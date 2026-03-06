@@ -1,0 +1,5 @@
+{
+  "name": "scripted-skill",
+  "private": true,
+  "purpose": "Starter template for script-backed private skills"
+}
