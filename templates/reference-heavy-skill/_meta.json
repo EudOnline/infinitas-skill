@@ -1,5 +1,30 @@
 {
   "name": "reference-heavy-skill",
-  "private": true,
-  "purpose": "Starter template for documentation-heavy private skills"
+  "version": "0.1.0",
+  "status": "incubating",
+  "summary": "Starter template for documentation-heavy private skills",
+  "owner": "replace-me",
+  "maintainers": [],
+  "tags": [],
+  "agent_compatible": ["openclaw", "claude-code", "codex"],
+  "derived_from": null,
+  "replaces": null,
+  "visibility": "private",
+  "review_state": "draft",
+  "risk_level": "low",
+  "requires": {
+    "tools": [],
+    "bins": [],
+    "env": []
+  },
+  "entrypoints": {
+    "skill_md": "SKILL.md"
+  },
+  "tests": {
+    "smoke": "tests/smoke.md"
+  },
+  "distribution": {
+    "installable": true,
+    "channel": "git"
+  }
 }
