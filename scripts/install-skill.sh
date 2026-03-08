@@ -44,25 +44,25 @@ if [[ ${#POSITIONAL[@]} -eq 1 ]]; then
 fi
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SRC="$ROOT/skills/active/$NAME"
 DEST="$TARGET_DIR/$NAME"
 
-[[ -d "$SRC" ]] || { echo "missing active skill: $NAME" >&2; exit 1; }
-"$ROOT/scripts/check-skill.sh" "$SRC" >/dev/null
-
-ACTUAL_VERSION="$(python3 - "$SRC/_meta.json" <<'PY'
+ARGS=("$NAME" --json)
+if [[ -n "$LOCK_VERSION" ]]; then
+  ARGS+=(--version "$LOCK_VERSION")
+fi
+INFO_JSON="$(python3 "$ROOT/scripts/resolve-skill-source.py" "${ARGS[@]}")"
+SRC="$(python3 - <<'PY' "$INFO_JSON"
 import json, sys
-with open(sys.argv[1], 'r', encoding='utf-8') as f:
-    print(json.load(f).get('version') or '')
+print(json.loads(sys.argv[1])['path'])
+PY
+)"
+RESOLVED_VERSION="$(python3 - <<'PY' "$INFO_JSON"
+import json, sys
+print(json.loads(sys.argv[1]).get('version') or '')
 PY
 )"
 
-if [[ -n "$LOCK_VERSION" && "$LOCK_VERSION" != "$ACTUAL_VERSION" ]]; then
-  echo "requested version $LOCK_VERSION but active skill is at $ACTUAL_VERSION" >&2
-  echo "Use archived snapshots for exact historical installs." >&2
-  exit 1
-fi
-
+"$ROOT/scripts/check-skill.sh" "$SRC" >/dev/null
 mkdir -p "$TARGET_DIR"
 if [[ -e "$DEST" ]]; then
   if [[ $FORCE -ne 1 ]]; then
@@ -72,5 +72,5 @@ if [[ -e "$DEST" ]]; then
   rm -rf "$DEST"
 fi
 cp -R "$SRC" "$DEST"
-python3 "$ROOT/scripts/update-install-manifest.py" "$TARGET_DIR" "$SRC" "$DEST" install "${LOCK_VERSION:-$ACTUAL_VERSION}" >/dev/null
-echo "installed: $DEST"
+python3 "$ROOT/scripts/update-install-manifest.py" "$TARGET_DIR" "$SRC" "$DEST" install "${LOCK_VERSION:-$RESOLVED_VERSION}" >/dev/null
+echo "installed: $DEST <- $SRC"

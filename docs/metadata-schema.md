@@ -98,3 +98,12 @@ Archived snapshots may add these optional fields:
 - `snapshot_label`: optional human label such as `pre-refactor`
 
 Archived snapshot folder names may differ from `_meta.json.name` because the directory encodes version and timestamp for uniqueness.
+
+## Install manifest history
+
+Target directories now maintain:
+
+- current installed skill state under `skills.<name>`
+- prior states under `history.<name>[]`
+
+That history is used by rollback tooling and is separate from the registry catalog itself.

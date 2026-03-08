@@ -19,7 +19,8 @@ This repository is meant to hold private skills, templates, helper scripts, and 
 ```text
 catalog/
 ├─ catalog.json          machine-readable index for all skills
-└─ active.json           install-focused index for active skills only
+├─ active.json           install-focused index for active skills only
+└─ compatibility.json    agent/tool compatibility view
 
 docs/
 ├─ conventions.md        naming, layout, lifecycle rules
@@ -28,6 +29,7 @@ docs/
 ├─ release-checklist.md  pre-publish / pre-promote review list
 ├─ release-strategy.md   version bump, changelog, and git tag guidance
 ├─ history-and-snapshots.md active overwrite snapshots and exact ancestry
+├─ compatibility-matrix.md generated compatibility catalog guide
 └─ trust-model.md        safety model for shared skill evolution
 
 scripts/
@@ -41,7 +43,11 @@ scripts/
 ├─ snapshot-active-skill.sh archive a timestamped copy of an active skill
 ├─ bump-skill-version.sh bump semver and seed changelog entries
 ├─ release-skill-tag.sh  print or create a skill/<name>/v<version> git tag
+├─ release-skill.sh      check, tag, and prepare release notes for a skill
 ├─ lineage-diff.sh       diff a skill against its declared ancestor
+├─ switch-installed-skill.sh switch an installed copy to active or a historical version
+├─ rollback-installed-skill.sh rollback using manifest history
+├─ resolve-skill-source.py resolve active vs archived skill sources
 └─ diff-skill.sh         compare two skill folders or names
 
 skills/
@@ -76,14 +82,23 @@ scripts/bump-skill-version.sh my-skill patch --note "Refined the workflow"
 # Promote a reviewed skill
 scripts/promote-skill.sh my-skill
 
-# Install a stable skill into an OpenClaw-managed local skills dir and lock it to the active version
+# Install a stable skill into an OpenClaw-managed local skills dir and lock it to the current version
 scripts/install-skill.sh my-skill ~/.openclaw/skills --version 0.2.0
+
+# Later, install an exact historical version from archived snapshots
+scripts/install-skill.sh my-skill ~/.openclaw/skills --version 0.1.0 --force
 
 # Snapshot the current active copy before a risky overwrite
 scripts/snapshot-active-skill.sh my-skill --label pre-refactor
 
-# Print the release tag you would use (or create it with --create)
-scripts/release-skill-tag.sh my-skill
+# Prepare a release summary (and optionally tag it)
+scripts/release-skill.sh my-skill
+
+# Switch an installed copy to a different historical version
+scripts/switch-installed-skill.sh my-skill ~/.openclaw/skills --to-version 0.1.0 --force
+
+# Roll back using manifest history
+scripts/rollback-installed-skill.sh my-skill ~/.openclaw/skills --force
 
 # View the install manifest for that target directory
 scripts/list-installed.sh ~/.openclaw/skills
@@ -98,6 +113,7 @@ GitHub Actions runs `scripts/check-all.sh` on pushes and pull requests. That val
 - smoke test presence
 - secret scan
 - deterministic catalog generation
+- compatibility catalog generation
 
 If CI fails because catalog files changed, run:
 
@@ -118,6 +134,9 @@ and commit the updated `catalog/*.json`.
 - **Install targets keep a manifest**. Local skill directories can now record what was installed, from where, and at which version.
 - **Installs can be version-locked**. Sync now refuses to silently advance a locked install beyond the pinned active version.
 - **Active overwrites can snapshot history**. You can archive an active skill before replacing it and later diff lineage against the exact archived ancestor.
+- **Historical installs are supported**. Versioned installs can resolve archived snapshots instead of only whatever happens to be active now.
+- **Installed copies can switch or roll back**. Manifest history now supports controlled source switching and version rollback.
+- **Compatibility is exported**. Consumers can read a generated compatibility matrix instead of scraping every `_meta.json`.
 
 ## Safety rules
 

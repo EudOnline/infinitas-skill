@@ -14,7 +14,7 @@ done < <(find skills -mindepth 2 -maxdepth 2 -type d -exec test -f '{}/_meta.jso
 before_catalog_norm="$(python3 - <<'PY'
 import json
 from pathlib import Path
-for path in ['catalog/catalog.json','catalog/active.json']:
+for path in ['catalog/catalog.json','catalog/active.json','catalog/compatibility.json']:
     p = Path(path)
     if not p.exists():
         continue
@@ -27,7 +27,7 @@ scripts/build-catalog.sh >/dev/null
 after_catalog_norm="$(python3 - <<'PY'
 import json
 from pathlib import Path
-for path in ['catalog/catalog.json','catalog/active.json']:
+for path in ['catalog/catalog.json','catalog/active.json','catalog/compatibility.json']:
     p = Path(path)
     if not p.exists():
         continue
@@ -39,7 +39,7 @@ PY
 
 if [[ -n "$before_catalog_norm" && -n "$after_catalog_norm" && "$before_catalog_norm" != "$after_catalog_norm" ]]; then
   echo "FAIL: catalog contents changed; run scripts/build-catalog.sh and commit the result" >&2
-  git --no-pager diff -- catalog/catalog.json catalog/active.json || true
+  git --no-pager diff -- catalog/catalog.json catalog/active.json catalog/compatibility.json || true
   exit 1
 fi
 

@@ -16,9 +16,12 @@ action = sys.argv[4]
 locked_version = sys.argv[5]
 manifest_path = target_dir / '.infinitas-skill-install-manifest.json'
 meta_path = dest_dir / '_meta.json'
+source_meta_path = source_dir / '_meta.json'
 
 with open(meta_path, 'r', encoding='utf-8') as f:
     meta = json.load(f)
+with open(source_meta_path, 'r', encoding='utf-8') as f:
+    source_meta = json.load(f)
 
 repo_root = Path(__file__).resolve().parent.parent
 try:
@@ -32,20 +35,31 @@ except Exception:
 if manifest_path.exists():
     manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
 else:
-    manifest = {'repo': repo_url, 'updated_at': None, 'skills': {}}
+    manifest = {'repo': repo_url, 'updated_at': None, 'skills': {}, 'history': {}}
 
 manifest['repo'] = repo_url or manifest.get('repo')
 manifest['updated_at'] = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
 manifest.setdefault('skills', {})
-manifest['skills'][meta['name']] = {
-    'name': meta['name'],
+manifest.setdefault('history', {})
+name = meta['name']
+previous = manifest['skills'].get(name)
+if previous:
+    hist = manifest['history'].setdefault(name, [])
+    hist.append(previous)
+    manifest['history'][name] = hist[-25:]
+
+manifest['skills'][name] = {
+    'name': name,
     'version': meta.get('version'),
     'locked_version': locked_version or meta.get('version'),
     'status': meta.get('status'),
     'source_repo': repo_url,
     'source_path': str(source_dir.relative_to(repo_root)),
-    'target_path': str(dest_dir.relative_to(target_dir)),
     'source_stage': source_dir.parent.name,
+    'source_version': source_meta.get('version'),
+    'source_snapshot_of': source_meta.get('snapshot_of'),
+    'source_snapshot_created_at': source_meta.get('snapshot_created_at'),
+    'target_path': str(dest_dir.relative_to(target_dir)),
     'action': action,
     'updated_at': manifest['updated_at'],
 }

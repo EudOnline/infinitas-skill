@@ -15,6 +15,10 @@ print(f"updated_at: {data.get('updated_at')}")
 for name, meta in sorted(data.get('skills', {}).items()):
     version = meta.get('version')
     locked = meta.get('locked_version')
+    stage = meta.get('source_stage')
+    src = meta.get('source_path')
+    history_len = len((data.get('history') or {}).get(name) or [])
     lock_note = f", locked={locked}" if locked else ""
-    print(f"- {name}: {version}{lock_note} ({meta.get('action')}) -> {meta.get('target_path')}")
+    hist_note = f", history={history_len}" if history_len else ""
+    print(f"- {name}: {version}{lock_note} [{stage}] ({meta.get('action')}) -> {meta.get('target_path')} from {src}{hist_note}")
 PY

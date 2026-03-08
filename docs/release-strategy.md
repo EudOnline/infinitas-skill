@@ -72,3 +72,20 @@ scripts/release-skill-tag.sh repo-audit --create
 ```
 
 This keeps per-skill release tags consistent with the documented naming scheme.
+
+## Release helper
+
+Use the higher-level helper to validate the registry, print release notes from the current changelog section, and optionally create/push a tag or GitHub release:
+
+```bash
+# print the release summary
+scripts/release-skill.sh repo-audit
+
+# create the local tag
+scripts/release-skill.sh repo-audit --create-tag
+
+# create and push the tag
+scripts/release-skill.sh repo-audit --push-tag
+```
+
+If you also pass `--github-release`, the helper will call `gh release create` with the extracted changelog notes.

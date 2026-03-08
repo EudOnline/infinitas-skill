@@ -62,3 +62,23 @@ If a derived skill declares:
 `sync-skill.sh` refuses to advance a locked install if the active skill has moved past that version.
 
 That gives you a light-weight way to say: "keep this local agent on the current stable version until I explicitly re-install or change the lock."
+
+## Historical installs
+
+`install-skill.sh --version <x.y.z>` now resolves the requested version from archived snapshots when the active copy has already moved on.
+
+That means local agents can intentionally stay on or return to an older stable version without manual path-copy work.
+
+## Switching and rollback
+
+Two helpers now exist for installed copies:
+
+```bash
+# switch to a specific historical version
+scripts/switch-installed-skill.sh repo-audit ~/.openclaw/skills --to-version 0.2.0 --force
+
+# roll back using manifest history
+scripts/rollback-installed-skill.sh repo-audit ~/.openclaw/skills --force
+```
+
+Manifest history stores previous install states so rollback can choose the last known version source automatically.

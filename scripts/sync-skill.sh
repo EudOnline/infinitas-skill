@@ -22,48 +22,63 @@ for arg in "$@"; do
 done
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SRC="$ROOT/skills/active/$NAME"
 DEST="$TARGET_DIR/$NAME"
 MANIFEST="$TARGET_DIR/.infinitas-skill-install-manifest.json"
 
-[[ -d "$SRC" ]] || { echo "missing active skill: $NAME" >&2; exit 1; }
 [[ -d "$DEST" ]] || { echo "skill is not installed yet: $DEST" >&2; exit 1; }
-"$ROOT/scripts/check-skill.sh" "$SRC" >/dev/null
 
-readarray -t INFO < <(python3 - "$SRC/_meta.json" "$MANIFEST" "$NAME" <<'PY'
-import json, sys
-meta_path, manifest_path, name = sys.argv[1:4]
-with open(meta_path, 'r', encoding='utf-8') as f:
-    src = json.load(f)
-print(src.get('version') or '')
-locked = ''
-installed = ''
-if manifest_path and __import__('os').path.isfile(manifest_path):
+readarray -t INFO < <(python3 - "$MANIFEST" "$NAME" <<'PY'
+import json, os, sys
+manifest_path, name = sys.argv[1:3]
+item = {}
+if os.path.isfile(manifest_path):
     with open(manifest_path, 'r', encoding='utf-8') as f:
         manifest = json.load(f)
     item = (manifest.get('skills') or {}).get(name) or {}
-    locked = item.get('locked_version') or ''
-    installed = item.get('version') or ''
-print(locked)
-print(installed)
+print(item.get('locked_version') or '')
+print(item.get('version') or '')
+print(item.get('source_stage') or '')
 PY
 )
-SRC_VERSION="${INFO[0]}"
-LOCKED_VERSION="${INFO[1]}"
-INSTALLED_VERSION="${INFO[2]}"
+LOCKED_VERSION="${INFO[0]}"
+INSTALLED_VERSION="${INFO[1]}"
+SOURCE_STAGE="${INFO[2]}"
+
+ARGS=("$NAME" --json)
+if [[ -n "$LOCKED_VERSION" ]]; then
+  ARGS+=(--version "$LOCKED_VERSION")
+fi
+INFO_JSON="$(python3 "$ROOT/scripts/resolve-skill-source.py" "${ARGS[@]}")"
+SRC="$(python3 - <<'PY' "$INFO_JSON"
+import json, sys
+print(json.loads(sys.argv[1])['path'])
+PY
+)"
+SRC_VERSION="$(python3 - <<'PY' "$INFO_JSON"
+import json, sys
+print(json.loads(sys.argv[1]).get('version') or '')
+PY
+)"
+SRC_STAGE="$(python3 - <<'PY' "$INFO_JSON"
+import json, sys
+print(json.loads(sys.argv[1]).get('stage') or '')
+PY
+)"
+
+"$ROOT/scripts/check-skill.sh" "$SRC" >/dev/null
 
 if [[ -n "$LOCKED_VERSION" && "$LOCKED_VERSION" != "$SRC_VERSION" ]]; then
-  echo "installed skill is version-locked to $LOCKED_VERSION; active version is $SRC_VERSION" >&2
+  echo "installed skill is version-locked to $LOCKED_VERSION; resolved source version is $SRC_VERSION" >&2
   echo "refusing to sync without updating the lock policy" >&2
   exit 1
 fi
 
 if [[ $FORCE -ne 1 ]]; then
-  echo "source version: $SRC_VERSION"
-  echo "installed version: $INSTALLED_VERSION"
+  echo "source version: $SRC_VERSION ($SRC_STAGE)"
+  echo "installed version: $INSTALLED_VERSION ($SOURCE_STAGE)"
 fi
 
 rm -rf "$DEST"
 cp -R "$SRC" "$DEST"
 python3 "$ROOT/scripts/update-install-manifest.py" "$TARGET_DIR" "$SRC" "$DEST" sync "${LOCKED_VERSION:-$SRC_VERSION}" >/dev/null
-echo "synced: $DEST"
+echo "synced: $DEST <- $SRC"
