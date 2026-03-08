@@ -31,6 +31,12 @@ for stage in ['incubating', 'active', 'archived']:
             continue
         with open(meta_path, 'r', encoding='utf-8') as f:
             meta = json.load(f)
+        reviews_path = skill_dir / 'reviews.json'
+        if reviews_path.exists():
+            reviews = json.loads(reviews_path.read_text(encoding='utf-8'))
+            approval_count = len([e for e in (reviews.get('entries') or []) if e.get('decision') == 'approved'])
+        else:
+            approval_count = 0
         agent_compatible = meta.get('agent_compatible', [])
         entry = {
             'name': meta.get('name', skill_dir.name),
@@ -48,6 +54,7 @@ for stage in ['incubating', 'active', 'archived']:
             'conflicts_with': meta.get('conflicts_with', []),
             'agent_compatible': agent_compatible,
             'installable': bool(meta.get('distribution', {}).get('installable', True)),
+            'approval_count': approval_count,
             'path': str(skill_dir.relative_to(root)),
         }
         entries.append(entry)

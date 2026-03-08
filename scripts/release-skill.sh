@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: scripts/release-skill.sh <skill-name-or-path> [--create-tag] [--push-tag] [--github-release] [--notes-out PATH] [--write-provenance]" >&2
+  echo "usage: scripts/release-skill.sh <skill-name-or-path> [--create-tag] [--sign-tag] [--push-tag] [--github-release] [--notes-out PATH] [--write-provenance] [--sign-provenance]" >&2
 }
 
 if [[ $# -lt 1 ]]; then
@@ -14,10 +14,12 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TARGET="$1"
 shift || true
 CREATE_TAG=0
+SIGN_TAG=0
 PUSH_TAG=0
 GITHUB_RELEASE=0
 NOTES_OUT=""
 WRITE_PROVENANCE=0
+SIGN_PROVENANCE=0
 
 resolve_skill() {
   local name="$1"
@@ -40,6 +42,11 @@ while [[ $# -gt 0 ]]; do
       CREATE_TAG=1
       shift
       ;;
+    --sign-tag)
+      SIGN_TAG=1
+      CREATE_TAG=1
+      shift
+      ;;
     --push-tag)
       PUSH_TAG=1
       CREATE_TAG=1
@@ -55,6 +62,11 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --write-provenance)
+      WRITE_PROVENANCE=1
+      shift
+      ;;
+    --sign-provenance)
+      SIGN_PROVENANCE=1
       WRITE_PROVENANCE=1
       shift
       ;;
@@ -83,12 +95,7 @@ changelog = (skill_dir / 'CHANGELOG.md').read_text(encoding='utf-8')
 pattern = re.compile(rf'^##\s+{re.escape(version)}\s+-.*?(?=^##\s+|\Z)', re.M | re.S)
 m = pattern.search(changelog)
 notes = m.group(0).strip() if m else f'## {version}\n\n- No matching changelog section found.'
-out.write_text(json.dumps({
-    'name': name,
-    'version': version,
-    'status': status,
-    'notes': notes,
-}, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+out.write_text(json.dumps({'name': name,'version': version,'status': status,'notes': notes}, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 PY
 
 NAME="$(python3 - <<'PY' "$META_JSON"
@@ -138,7 +145,11 @@ if [[ $CREATE_TAG -eq 1 ]]; then
     echo "tag already exists: $TAG" >&2
     exit 1
   fi
-  git tag "$TAG"
+  if [[ $SIGN_TAG -eq 1 ]]; then
+    git tag -s "$TAG" -m "$TAG"
+  else
+    git tag "$TAG"
+  fi
   echo "created tag: $TAG"
 fi
 
@@ -148,8 +159,14 @@ fi
 
 if [[ $WRITE_PROVENANCE -eq 1 ]]; then
   mkdir -p "$ROOT/catalog/provenance"
-  python3 "$ROOT/scripts/generate-provenance.py" "$DIR" > "$ROOT/catalog/provenance/$NAME-$VERSION.json"
-  echo "wrote provenance: $ROOT/catalog/provenance/$NAME-$VERSION.json"
+  PROV="$ROOT/catalog/provenance/$NAME-$VERSION.json"
+  python3 "$ROOT/scripts/generate-provenance.py" "$DIR" > "$PROV"
+  echo "wrote provenance: $PROV"
+  if [[ $SIGN_PROVENANCE -eq 1 ]]; then
+    python3 "$ROOT/scripts/sign-provenance.py" "$PROV" >/dev/null
+    python3 "$ROOT/scripts/verify-provenance.py" "$PROV" >/dev/null
+    echo "signed provenance: $PROV.sig.json"
+  fi
 fi
 
 if [[ $GITHUB_RELEASE -eq 1 ]]; then

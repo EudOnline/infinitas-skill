@@ -36,3 +36,14 @@ Today the registry still resolves local paths only, but the config is already us
 - provenance generation
 
 That means a future multi-source resolver can build on a stable config format rather than inventing one later.
+
+## Resolution behavior
+
+`resolve-skill-source.py` now merges candidates from all enabled local registry sources and chooses between them by:
+
+1. explicit registry filter when provided
+2. requested version / snapshot exactness
+3. registry priority
+4. stage preference (`active` before `archived` for default installs)
+
+That gives the repository a real multi-source resolution path rather than only a config placeholder.

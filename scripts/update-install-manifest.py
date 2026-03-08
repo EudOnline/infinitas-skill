@@ -5,8 +5,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-if len(sys.argv) != 6:
-    print('usage: scripts/update-install-manifest.py <target-dir> <source-dir> <dest-dir> <action> <locked-version>', file=sys.stderr)
+if len(sys.argv) != 7:
+    print('usage: scripts/update-install-manifest.py <target-dir> <source-dir> <dest-dir> <action> <locked-version> <source-registry>', file=sys.stderr)
     raise SystemExit(1)
 
 target_dir = Path(sys.argv[1]).resolve()
@@ -14,6 +14,7 @@ source_dir = Path(sys.argv[2]).resolve()
 dest_dir = Path(sys.argv[3]).resolve()
 action = sys.argv[4]
 locked_version = sys.argv[5]
+source_registry = sys.argv[6]
 manifest_path = target_dir / '.infinitas-skill-install-manifest.json'
 meta_path = dest_dir / '_meta.json'
 source_meta_path = source_dir / '_meta.json'
@@ -54,7 +55,8 @@ manifest['skills'][name] = {
     'locked_version': locked_version or meta.get('version'),
     'status': meta.get('status'),
     'source_repo': repo_url,
-    'source_path': str(source_dir.relative_to(repo_root)),
+    'source_registry': source_registry or 'self',
+    'source_path': str(source_dir.relative_to(Path(source_dir.anchor) if source_registry != 'self' else repo_root)) if False else str(source_dir),
     'source_stage': source_dir.parent.name,
     'source_version': source_meta.get('version'),
     'source_snapshot_of': source_meta.get('snapshot_of'),

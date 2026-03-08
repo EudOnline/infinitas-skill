@@ -16,6 +16,8 @@ For `active` skills, the policy currently requires:
 - `CHANGELOG.md` present
 - smoke test present
 - owner present
+- `reviews.json` present
+- minimum distinct reviewer approvals
 
 Additional checks for `high` risk active skills:
 

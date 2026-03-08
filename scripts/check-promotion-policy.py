@@ -16,6 +16,22 @@ def check_skill(skill_dir: Path, as_active: bool = False) -> int:
         return 0
 
     req = POLICY['active_requires']
+    reviews_path = skill_dir / 'reviews.json'
+    reviews = {'entries': []}
+    if reviews_path.exists():
+        reviews = json.loads(reviews_path.read_text(encoding='utf-8'))
+    entries = reviews.get('entries', []) or []
+    approvals = [e for e in entries if e.get('decision') == 'approved']
+    distinct_reviewers = {e.get('reviewer') for e in approvals if e.get('reviewer')}
+    owner = meta.get('owner')
+    if req.get('reviewer_must_differ_from_owner') and owner in distinct_reviewers:
+        distinct_reviewers.discard(owner)
+    if req.get('require_reviews_file') and not reviews_path.is_file():
+        print(f'FAIL: {skill_dir}: active skill requires reviews.json', file=sys.stderr)
+        errors += 1
+    if len(distinct_reviewers) < req.get('min_approvals', 0):
+        print(f'FAIL: {skill_dir}: active skill requires at least {req.get("min_approvals", 0)} distinct approval(s)', file=sys.stderr)
+        errors += 1
     if meta.get('review_state') not in req['review_state']:
         print(f'FAIL: {skill_dir}: review_state must be one of {req["review_state"]}', file=sys.stderr)
         errors += 1
@@ -39,6 +55,9 @@ def check_skill(skill_dir: Path, as_active: bool = False) -> int:
             errors += 1
         if high.get('require_requires_block') and not isinstance(meta.get('requires'), dict):
             print(f'FAIL: {skill_dir}: high-risk active skill requires a requires block', file=sys.stderr)
+            errors += 1
+        if len(distinct_reviewers) < high.get('min_approvals', 0):
+            print(f'FAIL: {skill_dir}: high-risk active skill requires at least {high.get("min_approvals", 0)} distinct approval(s)', file=sys.stderr)
             errors += 1
 
     if errors == 0:

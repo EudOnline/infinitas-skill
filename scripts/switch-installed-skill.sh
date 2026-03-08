@@ -76,6 +76,12 @@ info=json.loads(sys.argv[1])
 print(info.get('version') or '')
 PY
 )"
+SOURCE_REGISTRY="$(python3 - <<'PY' "$INFO_JSON"
+import json, sys
+info=json.loads(sys.argv[1])
+print(info.get('registry_name') or 'self')
+PY
+)"
 
 "$ROOT/scripts/check-skill.sh" "$SRC" >/dev/null
 "$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR" >/dev/null 2>&1 || { echo "switch target failed dependency/conflict checks" >&2; "$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR"; exit 1; }
@@ -85,5 +91,5 @@ if [[ -e "$DEST" && $FORCE -ne 1 ]]; then
 fi
 rm -rf "$DEST"
 cp -R "$SRC" "$DEST"
-python3 "$ROOT/scripts/update-install-manifest.py" "$TARGET_DIR" "$SRC" "$DEST" switch "$LOCK_VERSION" >/dev/null
+python3 "$ROOT/scripts/update-install-manifest.py" "$TARGET_DIR" "$SRC" "$DEST" switch "$LOCK_VERSION" "$SOURCE_REGISTRY" >/dev/null
 echo "switched: $DEST <- $SRC"

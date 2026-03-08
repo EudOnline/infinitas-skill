@@ -64,6 +64,11 @@ import json, sys
 print(json.loads(sys.argv[1]).get('stage') or '')
 PY
 )"
+SOURCE_REGISTRY="$(python3 - <<'PY' "$INFO_JSON"
+import json, sys
+print(json.loads(sys.argv[1]).get('registry_name') or 'self')
+PY
+)"
 
 "$ROOT/scripts/check-skill.sh" "$SRC" >/dev/null
 "$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR" >/dev/null 2>&1 || { echo "sync target failed dependency/conflict checks" >&2; "$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR"; exit 1; }
@@ -81,5 +86,5 @@ fi
 
 rm -rf "$DEST"
 cp -R "$SRC" "$DEST"
-python3 "$ROOT/scripts/update-install-manifest.py" "$TARGET_DIR" "$SRC" "$DEST" sync "${LOCKED_VERSION:-$SRC_VERSION}" >/dev/null
+python3 "$ROOT/scripts/update-install-manifest.py" "$TARGET_DIR" "$SRC" "$DEST" sync "${LOCKED_VERSION:-$SRC_VERSION}" "$SOURCE_REGISTRY" >/dev/null
 echo "synced: $DEST <- $SRC"

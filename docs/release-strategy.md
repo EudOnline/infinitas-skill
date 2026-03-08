@@ -89,3 +89,21 @@ scripts/release-skill.sh repo-audit --push-tag
 ```
 
 If you also pass `--github-release`, the helper will call `gh release create` with the extracted changelog notes.
+
+## Provenance signing
+
+If `INFINITAS_SKILL_SIGNING_KEY` is set, release tooling can sign provenance bundles via:
+
+```bash
+scripts/release-skill.sh repo-audit --write-provenance --sign-provenance
+```
+
+That produces a sidecar signature file (`.sig.json`) and verifies it immediately.
+
+For signed git tags, use:
+
+```bash
+scripts/release-skill.sh repo-audit --sign-tag
+```
+
+which delegates to `git tag -s` and therefore depends on your local git signing setup.
