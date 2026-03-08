@@ -131,4 +131,4 @@ Dependency planning now follows a deterministic registry-aware order:
 - `resolved_tag`
 - `resolved_origin_url`
 
-When the local repository itself is the catalog source, `catalog/catalog.json` and `catalog/active.json` also attach registry identity fields to each skill entry.
+When the local repository itself is the catalog source in `local-only` mode, catalog generation intentionally leaves `resolved_commit` / `resolved_tag` (and per-skill `source_registry_commit` / `source_registry_tag`) empty. That keeps committed catalog snapshots stable instead of making every new commit invalidate `catalog/registries.json` on the next validation pass. Operators can still inspect the live checkout identity with `scripts/list-registry-sources.py`.

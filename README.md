@@ -170,6 +170,7 @@ and commit the updated `catalog/*.json`.
 - **Installed copies can switch or roll back**. Manifest history now supports controlled source switching and version rollback.
 - **Compatibility is exported**. Consumers can read a generated compatibility matrix instead of scraping every `_meta.json`.
 - **Registry sources are policy-driven**. Source registries now declare trust, allowed hosts/refs, pinning, and update behavior in config.
+- **Local-only self catalogs stay stable**. Committed catalog snapshots intentionally omit live `self` commit/tag identity so `check-all.sh` does not fail after every local commit; use `scripts/list-registry-sources.py` for the current checkout identity.
 - **Dependencies and conflicts are first-class**. Skills can declare exact or ranged constraints plus optional registry hints in `depends_on` / `conflicts_with`.
 - **Install and sync are plan-driven**. Both commands now print a deterministic dependency plan before mutating the target directory.
 - **Unsafe upgrades fail early**. Dependency locks, reverse conflicts, and unresolved cross-registry requests are rejected before files are copied.

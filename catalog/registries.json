@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-08T16:25:14Z",
+  "generated_at": "2026-03-08T16:59:35Z",
   "default_registry": "self",
   "registries": [
     {
@@ -27,7 +27,7 @@
       "notes": "Primary private registry for local development and promotion",
       "resolved_root": "/root/.openclaw/workspace/infinitas-skill",
       "resolved_ref": "refs/heads/main",
-      "resolved_commit": "a0f6066a23a943a123b7470a81c308a264d69582",
+      "resolved_commit": null,
       "resolved_tag": null,
       "resolved_origin_url": "https://github.com/EudOnline/infinitas-skill.git"
     }

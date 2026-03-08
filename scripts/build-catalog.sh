@@ -25,6 +25,25 @@ def expected_skill_tag(name, version):
 
 
 cfg = load_registry_config(root)
+
+
+def stable_catalog_identity(reg, identity):
+    if not reg:
+        return identity
+    reg_root = resolve_registry_root(root, reg)
+    if reg_root == root and identity.get('registry_update_mode') == 'local-only':
+        # A committed catalog cannot stably point at the live HEAD of the same
+        # repository that stores the catalog files, otherwise every commit would
+        # invalidate catalog/registries.json (and per-skill source identity) on
+        # the next check/build pass.
+        clone = dict(identity)
+        clone['registry_commit'] = None
+        clone['registry_tag'] = None
+        clone['registry_branch'] = None
+        return clone
+    return identity
+
+
 catalog_source_registry = None
 for reg in cfg.get('registries', []):
     if resolve_registry_root(root, reg) == root:
@@ -32,7 +51,10 @@ for reg in cfg.get('registries', []):
         break
 if catalog_source_registry is None:
     catalog_source_registry = next((reg for reg in cfg.get('registries', []) if reg.get('name') == cfg.get('default_registry')), None)
-catalog_source_identity = registry_identity(root, catalog_source_registry) if catalog_source_registry else {}
+catalog_source_identity = stable_catalog_identity(
+    catalog_source_registry,
+    registry_identity(root, catalog_source_registry) if catalog_source_registry else {},
+)
 
 skills_root = root / 'skills'
 out_catalog = root / 'catalog' / 'catalog.json'
@@ -133,7 +155,7 @@ for reg in cfg.get('registries', []):
         item['resolved_root'] = str((root / '.cache' / 'registries' / item.get('name')).resolve())
     else:
         item['resolved_root'] = None
-    identity = registry_identity(root, reg)
+    identity = stable_catalog_identity(reg, registry_identity(root, reg))
     item['resolved_ref'] = identity.get('registry_ref')
     item['resolved_commit'] = identity.get('registry_commit')
     item['resolved_tag'] = identity.get('registry_tag')
