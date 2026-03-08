@@ -6,6 +6,7 @@ Before pushing or promoting a skill:
 - [ ] `SKILL.md` has `name` and `description`
 - [ ] `name:` matches the folder name
 - [ ] `_meta.json` exists and passes `scripts/check-skill.sh`
+- [ ] full registry validation passes via `scripts/check-all.sh`
 - [ ] `_meta.json.status` matches the parent directory
 - [ ] `_meta.json.review_state` is appropriate for the target stage
 - [ ] Trigger description clearly states when the skill should activate

@@ -60,12 +60,33 @@ scripts/check-skill.sh skills/incubating/my-skill
 # Rebuild the install/search catalog
 scripts/build-catalog.sh
 
+# Run the full local validation suite
+scripts/check-all.sh
+
 # Promote a reviewed skill
 scripts/promote-skill.sh my-skill
 
 # Install a stable skill into an OpenClaw-managed local skills dir
 scripts/install-skill.sh my-skill ~/.openclaw/skills
 ```
+
+## CI
+
+GitHub Actions runs `scripts/check-all.sh` on pushes and pull requests. That validation currently covers:
+
+- `_meta.json` shape and required fields
+- stage/status consistency
+- smoke test presence
+- secret scan
+- deterministic catalog generation
+
+If CI fails because catalog files changed, run:
+
+```bash
+scripts/build-catalog.sh
+```
+
+and commit the updated `catalog/*.json`.
 
 ## Registry model
 

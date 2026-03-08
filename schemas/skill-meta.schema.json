@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/infinitas-skill/skill-meta.schema.json",
+  "title": "infinitas-skill _meta.json",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "name",
+    "version",
+    "status",
+    "summary",
+    "owner",
+    "review_state",
+    "risk_level",
+    "distribution"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9_.-]+)?$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["incubating", "active", "archived"]
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "maintainers": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "agent_compatible": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "derived_from": {
+      "type": ["string", "null"]
+    },
+    "replaces": {
+      "type": ["string", "null"]
+    },
+    "visibility": {
+      "type": "string"
+    },
+    "review_state": {
+      "type": "string",
+      "enum": ["draft", "under-review", "approved", "rejected"]
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    },
+    "requires": {
+      "type": "object",
+      "properties": {
+        "tools": { "type": "array", "items": { "type": "string" } },
+        "bins": { "type": "array", "items": { "type": "string" } },
+        "env": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "entrypoints": {
+      "type": "object",
+      "properties": {
+        "skill_md": { "type": "string" }
+      }
+    },
+    "tests": {
+      "type": "object",
+      "properties": {
+        "smoke": { "type": "string" }
+      }
+    },
+    "distribution": {
+      "type": "object",
+      "required": ["installable", "channel"],
+      "properties": {
+        "installable": { "type": "boolean" },
+        "channel": { "type": "string" }
+      }
+    }
+  }
+}

@@ -55,8 +55,20 @@ active = {
     'skills': [e for e in entries if e['status'] == 'active' and e['installable']],
 }
 
-out_catalog.write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-out_active.write_text(json.dumps(active, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-print(f'wrote: {out_catalog}')
-print(f'wrote: {out_active}')
+def normalized(payload):
+    clone = dict(payload)
+    clone.pop('generated_at', None)
+    return json.dumps(clone, ensure_ascii=False, sort_keys=True)
+
+def write_if_changed(path, payload):
+    if path.exists():
+        existing = json.loads(path.read_text(encoding='utf-8'))
+        if normalized(existing) == normalized(payload):
+            print(f'unchanged: {path}')
+            return
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    print(f'wrote: {path}')
+
+write_if_changed(out_catalog, catalog)
+write_if_changed(out_active, active)
 PY

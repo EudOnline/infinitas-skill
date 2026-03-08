@@ -71,3 +71,11 @@ Every registry-managed skill should include `_meta.json`.
 - Keep `_meta.json` machine-friendly and flat enough to parse from shell/python helpers
 - Do not store secrets here
 - Prefer explicit lineage over implicit inheritance
+
+## Machine-readable schema
+
+The canonical JSON Schema file for CI and editor integration lives at:
+
+- `schemas/skill-meta.schema.json`
+
+The current validation script is intentionally dependency-free, so it performs schema-equivalent checks in Python rather than requiring an external `jsonschema` package.
