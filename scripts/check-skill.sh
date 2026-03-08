@@ -28,7 +28,7 @@ if [[ -z "$DESC_LINE" ]]; then
   echo "FAIL: missing description field in SKILL.md" >&2
   STATUS=1
 fi
-if [[ -n "$NAME_LINE" && "$NAME_LINE" != "$BASENAME" ]]; then
+if [[ -n "$NAME_LINE" && "$NAME_LINE" != "$BASENAME" && "$PARENT_STAGE" != "archived" ]]; then
   echo "WARN: folder name ($BASENAME) does not match SKILL.md name field ($NAME_LINE)" >&2
 fi
 
@@ -52,7 +52,7 @@ for key in required:
         status = 1
 
 name = meta.get('name')
-if name and name != basename:
+if name and name != basename and parent_stage != 'archived':
     print(f'FAIL: _meta.json name ({name}) does not match folder name ({basename})', file=sys.stderr)
     status = 1
 if skill_name and name and skill_name != name:

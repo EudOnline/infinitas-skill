@@ -3,13 +3,27 @@ set -euo pipefail
 
 NAME="${1:-}"
 if [[ -z "$NAME" ]]; then
-  echo "usage: scripts/promote-skill.sh <skill-name> [--force]" >&2
+  echo "usage: scripts/promote-skill.sh <skill-name> [--force] [--snapshot-label TEXT]" >&2
   exit 1
 fi
 shift || true
 FORCE=0
-for arg in "$@"; do
-  [[ "$arg" == "--force" ]] && FORCE=1
+SNAPSHOT_LABEL="promote-overwrite"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --force)
+      FORCE=1
+      shift
+      ;;
+    --snapshot-label)
+      SNAPSHOT_LABEL="${2:-}"
+      shift 2
+      ;;
+    *)
+      echo "unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
 done
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -33,6 +47,7 @@ if [[ -e "$DEST" ]]; then
     echo "active skill already exists: $DEST (use --force to overwrite)" >&2
     exit 1
   fi
+  "$ROOT/scripts/snapshot-active-skill.sh" "$NAME" --label "$SNAPSHOT_LABEL" >/dev/null
   rm -rf "$DEST"
 fi
 mv "$SRC" "$DEST"

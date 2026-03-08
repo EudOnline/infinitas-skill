@@ -27,6 +27,7 @@ docs/
 ├─ metadata-schema.md    required `_meta.json` fields
 ├─ release-checklist.md  pre-publish / pre-promote review list
 ├─ release-strategy.md   version bump, changelog, and git tag guidance
+├─ history-and-snapshots.md active overwrite snapshots and exact ancestry
 └─ trust-model.md        safety model for shared skill evolution
 
 scripts/
@@ -37,7 +38,9 @@ scripts/
 ├─ sync-skill.sh         refresh an installed skill from the registry
 ├─ list-installed.sh     inspect install manifest data for a target dir
 ├─ promote-skill.sh      move an approved incubating skill into active/
+├─ snapshot-active-skill.sh archive a timestamped copy of an active skill
 ├─ bump-skill-version.sh bump semver and seed changelog entries
+├─ release-skill-tag.sh  print or create a skill/<name>/v<version> git tag
 ├─ lineage-diff.sh       diff a skill against its declared ancestor
 └─ diff-skill.sh         compare two skill folders or names
 
@@ -73,8 +76,14 @@ scripts/bump-skill-version.sh my-skill patch --note "Refined the workflow"
 # Promote a reviewed skill
 scripts/promote-skill.sh my-skill
 
-# Install a stable skill into an OpenClaw-managed local skills dir
-scripts/install-skill.sh my-skill ~/.openclaw/skills
+# Install a stable skill into an OpenClaw-managed local skills dir and lock it to the active version
+scripts/install-skill.sh my-skill ~/.openclaw/skills --version 0.2.0
+
+# Snapshot the current active copy before a risky overwrite
+scripts/snapshot-active-skill.sh my-skill --label pre-refactor
+
+# Print the release tag you would use (or create it with --create)
+scripts/release-skill-tag.sh my-skill
 
 # View the install manifest for that target directory
 scripts/list-installed.sh ~/.openclaw/skills
@@ -107,6 +116,8 @@ and commit the updated `catalog/*.json`.
 - **`SKILL.md` is runtime-facing**. `_meta.json` is registry/governance-facing.
 - **`CHANGELOG.md` tracks skill evolution**. Use it with semantic version bumps and optional git tags.
 - **Install targets keep a manifest**. Local skill directories can now record what was installed, from where, and at which version.
+- **Installs can be version-locked**. Sync now refuses to silently advance a locked install beyond the pinned active version.
+- **Active overwrites can snapshot history**. You can archive an active skill before replacing it and later diff lineage against the exact archived ancestor.
 
 ## Safety rules
 

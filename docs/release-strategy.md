@@ -58,3 +58,17 @@ scripts/bump-skill-version.sh repo-audit patch --note "Refined repo scoring rubr
 # inspect lineage against a declared ancestor
 scripts/lineage-diff.sh repo-audit-plus
 ```
+
+## Tag helper
+
+Use the helper to print the expected tag or create it locally:
+
+```bash
+# print the recommended tag
+scripts/release-skill-tag.sh repo-audit
+
+# create the tag locally
+scripts/release-skill-tag.sh repo-audit --create
+```
+
+This keeps per-skill release tags consistent with the documented naming scheme.

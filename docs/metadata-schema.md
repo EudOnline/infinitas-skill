@@ -88,3 +88,13 @@ Installed copies are tracked outside `_meta.json` in target directories via:
 - `.infinitas-skill-install-manifest.json`
 
 That manifest records which active skill version was installed or synced into a local runtime directory.
+
+## Snapshot metadata
+
+Archived snapshots may add these optional fields:
+
+- `snapshot_of`: original skill and version, e.g. `repo-audit@0.2.0`
+- `snapshot_created_at`: UTC timestamp used when the snapshot was created
+- `snapshot_label`: optional human label such as `pre-refactor`
+
+Archived snapshot folder names may differ from `_meta.json.name` because the directory encodes version and timestamp for uniqueness.

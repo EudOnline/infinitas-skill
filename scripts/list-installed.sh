@@ -13,5 +13,8 @@ with open(p, 'r', encoding='utf-8') as f:
 print(f"repo: {data.get('repo')}")
 print(f"updated_at: {data.get('updated_at')}")
 for name, meta in sorted(data.get('skills', {}).items()):
-    print(f"- {name}: {meta.get('version')} ({meta.get('action')}) -> {meta.get('target_path')}")
+    version = meta.get('version')
+    locked = meta.get('locked_version')
+    lock_note = f", locked={locked}" if locked else ""
+    print(f"- {name}: {version}{lock_note} ({meta.get('action')}) -> {meta.get('target_path')}")
 PY

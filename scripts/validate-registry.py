@@ -43,7 +43,7 @@ def validate_meta(skill_dir: Path) -> int:
     if not isinstance(name, str) or not NAME_RE.match(name):
         fail(f'{skill_dir}: invalid name {name!r}')
         errors += 1
-    elif name != skill_dir.name:
+    elif skill_dir.parent.name != 'archived' and name != skill_dir.name:
         fail(f'{skill_dir}: meta name {name!r} does not match folder name {skill_dir.name!r}')
         errors += 1
 
@@ -87,6 +87,11 @@ def validate_meta(skill_dir: Path) -> int:
     for nullable_key in ['derived_from', 'replaces']:
         if nullable_key in meta and meta[nullable_key] is not None and not isinstance(meta[nullable_key], str):
             fail(f'{skill_dir}: {nullable_key} must be null or string')
+            errors += 1
+
+    for string_key in ['snapshot_of', 'snapshot_created_at', 'snapshot_label']:
+        if string_key in meta and not isinstance(meta[string_key], str):
+            fail(f'{skill_dir}: {string_key} must be a string when present')
             errors += 1
 
     requires = meta.get('requires', {})
