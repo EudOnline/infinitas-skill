@@ -91,22 +91,77 @@ elif ref:
 print(summary)
 PY
 
-"$ROOT/scripts/check-skill.sh" "$SRC" >/dev/null
-"$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR" >/dev/null 2>&1 || { echo "sync target failed dependency/conflict checks" >&2; "$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR"; exit 1; }
-
-if [[ -n "$LOCKED_VERSION" && "$LOCKED_VERSION" != "$SRC_VERSION" ]]; then
-  echo "installed skill is version-locked to $LOCKED_VERSION; resolved source version is $SRC_VERSION" >&2
-  echo "refusing to sync without updating the lock policy" >&2
-  exit 1
-fi
-
 if [[ $FORCE -ne 1 ]]; then
   echo "source version: $SRC_VERSION ($SRC_STAGE)"
   echo "installed version: $INSTALLED_VERSION ($SOURCE_STAGE)"
   echo "source registry: $SOURCE_REGISTRY"
 fi
 
-rm -rf "$DEST"
-cp -R "$SRC" "$DEST"
-python3 "$ROOT/scripts/update-install-manifest.py" "$TARGET_DIR" "$SRC" "$DEST" sync "${LOCKED_VERSION:-$SRC_VERSION}" "$INFO_JSON" >/dev/null
-echo "synced: $DEST <- $SRC"
+PLAN_JSON="$(python3 "$ROOT/scripts/resolve-install-plan.py" --skill-dir "$SRC" --target-dir "$TARGET_DIR" --source-registry "$SOURCE_REGISTRY" --source-json "$INFO_JSON" --mode sync --json)"
+
+python3 - <<'PY' "$PLAN_JSON"
+import json, sys
+plan = json.loads(sys.argv[1])
+root = plan.get('root') or {}
+print(f"resolution plan: {root.get('name')}@{root.get('version')} from {root.get('registry')}")
+for step in plan.get('steps', []):
+    head = f"- [{step.get('action')}] {step.get('name')}@{step.get('version')} ({step.get('stage')}) from {step.get('registry')}"
+    if step.get('source_commit'):
+        head += f" @{step.get('source_commit')[:12]}"
+    elif step.get('source_tag'):
+        head += f" tag={step.get('source_tag')}"
+    elif step.get('source_ref'):
+        head += f" ref={step.get('source_ref')}"
+    print(head)
+    for requester in step.get('requested_by', []):
+        registry = f" [{requester.get('registry')}]" if requester.get('registry') else ''
+        incubating = ' +incubating' if requester.get('allow_incubating') else ''
+        print(f"    requested by {requester.get('by')}@{requester.get('version')} -> {requester.get('constraint')}{registry}{incubating}")
+PY
+
+APPLIED=0
+while IFS=$'\t' read -r STEP_ORDER STEP_NAME STEP_VERSION STEP_REGISTRY STEP_STAGE STEP_ACTION STEP_PATH STEP_ROOT STEP_NEEDS; do
+  [[ -n "$STEP_NAME" ]] || continue
+  [[ "$STEP_NEEDS" == "1" ]] || continue
+  STEP_DEST="$TARGET_DIR/$STEP_NAME"
+  "$ROOT/scripts/check-skill.sh" "$STEP_PATH" >/dev/null
+  RESOLVE_ARGS=("$STEP_NAME" --version "$STEP_VERSION" --registry "$STEP_REGISTRY" --json)
+  if [[ "$STEP_STAGE" == "incubating" ]]; then
+    RESOLVE_ARGS+=(--allow-incubating)
+  fi
+  STEP_INFO_JSON="$(python3 "$ROOT/scripts/resolve-skill-source.py" "${RESOLVE_ARGS[@]}")"
+  if [[ -e "$STEP_DEST" ]]; then
+    rm -rf "$STEP_DEST"
+  fi
+  cp -R "$STEP_PATH" "$STEP_DEST"
+  STEP_PLAN_JSON=""
+  if [[ "$STEP_ROOT" == "1" ]]; then
+    STEP_PLAN_JSON="$PLAN_JSON"
+  fi
+  python3 "$ROOT/scripts/update-install-manifest.py" "$TARGET_DIR" "$STEP_PATH" "$STEP_DEST" "$STEP_ACTION" "$STEP_VERSION" "$STEP_INFO_JSON" "$STEP_PLAN_JSON" >/dev/null
+  APPLIED=1
+done < <(python3 - <<'PY' "$PLAN_JSON"
+import json, sys
+plan = json.loads(sys.argv[1])
+for step in plan.get('steps', []):
+    print('\t'.join([
+        str(step.get('order') or ''),
+        step.get('name') or '',
+        step.get('version') or '',
+        step.get('registry') or '',
+        step.get('stage') or '',
+        step.get('action') or '',
+        step.get('path') or '',
+        '1' if step.get('root') else '0',
+        '1' if step.get('needs_apply') else '0',
+    ]))
+PY
+)
+
+python3 "$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR" --source-registry "$SOURCE_REGISTRY" --source-json "$INFO_JSON" --mode sync >/dev/null
+
+if [[ $APPLIED -eq 0 ]]; then
+  echo "already up to date: $DEST"
+else
+  echo "synced plan applied: $NAME -> $TARGET_DIR"
+fi

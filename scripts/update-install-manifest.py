@@ -5,8 +5,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-if len(sys.argv) != 7:
-    print('usage: scripts/update-install-manifest.py <target-dir> <source-dir> <dest-dir> <action> <locked-version> <resolved-source-json>', file=sys.stderr)
+if len(sys.argv) not in {7, 8}:
+    print('usage: scripts/update-install-manifest.py <target-dir> <source-dir> <dest-dir> <action> <locked-version> <resolved-source-json> [resolution-plan-json]', file=sys.stderr)
     raise SystemExit(1)
 
 target_dir = Path(sys.argv[1]).resolve()
@@ -15,6 +15,7 @@ dest_dir = Path(sys.argv[3]).resolve()
 action = sys.argv[4]
 locked_version = sys.argv[5]
 source_info = json.loads(sys.argv[6]) if sys.argv[6] else {}
+resolution_plan = json.loads(sys.argv[7]) if len(sys.argv) == 8 and sys.argv[7] else None
 manifest_path = target_dir / '.infinitas-skill-install-manifest.json'
 meta_path = dest_dir / '_meta.json'
 source_meta_path = source_dir / '_meta.json'
@@ -49,7 +50,7 @@ if previous:
     hist.append(previous)
     manifest['history'][name] = hist[-25:]
 
-manifest['skills'][name] = {
+manifest_entry = {
     'name': name,
     'version': meta.get('version'),
     'locked_version': locked_version or meta.get('version'),
@@ -77,5 +78,8 @@ manifest['skills'][name] = {
     'action': action,
     'updated_at': manifest['updated_at'],
 }
+if resolution_plan is not None:
+    manifest_entry['resolution_plan'] = resolution_plan
+manifest['skills'][name] = manifest_entry
 manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 print(f'updated manifest: {manifest_path}')

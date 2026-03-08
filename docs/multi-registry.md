@@ -108,6 +108,19 @@ For tracked or pinned remote registries, sync now:
 
 Install and sync manifests persist the same identity so `scripts/list-installed.sh` can show where a skill came from with its registry plus exact commit/tag.
 
+## Dependency resolution rules
+
+Dependency planning now follows a deterministic registry-aware order:
+
+1. An explicit dependency `registry` hint is authoritative.
+2. Otherwise, the planner prefers the same registry that supplied the requesting skill.
+3. Remaining registries are considered by configured `priority` and then by name.
+4. An already-installed dependency is kept when it still satisfies every constraint and does not violate an explicit registry hint.
+5. `archived` candidates are only considered for exact version requests, while `incubating` candidates require `allow_incubating: true`.
+6. If the final plan would violate an installed dependency lock or leave an unresolved conflict, install/sync fails before mutating the target directory.
+
+`scripts/resolve-install-plan.py` exposes the same planner that `install-skill.sh`, `sync-skill.sh`, `check-install-target.py`, and `check-registry-integrity.py` now use.
+
 ## Catalog output
 
 `catalog/registries.json` now exports each configured registry together with:

@@ -5,12 +5,16 @@ import re
 import sys
 from pathlib import Path
 
+from dependency_lib import DependencyError, normalize_meta_dependencies
+from registry_source_lib import load_registry_config
+
 ROOT = Path(__file__).resolve().parent.parent
 NAME_RE = re.compile(r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
 SEMVER_RE = re.compile(r'^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9_.-]+)?$')
 ALLOWED_STATUS = {'incubating', 'active', 'archived'}
 ALLOWED_REVIEW = {'draft', 'under-review', 'approved', 'rejected'}
 ALLOWED_RISK = {'low', 'medium', 'high'}
+KNOWN_REGISTRIES = {reg.get('name') for reg in load_registry_config(ROOT).get('registries', []) if reg.get('name')}
 
 
 def fail(msg: str):
@@ -79,10 +83,24 @@ def validate_meta(skill_dir: Path) -> int:
         fail(f'{skill_dir}: invalid risk_level {risk!r}')
         errors += 1
 
-    for list_key in ['maintainers', 'tags', 'agent_compatible', 'depends_on', 'conflicts_with']:
+    for list_key in ['maintainers', 'tags', 'agent_compatible']:
         if list_key in meta and not (isinstance(meta[list_key], list) and all(isinstance(x, str) for x in meta[list_key])):
             fail(f'{skill_dir}: {list_key} must be an array of strings')
             errors += 1
+
+    try:
+        normalized_dependencies = normalize_meta_dependencies(meta)
+    except DependencyError as exc:
+        fail(f'{skill_dir}: {exc.message}')
+        errors += 1
+        normalized_dependencies = {'depends_on': [], 'conflicts_with': []}
+
+    for field, entries in normalized_dependencies.items():
+        for entry in entries:
+            registry = entry.get('registry')
+            if registry and registry not in KNOWN_REGISTRIES:
+                fail(f'{skill_dir}: {field} entry for {entry.get("name")} references unknown registry {registry!r}')
+                errors += 1
 
     for nullable_key in ['derived_from', 'replaces']:
         if nullable_key in meta and meta[nullable_key] is not None and not isinstance(meta[nullable_key], str):

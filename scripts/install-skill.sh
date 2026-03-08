@@ -18,12 +18,6 @@ LOCK_VERSION=""
 REGISTRY=""
 AUTO_DEPS=1
 POSITIONAL=()
-STACK=",${INFINITAS_SKILL_INSTALL_STACK:-},"
-if [[ "$STACK" == *",$NAME,"* ]]; then
-  echo "detected dependency cycle while installing $NAME" >&2
-  exit 1
-fi
-export INFINITAS_SKILL_INSTALL_STACK="${INFINITAS_SKILL_INSTALL_STACK:+$INFINITAS_SKILL_INSTALL_STACK,}$NAME"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -102,57 +96,111 @@ elif ref:
 print(summary)
 PY
 
-"$ROOT/scripts/check-skill.sh" "$SRC" >/dev/null
 mkdir -p "$TARGET_DIR"
+PLAN_JSON="$(python3 "$ROOT/scripts/resolve-install-plan.py" --skill-dir "$SRC" --target-dir "$TARGET_DIR" --source-registry "$RESOLVED_REGISTRY" --source-json "$INFO_JSON" --mode install --json)"
 
-if [[ $AUTO_DEPS -eq 1 ]]; then
-  while IFS= read -r ref; do
-    [[ -n "$ref" ]] || continue
-    DEP_NAME="${ref%@*}"
-    DEP_VERSION=""
-    if [[ "$ref" == *"@"* ]]; then
-      DEP_VERSION="${ref#*@}"
-    fi
-    if python3 - "$TARGET_DIR" "$DEP_NAME" "$DEP_VERSION" <<'PY'
+python3 - <<'PY' "$PLAN_JSON"
 import json, sys
-from pathlib import Path
-target, dep_name, dep_version = sys.argv[1:4]
-manifest = Path(target) / '.infinitas-skill-install-manifest.json'
-installed = {}
-if manifest.exists():
-    installed = json.loads(manifest.read_text(encoding='utf-8')).get('skills', {}) or {}
-item = installed.get(dep_name)
-if not item:
-    raise SystemExit(1)
-if dep_version and item.get('version') != dep_version and item.get('locked_version') != dep_version:
-    raise SystemExit(1)
+plan = json.loads(sys.argv[1])
+root = plan.get('root') or {}
+print(f"resolution plan: {root.get('name')}@{root.get('version')} from {root.get('registry')}")
+for step in plan.get('steps', []):
+    head = f"- [{step.get('action')}] {step.get('name')}@{step.get('version')} ({step.get('stage')}) from {step.get('registry')}"
+    if step.get('source_commit'):
+        head += f" @{step.get('source_commit')[:12]}"
+    elif step.get('source_tag'):
+        head += f" tag={step.get('source_tag')}"
+    elif step.get('source_ref'):
+        head += f" ref={step.get('source_ref')}"
+    print(head)
+    for requester in step.get('requested_by', []):
+        registry = f" [{requester.get('registry')}]" if requester.get('registry') else ''
+        incubating = ' +incubating' if requester.get('allow_incubating') else ''
+        print(f"    requested by {requester.get('by')}@{requester.get('version')} -> {requester.get('constraint')}{registry}{incubating}")
 PY
-    then
-      continue
-    fi
-    CMD=("$0" "$DEP_NAME" "$TARGET_DIR")
-    [[ -n "$DEP_VERSION" ]] && CMD+=(--version "$DEP_VERSION")
-    CMD+=(--registry "$RESOLVED_REGISTRY")
-    [[ $FORCE -eq 1 ]] && CMD+=(--force)
-    "${CMD[@]}"
-  done < <(python3 - "$SRC/_meta.json" <<'PY'
-import json, sys
-with open(sys.argv[1], 'r', encoding='utf-8') as f:
-    meta = json.load(f)
-for ref in meta.get('depends_on', []) or []:
-    print(ref)
-PY
-)
-fi
 
-"$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR" >/dev/null 2>&1 || { echo "install target failed dependency/conflict checks" >&2; "$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR"; exit 1; }
-if [[ -e "$DEST" ]]; then
-  if [[ $FORCE -ne 1 ]]; then
-    echo "target already exists: $DEST (use --force to overwrite)" >&2
+if [[ $AUTO_DEPS -eq 0 ]]; then
+  if python3 - <<'PY' "$PLAN_JSON"
+import json, sys
+plan = json.loads(sys.argv[1])
+for step in plan.get('steps', []):
+    if step.get('root'):
+        continue
+    if step.get('needs_apply'):
+        raise SystemExit(1)
+PY
+  then
+    :
+  else
+    echo "dependency plan requires installing or upgrading dependencies; rerun without --no-deps" >&2
     exit 1
   fi
-  rm -rf "$DEST"
 fi
-cp -R "$SRC" "$DEST"
-python3 "$ROOT/scripts/update-install-manifest.py" "$TARGET_DIR" "$SRC" "$DEST" install "${LOCK_VERSION:-$RESOLVED_VERSION}" "$INFO_JSON" >/dev/null
-echo "installed: $DEST <- $SRC"
+
+ROOT_ACTION="$(python3 - <<'PY' "$PLAN_JSON" "$NAME"
+import json, sys
+plan = json.loads(sys.argv[1])
+name = sys.argv[2]
+for step in plan.get('steps', []):
+    if step.get('name') == name and step.get('root'):
+        print(step.get('action') or '')
+        break
+PY
+)"
+if [[ -e "$DEST" && "$ROOT_ACTION" != "keep" && $FORCE -ne 1 ]]; then
+  echo "target already exists: $DEST (use --force to overwrite)" >&2
+  exit 1
+fi
+
+APPLIED=0
+while IFS=$'\t' read -r STEP_ORDER STEP_NAME STEP_VERSION STEP_REGISTRY STEP_STAGE STEP_ACTION STEP_PATH STEP_ROOT STEP_NEEDS; do
+  [[ -n "$STEP_NAME" ]] || continue
+  [[ "$STEP_NEEDS" == "1" ]] || continue
+  STEP_DEST="$TARGET_DIR/$STEP_NAME"
+  if [[ "$STEP_ROOT" == "1" && -e "$STEP_DEST" && $FORCE -ne 1 ]]; then
+    echo "target already exists: $STEP_DEST (use --force to overwrite)" >&2
+    exit 1
+  fi
+  "$ROOT/scripts/check-skill.sh" "$STEP_PATH" >/dev/null
+  RESOLVE_ARGS=("$STEP_NAME" --version "$STEP_VERSION" --registry "$STEP_REGISTRY" --json)
+  if [[ "$STEP_STAGE" == "incubating" ]]; then
+    RESOLVE_ARGS+=(--allow-incubating)
+  fi
+  STEP_INFO_JSON="$(python3 "$ROOT/scripts/resolve-skill-source.py" "${RESOLVE_ARGS[@]}")"
+  if [[ -e "$STEP_DEST" ]]; then
+    rm -rf "$STEP_DEST"
+  fi
+  cp -R "$STEP_PATH" "$STEP_DEST"
+  STEP_LOCK_VERSION="$STEP_VERSION"
+  STEP_PLAN_JSON=""
+  if [[ "$STEP_ROOT" == "1" ]]; then
+    STEP_LOCK_VERSION="${LOCK_VERSION:-$RESOLVED_VERSION}"
+    STEP_PLAN_JSON="$PLAN_JSON"
+  fi
+  python3 "$ROOT/scripts/update-install-manifest.py" "$TARGET_DIR" "$STEP_PATH" "$STEP_DEST" "$STEP_ACTION" "$STEP_LOCK_VERSION" "$STEP_INFO_JSON" "$STEP_PLAN_JSON" >/dev/null
+  APPLIED=1
+done < <(python3 - <<'PY' "$PLAN_JSON"
+import json, sys
+plan = json.loads(sys.argv[1])
+for step in plan.get('steps', []):
+    print('\t'.join([
+        str(step.get('order') or ''),
+        step.get('name') or '',
+        step.get('version') or '',
+        step.get('registry') or '',
+        step.get('stage') or '',
+        step.get('action') or '',
+        step.get('path') or '',
+        '1' if step.get('root') else '0',
+        '1' if step.get('needs_apply') else '0',
+    ]))
+PY
+)
+
+python3 "$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR" --source-registry "$RESOLVED_REGISTRY" --source-json "$INFO_JSON" --mode install >/dev/null
+
+if [[ $APPLIED -eq 0 ]]; then
+  echo "already satisfied: $DEST"
+else
+  echo "installed plan applied: $NAME -> $TARGET_DIR"
+fi

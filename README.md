@@ -53,6 +53,7 @@ scripts/
 ├─ switch-installed-skill.sh switch an installed copy to active or a historical version
 ├─ rollback-installed-skill.sh rollback using manifest history
 ├─ resolve-skill-source.py resolve active vs archived skill sources
+├─ resolve-install-plan.py preflight deterministic dependency resolution plans
 ├─ list-registry-sources.py list configured registry sources
 ├─ check-registry-sources.py validate multi-registry source config
 ├─ sync-registry-source.sh sync one configured git registry into cache
@@ -101,6 +102,9 @@ scripts/bump-skill-version.sh my-skill patch --note "Refined the workflow"
 scripts/request-review.sh my-skill --note "Ready for active"
 scripts/approve-skill.sh my-skill --reviewer lvxiaoer --decision approved --note "Looks good"
 scripts/promote-skill.sh my-skill
+
+# Preview or apply the deterministic dependency plan for an install
+scripts/resolve-install-plan.py --skill-dir skills/active/my-skill --target-dir ~/.openclaw/skills
 
 # Install a stable skill into an OpenClaw-managed local skills dir and lock it to the current version
 scripts/install-skill.sh my-skill ~/.openclaw/skills --version 0.2.0
@@ -166,8 +170,9 @@ and commit the updated `catalog/*.json`.
 - **Installed copies can switch or roll back**. Manifest history now supports controlled source switching and version rollback.
 - **Compatibility is exported**. Consumers can read a generated compatibility matrix instead of scraping every `_meta.json`.
 - **Registry sources are policy-driven**. Source registries now declare trust, allowed hosts/refs, pinning, and update behavior in config.
-- **Dependencies and conflicts are first-class**. Skills can declare `depends_on` and `conflicts_with`, and installs are checked against them.
-- **Dependency installs can cascade**. Install now supports automatic recursive dependency installation with a simple cycle guard.
+- **Dependencies and conflicts are first-class**. Skills can declare exact or ranged constraints plus optional registry hints in `depends_on` / `conflicts_with`.
+- **Install and sync are plan-driven**. Both commands now print a deterministic dependency plan before mutating the target directory.
+- **Unsafe upgrades fail early**. Dependency locks, reverse conflicts, and unresolved cross-registry requests are rejected before files are copied.
 - **Promotion is policy-driven**. Active skills now pass a dedicated promotion policy check instead of relying only on ad-hoc conventions.
 - **Reviewer approvals are tracked**. Promotion policy can require explicit approvals from reviewers distinct from the owner.
 - **Releases can emit signed provenance**. Release tooling can write machine-readable provenance records and sign/verify them.

@@ -15,9 +15,9 @@ Requirements committed for milestone `v9`. Each requirement maps to exactly one 
 
 ### Dependency Resolution
 
-- [ ] **DEP-01**: Maintainer can declare dependency version constraints and source hints for a skill in a machine-validated format.
-- [ ] **DEP-02**: Validation detects unresolved dependency conflicts, incompatible version requests, and unsafe upgrade plans before promotion or install.
-- [ ] **DEP-03**: Install or sync operations produce a deterministic dependency resolution plan or fail with actionable conflict details.
+- [x] **DEP-01**: Maintainer can declare dependency version constraints and source hints for a skill in a machine-validated format.
+- [x] **DEP-02**: Validation detects unresolved dependency conflicts, incompatible version requests, and unsafe upgrade plans before promotion or install.
+- [x] **DEP-03**: Install or sync operations produce a deterministic dependency resolution plan or fail with actionable conflict details.
 
 ### Review Governance
 
@@ -64,9 +64,9 @@ Requirements committed for milestone `v9`. Each requirement maps to exactly one 
 | REG-01 | Phase 1 | Complete |
 | REG-02 | Phase 1 | Complete |
 | REG-03 | Phase 1 | Complete |
-| DEP-01 | Phase 2 | Pending |
-| DEP-02 | Phase 2 | Pending |
-| DEP-03 | Phase 2 | Pending |
+| DEP-01 | Phase 2 | Complete |
+| DEP-02 | Phase 2 | Complete |
+| DEP-03 | Phase 2 | Complete |
 | REV-01 | Phase 3 | Pending |
 | REV-02 | Phase 3 | Pending |
 | REV-03 | Phase 3 | Pending |
@@ -81,4 +81,4 @@ Requirements committed for milestone `v9`. Each requirement maps to exactly one 
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-08 after Phase 1 implementation*
+*Last updated: 2026-03-08 after Phase 2 implementation*

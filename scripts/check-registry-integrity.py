@@ -1,90 +1,100 @@
 #!/usr/bin/env python3
 import json
-import re
 import sys
 from pathlib import Path
 
+from dependency_lib import DependencyError, constraint_display, normalize_meta_dependencies, plan_from_skill_dir
+from registry_source_lib import load_registry_config
+
 ROOT = Path(__file__).resolve().parent.parent
-REF_RE = re.compile(r'^[a-z0-9]+(?:-[a-z0-9]+)*(?:@\d+\.\d+\.\d+(?:[-+][A-Za-z0-9_.-]+)?)?$')
+DEFAULT_REGISTRY = load_registry_config(ROOT).get('default_registry') or 'self'
 
 
 def load_skills():
     items = []
     for stage in ['incubating', 'active', 'archived', 'templates']:
-        base = ROOT / ('skills' if stage != 'templates' else 'templates') / ('' if stage == 'templates' else stage)
-        if stage == 'templates':
-            base = ROOT / 'templates'
+        base = ROOT / 'templates' if stage == 'templates' else ROOT / 'skills' / stage
         if not base.exists():
             continue
-        for d in sorted(p for p in base.iterdir() if p.is_dir() and (p / '_meta.json').exists()):
-            meta = json.loads((d / '_meta.json').read_text(encoding='utf-8'))
-            items.append((stage, d, meta))
+        for skill_dir in sorted(path for path in base.iterdir() if path.is_dir() and (path / '_meta.json').exists()):
+            meta = json.loads((skill_dir / '_meta.json').read_text(encoding='utf-8'))
+            items.append((stage, skill_dir, meta))
     return items
 
 
-def ref_matches(ref, name, version):
-    if '@' in ref:
-        rn, rv = ref.split('@', 1)
-        return rn == name and rv == version
-    return ref == name
+def matches_entry(entry, name, version):
+    if entry.get('name') != name:
+        return False
+    expected = entry.get('version') or '*'
+    if expected == '*':
+        return True
+    return expected == f'={version}' or expected == version
+
+
+def print_dependency_error(prefix, exc):
+    print(f'FAIL: {prefix}: {exc.message}', file=sys.stderr)
+    details = exc.details or {}
+    reason = details.get('reason')
+    if reason:
+        print(f'  reason: {reason}', file=sys.stderr)
+    constraints = details.get('constraints') or []
+    if constraints:
+        print('  constraints:', file=sys.stderr)
+        for entry in constraints:
+            source = f" <= {entry.get('source_name')}@{entry.get('source_version')}" if entry.get('source_name') else ''
+            print(f"    - {constraint_display(entry)}{source}", file=sys.stderr)
+    available = details.get('available') or []
+    if available:
+        print('  available:', file=sys.stderr)
+        for item in available:
+            print(
+                f"    - {item.get('name')}@{item.get('version')} from {item.get('registry')} ({item.get('stage')})",
+                file=sys.stderr,
+            )
 
 
 def main():
     items = load_skills()
     errors = 0
-    names = {(meta.get('name'), meta.get('version'), stage, str(d)): meta for stage, d, meta in items}
-    all_refs = []
+    warnings = 0
+    normalized = {}
     active_installable = []
-    for stage, d, meta in items:
-        for field in ['depends_on', 'conflicts_with']:
-            vals = meta.get(field, [])
-            if vals is None:
-                continue
-            if not isinstance(vals, list) or not all(isinstance(x, str) for x in vals):
-                print(f'FAIL: {d}: {field} must be an array of strings', file=sys.stderr)
-                errors += 1
-                continue
-            for ref in vals:
-                if not REF_RE.match(ref):
-                    print(f'FAIL: {d}: invalid {field} ref {ref!r}', file=sys.stderr)
-                    errors += 1
-                all_refs.append((field, ref, stage, d, meta))
-        if stage == 'active' and meta.get('distribution', {}).get('installable', True):
-            active_installable.append((d, meta))
 
-    for field, ref, stage, d, meta in all_refs:
-        if ref == meta.get('name') or ref == f"{meta.get('name')}@{meta.get('version')}":
-            print(f'FAIL: {d}: {field} cannot reference itself ({ref})', file=sys.stderr)
+    for stage, skill_dir, meta in items:
+        try:
+            entry = normalize_meta_dependencies(meta)
+        except DependencyError as exc:
+            print_dependency_error(str(skill_dir), exc)
             errors += 1
             continue
-        if stage == 'active' and field == 'depends_on':
-            matched = False
-            for other_stage, other_dir, other_meta in items:
-                if other_stage not in {'active', 'archived'}:
-                    continue
-                if ref_matches(ref, other_meta.get('name'), other_meta.get('version')):
-                    matched = True
-                    break
-                if other_meta.get('snapshot_of') == ref:
-                    matched = True
-                    break
-            if not matched:
-                print(f'FAIL: {d}: unresolved active dependency {ref}', file=sys.stderr)
-                errors += 1
+        normalized[str(skill_dir)] = entry
+        if stage == 'active' and meta.get('distribution', {}).get('installable', True):
+            active_installable.append((skill_dir, meta, entry))
 
-    # detect active/installable conflict pairs
-    active_names = {meta.get('name'): (d, meta) for d, meta in active_installable}
-    for d, meta in active_installable:
-        for ref in meta.get('conflicts_with', []) or []:
-            name = ref.split('@', 1)[0]
-            if name in active_names:
-                other_d, other_meta = active_names[name]
-                print(f'WARN: {meta.get("name")} conflicts with active skill {other_meta.get("name")} ({other_d})', file=sys.stderr)
+    active_names = {meta.get('name'): (skill_dir, meta, entry) for skill_dir, meta, entry in active_installable}
+    for skill_dir, meta, entry in active_installable:
+        for conflict in entry.get('conflicts_with', []):
+            other = active_names.get(conflict.get('name'))
+            if not other or other[1].get('name') == meta.get('name'):
+                continue
+            if matches_entry(conflict, other[1].get('name'), other[1].get('version')):
+                warnings += 1
+                print(
+                    f'WARN: {meta.get("name")} conflicts with active skill {other[1].get("name")} ({other[0]})',
+                    file=sys.stderr,
+                )
+
+    for skill_dir, meta, _entry in active_installable:
+        try:
+            plan_from_skill_dir(skill_dir, source_registry=DEFAULT_REGISTRY, mode='install')
+        except DependencyError as exc:
+            print_dependency_error(str(skill_dir), exc)
+            errors += 1
 
     if errors:
-        print(f'Integrity check failed with {errors} error(s).', file=sys.stderr)
+        print(f'Integrity check failed with {errors} error(s) and {warnings} warning(s).', file=sys.stderr)
         return 1
-    print(f'OK: registry integrity checked across {len(items)} skill directories')
+    print(f'OK: registry integrity checked across {len(items)} skill directories ({warnings} warning(s))')
     return 0
 
 

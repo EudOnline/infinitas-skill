@@ -4,6 +4,37 @@
   "title": "infinitas-skill _meta.json",
   "type": "object",
   "additionalProperties": true,
+  "$defs": {
+    "dependencyRef": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:@\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9_.-]+)?)?$"
+    },
+    "dependencyConstraint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(\\*|[<>=~^0-9][0-9A-Za-z.+\\-<>=~^, ]*)$"
+        },
+        "registry": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allow_incubating": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
   "required": [
     "name",
     "version",
@@ -155,13 +186,27 @@
     "depends_on": {
       "type": "array",
       "items": {
-        "type": "string"
+        "oneOf": [
+          {
+            "$ref": "#/$defs/dependencyRef"
+          },
+          {
+            "$ref": "#/$defs/dependencyConstraint"
+          }
+        ]
       }
     },
     "conflicts_with": {
       "type": "array",
       "items": {
-        "type": "string"
+        "oneOf": [
+          {
+            "$ref": "#/$defs/dependencyRef"
+          },
+          {
+            "$ref": "#/$defs/dependencyConstraint"
+          }
+        ]
       }
     }
   }

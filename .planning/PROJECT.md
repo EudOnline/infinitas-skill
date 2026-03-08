@@ -31,7 +31,7 @@ Maintainers can publish and distribute private skills with deterministic, audita
 ### Active
 
 - [ ] Registry sync respects explicit remote fetch/update policy, trust enforcement, and immutable source selection.
-- [ ] Dependency upgrade planning can detect and reject cross-source or cross-version conflicts deterministically.
+- ✓ Dependency upgrade planning can detect and reject cross-source or cross-version conflicts deterministically.
 - [ ] Promotion depends on computed reviewer-group quorum instead of mutable review metadata.
 - [ ] Releases require asymmetric signatures and verifiable attestation before distribution.
 
@@ -70,4 +70,4 @@ Maintainers can publish and distribute private skills with deterministic, audita
 | Treat computed quorum and asymmetric attestation as enforcement points, not documentation-only guidance | The highest-risk gaps are governance and authenticity paths that are currently optional or mutable | — Pending |
 
 ---
-*Last updated: 2026-03-08 after v9 milestone initialization*
+*Last updated: 2026-03-08 after Phase 2 implementation*

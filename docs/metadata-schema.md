@@ -32,8 +32,20 @@ Every registry-managed skill should include `_meta.json`.
   "maintainers": ["lvxiaoer"],
   "tags": ["github", "audit", "code-review"],
   "agent_compatible": ["openclaw", "claude-code", "codex"],
-  "depends_on": [],
-  "conflicts_with": [],
+  "depends_on": [
+    {
+      "name": "registry-core",
+      "version": ">=1.2.0 <2.0.0",
+      "registry": "self"
+    },
+    "snapshot-tools@0.4.0"
+  ],
+  "conflicts_with": [
+    {
+      "name": "legacy-registry-core",
+      "version": "<1.2.0"
+    }
+  ],
   "derived_from": null,
   "replaces": null,
   "visibility": "private",
@@ -68,8 +80,11 @@ Every registry-managed skill should include `_meta.json`.
 - Use the `name@version` form so lineage tools can diff against the intended ancestor
 - `tests.smoke`: path to the minimum realistic validation case
 - `distribution.installable`: whether install/sync scripts should expose the skill
-- `depends_on`: install-time dependency list such as `base-skill` or `base-skill@0.2.0`
-- `conflicts_with`: install-time conflict list using the same reference format
+- `depends_on`: install-time dependency list; use an object for machine-checked ranges and source hints, or keep the legacy `skill` / `skill@version` shorthand
+- `conflicts_with`: install-time conflict list using the same object-or-shorthand format
+- dependency objects support `name`, `version`, optional `registry`, and optional `allow_incubating`
+- version constraints support `*`, exact versions, comparator chains like `>=1.2.0 <2.0.0`, plus `^` and `~` shorthands
+- archived dependencies are only selected for exact version requests; incubating dependencies require `allow_incubating: true`
 
 ## MVP constraints
 
@@ -111,3 +126,5 @@ Target directories now maintain:
 - prior states under `history.<name>[]`
 
 That history is used by rollback tooling and is separate from the registry catalog itself.
+
+Root install/sync entries may also persist `resolution_plan`, which records the deterministic dependency plan that was applied for that action.

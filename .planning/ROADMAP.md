@@ -26,7 +26,7 @@ Plans:
 - [x] 01-02: Enforce safe sync semantics in registry fetch/update scripts
 - [x] 01-03: Export resolved source identity into resolver, install, and catalog metadata
 
-#### Phase 2: Dependency Upgrade Planning and Conflict Solver
+#### ✅ Phase 2: Dependency Upgrade Planning and Conflict Solver
 **Goal**: Make dependency upgrades deterministic by introducing machine-checked constraints, upgrade planning, and actionable conflict reporting across registry sources.
 **Depends on**: Phase 1
 **Requirements**: [DEP-01, DEP-02, DEP-03]
@@ -37,9 +37,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-01: Define dependency constraint format and registry-aware resolution rules
-- [ ] 02-02: Add upgrade planning plus conflict detection to integrity and install checks
-- [ ] 02-03: Wire deterministic resolution output into install/sync workflows and documentation
+- [x] 02-01: Define dependency constraint format and registry-aware resolution rules
+- [x] 02-02: Add upgrade planning plus conflict detection to integrity and install checks
+- [x] 02-03: Wire deterministic resolution output into install/sync workflows and documentation
 
 #### Phase 3: Reviewer Groups and Quorum Enforcement
 **Goal**: Replace mutable review summaries with policy-driven reviewer groups and computed quorum that promotion tooling can enforce.
@@ -90,7 +90,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1. Registry Source Policy and Safe Sync | v9 | 3/3 | Completed | 2026-03-08 |
-| 2. Dependency Upgrade Planning and Conflict Solver | v9 | 0/3 | Not started | - |
+| 2. Dependency Upgrade Planning and Conflict Solver | v9 | 3/3 | Completed | 2026-03-08 |
 | 3. Reviewer Groups and Quorum Enforcement | v9 | 0/3 | Not started | - |
 | 4. Signed Release Invariants | v9 | 0/2 | Not started | - |
 | 5. Asymmetric Attestation and Verification | v9 | 0/3 | Not started | - |

@@ -1,46 +1,75 @@
 #!/usr/bin/env python3
+import argparse
 import json
-import os
 import sys
-from pathlib import Path
 
-if len(sys.argv) != 3:
-    print('usage: scripts/check-install-target.py <skill-dir> <target-dir>', file=sys.stderr)
+from dependency_lib import DependencyError, error_to_payload, plan_from_skill_dir
+
+
+def print_error(exc):
+    payload = error_to_payload(exc)
+    print(f"FAIL: {payload.pop('error')}", file=sys.stderr)
+    reason = payload.pop('reason', None)
+    if reason:
+        print(f'  reason: {reason}', file=sys.stderr)
+    constraints = payload.pop('constraints', None)
+    if constraints:
+        print('  constraints:', file=sys.stderr)
+        for entry in constraints:
+            registry = f" [{entry.get('registry')}]" if entry.get('registry') else ''
+            source = f" <= {entry.get('source_name')}@{entry.get('source_version')}" if entry.get('source_name') else ''
+            incubating = ' +incubating' if entry.get('allow_incubating') else ''
+            print(f"    - {entry.get('name')}{registry} {entry.get('version')}{incubating}{source}", file=sys.stderr)
+    selected = payload.pop('selected', None)
+    if selected:
+        print(
+            f"  selected: {selected.get('name')}@{selected.get('version')} from {selected.get('registry')} ({selected.get('stage')})",
+            file=sys.stderr,
+        )
+    installed = payload.pop('installed', None)
+    if installed:
+        print(
+            f"  installed: {installed.get('name')}@{installed.get('version')} locked={installed.get('locked_version')} from {installed.get('registry')}",
+            file=sys.stderr,
+        )
+    conflict = payload.pop('conflict', None)
+    if conflict:
+        registry = f" [{conflict.get('registry')}]" if conflict.get('registry') else ''
+        print(f"  conflict: {conflict.get('name')}{registry} {conflict.get('version')}", file=sys.stderr)
+    available = payload.pop('available', None)
+    if available:
+        print('  available candidates:', file=sys.stderr)
+        for item in available:
+            print(
+                f"    - {item.get('name')}@{item.get('version')} from {item.get('registry')} ({item.get('stage')})",
+                file=sys.stderr,
+            )
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('skill_dir')
+parser.add_argument('target_dir')
+parser.add_argument('--source-registry')
+parser.add_argument('--source-json')
+parser.add_argument('--mode', choices=['install', 'sync'], default='install')
+parser.add_argument('--json', action='store_true')
+args = parser.parse_args()
+
+source_info = json.loads(args.source_json) if args.source_json else None
+try:
+    plan = plan_from_skill_dir(
+        args.skill_dir,
+        target_dir=args.target_dir,
+        source_registry=args.source_registry,
+        source_info=source_info,
+        mode=args.mode,
+    )
+except DependencyError as exc:
+    print_error(exc)
     raise SystemExit(1)
 
-skill_dir = Path(sys.argv[1]).resolve()
-target_dir = Path(sys.argv[2]).resolve()
-meta = json.loads((skill_dir / '_meta.json').read_text(encoding='utf-8'))
-manifest_path = target_dir / '.infinitas-skill-install-manifest.json'
-installed = {}
-if manifest_path.exists():
-    manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
-    installed = manifest.get('skills') or {}
+if args.json:
+    print(json.dumps(plan, ensure_ascii=False, indent=2))
 else:
-    for child in sorted(p for p in target_dir.iterdir() if p.is_dir() and (p / '_meta.json').exists()) if target_dir.exists() else []:
-        installed[child.name] = json.loads((child / '_meta.json').read_text(encoding='utf-8'))
-
-errors = 0
-for ref in meta.get('depends_on', []) or []:
-    name, _, version = ref.partition('@')
-    item = installed.get(name)
-    if not item:
-        print(f'FAIL: missing dependency in target: {ref}', file=sys.stderr)
-        errors += 1
-        continue
-    if version and (item.get('locked_version') or item.get('version')) != version and item.get('version') != version:
-        print(f'FAIL: dependency version mismatch for {ref}: installed {item.get("version")}', file=sys.stderr)
-        errors += 1
-
-for ref in meta.get('conflicts_with', []) or []:
-    name, _, version = ref.partition('@')
-    item = installed.get(name)
-    if not item:
-        continue
-    if not version or item.get('version') == version or item.get('locked_version') == version:
-        print(f'FAIL: conflicting installed skill present: {ref}', file=sys.stderr)
-        errors += 1
-
-if errors:
-    raise SystemExit(1)
-print(f'OK: install target check passed for {meta.get("name")}')
+    name = plan.get('root', {}).get('name')
+    print(f'OK: install target check passed for {name}')
