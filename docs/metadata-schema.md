@@ -63,6 +63,7 @@ Every registry-managed skill should include `_meta.json`.
 - `review_state`: `draft | under-review | approved | rejected`
 - `risk_level`: `low | medium | high`
 - `derived_from`: lineage string such as `repo-audit@0.1.0`
+- Use the `name@version` form so lineage tools can diff against the intended ancestor
 - `tests.smoke`: path to the minimum realistic validation case
 - `distribution.installable`: whether install/sync scripts should expose the skill
 
@@ -79,3 +80,11 @@ The canonical JSON Schema file for CI and editor integration lives at:
 - `schemas/skill-meta.schema.json`
 
 The current validation script is intentionally dependency-free, so it performs schema-equivalent checks in Python rather than requiring an external `jsonschema` package.
+
+## Install manifests
+
+Installed copies are tracked outside `_meta.json` in target directories via:
+
+- `.infinitas-skill-install-manifest.json`
+
+That manifest records which active skill version was installed or synced into a local runtime directory.

@@ -16,7 +16,7 @@ Each skill should usually follow this layout:
 skill-name/
 ├─ SKILL.md
 ├─ _meta.json            required for registry indexing
-├─ CHANGELOG.md          optional but recommended after first release
+├─ CHANGELOG.md          expected for registry-managed skills
 ├─ scripts/              executable helpers
 ├─ references/           docs to load as needed
 ├─ assets/               templates or output resources
@@ -64,3 +64,10 @@ Before moving a skill to `skills/active/`, check that:
 - scripts are named clearly and do one job well
 - `tests/smoke.md` exists
 - obvious secrets and private dumps are removed
+
+## Versioning and lineage
+
+- Keep `CHANGELOG.md` current when you change a skill's behavior or intended use.
+- Use semantic versioning in `_meta.json.version`.
+- Prefer `derived_from: "base-skill@x.y.z"` for skill evolution over silent overwrites.
+- If a skill meaningfully diverges, consider a new skill folder rather than hiding the divergence in-place.

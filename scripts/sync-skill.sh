@@ -23,6 +23,7 @@ DEST="$TARGET_DIR/$NAME"
 
 [[ -d "$SRC" ]] || { echo "missing active skill: $NAME" >&2; exit 1; }
 [[ -d "$DEST" ]] || { echo "skill is not installed yet: $DEST" >&2; exit 1; }
+"$ROOT/scripts/check-skill.sh" "$SRC" >/dev/null
 
 if [[ $FORCE -ne 1 ]]; then
   python3 - "$SRC" "$DEST" <<'PY'
@@ -38,4 +39,5 @@ fi
 
 rm -rf "$DEST"
 cp -R "$SRC" "$DEST"
+python3 "$ROOT/scripts/update-install-manifest.py" "$TARGET_DIR" "$SRC" "$DEST" sync >/dev/null
 echo "synced: $DEST"

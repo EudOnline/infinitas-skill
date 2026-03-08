@@ -10,6 +10,9 @@ fi
 [[ -d "$DIR" ]] || { echo "missing directory: $DIR" >&2; exit 1; }
 [[ -f "$DIR/SKILL.md" ]] || { echo "missing SKILL.md in $DIR" >&2; exit 1; }
 [[ -f "$DIR/_meta.json" ]] || { echo "missing _meta.json in $DIR" >&2; exit 1; }
+if [[ "$(basename "$(dirname "$DIR")")" != "templates" ]]; then
+  [[ -f "$DIR/CHANGELOG.md" ]] || { echo "missing CHANGELOG.md in $DIR" >&2; exit 1; }
+fi
 
 STATUS=0
 BASENAME="$(basename "$DIR")"

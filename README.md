@@ -26,6 +26,7 @@ docs/
 ├─ lifecycle.md          incubating → active → archived flow
 ├─ metadata-schema.md    required `_meta.json` fields
 ├─ release-checklist.md  pre-publish / pre-promote review list
+├─ release-strategy.md   version bump, changelog, and git tag guidance
 └─ trust-model.md        safety model for shared skill evolution
 
 scripts/
@@ -34,7 +35,10 @@ scripts/
 ├─ build-catalog.sh      regenerate catalog JSON files
 ├─ install-skill.sh      copy an active skill into a local skills dir
 ├─ sync-skill.sh         refresh an installed skill from the registry
+├─ list-installed.sh     inspect install manifest data for a target dir
 ├─ promote-skill.sh      move an approved incubating skill into active/
+├─ bump-skill-version.sh bump semver and seed changelog entries
+├─ lineage-diff.sh       diff a skill against its declared ancestor
 └─ diff-skill.sh         compare two skill folders or names
 
 skills/
@@ -63,11 +67,17 @@ scripts/build-catalog.sh
 # Run the full local validation suite
 scripts/check-all.sh
 
+# Bump a skill version and seed a changelog entry
+scripts/bump-skill-version.sh my-skill patch --note "Refined the workflow"
+
 # Promote a reviewed skill
 scripts/promote-skill.sh my-skill
 
 # Install a stable skill into an OpenClaw-managed local skills dir
 scripts/install-skill.sh my-skill ~/.openclaw/skills
+
+# View the install manifest for that target directory
+scripts/list-installed.sh ~/.openclaw/skills
 ```
 
 ## CI
@@ -95,6 +105,8 @@ and commit the updated `catalog/*.json`.
 - **Active is curated**. Only reviewed skills should be promoted here.
 - **Archived keeps history**. Don't delete lineage unless you mean it.
 - **`SKILL.md` is runtime-facing**. `_meta.json` is registry/governance-facing.
+- **`CHANGELOG.md` tracks skill evolution**. Use it with semantic version bumps and optional git tags.
+- **Install targets keep a manifest**. Local skill directories can now record what was installed, from where, and at which version.
 
 ## Safety rules
 

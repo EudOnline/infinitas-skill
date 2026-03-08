@@ -22,6 +22,7 @@ SRC="$ROOT/skills/active/$NAME"
 DEST="$TARGET_DIR/$NAME"
 
 [[ -d "$SRC" ]] || { echo "missing active skill: $NAME" >&2; exit 1; }
+"$ROOT/scripts/check-skill.sh" "$SRC" >/dev/null
 mkdir -p "$TARGET_DIR"
 if [[ -e "$DEST" ]]; then
   if [[ $FORCE -ne 1 ]]; then
@@ -31,4 +32,5 @@ if [[ -e "$DEST" ]]; then
   rm -rf "$DEST"
 fi
 cp -R "$SRC" "$DEST"
+python3 "$ROOT/scripts/update-install-manifest.py" "$TARGET_DIR" "$SRC" "$DEST" install >/dev/null
 echo "installed: $DEST"

@@ -51,3 +51,9 @@ Use `_meta.json.derived_from` to track lineage, for example:
 ```
 
 That keeps history auditable without adding a build-time merge system yet.
+
+## Version bump guidance
+
+When a skill changes meaningfully, bump `_meta.json.version` and add a `CHANGELOG.md` entry before promotion.
+
+Use `scripts/bump-skill-version.sh` for a quick semver bump with a seeded changelog block.
