@@ -31,10 +31,19 @@ for reg in registries or []:
         errors += 1
     else:
         seen.add(name)
-    for key in ['kind', 'url', 'trust']:
-        if not isinstance(reg.get(key), str) or not reg.get(key):
-            print(f'FAIL: registry {name!r} missing non-empty {key}', file=sys.stderr)
-            errors += 1
+    kind = reg.get('kind')
+    if kind not in {'git', 'local'}:
+        print(f'FAIL: registry {name!r} kind must be git or local', file=sys.stderr)
+        errors += 1
+    if not isinstance(reg.get('trust'), str) or not reg.get('trust'):
+        print(f'FAIL: registry {name!r} missing non-empty trust', file=sys.stderr)
+        errors += 1
+    if kind == 'git' and (not isinstance(reg.get('url'), str) or not reg.get('url')):
+        print(f'FAIL: git registry {name!r} missing non-empty url', file=sys.stderr)
+        errors += 1
+    if kind == 'local' and (not isinstance(reg.get('local_path'), str) or not reg.get('local_path')):
+        print(f'FAIL: local registry {name!r} missing non-empty local_path', file=sys.stderr)
+        errors += 1
     if 'enabled' in reg and not isinstance(reg.get('enabled'), bool):
         print(f'FAIL: registry {name!r} enabled must be boolean', file=sys.stderr)
         errors += 1

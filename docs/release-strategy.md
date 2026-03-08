@@ -107,3 +107,17 @@ scripts/release-skill.sh repo-audit --sign-tag
 ```
 
 which delegates to `git tag -s` and therefore depends on your local git signing setup.
+
+## SSH provenance signing
+
+In addition to HMAC signing, provenance can now be signed with SSH keys:
+
+```bash
+scripts/release-skill.sh repo-audit --write-provenance --ssh-sign-provenance --ssh-key ~/.ssh/id_ed25519
+```
+
+To verify, provide the signer identity and an allowed signers file:
+
+```bash
+scripts/release-skill.sh repo-audit --write-provenance --ssh-verify-provenance --signer registry-signer
+```

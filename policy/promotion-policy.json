@@ -1,18 +1,23 @@
 {
-  "version": 2,
+  "version": 3,
   "active_requires": {
     "review_state": ["approved"],
     "require_changelog": true,
     "require_smoke_test": true,
-    "require_owner": true,
+    "require_owner": true
+  },
+  "reviews": {
     "require_reviews_file": true,
-    "min_approvals": 1,
-    "reviewer_must_differ_from_owner": true
+    "default_min_approvals": 1,
+    "risk_overrides": {
+      "high": 2
+    },
+    "reviewer_must_differ_from_owner": true,
+    "block_on_rejection": true
   },
   "high_risk_active_requires": {
     "min_maintainers": 1,
-    "require_requires_block": true,
-    "min_approvals": 1
+    "require_requires_block": true
   },
   "dependency_rules": {
     "allow_name_only_refs": true,

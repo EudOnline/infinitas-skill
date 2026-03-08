@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import argparse
 import json
-import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -9,12 +8,16 @@ ROOT = Path(__file__).resolve().parent.parent
 
 def resolve_registry_root(reg):
     local_path = reg.get('local_path')
-    if not local_path:
-        return ROOT if reg.get('name') == 'self' else None
-    p = Path(local_path)
-    if not p.is_absolute():
-        p = (ROOT / p).resolve()
-    return p
+    if local_path:
+        p = Path(local_path)
+        if not p.is_absolute():
+            p = (ROOT / p).resolve()
+        return p
+    if reg.get('kind') == 'git':
+        return (ROOT / '.cache' / 'registries' / reg.get('name')).resolve()
+    if reg.get('name') == 'self':
+        return ROOT
+    return None
 
 
 def load_registry_config():
@@ -80,6 +83,12 @@ def sort_key(item):
     )
 
 
+def archived_snapshot_sort_key(item):
+    ts = item.get('snapshot_created_at') or ''
+    ts_num = int(ts.replace('T', '').replace('Z', '').replace('-', '').replace(':', '')) if ts else 0
+    return (-int(item.get('registry_priority', 0)), -ts_num, item['dir_name'])
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('name')
@@ -99,9 +108,8 @@ def main():
     if args.version:
         exact = [x for x in candidates if x.get('version') == args.version]
         archived_snapshots = [x for x in exact if x['stage'] == 'archived' and x.get('snapshot_of') == f"{args.name}@{args.version}"]
-        archived_snapshots.sort(key=lambda x: (-int(x.get('registry_priority', 0)), x.get('snapshot_created_at') or '', x['dir_name']), reverse=False)
         if archived_snapshots:
-            archived_snapshots.sort(key=lambda x: (-int(x.get('registry_priority', 0)), -(int(x.get('snapshot_created_at', '0').replace('T','').replace('Z','').replace('-','').replace(':','')) if x.get('snapshot_created_at') else 0), x['dir_name']))
+            archived_snapshots.sort(key=archived_snapshot_sort_key)
             resolved = archived_snapshots[0]
             reason = 'archived-exact-snapshot'
         elif exact:
@@ -117,8 +125,7 @@ def main():
 
     if resolved is None:
         suffix = f' from registry {args.registry}' if args.registry else ''
-        print(f'No matching skill source found for {args.name}{"@" + args.version if args.version else ""}{suffix}.', file=sys.stderr)
-        return 1
+        raise SystemExit(f'No matching skill source found for {args.name}{"@" + args.version if args.version else ""}{suffix}.')
 
     resolved = dict(resolved)
     resolved['resolution_reason'] = reason
@@ -126,8 +133,7 @@ def main():
         print(json.dumps(resolved, ensure_ascii=False, indent=2))
     else:
         print(resolved['path'])
-    return 0
 
 
 if __name__ == '__main__':
-    raise SystemExit(main())
+    main()

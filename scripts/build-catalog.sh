@@ -34,7 +34,13 @@ for stage in ['incubating', 'active', 'archived']:
         reviews_path = skill_dir / 'reviews.json'
         if reviews_path.exists():
             reviews = json.loads(reviews_path.read_text(encoding='utf-8'))
-            approval_count = len([e for e in (reviews.get('entries') or []) if e.get('decision') == 'approved'])
+            latest = {}
+            for e in (reviews.get('entries') or []):
+                reviewer = e.get('reviewer')
+                if reviewer:
+                    latest[reviewer] = e
+            approval_count = len([e for e in latest.values() if e.get('decision') == 'approved'])
+            rejection_count = len([e for e in latest.values() if e.get('decision') == 'rejected'])
         else:
             approval_count = 0
         agent_compatible = meta.get('agent_compatible', [])
@@ -55,6 +61,7 @@ for stage in ['incubating', 'active', 'archived']:
             'agent_compatible': agent_compatible,
             'installable': bool(meta.get('distribution', {}).get('installable', True)),
             'approval_count': approval_count,
+            'rejection_count': rejection_count if 'rejection_count' in locals() else 0,
             'path': str(skill_dir.relative_to(root)),
         }
         entries.append(entry)
@@ -83,10 +90,21 @@ compatibility = {
     'agents': {k: sorted(v, key=lambda x: (x['name'], x['version'] or '')) for k, v in sorted(compat_agents.items())},
 }
 registries = json.loads((root / 'config' / 'registry-sources.json').read_text(encoding='utf-8'))
+registries_export = []
+for reg in registries.get('registries', []):
+    item = dict(reg)
+    lp = item.get('local_path')
+    if lp:
+        item['resolved_root'] = str((root / lp).resolve()) if not Path(lp).is_absolute() else str(Path(lp).resolve())
+    elif item.get('kind') == 'git':
+        item['resolved_root'] = str((root / '.cache' / 'registries' / item.get('name')).resolve())
+    else:
+        item['resolved_root'] = None
+    registries_export.append(item)
 registries_view = {
     'generated_at': catalog['generated_at'],
     'default_registry': registries.get('default_registry'),
-    'registries': registries.get('registries', []),
+    'registries': registries_export,
 }
 
 def normalized(payload):

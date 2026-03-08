@@ -31,3 +31,14 @@ The current promotion policy can require:
 - reviewer identities distinct from the skill owner
 
 That lets promotion remain lightweight while still producing an auditable review trail.
+
+## Review quorum
+
+You can inspect whether a skill currently meets policy with:
+
+```bash
+scripts/review-status.py repo-audit
+scripts/review-status.py repo-audit --require-pass
+```
+
+The status command counts the latest decision per reviewer and applies the current policy quorum rules.

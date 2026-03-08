@@ -1,0 +1,6 @@
+{
+  "namespace": "infinitas-skill",
+  "allowed_signers": "config/allowed_signers",
+  "signature_ext": ".sshsig",
+  "note": "SSH signing settings for provenance bundles"
+}

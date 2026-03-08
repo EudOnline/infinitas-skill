@@ -55,12 +55,17 @@ scripts/
 ├─ resolve-skill-source.py resolve active vs archived skill sources
 ├─ list-registry-sources.py list configured registry sources
 ├─ check-registry-sources.py validate multi-registry source config
+├─ sync-registry-source.sh sync one configured git registry into cache
+├─ sync-all-registries.sh sync all enabled git registries
 ├─ check-registry-integrity.py validate dependency refs and graph integrity
 ├─ check-promotion-policy.py enforce active-skill promotion policy
 ├─ request-review.sh     mark a skill under review and log the request
+├─ review-status.py      summarize current approval quorum status
 ├─ approve-skill.sh      record reviewer approvals or rejections
 ├─ sign-provenance.py    sign provenance bundles with an HMAC key
 ├─ verify-provenance.py  verify signed provenance bundles
+├─ sign-provenance-ssh.sh sign provenance bundles with SSH keys
+├─ verify-provenance-ssh.sh verify SSH-signed provenance bundles
 └─ diff-skill.sh         compare two skill folders or names
 
 skills/
@@ -108,6 +113,8 @@ scripts/snapshot-active-skill.sh my-skill --label pre-refactor
 
 # Prepare a release summary and signed provenance (and optionally tag it)
 scripts/release-skill.sh my-skill --write-provenance --sign-provenance
+# or with SSH signing
+scripts/release-skill.sh my-skill --write-provenance --ssh-sign-provenance --ssh-key ~/.ssh/id_ed25519
 
 # Switch an installed copy to a different historical version
 scripts/switch-installed-skill.sh my-skill ~/.openclaw/skills --to-version 0.1.0 --force

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-08T04:19:33Z",
+  "generated_at": "2026-03-08T04:33:16Z",
   "default_registry": "self",
   "registries": [
     {
@@ -11,7 +11,8 @@
       "priority": 100,
       "enabled": true,
       "trust": "private",
-      "notes": "Primary private registry for local development and promotion"
+      "notes": "Primary private registry for local development and promotion",
+      "resolved_root": "/root/.openclaw/workspace/infinitas-skill"
     }
   ]
 }

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: scripts/release-skill.sh <skill-name-or-path> [--create-tag] [--sign-tag] [--push-tag] [--github-release] [--notes-out PATH] [--write-provenance] [--sign-provenance]" >&2
+  echo "usage: scripts/release-skill.sh <skill-name-or-path> [--create-tag] [--sign-tag] [--push-tag] [--github-release] [--notes-out PATH] [--write-provenance] [--sign-provenance] [--ssh-sign-provenance] [--ssh-verify-provenance] [--ssh-key PATH] [--signer IDENTITY]" >&2
 }
 
 if [[ $# -lt 1 ]]; then
@@ -20,6 +20,10 @@ GITHUB_RELEASE=0
 NOTES_OUT=""
 WRITE_PROVENANCE=0
 SIGN_PROVENANCE=0
+SSH_SIGN_PROVENANCE=0
+SSH_VERIFY_PROVENANCE=0
+SSH_KEY=""
+SIGNER=""
 
 resolve_skill() {
   local name="$1"
@@ -69,6 +73,23 @@ while [[ $# -gt 0 ]]; do
       SIGN_PROVENANCE=1
       WRITE_PROVENANCE=1
       shift
+      ;;
+    --ssh-sign-provenance)
+      SSH_SIGN_PROVENANCE=1
+      WRITE_PROVENANCE=1
+      shift
+      ;;
+    --ssh-verify-provenance)
+      SSH_VERIFY_PROVENANCE=1
+      shift
+      ;;
+    --ssh-key)
+      SSH_KEY="${2:-}"
+      shift 2
+      ;;
+    --signer)
+      SIGNER="${2:-}"
+      shift 2
       ;;
     *)
       echo "unknown argument: $1" >&2
@@ -166,6 +187,16 @@ if [[ $WRITE_PROVENANCE -eq 1 ]]; then
     python3 "$ROOT/scripts/sign-provenance.py" "$PROV" >/dev/null
     python3 "$ROOT/scripts/verify-provenance.py" "$PROV" >/dev/null
     echo "signed provenance: $PROV.sig.json"
+  fi
+  if [[ $SSH_SIGN_PROVENANCE -eq 1 ]]; then
+    [[ -n "$SSH_KEY" ]] || { echo "--ssh-key is required for --ssh-sign-provenance" >&2; exit 1; }
+    "$ROOT/scripts/sign-provenance-ssh.sh" "$PROV" --key "$SSH_KEY" >/dev/null
+    echo "ssh-signed provenance: $PROV.ssig"
+  fi
+  if [[ $SSH_VERIFY_PROVENANCE -eq 1 ]]; then
+    [[ -n "$SIGNER" ]] || { echo "--signer is required for --ssh-verify-provenance" >&2; exit 1; }
+    "$ROOT/scripts/verify-provenance-ssh.sh" "$PROV" --identity "$SIGNER" >/dev/null
+    echo "ssh-verified provenance: $PROV.ssig"
   fi
 fi
 

@@ -47,3 +47,14 @@ That means a future multi-source resolver can build on a stable config format ra
 4. stage preference (`active` before `archived` for default installs)
 
 That gives the repository a real multi-source resolution path rather than only a config placeholder.
+
+## Syncing git registries
+
+Use:
+
+```bash
+scripts/sync-registry-source.sh <name>
+scripts/sync-all-registries.sh
+```
+
+Git registries without a fixed `local_path` are cloned or fetched into `.cache/registries/<name>`.
