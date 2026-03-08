@@ -16,6 +16,7 @@ root = Path(os.environ['ROOT'])
 sys.path.insert(0, str(root / 'scripts'))
 
 from registry_source_lib import load_registry_config, registry_identity, resolve_registry_root  # noqa: E402
+from review_lib import ReviewPolicyError, evaluate_review_state  # noqa: E402
 
 
 def expected_skill_tag(name, version):
@@ -76,19 +77,12 @@ for stage in ['incubating', 'active', 'archived']:
             continue
         with open(meta_path, 'r', encoding='utf-8') as f:
             meta = json.load(f)
-        reviews_path = skill_dir / 'reviews.json'
-        if reviews_path.exists():
-            reviews = json.loads(reviews_path.read_text(encoding='utf-8'))
-            latest = {}
-            for entry in (reviews.get('entries') or []):
-                reviewer = entry.get('reviewer')
-                if reviewer:
-                    latest[reviewer] = entry
-            approval_count = len([entry for entry in latest.values() if entry.get('decision') == 'approved'])
-            rejection_count = len([entry for entry in latest.values() if entry.get('decision') == 'rejected'])
-        else:
-            approval_count = 0
-            rejection_count = 0
+        try:
+            review_status = evaluate_review_state(skill_dir, root=root)
+        except ReviewPolicyError as exc:
+            for error in exc.errors:
+                print(f'FAIL: {error}', file=sys.stderr)
+            raise SystemExit(1)
         agent_compatible = meta.get('agent_compatible', [])
         item = {
             'name': meta.get('name', skill_dir.name),
@@ -98,7 +92,8 @@ for stage in ['incubating', 'active', 'archived']:
             'owner': meta.get('owner'),
             'maintainers': meta.get('maintainers', []),
             'tags': meta.get('tags', []),
-            'review_state': meta.get('review_state'),
+            'review_state': review_status.get('effective_review_state'),
+            'declared_review_state': review_status.get('declared_review_state'),
             'risk_level': meta.get('risk_level'),
             'derived_from': meta.get('derived_from'),
             'snapshot_of': meta.get('snapshot_of'),
@@ -106,8 +101,15 @@ for stage in ['incubating', 'active', 'archived']:
             'conflicts_with': meta.get('conflicts_with', []),
             'agent_compatible': agent_compatible,
             'installable': bool(meta.get('distribution', {}).get('installable', True)),
-            'approval_count': approval_count,
-            'rejection_count': rejection_count,
+            'approval_count': review_status.get('approval_count'),
+            'rejection_count': review_status.get('rejection_count'),
+            'blocking_rejection_count': review_status.get('blocking_rejection_count'),
+            'required_approvals': review_status.get('required_approvals'),
+            'quorum_met': review_status.get('quorum_met'),
+            'review_gate_pass': review_status.get('review_gate_pass'),
+            'required_reviewer_groups': review_status.get('required_groups'),
+            'covered_reviewer_groups': review_status.get('covered_groups'),
+            'missing_reviewer_groups': review_status.get('missing_groups'),
             'path': str(skill_dir.relative_to(root)),
             'source_registry': catalog_source_identity.get('registry_name'),
             'source_registry_url': catalog_source_identity.get('registry_url'),

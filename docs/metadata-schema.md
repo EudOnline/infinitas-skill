@@ -74,7 +74,7 @@ Every registry-managed skill should include `_meta.json`.
 - `name`: folder name and `SKILL.md` frontmatter name should match this
 - `version`: semver string like `0.1.0`
 - `status`: `incubating | active | archived`
-- `review_state`: `draft | under-review | approved | rejected`
+- `review_state`: `draft | under-review | approved | rejected` for compatibility and indexing; promotion tooling recomputes the authoritative value from `reviews.json` plus `policy/promotion-policy.json`
 - `risk_level`: `low | medium | high`
 - `derived_from`: lineage string such as `repo-audit@0.1.0`
 - Use the `name@version` form so lineage tools can diff against the intended ancestor

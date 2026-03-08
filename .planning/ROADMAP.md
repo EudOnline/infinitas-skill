@@ -41,7 +41,7 @@ Plans:
 - [x] 02-02: Add upgrade planning plus conflict detection to integrity and install checks
 - [x] 02-03: Wire deterministic resolution output into install/sync workflows and documentation
 
-#### Phase 3: Reviewer Groups and Quorum Enforcement
+#### ✅ Phase 3: Reviewer Groups and Quorum Enforcement
 **Goal**: Replace mutable review summaries with policy-driven reviewer groups and computed quorum that promotion tooling can enforce.
 **Depends on**: Phase 2
 **Requirements**: [REV-01, REV-02, REV-03]
@@ -53,8 +53,9 @@ Plans:
 
 Plans:
 - [ ] 03-01: Add reviewer-group and quorum policy schema plus defaults
-- [ ] 03-02: Refactor review request/status/approval scripts to compute authoritative review state
-- [ ] 03-03: Enforce computed quorum in promotion, catalog generation, and docs
+- [x] 03-01: Add reviewer-group and quorum policy schema plus defaults
+- [x] 03-02: Refactor review request/status/approval scripts to compute authoritative review state
+- [x] 03-03: Enforce computed quorum in promotion, catalog generation, and docs
 
 #### Phase 4: Signed Release Invariants
 **Goal**: Make release creation depend on a clean, synchronized repository state and a signed git tag before any release is considered valid.
@@ -91,6 +92,6 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 1. Registry Source Policy and Safe Sync | v9 | 3/3 | Completed | 2026-03-08 |
 | 2. Dependency Upgrade Planning and Conflict Solver | v9 | 3/3 | Completed | 2026-03-08 |
-| 3. Reviewer Groups and Quorum Enforcement | v9 | 0/3 | Not started | - |
+| 3. Reviewer Groups and Quorum Enforcement | v9 | 3/3 | Completed | 2026-03-09 |
 | 4. Signed Release Invariants | v9 | 0/2 | Not started | - |
 | 5. Asymmetric Attestation and Verification | v9 | 0/3 | Not started | - |

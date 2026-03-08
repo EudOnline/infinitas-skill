@@ -39,27 +39,23 @@ resolve_skill() {
 }
 
 DIR="$(resolve_skill "$TARGET")" || { echo "cannot resolve skill: $TARGET" >&2; exit 1; }
-python3 - "$DIR" "$NOTE" <<'PY'
-import json, sys
-from datetime import datetime, timezone
+python3 - "$ROOT" "$DIR" "$NOTE" <<'PY'
+import sys
 from pathlib import Path
-skill_dir = Path(sys.argv[1])
-note = sys.argv[2]
-meta_path = skill_dir / '_meta.json'
-reviews_path = skill_dir / 'reviews.json'
-meta = json.loads(meta_path.read_text(encoding='utf-8'))
-meta['review_state'] = 'under-review'
-meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-if reviews_path.exists():
-    reviews = json.loads(reviews_path.read_text(encoding='utf-8'))
-else:
-    reviews = {'version': 1, 'requests': [], 'entries': []}
-reviews.setdefault('requests', [])
-reviews.setdefault('entries', [])
-reviews['requests'].append({
-    'requested_at': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
-    'note': note or None,
-})
-reviews_path.write_text(json.dumps(reviews, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-print(f'requested review: {skill_dir}')
+
+root = Path(sys.argv[1]).resolve()
+skill_dir = Path(sys.argv[2]).resolve()
+note = sys.argv[3]
+sys.path.insert(0, str(root / 'scripts'))
+
+from review_lib import ReviewPolicyError, request_review
+
+try:
+    evaluation = request_review(skill_dir, note=note, root=root)
+except ReviewPolicyError as exc:
+    for error in exc.errors:
+        print(f'FAIL: {error}', file=sys.stderr)
+    raise SystemExit(1)
+
+print(f"requested review: {skill_dir} ({evaluation['effective_review_state']})")
 PY

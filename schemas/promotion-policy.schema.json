@@ -1,0 +1,278 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://infinitas-skill.local/schemas/promotion-policy.schema.json",
+  "title": "Promotion Policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "active_requires",
+    "reviews"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "active_requires": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "review_state"
+      ],
+      "properties": {
+        "review_state": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "under-review",
+              "approved",
+              "rejected"
+            ]
+          }
+        },
+        "require_changelog": {
+          "type": "boolean"
+        },
+        "require_smoke_test": {
+          "type": "boolean"
+        },
+        "require_owner": {
+          "type": "boolean"
+        }
+      }
+    },
+    "reviews": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "require_reviews_file": {
+          "type": "boolean"
+        },
+        "reviewer_must_differ_from_owner": {
+          "type": "boolean"
+        },
+        "block_on_rejection": {
+          "type": "boolean"
+        },
+        "default_min_approvals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "risk_overrides": {
+          "$ref": "#/$defs/riskRuleMap"
+        },
+        "groups": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/group"
+          }
+        },
+        "quorum": {
+          "$ref": "#/$defs/quorum"
+        }
+      }
+    },
+    "high_risk_active_requires": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min_maintainers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "require_requires_block": {
+          "type": "boolean"
+        }
+      }
+    },
+    "dependency_rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allow_name_only_refs": {
+          "type": "boolean"
+        },
+        "allow_version_pins": {
+          "type": "boolean"
+        },
+        "require_resolvable_refs_for_active": {
+          "type": "boolean"
+        },
+        "auto_install_dependencies_default": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "members"
+      ],
+      "properties": {
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "quorumRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min_approvals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "required_groups": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        }
+      }
+    },
+    "stageRuleMap": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "incubating": {
+          "$ref": "#/$defs/quorumRule"
+        },
+        "active": {
+          "$ref": "#/$defs/quorumRule"
+        },
+        "archived": {
+          "$ref": "#/$defs/quorumRule"
+        }
+      }
+    },
+    "riskRuleMap": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "low": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "$ref": "#/$defs/quorumRule"
+            }
+          ]
+        },
+        "medium": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "$ref": "#/$defs/quorumRule"
+            }
+          ]
+        },
+        "high": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "$ref": "#/$defs/quorumRule"
+            }
+          ]
+        }
+      }
+    },
+    "stageRiskRuleMap": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "incubating": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "low": {
+              "$ref": "#/$defs/quorumRule"
+            },
+            "medium": {
+              "$ref": "#/$defs/quorumRule"
+            },
+            "high": {
+              "$ref": "#/$defs/quorumRule"
+            }
+          }
+        },
+        "active": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "low": {
+              "$ref": "#/$defs/quorumRule"
+            },
+            "medium": {
+              "$ref": "#/$defs/quorumRule"
+            },
+            "high": {
+              "$ref": "#/$defs/quorumRule"
+            }
+          }
+        },
+        "archived": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "low": {
+              "$ref": "#/$defs/quorumRule"
+            },
+            "medium": {
+              "$ref": "#/$defs/quorumRule"
+            },
+            "high": {
+              "$ref": "#/$defs/quorumRule"
+            }
+          }
+        }
+      }
+    },
+    "quorum": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "defaults": {
+          "$ref": "#/$defs/quorumRule"
+        },
+        "stage_overrides": {
+          "$ref": "#/$defs/stageRuleMap"
+        },
+        "risk_overrides": {
+          "$ref": "#/$defs/riskRuleMap"
+        },
+        "stage_risk_overrides": {
+          "$ref": "#/$defs/stageRiskRuleMap"
+        }
+      }
+    }
+  }
+}

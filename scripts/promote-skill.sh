@@ -32,17 +32,7 @@ DEST="$ROOT/skills/active/$NAME"
 
 [[ -d "$SRC" ]] || { echo "missing incubating skill: $SRC" >&2; exit 1; }
 "$ROOT/scripts/check-skill.sh" "$SRC"
-
-python3 - "$SRC/_meta.json" <<'PY'
-import json, sys
-with open(sys.argv[1], 'r', encoding='utf-8') as f:
-    meta = json.load(f)
-if meta.get('review_state') != 'approved':
-    print('FAIL: review_state must be approved before promotion', file=sys.stderr)
-    sys.exit(1)
-PY
-
-"$ROOT/scripts/check-promotion-policy.py" --as-active "$SRC" >/dev/null
+"$ROOT/scripts/check-promotion-policy.py" --as-active "$SRC"
 "$ROOT/scripts/check-registry-integrity.py" >/dev/null
 
 if [[ -e "$DEST" ]]; then
@@ -54,15 +44,25 @@ if [[ -e "$DEST" ]]; then
   rm -rf "$DEST"
 fi
 mv "$SRC" "$DEST"
-python3 - "$DEST/_meta.json" <<'PY'
-import json, sys
-p = sys.argv[1]
-with open(p, 'r', encoding='utf-8') as f:
-    meta = json.load(f)
+python3 - "$ROOT" "$DEST" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1]).resolve()
+skill_dir = Path(sys.argv[2]).resolve()
+meta_path = skill_dir / '_meta.json'
+with open(meta_path, 'r', encoding='utf-8') as handle:
+    meta = json.load(handle)
 meta['status'] = 'active'
-with open(p, 'w', encoding='utf-8') as f:
-    json.dump(meta, f, ensure_ascii=False, indent=2)
-    f.write('\n')
+with open(meta_path, 'w', encoding='utf-8') as handle:
+    json.dump(meta, handle, ensure_ascii=False, indent=2)
+    handle.write('\n')
+
+sys.path.insert(0, str(root / 'scripts'))
+from review_lib import sync_declared_review_state
+
+sync_declared_review_state(skill_dir, root=root, stage='active')
 PY
 "$ROOT/scripts/build-catalog.sh"
 echo "promoted: $NAME"

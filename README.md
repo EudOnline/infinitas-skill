@@ -11,7 +11,8 @@ This repository is meant to hold private skills, templates, helper scripts, and 
 3. Fill in `SKILL.md`, `_meta.json`, and `tests/smoke.md`
 4. Validate it with `scripts/check-skill.sh`
 5. Rebuild the catalog with `scripts/build-catalog.sh`
-6. Promote approved skills into `skills/active/`
+6. Verify computed review quorum with `scripts/review-status.py`
+7. Promote approved skills into `skills/active/`
 7. Install or sync stable skills into agent-local skill directories
 
 ## Repository layout
@@ -44,7 +45,7 @@ scripts/
 ├─ install-skill.sh      copy an active skill into a local skills dir
 ├─ sync-skill.sh         refresh an installed skill from the registry
 ├─ list-installed.sh     inspect install manifest data for a target dir
-├─ promote-skill.sh      move an approved incubating skill into active/
+├─ promote-skill.sh      move a quorum-approved incubating skill into active/
 ├─ snapshot-active-skill.sh archive a timestamped copy of an active skill
 ├─ bump-skill-version.sh bump semver and seed changelog entries
 ├─ release-skill-tag.sh  print or create a skill/<name>/v<version> git tag
@@ -61,7 +62,7 @@ scripts/
 ├─ check-registry-integrity.py validate dependency refs and graph integrity
 ├─ check-promotion-policy.py enforce active-skill promotion policy
 ├─ request-review.sh     mark a skill under review and log the request
-├─ review-status.py      summarize current approval quorum status
+├─ review-status.py      summarize current computed approval quorum status
 ├─ approve-skill.sh      record reviewer approvals or rejections
 ├─ sign-provenance.py    sign provenance bundles with an HMAC key
 ├─ verify-provenance.py  verify signed provenance bundles
@@ -98,9 +99,10 @@ scripts/check-all.sh
 # Bump a skill version and seed a changelog entry
 scripts/bump-skill-version.sh my-skill patch --note "Refined the workflow"
 
-# Request review, record an approval, then promote
+# Request review, record reviewer decisions, verify quorum, then promote
 scripts/request-review.sh my-skill --note "Ready for active"
 scripts/approve-skill.sh my-skill --reviewer lvxiaoer --decision approved --note "Looks good"
+scripts/review-status.py my-skill --as-active --require-pass
 scripts/promote-skill.sh my-skill
 
 # Preview or apply the deterministic dependency plan for an install
@@ -146,6 +148,7 @@ GitHub Actions runs `scripts/check-all.sh` on pushes and pull requests. That val
 - secret scan
 - deterministic catalog generation
 - compatibility catalog generation
+- computed review-group quorum enforcement
 
 If CI fails because catalog files changed, run:
 
@@ -175,7 +178,8 @@ and commit the updated `catalog/*.json`.
 - **Install and sync are plan-driven**. Both commands now print a deterministic dependency plan before mutating the target directory.
 - **Unsafe upgrades fail early**. Dependency locks, reverse conflicts, and unresolved cross-registry requests are rejected before files are copied.
 - **Promotion is policy-driven**. Active skills now pass a dedicated promotion policy check instead of relying only on ad-hoc conventions.
-- **Reviewer approvals are tracked**. Promotion policy can require explicit approvals from reviewers distinct from the owner.
+- **Computed review state is authoritative**. `_meta.json.review_state` is kept for compatibility, but promotion and catalog data now derive from `reviews.json` plus repository policy.
+- **Reviewer groups and quorum are enforced**. Promotion policy can require configured reviewer groups, stage/risk-specific quorum, and rejection-free latest decisions.
 - **Releases can emit signed provenance**. Release tooling can write machine-readable provenance records and sign/verify them.
 
 ## Safety rules

@@ -32,7 +32,7 @@ Maintainers can publish and distribute private skills with deterministic, audita
 
 - [ ] Registry sync respects explicit remote fetch/update policy, trust enforcement, and immutable source selection.
 - ✓ Dependency upgrade planning can detect and reject cross-source or cross-version conflicts deterministically.
-- [ ] Promotion depends on computed reviewer-group quorum instead of mutable review metadata.
+- [x] Promotion depends on computed reviewer-group quorum instead of mutable review metadata.
 - [ ] Releases require asymmetric signatures and verifiable attestation before distribution.
 
 ### Out of Scope
@@ -67,7 +67,7 @@ Maintainers can publish and distribute private skills with deterministic, audita
 | Start GSD-managed planning history at v9 with phase numbering from 1 | The repo existed before `.planning/` and does not contain authoritative prior phase plans | — Pending |
 | Skip a separate research stage for v9 | The codebase map and repository docs already expose the required problem space for this milestone | ✓ Good |
 | Keep the v9 implementation shell/python/json-native | This minimizes migration risk and fits the current execution model | ✓ Good |
-| Treat computed quorum and asymmetric attestation as enforcement points, not documentation-only guidance | The highest-risk gaps are governance and authenticity paths that are currently optional or mutable | — Pending |
+| Treat computed quorum and asymmetric attestation as enforcement points, not documentation-only guidance | The highest-risk gaps are governance and authenticity paths that are currently optional or mutable | ✓ Good |
 
 ---
-*Last updated: 2026-03-08 after Phase 2 implementation*
+*Last updated: 2026-03-09 after Phase 3 implementation*

@@ -4,23 +4,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-POLICY = json.loads((ROOT / 'policy' / 'promotion-policy.json').read_text(encoding='utf-8'))
 
-
-def latest_reviews(entries):
-    latest = {}
-    for e in entries:
-        reviewer = e.get('reviewer')
-        if reviewer:
-            latest[reviewer] = e
-    return latest
-
-
-def required_approvals(meta):
-    reviews = POLICY.get('reviews', {})
-    req = reviews.get('default_min_approvals', 0)
-    req = reviews.get('risk_overrides', {}).get(meta.get('risk_level'), req)
-    return req
+from review_lib import ReviewPolicyError, evaluate_review_state, load_promotion_policy
 
 
 def check_skill(skill_dir: Path, as_active: bool = False) -> int:
@@ -31,33 +16,29 @@ def check_skill(skill_dir: Path, as_active: bool = False) -> int:
         print(f'OK: policy skipped for non-active skill {skill_dir}')
         return 0
 
-    req = POLICY['active_requires']
-    reviews_cfg = POLICY.get('reviews', {})
+    policy = load_promotion_policy(ROOT)
+    req = policy['active_requires']
+    reviews_cfg = policy.get('reviews', {})
+    evaluation = evaluate_review_state(skill_dir, root=ROOT, stage='active', policy=policy)
     reviews_path = skill_dir / 'reviews.json'
-    reviews = {'entries': []}
-    if reviews_path.exists():
-        reviews = json.loads(reviews_path.read_text(encoding='utf-8'))
-    latest = latest_reviews(reviews.get('entries', []) or [])
-    owner = meta.get('owner')
-    approvals = []
-    rejections = []
-    for reviewer, entry in latest.items():
-        if entry.get('decision') == 'approved' and (not reviews_cfg.get('reviewer_must_differ_from_owner') or reviewer != owner):
-            approvals.append(entry)
-        if entry.get('decision') == 'rejected':
-            rejections.append(entry)
 
     if reviews_cfg.get('require_reviews_file') and not reviews_path.is_file():
         print(f'FAIL: {skill_dir}: active skill requires reviews.json', file=sys.stderr)
         errors += 1
-    if len(approvals) < required_approvals(meta):
-        print(f'FAIL: {skill_dir}: active skill requires at least {required_approvals(meta)} distinct approval(s)', file=sys.stderr)
+    if evaluation['approval_count'] < evaluation['required_approvals']:
+        print(f'FAIL: {skill_dir}: active skill requires at least {evaluation["required_approvals"]} counted approval(s)', file=sys.stderr)
         errors += 1
-    if reviews_cfg.get('block_on_rejection', False) and rejections:
+    if evaluation['missing_groups']:
+        print(f'FAIL: {skill_dir}: active skill is missing reviewer group coverage for {", ".join(evaluation["missing_groups"])}', file=sys.stderr)
+        errors += 1
+    if reviews_cfg.get('block_on_rejection', False) and evaluation['blocking_rejection_count']:
         print(f'FAIL: {skill_dir}: active skill has blocking rejection(s)', file=sys.stderr)
         errors += 1
+    if not evaluation['review_gate_pass'] and errors == 0:
+        print(f'FAIL: {skill_dir}: active skill does not satisfy computed review quorum', file=sys.stderr)
+        errors += 1
 
-    if meta.get('review_state') not in req['review_state']:
+    if evaluation['effective_review_state'] not in req['review_state']:
         print(f'FAIL: {skill_dir}: review_state must be one of {req["review_state"]}', file=sys.stderr)
         errors += 1
     if req.get('require_changelog') and not (skill_dir / 'CHANGELOG.md').is_file():
@@ -93,6 +74,12 @@ def main():
     if '--as-active' in args:
         args.remove('--as-active')
         as_active = True
+    try:
+        load_promotion_policy(ROOT)
+    except ReviewPolicyError as exc:
+        for error in exc.errors:
+            print(f'FAIL: {error}', file=sys.stderr)
+        raise SystemExit(1)
     targets = [Path(p).resolve() for p in args]
     if not targets:
         base = ROOT / 'skills' / 'active'

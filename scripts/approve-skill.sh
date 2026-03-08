@@ -51,29 +51,26 @@ resolve_skill() {
 }
 
 DIR="$(resolve_skill "$TARGET")" || { echo "cannot resolve skill: $TARGET" >&2; exit 1; }
-python3 - "$DIR" "$REVIEWER" "$DECISION" "$NOTE" <<'PY'
-import json, sys
-from datetime import datetime, timezone
+python3 - "$ROOT" "$DIR" "$REVIEWER" "$DECISION" "$NOTE" <<'PY'
+import sys
 from pathlib import Path
-skill_dir = Path(sys.argv[1])
-reviewer, decision, note = sys.argv[2:5]
-meta_path = skill_dir / '_meta.json'
-reviews_path = skill_dir / 'reviews.json'
-meta = json.loads(meta_path.read_text(encoding='utf-8'))
-if reviews_path.exists():
-    reviews = json.loads(reviews_path.read_text(encoding='utf-8'))
-else:
-    reviews = {'version': 1, 'requests': [], 'entries': []}
-reviews.setdefault('requests', [])
-reviews.setdefault('entries', [])
-reviews['entries'].append({
-    'reviewer': reviewer,
-    'decision': decision,
-    'note': note or None,
-    'at': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
-})
-meta['review_state'] = 'approved' if decision == 'approved' else 'rejected'
-meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-reviews_path.write_text(json.dumps(reviews, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-print(f'{decision}: {skill_dir} by {reviewer}')
+
+root = Path(sys.argv[1]).resolve()
+skill_dir = Path(sys.argv[2]).resolve()
+reviewer, decision, note = sys.argv[3:6]
+sys.path.insert(0, str(root / 'scripts'))
+
+from review_lib import ReviewPolicyError, record_review_decision
+
+try:
+    evaluation = record_review_decision(skill_dir, reviewer=reviewer, decision=decision, note=note, root=root)
+except ReviewPolicyError as exc:
+    for error in exc.errors:
+        print(f'FAIL: {error}', file=sys.stderr)
+    raise SystemExit(1)
+except ValueError as exc:
+    print(f'FAIL: {exc}', file=sys.stderr)
+    raise SystemExit(1)
+
+print(f"{decision}: {skill_dir} by {reviewer} ({evaluation['effective_review_state']})")
 PY

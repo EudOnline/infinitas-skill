@@ -45,7 +45,7 @@ Typical flow:
 2. Update `_meta.json.version`
 3. Add or update `CHANGELOG.md`
 4. Run `scripts/check-all.sh`
-5. Set `review_state` appropriately
+5. Ensure `scripts/review-status.py <name> --as-active --require-pass` succeeds
 6. Promote to `skills/active/`
 7. Optionally tag a stable milestone
 

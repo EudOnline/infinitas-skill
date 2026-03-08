@@ -12,12 +12,25 @@ Earlier versions encoded promotion expectations partly in docs and partly in she
 
 For `active` skills, the policy currently requires:
 
-- approved `review_state`
+- computed `review_state` to resolve to `approved`
 - `CHANGELOG.md` present
 - smoke test present
 - owner present
 - `reviews.json` present
-- minimum distinct reviewer approvals
+- minimum counted reviewer approvals
+- required reviewer-group coverage
+
+## Review groups and quorum
+
+Reviewer governance lives under `reviews` in `policy/promotion-policy.json`.
+
+- `groups` defines the configured reviewer identities and their group membership
+- `quorum.defaults` sets the baseline quorum
+- `quorum.stage_overrides` adjusts quorum by lifecycle stage
+- `quorum.risk_overrides` adjusts quorum by risk level
+- `quorum.stage_risk_overrides` can refine a specific stage+risk combination
+
+The effective review result always comes from the latest distinct reviewer decisions after those rules are applied.
 
 Additional checks for `high` risk active skills:
 

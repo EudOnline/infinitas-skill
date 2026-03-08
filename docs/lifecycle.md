@@ -34,9 +34,10 @@ Use for:
 1. Create or copy a skill into `skills/incubating/<name>`
 2. Fill in `SKILL.md`, `_meta.json`, and `tests/smoke.md`
 3. Run `scripts/check-skill.sh skills/incubating/<name>`
-4. Mark `_meta.json.review_state = "approved"` after human review
-5. Run `scripts/promote-skill.sh <name>`
-6. Rebuild catalogs with `scripts/build-catalog.sh`
+4. Request review and record reviewer decisions in `reviews.json`
+5. Run `scripts/review-status.py <name> --as-active --require-pass`
+6. Run `scripts/promote-skill.sh <name>`
+7. Rebuild catalogs with `scripts/build-catalog.sh`
 
 ## Evolution rule of thumb
 

@@ -21,9 +21,9 @@ Requirements committed for milestone `v9`. Each requirement maps to exactly one 
 
 ### Review Governance
 
-- [ ] **REV-01**: Maintainer can configure reviewer groups and quorum rules by stage or risk level in repository policy files.
-- [ ] **REV-02**: Review tooling records decisions only for configured reviewers and computes effective approval from the latest distinct reviewer decisions.
-- [ ] **REV-03**: Promotion fails unless required reviewer groups and quorum are satisfied, and blocking rejections are handled explicitly.
+- [x] **REV-01**: Maintainer can configure reviewer groups and quorum rules by stage or risk level in repository policy files.
+- [x] **REV-02**: Review tooling records decisions only for configured reviewers and computes effective approval from the latest distinct reviewer decisions.
+- [x] **REV-03**: Promotion fails unless required reviewer groups and quorum are satisfied, and blocking rejections are handled explicitly.
 
 ### Release Attestation
 
@@ -67,9 +67,9 @@ Requirements committed for milestone `v9`. Each requirement maps to exactly one 
 | DEP-01 | Phase 2 | Complete |
 | DEP-02 | Phase 2 | Complete |
 | DEP-03 | Phase 2 | Complete |
-| REV-01 | Phase 3 | Pending |
-| REV-02 | Phase 3 | Pending |
-| REV-03 | Phase 3 | Pending |
+| REV-01 | Phase 3 | Complete |
+| REV-02 | Phase 3 | Complete |
+| REV-03 | Phase 3 | Complete |
 | ATT-01 | Phase 4 | Pending |
 | ATT-02 | Phase 5 | Pending |
 | ATT-03 | Phase 5 | Pending |
@@ -81,4 +81,4 @@ Requirements committed for milestone `v9`. Each requirement maps to exactly one 
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-08 after Phase 2 implementation*
+*Last updated: 2026-03-09 after Phase 3 implementation*

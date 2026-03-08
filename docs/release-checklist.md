@@ -8,7 +8,7 @@ Before pushing or promoting a skill:
 - [ ] `_meta.json` exists and passes `scripts/check-skill.sh`
 - [ ] full registry validation passes via `scripts/check-all.sh`
 - [ ] `_meta.json.status` matches the parent directory
-- [ ] `_meta.json.review_state` is appropriate for the target stage
+- [ ] computed review quorum passes for the target stage via `scripts/review-status.py <name> --as-active --require-pass`
 - [ ] `_meta.json.version` was bumped appropriately for behavioral changes
 - [ ] `CHANGELOG.md` was updated
 - [ ] Trigger description clearly states when the skill should activate

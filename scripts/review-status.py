@@ -1,67 +1,83 @@
 #!/usr/bin/env python3
-import json
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-POLICY = json.loads((ROOT / 'policy' / 'promotion-policy.json').read_text(encoding='utf-8'))
+
+from review_lib import ReviewPolicyError, evaluate_review_state, resolve_skill
 
 
-def resolve_skill(arg: str) -> Path:
-    p = Path(arg)
-    if p.is_dir() and (p / '_meta.json').exists():
-        return p.resolve()
-    for stage in ['incubating', 'active', 'archived']:
-        q = ROOT / 'skills' / stage / arg
-        if q.is_dir() and (q / '_meta.json').exists():
-            return q
-    raise SystemExit(f'cannot resolve skill: {arg}')
-
-
-def latest_by_reviewer(entries):
-    latest = {}
-    for e in entries:
-        reviewer = e.get('reviewer')
-        if reviewer:
-            latest[reviewer] = e
-    return latest
-
-
-def required_approvals(meta):
-    reviews = POLICY.get('reviews', {})
-    req = reviews.get('default_min_approvals', 0)
-    req = reviews.get('risk_overrides', {}).get(meta.get('risk_level'), req)
-    return req
+def print_csv_list(name, values):
+    print(f"{name}: {', '.join(values) if values else '-'}")
 
 
 def main():
     if len(sys.argv) < 2:
-        print('usage: scripts/review-status.py <skill-name-or-path> [--require-pass]', file=sys.stderr)
+        print('usage: scripts/review-status.py <skill-name-or-path> [--require-pass] [--as-active] [--stage STAGE]', file=sys.stderr)
         return 1
-    require_pass = '--require-pass' in sys.argv[2:]
-    skill_dir = resolve_skill(sys.argv[1])
-    meta = json.loads((skill_dir / '_meta.json').read_text(encoding='utf-8'))
-    reviews_path = skill_dir / 'reviews.json'
-    reviews = {'entries': []}
-    if reviews_path.exists():
-        reviews = json.loads(reviews_path.read_text(encoding='utf-8'))
-    latest = latest_by_reviewer(reviews.get('entries', []) or [])
-    owner = meta.get('owner')
-    approvals = [e for r, e in latest.items() if e.get('decision') == 'approved' and r != owner]
-    rejections = [e for e in latest.values() if e.get('decision') == 'rejected']
-    req = required_approvals(meta)
-    print(f"skill: {meta.get('name')}@{meta.get('version')}")
-    print(f"risk: {meta.get('risk_level')}")
-    print(f"owner: {owner}")
-    print(f"required_approvals: {req}")
-    print(f"approval_count: {len(approvals)}")
-    print(f"rejection_count: {len(rejections)}")
-    for reviewer, entry in sorted(latest.items()):
-        print(f"- {reviewer}: {entry.get('decision')} ({entry.get('at')})")
-    ok = len(approvals) >= req
-    if POLICY.get('reviews', {}).get('block_on_rejection', False) and rejections:
-        ok = False
-    if require_pass and not ok:
+    args = sys.argv[2:]
+    require_pass = False
+    as_active = False
+    stage = None
+    index = 0
+    while index < len(args):
+        arg = args[index]
+        if arg == '--require-pass':
+            require_pass = True
+            index += 1
+            continue
+        if arg == '--as-active':
+            as_active = True
+            index += 1
+            continue
+        if arg == '--stage':
+            stage = args[index + 1] if index + 1 < len(args) else None
+            if stage is None:
+                print('--stage requires a value', file=sys.stderr)
+                return 1
+            index += 2
+            continue
+        print(f'unknown argument: {arg}', file=sys.stderr)
+        return 1
+
+    if as_active and stage is not None:
+        print('--as-active and --stage cannot be combined', file=sys.stderr)
+        return 1
+
+    skill_dir = resolve_skill(ROOT, sys.argv[1])
+    try:
+        evaluation = evaluate_review_state(skill_dir, root=ROOT, stage=stage, as_active=as_active)
+    except ReviewPolicyError as exc:
+        for error in exc.errors:
+            print(f'FAIL: {error}', file=sys.stderr)
+        return 1
+
+    print(f"skill: {evaluation['skill']}@{evaluation['version']}")
+    print(f"actual_stage: {evaluation['actual_stage']}")
+    print(f"evaluated_stage: {evaluation['evaluated_stage']}")
+    print(f"risk: {evaluation['risk_level']}")
+    print(f"owner: {evaluation['owner']}")
+    print(f"declared_review_state: {evaluation['declared_review_state']}")
+    print(f"effective_review_state: {evaluation['effective_review_state']}")
+    print(f"review_requests: {evaluation['review_request_count']}")
+    print(f"required_approvals: {evaluation['required_approvals']}")
+    print(f"approval_count: {evaluation['approval_count']}")
+    print(f"rejection_count: {evaluation['rejection_count']}")
+    print(f"blocking_rejections: {evaluation['blocking_rejection_count']}")
+    print(f"quorum_met: {'yes' if evaluation['quorum_met'] else 'no'}")
+    print(f"review_gate_pass: {'yes' if evaluation['review_gate_pass'] else 'no'}")
+    print_csv_list('required_groups', evaluation['required_groups'])
+    print_csv_list('covered_groups', evaluation['covered_groups'])
+    print_csv_list('missing_groups', evaluation['missing_groups'])
+    print(f"ignored_decisions: {len(evaluation['ignored_decisions'])}")
+    if evaluation['latest_decisions']:
+        print('latest_decisions:')
+        for item in evaluation['latest_decisions']:
+            reasons = f" [{'; '.join(item['reasons'])}]" if item['reasons'] else ''
+            groups = ','.join(item['groups']) if item['groups'] else '-'
+            counted = 'yes' if item['counted'] else 'no'
+            print(f"- {item['reviewer']}: {item['decision']} counted={counted} groups={groups} at={item['at']}{reasons}")
+    if require_pass and not evaluation['review_gate_pass']:
         return 1
     return 0
 
