@@ -79,7 +79,7 @@ def validate_meta(skill_dir: Path) -> int:
         fail(f'{skill_dir}: invalid risk_level {risk!r}')
         errors += 1
 
-    for list_key in ['maintainers', 'tags', 'agent_compatible']:
+    for list_key in ['maintainers', 'tags', 'agent_compatible', 'depends_on', 'conflicts_with']:
         if list_key in meta and not (isinstance(meta[list_key], list) and all(isinstance(x, str) for x in meta[list_key])):
             fail(f'{skill_dir}: {list_key} must be an array of strings')
             errors += 1

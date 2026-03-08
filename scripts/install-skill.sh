@@ -64,6 +64,7 @@ PY
 
 "$ROOT/scripts/check-skill.sh" "$SRC" >/dev/null
 mkdir -p "$TARGET_DIR"
+"$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR" >/dev/null 2>&1 || { echo "install target failed dependency/conflict checks" >&2; "$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR"; exit 1; }
 if [[ -e "$DEST" ]]; then
   if [[ $FORCE -ne 1 ]]; then
     echo "target already exists: $DEST (use --force to overwrite)" >&2

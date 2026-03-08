@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: scripts/release-skill.sh <skill-name-or-path> [--create-tag] [--push-tag] [--github-release] [--notes-out PATH]" >&2
+  echo "usage: scripts/release-skill.sh <skill-name-or-path> [--create-tag] [--push-tag] [--github-release] [--notes-out PATH] [--write-provenance]" >&2
 }
 
 if [[ $# -lt 1 ]]; then
@@ -17,6 +17,7 @@ CREATE_TAG=0
 PUSH_TAG=0
 GITHUB_RELEASE=0
 NOTES_OUT=""
+WRITE_PROVENANCE=0
 
 resolve_skill() {
   local name="$1"
@@ -52,6 +53,10 @@ while [[ $# -gt 0 ]]; do
     --notes-out)
       NOTES_OUT="${2:-}"
       shift 2
+      ;;
+    --write-provenance)
+      WRITE_PROVENANCE=1
+      shift
       ;;
     *)
       echo "unknown argument: $1" >&2
@@ -139,6 +144,12 @@ fi
 
 if [[ $PUSH_TAG -eq 1 ]]; then
   git push origin "$TAG"
+fi
+
+if [[ $WRITE_PROVENANCE -eq 1 ]]; then
+  mkdir -p "$ROOT/catalog/provenance"
+  python3 "$ROOT/scripts/generate-provenance.py" "$DIR" > "$ROOT/catalog/provenance/$NAME-$VERSION.json"
+  echo "wrote provenance: $ROOT/catalog/provenance/$NAME-$VERSION.json"
 fi
 
 if [[ $GITHUB_RELEASE -eq 1 ]]; then

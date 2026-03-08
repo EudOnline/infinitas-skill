@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "active_requires": {
+    "review_state": ["approved"],
+    "require_changelog": true,
+    "require_smoke_test": true,
+    "require_owner": true
+  },
+  "high_risk_active_requires": {
+    "min_maintainers": 1,
+    "require_requires_block": true
+  },
+  "dependency_rules": {
+    "allow_name_only_refs": true,
+    "allow_version_pins": true,
+    "require_resolvable_refs_for_active": true
+  }
+}

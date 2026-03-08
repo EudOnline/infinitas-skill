@@ -42,6 +42,9 @@ if meta.get('review_state') != 'approved':
     sys.exit(1)
 PY
 
+"$ROOT/scripts/check-promotion-policy.py" --as-active "$SRC" >/dev/null
+"$ROOT/scripts/check-registry-integrity.py" >/dev/null
+
 if [[ -e "$DEST" ]]; then
   if [[ $FORCE -ne 1 ]]; then
     echo "active skill already exists: $DEST (use --force to overwrite)" >&2

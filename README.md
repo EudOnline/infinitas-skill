@@ -20,7 +20,9 @@ This repository is meant to hold private skills, templates, helper scripts, and 
 catalog/
 ├─ catalog.json          machine-readable index for all skills
 ├─ active.json           install-focused index for active skills only
-└─ compatibility.json    agent/tool compatibility view
+├─ compatibility.json    agent/tool compatibility view
+├─ registries.json       configured registry sources view
+└─ provenance/           generated release provenance records
 
 docs/
 ├─ conventions.md        naming, layout, lifecycle rules
@@ -30,6 +32,8 @@ docs/
 ├─ release-strategy.md   version bump, changelog, and git tag guidance
 ├─ history-and-snapshots.md active overwrite snapshots and exact ancestry
 ├─ compatibility-matrix.md generated compatibility catalog guide
+├─ multi-registry.md     source registry configuration and trust model
+├─ promotion-policy.md   promotion rules for active skills
 └─ trust-model.md        safety model for shared skill evolution
 
 scripts/
@@ -43,11 +47,15 @@ scripts/
 ├─ snapshot-active-skill.sh archive a timestamped copy of an active skill
 ├─ bump-skill-version.sh bump semver and seed changelog entries
 ├─ release-skill-tag.sh  print or create a skill/<name>/v<version> git tag
-├─ release-skill.sh      check, tag, and prepare release notes for a skill
+├─ release-skill.sh      check, tag, prepare release notes, and write provenance
 ├─ lineage-diff.sh       diff a skill against its declared ancestor
 ├─ switch-installed-skill.sh switch an installed copy to active or a historical version
 ├─ rollback-installed-skill.sh rollback using manifest history
 ├─ resolve-skill-source.py resolve active vs archived skill sources
+├─ list-registry-sources.py list configured registry sources
+├─ check-registry-sources.py validate multi-registry source config
+├─ check-registry-integrity.py validate dependency refs and graph integrity
+├─ check-promotion-policy.py enforce active-skill promotion policy
 └─ diff-skill.sh         compare two skill folders or names
 
 skills/
@@ -91,8 +99,8 @@ scripts/install-skill.sh my-skill ~/.openclaw/skills --version 0.1.0 --force
 # Snapshot the current active copy before a risky overwrite
 scripts/snapshot-active-skill.sh my-skill --label pre-refactor
 
-# Prepare a release summary (and optionally tag it)
-scripts/release-skill.sh my-skill
+# Prepare a release summary and provenance (and optionally tag it)
+scripts/release-skill.sh my-skill --write-provenance
 
 # Switch an installed copy to a different historical version
 scripts/switch-installed-skill.sh my-skill ~/.openclaw/skills --to-version 0.1.0 --force
@@ -102,6 +110,9 @@ scripts/rollback-installed-skill.sh my-skill ~/.openclaw/skills --force
 
 # View the install manifest for that target directory
 scripts/list-installed.sh ~/.openclaw/skills
+
+# List configured registry sources
+scripts/list-registry-sources.py
 ```
 
 ## CI
@@ -137,6 +148,10 @@ and commit the updated `catalog/*.json`.
 - **Historical installs are supported**. Versioned installs can resolve archived snapshots instead of only whatever happens to be active now.
 - **Installed copies can switch or roll back**. Manifest history now supports controlled source switching and version rollback.
 - **Compatibility is exported**. Consumers can read a generated compatibility matrix instead of scraping every `_meta.json`.
+- **Registry sources are explicit**. Source registries now live in config and are exported as catalog data.
+- **Dependencies and conflicts are first-class**. Skills can declare `depends_on` and `conflicts_with`, and installs are checked against them.
+- **Promotion is policy-driven**. Active skills now pass a dedicated promotion policy check instead of relying only on ad-hoc conventions.
+- **Releases can emit provenance**. Release tooling can write machine-readable provenance records alongside tags and notes.
 
 ## Safety rules
 

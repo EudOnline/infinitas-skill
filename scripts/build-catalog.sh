@@ -15,6 +15,7 @@ skills_root = root / 'skills'
 out_catalog = root / 'catalog' / 'catalog.json'
 out_active = root / 'catalog' / 'active.json'
 out_compat = root / 'catalog' / 'compatibility.json'
+out_registries = root / 'catalog' / 'registries.json'
 
 entries = []
 compat_agents = {}
@@ -43,6 +44,8 @@ for stage in ['incubating', 'active', 'archived']:
             'risk_level': meta.get('risk_level'),
             'derived_from': meta.get('derived_from'),
             'snapshot_of': meta.get('snapshot_of'),
+            'depends_on': meta.get('depends_on', []),
+            'conflicts_with': meta.get('conflicts_with', []),
             'agent_compatible': agent_compatible,
             'installable': bool(meta.get('distribution', {}).get('installable', True)),
             'path': str(skill_dir.relative_to(root)),
@@ -72,6 +75,12 @@ compatibility = {
     'stage_counts': stage_counts,
     'agents': {k: sorted(v, key=lambda x: (x['name'], x['version'] or '')) for k, v in sorted(compat_agents.items())},
 }
+registries = json.loads((root / 'config' / 'registry-sources.json').read_text(encoding='utf-8'))
+registries_view = {
+    'generated_at': catalog['generated_at'],
+    'default_registry': registries.get('default_registry'),
+    'registries': registries.get('registries', []),
+}
 
 def normalized(payload):
     clone = dict(payload)
@@ -90,4 +99,5 @@ def write_if_changed(path, payload):
 write_if_changed(out_catalog, catalog)
 write_if_changed(out_active, active)
 write_if_changed(out_compat, compatibility)
+write_if_changed(out_registries, registries_view)
 PY

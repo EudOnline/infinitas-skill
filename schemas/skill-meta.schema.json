@@ -151,6 +151,18 @@
     },
     "snapshot_label": {
       "type": "string"
+    },
+    "depends_on": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "conflicts_with": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   }
 }

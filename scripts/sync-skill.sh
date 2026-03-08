@@ -66,6 +66,7 @@ PY
 )"
 
 "$ROOT/scripts/check-skill.sh" "$SRC" >/dev/null
+"$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR" >/dev/null 2>&1 || { echo "sync target failed dependency/conflict checks" >&2; "$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR"; exit 1; }
 
 if [[ -n "$LOCKED_VERSION" && "$LOCKED_VERSION" != "$SRC_VERSION" ]]; then
   echo "installed skill is version-locked to $LOCKED_VERSION; resolved source version is $SRC_VERSION" >&2

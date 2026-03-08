@@ -78,6 +78,7 @@ PY
 )"
 
 "$ROOT/scripts/check-skill.sh" "$SRC" >/dev/null
+"$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR" >/dev/null 2>&1 || { echo "switch target failed dependency/conflict checks" >&2; "$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR"; exit 1; }
 if [[ -e "$DEST" && $FORCE -ne 1 ]]; then
   echo "target exists: $DEST (use --force to overwrite)" >&2
   exit 1

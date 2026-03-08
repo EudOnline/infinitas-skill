@@ -4,7 +4,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+python3 scripts/check-registry-sources.py
 python3 scripts/validate-registry.py
+python3 scripts/check-registry-integrity.py
+python3 scripts/check-promotion-policy.py
 
 while IFS= read -r dir; do
   [[ -n "$dir" ]] || continue
@@ -14,7 +17,7 @@ done < <(find skills -mindepth 2 -maxdepth 2 -type d -exec test -f '{}/_meta.jso
 before_catalog_norm="$(python3 - <<'PY'
 import json
 from pathlib import Path
-for path in ['catalog/catalog.json','catalog/active.json','catalog/compatibility.json']:
+for path in ['catalog/catalog.json','catalog/active.json','catalog/compatibility.json','catalog/registries.json']:
     p = Path(path)
     if not p.exists():
         continue
@@ -27,7 +30,7 @@ scripts/build-catalog.sh >/dev/null
 after_catalog_norm="$(python3 - <<'PY'
 import json
 from pathlib import Path
-for path in ['catalog/catalog.json','catalog/active.json','catalog/compatibility.json']:
+for path in ['catalog/catalog.json','catalog/active.json','catalog/compatibility.json','catalog/registries.json']:
     p = Path(path)
     if not p.exists():
         continue
@@ -39,7 +42,7 @@ PY
 
 if [[ -n "$before_catalog_norm" && -n "$after_catalog_norm" && "$before_catalog_norm" != "$after_catalog_norm" ]]; then
   echo "FAIL: catalog contents changed; run scripts/build-catalog.sh and commit the result" >&2
-  git --no-pager diff -- catalog/catalog.json catalog/active.json catalog/compatibility.json || true
+  git --no-pager diff -- catalog/catalog.json catalog/active.json catalog/compatibility.json catalog/registries.json || true
   exit 1
 fi
 

@@ -6,7 +6,11 @@
   "owner": "replace-me",
   "maintainers": [],
   "tags": [],
-  "agent_compatible": ["openclaw", "claude-code", "codex"],
+  "agent_compatible": [
+    "openclaw",
+    "claude-code",
+    "codex"
+  ],
   "derived_from": null,
   "replaces": null,
   "visibility": "private",
@@ -26,5 +30,7 @@
   "distribution": {
     "installable": true,
     "channel": "git"
-  }
+  },
+  "depends_on": [],
+  "conflicts_with": []
 }
