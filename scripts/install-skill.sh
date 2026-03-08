@@ -86,6 +86,22 @@ print(json.loads(sys.argv[1]).get('registry_name') or 'self')
 PY
 )"
 
+python3 - <<'PY' "$INFO_JSON"
+import json, sys
+info = json.loads(sys.argv[1])
+commit = info.get('registry_commit') or ''
+tag = info.get('registry_tag')
+ref = info.get('registry_ref')
+summary = f"resolved: {info.get('name')}@{info.get('version') or '?'} from {info.get('registry_name')}"
+if commit:
+    summary += f" @{commit[:12]}"
+if tag:
+    summary += f" tag={tag}"
+elif ref:
+    summary += f" ref={ref}"
+print(summary)
+PY
+
 "$ROOT/scripts/check-skill.sh" "$SRC" >/dev/null
 mkdir -p "$TARGET_DIR"
 
@@ -138,5 +154,5 @@ if [[ -e "$DEST" ]]; then
   rm -rf "$DEST"
 fi
 cp -R "$SRC" "$DEST"
-python3 "$ROOT/scripts/update-install-manifest.py" "$TARGET_DIR" "$SRC" "$DEST" install "${LOCK_VERSION:-$RESOLVED_VERSION}" "$RESOLVED_REGISTRY" >/dev/null
+python3 "$ROOT/scripts/update-install-manifest.py" "$TARGET_DIR" "$SRC" "$DEST" install "${LOCK_VERSION:-$RESOLVED_VERSION}" "$INFO_JSON" >/dev/null
 echo "installed: $DEST <- $SRC"

@@ -125,8 +125,11 @@ scripts/rollback-installed-skill.sh my-skill ~/.openclaw/skills --force
 # View the install manifest for that target directory
 scripts/list-installed.sh ~/.openclaw/skills
 
-# List configured registry sources
+# List configured registry sources and their resolved commit/tag
 scripts/list-registry-sources.py
+
+# Safe local-only sync for the self registry
+scripts/sync-registry-source.sh self
 ```
 
 ## CI
@@ -162,7 +165,7 @@ and commit the updated `catalog/*.json`.
 - **Historical installs are supported**. Versioned installs can resolve archived snapshots instead of only whatever happens to be active now.
 - **Installed copies can switch or roll back**. Manifest history now supports controlled source switching and version rollback.
 - **Compatibility is exported**. Consumers can read a generated compatibility matrix instead of scraping every `_meta.json`.
-- **Registry sources are explicit**. Source registries now live in config and are exported as catalog data.
+- **Registry sources are policy-driven**. Source registries now declare trust, allowed hosts/refs, pinning, and update behavior in config.
 - **Dependencies and conflicts are first-class**. Skills can declare `depends_on` and `conflicts_with`, and installs are checked against them.
 - **Dependency installs can cascade**. Install now supports automatic recursive dependency installation with a simple cycle guard.
 - **Promotion is policy-driven**. Active skills now pass a dedicated promotion policy check instead of relying only on ad-hoc conventions.

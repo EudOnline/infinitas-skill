@@ -16,9 +16,20 @@ for name, meta in sorted(data.get('skills', {}).items()):
     version = meta.get('version')
     locked = meta.get('locked_version')
     stage = meta.get('source_stage')
-    src = meta.get('source_path')
+    src = meta.get('source_relative_path') or meta.get('source_path')
+    registry = meta.get('source_registry') or 'self'
+    commit = meta.get('source_commit')
+    tag = meta.get('source_tag')
+    ref = meta.get('source_ref')
     history_len = len((data.get('history') or {}).get(name) or [])
     lock_note = f", locked={locked}" if locked else ""
     hist_note = f", history={history_len}" if history_len else ""
-    print(f"- {name}: {version}{lock_note} [{stage}] ({meta.get('action')}) -> {meta.get('target_path')} from {src}{hist_note}")
+    source_note = registry
+    if commit:
+        source_note += f"@{commit[:12]}"
+    if tag:
+        source_note += f" tag={tag}"
+    elif ref:
+        source_note += f" ref={ref}"
+    print(f"- {name}: {version}{lock_note} [{stage}] ({meta.get('action')}) -> {meta.get('target_path')} from {source_note}:{src}{hist_note}")
 PY

@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://infinitas-skill.local/schemas/registry-sources.schema.json",
+  "title": "Registry Sources",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "default_registry",
+    "registries"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "default_registry": {
+      "type": "string",
+      "minLength": 1
+    },
+    "registries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/registry"
+      }
+    }
+  },
+  "$defs": {
+    "pin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "value"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "branch",
+            "tag",
+            "commit"
+          ]
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "update_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "local-only",
+            "track",
+            "pinned"
+          ]
+        }
+      }
+    },
+    "registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "kind",
+        "enabled",
+        "priority",
+        "trust"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "git",
+            "local"
+          ]
+        },
+        "url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "local_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "priority": {
+          "type": "integer"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "trust": {
+          "type": "string",
+          "enum": [
+            "private",
+            "trusted",
+            "public",
+            "untrusted"
+          ]
+        },
+        "allowed_hosts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "allowed_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "pin": {
+          "$ref": "#/$defs/pin"
+        },
+        "update_policy": {
+          "$ref": "#/$defs/update_policy"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "git"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "url",
+              "allowed_hosts",
+              "allowed_refs",
+              "pin",
+              "update_policy"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "local"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "local_path"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

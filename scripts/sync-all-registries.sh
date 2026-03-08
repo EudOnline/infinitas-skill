@@ -2,6 +2,13 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+FORCE_FLAG=()
+for arg in "$@"; do
+  if [[ "$arg" == "--force" ]]; then
+    FORCE_FLAG+=(--force)
+  fi
+done
+
 python3 - "$ROOT" <<'PY' | while IFS= read -r name; do
 import json, sys
 from pathlib import Path
@@ -13,5 +20,5 @@ for reg in cfg.get('registries', []):
 PY
   [[ -n "$name" ]] || continue
   echo "syncing: $name"
-  "$ROOT/scripts/sync-registry-source.sh" "$name"
+  "$ROOT/scripts/sync-registry-source.sh" "$name" "${FORCE_FLAG[@]}"
 done

@@ -3,31 +3,22 @@ import argparse
 import json
 from pathlib import Path
 
+from registry_source_lib import load_registry_config, registry_identity, resolve_registry_root
+
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def resolve_registry_root(reg):
-    local_path = reg.get('local_path')
-    if local_path:
-        p = Path(local_path)
-        if not p.is_absolute():
-            p = (ROOT / p).resolve()
-        return p
-    if reg.get('kind') == 'git':
-        return (ROOT / '.cache' / 'registries' / reg.get('name')).resolve()
-    if reg.get('name') == 'self':
-        return ROOT
-    return None
-
-
-def load_registry_config():
-    return json.loads((ROOT / 'config' / 'registry-sources.json').read_text(encoding='utf-8'))
+def expected_skill_tag(name, version):
+    if not name or not version:
+        return None
+    return f'skill/{name}/v{version}'
 
 
 def scan_registry(reg):
-    reg_root = resolve_registry_root(reg)
+    reg_root = resolve_registry_root(ROOT, reg)
     if reg_root is None or not reg_root.exists():
         return []
+    reg_info = registry_identity(ROOT, reg)
     items = []
     skills_root = reg_root / 'skills'
     for stage in ['active', 'incubating', 'archived']:
@@ -40,12 +31,7 @@ def scan_registry(reg):
             except Exception:
                 continue
             items.append({
-                'registry_name': reg.get('name'),
-                'registry_kind': reg.get('kind'),
-                'registry_url': reg.get('url'),
-                'registry_priority': reg.get('priority', 0),
-                'registry_trust': reg.get('trust'),
-                'registry_root': str(reg_root),
+                **reg_info,
                 'stage': stage,
                 'path': str(d),
                 'relative_path': str(d.relative_to(reg_root)),
@@ -57,12 +43,13 @@ def scan_registry(reg):
                 'snapshot_created_at': meta.get('snapshot_created_at'),
                 'snapshot_label': meta.get('snapshot_label'),
                 'installable': bool(meta.get('distribution', {}).get('installable', True)),
+                'expected_tag': expected_skill_tag(meta.get('name'), meta.get('version')),
             })
     return items
 
 
 def load_candidates(registry=None):
-    cfg = load_registry_config()
+    cfg = load_registry_config(ROOT)
     items = []
     for reg in cfg.get('registries', []):
         if not reg.get('enabled', True):

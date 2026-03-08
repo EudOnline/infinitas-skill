@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-08T04:33:16Z",
+  "generated_at": "2026-03-08T10:02:09Z",
   "default_registry": "self",
   "registries": [
     {
@@ -11,8 +11,25 @@
       "priority": 100,
       "enabled": true,
       "trust": "private",
+      "allowed_hosts": [
+        "github.com"
+      ],
+      "allowed_refs": [
+        "refs/heads/main"
+      ],
+      "pin": {
+        "mode": "branch",
+        "value": "main"
+      },
+      "update_policy": {
+        "mode": "local-only"
+      },
       "notes": "Primary private registry for local development and promotion",
-      "resolved_root": "/root/.openclaw/workspace/infinitas-skill"
+      "resolved_root": "/root/.openclaw/workspace/infinitas-skill",
+      "resolved_ref": "refs/heads/main",
+      "resolved_commit": "1454c1cb683845c57431d2d06c5fc5ce155646de",
+      "resolved_tag": null,
+      "resolved_origin_url": "https://github.com/EudOnline/infinitas-skill.git"
     }
   ]
 }

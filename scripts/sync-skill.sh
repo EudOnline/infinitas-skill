@@ -38,15 +38,20 @@ if os.path.isfile(manifest_path):
 print(item.get('locked_version') or '')
 print(item.get('version') or '')
 print(item.get('source_stage') or '')
+print(item.get('source_registry') or '')
 PY
 )
 LOCKED_VERSION="${INFO[0]}"
 INSTALLED_VERSION="${INFO[1]}"
 SOURCE_STAGE="${INFO[2]}"
+MANIFEST_REGISTRY="${INFO[3]}"
 
 ARGS=("$NAME" --json)
 if [[ -n "$LOCKED_VERSION" ]]; then
   ARGS+=(--version "$LOCKED_VERSION")
+fi
+if [[ -n "$MANIFEST_REGISTRY" ]]; then
+  ARGS+=(--registry "$MANIFEST_REGISTRY")
 fi
 INFO_JSON="$(python3 "$ROOT/scripts/resolve-skill-source.py" "${ARGS[@]}")"
 SRC="$(python3 - <<'PY' "$INFO_JSON"
@@ -70,6 +75,22 @@ print(json.loads(sys.argv[1]).get('registry_name') or 'self')
 PY
 )"
 
+python3 - <<'PY' "$INFO_JSON"
+import json, sys
+info = json.loads(sys.argv[1])
+commit = info.get('registry_commit') or ''
+tag = info.get('registry_tag')
+ref = info.get('registry_ref')
+summary = f"resolved: {info.get('name')}@{info.get('version') or '?'} from {info.get('registry_name')}"
+if commit:
+    summary += f" @{commit[:12]}"
+if tag:
+    summary += f" tag={tag}"
+elif ref:
+    summary += f" ref={ref}"
+print(summary)
+PY
+
 "$ROOT/scripts/check-skill.sh" "$SRC" >/dev/null
 "$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR" >/dev/null 2>&1 || { echo "sync target failed dependency/conflict checks" >&2; "$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR"; exit 1; }
 
@@ -82,9 +103,10 @@ fi
 if [[ $FORCE -ne 1 ]]; then
   echo "source version: $SRC_VERSION ($SRC_STAGE)"
   echo "installed version: $INSTALLED_VERSION ($SOURCE_STAGE)"
+  echo "source registry: $SOURCE_REGISTRY"
 fi
 
 rm -rf "$DEST"
 cp -R "$SRC" "$DEST"
-python3 "$ROOT/scripts/update-install-manifest.py" "$TARGET_DIR" "$SRC" "$DEST" sync "${LOCKED_VERSION:-$SRC_VERSION}" "$SOURCE_REGISTRY" >/dev/null
+python3 "$ROOT/scripts/update-install-manifest.py" "$TARGET_DIR" "$SRC" "$DEST" sync "${LOCKED_VERSION:-$SRC_VERSION}" "$INFO_JSON" >/dev/null
 echo "synced: $DEST <- $SRC"

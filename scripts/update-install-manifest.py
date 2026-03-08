@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 if len(sys.argv) != 7:
-    print('usage: scripts/update-install-manifest.py <target-dir> <source-dir> <dest-dir> <action> <locked-version> <source-registry>', file=sys.stderr)
+    print('usage: scripts/update-install-manifest.py <target-dir> <source-dir> <dest-dir> <action> <locked-version> <resolved-source-json>', file=sys.stderr)
     raise SystemExit(1)
 
 target_dir = Path(sys.argv[1]).resolve()
@@ -14,7 +14,7 @@ source_dir = Path(sys.argv[2]).resolve()
 dest_dir = Path(sys.argv[3]).resolve()
 action = sys.argv[4]
 locked_version = sys.argv[5]
-source_registry = sys.argv[6]
+source_info = json.loads(sys.argv[6]) if sys.argv[6] else {}
 manifest_path = target_dir / '.infinitas-skill-install-manifest.json'
 meta_path = dest_dir / '_meta.json'
 source_meta_path = source_dir / '_meta.json'
@@ -54,9 +54,21 @@ manifest['skills'][name] = {
     'version': meta.get('version'),
     'locked_version': locked_version or meta.get('version'),
     'status': meta.get('status'),
-    'source_repo': repo_url,
-    'source_registry': source_registry or 'self',
-    'source_path': str(source_dir.relative_to(Path(source_dir.anchor) if source_registry != 'self' else repo_root)) if False else str(source_dir),
+    'source_repo': source_info.get('registry_url') or repo_url,
+    'source_registry': source_info.get('registry_name') or 'self',
+    'source_registry_kind': source_info.get('registry_kind'),
+    'source_trust': source_info.get('registry_trust'),
+    'source_ref': source_info.get('registry_ref'),
+    'source_commit': source_info.get('registry_commit'),
+    'source_tag': source_info.get('registry_tag'),
+    'source_expected_tag': source_info.get('expected_tag'),
+    'source_resolution_reason': source_info.get('resolution_reason'),
+    'source_update_mode': source_info.get('registry_update_mode'),
+    'source_pin_mode': source_info.get('registry_pin_mode'),
+    'source_pin_value': source_info.get('registry_pin_value'),
+    'source_root': source_info.get('registry_root'),
+    'source_path': str(source_dir),
+    'source_relative_path': source_info.get('relative_path'),
     'source_stage': source_dir.parent.name,
     'source_version': source_meta.get('version'),
     'source_snapshot_of': source_meta.get('snapshot_of'),

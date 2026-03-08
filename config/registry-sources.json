@@ -1,4 +1,5 @@
 {
+  "$schema": "../schemas/registry-sources.schema.json",
   "default_registry": "self",
   "registries": [
     {
@@ -10,6 +11,19 @@
       "priority": 100,
       "enabled": true,
       "trust": "private",
+      "allowed_hosts": [
+        "github.com"
+      ],
+      "allowed_refs": [
+        "refs/heads/main"
+      ],
+      "pin": {
+        "mode": "branch",
+        "value": "main"
+      },
+      "update_policy": {
+        "mode": "local-only"
+      },
       "notes": "Primary private registry for local development and promotion"
     }
   ]
