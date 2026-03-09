@@ -26,7 +26,10 @@ SSH_VERIFY_PROVENANCE=0
 SSH_KEY=""
 SIGNER=""
 RELEASER=""
-readarray -t ATT_CFG < <(python3 - <<'PY' "$ROOT"
+ATT_CFG=()
+while IFS= read -r line; do
+  ATT_CFG+=("$line")
+done < <(python3 - <<'PY' "$ROOT"
 import json, sys
 from pathlib import Path
 root = Path(sys.argv[1])
@@ -332,7 +335,10 @@ if [[ $WRITE_PROVENANCE -eq 1 ]]; then
   mkdir -p "$ROOT/catalog/provenance"
   PROV="$ROOT/catalog/provenance/$NAME-$VERSION.json"
   TMP_PROV="$(mktemp)"
-  readarray -t DIST_PATHS < <(python3 - <<'PY' "$ROOT" "$NAME" "$VERSION" "$PUBLISHER"
+  DIST_PATHS=()
+  while IFS= read -r line; do
+    DIST_PATHS+=("$line")
+  done < <(python3 - <<'PY' "$ROOT" "$NAME" "$VERSION" "$PUBLISHER"
 import sys
 from pathlib import Path
 root = Path(sys.argv[1]).resolve()
@@ -360,7 +366,10 @@ PY
   [[ -n "$EFFECTIVE_RELEASER" ]] || EFFECTIVE_RELEASER="$RELEASER_NAME"
   EFFECTIVE_SSH_KEY="$SSH_KEY"
   [[ -n "$EFFECTIVE_SSH_KEY" ]] || EFFECTIVE_SSH_KEY="$ATTESTATION_KEY"
-  readarray -t BUNDLE_INFO < <(python3 - <<'PY' "$ROOT" "$DIR" "$TMP_BUNDLE"
+  BUNDLE_INFO=()
+  while IFS= read -r line; do
+    BUNDLE_INFO+=("$line")
+  done < <(python3 - <<'PY' "$ROOT" "$DIR" "$TMP_BUNDLE"
 import sys
 from pathlib import Path
 root = Path(sys.argv[1]).resolve()

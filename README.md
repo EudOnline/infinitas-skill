@@ -176,6 +176,29 @@ scripts/list-registry-sources.py
 scripts/sync-registry-source.sh self
 ```
 
+# AI-first publish and pull wrappers
+scripts/publish-skill.sh my-skill
+scripts/pull-skill.sh my-skill ~/.openclaw/skills
+scripts/import-openclaw-skill.sh ~/.openclaw/workspace/skills/my-skill --owner lvxiaoer
+scripts/export-openclaw-skill.sh my-skill --version 1.2.3 --out /tmp/openclaw-export
+```
+
+## AI Protocol
+
+For AI-driven publishing, import, export, and installation, treat the following files as the machine-facing contract:
+
+- `docs/ai/openclaw.md` — OpenClaw / ClawHub bridge contract
+- `docs/ai/publish.md` — protocol for `scripts/publish-skill.sh`
+- `docs/ai/pull.md` — protocol for `scripts/pull-skill.sh`
+
+The default AI execution model is autonomous, but the contract also supports `--mode confirm` for non-mutating plan output. AI installation is immutable-only: agents must resolve installable versions from published release artifacts, not from `skills/active/` or `skills/incubating/`.
+
+## OpenClaw workflows
+
+- **Private default**: OpenClaw local prototype → `scripts/import-openclaw-skill.sh` → review / release → `scripts/pull-skill.sh ~/.openclaw/skills`
+- **Public optional**: release first → `scripts/export-openclaw-skill.sh --out <dir>` → manual `clawhub publish <dir>/<skill>`
+- **Do not skip release**: AI must not install directly from editable source folders when serving OpenClaw runtime installs
+
 ## CI
 
 GitHub Actions runs `scripts/check-all.sh` on pushes and pull requests. That validation currently covers:

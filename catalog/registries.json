@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-08T16:59:35Z",
+  "generated_at": "2026-03-09T13:17:44Z",
   "default_registry": "self",
   "registries": [
     {
@@ -25,7 +25,7 @@
         "mode": "local-only"
       },
       "notes": "Primary private registry for local development and promotion",
-      "resolved_root": "/root/.openclaw/workspace/infinitas-skill",
+      "resolved_root": ".",
       "resolved_ref": "refs/heads/main",
       "resolved_commit": null,
       "resolved_tag": null,

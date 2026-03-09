@@ -1,0 +1,249 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  echo "usage: scripts/pull-skill.sh <qualified-name-or-name> <target-dir> [--version X.Y.Z] [--mode auto|confirm]" >&2
+}
+
+if [[ $# -lt 2 ]]; then
+  usage
+  exit 1
+fi
+
+REQUESTED_NAME="$1"
+TARGET_DIR="$2"
+shift 2 || true
+RESOLVED_VERSION=""
+MODE="auto"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --version)
+      RESOLVED_VERSION="${2:-}"
+      [[ -n "$RESOLVED_VERSION" ]] || { echo "missing value for --version" >&2; exit 1; }
+      shift 2
+      ;;
+    --mode)
+      MODE="${2:-}"
+      [[ "$MODE" == "auto" || "$MODE" == "confirm" ]] || { echo "--mode must be auto or confirm" >&2; exit 1; }
+      shift 2
+      ;;
+    *)
+      echo "unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PLAN_JSON="$(python3 - "$ROOT" "$REQUESTED_NAME" "$TARGET_DIR" "$RESOLVED_VERSION" "$MODE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1]).resolve()
+requested = sys.argv[2]
+target_dir = sys.argv[3]
+requested_version = sys.argv[4] or None
+mode = sys.argv[5]
+
+sys.path.insert(0, str(root / 'scripts'))
+from ai_index_lib import validate_ai_index_payload  # noqa: E402
+
+index_path = root / 'catalog' / 'ai-index.json'
+if not index_path.exists():
+    print(json.dumps({
+        'ok': False,
+        'state': 'failed',
+        'failed_at_step': 'resolved',
+        'error_code': 'missing-ai-index',
+        'message': f'missing AI index: {index_path}',
+        'suggested_action': 'run scripts/build-catalog.sh',
+    }, ensure_ascii=False))
+    raise SystemExit(1)
+
+payload = json.loads(index_path.read_text(encoding='utf-8'))
+errors = validate_ai_index_payload(payload)
+if errors:
+    print(json.dumps({
+        'ok': False,
+        'state': 'failed',
+        'failed_at_step': 'resolved',
+        'error_code': 'invalid-ai-index',
+        'message': '; '.join(errors),
+        'suggested_action': 'regenerate and validate catalog/ai-index.json',
+    }, ensure_ascii=False))
+    raise SystemExit(1)
+
+policy = payload.get('install_policy') or {}
+if policy.get('mode') != 'immutable-only' or policy.get('direct_source_install_allowed') is not False:
+    print(json.dumps({
+        'ok': False,
+        'state': 'failed',
+        'failed_at_step': 'resolved',
+        'error_code': 'invalid-install-policy',
+        'message': 'AI install policy must be immutable-only with direct source installs disabled',
+        'suggested_action': 'fix catalog/ai-index.json install_policy',
+    }, ensure_ascii=False))
+    raise SystemExit(1)
+
+matches = []
+for skill in payload.get('skills', []):
+    if requested == skill.get('qualified_name') or requested == skill.get('name'):
+        matches.append(skill)
+
+if not matches:
+    print(json.dumps({
+        'ok': False,
+        'state': 'failed',
+        'failed_at_step': 'resolved',
+        'error_code': 'skill-not-found',
+        'message': f'no AI-index entry found for {requested}',
+        'suggested_action': 'check the skill name or regenerate catalog/ai-index.json',
+    }, ensure_ascii=False))
+    raise SystemExit(1)
+
+exact = [skill for skill in matches if requested == skill.get('qualified_name')]
+if exact:
+    selected_skill = exact[0]
+elif len(matches) == 1:
+    selected_skill = matches[0]
+else:
+    choices = ', '.join(sorted(skill.get('qualified_name') or skill.get('name') or '?' for skill in matches))
+    print(json.dumps({
+        'ok': False,
+        'state': 'failed',
+        'failed_at_step': 'resolved',
+        'error_code': 'ambiguous-skill-name',
+        'message': f'ambiguous skill name {requested}: {choices}',
+        'suggested_action': 'use the qualified_name',
+    }, ensure_ascii=False))
+    raise SystemExit(1)
+
+resolved_version = requested_version or selected_skill.get('default_install_version')
+versions = selected_skill.get('versions') or {}
+if resolved_version not in versions:
+    print(json.dumps({
+        'ok': False,
+        'state': 'failed',
+        'failed_at_step': 'selected_version',
+        'error_code': 'version-not-found',
+        'message': f'version {resolved_version!r} is not available for {selected_skill.get("qualified_name") or selected_skill.get("name")}',
+        'suggested_action': 'use one of available_versions from catalog/ai-index.json',
+    }, ensure_ascii=False))
+    raise SystemExit(1)
+
+version_entry = versions[resolved_version]
+required_fields = ['manifest_path', 'bundle_path', 'bundle_sha256', 'attestation_path']
+missing = [field for field in required_fields if not isinstance(version_entry.get(field), str) or not version_entry.get(field).strip()]
+if missing:
+    print(json.dumps({
+        'ok': False,
+        'state': 'failed',
+        'failed_at_step': 'verified_manifest',
+        'error_code': 'missing-distribution-fields',
+        'message': f'missing distribution fields: {", ".join(missing)}',
+        'suggested_action': 'republish the skill and rebuild the catalog',
+    }, ensure_ascii=False))
+    raise SystemExit(1)
+
+for field in ['manifest_path', 'bundle_path', 'attestation_path']:
+    full = root / version_entry[field]
+    if not full.exists():
+        print(json.dumps({
+            'ok': False,
+            'state': 'failed',
+            'failed_at_step': 'verified_manifest',
+            'error_code': 'missing-distribution-file',
+            'message': f'missing {field}: {version_entry[field]}',
+            'suggested_action': 'rebuild or republish the distribution artifacts',
+        }, ensure_ascii=False))
+        raise SystemExit(1)
+
+install_name = selected_skill.get('qualified_name') or selected_skill.get('name')
+plan = {
+    'ok': True,
+    'qualified_name': selected_skill.get('qualified_name') or selected_skill.get('name'),
+    'requested_version': requested_version,
+    'resolved_version': resolved_version,
+    'target_dir': target_dir,
+    'state': 'planned' if mode == 'confirm' else 'selected_version',
+    'manifest_path': version_entry.get('manifest_path'),
+    'bundle_path': version_entry.get('bundle_path'),
+    'bundle_sha256': version_entry.get('bundle_sha256'),
+    'attestation_path': version_entry.get('attestation_path'),
+    'install_name': install_name,
+    'install_command': ['scripts/install-skill.sh', install_name, target_dir, '--version', resolved_version],
+    'next_step': 'run-install' if mode == 'auto' else 'confirm-or-run',
+}
+print(json.dumps(plan, ensure_ascii=False))
+PY
+)" || {
+  status=$?
+  printf '%s\n' "$PLAN_JSON"
+  exit $status
+}
+
+if [[ "$MODE" == "confirm" ]]; then
+  printf '%s\n' "$PLAN_JSON"
+  exit 0
+fi
+
+INSTALL_NAME="$(python3 - <<'PY' "$PLAN_JSON"
+import json, sys
+plan = json.loads(sys.argv[1])
+print(plan['install_name'])
+print(plan['resolved_version'])
+PY
+)"
+INSTALL_NAME="${INSTALL_NAME%%$'
+'*}"
+RESOLVED_INSTALL_VERSION="$(python3 - <<'PY' "$PLAN_JSON"
+import json, sys
+print(json.loads(sys.argv[1])['resolved_version'])
+PY
+)"
+LOCKFILE_PATH="$TARGET_DIR/.infinitas-skill-install-manifest.json"
+INSTALL_LOG="$(mktemp)"
+if ! ./scripts/install-skill.sh "$INSTALL_NAME" "$TARGET_DIR" --version "$RESOLVED_INSTALL_VERSION" >"$INSTALL_LOG" 2>&1; then
+  python3 - <<'PY' "$PLAN_JSON" "$INSTALL_LOG"
+import json, sys
+from pathlib import Path
+plan = json.loads(sys.argv[1])
+message = Path(sys.argv[2]).read_text(encoding='utf-8').strip()
+payload = {
+    'ok': False,
+    'qualified_name': plan.get('qualified_name'),
+    'requested_version': plan.get('requested_version'),
+    'resolved_version': plan.get('resolved_version'),
+    'target_dir': plan.get('target_dir'),
+    'state': 'failed',
+    'failed_at_step': 'materialized',
+    'error_code': 'install-failed',
+    'message': message,
+    'suggested_action': 'inspect install output and distribution artifacts',
+}
+print(json.dumps(payload, ensure_ascii=False))
+PY
+  rm -f "$INSTALL_LOG"
+  exit 1
+fi
+rm -f "$INSTALL_LOG"
+
+python3 - <<'PY' "$PLAN_JSON" "$LOCKFILE_PATH"
+import json, sys
+plan = json.loads(sys.argv[1])
+lockfile_path = sys.argv[2]
+payload = {
+    'ok': True,
+    'qualified_name': plan.get('qualified_name'),
+    'requested_version': plan.get('requested_version'),
+    'resolved_version': plan.get('resolved_version'),
+    'target_dir': plan.get('target_dir'),
+    'state': 'installed',
+    'lockfile_path': lockfile_path,
+    'installed_files_manifest': lockfile_path,
+    'next_step': 'sync-or-use',
+}
+print(json.dumps(payload, ensure_ascii=False))
+PY

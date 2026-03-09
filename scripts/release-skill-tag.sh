@@ -64,7 +64,10 @@ while [[ $# -gt 0 ]]; do
 done
 
 DIR="$(resolve_skill "$TARGET")" || { echo "cannot resolve skill: $TARGET" >&2; exit 1; }
-readarray -t META < <(python3 - "$DIR/_meta.json" "$SET_VERSION" <<'PY'
+META=()
+while IFS= read -r line; do
+  META+=("$line")
+done < <(python3 - "$DIR/_meta.json" "$SET_VERSION" <<'PY'
 import json, sys
 with open(sys.argv[1], 'r', encoding='utf-8') as f:
     meta = json.load(f)

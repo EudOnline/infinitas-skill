@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import re
+from typing import Optional
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -366,7 +367,7 @@ def latest_distinct_entries(entries):
     return {reviewer: entry for reviewer, (_, entry) in sorted(latest.items())}
 
 
-def evaluate_review_state(skill_dir: Path, root: Path = ROOT, stage: str | None = None, as_active: bool = False, policy=None):
+def evaluate_review_state(skill_dir: Path, root: Path = ROOT, stage: Optional[str] = None, as_active: bool = False, policy=None):
     skill_dir = Path(skill_dir).resolve()
     policy = policy or load_promotion_policy(root)
     meta = load_meta(skill_dir)
@@ -465,7 +466,7 @@ def evaluate_review_state(skill_dir: Path, root: Path = ROOT, stage: str | None 
     }
 
 
-def sync_declared_review_state(skill_dir: Path, evaluation=None, root: Path = ROOT, stage: str | None = None, as_active: bool = False, policy=None):
+def sync_declared_review_state(skill_dir: Path, evaluation=None, root: Path = ROOT, stage: Optional[str] = None, as_active: bool = False, policy=None):
     skill_dir = Path(skill_dir).resolve()
     evaluation = evaluation or evaluate_review_state(skill_dir, root=root, stage=stage, as_active=as_active, policy=policy)
     meta_path = skill_dir / '_meta.json'

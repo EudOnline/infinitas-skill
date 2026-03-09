@@ -20,6 +20,13 @@ fi
 if [[ "${INFINITAS_SKIP_DISTRIBUTION_TESTS:-0}" != "1" ]]; then
   python3 scripts/test-distribution-install.py
 fi
+if [[ "${INFINITAS_SKIP_AI_WRAPPER_TESTS:-0}" != "1" ]]; then
+  python3 scripts/test-ai-index.py
+  python3 scripts/test-ai-pull.py
+  python3 scripts/test-ai-publish.py
+  python3 scripts/test-openclaw-import.py
+  python3 scripts/test-openclaw-export.py
+fi
 if [[ "${INFINITAS_SKIP_BOOTSTRAP_TESTS:-0}" != "1" ]]; then
   python3 scripts/test-signing-bootstrap.py
 fi
@@ -32,7 +39,7 @@ done < <(find skills -mindepth 2 -maxdepth 2 -type d -exec test -f '{}/_meta.jso
 before_catalog_norm="$(python3 - <<'PY'
 import json
 from pathlib import Path
-for path in ['catalog/catalog.json','catalog/active.json','catalog/compatibility.json','catalog/registries.json','catalog/distributions.json']:
+for path in ['catalog/catalog.json','catalog/active.json','catalog/compatibility.json','catalog/registries.json','catalog/distributions.json','catalog/ai-index.json']:
     p = Path(path)
     if not p.exists():
         continue
@@ -45,7 +52,7 @@ scripts/build-catalog.sh >/dev/null
 after_catalog_norm="$(python3 - <<'PY'
 import json
 from pathlib import Path
-for path in ['catalog/catalog.json','catalog/active.json','catalog/compatibility.json','catalog/registries.json','catalog/distributions.json']:
+for path in ['catalog/catalog.json','catalog/active.json','catalog/compatibility.json','catalog/registries.json','catalog/distributions.json','catalog/ai-index.json']:
     p = Path(path)
     if not p.exists():
         continue
@@ -57,7 +64,7 @@ PY
 
 if [[ -n "$before_catalog_norm" && -n "$after_catalog_norm" && "$before_catalog_norm" != "$after_catalog_norm" ]]; then
   echo "FAIL: catalog contents changed; run scripts/build-catalog.sh and commit the result" >&2
-  git --no-pager diff -- catalog/catalog.json catalog/active.json catalog/compatibility.json catalog/registries.json catalog/distributions.json || true
+  git --no-pager diff -- catalog/catalog.json catalog/active.json catalog/compatibility.json catalog/registries.json catalog/distributions.json catalog/ai-index.json || true
   exit 1
 fi
 
