@@ -37,6 +37,7 @@ def make_env(extra=None):
     env = os.environ.copy()
     env['INFINITAS_SKIP_RELEASE_TESTS'] = '1'
     env['INFINITAS_SKIP_ATTESTATION_TESTS'] = '1'
+    env['INFINITAS_SKIP_DISTRIBUTION_TESTS'] = '1'
     env['INFINITAS_SKIP_BOOTSTRAP_TESTS'] = '1'
     if extra:
         env.update(extra)
@@ -170,8 +171,18 @@ def scenario_verified_attestation_bundle_is_emitted():
         assert_contains(combined, 'verified attestation:', 'verified attestation output')
         provenance_path = repo / 'catalog' / 'provenance' / f'{FIXTURE_NAME}-{FIXTURE_VERSION}.json'
         signature_path = provenance_path.with_suffix(provenance_path.suffix + '.ssig')
+        distribution_dir = repo / 'catalog' / 'distributions' / '_legacy' / FIXTURE_NAME / FIXTURE_VERSION
+        distribution_bundle = distribution_dir / 'skill.tar.gz'
+        distribution_manifest = distribution_dir / 'manifest.json'
+        distribution_index = repo / 'catalog' / 'distributions.json'
         if not signature_path.exists():
             fail(f'missing attestation signature {signature_path}')
+        if not distribution_bundle.exists():
+            fail(f'missing distribution bundle {distribution_bundle}')
+        if not distribution_manifest.exists():
+            fail(f'missing distribution manifest {distribution_manifest}')
+        if not distribution_index.exists():
+            fail(f'missing distribution index {distribution_index}')
         provenance = json.loads(provenance_path.read_text(encoding='utf-8'))
         if provenance.get('kind') != 'skill-release-attestation':
             fail(f"unexpected attestation kind {provenance.get('kind')!r}")
@@ -200,8 +211,14 @@ def scenario_verified_attestation_bundle_is_emitted():
         root_steps = [step for step in provenance['dependencies']['steps'] if step.get('root')]
         if len(root_steps) != 1 or root_steps[0].get('name') != FIXTURE_NAME:
             fail(f"unexpected dependency root steps {root_steps!r}")
+        distribution = provenance.get('distribution') or {}
+        if (distribution.get('bundle') or {}).get('path') != str(distribution_bundle.relative_to(repo)):
+            fail(f"unexpected bundle path {distribution.get('bundle')!r}")
+        if distribution.get('manifest_path') != str(distribution_manifest.relative_to(repo)):
+            fail(f"unexpected manifest path {distribution.get('manifest_path')!r}")
         run([sys.executable, str(repo / 'scripts' / 'verify-attestation.py'), str(provenance_path)], cwd=repo, env=make_env())
         run([str(repo / 'scripts' / 'verify-provenance-ssh.sh'), str(provenance_path)], cwd=repo, env=make_env())
+        run([sys.executable, str(repo / 'scripts' / 'verify-distribution-manifest.py'), str(distribution_manifest)], cwd=repo, env=make_env())
     finally:
         shutil.rmtree(tmpdir)
 

@@ -18,6 +18,7 @@ sys.path.insert(0, str(root / 'scripts'))
 from registry_source_lib import load_registry_config, registry_identity, resolve_registry_root  # noqa: E402
 from review_lib import ReviewPolicyError, evaluate_review_state, load_reviews  # noqa: E402
 from skill_identity_lib import display_name, normalize_skill_identity  # noqa: E402
+from distribution_lib import DistributionError, manifest_index_entry  # noqa: E402
 
 
 def expected_skill_tag(name, version):
@@ -80,6 +81,25 @@ out_catalog = root / 'catalog' / 'catalog.json'
 out_active = root / 'catalog' / 'active.json'
 out_compat = root / 'catalog' / 'compatibility.json'
 out_registries = root / 'catalog' / 'registries.json'
+out_distributions = root / 'catalog' / 'distributions.json'
+
+
+def dist_identity_key(entry):
+    return (entry.get('qualified_name') or entry.get('name'), entry.get('version'))
+
+
+distribution_entries = []
+distribution_lookup = {}
+distribution_root = root / 'catalog' / 'distributions'
+if distribution_root.exists():
+    for manifest_path in sorted(distribution_root.rglob('manifest.json')):
+        try:
+            entry = manifest_index_entry(manifest_path, root)
+        except DistributionError as exc:
+            print(f'FAIL: {exc}', file=sys.stderr)
+            raise SystemExit(1)
+        distribution_entries.append(entry)
+        distribution_lookup[dist_identity_key(entry)] = entry
 
 entries = []
 compat_agents = {}
@@ -148,6 +168,18 @@ for stage in ['incubating', 'active', 'archived']:
             'source_pin_value': catalog_source_identity.get('registry_pin_value'),
             'expected_tag': expected_skill_tag(meta.get('name'), meta.get('version')),
         }
+        dist = distribution_lookup.get(dist_identity_key(item))
+        if dist:
+            item['verified_distribution'] = {
+                'manifest_path': dist.get('manifest_path'),
+                'bundle_path': dist.get('bundle_path'),
+                'bundle_sha256': dist.get('bundle_sha256'),
+                'attestation_path': dist.get('attestation_path'),
+                'attestation_signature_path': dist.get('attestation_signature_path'),
+                'source_snapshot_tag': dist.get('source_snapshot_tag'),
+                'source_snapshot_commit': dist.get('source_snapshot_commit'),
+                'generated_at': dist.get('generated_at'),
+            }
         entries.append(item)
         stage_counts[item['status']] = stage_counts.get(item['status'], 0) + 1
         for agent in agent_compatible:
@@ -196,6 +228,11 @@ registries_view = {
     'default_registry': cfg.get('default_registry'),
     'registries': registries_export,
 }
+distributions_view = {
+    'generated_at': catalog['generated_at'],
+    'count': len(distribution_entries),
+    'skills': distribution_entries,
+}
 
 
 def normalized(payload):
@@ -218,4 +255,5 @@ write_if_changed(out_catalog, catalog)
 write_if_changed(out_active, active)
 write_if_changed(out_compat, compatibility)
 write_if_changed(out_registries, registries_view)
+write_if_changed(out_distributions, distributions_view)
 PY

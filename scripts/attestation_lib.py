@@ -187,6 +187,28 @@ def validate_provenance_payload(payload):
         if not isinstance(attestation.get('require_verified_attestation_for_distribution'), bool):
             errors.append('attestation.require_verified_attestation_for_distribution must be boolean')
 
+    distribution = payload.get('distribution')
+    if distribution is not None:
+        if not isinstance(distribution, dict):
+            errors.append('distribution must be an object when present')
+        else:
+            manifest_path = distribution.get('manifest_path')
+            if manifest_path is not None and (not isinstance(manifest_path, str) or not manifest_path.strip()):
+                errors.append('distribution.manifest_path must be a non-empty string when present')
+            bundle = distribution.get('bundle')
+            if not isinstance(bundle, dict):
+                errors.append('distribution.bundle must be an object')
+            else:
+                require_string(bundle, 'path', 'distribution.bundle.path')
+                if bundle.get('format') != 'tar.gz':
+                    errors.append('distribution.bundle.format must be tar.gz')
+                require_string(bundle, 'sha256', 'distribution.bundle.sha256')
+                require_string(bundle, 'root_dir', 'distribution.bundle.root_dir')
+                if not isinstance(bundle.get('size'), int) or bundle.get('size') < 0:
+                    errors.append('distribution.bundle.size must be a non-negative integer')
+                if not isinstance(bundle.get('file_count'), int) or bundle.get('file_count') < 1:
+                    errors.append('distribution.bundle.file_count must be a positive integer')
+
     return errors
 
 

@@ -55,6 +55,28 @@ if [[ ${#POSITIONAL[@]} -eq 1 ]]; then
 fi
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CLEANUP_DIRS=()
+
+cleanup_materialized() {
+  local dir
+  for dir in "${CLEANUP_DIRS[@]}"; do
+    [[ -n "$dir" && -d "$dir" ]] || continue
+    rm -rf "$dir"
+  done
+}
+
+remember_cleanup_dir() {
+  local dir="$1"
+  [[ -n "$dir" && "$dir" != "null" ]] || return 0
+  CLEANUP_DIRS+=("$dir")
+}
+
+materialize_source() {
+  python3 "$ROOT/scripts/materialize-skill-source.py" --source-json "$1"
+}
+
+trap cleanup_materialized EXIT
+
 ARGS=("$NAME" --json)
 if [[ -n "$LOCK_VERSION" ]]; then
   ARGS+=(--version "$LOCK_VERSION")
@@ -63,11 +85,18 @@ if [[ -n "$REGISTRY" ]]; then
   ARGS+=(--registry "$REGISTRY")
 fi
 INFO_JSON="$(python3 "$ROOT/scripts/resolve-skill-source.py" "${ARGS[@]}")"
-SRC="$(python3 - <<'PY' "$INFO_JSON"
+MATERIALIZED_JSON="$(materialize_source "$INFO_JSON")"
+SRC="$(python3 - <<'PY' "$MATERIALIZED_JSON"
 import json, sys
-print(json.loads(sys.argv[1])['path'])
+print(json.loads(sys.argv[1])['materialized_path'])
 PY
 )"
+ROOT_CLEANUP_DIR="$(python3 - <<'PY' "$MATERIALIZED_JSON"
+import json, sys
+print(json.loads(sys.argv[1]).get('cleanup_dir') or '')
+PY
+)"
+remember_cleanup_dir "$ROOT_CLEANUP_DIR"
 RESOLVED_VERSION="$(python3 - <<'PY' "$INFO_JSON"
 import json, sys
 print(json.loads(sys.argv[1]).get('version') or '')
@@ -110,7 +139,7 @@ print(summary)
 PY
 
 mkdir -p "$TARGET_DIR"
-PLAN_JSON="$(python3 "$ROOT/scripts/resolve-install-plan.py" --skill-dir "$SRC" --target-dir "$TARGET_DIR" --source-registry "$RESOLVED_REGISTRY" --source-json "$INFO_JSON" --mode install --json)"
+PLAN_JSON="$(python3 "$ROOT/scripts/resolve-install-plan.py" --skill-dir "$SRC" --target-dir "$TARGET_DIR" --source-registry "$RESOLVED_REGISTRY" --source-json "$MATERIALIZED_JSON" --mode install --json)"
 
 python3 - <<'PY' "$PLAN_JSON"
 import json, sys
@@ -176,7 +205,6 @@ while IFS=$'\t' read -r STEP_ORDER STEP_NAME STEP_VERSION STEP_REGISTRY STEP_STA
     echo "target already exists: $STEP_DEST (use --force to overwrite)" >&2
     exit 1
   fi
-  "$ROOT/scripts/check-skill.sh" "$STEP_PATH" >/dev/null
   RESOLVE_NAME="$STEP_QUALIFIED"
   [[ -n "$RESOLVE_NAME" ]] || RESOLVE_NAME="$STEP_NAME"
   RESOLVE_ARGS=("$RESOLVE_NAME" --version "$STEP_VERSION" --registry "$STEP_REGISTRY" --json)
@@ -184,17 +212,30 @@ while IFS=$'\t' read -r STEP_ORDER STEP_NAME STEP_VERSION STEP_REGISTRY STEP_STA
     RESOLVE_ARGS+=(--allow-incubating)
   fi
   STEP_INFO_JSON="$(python3 "$ROOT/scripts/resolve-skill-source.py" "${RESOLVE_ARGS[@]}")"
+  STEP_SOURCE_JSON="$(materialize_source "$STEP_INFO_JSON")"
+  STEP_SRC="$(python3 - <<'PY' "$STEP_SOURCE_JSON"
+import json, sys
+print(json.loads(sys.argv[1])['materialized_path'])
+PY
+  )"
+  STEP_CLEANUP_DIR="$(python3 - <<'PY' "$STEP_SOURCE_JSON"
+import json, sys
+print(json.loads(sys.argv[1]).get('cleanup_dir') or '')
+PY
+  )"
+  remember_cleanup_dir "$STEP_CLEANUP_DIR"
+  "$ROOT/scripts/check-skill.sh" "$STEP_SRC" >/dev/null
   if [[ -e "$STEP_DEST" ]]; then
     rm -rf "$STEP_DEST"
   fi
-  cp -R "$STEP_PATH" "$STEP_DEST"
+  cp -R "$STEP_SRC" "$STEP_DEST"
   STEP_LOCK_VERSION="$STEP_VERSION"
   STEP_PLAN_JSON=""
   if [[ "$STEP_ROOT" == "1" ]]; then
     STEP_LOCK_VERSION="${LOCK_VERSION:-$RESOLVED_VERSION}"
     STEP_PLAN_JSON="$PLAN_JSON"
   fi
-  python3 "$ROOT/scripts/update-install-manifest.py" "$TARGET_DIR" "$STEP_PATH" "$STEP_DEST" "$STEP_ACTION" "$STEP_LOCK_VERSION" "$STEP_INFO_JSON" "$STEP_PLAN_JSON" >/dev/null
+  python3 "$ROOT/scripts/update-install-manifest.py" "$TARGET_DIR" "$STEP_SRC" "$STEP_DEST" "$STEP_ACTION" "$STEP_LOCK_VERSION" "$STEP_SOURCE_JSON" "$STEP_PLAN_JSON" >/dev/null
   APPLIED=1
 done < <(python3 - <<'PY' "$PLAN_JSON"
 import json, sys
@@ -215,7 +256,7 @@ for step in plan.get('steps', []):
 PY
 )
 
-python3 "$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR" --source-registry "$RESOLVED_REGISTRY" --source-json "$INFO_JSON" --mode install >/dev/null
+python3 "$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR" --source-registry "$RESOLVED_REGISTRY" --source-json "$MATERIALIZED_JSON" --mode install >/dev/null
 
 if [[ $APPLIED -eq 0 ]]; then
   echo "already satisfied: $DEST"

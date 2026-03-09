@@ -15,7 +15,8 @@
     "dependencies",
     "review",
     "release",
-    "attestation"
+    "attestation",
+    "distribution"
   ],
   "properties": {
     "$schema": {
@@ -273,6 +274,37 @@
         "policy_mode": {"type": "string", "enum": ["advisory", "enforce"]},
         "require_verified_attestation_for_release_output": {"type": "boolean"},
         "require_verified_attestation_for_distribution": {"type": "boolean"}
+      },
+      "additionalProperties": true
+    },
+    "distribution": {
+      "type": "object",
+      "required": [
+        "manifest_path",
+        "bundle"
+      ],
+      "properties": {
+        "manifest_path": {"type": "string", "minLength": 1},
+        "bundle": {
+          "type": "object",
+          "required": [
+            "path",
+            "format",
+            "sha256",
+            "size",
+            "root_dir",
+            "file_count"
+          ],
+          "properties": {
+            "path": {"type": "string", "minLength": 1},
+            "format": {"type": "string", "const": "tar.gz"},
+            "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "size": {"type": "integer", "minimum": 0},
+            "root_dir": {"type": "string", "minLength": 1},
+            "file_count": {"type": "integer", "minimum": 1}
+          },
+          "additionalProperties": true
+        }
       },
       "additionalProperties": true
     }

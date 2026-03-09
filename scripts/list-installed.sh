@@ -17,18 +17,19 @@ for name, meta in sorted(data.get('skills', {}).items()):
     version = meta.get('version')
     locked = meta.get('locked_version')
     stage = meta.get('source_stage')
-    src = meta.get('source_relative_path') or meta.get('source_path')
+    src_type = meta.get('source_type') or 'working-tree'
+    src = meta.get('source_distribution_manifest') or meta.get('source_relative_path') or meta.get('source_path')
     registry = meta.get('source_registry') or 'self'
-    commit = meta.get('source_commit')
-    tag = meta.get('source_tag')
-    ref = meta.get('source_ref')
+    commit = meta.get('source_snapshot_commit') or meta.get('source_commit')
+    tag = meta.get('source_snapshot_tag') or meta.get('source_tag')
+    ref = meta.get('source_snapshot_ref') or meta.get('source_ref')
     history_len = len((data.get('history') or {}).get(name) or [])
     resolution_plan = meta.get('resolution_plan') or {}
     resolution_steps = len((resolution_plan.get('steps') or [])) if isinstance(resolution_plan, dict) else 0
     lock_note = f", locked={locked}" if locked else ""
     hist_note = f", history={history_len}" if history_len else ""
     plan_note = f", plan_steps={resolution_steps}" if resolution_steps else ""
-    source_note = registry
+    source_note = f"{registry}/{src_type}"
     if commit:
         source_note += f"@{commit[:12]}"
     if tag:

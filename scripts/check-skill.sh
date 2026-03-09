@@ -51,6 +51,11 @@ with open(meta_path, 'r', encoding='utf-8') as f:
         print(f'FAIL: invalid JSON in _meta.json: {e}', file=sys.stderr)
         sys.exit(1)
 
+root_path = Path(root).resolve()
+skill_path = Path(path).resolve()
+allowed_status = {'incubating', 'active', 'archived'}
+detached_layout = parent_stage not in allowed_status
+
 required = ['name', 'version', 'status', 'summary', 'owner', 'review_state', 'risk_level', 'distribution']
 for key in required:
     if key not in meta:
@@ -70,12 +75,11 @@ if version and not re.match(r'^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9_.-]+)?$', version)
     print(f'FAIL: version is not semver-like: {version}', file=sys.stderr)
     status = 1
 
-allowed_status = {'incubating', 'active', 'archived'}
 meta_status = meta.get('status')
 if meta_status and meta_status not in allowed_status:
     print(f'FAIL: invalid status: {meta_status}', file=sys.stderr)
     status = 1
-if meta_status and meta_status != parent_stage:
+if meta_status and not detached_layout and meta_status != parent_stage:
     print(f'FAIL: _meta.json status ({meta_status}) does not match parent dir ({parent_stage})', file=sys.stderr)
     status = 1
 
@@ -114,8 +118,6 @@ if identity.get('publisher') and identity.get('qualified_name') != f"{identity['
     print('FAIL: publisher-qualified_name combination is inconsistent with name', file=sys.stderr)
     status = 1
 
-root_path = Path(root).resolve()
-skill_path = Path(path).resolve()
 try:
     skill_path.relative_to((root_path / 'skills').resolve())
     is_registry_skill = True

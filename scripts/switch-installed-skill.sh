@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: scripts/switch-installed-skill.sh <skill-name> [target-dir] (--to-active | --to-version X.Y.Z) [--force]" >&2
+  echo "usage: scripts/switch-installed-skill.sh <skill-name> [target-dir] (--to-active | --to-version X.Y.Z) [--registry NAME] [--qualified-name NAME] [--force]" >&2
 }
 
 if [[ $# -lt 1 ]]; then
@@ -16,6 +16,8 @@ TARGET_DIR="$HOME/.openclaw/skills"
 TO_ACTIVE=0
 TO_VERSION=""
 FORCE=0
+SOURCE_REGISTRY_OVERRIDE=""
+QUALIFIED_NAME_OVERRIDE=""
 POSITIONAL=()
 
 while [[ $# -gt 0 ]]; do
@@ -32,6 +34,16 @@ while [[ $# -gt 0 ]]; do
     --force)
       FORCE=1
       shift
+      ;;
+    --registry)
+      SOURCE_REGISTRY_OVERRIDE="${2:-}"
+      [[ -n "$SOURCE_REGISTRY_OVERRIDE" ]] || { echo "missing value for --registry" >&2; exit 1; }
+      shift 2
+      ;;
+    --qualified-name)
+      QUALIFIED_NAME_OVERRIDE="${2:-}"
+      [[ -n "$QUALIFIED_NAME_OVERRIDE" ]] || { echo "missing value for --qualified-name" >&2; exit 1; }
+      shift 2
       ;;
     *)
       POSITIONAL+=("$1")
@@ -57,19 +69,53 @@ if [[ $TO_ACTIVE -eq 1 && -n "$TO_VERSION" ]]; then
 fi
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CLEANUP_DIRS=()
+
+cleanup_materialized() {
+  local dir
+  for dir in "${CLEANUP_DIRS[@]}"; do
+    [[ -n "$dir" && -d "$dir" ]] || continue
+    rm -rf "$dir"
+  done
+}
+
+remember_cleanup_dir() {
+  local dir="$1"
+  [[ -n "$dir" && "$dir" != "null" ]] || return 0
+  CLEANUP_DIRS+=("$dir")
+}
+
+materialize_source() {
+  python3 "$ROOT/scripts/materialize-skill-source.py" --source-json "$1"
+}
+
+trap cleanup_materialized EXIT
+
 DEST="$TARGET_DIR/$NAME"
 [[ -d "$DEST" ]] || { echo "skill is not installed yet: $DEST" >&2; exit 1; }
 
-ARGS=("$NAME" --json)
+RESOLVE_NAME="$QUALIFIED_NAME_OVERRIDE"
+[[ -n "$RESOLVE_NAME" ]] || RESOLVE_NAME="$NAME"
+ARGS=("$RESOLVE_NAME" --json)
 if [[ -n "$TO_VERSION" ]]; then
   ARGS+=(--version "$TO_VERSION")
 fi
+if [[ -n "$SOURCE_REGISTRY_OVERRIDE" ]]; then
+  ARGS+=(--registry "$SOURCE_REGISTRY_OVERRIDE")
+fi
 INFO_JSON="$(python3 "$ROOT/scripts/resolve-skill-source.py" "${ARGS[@]}")"
-SRC="$(python3 - <<'PY' "$INFO_JSON"
+SOURCE_JSON="$(materialize_source "$INFO_JSON")"
+SRC="$(python3 - <<'PY' "$SOURCE_JSON"
 import json, sys
-print(json.loads(sys.argv[1])['path'])
+print(json.loads(sys.argv[1])['materialized_path'])
 PY
 )"
+ROOT_CLEANUP_DIR="$(python3 - <<'PY' "$SOURCE_JSON"
+import json, sys
+print(json.loads(sys.argv[1]).get('cleanup_dir') or '')
+PY
+)"
+remember_cleanup_dir "$ROOT_CLEANUP_DIR"
 LOCK_VERSION="$(python3 - <<'PY' "$INFO_JSON"
 import json, sys
 info=json.loads(sys.argv[1])
@@ -84,12 +130,12 @@ PY
 )"
 
 "$ROOT/scripts/check-skill.sh" "$SRC" >/dev/null
-"$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR" >/dev/null 2>&1 || { echo "switch target failed dependency/conflict checks" >&2; "$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR"; exit 1; }
+"$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR" --source-registry "$SOURCE_REGISTRY" --source-json "$SOURCE_JSON" >/dev/null 2>&1 || { echo "switch target failed dependency/conflict checks" >&2; "$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR" --source-registry "$SOURCE_REGISTRY" --source-json "$SOURCE_JSON"; exit 1; }
 if [[ -e "$DEST" && $FORCE -ne 1 ]]; then
   echo "target exists: $DEST (use --force to overwrite)" >&2
   exit 1
 fi
 rm -rf "$DEST"
 cp -R "$SRC" "$DEST"
-python3 "$ROOT/scripts/update-install-manifest.py" "$TARGET_DIR" "$SRC" "$DEST" switch "$LOCK_VERSION" "$SOURCE_REGISTRY" >/dev/null
+python3 "$ROOT/scripts/update-install-manifest.py" "$TARGET_DIR" "$SRC" "$DEST" switch "$LOCK_VERSION" "$SOURCE_JSON" >/dev/null
 echo "switched: $DEST <- $SRC"

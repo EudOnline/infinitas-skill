@@ -23,7 +23,9 @@ catalog/
 ├─ active.json           install-focused index for active skills only
 ├─ compatibility.json    agent/tool compatibility view
 ├─ registries.json       configured registry sources view
-└─ provenance/           generated release provenance records
+├─ distributions.json    immutable distribution manifest index
+├─ provenance/           generated release provenance records
+└─ distributions/        released bundles + verified manifest payloads
 
 docs/
 ├─ conventions.md        naming, layout, lifecycle rules
@@ -32,6 +34,7 @@ docs/
 ├─ release-checklist.md  pre-publish / pre-promote review list
 ├─ release-strategy.md   version bump, changelog, and git tag guidance
 ├─ signing-bootstrap.md  first trusted signer setup and doctor flow
+├─ distribution-manifests.md verified bundles, manifests, and immutable install flow
 ├─ history-and-snapshots.md active overwrite snapshots and exact ancestry
 ├─ compatibility-matrix.md generated compatibility catalog guide
 ├─ multi-registry.md     source registry configuration and trust model
@@ -53,7 +56,9 @@ scripts/
 ├─ check-release-state.py verify clean-tree, upstream-sync, and signed-tag release invariants
 ├─ bootstrap-signing.py  create or wire SSH signing identities into repo policy
 ├─ doctor-signing.py     explain signer, tag, and attestation readiness blockers
-├─ release-skill.sh      verify stable release state, tag, prepare release notes, and write provenance
+├─ release-skill.sh      verify stable release state, tag, prepare release notes, write provenance, and emit immutable bundles
+├─ generate-distribution-manifest.py create a verified manifest from a signed attestation payload
+├─ verify-distribution-manifest.py verify bundle + manifest + attestation consistency
 ├─ lineage-diff.sh       diff a skill against its declared ancestor
 ├─ switch-installed-skill.sh switch an installed copy to active or a historical version
 ├─ rollback-installed-skill.sh rollback using manifest history
@@ -150,6 +155,7 @@ scripts/release-skill.sh my-skill --notes-out /tmp/my-skill-release.md --write-p
 # verify the resulting attestation bundle against repo-managed signers
 scripts/verify-attestation.py catalog/provenance/my-skill-1.2.3.json
 python3 scripts/doctor-signing.py my-skill --provenance catalog/provenance/my-skill-1.2.3.json
+python3 scripts/verify-distribution-manifest.py catalog/distributions/_legacy/my-skill/1.2.3/manifest.json
 # optional legacy HMAC sidecars still work after the SSH attestation is verified
 scripts/release-skill.sh my-skill --write-provenance --sign-provenance
 scripts/release-skill.sh my-skill --write-provenance --ssh-sign-provenance --ssh-key ~/.ssh/id_ed25519
@@ -210,6 +216,8 @@ and commit the updated `catalog/*.json`.
 - **Active overwrites can snapshot history**. You can archive an active skill before replacing it and later diff lineage against the exact archived ancestor.
 - **Historical installs are supported**. Versioned installs can resolve archived snapshots instead of only whatever happens to be active now.
 - **Installed copies can switch or roll back**. Manifest history now supports controlled source switching and version rollback.
+- **Stable releases emit verified bundles and manifests**. Catalog exports now index immutable release bundles under `catalog/distributions/` plus `catalog/distributions.json`.
+- **Install and sync prefer immutable release artifacts**. When a verified distribution manifest exists, resolver/install/sync materialize from that manifest instead of relying only on the live working-tree folder.
 - **Compatibility is exported**. Consumers can read a generated compatibility matrix instead of scraping every `_meta.json`.
 - **Namespace ownership is policy-driven**. `policy/namespace-policy.json` declares valid publishers plus approved namespace transfers.
 - **Registry sources are policy-driven**. Source registries now declare trust, allowed hosts/refs, pinning, and update behavior in config.

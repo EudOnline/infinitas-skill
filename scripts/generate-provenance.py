@@ -25,6 +25,32 @@ def parse_args():
         '--releaser',
         help='Release operator identity; defaults to INFINITAS_SKILL_RELEASER or git user.name/user.email',
     )
+    parser.add_argument(
+        '--distribution-manifest-path',
+        help='Repository-relative distribution manifest path to bind into the signed attestation payload',
+    )
+    parser.add_argument(
+        '--distribution-bundle-path',
+        help='Repository-relative distribution bundle path to bind into the signed attestation payload',
+    )
+    parser.add_argument(
+        '--distribution-bundle-sha256',
+        help='SHA-256 digest of the distribution bundle',
+    )
+    parser.add_argument(
+        '--distribution-bundle-size',
+        type=int,
+        help='Size in bytes of the distribution bundle',
+    )
+    parser.add_argument(
+        '--distribution-bundle-root-dir',
+        help='Top-level extracted directory name inside the distribution bundle',
+    )
+    parser.add_argument(
+        '--distribution-bundle-file-count',
+        type=int,
+        help='Number of files archived in the distribution bundle',
+    )
     return parser.parse_args()
 
 
@@ -109,12 +135,15 @@ def main():
             'identity_mode': state.get('skill', {}).get('identity_mode'),
             'version': meta.get('version'),
             'status': meta.get('status'),
+            'summary': meta.get('summary'),
             'path': str(skill_dir.relative_to(ROOT)),
             'author': state.get('skill', {}).get('author'),
             'owners': state.get('skill', {}).get('owners', []),
             'maintainers': state.get('skill', {}).get('maintainers', []),
             'derived_from': meta.get('derived_from'),
             'snapshot_of': meta.get('snapshot_of'),
+            'depends_on': meta.get('depends_on', []),
+            'conflicts_with': meta.get('conflicts_with', []),
         },
         'git': {
             'repo_url': state['git'].get('repo_url'),
@@ -172,6 +201,18 @@ def main():
             'require_verified_attestation_for_distribution': attestation_cfg['require_distribution'],
         },
     }
+    if args.distribution_bundle_path:
+        out['distribution'] = {
+            'manifest_path': args.distribution_manifest_path,
+            'bundle': {
+                'path': args.distribution_bundle_path,
+                'format': 'tar.gz',
+                'sha256': args.distribution_bundle_sha256,
+                'size': args.distribution_bundle_size,
+                'root_dir': args.distribution_bundle_root_dir,
+                'file_count': args.distribution_bundle_file_count,
+            },
+        }
     print(json.dumps(out, ensure_ascii=False, indent=2))
 
 

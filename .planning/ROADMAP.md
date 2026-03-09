@@ -121,7 +121,7 @@ Plans:
 - [x] 10-05: Add doctor-style diagnostics for signer state, tag signing readiness, and attestation verification prerequisites
 - [x] 10-06: Write and test an end-to-end bootstrap rehearsal for the first trusted stable release
 
-#### Phase 3: Verified Artifact Format and Distribution Manifest
+#### ✅ Phase 3: Verified Artifact Format and Distribution Manifest
 **Goal**: Promote release output from ad-hoc repository state into a versioned, immutable distribution unit with manifest, digest, and attached verification material.
 **Depends on**: Phase 2
 **Requirements**: [DIST-01, DIST-02, DIST-03]
@@ -132,9 +132,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 10-07: Define stable skill bundle / manifest format plus catalog references to digests and attestation payloads
-- [ ] 10-08: Teach install/sync flows to fetch and verify distribution manifests before mutating target directories
-- [ ] 10-09: Document historical install and rollback behavior against immutable release artifacts
+- [x] 10-07: Define stable skill bundle / manifest format plus catalog references to digests and attestation payloads
+- [x] 10-08: Teach install/sync flows to fetch and verify distribution manifests before mutating target directories
+- [x] 10-09: Document historical install and rollback behavior against immutable release artifacts
 
 #### Phase 4: CI-native Attestations and Verification
 **Goal**: Add CI-generated provenance and attestation paths so release trust can be established from both local and automated workflows.
@@ -225,7 +225,7 @@ Plans:
 | 5. Asymmetric Attestation and Verification | v9 | 3/3 | Completed | 2026-03-09 |
 | 1. Publisher / Namespace Model | v10 | 3/3 | Completed | 2026-03-09 |
 | 2. Signing Bootstrap and Operator Doctoring | v10 | 3/3 | Completed | 2026-03-09 |
-| 3. Verified Artifact Format and Distribution Manifest | v10 | 0/3 | Planned | - |
+| 3. Verified Artifact Format and Distribution Manifest | v10 | 3/3 | Completed | 2026-03-09 |
 | 4. CI-native Attestations and Verification | v10 | 0/3 | Planned | - |
 | 5. Search, Discovery, and Consumer UX | v10 | 0/3 | Planned | - |
 | 1. Policy Packs and Explainable Decisions | v11 | 0/2 | Planned | - |

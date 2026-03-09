@@ -3,6 +3,7 @@ import argparse
 import json
 from pathlib import Path
 
+from distribution_lib import load_distribution_index
 from registry_source_lib import load_registry_config, registry_identity, resolve_registry_root
 from skill_identity_lib import normalize_skill_identity, parse_requested_skill
 
@@ -20,6 +21,11 @@ def scan_registry(reg):
     if reg_root is None or not reg_root.exists():
         return []
     reg_info = registry_identity(ROOT, reg)
+    distribution_index = load_distribution_index(reg_root)
+    distribution_by_identity = {
+        (entry.get('qualified_name') or entry.get('name'), entry.get('version')): entry for entry in distribution_index
+    }
+    matched_distribution = set()
     items = []
     skills_root = reg_root / 'skills'
     for stage in ['active', 'incubating', 'archived']:
@@ -31,24 +37,79 @@ def scan_registry(reg):
                 meta = json.loads((d / '_meta.json').read_text(encoding='utf-8'))
             except Exception:
                 continue
+            identity = normalize_skill_identity(meta)
+            distribution = distribution_by_identity.get((identity.get('qualified_name') or meta.get('name'), meta.get('version')))
             items.append({
                 **reg_info,
-                'stage': stage,
-                'path': str(d),
-                'relative_path': str(d.relative_to(reg_root)),
+                'stage': distribution.get('status') if distribution else stage,
+                'path': str((reg_root / distribution.get('manifest_path')).resolve()) if distribution else str(d),
+                'skill_path': str(d),
+                'relative_path': distribution.get('manifest_path') if distribution else str(d.relative_to(reg_root)),
                 'dir_name': d.name,
                 'name': meta.get('name'),
-                'publisher': normalize_skill_identity(meta).get('publisher'),
-                'qualified_name': normalize_skill_identity(meta).get('qualified_name'),
-                'identity_mode': normalize_skill_identity(meta).get('identity_mode'),
+                'publisher': identity.get('publisher'),
+                'qualified_name': identity.get('qualified_name'),
+                'identity_mode': identity.get('identity_mode'),
                 'version': meta.get('version'),
                 'status': meta.get('status'),
                 'snapshot_of': meta.get('snapshot_of'),
                 'snapshot_created_at': meta.get('snapshot_created_at'),
                 'snapshot_label': meta.get('snapshot_label'),
                 'installable': bool(meta.get('distribution', {}).get('installable', True)),
-                'expected_tag': expected_skill_tag(meta.get('name'), meta.get('version')),
+                'expected_tag': distribution.get('source_snapshot_tag') if distribution else expected_skill_tag(meta.get('name'), meta.get('version')),
+                'source_type': 'distribution-manifest' if distribution else 'working-tree',
+                'distribution_manifest': distribution.get('manifest_path') if distribution else None,
+                'distribution_bundle': distribution.get('bundle_path') if distribution else None,
+                'distribution_bundle_sha256': distribution.get('bundle_sha256') if distribution else None,
+                'distribution_attestation': distribution.get('attestation_path') if distribution else None,
+                'distribution_attestation_signature': distribution.get('attestation_signature_path') if distribution else None,
+                'source_snapshot_kind': distribution.get('source_snapshot_kind') if distribution else None,
+                'source_snapshot_tag': distribution.get('source_snapshot_tag') if distribution else None,
+                'source_snapshot_ref': distribution.get('source_snapshot_ref') if distribution else None,
+                'source_snapshot_commit': distribution.get('source_snapshot_commit') if distribution else None,
+                'registry_commit': distribution.get('source_snapshot_commit') if distribution else reg_info.get('registry_commit'),
+                'registry_tag': distribution.get('source_snapshot_tag') if distribution else reg_info.get('registry_tag'),
+                'registry_ref': distribution.get('source_snapshot_ref') if distribution else reg_info.get('registry_ref'),
             })
+            if distribution:
+                matched_distribution.add((identity.get('qualified_name') or meta.get('name'), meta.get('version')))
+
+    for distribution in distribution_index:
+        key = (distribution.get('qualified_name') or distribution.get('name'), distribution.get('version'))
+        if key in matched_distribution:
+            continue
+        items.append({
+            **reg_info,
+            'stage': distribution.get('status') or 'archived',
+            'path': str((reg_root / distribution.get('manifest_path')).resolve()),
+            'skill_path': None,
+            'relative_path': distribution.get('manifest_path'),
+            'dir_name': Path(distribution.get('manifest_path') or '').parent.name,
+            'name': distribution.get('name'),
+            'publisher': distribution.get('publisher'),
+            'qualified_name': distribution.get('qualified_name'),
+            'identity_mode': distribution.get('identity_mode'),
+            'version': distribution.get('version'),
+            'status': distribution.get('status'),
+            'snapshot_of': None,
+            'snapshot_created_at': distribution.get('generated_at'),
+            'snapshot_label': None,
+            'installable': True,
+            'expected_tag': distribution.get('source_snapshot_tag') or expected_skill_tag(distribution.get('name'), distribution.get('version')),
+            'source_type': 'distribution-manifest',
+            'distribution_manifest': distribution.get('manifest_path'),
+            'distribution_bundle': distribution.get('bundle_path'),
+            'distribution_bundle_sha256': distribution.get('bundle_sha256'),
+            'distribution_attestation': distribution.get('attestation_path'),
+            'distribution_attestation_signature': distribution.get('attestation_signature_path'),
+            'source_snapshot_kind': distribution.get('source_snapshot_kind'),
+            'source_snapshot_tag': distribution.get('source_snapshot_tag'),
+            'source_snapshot_ref': distribution.get('source_snapshot_ref'),
+            'source_snapshot_commit': distribution.get('source_snapshot_commit'),
+            'registry_commit': distribution.get('source_snapshot_commit') or reg_info.get('registry_commit'),
+            'registry_tag': distribution.get('source_snapshot_tag') or reg_info.get('registry_tag'),
+            'registry_ref': distribution.get('source_snapshot_ref') or reg_info.get('registry_ref'),
+        })
     return items
 
 
@@ -68,6 +129,7 @@ def sort_key(item):
     stage_order = {'active': 0, 'incubating': 1, 'archived': 2}
     return (
         -int(item.get('registry_priority', 0)),
+        0 if item.get('source_type') == 'distribution-manifest' else 1,
         stage_order.get(item['stage'], 9),
         item.get('snapshot_created_at') or '',
         item['dir_name'],
@@ -77,7 +139,7 @@ def sort_key(item):
 def archived_snapshot_sort_key(item):
     ts = item.get('snapshot_created_at') or ''
     ts_num = int(ts.replace('T', '').replace('Z', '').replace('-', '').replace(':', '')) if ts else 0
-    return (-int(item.get('registry_priority', 0)), -ts_num, item['dir_name'])
+    return (-int(item.get('registry_priority', 0)), 0 if item.get('source_type') == 'distribution-manifest' else 1, -ts_num, item['dir_name'])
 
 
 def main():
@@ -129,6 +191,13 @@ def main():
         raise SystemExit(f'No matching skill source found for {args.name}{"@" + args.version if args.version else ""}{suffix}.')
 
     resolved = dict(resolved)
+    if resolved.get('source_type') == 'distribution-manifest':
+        if reason == 'active-default':
+            reason = 'distribution-active-default'
+        elif reason == 'exact-version':
+            reason = 'distribution-exact-version'
+        elif reason == 'archived-exact-snapshot':
+            reason = 'distribution-archived-exact-version'
     resolved['resolution_reason'] = reason
     if args.json:
         print(json.dumps(resolved, ensure_ascii=False, indent=2))

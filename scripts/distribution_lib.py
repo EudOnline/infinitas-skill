@@ -1,0 +1,442 @@
+#!/usr/bin/env python3
+import hashlib
+import io
+import json
+import tarfile
+import tempfile
+from datetime import datetime, timezone
+from gzip import GzipFile
+from pathlib import Path
+
+from attestation_lib import AttestationError, verify_attestation
+from release_lib import ROOT
+
+
+class DistributionError(Exception):
+    pass
+
+
+def sha256_file(path):
+    digest = hashlib.sha256()
+    with Path(path).open('rb') as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _normalized_publisher(value):
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return '_legacy'
+
+
+def distribution_rel_dir(skill_name, version, publisher=None):
+    return Path('catalog') / 'distributions' / _normalized_publisher(publisher) / skill_name / version
+
+
+def distribution_paths(root, skill_name, version, publisher=None):
+    rel_dir = distribution_rel_dir(skill_name, version, publisher=publisher)
+    base_dir = Path(root).resolve() / rel_dir
+    return {
+        'dir': base_dir,
+        'rel_dir': rel_dir,
+        'manifest': base_dir / 'manifest.json',
+        'manifest_rel': rel_dir / 'manifest.json',
+        'bundle': base_dir / 'skill.tar.gz',
+        'bundle_rel': rel_dir / 'skill.tar.gz',
+    }
+
+
+def deterministic_bundle(skill_dir, output_path, root_dir=None):
+    skill_dir = Path(skill_dir).resolve()
+    output_path = Path(output_path).resolve()
+    if root_dir is None:
+        root_dir = skill_dir.name
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    files = [path for path in sorted(skill_dir.rglob('*')) if path.is_file()]
+    with output_path.open('wb') as raw_handle:
+        with GzipFile(filename='', mode='wb', fileobj=raw_handle, mtime=0) as gzip_handle:
+            with tarfile.open(fileobj=gzip_handle, mode='w') as archive:
+                for path in files:
+                    rel = path.relative_to(skill_dir)
+                    arcname = str(Path(root_dir) / rel)
+                    info = archive.gettarinfo(str(path), arcname=arcname)
+                    info.uid = 0
+                    info.gid = 0
+                    info.uname = ''
+                    info.gname = ''
+                    info.mtime = 0
+                    with path.open('rb') as src:
+                        archive.addfile(info, src)
+
+    return {
+        'format': 'tar.gz',
+        'path': str(output_path),
+        'sha256': sha256_file(output_path),
+        'size': output_path.stat().st_size,
+        'root_dir': root_dir,
+        'file_count': len(files),
+    }
+
+
+def load_json(path):
+    return json.loads(Path(path).read_text(encoding='utf-8'))
+
+
+def validate_distribution_manifest(payload):
+    errors = []
+
+    def require_string(mapping, key, label):
+        value = mapping.get(key) if isinstance(mapping, dict) else None
+        if not isinstance(value, str) or not value.strip():
+            errors.append(f'{label} must be a non-empty string')
+        return value
+
+    if payload.get('kind') != 'skill-distribution-manifest':
+        errors.append('kind must be skill-distribution-manifest')
+    if payload.get('schema_version') != 1:
+        errors.append('schema_version must be 1')
+
+    skill = payload.get('skill')
+    if not isinstance(skill, dict):
+        errors.append('skill must be an object')
+    else:
+        require_string(skill, 'name', 'skill.name')
+        require_string(skill, 'version', 'skill.version')
+
+    source_snapshot = payload.get('source_snapshot')
+    if not isinstance(source_snapshot, dict):
+        errors.append('source_snapshot must be an object')
+    else:
+        for key in ['kind', 'tag', 'ref', 'commit']:
+            require_string(source_snapshot, key, f'source_snapshot.{key}')
+        if not isinstance(source_snapshot.get('immutable'), bool):
+            errors.append('source_snapshot.immutable must be boolean')
+        if not isinstance(source_snapshot.get('pushed'), bool):
+            errors.append('source_snapshot.pushed must be boolean')
+
+    bundle = payload.get('bundle')
+    if not isinstance(bundle, dict):
+        errors.append('bundle must be an object')
+    else:
+        require_string(bundle, 'path', 'bundle.path')
+        if bundle.get('format') != 'tar.gz':
+            errors.append('bundle.format must be tar.gz')
+        require_string(bundle, 'sha256', 'bundle.sha256')
+        require_string(bundle, 'root_dir', 'bundle.root_dir')
+        if not isinstance(bundle.get('size'), int) or bundle.get('size') < 0:
+            errors.append('bundle.size must be a non-negative integer')
+        if not isinstance(bundle.get('file_count'), int) or bundle.get('file_count') < 1:
+            errors.append('bundle.file_count must be a positive integer')
+
+    registry = payload.get('registry')
+    if not isinstance(registry, dict):
+        errors.append('registry must be an object')
+    else:
+        if not isinstance(registry.get('registries_consulted'), list):
+            errors.append('registry.registries_consulted must be an array')
+        if not isinstance(registry.get('resolved'), list):
+            errors.append('registry.resolved must be an array')
+
+    dependencies = payload.get('dependencies')
+    if not isinstance(dependencies, dict):
+        errors.append('dependencies must be an object')
+    else:
+        if not isinstance(dependencies.get('steps'), list):
+            errors.append('dependencies.steps must be an array')
+        if not isinstance(dependencies.get('registries_consulted'), list):
+            errors.append('dependencies.registries_consulted must be an array')
+
+    attestation_bundle = payload.get('attestation_bundle')
+    if not isinstance(attestation_bundle, dict):
+        errors.append('attestation_bundle must be an object')
+    else:
+        for key in [
+            'provenance_path',
+            'provenance_sha256',
+            'signature_path',
+            'signature_sha256',
+            'namespace',
+            'allowed_signers',
+        ]:
+            require_string(attestation_bundle, key, f'attestation_bundle.{key}')
+
+    return errors
+
+
+def _relative_from_root(root, path):
+    root = Path(root).resolve()
+    path = Path(path).resolve()
+    return str(path.relative_to(root)) if path.is_relative_to(root) else str(path)
+
+
+def _resolve_manifest_ref(path, ref, root=None):
+    ref_path = Path(ref)
+    if ref_path.is_absolute():
+        return ref_path.resolve()
+    if root is not None:
+        root_candidate = (Path(root).resolve() / ref_path).resolve()
+        if root_candidate.exists():
+            return root_candidate
+    return (Path(path).resolve().parent / ref_path).resolve()
+
+
+def verify_distribution_manifest(manifest_path, root=None):
+    root = Path(root or ROOT).resolve()
+    manifest_path = Path(manifest_path).resolve()
+    try:
+        payload = load_json(manifest_path)
+    except Exception as exc:
+        raise DistributionError(f'could not parse distribution manifest {manifest_path}: {exc}') from exc
+
+    errors = validate_distribution_manifest(payload)
+    if errors:
+        raise DistributionError('; '.join(errors))
+
+    attestation_bundle = payload['attestation_bundle']
+    provenance_path = _resolve_manifest_ref(manifest_path, attestation_bundle['provenance_path'], root=root)
+    signature_path = _resolve_manifest_ref(manifest_path, attestation_bundle['signature_path'], root=root)
+    bundle_path = _resolve_manifest_ref(manifest_path, payload['bundle']['path'], root=root)
+
+    if not provenance_path.exists():
+        raise DistributionError(f'missing attestation payload: {provenance_path}')
+    if not signature_path.exists():
+        raise DistributionError(f'missing attestation signature: {signature_path}')
+    if not bundle_path.exists():
+        raise DistributionError(f'missing distribution bundle: {bundle_path}')
+
+    if sha256_file(provenance_path) != attestation_bundle['provenance_sha256']:
+        raise DistributionError('attestation payload digest does not match manifest')
+    if sha256_file(signature_path) != attestation_bundle['signature_sha256']:
+        raise DistributionError('attestation signature digest does not match manifest')
+    if sha256_file(bundle_path) != payload['bundle']['sha256']:
+        raise DistributionError('bundle digest does not match manifest')
+    if bundle_path.stat().st_size != payload['bundle']['size']:
+        raise DistributionError('bundle size does not match manifest')
+
+    try:
+        attestation_result = verify_attestation(provenance_path, root=root)
+    except AttestationError as exc:
+        raise DistributionError(str(exc)) from exc
+
+    provenance = load_json(provenance_path)
+    signed_distribution = provenance.get('distribution') or {}
+    signed_bundle = signed_distribution.get('bundle') or {}
+    if not signed_bundle:
+        raise DistributionError('attestation is missing distribution.bundle metadata')
+    comparisons = [
+        ('skill.name', payload['skill'].get('name'), provenance.get('skill', {}).get('name')),
+        ('skill.version', payload['skill'].get('version'), provenance.get('skill', {}).get('version')),
+        ('source_snapshot.tag', payload['source_snapshot'].get('tag'), provenance.get('source_snapshot', {}).get('tag')),
+        ('source_snapshot.commit', payload['source_snapshot'].get('commit'), provenance.get('source_snapshot', {}).get('commit')),
+        ('bundle.path', payload['bundle'].get('path'), signed_bundle.get('path')),
+        ('bundle.sha256', payload['bundle'].get('sha256'), signed_bundle.get('sha256')),
+        ('bundle.format', payload['bundle'].get('format'), signed_bundle.get('format')),
+        ('bundle.root_dir', payload['bundle'].get('root_dir'), signed_bundle.get('root_dir')),
+    ]
+    for label, left, right in comparisons:
+        if left != right:
+            raise DistributionError(f'{label} does not match signed attestation payload')
+
+    if payload.get('registry') != provenance.get('registry'):
+        raise DistributionError('registry context does not match signed attestation payload')
+    if payload.get('dependencies') != provenance.get('dependencies'):
+        raise DistributionError('dependency context does not match signed attestation payload')
+
+    return {
+        'verified': True,
+        'manifest_path': str(manifest_path),
+        'bundle_path': str(bundle_path),
+        'provenance_path': str(provenance_path),
+        'signature_path': str(signature_path),
+        'skill': payload.get('skill', {}).get('name'),
+        'version': payload.get('skill', {}).get('version'),
+        'source_type': 'distribution-manifest',
+        'attestation': attestation_result,
+        'manifest': payload,
+        'provenance': provenance,
+    }
+
+
+def safely_extract_bundle(bundle_path, destination_root, expected_root=None):
+    bundle_path = Path(bundle_path).resolve()
+    destination_root = Path(destination_root).resolve()
+    destination_root.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(bundle_path, mode='r:gz') as archive:
+        members = archive.getmembers()
+        for member in members:
+            member_path = destination_root / member.name
+            resolved = member_path.resolve()
+            if not resolved.is_relative_to(destination_root):
+                raise DistributionError(f'unsafe bundle member path: {member.name}')
+        archive.extractall(destination_root)
+    if expected_root:
+        source_dir = destination_root / expected_root
+        if not source_dir.is_dir():
+            raise DistributionError(f'expected extracted bundle root {expected_root} is missing')
+        return source_dir
+
+    dirs = [path for path in destination_root.iterdir() if path.is_dir()]
+    if len(dirs) != 1:
+        raise DistributionError(f'expected one extracted top-level directory, found {len(dirs)}')
+    return dirs[0]
+
+
+def materialize_distribution_source(source_info, root=None):
+    root = Path(root or ROOT).resolve()
+    info = dict(source_info or {})
+    source_type = info.get('source_type') or 'working-tree'
+    if source_type != 'distribution-manifest':
+        path = info.get('skill_path') or info.get('path')
+        if not path:
+            raise DistributionError('working-tree source is missing path')
+        info['materialized_path'] = path
+        info['cleanup_dir'] = None
+        return info
+
+    manifest_path = info.get('distribution_manifest') or info.get('path')
+    if not manifest_path:
+        raise DistributionError('distribution-manifest source is missing manifest path')
+    verified = verify_distribution_manifest(manifest_path, root=root)
+    payload = verified['manifest']
+    bundle_path = verified['bundle_path']
+    temp_root = Path(tempfile.mkdtemp(prefix='infinitas-distribution-'))
+    materialized_path = safely_extract_bundle(
+        bundle_path,
+        temp_root,
+        expected_root=(payload.get('bundle') or {}).get('root_dir'),
+    )
+    info.update(
+        {
+            'materialized_path': str(materialized_path),
+            'cleanup_dir': str(temp_root),
+            'distribution_manifest': _relative_from_root(root, manifest_path),
+            'distribution_bundle': _relative_from_root(root, bundle_path),
+            'distribution_bundle_sha256': payload.get('bundle', {}).get('sha256'),
+            'distribution_bundle_size': payload.get('bundle', {}).get('size'),
+            'distribution_bundle_root_dir': payload.get('bundle', {}).get('root_dir'),
+            'distribution_bundle_file_count': payload.get('bundle', {}).get('file_count'),
+            'distribution_attestation': payload.get('attestation_bundle', {}).get('provenance_path'),
+            'distribution_attestation_signature': payload.get('attestation_bundle', {}).get('signature_path'),
+            'distribution_attestation_sha256': payload.get('attestation_bundle', {}).get('provenance_sha256'),
+            'distribution_attestation_signature_sha256': payload.get('attestation_bundle', {}).get('signature_sha256'),
+            'source_snapshot_kind': payload.get('source_snapshot', {}).get('kind'),
+            'source_snapshot_tag': payload.get('source_snapshot', {}).get('tag'),
+            'source_snapshot_ref': payload.get('source_snapshot', {}).get('ref'),
+            'source_snapshot_commit': payload.get('source_snapshot', {}).get('commit'),
+            'source_stage': (payload.get('skill') or {}).get('status') or info.get('stage'),
+            'registry_context': payload.get('registry'),
+            'dependency_context': payload.get('dependencies'),
+        }
+    )
+    return info
+
+
+def manifest_index_entry(manifest_path, root):
+    payload = load_json(manifest_path)
+    errors = validate_distribution_manifest(payload)
+    if errors:
+        raise DistributionError(f'{manifest_path}: ' + '; '.join(errors))
+    skill = payload.get('skill') or {}
+    bundle = payload.get('bundle') or {}
+    attestation_bundle = payload.get('attestation_bundle') or {}
+    return {
+        'name': skill.get('name'),
+        'publisher': skill.get('publisher'),
+        'qualified_name': skill.get('qualified_name'),
+        'identity_mode': skill.get('identity_mode'),
+        'version': skill.get('version'),
+        'status': skill.get('status'),
+        'summary': skill.get('summary'),
+        'manifest_path': _relative_from_root(root, manifest_path),
+        'bundle_path': bundle.get('path'),
+        'bundle_sha256': bundle.get('sha256'),
+        'bundle_size': bundle.get('size'),
+        'bundle_file_count': bundle.get('file_count'),
+        'bundle_root_dir': bundle.get('root_dir'),
+        'attestation_path': attestation_bundle.get('provenance_path'),
+        'attestation_signature_path': attestation_bundle.get('signature_path'),
+        'attestation_sha256': attestation_bundle.get('provenance_sha256'),
+        'attestation_signature_sha256': attestation_bundle.get('signature_sha256'),
+        'signer_identity': attestation_bundle.get('signer_identity'),
+        'namespace': attestation_bundle.get('namespace'),
+        'allowed_signers': attestation_bundle.get('allowed_signers'),
+        'source_snapshot_kind': (payload.get('source_snapshot') or {}).get('kind'),
+        'source_snapshot_tag': (payload.get('source_snapshot') or {}).get('tag'),
+        'source_snapshot_ref': (payload.get('source_snapshot') or {}).get('ref'),
+        'source_snapshot_commit': (payload.get('source_snapshot') or {}).get('commit'),
+        'registry': payload.get('registry'),
+        'dependencies': payload.get('dependencies'),
+        'depends_on': skill.get('depends_on', []),
+        'conflicts_with': skill.get('conflicts_with', []),
+        'generated_at': payload.get('generated_at'),
+        'source_type': 'distribution-manifest',
+    }
+
+
+def load_distribution_index(root):
+    root = Path(root).resolve()
+    index_path = root / 'catalog' / 'distributions.json'
+    if not index_path.exists():
+        return []
+    payload = load_json(index_path)
+    skills = payload.get('skills')
+    return skills if isinstance(skills, list) else []
+
+
+def build_distribution_manifest_payload(provenance_path, bundle_path, root=None):
+    root = Path(root or ROOT).resolve()
+    provenance_path = Path(provenance_path).resolve()
+    bundle_path = Path(bundle_path).resolve()
+    provenance = load_json(provenance_path)
+    distribution = provenance.get('distribution') or {}
+    signed_bundle = distribution.get('bundle') or {}
+    if not signed_bundle:
+        raise DistributionError('attestation payload is missing distribution.bundle metadata')
+
+    signature_path = provenance_path.with_suffix(provenance_path.suffix + (provenance.get('attestation') or {}).get('signature_ext', '.ssig'))
+    if not signature_path.exists():
+        raise DistributionError(f'missing attestation signature: {signature_path}')
+
+    skill = provenance.get('skill') or {}
+    return {
+        '$schema': 'schemas/distribution-manifest.schema.json',
+        'schema_version': 1,
+        'kind': 'skill-distribution-manifest',
+        'generated_at': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+        'skill': {
+            'name': skill.get('name'),
+            'publisher': skill.get('publisher'),
+            'qualified_name': skill.get('qualified_name'),
+            'identity_mode': skill.get('identity_mode'),
+            'version': skill.get('version'),
+            'status': skill.get('status'),
+            'summary': skill.get('summary'),
+            'author': skill.get('author'),
+            'owners': skill.get('owners', []),
+            'maintainers': skill.get('maintainers', []),
+            'depends_on': skill.get('depends_on', []),
+            'conflicts_with': skill.get('conflicts_with', []),
+        },
+        'source_snapshot': provenance.get('source_snapshot'),
+        'bundle': {
+            'path': signed_bundle.get('path'),
+            'format': signed_bundle.get('format'),
+            'sha256': signed_bundle.get('sha256'),
+            'size': signed_bundle.get('size'),
+            'root_dir': signed_bundle.get('root_dir'),
+            'file_count': signed_bundle.get('file_count'),
+        },
+        'registry': provenance.get('registry'),
+        'dependencies': provenance.get('dependencies'),
+        'attestation_bundle': {
+            'provenance_path': _relative_from_root(root, provenance_path),
+            'provenance_sha256': sha256_file(provenance_path),
+            'signature_path': _relative_from_root(root, signature_path),
+            'signature_sha256': sha256_file(signature_path),
+            'signer_identity': (provenance.get('attestation') or {}).get('signer_identity'),
+            'namespace': (provenance.get('attestation') or {}).get('namespace'),
+            'allowed_signers': (provenance.get('attestation') or {}).get('allowed_signers'),
+        },
+    }

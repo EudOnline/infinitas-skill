@@ -171,6 +171,12 @@ print(json.load(open(sys.argv[1], encoding='utf-8'))['status'])
 PY
 )"
 TAG="skill/$NAME/v$VERSION"
+PUBLISHER="$(python3 - <<'PY' "$DIR/_meta.json"
+import json, sys
+meta = json.load(open(sys.argv[1], encoding='utf-8'))
+print(meta.get('publisher') or '')
+PY
+)"
 
 if [[ "$STATUS" != "active" ]]; then
   rm -f "$META_JSON"
@@ -326,12 +332,52 @@ if [[ $WRITE_PROVENANCE -eq 1 ]]; then
   mkdir -p "$ROOT/catalog/provenance"
   PROV="$ROOT/catalog/provenance/$NAME-$VERSION.json"
   TMP_PROV="$(mktemp)"
+  readarray -t DIST_PATHS < <(python3 - <<'PY' "$ROOT" "$NAME" "$VERSION" "$PUBLISHER"
+import sys
+from pathlib import Path
+root = Path(sys.argv[1]).resolve()
+sys.path.insert(0, str(root / 'scripts'))
+from distribution_lib import distribution_paths
+
+paths = distribution_paths(root, sys.argv[2], sys.argv[3], publisher=sys.argv[4] or None)
+print(paths['dir'])
+print(paths['manifest'])
+print(paths['manifest_rel'])
+print(paths['bundle'])
+print(paths['bundle_rel'])
+PY
+  )
+  DIST_DIR="${DIST_PATHS[0]}"
+  DIST_MANIFEST="${DIST_PATHS[1]}"
+  DIST_MANIFEST_REL="${DIST_PATHS[2]}"
+  DIST_BUNDLE="${DIST_PATHS[3]}"
+  DIST_BUNDLE_REL="${DIST_PATHS[4]}"
+  mkdir -p "$DIST_DIR"
+  TMP_BUNDLE="$(mktemp)"
   EFFECTIVE_SIGNER="$SIGNER"
   [[ -n "$EFFECTIVE_SIGNER" ]] || EFFECTIVE_SIGNER="$SIGNER_NAME"
   EFFECTIVE_RELEASER="$RELEASER"
   [[ -n "$EFFECTIVE_RELEASER" ]] || EFFECTIVE_RELEASER="$RELEASER_NAME"
   EFFECTIVE_SSH_KEY="$SSH_KEY"
   [[ -n "$EFFECTIVE_SSH_KEY" ]] || EFFECTIVE_SSH_KEY="$ATTESTATION_KEY"
+  readarray -t BUNDLE_INFO < <(python3 - <<'PY' "$ROOT" "$DIR" "$TMP_BUNDLE"
+import sys
+from pathlib import Path
+root = Path(sys.argv[1]).resolve()
+sys.path.insert(0, str(root / 'scripts'))
+from distribution_lib import deterministic_bundle
+
+bundle = deterministic_bundle(sys.argv[2], sys.argv[3])
+print(bundle['sha256'])
+print(bundle['size'])
+print(bundle['root_dir'])
+print(bundle['file_count'])
+PY
+  )
+  BUNDLE_SHA256="${BUNDLE_INFO[0]}"
+  BUNDLE_SIZE="${BUNDLE_INFO[1]}"
+  BUNDLE_ROOT_DIR="${BUNDLE_INFO[2]}"
+  BUNDLE_FILE_COUNT="${BUNDLE_INFO[3]}"
   GENERATE_ARGS=(python3 "$ROOT/scripts/generate-provenance.py" "$DIR" --output-name "$(basename "$PROV")")
   if [[ -n "$EFFECTIVE_SIGNER" ]]; then
     GENERATE_ARGS+=(--signer "$EFFECTIVE_SIGNER")
@@ -339,6 +385,14 @@ if [[ $WRITE_PROVENANCE -eq 1 ]]; then
   if [[ -n "$EFFECTIVE_RELEASER" ]]; then
     GENERATE_ARGS+=(--releaser "$EFFECTIVE_RELEASER")
   fi
+  GENERATE_ARGS+=(
+    --distribution-manifest-path "$DIST_MANIFEST_REL"
+    --distribution-bundle-path "$DIST_BUNDLE_REL"
+    --distribution-bundle-sha256 "$BUNDLE_SHA256"
+    --distribution-bundle-size "$BUNDLE_SIZE"
+    --distribution-bundle-root-dir "$BUNDLE_ROOT_DIR"
+    --distribution-bundle-file-count "$BUNDLE_FILE_COUNT"
+  )
   "${GENERATE_ARGS[@]}" > "$TMP_PROV"
   TMP_SSH_SIG="$TMP_PROV$ATT_SIGNATURE_EXT"
   PROV_SSH_SIG="$PROV$ATT_SIGNATURE_EXT"
@@ -348,10 +402,12 @@ if [[ $WRITE_PROVENANCE -eq 1 ]]; then
     "$ROOT/scripts/sign-provenance-ssh.sh" "$TMP_PROV" --key "$EFFECTIVE_SSH_KEY" >/dev/null
   fi
   mv "$TMP_PROV" "$PROV"
+  mv "$TMP_BUNDLE" "$DIST_BUNDLE"
   if [[ -f "$TMP_SSH_SIG" ]]; then
     mv "$TMP_SSH_SIG" "$PROV_SSH_SIG"
   fi
   echo "wrote provenance: $PROV"
+  echo "wrote distribution bundle: $DIST_BUNDLE"
   if [[ $SIGN_PROVENANCE -eq 1 ]]; then
     python3 "$ROOT/scripts/sign-provenance.py" "$PROV" >/dev/null
     python3 "$ROOT/scripts/verify-provenance.py" "$PROV" >/dev/null
@@ -369,6 +425,15 @@ if [[ $WRITE_PROVENANCE -eq 1 ]]; then
     else
       echo "ssh-verified provenance: $PROV_SSH_SIG"
     fi
+  fi
+  if [[ -f "$PROV_SSH_SIG" ]]; then
+    python3 "$ROOT/scripts/generate-distribution-manifest.py" --provenance "$PROV" --bundle "$DIST_BUNDLE" --output "$DIST_MANIFEST"
+    echo "wrote distribution manifest: $DIST_MANIFEST"
+    python3 "$ROOT/scripts/verify-distribution-manifest.py" "$DIST_MANIFEST" >/dev/null
+    echo "verified distribution manifest: $DIST_MANIFEST"
+    "$ROOT/scripts/build-catalog.sh" >/dev/null
+  else
+    echo "skipped verified distribution manifest: SSH attestation signature is not present" >&2
   fi
 fi
 

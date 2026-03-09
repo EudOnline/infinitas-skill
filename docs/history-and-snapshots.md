@@ -82,3 +82,5 @@ scripts/rollback-installed-skill.sh repo-audit ~/.openclaw/skills --force
 ```
 
 Manifest history stores previous install states so rollback can choose the last known version source automatically.
+
+With V10 Phase 3, those stored states can now re-resolve immutable release artifacts through verified distribution manifests instead of depending only on a still-present working-tree copy under `skills/active/` or `skills/archived/`.

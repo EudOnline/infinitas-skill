@@ -37,6 +37,7 @@ def make_env(extra=None):
     env = os.environ.copy()
     env['INFINITAS_SKIP_RELEASE_TESTS'] = '1'
     env['INFINITAS_SKIP_ATTESTATION_TESTS'] = '1'
+    env['INFINITAS_SKIP_DISTRIBUTION_TESTS'] = '1'
     env['INFINITAS_SKIP_BOOTSTRAP_TESTS'] = '1'
     if extra:
         env.update(extra)

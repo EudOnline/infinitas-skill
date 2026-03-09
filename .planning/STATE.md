@@ -5,16 +5,16 @@
 See: `.planning/PROJECT.md` (updated 2026-03-09)
 
 **Core value:** Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
-**Current focus:** v10 Phase 3 — Verified Artifact Format and Distribution Manifest
+**Current focus:** v10 Phase 4 — CI-native Attestations and Verification
 
 ## Current Position
 
-Phase: 3 of 5 (Verified Artifact Format and Distribution Manifest)
+Phase: 4 of 5 (CI-native Attestations and Verification)
 Plan: —
-Status: Phase 2 complete; ready to plan
-Last activity: 2026-03-09 — Completed v10 Phase 2 by adding signing bootstrap helpers, doctor diagnostics, and a first stable-release rehearsal
+Status: Phase 3 complete; ready to plan
+Last activity: 2026-03-09 — Completed v10 Phase 3 by adding verified distribution manifests, immutable release bundles, manifest-aware install/sync flows, and regression coverage for distribution installs
 
-Progress: [████░░░░░░] 40%
+Progress: [██████░░░░] 60%
 
 ## Performance Metrics
 
@@ -25,12 +25,12 @@ Progress: [████░░░░░░] 40%
 
 **By Phase:**
 - v9: 14 plans completed across 5 phases
-- v10: 6 plans completed across 5 phases
+- v10: 9 plans completed across 5 phases
 - v11: 0 plans completed across 3 phases
 
 **Recent Trend:**
-- Last 5 plans: 10-02, 10-03, 10-04, 10-05, 10-06
-- Trend: v10 Phase 2 closed; distribution artifact work is next
+- Last 5 plans: 10-05, 10-06, 10-07, 10-08, 10-09
+- Trend: v10 Phase 3 closed; CI-native attestation work is next
 
 ## Accumulated Context
 
@@ -55,7 +55,7 @@ Decisions are logged in `PROJECT.md`.
 
 ### Pending Todos
 
-- Plan and execute v10 Phase 3 (verified artifact format and distribution manifests).
+- Plan and execute v10 Phase 4 (CI-native attestation generation and verification).
 - Bootstrap real trusted signer entries in `config/allowed_signers` before the first actual stable release.
 - Decide whether CI-native attestations should be additive to, or eventually authoritative over, the repo-managed SSH path.
 
@@ -68,5 +68,5 @@ Decisions are logged in `PROJECT.md`.
 ## Session Continuity
 
 Last session: 2026-03-09 14:26 GMT+8
-Stopped at: v10 Phase 2 complete; next logical step is planning v10 Phase 3
+Stopped at: v10 Phase 3 complete; next logical step is planning v10 Phase 4
 Resume file: None

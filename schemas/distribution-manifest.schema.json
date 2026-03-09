@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openai.invalid/infinitas-skill/distribution-manifest.schema.json",
+  "title": "infinitas-skill verified distribution manifest",
+  "type": "object",
+  "required": [
+    "$schema",
+    "schema_version",
+    "kind",
+    "generated_at",
+    "skill",
+    "source_snapshot",
+    "bundle",
+    "registry",
+    "dependencies",
+    "attestation_bundle"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "kind": {
+      "type": "string",
+      "const": "skill-distribution-manifest"
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "skill": {
+      "type": "object",
+      "required": [
+        "name",
+        "version",
+        "status"
+      ],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "publisher": {"type": ["string", "null"]},
+        "qualified_name": {"type": ["string", "null"]},
+        "identity_mode": {"type": ["string", "null"]},
+        "version": {"type": "string", "minLength": 1},
+        "status": {"type": ["string", "null"]},
+        "summary": {"type": ["string", "null"]},
+        "author": {"type": ["string", "null"]},
+        "owners": {"type": "array", "items": {"type": "string"}},
+        "maintainers": {"type": "array", "items": {"type": "string"}},
+        "depends_on": {"type": "array"},
+        "conflicts_with": {"type": "array"}
+      },
+      "additionalProperties": true
+    },
+    "source_snapshot": {
+      "type": "object",
+      "required": [
+        "kind",
+        "tag",
+        "ref",
+        "commit",
+        "immutable",
+        "pushed"
+      ],
+      "properties": {
+        "kind": {"type": "string", "minLength": 1},
+        "tag": {"type": "string", "minLength": 1},
+        "ref": {"type": "string", "minLength": 1},
+        "commit": {"type": "string", "minLength": 1},
+        "remote": {"type": ["string", "null"]},
+        "upstream": {"type": ["string", "null"]},
+        "immutable": {"type": "boolean"},
+        "pushed": {"type": "boolean"}
+      },
+      "additionalProperties": true
+    },
+    "bundle": {
+      "type": "object",
+      "required": [
+        "path",
+        "format",
+        "sha256",
+        "size",
+        "root_dir",
+        "file_count"
+      ],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "format": {"type": "string", "const": "tar.gz"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "size": {"type": "integer", "minimum": 0},
+        "root_dir": {"type": "string", "minLength": 1},
+        "file_count": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": true
+    },
+    "registry": {
+      "type": "object",
+      "required": [
+        "default_registry",
+        "registries_consulted",
+        "resolved"
+      ],
+      "properties": {
+        "default_registry": {"type": ["string", "null"]},
+        "registries_consulted": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "resolved": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "dependencies": {
+      "type": "object",
+      "required": [
+        "mode",
+        "root",
+        "steps",
+        "registries_consulted"
+      ],
+      "properties": {
+        "mode": {"type": ["string", "null"]},
+        "root": {"type": "object"},
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "registries_consulted": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "additionalProperties": true
+    },
+    "attestation_bundle": {
+      "type": "object",
+      "required": [
+        "provenance_path",
+        "provenance_sha256",
+        "signature_path",
+        "signature_sha256",
+        "signer_identity",
+        "namespace",
+        "allowed_signers"
+      ],
+      "properties": {
+        "provenance_path": {"type": "string", "minLength": 1},
+        "provenance_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "signature_path": {"type": "string", "minLength": 1},
+        "signature_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "signer_identity": {"type": ["string", "null"]},
+        "namespace": {"type": "string", "minLength": 1},
+        "allowed_signers": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}
