@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: scripts/release-skill.sh <skill-name-or-path> [--preview] [--create-tag] [--sign-tag] [--unsigned-tag] [--push-tag] [--github-release] [--notes-out PATH] [--write-provenance] [--sign-provenance] [--ssh-sign-provenance] [--ssh-verify-provenance] [--ssh-key PATH] [--signer IDENTITY]" >&2
+  echo "usage: scripts/release-skill.sh <skill-name-or-path> [--preview] [--create-tag] [--sign-tag] [--unsigned-tag] [--push-tag] [--github-release] [--notes-out PATH] [--write-provenance] [--sign-provenance] [--ssh-sign-provenance] [--ssh-verify-provenance] [--ssh-key PATH] [--signer IDENTITY] [--releaser IDENTITY]" >&2
 }
 
 if [[ $# -lt 1 ]]; then
@@ -25,6 +25,7 @@ SSH_SIGN_PROVENANCE=0
 SSH_VERIFY_PROVENANCE=0
 SSH_KEY=""
 SIGNER=""
+RELEASER=""
 readarray -t ATT_CFG < <(python3 - <<'PY' "$ROOT"
 import json, sys
 from pathlib import Path
@@ -115,6 +116,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --signer)
       SIGNER="${2:-}"
+      shift 2
+      ;;
+    --releaser)
+      RELEASER="${2:-}"
       shift 2
       ;;
     *)
@@ -284,6 +289,11 @@ import json, sys
 print(json.load(open(sys.argv[1], encoding='utf-8'))['git']['local_tag'].get('signer') or '')
 PY
 )"
+  RELEASER_NAME="$(python3 - <<'PY' "$STATE_JSON"
+import json, sys
+print((json.load(open(sys.argv[1], encoding='utf-8')).get('release') or {}).get('releaser_identity') or '')
+PY
+  )"
   ATTESTATION_KEY="$(python3 - <<'PY' "$STATE_JSON"
 import json, sys
 state = json.load(open(sys.argv[1], encoding='utf-8'))
@@ -300,6 +310,9 @@ PY
   if [[ -n "$SIGNER_NAME" ]]; then
     echo "verified_signer: $SIGNER_NAME"
   fi
+  if [[ -n "$RELEASER_NAME" ]]; then
+    echo "releaser: $RELEASER_NAME"
+  fi
   echo
   write_release_notes -
 fi
@@ -315,11 +328,16 @@ if [[ $WRITE_PROVENANCE -eq 1 ]]; then
   TMP_PROV="$(mktemp)"
   EFFECTIVE_SIGNER="$SIGNER"
   [[ -n "$EFFECTIVE_SIGNER" ]] || EFFECTIVE_SIGNER="$SIGNER_NAME"
+  EFFECTIVE_RELEASER="$RELEASER"
+  [[ -n "$EFFECTIVE_RELEASER" ]] || EFFECTIVE_RELEASER="$RELEASER_NAME"
   EFFECTIVE_SSH_KEY="$SSH_KEY"
   [[ -n "$EFFECTIVE_SSH_KEY" ]] || EFFECTIVE_SSH_KEY="$ATTESTATION_KEY"
   GENERATE_ARGS=(python3 "$ROOT/scripts/generate-provenance.py" "$DIR" --output-name "$(basename "$PROV")")
   if [[ -n "$EFFECTIVE_SIGNER" ]]; then
     GENERATE_ARGS+=(--signer "$EFFECTIVE_SIGNER")
+  fi
+  if [[ -n "$EFFECTIVE_RELEASER" ]]; then
+    GENERATE_ARGS+=(--releaser "$EFFECTIVE_RELEASER")
   fi
   "${GENERATE_ARGS[@]}" > "$TMP_PROV"
   TMP_SSH_SIG="$TMP_PROV$ATT_SIGNATURE_EXT"

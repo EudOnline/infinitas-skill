@@ -5,6 +5,7 @@ from functools import cmp_to_key
 from pathlib import Path
 
 from registry_source_lib import load_registry_config, registry_identity, resolve_registry_root
+from skill_identity_lib import derive_qualified_name, normalize_skill_identity, parse_requested_skill
 
 ROOT = Path(__file__).resolve().parent.parent
 SKILL_NAME_RE = re.compile(r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
@@ -29,6 +30,33 @@ def unique(values):
         seen.add(value)
         out.append(value)
     return out
+
+
+def identity_key_for(payload):
+    if not isinstance(payload, dict):
+        return None
+    return payload.get('qualified_name') or payload.get('name')
+
+
+def display_identity(payload):
+    if not isinstance(payload, dict):
+        return None
+    return payload.get('qualified_name') or payload.get('name')
+
+
+def parse_dependency_identity(value, field):
+    publisher, name = parse_requested_skill(value)
+    if publisher is not None and not SKILL_NAME_RE.match(publisher):
+        raise DependencyError(f'{field} entry has invalid publisher {publisher!r}')
+    if not isinstance(name, str) or not SKILL_NAME_RE.match(name):
+        raise DependencyError(f'{field} entry has invalid name {value!r}')
+    qualified_name = derive_qualified_name(name, publisher) if publisher else None
+    return {
+        'name': name,
+        'publisher': publisher,
+        'qualified_name': qualified_name,
+        'identity_key': qualified_name or name,
+    }
 
 
 def parse_semver(version):
@@ -166,11 +194,12 @@ def version_satisfies(version, expression):
 
 def _normalize_entry(entry, field, owner_name=None):
     if isinstance(entry, str):
-        if not LEGACY_REF_RE.match(entry):
-            raise DependencyError(f'invalid {field} ref {entry!r}')
         name, _, version = entry.partition('@')
+        identity = parse_dependency_identity(name, field)
+        if version and not SEMVER_RE.match(version):
+            raise DependencyError(f'invalid {field} ref {entry!r}')
         normalized = {
-            'name': name,
+            **identity,
             'version': canonicalize_constraint(version or '*'),
             'registry': None,
             'allow_incubating': False,
@@ -183,19 +212,20 @@ def _normalize_entry(entry, field, owner_name=None):
         if unknown:
             raise DependencyError(f'{field} entry for {entry.get("name") or "<unknown>"} has unsupported keys: {", ".join(unknown)}')
         name = entry.get('name')
-        if not isinstance(name, str) or not SKILL_NAME_RE.match(name):
+        if not isinstance(name, str):
             raise DependencyError(f'{field} entry has invalid name {name!r}')
+        identity = parse_dependency_identity(name, field)
         version = entry.get('version', '*')
         if not isinstance(version, str):
-            raise DependencyError(f'{field} entry for {name} has non-string version constraint')
+            raise DependencyError(f'{field} entry for {identity["identity_key"]} has non-string version constraint')
         registry = entry.get('registry')
         if registry is not None and (not isinstance(registry, str) or not registry.strip()):
-            raise DependencyError(f'{field} entry for {name} has invalid registry hint {registry!r}')
+            raise DependencyError(f'{field} entry for {identity["identity_key"]} has invalid registry hint {registry!r}')
         allow_incubating = entry.get('allow_incubating', False)
         if not isinstance(allow_incubating, bool):
-            raise DependencyError(f'{field} entry for {name} has non-boolean allow_incubating')
+            raise DependencyError(f'{field} entry for {identity["identity_key"]} has non-boolean allow_incubating')
         normalized = {
-            'name': name,
+            **identity,
             'version': canonicalize_constraint(version),
             'registry': registry.strip() if isinstance(registry, str) and registry.strip() else None,
             'allow_incubating': allow_incubating,
@@ -205,13 +235,14 @@ def _normalize_entry(entry, field, owner_name=None):
     else:
         raise DependencyError(f'{field} entries must be strings or objects')
 
-    if owner_name and normalized['name'] == owner_name:
-        raise DependencyError(f'{field} cannot reference itself ({normalized["name"]})')
+    if owner_name and normalized['identity_key'] == owner_name:
+        raise DependencyError(f'{field} cannot reference itself ({normalized["identity_key"]})')
     return normalized
 
 
 def normalize_meta_dependencies(meta, owner_name=None):
-    owner = owner_name or meta.get('name')
+    owner_identity = normalize_skill_identity(meta)
+    owner = owner_name or identity_key_for(owner_identity) or meta.get('name')
     normalized = {}
     for field in ['depends_on', 'conflicts_with']:
         values = meta.get(field, []) or []
@@ -225,7 +256,7 @@ def constraint_display(entry):
     registry = f' [{entry["registry"]}]' if entry.get('registry') else ''
     version = entry.get('version') or '*'
     incubating = ' +incubating' if entry.get('allow_incubating') else ''
-    return f'{entry["name"]}{registry} {version}{incubating}'.strip()
+    return f'{display_identity(entry) or entry["name"]}{registry} {version}{incubating}'.strip()
 
 
 def load_meta(path):
@@ -260,9 +291,14 @@ def scan_enabled_registry_skills(root):
             for skill_dir in sorted(path for path in stage_dir.iterdir() if path.is_dir() and (path / '_meta.json').exists()):
                 meta = load_meta(skill_dir / '_meta.json')
                 normalized = normalize_meta_dependencies(meta)
+                identity = normalize_skill_identity(meta)
                 candidates.append({
                     **identity,
                     'name': meta.get('name'),
+                    'publisher': identity.get('publisher'),
+                    'qualified_name': identity.get('qualified_name'),
+                    'identity_mode': identity.get('identity_mode'),
+                    'identity_key': identity_key_for(identity) or meta.get('name'),
                     'version': meta.get('version'),
                     'status': meta.get('status'),
                     'stage': stage,
@@ -280,10 +316,14 @@ def scan_enabled_registry_skills(root):
                     'registry_enabled': reg.get('enabled', True),
                 })
     by_name = {}
+    by_identity = {}
     for candidate in candidates:
         by_name.setdefault(candidate.get('name'), []).append(candidate)
+        by_identity.setdefault(candidate.get('identity_key') or candidate.get('name'), []).append(candidate)
     for name in list(by_name):
         by_name[name] = sorted(by_name[name], key=cmp_to_key(_candidate_catalog_compare))
+    for key in list(by_identity):
+        by_identity[key] = sorted(by_identity[key], key=cmp_to_key(_candidate_catalog_compare))
     return {
         'config': cfg,
         'registries': sorted_registries,
@@ -292,6 +332,7 @@ def scan_enabled_registry_skills(root):
         'missing_roots': missing_roots,
         'candidates': candidates,
         'by_name': by_name,
+        'by_identity': by_identity,
     }
 
 
@@ -329,9 +370,20 @@ def load_installed_state(target_dir):
         for child in sorted(path for path in target.iterdir() if path.is_dir() and (path / '_meta.json').exists()):
             meta = load_meta(child / '_meta.json')
             normalized = normalize_meta_dependencies(meta)
-            entry = manifest_skills.get(meta.get('name')) or manifest_skills.get(child.name) or {}
-            installed[meta.get('name')] = {
+            identity = normalize_skill_identity(meta)
+            identity_key = identity_key_for(identity) or meta.get('name') or child.name
+            entry = {}
+            for key in unique([identity_key, meta.get('name'), child.name]):
+                if key and key in manifest_skills:
+                    entry = manifest_skills.get(key) or {}
+                    break
+            installed[identity_key] = {
+                **identity,
                 'name': meta.get('name'),
+                'publisher': identity.get('publisher'),
+                'qualified_name': identity.get('qualified_name'),
+                'identity_mode': identity.get('identity_mode'),
+                'identity_key': identity_key,
                 'version': meta.get('version') or entry.get('version'),
                 'locked_version': entry.get('locked_version') or meta.get('version'),
                 'source_registry': entry.get('source_registry'),
@@ -341,14 +393,19 @@ def load_installed_state(target_dir):
                 'conflicts_with': normalized['conflicts_with'],
             }
     for name, entry in manifest_skills.items():
-        if name in installed:
+        identity_key = entry.get('qualified_name') or entry.get('name') or name
+        if identity_key in installed:
             continue
-        installed[name] = {
-            'name': name,
+        installed[identity_key] = {
+            'name': entry.get('name') or name,
+            'publisher': entry.get('publisher'),
+            'qualified_name': entry.get('qualified_name'),
+            'identity_mode': entry.get('identity_mode') or ('qualified' if entry.get('qualified_name') else 'legacy'),
+            'identity_key': identity_key,
             'version': entry.get('version') or entry.get('locked_version'),
             'locked_version': entry.get('locked_version'),
             'source_registry': entry.get('source_registry'),
-            'path': str((target / name).resolve()),
+            'path': str((target / (entry.get('name') or name)).resolve()),
             'meta': None,
             'depends_on': [],
             'conflicts_with': [],
@@ -360,10 +417,16 @@ def candidate_from_skill_dir(skill_dir, source_registry=None, source_info=None):
     skill_path = Path(skill_dir).resolve()
     meta = load_meta(skill_path / '_meta.json')
     normalized = normalize_meta_dependencies(meta)
+    identity = normalize_skill_identity(meta)
     info = source_info or {}
     return {
         **info,
+        **identity,
         'name': meta.get('name'),
+        'publisher': identity.get('publisher'),
+        'qualified_name': identity.get('qualified_name'),
+        'identity_mode': identity.get('identity_mode'),
+        'identity_key': identity_key_for(identity) or meta.get('name'),
         'version': meta.get('version'),
         'status': meta.get('status'),
         'stage': info.get('stage') or skill_path.parent.name,
@@ -382,8 +445,14 @@ def candidate_from_skill_dir(skill_dir, source_registry=None, source_info=None):
 
 
 def entry_matches_skill(entry, skill):
-    if entry.get('name') != skill.get('name'):
-        return False
+    if entry.get('qualified_name'):
+        if entry.get('qualified_name') != skill.get('qualified_name'):
+            return False
+    else:
+        if entry.get('name') != skill.get('name'):
+            return False
+        if entry.get('publisher') and entry.get('publisher') != skill.get('publisher'):
+            return False
     if entry.get('registry') and entry.get('registry') != skill.get('registry_name'):
         return False
     version = skill.get('version')
@@ -402,6 +471,10 @@ def constraints_compatible(constraints):
 def installed_identity_matches(candidate, installed):
     if not installed:
         return False
+    candidate_identity = candidate.get('identity_key') or candidate.get('qualified_name') or candidate.get('name')
+    installed_identity = installed.get('identity_key') or installed.get('qualified_name') or installed.get('name')
+    if candidate_identity and installed_identity and candidate_identity != installed_identity:
+        return False
     installed_version = installed.get('version') or installed.get('locked_version')
     if installed_version and candidate.get('version') != installed_version:
         return False
@@ -418,7 +491,8 @@ class DependencyPlanner:
 
     def plan(self, root_candidate, target_dir=None, mode='install'):
         installed = load_installed_state(target_dir) if target_dir else {}
-        selected = {root_candidate['name']: root_candidate}
+        root_key = root_candidate.get('identity_key') or root_candidate.get('name')
+        selected = {root_key: root_candidate}
         pending = [self._prepare_requirement(root_candidate, entry) for entry in root_candidate.get('depends_on', [])]
         result = self._resolve_recursive(selected, pending, installed)
         self._validate_final_state(root_candidate, result, installed, mode)
@@ -428,6 +502,7 @@ class DependencyPlanner:
         return {
             **entry,
             'source_name': source_candidate.get('name'),
+            'source_qualified_name': source_candidate.get('qualified_name'),
             'source_version': source_candidate.get('version'),
             'source_registry': source_candidate.get('registry_name'),
         }
@@ -439,7 +514,7 @@ class DependencyPlanner:
         pending_sorted = sorted(
             pending,
             key=lambda item: (
-                item.get('name') or '',
+                item.get('identity_key') or item.get('name') or '',
                 item.get('registry') or '',
                 item.get('version') or '*',
                 item.get('source_name') or '',
@@ -447,12 +522,13 @@ class DependencyPlanner:
             ),
         )
         requirement = pending_sorted[0]
-        name = requirement['name']
+        identity_key = requirement.get('identity_key') or requirement.get('name')
+        display_name = display_identity(requirement) or requirement.get('name')
         remaining = pending_sorted[1:]
         same_name = [requirement]
         rest = []
         for item in remaining:
-            if item['name'] == name:
+            if (item.get('identity_key') or item.get('name')) == identity_key:
                 same_name.append(item)
             else:
                 rest.append(item)
@@ -462,32 +538,32 @@ class DependencyPlanner:
             raise DependencyError(
                 f'conflicting requirements for {name}',
                 {
-                    'skill': name,
+                    'skill': display_name,
                     'constraints': same_name,
                     'reason': problem,
                 },
             )
 
-        if name in selected:
-            candidate = selected[name]
+        if identity_key in selected:
+            candidate = selected[identity_key]
             if not self._candidate_satisfies_all(candidate, same_name):
                 raise DependencyError(
-                    f'selected dependency no longer satisfies all constraints for {name}',
+                    f'selected dependency no longer satisfies all constraints for {display_name}',
                     {
-                        'skill': name,
+                        'skill': display_name,
                         'selected': self._candidate_view(candidate),
                         'constraints': same_name,
                     },
                 )
             return self._resolve_recursive(selected, rest, installed)
 
-        matching_candidates = self._matching_candidates(name, same_name, installed.get(name))
+        matching_candidates = self._matching_candidates(requirement, same_name, installed.get(identity_key))
         if not matching_candidates:
-            available = [self._candidate_view(item) for item in self.catalog['by_name'].get(name, [])]
+            available = [self._candidate_view(item) for item in self.catalog['by_identity'].get(identity_key, [])]
             raise DependencyError(
-                f'no registry candidate satisfies dependency {name}',
+                f'no registry candidate satisfies dependency {display_name}',
                 {
-                    'skill': name,
+                    'skill': display_name,
                     'constraints': same_name,
                     'available': available,
                     'missing_registry_roots': self.catalog.get('missing_roots', {}),
@@ -501,7 +577,7 @@ class DependencyPlanner:
                 rejected.append({'candidate': self._candidate_view(candidate), 'reason': conflict})
                 continue
             next_selected = dict(selected)
-            next_selected[name] = candidate
+            next_selected[candidate.get('identity_key') or candidate.get('name')] = candidate
             next_pending = list(rest)
             for dep in candidate.get('depends_on', []):
                 next_pending.append(self._prepare_requirement(candidate, dep))
@@ -511,9 +587,9 @@ class DependencyPlanner:
                 rejected.append({'candidate': self._candidate_view(candidate), 'reason': exc.message})
 
         raise DependencyError(
-            f'no compatible resolution path found for {name}',
+            f'no compatible resolution path found for {display_name}',
             {
-                'skill': name,
+                'skill': display_name,
                 'constraints': same_name,
                 'rejected_candidates': rejected,
             },
@@ -539,10 +615,12 @@ class DependencyPlanner:
         configured = [reg.get('name') for reg in self.catalog.get('registries', [])]
         return unique(from_sources + configured)
 
-    def _matching_candidates(self, name, constraints, installed_item):
+    def _matching_candidates(self, requirement, constraints, installed_item):
         preferred = self._preferred_registries(constraints)
         candidates = []
-        for candidate in self.catalog['by_name'].get(name, []):
+        identity_key = requirement.get('identity_key') or requirement.get('name')
+        candidate_pool = self.catalog['by_identity'].get(identity_key, self.catalog['by_name'].get(requirement.get('name'), []))
+        for candidate in candidate_pool:
             if self._candidate_satisfies_all(candidate, constraints):
                 candidates.append(candidate)
 
@@ -578,9 +656,15 @@ class DependencyPlanner:
         return sorted(candidates, key=cmp_to_key(compare))
 
     def _selected_conflict(self, candidate, selected):
-        for other_name, other in selected.items():
-            if other_name == candidate.get('name'):
+        candidate_identity = candidate.get('identity_key') or candidate.get('name')
+        for other_identity, other in selected.items():
+            if other_identity == candidate_identity:
                 continue
+            if other.get('name') == candidate.get('name'):
+                return (
+                    f'cannot select both {display_identity(other)} and {display_identity(candidate)} '
+                    'because installed skill state is still keyed by bare skill name'
+                )
             for conflict in candidate.get('conflicts_with', []):
                 if entry_matches_skill(conflict, other):
                     return f'{candidate.get("name")} conflicts with selected {other.get("name")} ({constraint_display(conflict)})'
@@ -593,7 +677,7 @@ class DependencyPlanner:
         selected_names = set(selected)
         for candidate in selected.values():
             for installed_item in installed.values():
-                if installed_item.get('name') in selected_names:
+                if (installed_item.get('identity_key') or installed_item.get('name')) in selected_names:
                     continue
                 for conflict in candidate.get('conflicts_with', []):
                     if entry_matches_skill(conflict, installed_item):
@@ -617,18 +701,19 @@ class DependencyPlanner:
                                 'conflict': conflict,
                             },
                         )
-        for name, candidate in selected.items():
-            installed_item = installed.get(name)
+        root_identity = root_candidate.get('identity_key') or root_candidate.get('name')
+        for identity_key, candidate in selected.items():
+            installed_item = installed.get(identity_key)
             if not installed_item:
                 continue
-            if mode == 'install' and name == root_candidate.get('name'):
+            if mode == 'install' and identity_key == root_identity:
                 continue
             locked_version = installed_item.get('locked_version')
             if locked_version and candidate.get('version') != locked_version:
                 raise DependencyError(
-                    f'unsafe upgrade plan for {name}: installed copy is locked to {locked_version}',
+                    f'unsafe upgrade plan for {display_identity(candidate) or identity_key}: installed copy is locked to {locked_version}',
                     {
-                        'skill': name,
+                        'skill': display_identity(candidate) or identity_key,
                         'selected': self._candidate_view(candidate),
                         'installed': self._installed_view(installed_item),
                         'reason': 'locked-version-mismatch',
@@ -638,6 +723,8 @@ class DependencyPlanner:
     def _candidate_view(self, candidate):
         return {
             'name': candidate.get('name'),
+            'publisher': candidate.get('publisher'),
+            'qualified_name': candidate.get('qualified_name'),
             'version': candidate.get('version'),
             'registry': candidate.get('registry_name'),
             'stage': candidate.get('stage'),
@@ -647,6 +734,8 @@ class DependencyPlanner:
     def _installed_view(self, installed):
         return {
             'name': installed.get('name'),
+            'publisher': installed.get('publisher'),
+            'qualified_name': installed.get('qualified_name'),
             'version': installed.get('version'),
             'locked_version': installed.get('locked_version'),
             'registry': installed.get('source_registry'),
@@ -657,23 +746,27 @@ class DependencyPlanner:
         apply_order = []
         visited = set()
 
-        def visit(name):
-            if name in visited:
+        def visit(identity_key):
+            if identity_key in visited:
                 return
-            visited.add(name)
-            candidate = selected[name]
+            visited.add(identity_key)
+            candidate = selected[identity_key]
             deps = sorted(candidate.get('depends_on', []), key=lambda item: (item.get('name') or '', item.get('version') or '*'))
             for dep in deps:
-                if dep.get('name') in selected:
-                    visit(dep['name'])
-            apply_order.append(name)
+                dep_key = dep.get('identity_key') or dep.get('name')
+                if dep_key in selected:
+                    visit(dep_key)
+            apply_order.append(identity_key)
 
-        visit(root_candidate['name'])
+        root_identity = root_candidate.get('identity_key') or root_candidate.get('name')
+        visit(root_identity)
         requesters = {}
         for candidate in selected.values():
             for dep in candidate.get('depends_on', []):
-                requesters.setdefault(dep['name'], []).append({
+                dep_key = dep.get('identity_key') or dep.get('name')
+                requesters.setdefault(dep_key, []).append({
                     'by': candidate.get('name'),
+                    'by_qualified_name': candidate.get('qualified_name'),
                     'version': candidate.get('version'),
                     'registry': dep.get('registry'),
                     'constraint': dep.get('version'),
@@ -681,13 +774,16 @@ class DependencyPlanner:
                 })
 
         steps = []
-        for index, name in enumerate(apply_order, start=1):
-            candidate = selected[name]
-            installed_item = installed.get(name)
-            action = self._plan_action(name, candidate, installed_item, root_candidate, mode)
+        for index, identity_key in enumerate(apply_order, start=1):
+            candidate = selected[identity_key]
+            installed_item = installed.get(identity_key)
+            action = self._plan_action(identity_key, candidate, installed_item, root_candidate, mode)
             steps.append({
                 'order': index,
                 'name': candidate.get('name'),
+                'publisher': candidate.get('publisher'),
+                'qualified_name': candidate.get('qualified_name'),
+                'identity_mode': candidate.get('identity_mode'),
                 'version': candidate.get('version'),
                 'registry': candidate.get('registry_name'),
                 'stage': candidate.get('stage'),
@@ -695,10 +791,10 @@ class DependencyPlanner:
                 'relative_path': candidate.get('relative_path'),
                 'action': action,
                 'needs_apply': action not in {'keep'},
-                'requested_by': requesters.get(name, []),
+                'requested_by': requesters.get(identity_key, []),
                 'depends_on': candidate.get('depends_on', []),
                 'conflicts_with': candidate.get('conflicts_with', []),
-                'root': name == root_candidate.get('name'),
+                'root': identity_key == root_identity,
                 'source_commit': candidate.get('registry_commit'),
                 'source_ref': candidate.get('registry_ref'),
                 'source_tag': candidate.get('registry_tag'),
@@ -711,11 +807,12 @@ class DependencyPlanner:
         }
 
     def _plan_action(self, name, candidate, installed_item, root_candidate, mode):
+        root_identity = root_candidate.get('identity_key') or root_candidate.get('name')
         if not installed_item:
-            return 'sync' if name == root_candidate.get('name') and mode == 'sync' else 'install'
+            return 'sync' if name == root_identity and mode == 'sync' else 'install'
         same_version = installed_item.get('version') == candidate.get('version') or installed_item.get('locked_version') == candidate.get('version')
         same_registry = not installed_item.get('source_registry') or installed_item.get('source_registry') == candidate.get('registry_name')
-        if name == root_candidate.get('name') and mode == 'sync':
+        if name == root_identity and mode == 'sync':
             return 'sync' if not (same_version and same_registry) else 'keep'
         if same_version and same_registry:
             return 'keep'
@@ -741,12 +838,14 @@ def error_to_payload(error):
 def plan_to_text(plan):
     lines = []
     root = plan.get('root') or {}
-    lines.append(f"resolution plan: {root.get('name')}@{root.get('version')} from {root.get('registry')}")
+    root_display = root.get('qualified_name') or root.get('name')
+    lines.append(f"resolution plan: {root_display}@{root.get('version')} from {root.get('registry')}")
     for step in plan.get('steps', []):
         action = step.get('action')
         stage = step.get('stage')
         registry = step.get('registry')
-        head = f"- [{action}] {step.get('name')}@{step.get('version')} ({stage}) from {registry}"
+        display = step.get('qualified_name') or step.get('name')
+        head = f"- [{action}] {display}@{step.get('version')} ({stage}) from {registry}"
         if step.get('source_commit'):
             head += f" @{step.get('source_commit')[:12]}"
         elif step.get('source_tag'):
@@ -755,8 +854,9 @@ def plan_to_text(plan):
             head += f" ref={step.get('source_ref')}"
         lines.append(head)
         for requester in step.get('requested_by', []):
+            requester_name = requester.get('by_qualified_name') or requester.get('by')
             lines.append(
-                f"    requested by {requester.get('by')}@{requester.get('version')} -> {requester.get('constraint')}"
+                f"    requested by {requester_name}@{requester.get('version')} -> {requester.get('constraint')}"
                 + (f" [{requester.get('registry')}]" if requester.get('registry') else '')
                 + (' +incubating' if requester.get('allow_incubating') else '')
             )

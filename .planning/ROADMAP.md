@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v9 Registry Trust, Quorum, and Attestation** - Phases 1-5 (completed 2026-03-09)
-- 🚧 **v10 Publisher Identity and Verified Distribution** - Phases 1-5 (planned)
+- 🚧 **v10 Publisher Identity and Verified Distribution** - Phases 1-5 (in progress)
 - 🗂️ **v11 Policy-as-Code and Organizational Controls** - Phases 1-3 (planned)
 
 ## Phases
@@ -87,11 +87,11 @@ Plans:
 - [x] 05-02: Make SSH/asymmetric signing and verification first-class in release tooling
 - [x] 05-03: Enforce attestation verification in release/distribution paths and document the bootstrap flow
 
-### 🚧 v10 Publisher Identity and Verified Distribution (Planned)
+### 🚧 v10 Publisher Identity and Verified Distribution (In Progress)
 
 **Milestone Goal:** Turn the hardened Git-native registry into a verified distribution system with explicit publisher identity, bootstrap-safe signing, and consumer-friendly install/search flows.
 
-#### Phase 1: Publisher / Namespace Model
+#### ✅ Phase 1: Publisher / Namespace Model
 **Goal**: Introduce first-class publisher and namespace identity so skill ownership, release authority, and trusted actors are explicit instead of implied by repository write access.
 **Depends on**: v9 completed
 **Requirements**: [PUB-01, PUB-02, PUB-03]
@@ -102,9 +102,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 10-01: Define publisher/namespace metadata schema, migration rules, and compatibility behavior for legacy unqualified skill names
-- [ ] 10-02: Enforce namespace ownership plus actor-role recording in validation, promotion, and release tooling
-- [ ] 10-03: Export fully-qualified identities in catalogs, install manifests, and user-facing docs/CLI output
+- [x] 10-01: Define publisher/namespace metadata schema, migration rules, and compatibility behavior for legacy unqualified skill names
+- [x] 10-02: Enforce namespace ownership plus actor-role recording in validation, promotion, and release tooling
+- [x] 10-03: Export fully-qualified identities in catalogs, install manifests, and user-facing docs/CLI output
 
 #### Phase 2: Signing Bootstrap and Operator Doctoring
 **Goal**: Make the first trusted-signer setup repeatable, diagnosable, and safe for maintainers who are not already signing experts.
@@ -223,7 +223,7 @@ Plans:
 | 3. Reviewer Groups and Quorum Enforcement | v9 | 3/3 | Completed | 2026-03-09 |
 | 4. Signed Release Invariants | v9 | 2/2 | Completed | 2026-03-09 |
 | 5. Asymmetric Attestation and Verification | v9 | 3/3 | Completed | 2026-03-09 |
-| 1. Publisher / Namespace Model | v10 | 0/3 | Planned | - |
+| 1. Publisher / Namespace Model | v10 | 3/3 | Completed | 2026-03-09 |
 | 2. Signing Bootstrap and Operator Doctoring | v10 | 0/3 | Planned | - |
 | 3. Verified Artifact Format and Distribution Manifest | v10 | 0/3 | Planned | - |
 | 4. CI-native Attestations and Verification | v10 | 0/3 | Planned | - |

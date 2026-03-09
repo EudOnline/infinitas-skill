@@ -102,6 +102,10 @@ def validate_provenance_payload(payload):
         require_string(skill, 'name', 'skill.name')
         require_string(skill, 'version', 'skill.version')
         require_string(skill, 'path', 'skill.path')
+        for key in ['owners', 'maintainers']:
+            value = skill.get(key)
+            if value is not None and not isinstance(value, list):
+                errors.append(f'skill.{key} must be an array when present')
 
     git = payload.get('git')
     if not isinstance(git, dict):
@@ -142,6 +146,28 @@ def validate_provenance_payload(payload):
             errors.append('dependencies.steps must be an array')
         if not isinstance(dependencies.get('registries_consulted'), list):
             errors.append('dependencies.registries_consulted must be an array')
+
+    review = payload.get('review')
+    if not isinstance(review, dict):
+        errors.append('review must be an object')
+    else:
+        if not isinstance(review.get('reviewers'), list):
+            errors.append('review.reviewers must be an array')
+
+    release = payload.get('release')
+    if not isinstance(release, dict):
+        errors.append('release must be an object')
+    else:
+        releaser_identity = release.get('releaser_identity')
+        if releaser_identity is not None and (not isinstance(releaser_identity, str) or not releaser_identity.strip()):
+            errors.append('release.releaser_identity must be a non-empty string when present')
+        if not isinstance(release.get('transfer_required'), bool):
+            errors.append('release.transfer_required must be boolean')
+        if not isinstance(release.get('transfer_authorized'), bool):
+            errors.append('release.transfer_authorized must be boolean')
+        for key in ['authorized_signers', 'authorized_releasers', 'transfer_matches', 'competing_claims']:
+            if not isinstance(release.get(key), list):
+                errors.append(f'release.{key} must be an array')
 
     attestation = payload.get('attestation')
     if not isinstance(attestation, dict):

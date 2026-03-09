@@ -4,6 +4,10 @@
   "status": "incubating",
   "summary": "Starter template for documentation-heavy private skills",
   "owner": "replace-me",
+  "owners": [
+    "replace-me"
+  ],
+  "author": "replace-me",
   "maintainers": [],
   "tags": [],
   "agent_compatible": [

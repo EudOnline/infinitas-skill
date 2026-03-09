@@ -16,13 +16,31 @@ root = Path(os.environ['ROOT'])
 sys.path.insert(0, str(root / 'scripts'))
 
 from registry_source_lib import load_registry_config, registry_identity, resolve_registry_root  # noqa: E402
-from review_lib import ReviewPolicyError, evaluate_review_state  # noqa: E402
+from review_lib import ReviewPolicyError, evaluate_review_state, load_reviews  # noqa: E402
+from skill_identity_lib import display_name, normalize_skill_identity  # noqa: E402
 
 
 def expected_skill_tag(name, version):
     if not name or not version:
         return None
     return f'skill/{name}/v{version}'
+
+
+def review_audit_entries(skill_dir):
+    reviews = load_reviews(skill_dir)
+    entries = []
+    for item in reviews.get('entries', []):
+        reviewer = item.get('reviewer')
+        decision = item.get('decision')
+        if not reviewer or not decision:
+            continue
+        entries.append({
+            'reviewer': reviewer,
+            'decision': decision,
+            'at': item.get('at'),
+            'note': item.get('note'),
+        })
+    return entries
 
 
 cfg = load_registry_config(root)
@@ -84,12 +102,19 @@ for stage in ['incubating', 'active', 'archived']:
                 print(f'FAIL: {error}', file=sys.stderr)
             raise SystemExit(1)
         agent_compatible = meta.get('agent_compatible', [])
+        identity = normalize_skill_identity(meta)
+        review_audit = review_audit_entries(skill_dir)
         item = {
             'name': meta.get('name', skill_dir.name),
+            'publisher': identity.get('publisher'),
+            'qualified_name': identity.get('qualified_name'),
+            'identity_mode': identity.get('identity_mode'),
             'version': meta.get('version'),
             'status': meta.get('status', stage),
             'summary': meta.get('summary', ''),
+            'author': identity.get('author'),
             'owner': meta.get('owner'),
+            'owners': identity.get('owners', []),
             'maintainers': meta.get('maintainers', []),
             'tags': meta.get('tags', []),
             'review_state': review_status.get('effective_review_state'),
@@ -110,6 +135,7 @@ for stage in ['incubating', 'active', 'archived']:
             'required_reviewer_groups': review_status.get('required_groups'),
             'covered_reviewer_groups': review_status.get('covered_groups'),
             'missing_reviewer_groups': review_status.get('missing_groups'),
+            'reviewers': review_audit,
             'path': str(skill_dir.relative_to(root)),
             'source_registry': catalog_source_identity.get('registry_name'),
             'source_registry_url': catalog_source_identity.get('registry_url'),
@@ -127,6 +153,8 @@ for stage in ['incubating', 'active', 'archived']:
         for agent in agent_compatible:
             compat_agents.setdefault(agent, []).append({
                 'name': item['name'],
+                'publisher': item['publisher'],
+                'qualified_name': item['qualified_name'],
                 'version': item['version'],
                 'status': item['status'],
                 'path': item['path'],

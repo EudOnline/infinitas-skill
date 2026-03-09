@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from registry_source_lib import load_registry_config, registry_identity, resolve_registry_root
+from skill_identity_lib import normalize_skill_identity, parse_requested_skill
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -37,6 +38,9 @@ def scan_registry(reg):
                 'relative_path': str(d.relative_to(reg_root)),
                 'dir_name': d.name,
                 'name': meta.get('name'),
+                'publisher': normalize_skill_identity(meta).get('publisher'),
+                'qualified_name': normalize_skill_identity(meta).get('qualified_name'),
+                'identity_mode': normalize_skill_identity(meta).get('identity_mode'),
                 'version': meta.get('version'),
                 'status': meta.get('status'),
                 'snapshot_of': meta.get('snapshot_of'),
@@ -85,7 +89,14 @@ def main():
     ap.add_argument('--json', action='store_true')
     args = ap.parse_args()
 
-    candidates = [x for x in load_candidates(args.registry) if x.get('name') == args.name]
+    requested_publisher, requested_name = parse_requested_skill(args.name)
+    candidates = []
+    for item in load_candidates(args.registry):
+        if requested_publisher:
+            if item.get('qualified_name') == args.name:
+                candidates.append(item)
+        elif item.get('name') == requested_name:
+            candidates.append(item)
     if not args.allow_incubating:
         candidates = [x for x in candidates if x['stage'] != 'incubating']
 
@@ -94,7 +105,10 @@ def main():
 
     if args.version:
         exact = [x for x in candidates if x.get('version') == args.version]
-        archived_snapshots = [x for x in exact if x['stage'] == 'archived' and x.get('snapshot_of') == f"{args.name}@{args.version}"]
+        snapshot_refs = [f"{requested_name}@{args.version}"]
+        if requested_publisher:
+            snapshot_refs.insert(0, f"{args.name}@{args.version}")
+        archived_snapshots = [x for x in exact if x['stage'] == 'archived' and x.get('snapshot_of') in snapshot_refs]
         if archived_snapshots:
             archived_snapshots.sort(key=archived_snapshot_sort_key)
             resolved = archived_snapshots[0]

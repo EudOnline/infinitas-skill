@@ -7,6 +7,7 @@ from pathlib import Path
 
 from dependency_lib import DependencyError, normalize_meta_dependencies
 from registry_source_lib import load_registry_config
+from skill_identity_lib import NamespacePolicyError, load_namespace_policy, namespace_policy_report, validate_identity_metadata
 
 ROOT = Path(__file__).resolve().parent.parent
 NAME_RE = re.compile(r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
@@ -21,7 +22,15 @@ def fail(msg: str):
     print(f'FAIL: {msg}', file=sys.stderr)
 
 
-def validate_meta(skill_dir: Path) -> int:
+def _is_registry_skill_dir(skill_dir: Path) -> bool:
+    try:
+        skill_dir.resolve().relative_to((ROOT / 'skills').resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def validate_meta(skill_dir: Path, namespace_policy=None) -> int:
     errors = 0
     meta_path = skill_dir / '_meta.json'
     skill_md = skill_dir / 'SKILL.md'
@@ -71,6 +80,11 @@ def validate_meta(skill_dir: Path) -> int:
         errors += 1
     if not isinstance(meta.get('owner'), str) or not meta.get('owner', '').strip():
         fail(f'{skill_dir}: owner must be a non-empty string')
+        errors += 1
+
+    _identity, identity_errors = validate_identity_metadata(meta)
+    for error in identity_errors:
+        fail(f'{skill_dir}: {error}')
         errors += 1
 
     review = meta.get('review_state')
@@ -155,6 +169,12 @@ def validate_meta(skill_dir: Path) -> int:
             fail(f'{skill_dir}: distribution.channel must be non-empty string')
             errors += 1
 
+    if _is_registry_skill_dir(skill_dir):
+        report = namespace_policy_report(skill_dir, root=ROOT, policy=namespace_policy)
+        for message in report.get('errors', []):
+            fail(message)
+            errors += 1
+
     return errors
 
 
@@ -187,9 +207,15 @@ def main():
     if not dirs:
         print('No skill directories found.' if len(sys.argv) == 1 else 'Nothing to validate.', file=sys.stderr)
         return 1
+    try:
+        namespace_policy = load_namespace_policy(ROOT)
+    except NamespacePolicyError as exc:
+        for error in exc.errors:
+            fail(error)
+        return 1
     errors = 0
     for d in dirs:
-        errors += validate_meta(d)
+        errors += validate_meta(d, namespace_policy=namespace_policy)
     if errors:
         print(f'Validation failed with {errors} error(s).', file=sys.stderr)
         return 1

@@ -1,0 +1,24 @@
+{
+  "$schema": "../schemas/namespace-policy.schema.json",
+  "version": 1,
+  "compatibility": {
+    "allow_unqualified_names": true
+  },
+  "publishers": {
+    "lvxiaoer": {
+      "owners": [
+        "lvxiaoer"
+      ],
+      "maintainers": [
+        "lvxiaoer"
+      ],
+      "authorized_signers": [
+        "lvxiaoer"
+      ],
+      "authorized_releasers": [
+        "lvxiaoer"
+      ]
+    }
+  },
+  "transfers": []
+}

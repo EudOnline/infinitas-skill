@@ -53,6 +53,8 @@ def scaffold_fixture(repo: Path):
             'status': 'active',
             'summary': 'Fixture skill for stable release invariant tests',
             'owner': 'release-test',
+            'owners': ['release-test'],
+            'author': 'release-test',
             'review_state': 'approved',
         }
     )

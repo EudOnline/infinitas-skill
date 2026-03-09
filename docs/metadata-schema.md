@@ -7,10 +7,14 @@ Every registry-managed skill should include `_meta.json`.
 ```json
 {
   "name": "repo-audit",
+  "publisher": "lvxiaoer",
+  "qualified_name": "lvxiaoer/repo-audit",
   "version": "0.1.0",
   "status": "incubating",
   "summary": "Audit a repository for structure, code health, and obvious risks.",
   "owner": "lvxiaoer",
+  "owners": ["lvxiaoer"],
+  "author": "lvxiaoer",
   "review_state": "draft",
   "risk_level": "medium",
   "distribution": {
@@ -25,10 +29,14 @@ Every registry-managed skill should include `_meta.json`.
 ```json
 {
   "name": "repo-audit",
+  "publisher": "lvxiaoer",
+  "qualified_name": "lvxiaoer/repo-audit",
   "version": "0.1.0",
   "status": "incubating",
   "summary": "Audit a repository for structure, code health, and obvious risks.",
   "owner": "lvxiaoer",
+  "owners": ["lvxiaoer"],
+  "author": "lvxiaoer",
   "maintainers": ["lvxiaoer"],
   "tags": ["github", "audit", "code-review"],
   "agent_compatible": ["openclaw", "claude-code", "codex"],
@@ -72,17 +80,21 @@ Every registry-managed skill should include `_meta.json`.
 ## Field notes
 
 - `name`: folder name and `SKILL.md` frontmatter name should match this
+- `publisher`: optional namespace owner slug used for fully-qualified identity such as `publisher/skill`
+- `qualified_name`: optional fully-qualified identity; when present it must equal `publisher/name`
 - `version`: semver string like `0.1.0`
 - `status`: `incubating | active | archived`
+- `owners`: namespace-authorized owner list for governance and audit trails; `owner` must also appear here when `owners` is present
+- `author`: human or bot identity that originally authored the skill metadata
 - `review_state`: `draft | under-review | approved | rejected` for compatibility and indexing; promotion tooling recomputes the authoritative value from `reviews.json` plus `policy/promotion-policy.json`
 - `risk_level`: `low | medium | high`
 - `derived_from`: lineage string such as `repo-audit@0.1.0`
 - Use the `name@version` form so lineage tools can diff against the intended ancestor
 - `tests.smoke`: path to the minimum realistic validation case
 - `distribution.installable`: whether install/sync scripts should expose the skill
-- `depends_on`: install-time dependency list; use an object for machine-checked ranges and source hints, or keep the legacy `skill` / `skill@version` shorthand
+- `depends_on`: install-time dependency list; use an object for machine-checked ranges and source hints, or keep the legacy `skill` / `skill@version` shorthand. Qualified refs like `publisher/skill@1.2.0` are also valid.
 - `conflicts_with`: install-time conflict list using the same object-or-shorthand format
-- dependency objects support `name`, `version`, optional `registry`, and optional `allow_incubating`
+- dependency objects support `name`, `version`, optional `registry`, and optional `allow_incubating`; `name` may be bare or fully qualified (`publisher/skill`)
 - version constraints support `*`, exact versions, comparator chains like `>=1.2.0 <2.0.0`, plus `^` and `~` shorthands
 - archived dependencies are only selected for exact version requests; incubating dependencies require `allow_incubating: true`
 
@@ -108,6 +120,10 @@ Installed copies are tracked outside `_meta.json` in target directories via:
 
 That manifest records which active skill version was installed or synced into a local runtime directory.
 
+Install manifests now also persist identity fields such as `publisher`, `qualified_name`, `identity_mode`, `author`, `owners`, and `maintainers` together with the resolved source registry metadata.
+
+Namespace claims and publisher transfers are governed by `policy/namespace-policy.json`, which `scripts/check-skill.sh`, `scripts/validate-registry.py`, and release checks now enforce.
+
 ## Snapshot metadata
 
 Archived snapshots may add these optional fields:
@@ -126,5 +142,7 @@ Target directories now maintain:
 - prior states under `history.<name>[]`
 
 That history is used by rollback tooling and is separate from the registry catalog itself.
+
+The manifest key remains the bare installed folder name for backward compatibility, while each entry records the fully-qualified identity when the source metadata declares one.
 
 Root install/sync entries may also persist `resolution_plan`, which records the deterministic dependency plan that was applied for that action.

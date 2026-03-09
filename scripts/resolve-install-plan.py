@@ -8,6 +8,12 @@ from dependency_lib import DependencyError, error_to_payload, plan_from_skill_di
 
 def print_error(exc):
     payload = error_to_payload(exc)
+
+    def display(item):
+        if not isinstance(item, dict):
+            return None
+        return item.get('qualified_name') or item.get('name')
+
     print(f"FAIL: {payload.pop('error')}", file=sys.stderr)
     reason = payload.pop('reason', None)
     if reason:
@@ -15,13 +21,13 @@ def print_error(exc):
     selected = payload.pop('selected', None)
     if selected:
         print(
-            f"  selected: {selected.get('name')}@{selected.get('version')} from {selected.get('registry')} ({selected.get('stage')})",
+            f"  selected: {display(selected)}@{selected.get('version')} from {selected.get('registry')} ({selected.get('stage')})",
             file=sys.stderr,
         )
     installed = payload.pop('installed', None)
     if installed:
         print(
-            f"  installed: {installed.get('name')}@{installed.get('version')} locked={installed.get('locked_version')} from {installed.get('registry')}",
+            f"  installed: {display(installed)}@{installed.get('version')} locked={installed.get('locked_version')} from {installed.get('registry')}",
             file=sys.stderr,
         )
     conflict = payload.pop('conflict', None)
@@ -35,7 +41,7 @@ def print_error(exc):
             registry = f" [{entry.get('registry')}]" if entry.get('registry') else ''
             source = f" <= {entry.get('source_name')}@{entry.get('source_version')}" if entry.get('source_name') else ''
             incubating = ' +incubating' if entry.get('allow_incubating') else ''
-            print(f"    - {entry.get('name')}{registry} {entry.get('version')}{incubating}{source}", file=sys.stderr)
+            print(f"    - {display(entry)}{registry} {entry.get('version')}{incubating}{source}", file=sys.stderr)
     available = payload.pop('available', None)
     if available:
         print('  available candidates:', file=sys.stderr)
@@ -50,9 +56,9 @@ def print_error(exc):
         for item in rejected:
             candidate = item.get('candidate') or {}
             print(
-                f"    - {candidate.get('name')}@{candidate.get('version')} from {candidate.get('registry')} ({candidate.get('stage')}): {item.get('reason')}",
-                file=sys.stderr,
-            )
+                    f"    - {candidate.get('name')}@{candidate.get('version')} from {candidate.get('registry')} ({candidate.get('stage')}): {item.get('reason')}",
+                    file=sys.stderr,
+                )
     missing = payload.pop('missing_registry_roots', None)
     if missing:
         unresolved = {key: value for key, value in missing.items() if value}

@@ -45,6 +45,7 @@ Stable release tooling enforces all of the following before it will write releas
 2. the current branch tracks an upstream and is fully synchronized with it
 3. the expected tag `skill/<name>/v<version>` exists locally, points at `HEAD`, is signed, and verifies against repo-managed signers
 4. that same tag is already pushed to the tracked remote
+5. the skill's publisher / namespace claim is valid under `policy/namespace-policy.json`
 
 If any of those invariants fail, `scripts/release-skill.sh` and `scripts/check-release-state.py` exit with actionable errors.
 
@@ -52,7 +53,7 @@ If any of those invariants fail, `scripts/release-skill.sh` and `scripts/check-r
 
 Phase 5 adds a second enforcement layer on top of the signed-tag baseline.
 
-- `scripts/release-skill.sh <name> --write-provenance` now writes a release attestation payload that includes the immutable source snapshot, resolved registry context, dependency resolution plan, and signer identity.
+- `scripts/release-skill.sh <name> --write-provenance` now writes a release attestation payload that includes the immutable source snapshot, resolved registry context, dependency resolution plan, author, reviewer, releaser, and signer identities.
 - That payload is SSH-signed and verified against `config/allowed_signers` before the release helper accepts it as valid.
 - When the v9 attestation policy is enabled, commands that write release artifacts or distribution output must also use `--write-provenance`; otherwise the helper rejects them with an actionable error.
 - Use `scripts/verify-attestation.py <attestation.json>` to verify a generated attestation bundle directly.
@@ -142,7 +143,7 @@ scripts/release-skill.sh repo-audit --push-tag
 scripts/check-release-state.py repo-audit
 
 # write release notes and provenance from the pushed signed tag
-scripts/release-skill.sh repo-audit --notes-out /tmp/repo-audit-release.md --write-provenance
+scripts/release-skill.sh repo-audit --notes-out /tmp/repo-audit-release.md --write-provenance --releaser lvxiaoer
 
 # verify the resulting attestation bundle
 scripts/verify-attestation.py catalog/provenance/repo-audit-0.3.0.json
@@ -151,6 +152,8 @@ scripts/verify-attestation.py catalog/provenance/repo-audit-0.3.0.json
 If you also pass `--github-release`, the helper will call `gh release create` with notes that include the immutable source snapshot.
 
 Under the v9 policy, `--github-release` and `--notes-out` must be paired with `--write-provenance` so the emitted artifact is backed by a verified attestation.
+
+If you omit `--releaser`, release tooling records `INFINITAS_SKILL_RELEASER` when set and otherwise falls back to `git config user.name` / `user.email`.
 
 ## Provenance signing
 

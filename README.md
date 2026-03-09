@@ -90,6 +90,9 @@ templates/
 # Create a new incubating skill from the basic template
 scripts/new-skill.sh my-skill basic
 
+# Or scaffold a publisher-qualified skill while preserving legacy unqualified compatibility
+scripts/new-skill.sh lvxiaoer/my-skill basic
+
 # Validate a skill folder
 scripts/check-skill.sh skills/incubating/my-skill
 
@@ -114,6 +117,9 @@ scripts/resolve-install-plan.py --skill-dir skills/active/my-skill --target-dir 
 # Install a stable skill into an OpenClaw-managed local skills dir and lock it to the current version
 scripts/install-skill.sh my-skill ~/.openclaw/skills --version 0.2.0
 
+# Qualified names also resolve cleanly when a publisher namespace is declared
+scripts/install-skill.sh lvxiaoer/my-skill ~/.openclaw/skills --version 0.2.0
+
 # Later, install an exact historical version from archived snapshots
 scripts/install-skill.sh my-skill ~/.openclaw/skills --version 0.1.0 --force
 
@@ -130,7 +136,7 @@ scripts/release-skill.sh my-skill --push-tag
 scripts/check-release-state.py my-skill
 
 # Write immutable release notes and provenance from the pushed signed tag
-scripts/release-skill.sh my-skill --notes-out /tmp/my-skill-release.md --write-provenance
+scripts/release-skill.sh my-skill --notes-out /tmp/my-skill-release.md --write-provenance --releaser lvxiaoer
 # verify the resulting attestation bundle against repo-managed signers
 scripts/verify-attestation.py catalog/provenance/my-skill-1.2.3.json
 # optional legacy HMAC sidecars still work after the SSH attestation is verified
@@ -165,6 +171,7 @@ GitHub Actions runs `scripts/check-all.sh` on pushes and pull requests. That val
 - compatibility catalog generation
 - signing config and allowed-signer validation
 - computed review-group quorum enforcement
+- publisher namespace / transfer regression checks
 - stable release invariant regression checks
 - asymmetric attestation regression checks
 
@@ -183,6 +190,8 @@ and commit the updated `catalog/*.json`.
 - **Active is curated**. Only reviewed skills should be promoted here.
 - **Archived keeps history**. Don't delete lineage unless you mean it.
 - **`SKILL.md` is runtime-facing**. `_meta.json` is registry/governance-facing.
+- **Publishers are first-class**. `_meta.json` can now declare `publisher`, `qualified_name`, `owners`, and `author`.
+- **Legacy names still work**. Existing unqualified `skill` references remain valid while `publisher/skill` disambiguates ownership-sensitive flows.
 - **`CHANGELOG.md` tracks skill evolution**. Use it with semantic version bumps and optional git tags.
 - **Install targets keep a manifest**. Local skill directories can now record what was installed, from where, and at which version.
 - **Installs can be version-locked**. Sync now refuses to silently advance a locked install beyond the pinned active version.
@@ -190,6 +199,7 @@ and commit the updated `catalog/*.json`.
 - **Historical installs are supported**. Versioned installs can resolve archived snapshots instead of only whatever happens to be active now.
 - **Installed copies can switch or roll back**. Manifest history now supports controlled source switching and version rollback.
 - **Compatibility is exported**. Consumers can read a generated compatibility matrix instead of scraping every `_meta.json`.
+- **Namespace ownership is policy-driven**. `policy/namespace-policy.json` declares valid publishers plus approved namespace transfers.
 - **Registry sources are policy-driven**. Source registries now declare trust, allowed hosts/refs, pinning, and update behavior in config.
 - **Local-only self catalogs stay stable**. Committed catalog snapshots intentionally omit live `self` commit/tag identity so `check-all.sh` does not fail after every local commit; use `scripts/list-registry-sources.py` for the current checkout identity.
 - **Dependencies and conflicts are first-class**. Skills can declare exact or ranged constraints plus optional registry hints in `depends_on` / `conflicts_with`.
@@ -200,6 +210,7 @@ and commit the updated `catalog/*.json`.
 - **Reviewer groups and quorum are enforced**. Promotion policy can require configured reviewer groups, stage/risk-specific quorum, and rejection-free latest decisions.
 - **Stable releases require signed pushed tags**. Release notes and provenance now resolve against a verified `refs/tags/skill/<name>/v<version>` snapshot instead of best-effort `HEAD` state.
 - **Release attestations are authoritative under v9 policy**. Any written release artifact must be accompanied by a verified SSH attestation generated from the immutable release snapshot.
+- **Release actor decisions are auditable**. Machine-readable release outputs now record author, reviewers, releaser, signer, and namespace-policy context.
 - **Attestations capture dependency and registry context**. Release provenance now records the consulted registries, their resolved identity, and the dependency resolution plan used for the released skill.
 - **Legacy HMAC sidecars remain optional only**. `sign-provenance.py` / `verify-provenance.py` still work for compatibility, but repo-managed SSH attestation is the trusted verification path.
 

@@ -7,6 +7,8 @@ if [[ -z "$DIR" ]]; then
   exit 1
 fi
 
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 [[ -d "$DIR" ]] || { echo "missing directory: $DIR" >&2; exit 1; }
 [[ -f "$DIR/SKILL.md" ]] || { echo "missing SKILL.md in $DIR" >&2; exit 1; }
 [[ -f "$DIR/_meta.json" ]] || { echo "missing _meta.json in $DIR" >&2; exit 1; }
@@ -32,9 +34,13 @@ if [[ -n "$NAME_LINE" && "$NAME_LINE" != "$BASENAME" && "$PARENT_STAGE" != "arch
   echo "WARN: folder name ($BASENAME) does not match SKILL.md name field ($NAME_LINE)" >&2
 fi
 
-if ! python3 - "$DIR" "$BASENAME" "$PARENT_STAGE" "$NAME_LINE" <<'PY'
+if ! python3 - "$ROOT" "$DIR" "$BASENAME" "$PARENT_STAGE" "$NAME_LINE" <<'PY'
 import json, os, re, sys
-path, basename, parent_stage, skill_name = sys.argv[1:5]
+from pathlib import Path
+root, path, basename, parent_stage, skill_name = sys.argv[1:6]
+sys.path.insert(0, os.path.join(root, 'scripts'))
+from skill_identity_lib import NamespacePolicyError, load_namespace_policy, namespace_policy_report, validate_identity_metadata
+
 meta_path = os.path.join(path, '_meta.json')
 status = 0
 
@@ -88,6 +94,11 @@ if distribution is not None and not isinstance(distribution, dict):
     print('FAIL: distribution must be an object', file=sys.stderr)
     status = 1
 
+identity, identity_errors = validate_identity_metadata(meta)
+for error in identity_errors:
+    print(f'FAIL: {error}', file=sys.stderr)
+    status = 1
+
 smoke = meta.get('tests', {}).get('smoke', 'tests/smoke.md')
 smoke_path = os.path.join(path, smoke)
 if not os.path.isfile(smoke_path):
@@ -98,6 +109,31 @@ derived = meta.get('derived_from')
 if derived is not None and derived != '' and not isinstance(derived, str):
     print('FAIL: derived_from must be null or string', file=sys.stderr)
     status = 1
+
+if identity.get('publisher') and identity.get('qualified_name') != f"{identity['publisher']}/{name}":
+    print('FAIL: publisher-qualified_name combination is inconsistent with name', file=sys.stderr)
+    status = 1
+
+root_path = Path(root).resolve()
+skill_path = Path(path).resolve()
+try:
+    skill_path.relative_to((root_path / 'skills').resolve())
+    is_registry_skill = True
+except ValueError:
+    is_registry_skill = False
+
+if is_registry_skill:
+    try:
+        namespace_policy = load_namespace_policy(root_path)
+        report = namespace_policy_report(skill_path, root=root_path, policy=namespace_policy)
+    except NamespacePolicyError as exc:
+        for error in exc.errors:
+            print(f'FAIL: {error}', file=sys.stderr)
+            status = 1
+    else:
+        for error in report.get('errors', []):
+            print(f'FAIL: {error}', file=sys.stderr)
+            status = 1
 
 sys.exit(status)
 PY

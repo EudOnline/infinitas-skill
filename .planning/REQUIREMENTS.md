@@ -31,6 +31,16 @@ Requirements committed for milestone `v9`. Each requirement maps to exactly one 
 - [x] **ATT-02**: Release tooling emits provenance or attestation containing exact source commit or tag, registry context, dependency context, and signer identity.
 - [x] **ATT-03**: Maintainer can verify release attestation with asymmetric keys using repository-managed allowed signers before distribution.
 
+## v10 Requirements
+
+Requirements committed for milestone `v10`. Phase 1 is now complete.
+
+### Publisher Identity and Namespace Governance
+
+- [x] **PUB-01**: Skill metadata, dependency refs, and generated catalogs can represent publisher-qualified identities such as `publisher/skill` while preserving legacy unqualified compatibility.
+- [x] **PUB-02**: Validation and release checks reject publisher namespace claims or transfers that are not authorized by repository policy.
+- [x] **PUB-03**: Machine-readable catalog, install, release-state, and attestation outputs record author, reviewer, releaser, signer, and namespace-governance context for auditability.
+
 ## Future Requirements
 
 ### Registry Operations
@@ -73,12 +83,18 @@ Requirements committed for milestone `v9`. Each requirement maps to exactly one 
 | ATT-01 | Phase 4 | Complete |
 | ATT-02 | Phase 5 | Complete |
 | ATT-03 | Phase 5 | Complete |
+| PUB-01 | v10 Phase 1 | Complete |
+| PUB-02 | v10 Phase 1 | Complete |
+| PUB-03 | v10 Phase 1 | Complete |
 
 **Coverage:**
 - v9 requirements: 12 total
 - Mapped to phases: 12
 - Unmapped: 0 ✓
+- v10 requirements: 3 total
+- Mapped to phases: 3
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-09 after Phase 5 implementation*
+*Last updated: 2026-03-09 after v10 Phase 1 implementation*

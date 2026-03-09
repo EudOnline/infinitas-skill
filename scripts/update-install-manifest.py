@@ -5,6 +5,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from skill_identity_lib import normalize_skill_identity
+
 if len(sys.argv) not in {7, 8}:
     print('usage: scripts/update-install-manifest.py <target-dir> <source-dir> <dest-dir> <action> <locked-version> <resolved-source-json> [resolution-plan-json]', file=sys.stderr)
     raise SystemExit(1)
@@ -24,6 +26,9 @@ with open(meta_path, 'r', encoding='utf-8') as f:
     meta = json.load(f)
 with open(source_meta_path, 'r', encoding='utf-8') as f:
     source_meta = json.load(f)
+
+identity = normalize_skill_identity(meta)
+source_identity = normalize_skill_identity(source_meta)
 
 repo_root = Path(__file__).resolve().parent.parent
 try:
@@ -52,6 +57,12 @@ if previous:
 
 manifest_entry = {
     'name': name,
+    'publisher': identity.get('publisher'),
+    'qualified_name': identity.get('qualified_name'),
+    'identity_mode': identity.get('identity_mode'),
+    'author': identity.get('author'),
+    'owners': identity.get('owners', []),
+    'maintainers': identity.get('maintainers', []),
     'version': meta.get('version'),
     'locked_version': locked_version or meta.get('version'),
     'status': meta.get('status'),
@@ -71,6 +82,9 @@ manifest_entry = {
     'source_path': str(source_dir),
     'source_relative_path': source_info.get('relative_path'),
     'source_stage': source_dir.parent.name,
+    'source_publisher': source_identity.get('publisher'),
+    'source_qualified_name': source_identity.get('qualified_name'),
+    'source_identity_mode': source_identity.get('identity_mode'),
     'source_version': source_meta.get('version'),
     'source_snapshot_of': source_meta.get('snapshot_of'),
     'source_snapshot_created_at': source_meta.get('snapshot_created_at'),

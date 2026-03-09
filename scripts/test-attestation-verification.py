@@ -53,6 +53,8 @@ def scaffold_fixture(repo: Path):
             'status': 'active',
             'summary': 'Fixture skill for stable attestation tests',
             'owner': 'release-test',
+            'owners': ['release-test'],
+            'author': 'release-test',
             'review_state': 'approved',
         }
     )
@@ -172,10 +174,18 @@ def scenario_verified_attestation_bundle_is_emitted():
         provenance = json.loads(provenance_path.read_text(encoding='utf-8'))
         if provenance.get('kind') != 'skill-release-attestation':
             fail(f"unexpected attestation kind {provenance.get('kind')!r}")
+        if provenance.get('skill', {}).get('author') != identity:
+            fail(f"expected skill.author {identity!r}, got {provenance.get('skill', {}).get('author')!r}")
         if provenance.get('attestation', {}).get('signer_identity') != identity:
             fail(
                 f"expected signer_identity {identity!r}, got {provenance.get('attestation', {}).get('signer_identity')!r}"
             )
+        reviewers = (provenance.get('review') or {}).get('reviewers') or []
+        if len(reviewers) != 1 or reviewers[0].get('reviewer') != 'lvxiaoer':
+            fail(f'unexpected reviewers payload {reviewers!r}')
+        releaser = (provenance.get('release') or {}).get('releaser_identity')
+        if releaser != 'Release Fixture':
+            fail(f"expected releaser_identity 'Release Fixture', got {releaser!r}")
         if provenance.get('attestation', {}).get('signature_file') != signature_path.name:
             fail(
                 f"expected signature_file {signature_path.name!r}, got {provenance.get('attestation', {}).get('signature_file')!r}"

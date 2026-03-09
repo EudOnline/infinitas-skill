@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/infinitas-skill/namespace-policy.schema.json",
+  "title": "infinitas-skill namespace policy",
+  "type": "object",
+  "required": [
+    "version",
+    "publishers"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allow_unqualified_names": {
+          "type": "boolean"
+        }
+      }
+    },
+    "publishers": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/publisher"
+      }
+    },
+    "transfers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/transfer"
+      }
+    }
+  },
+  "$defs": {
+    "actorList": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "publisher": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "owners"
+      ],
+      "properties": {
+        "owners": {
+          "$ref": "#/$defs/actorList"
+        },
+        "maintainers": {
+          "$ref": "#/$defs/actorList"
+        },
+        "authorized_signers": {
+          "$ref": "#/$defs/actorList"
+        },
+        "authorized_releasers": {
+          "$ref": "#/$defs/actorList"
+        }
+      }
+    },
+    "transfer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "approved_by"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "from": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "approved_by": {
+          "$ref": "#/$defs/actorList"
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

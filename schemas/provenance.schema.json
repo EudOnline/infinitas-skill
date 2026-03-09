@@ -13,6 +13,8 @@
     "source_snapshot",
     "registry",
     "dependencies",
+    "review",
+    "release",
     "attestation"
   ],
   "properties": {
@@ -41,9 +43,15 @@
       ],
       "properties": {
         "name": {"type": "string", "minLength": 1},
+        "publisher": {"type": ["string", "null"]},
+        "qualified_name": {"type": ["string", "null"]},
+        "identity_mode": {"type": ["string", "null"]},
         "version": {"type": "string", "minLength": 1},
         "status": {"type": ["string", "null"]},
         "path": {"type": "string", "minLength": 1},
+        "author": {"type": ["string", "null"]},
+        "owners": {"type": "array", "items": {"type": "string"}},
+        "maintainers": {"type": "array", "items": {"type": "string"}},
         "derived_from": {"type": ["string", "null"]},
         "snapshot_of": {"type": ["string", "null"]}
       },
@@ -154,6 +162,8 @@
           "type": "object",
           "properties": {
             "name": {"type": ["string", "null"]},
+            "publisher": {"type": ["string", "null"]},
+            "qualified_name": {"type": ["string", "null"]},
             "version": {"type": ["string", "null"]},
             "registry": {"type": ["string", "null"]},
             "stage": {"type": ["string", "null"]},
@@ -168,6 +178,9 @@
             "properties": {
               "order": {"type": ["integer", "number"]},
               "name": {"type": ["string", "null"]},
+              "publisher": {"type": ["string", "null"]},
+              "qualified_name": {"type": ["string", "null"]},
+              "identity_mode": {"type": ["string", "null"]},
               "version": {"type": ["string", "null"]},
               "registry": {"type": ["string", "null"]},
               "stage": {"type": ["string", "null"]},
@@ -190,6 +203,50 @@
           "type": "array",
           "items": {"type": "string"}
         }
+      },
+      "additionalProperties": true
+    },
+    "review": {
+      "type": "object",
+      "required": [
+        "reviewers"
+      ],
+      "properties": {
+        "reviewers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "reviewer": {"type": ["string", "null"]},
+              "decision": {"type": ["string", "null"]},
+              "at": {"type": ["string", "null"]},
+              "note": {"type": ["string", "null"]}
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "release": {
+      "type": "object",
+      "required": [
+        "releaser_identity",
+        "transfer_required",
+        "transfer_authorized",
+        "authorized_signers",
+        "authorized_releasers"
+      ],
+      "properties": {
+        "releaser_identity": {"type": ["string", "null"]},
+        "namespace_policy_path": {"type": ["string", "null"]},
+        "namespace_policy_version": {"type": ["integer", "null"]},
+        "transfer_required": {"type": "boolean"},
+        "transfer_authorized": {"type": "boolean"},
+        "transfer_matches": {"type": "array"},
+        "competing_claims": {"type": "array"},
+        "authorized_signers": {"type": "array", "items": {"type": "string"}},
+        "authorized_releasers": {"type": "array", "items": {"type": "string"}}
       },
       "additionalProperties": true
     },

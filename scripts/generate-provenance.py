@@ -21,6 +21,10 @@ def parse_args():
         '--signer',
         help='Attestation signer identity; defaults to the verified release tag signer',
     )
+    parser.add_argument(
+        '--releaser',
+        help='Release operator identity; defaults to INFINITAS_SKILL_RELEASER or git user.name/user.email',
+    )
     return parser.parse_args()
 
 
@@ -86,6 +90,12 @@ def main():
     tag_name = state['git']['expected_tag']
     commit = remote_tag.get('target_commit') or local_tag.get('target_commit') or state['git']['head_commit']
     output_name = args.output_name or f"{meta.get('name')}-{meta.get('version')}.json"
+    review = state.get('review') or {}
+    release = state.get('release') or {}
+    releaser_identity = args.releaser or release.get('releaser_identity')
+    if not releaser_identity:
+        print('FAIL: cannot determine releaser identity; pass --releaser or set INFINITAS_SKILL_RELEASER / git user.name', file=sys.stderr)
+        raise SystemExit(1)
 
     out = {
         '$schema': 'schemas/provenance.schema.json',
@@ -94,9 +104,15 @@ def main():
         'generated_at': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
         'skill': {
             'name': meta.get('name'),
+            'publisher': state.get('skill', {}).get('publisher'),
+            'qualified_name': state.get('skill', {}).get('qualified_name'),
+            'identity_mode': state.get('skill', {}).get('identity_mode'),
             'version': meta.get('version'),
             'status': meta.get('status'),
             'path': str(skill_dir.relative_to(ROOT)),
+            'author': state.get('skill', {}).get('author'),
+            'owners': state.get('skill', {}).get('owners', []),
+            'maintainers': state.get('skill', {}).get('maintainers', []),
             'derived_from': meta.get('derived_from'),
             'snapshot_of': meta.get('snapshot_of'),
         },
@@ -130,6 +146,20 @@ def main():
             'resolved': resolved_registries,
         },
         'dependencies': dependency_plan,
+        'review': {
+            'reviewers': review.get('reviewers', []),
+        },
+        'release': {
+            'releaser_identity': releaser_identity,
+            'namespace_policy_path': release.get('namespace_policy_path'),
+            'namespace_policy_version': release.get('namespace_policy_version'),
+            'transfer_required': release.get('transfer_required', False),
+            'transfer_authorized': release.get('transfer_authorized', True),
+            'transfer_matches': release.get('transfer_matches', []),
+            'competing_claims': release.get('competing_claims', []),
+            'authorized_signers': release.get('authorized_signers', []),
+            'authorized_releasers': release.get('authorized_releasers', []),
+        },
         'attestation': {
             'format': attestation_cfg['format'],
             'namespace': attestation_cfg['namespace'],

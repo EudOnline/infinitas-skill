@@ -55,7 +55,6 @@ if [[ ${#POSITIONAL[@]} -eq 1 ]]; then
 fi
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DEST="$TARGET_DIR/$NAME"
 ARGS=("$NAME" --json)
 if [[ -n "$LOCK_VERSION" ]]; then
   ARGS+=(--version "$LOCK_VERSION")
@@ -79,6 +78,18 @@ import json, sys
 print(json.loads(sys.argv[1]).get('registry_name') or 'self')
 PY
 )"
+RESOLVED_NAME="$(python3 - <<'PY' "$INFO_JSON"
+import json, sys
+print(json.loads(sys.argv[1]).get('name') or '')
+PY
+)"
+RESOLVED_DISPLAY="$(python3 - <<'PY' "$INFO_JSON"
+import json, sys
+info = json.loads(sys.argv[1])
+print(info.get('qualified_name') or info.get('name') or '')
+PY
+)"
+DEST="$TARGET_DIR/$RESOLVED_NAME"
 
 python3 - <<'PY' "$INFO_JSON"
 import json, sys
@@ -87,6 +98,8 @@ commit = info.get('registry_commit') or ''
 tag = info.get('registry_tag')
 ref = info.get('registry_ref')
 summary = f"resolved: {info.get('name')}@{info.get('version') or '?'} from {info.get('registry_name')}"
+display = info.get('qualified_name') or info.get('name')
+summary = f"resolved: {display}@{info.get('version') or '?'} from {info.get('registry_name')}"
 if commit:
     summary += f" @{commit[:12]}"
 if tag:
@@ -103,9 +116,11 @@ python3 - <<'PY' "$PLAN_JSON"
 import json, sys
 plan = json.loads(sys.argv[1])
 root = plan.get('root') or {}
-print(f"resolution plan: {root.get('name')}@{root.get('version')} from {root.get('registry')}")
+root_display = root.get('qualified_name') or root.get('name')
+print(f"resolution plan: {root_display}@{root.get('version')} from {root.get('registry')}")
 for step in plan.get('steps', []):
-    head = f"- [{step.get('action')}] {step.get('name')}@{step.get('version')} ({step.get('stage')}) from {step.get('registry')}"
+    display = step.get('qualified_name') or step.get('name')
+    head = f"- [{step.get('action')}] {display}@{step.get('version')} ({step.get('stage')}) from {step.get('registry')}"
     if step.get('source_commit'):
         head += f" @{step.get('source_commit')[:12]}"
     elif step.get('source_tag'):
@@ -116,7 +131,8 @@ for step in plan.get('steps', []):
     for requester in step.get('requested_by', []):
         registry = f" [{requester.get('registry')}]" if requester.get('registry') else ''
         incubating = ' +incubating' if requester.get('allow_incubating') else ''
-        print(f"    requested by {requester.get('by')}@{requester.get('version')} -> {requester.get('constraint')}{registry}{incubating}")
+        requester_name = requester.get('by_qualified_name') or requester.get('by')
+        print(f"    requested by {requester_name}@{requester.get('version')} -> {requester.get('constraint')}{registry}{incubating}")
 PY
 
 if [[ $AUTO_DEPS -eq 0 ]]; then
@@ -137,12 +153,11 @@ PY
   fi
 fi
 
-ROOT_ACTION="$(python3 - <<'PY' "$PLAN_JSON" "$NAME"
+ROOT_ACTION="$(python3 - <<'PY' "$PLAN_JSON"
 import json, sys
 plan = json.loads(sys.argv[1])
-name = sys.argv[2]
 for step in plan.get('steps', []):
-    if step.get('name') == name and step.get('root'):
+    if step.get('root'):
         print(step.get('action') or '')
         break
 PY
@@ -153,7 +168,7 @@ if [[ -e "$DEST" && "$ROOT_ACTION" != "keep" && $FORCE -ne 1 ]]; then
 fi
 
 APPLIED=0
-while IFS=$'\t' read -r STEP_ORDER STEP_NAME STEP_VERSION STEP_REGISTRY STEP_STAGE STEP_ACTION STEP_PATH STEP_ROOT STEP_NEEDS; do
+while IFS=$'\t' read -r STEP_ORDER STEP_NAME STEP_VERSION STEP_REGISTRY STEP_STAGE STEP_ACTION STEP_PATH STEP_QUALIFIED STEP_ROOT STEP_NEEDS; do
   [[ -n "$STEP_NAME" ]] || continue
   [[ "$STEP_NEEDS" == "1" ]] || continue
   STEP_DEST="$TARGET_DIR/$STEP_NAME"
@@ -162,7 +177,9 @@ while IFS=$'\t' read -r STEP_ORDER STEP_NAME STEP_VERSION STEP_REGISTRY STEP_STA
     exit 1
   fi
   "$ROOT/scripts/check-skill.sh" "$STEP_PATH" >/dev/null
-  RESOLVE_ARGS=("$STEP_NAME" --version "$STEP_VERSION" --registry "$STEP_REGISTRY" --json)
+  RESOLVE_NAME="$STEP_QUALIFIED"
+  [[ -n "$RESOLVE_NAME" ]] || RESOLVE_NAME="$STEP_NAME"
+  RESOLVE_ARGS=("$RESOLVE_NAME" --version "$STEP_VERSION" --registry "$STEP_REGISTRY" --json)
   if [[ "$STEP_STAGE" == "incubating" ]]; then
     RESOLVE_ARGS+=(--allow-incubating)
   fi
@@ -191,6 +208,7 @@ for step in plan.get('steps', []):
         step.get('stage') or '',
         step.get('action') or '',
         step.get('path') or '',
+        step.get('qualified_name') or '',
         '1' if step.get('root') else '0',
         '1' if step.get('needs_apply') else '0',
     ]))
@@ -202,5 +220,5 @@ python3 "$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR" --source-re
 if [[ $APPLIED -eq 0 ]]; then
   echo "already satisfied: $DEST"
 else
-  echo "installed plan applied: $NAME -> $TARGET_DIR"
+  echo "installed plan applied: $RESOLVED_DISPLAY -> $TARGET_DIR"
 fi

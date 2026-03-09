@@ -13,6 +13,7 @@ with open(p, 'r', encoding='utf-8') as f:
 print(f"repo: {data.get('repo')}")
 print(f"updated_at: {data.get('updated_at')}")
 for name, meta in sorted(data.get('skills', {}).items()):
+    display = meta.get('qualified_name') or meta.get('name') or name
     version = meta.get('version')
     locked = meta.get('locked_version')
     stage = meta.get('source_stage')
@@ -34,5 +35,5 @@ for name, meta in sorted(data.get('skills', {}).items()):
         source_note += f" tag={tag}"
     elif ref:
         source_note += f" ref={ref}"
-    print(f"- {name}: {version}{lock_note} [{stage}] ({meta.get('action')}) -> {meta.get('target_path')} from {source_note}:{src}{hist_note}{plan_note}")
+    print(f"- {display}: {version}{lock_note} [{stage}] ({meta.get('action')}) -> {meta.get('target_path')} from {source_note}:{src}{hist_note}{plan_note}")
 PY

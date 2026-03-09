@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 import json
+import os
 import re
 import subprocess
 from pathlib import Path
+
+from review_lib import load_reviews
+from skill_identity_lib import NamespacePolicyError, load_namespace_policy, namespace_policy_report, normalize_skill_identity
 
 ROOT = Path(__file__).resolve().parent.parent
 SIGNER_RE = re.compile(r'Good "git" signature for (.+?) with ')
@@ -105,6 +109,35 @@ def repo_url(root):
     return result.stdout.strip() or None
 
 
+def git_config_value(root, key):
+    result = git(root, 'config', '--get', key, check=False)
+    return result.stdout.strip() or None
+
+
+def resolve_releaser_identity(root):
+    env_value = os.environ.get('INFINITAS_SKILL_RELEASER')
+    if env_value and env_value.strip():
+        return env_value.strip()
+    return git_config_value(root, 'user.name') or git_config_value(root, 'user.email')
+
+
+def review_audit_entries(skill_dir):
+    reviews = load_reviews(Path(skill_dir))
+    entries = []
+    for item in reviews.get('entries', []):
+        reviewer = item.get('reviewer')
+        decision = item.get('decision')
+        if not reviewer or not decision:
+            continue
+        entries.append({
+            'reviewer': reviewer,
+            'decision': decision,
+            'at': item.get('at'),
+            'note': item.get('note'),
+        })
+    return entries
+
+
 def _tag_signature_markers(root, tag_name):
     result = git(root, 'cat-file', '-p', tag_name, check=False)
     if result.returncode != 0:
@@ -205,6 +238,7 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
     root = Path(root or ROOT).resolve()
     skill_dir = Path(skill_dir).resolve()
     meta, expected_tag = expected_skill_tag(skill_dir)
+    identity = normalize_skill_identity(meta)
     signing = load_signing_config(root)
     head_commit = git(root, 'rev-parse', 'HEAD').stdout.strip()
     branch = git(root, 'branch', '--show-current', check=False).stdout.strip() or None
@@ -215,9 +249,43 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
     local_tag = local_tag_state(root, expected_tag, signing)
     local_tag['points_to_head'] = bool(local_tag['target_commit'] and local_tag['target_commit'] == head_commit)
     remote_tag = remote_tag_state(root, remote_name, expected_tag)
+    review_entries = review_audit_entries(skill_dir)
+    releaser_identity = resolve_releaser_identity(root)
+    namespace_report = {
+        'policy_path': None,
+        'policy_version': None,
+        'authorized_signers': [],
+        'authorized_releasers': [],
+        'transfer_required': False,
+        'transfer_authorized': True,
+        'transfer_matches': [],
+        'competing_claims': [],
+        'warnings': [],
+        'errors': [],
+    }
 
     errors = []
     warnings = []
+
+    try:
+        namespace_policy = load_namespace_policy(root)
+        namespace_report = namespace_policy_report(skill_dir, root=root, policy=namespace_policy)
+    except NamespacePolicyError as exc:
+        errors.extend(exc.errors)
+    else:
+        errors.extend(namespace_report.get('errors', []))
+        warnings.extend(namespace_report.get('warnings', []))
+
+    if not releaser_identity:
+        warnings.append('cannot determine releaser identity; set INFINITAS_SKILL_RELEASER or git config user.name/user.email')
+    elif namespace_report.get('authorized_releasers') and releaser_identity not in namespace_report.get('authorized_releasers', []):
+        warnings.append(
+            f'releaser identity {releaser_identity!r} is not listed in namespace-policy authorized_releasers for {identity.get("qualified_name") or identity.get("name")}'
+        )
+    if local_tag.get('signer') and namespace_report.get('authorized_signers') and local_tag['signer'] not in namespace_report.get('authorized_signers', []):
+        warnings.append(
+            f'tag signer {local_tag["signer"]!r} is not listed in namespace-policy authorized_signers for {identity.get("qualified_name") or identity.get("name")}'
+        )
 
     if dirty:
         errors.append('worktree is dirty; commit or stash all changes before creating or publishing a stable release')
@@ -275,9 +343,29 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
         'warnings': warnings,
         'skill': {
             'name': meta.get('name'),
+            'publisher': identity.get('publisher'),
+            'qualified_name': identity.get('qualified_name'),
+            'identity_mode': identity.get('identity_mode'),
             'version': meta.get('version'),
             'status': meta.get('status'),
             'path': str(skill_dir.relative_to(root)),
+            'author': identity.get('author'),
+            'owners': identity.get('owners', []),
+            'maintainers': identity.get('maintainers', []),
+        },
+        'review': {
+            'reviewers': review_entries,
+        },
+        'release': {
+            'releaser_identity': releaser_identity,
+            'namespace_policy_path': namespace_report.get('policy_path'),
+            'namespace_policy_version': namespace_report.get('policy_version'),
+            'transfer_required': namespace_report.get('transfer_required', False),
+            'transfer_authorized': namespace_report.get('transfer_authorized', True),
+            'transfer_matches': namespace_report.get('transfer_matches', []),
+            'competing_claims': namespace_report.get('competing_claims', []),
+            'authorized_signers': namespace_report.get('authorized_signers', []),
+            'authorized_releasers': namespace_report.get('authorized_releasers', []),
         },
         'signing': {
             'tag_format': signing['tag_format'],
@@ -305,11 +393,13 @@ def format_release_state(state):
     lines = [
         f"skill: {state['skill']['name']}",
         f"version: {state['skill']['version']}",
+        f"qualified_name: {state['skill'].get('qualified_name') or '-'}",
         f"mode: {state['mode']}",
         f"branch: {state['git']['branch'] or '-'}",
         f"upstream: {state['git']['upstream'] or '-'}",
         f"head: {state['git']['head_commit']}",
         f"expected_tag: {state['git']['expected_tag']}",
+        f"releaser: {(state.get('release') or {}).get('releaser_identity') or '-'}",
         f"release_ready: {'yes' if state['release_ready'] else 'no'}",
     ]
     if state['warnings']:

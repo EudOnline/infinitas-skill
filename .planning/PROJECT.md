@@ -8,57 +8,55 @@
 
 Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
 
-## Current Milestone: v9 Registry Trust, Quorum, and Attestation
+## Current Milestone: v10 Publisher Identity and Verified Distribution
 
-**Goal:** Turn the repository's existing governance intent into enforceable controls for remote registry updates, dependency resolution, reviewer quorum, and release authenticity.
+**Goal:** Turn the hardened Git-native registry into a verified distribution system with explicit publisher identity, bootstrap-safe signing, and consumer-friendly install/search flows.
 
 **Target features:**
-- Remote registry fetch/update policy with trust, pinning, and drift handling
-- Dependency upgrade planning plus deterministic conflict detection/resolution
-- Reviewer-group and quorum configuration enforced by tooling
-- Asymmetric tag signing and release attestation as release invariants
+- Publisher-qualified skill identity and namespace policy enforcement
+- Auditable release actor recording for author, reviewer, releaser, and signer identities
+- Bootstrap-safe signer setup and operator diagnostics
+- Verified distribution manifests plus better consumer search/install UX
 
 ## Requirements
 
 ### Validated
 
 - ✓ Maintainer can scaffold a new skill from templates and place it into the lifecycle directories via `scripts/new-skill.sh` and `templates/*`.
-- ✓ Maintainer can validate skill metadata, registry integrity, and promotion policy locally and in CI via `scripts/check-skill.sh`, `scripts/check-all.sh`, and `.github/workflows/validate.yml`.
+- ✓ Maintainer can validate skill metadata, registry integrity, namespace policy, and promotion policy locally and in CI via `scripts/check-skill.sh`, `scripts/check-all.sh`, and `.github/workflows/validate.yml`.
 - ✓ Maintainer can promote approved skills and regenerate install/search catalogs via `scripts/promote-skill.sh` and `scripts/build-catalog.sh`.
 - ✓ Maintainer can install, sync, switch, and roll back skills into agent-local directories via `scripts/install-skill.sh`, `scripts/sync-skill.sh`, `scripts/switch-installed-skill.sh`, and `scripts/rollback-installed-skill.sh`.
 - ✓ Maintainer can preview a release, verify stable release invariants, create signed tags, emit dependency-aware release attestations, and verify those attestations via `scripts/check-release-state.py`, `scripts/release-skill-tag.sh`, `scripts/release-skill.sh`, `scripts/generate-provenance.py`, and `scripts/verify-attestation.py`.
+- ✓ Skill metadata, dependency refs, catalogs, release state, and attestations can now carry publisher-qualified identity plus author/reviewer/releaser/signer audit fields.
 
 ### Active
 
-- [x] Registry sync respects explicit remote fetch/update policy, trust enforcement, and immutable source selection.
-- ✓ Dependency upgrade planning can detect and reject cross-source or cross-version conflicts deterministically.
-- [x] Promotion depends on computed reviewer-group quorum instead of mutable review metadata.
-- [x] Releases require asymmetric attestation payloads and repository-managed verification beyond the signed-tag invariant.
+- [x] Publisher-qualified identity and namespace ownership are enforced in metadata validation, registry validation, and release-readiness checks.
+- [x] Catalogs, install manifests, dependency plans, and provenance now surface fully-qualified identity and actor audit fields.
+- [ ] Signing bootstrap and operator diagnostics remain the next milestone focus.
+- [ ] Verified distribution manifests and consumer search/inspect UX remain upcoming v10 work.
 
 ### Out of Scope
 
-- Hosted registry service, database, or web UI — v9 hardens the existing file-system and Git-based model.
-- Rebuilding the lifecycle, templating, or catalog system from scratch — v9 extends current workflows instead of replacing them.
-- Public marketplace/package-manager integration — not needed to deliver private-registry trust goals.
+- Hosted registry service, database, or web UI — v10 keeps the repository Git-native and file-based.
+- Rebuilding the lifecycle, templating, or catalog system from scratch — v10 extends current workflows instead of replacing them.
+- Public marketplace/package-manager integration — not needed to deliver private-registry distribution goals.
 - Full reconstruction of v1-v8 planning history — the repository does not contain authoritative phase-by-phase planning records for those versions.
 
 ## Context
 
 - Brownfield GSD initialization started on 2026-03-08 after creating a fresh `.planning/codebase/` map for the existing repository.
-- The repository already models a multi-registry world through `config/registry-sources.json`, `scripts/sync-registry-source.sh`, and `scripts/resolve-skill-source.py`, but current trust values are descriptive rather than enforced.
-- The current self-registry points at `origin/main`, while local `main` is ahead of `origin/main` by 2 commits; any destructive sync policy must account for local-development semantics before execution work starts.
-- Dependency validation exists today (`scripts/check-registry-integrity.py`, `scripts/check-install-target.py`), but deterministic upgrade planning and conflict solving did not exist before v9.
-- Review and promotion governance exists today (`scripts/request-review.sh`, `scripts/approve-skill.sh`, `scripts/review-status.py`, `policy/promotion-policy.json`), and Phase 3 made computed review state authoritative.
-- Stable release tooling now rejects dirty or out-of-sync repositories, requires a verified signed `skill/<name>/v<version>` tag, and records immutable pushed source snapshots in release output.
-- Stable release attestations now record resolved registry context, dependency resolution context, and signer identity, and written release artifacts are gated on SSH verification against repository-managed allowed signers.
-- `config/allowed_signers` is still bootstrapped with guidance comments only; maintainers must commit real trusted signer entries before the first actual stable release or Phase 5 attestation verification can succeed.
+- Phase 1 of v10 introduced `policy/namespace-policy.json` and `scripts/skill_identity_lib.py` so publisher ownership, approved transfers, and authorized actor lists are repository-managed.
+- Qualified dependency refs such as `publisher/skill@1.2.3` now resolve through the same deterministic dependency planner as legacy refs.
+- Release state and attestation outputs now record publisher identity, review audit entries, releaser identity, signer identity, and namespace-policy context.
+- `config/allowed_signers` is still bootstrapped with guidance comments only; maintainers must commit real trusted signer entries before the first actual stable release or later v10 signing/bootstrap work can be considered operationally complete.
 
 ## Constraints
 
-- **Tech stack**: Keep v9 changes native to Bash, Python, JSON, and Markdown — the repository is already built around lightweight CLI tooling.
+- **Tech stack**: Keep v10 changes native to Bash, Python, JSON, and Markdown — the repository is already built around lightweight CLI tooling.
 - **Compatibility**: Preserve the existing local-filesystem plus Git workflow so current install/sync/promotion commands remain usable.
-- **Security**: Shared-secret-only signing is insufficient for release authenticity; asymmetric verification must become the trusted path.
-- **Governance**: Reviewer and quorum rules must be repository-configurable so policy changes are versioned and reviewable.
+- **Security**: Shared-secret-only signing is insufficient for release authenticity; asymmetric verification remains the trusted path.
+- **Governance**: Publisher ownership, reviewer evidence, and release actor identity must be repository-configurable so policy changes are versioned and reviewable.
 - **History**: GSD planning begins at v9; earlier release history may be referenced, but not reconstructed as authoritative planning data.
 
 ## Key Decisions
@@ -67,10 +65,13 @@ Maintainers can publish and distribute private skills with deterministic, audita
 |----------|-----------|---------|
 | Start GSD-managed planning history at v9 with phase numbering from 1 | The repo existed before `.planning/` and does not contain authoritative prior phase plans | — Pending |
 | Skip a separate research stage for v9 | The codebase map and repository docs already expose the required problem space for this milestone | ✓ Good |
-| Keep the v9 implementation shell/python/json-native | This minimizes migration risk and fits the current execution model | ✓ Good |
+| Keep the v9/v10 implementation shell/python/json-native | This minimizes migration risk and fits the current execution model | ✓ Good |
 | Treat computed quorum and asymmetric attestation as enforcement points, not documentation-only guidance | The highest-risk gaps are governance and authenticity paths that are currently optional or mutable | ✓ Good |
 | Make stable release output depend on verified, pushed `skill/<name>/v<version>` tags | Release notes and provenance must resolve against immutable source snapshots instead of best-effort local branch state | ✓ Good |
 | Require verified SSH attestations for written release artifacts | Release notes and distribution output need source, dependency, and signer context bound to a repo-managed trust root | ✓ Good |
+| Preserve legacy unqualified names while adding first-class `publisher/skill` identity | Existing install/sync consumers must keep working during the namespace transition | ✓ Good |
+| Keep namespace ownership and approved transfers in repository policy | Publisher governance must be explicit, reviewable, and machine-enforced | ✓ Good |
+| Record author, reviewer, releaser, signer, and namespace context in machine-readable release outputs | Governance decisions need a durable audit trail instead of implied operator knowledge | ✓ Good |
 
 ---
-*Last updated: 2026-03-09 after Phase 5 implementation*
+*Last updated: 2026-03-09 after v10 Phase 1 implementation*

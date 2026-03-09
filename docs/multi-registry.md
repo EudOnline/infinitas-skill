@@ -97,6 +97,9 @@ For tracked or pinned remote registries, sync now:
 
 `resolve-skill-source.py --json` now includes registry policy and exact git identity fields such as:
 
+- `publisher`
+- `qualified_name`
+- `identity_mode`
 - `registry_name`
 - `registry_ref`
 - `registry_commit`
@@ -106,7 +109,9 @@ For tracked or pinned remote registries, sync now:
 - `registry_pin_value`
 - `expected_tag`
 
-Install and sync manifests persist the same identity so `scripts/list-installed.sh` can show where a skill came from with its registry plus exact commit/tag.
+Use `publisher/skill` when you need to disambiguate two publishers that share the same bare skill slug. Legacy unqualified names still resolve for backward compatibility.
+
+Install and sync manifests persist the same identity so `scripts/list-installed.sh` can show where a skill came from with its publisher namespace plus exact registry commit/tag.
 
 ## Dependency resolution rules
 
