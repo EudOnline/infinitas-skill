@@ -106,7 +106,7 @@ Plans:
 - [x] 10-02: Enforce namespace ownership plus actor-role recording in validation, promotion, and release tooling
 - [x] 10-03: Export fully-qualified identities in catalogs, install manifests, and user-facing docs/CLI output
 
-#### Phase 2: Signing Bootstrap and Operator Doctoring
+#### ✅ Phase 2: Signing Bootstrap and Operator Doctoring
 **Goal**: Make the first trusted-signer setup repeatable, diagnosable, and safe for maintainers who are not already signing experts.
 **Depends on**: Phase 1
 **Requirements**: [OPS-01, OPS-02]
@@ -117,9 +117,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 10-04: Add signing bootstrap helpers and docs for `allowed_signers`, SSH signing, and first stable tag flow
-- [ ] 10-05: Add doctor-style diagnostics for signer state, tag signing readiness, and attestation verification prerequisites
-- [ ] 10-06: Write and test an end-to-end bootstrap rehearsal for the first trusted stable release
+- [x] 10-04: Add signing bootstrap helpers and docs for `allowed_signers`, SSH signing, and first stable tag flow
+- [x] 10-05: Add doctor-style diagnostics for signer state, tag signing readiness, and attestation verification prerequisites
+- [x] 10-06: Write and test an end-to-end bootstrap rehearsal for the first trusted stable release
 
 #### Phase 3: Verified Artifact Format and Distribution Manifest
 **Goal**: Promote release output from ad-hoc repository state into a versioned, immutable distribution unit with manifest, digest, and attached verification material.
@@ -224,7 +224,7 @@ Plans:
 | 4. Signed Release Invariants | v9 | 2/2 | Completed | 2026-03-09 |
 | 5. Asymmetric Attestation and Verification | v9 | 3/3 | Completed | 2026-03-09 |
 | 1. Publisher / Namespace Model | v10 | 3/3 | Completed | 2026-03-09 |
-| 2. Signing Bootstrap and Operator Doctoring | v10 | 0/3 | Planned | - |
+| 2. Signing Bootstrap and Operator Doctoring | v10 | 3/3 | Completed | 2026-03-09 |
 | 3. Verified Artifact Format and Distribution Manifest | v10 | 0/3 | Planned | - |
 | 4. CI-native Attestations and Verification | v10 | 0/3 | Planned | - |
 | 5. Search, Discovery, and Consumer UX | v10 | 0/3 | Planned | - |

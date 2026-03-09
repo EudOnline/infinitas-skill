@@ -128,6 +128,22 @@ scripts/release-skill-tag.sh repo-audit --create --push
 
 `--unsigned` still exists for local experiments, but stable release tooling rejects unsigned tags.
 
+## First trusted signer bootstrap
+
+New repositories start with comments only in `config/allowed_signers`, so the first stable tag is intentionally blocked until maintainers commit a trusted signer identity.
+
+Use the bootstrap helper to:
+
+```bash
+python3 scripts/bootstrap-signing.py init-key --identity lvxiaoer --output ~/.ssh/infinitas-skill-release-signing
+python3 scripts/bootstrap-signing.py add-allowed-signer --identity lvxiaoer --key ~/.ssh/infinitas-skill-release-signing
+python3 scripts/bootstrap-signing.py configure-git --key ~/.ssh/infinitas-skill-release-signing
+python3 scripts/bootstrap-signing.py authorize-publisher --publisher lvxiaoer --signer lvxiaoer --releaser lvxiaoer
+python3 scripts/doctor-signing.py repo-audit
+```
+
+For a full walkthrough, see `docs/signing-bootstrap.md`.
+
 ## Release helper
 
 Use the higher-level helper to preview notes, verify release readiness, and then emit immutable release artifacts:
@@ -147,11 +163,14 @@ scripts/release-skill.sh repo-audit --notes-out /tmp/repo-audit-release.md --wri
 
 # verify the resulting attestation bundle
 scripts/verify-attestation.py catalog/provenance/repo-audit-0.3.0.json
+python3 scripts/doctor-signing.py repo-audit --provenance catalog/provenance/repo-audit-0.3.0.json
 ```
 
 If you also pass `--github-release`, the helper will call `gh release create` with notes that include the immutable source snapshot.
 
 Under the v9 policy, `--github-release` and `--notes-out` must be paired with `--write-provenance` so the emitted artifact is backed by a verified attestation.
+
+After writing provenance, doctor may warn that the worktree is dirty until those generated release artifacts are committed or cleaned. That warning is about the next release ceremony, not the attestation you just verified.
 
 If you omit `--releaser`, release tooling records `INFINITAS_SKILL_RELEASER` when set and otherwise falls back to `git config user.name` / `user.email`.
 

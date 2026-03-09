@@ -7,5 +7,5 @@ Historical releases or internal versions before `v9` are not reconstructed here 
 ## Recorded milestones
 
 - ✅ `v9` — Registry Trust, Quorum, and Attestation (completed 2026-03-09)
-- 🚧 `v10` — Publisher Identity and Verified Distribution (Phase 1 complete on 2026-03-09)
+- 🚧 `v10` — Publisher Identity and Verified Distribution (Phase 2 complete on 2026-03-09)
 - 🗂️ `v11` — Policy-as-Code and Organizational Controls (planned)

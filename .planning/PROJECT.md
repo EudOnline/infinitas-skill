@@ -28,12 +28,14 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - ✓ Maintainer can install, sync, switch, and roll back skills into agent-local directories via `scripts/install-skill.sh`, `scripts/sync-skill.sh`, `scripts/switch-installed-skill.sh`, and `scripts/rollback-installed-skill.sh`.
 - ✓ Maintainer can preview a release, verify stable release invariants, create signed tags, emit dependency-aware release attestations, and verify those attestations via `scripts/check-release-state.py`, `scripts/release-skill-tag.sh`, `scripts/release-skill.sh`, `scripts/generate-provenance.py`, and `scripts/verify-attestation.py`.
 - ✓ Skill metadata, dependency refs, catalogs, release state, and attestations can now carry publisher-qualified identity plus author/reviewer/releaser/signer audit fields.
+- ✓ Maintainer can bootstrap SSH signer material, wire trusted signer identities into repository policy, diagnose release blockers, and rehearse the first stable release via `scripts/bootstrap-signing.py`, `scripts/doctor-signing.py`, and `scripts/test-signing-bootstrap.py`.
 
 ### Active
 
 - [x] Publisher-qualified identity and namespace ownership are enforced in metadata validation, registry validation, and release-readiness checks.
 - [x] Catalogs, install manifests, dependency plans, and provenance now surface fully-qualified identity and actor audit fields.
-- [ ] Signing bootstrap and operator diagnostics remain the next milestone focus.
+- [x] Signing bootstrap and operator diagnostics now cover key generation or reuse, repo trust-root wiring, namespace actor authorization, and first-release rehearsal.
+- [ ] Verified artifact format and distribution manifests are the next milestone focus.
 - [ ] Verified distribution manifests and consumer search/inspect UX remain upcoming v10 work.
 
 ### Out of Scope
@@ -49,7 +51,8 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - Phase 1 of v10 introduced `policy/namespace-policy.json` and `scripts/skill_identity_lib.py` so publisher ownership, approved transfers, and authorized actor lists are repository-managed.
 - Qualified dependency refs such as `publisher/skill@1.2.3` now resolve through the same deterministic dependency planner as legacy refs.
 - Release state and attestation outputs now record publisher identity, review audit entries, releaser identity, signer identity, and namespace-policy context.
-- `config/allowed_signers` is still bootstrapped with guidance comments only; maintainers must commit real trusted signer entries before the first actual stable release or later v10 signing/bootstrap work can be considered operationally complete.
+- Phase 2 added stepwise bootstrap helpers, a signing doctor, and an automated first-release rehearsal so operators no longer need to spelunk through repo internals to wire the first trusted signer.
+- `config/allowed_signers` is still intentionally bootstrapped with guidance comments only; maintainers must commit real trusted signer entries before the first actual stable release is operationally complete.
 
 ## Constraints
 
@@ -72,6 +75,8 @@ Maintainers can publish and distribute private skills with deterministic, audita
 | Preserve legacy unqualified names while adding first-class `publisher/skill` identity | Existing install/sync consumers must keep working during the namespace transition | ✓ Good |
 | Keep namespace ownership and approved transfers in repository policy | Publisher governance must be explicit, reviewable, and machine-enforced | ✓ Good |
 | Record author, reviewer, releaser, signer, and namespace context in machine-readable release outputs | Governance decisions need a durable audit trail instead of implied operator knowledge | ✓ Good |
+| Prefer stepwise signing bootstrap helpers over one-shot automation | Trusted signer enrollment changes both repo policy and local git config, so operators should be able to review and commit each step explicitly | ✓ Good |
+| Keep signing doctor diagnostics non-mutating and fix-oriented | Phase 2 should improve operator visibility and onboarding without weakening existing release invariants or attestation enforcement | ✓ Good |
 
 ---
-*Last updated: 2026-03-09 after v10 Phase 1 implementation*
+*Last updated: 2026-03-09 after v10 Phase 2 implementation*

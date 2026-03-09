@@ -22,7 +22,10 @@ Before pushing or promoting a skill:
 
 Before creating stable release output for an active skill:
 
+- [ ] trusted signer bootstrap was completed with `python3 scripts/bootstrap-signing.py ...` or an equivalent existing-key flow from `docs/signing-bootstrap.md`
 - [ ] `config/allowed_signers` contains at least one trusted release signer entry committed in-repo
+- [ ] publisher `authorized_signers` / `authorized_releasers` policy was updated when the release uses a qualified publisher namespace
+- [ ] `python3 scripts/doctor-signing.py <name>` has no `FAIL` items before the first stable tag
 - [ ] `git status --short` is empty for the repository worktree
 - [ ] current branch tracks its upstream and is neither ahead nor behind it
 - [ ] expected tag `skill/<name>/v<version>` does not already point at the wrong commit
@@ -32,4 +35,5 @@ Before creating stable release output for an active skill:
 - [ ] release notes or provenance reference `refs/tags/skill/<name>/v<version>` instead of local-only `HEAD`
 - [ ] `catalog/provenance/<name>-<version>.json` records the resolved registry context, dependency plan, and attestation signer identity
 - [ ] `scripts/verify-attestation.py catalog/provenance/<name>-<version>.json` passes against repo-managed allowed signers
+- [ ] `python3 scripts/doctor-signing.py <name> --provenance catalog/provenance/<name>-<version>.json` reports no blocking failures after the rehearsal
 - [ ] any optional legacy HMAC provenance signing happens after the required SSH attestation has already been verified

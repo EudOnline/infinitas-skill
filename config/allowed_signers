@@ -5,6 +5,10 @@
 #   <identity> <public-key>
 #
 # Commit public signer entries only. Never commit private SSH keys.
+# Bootstrap helpers:
+#   python3 scripts/bootstrap-signing.py init-key --identity lvxiaoer --output ~/.ssh/infinitas-skill-release-signing
+#   python3 scripts/bootstrap-signing.py add-allowed-signer --identity lvxiaoer --key ~/.ssh/infinitas-skill-release-signing
+#   python3 scripts/bootstrap-signing.py authorize-publisher --publisher lvxiaoer --signer lvxiaoer --releaser lvxiaoer
 #
 # Example:
 #   release-bot ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExamplePublicKeyMaterialHere

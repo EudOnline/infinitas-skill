@@ -17,6 +17,9 @@ fi
 if [[ "${INFINITAS_SKIP_ATTESTATION_TESTS:-0}" != "1" ]]; then
   python3 scripts/test-attestation-verification.py
 fi
+if [[ "${INFINITAS_SKIP_BOOTSTRAP_TESTS:-0}" != "1" ]]; then
+  python3 scripts/test-signing-bootstrap.py
+fi
 
 while IFS= read -r dir; do
   [[ -n "$dir" ]] || continue

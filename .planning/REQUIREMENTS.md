@@ -33,13 +33,18 @@ Requirements committed for milestone `v9`. Each requirement maps to exactly one 
 
 ## v10 Requirements
 
-Requirements committed for milestone `v10`. Phase 1 is now complete.
+Requirements committed for milestone `v10`. Phase 2 is now complete.
 
 ### Publisher Identity and Namespace Governance
 
 - [x] **PUB-01**: Skill metadata, dependency refs, and generated catalogs can represent publisher-qualified identities such as `publisher/skill` while preserving legacy unqualified compatibility.
 - [x] **PUB-02**: Validation and release checks reject publisher namespace claims or transfers that are not authorized by repository policy.
 - [x] **PUB-03**: Machine-readable catalog, install, release-state, and attestation outputs record author, reviewer, releaser, signer, and namespace-governance context for auditability.
+
+### Signing Bootstrap and Operator Doctoring
+
+- [x] **OPS-01**: Maintainer can initialize or reuse an SSH signing key, commit the corresponding public signer entry into `config/allowed_signers`, and wire signer or releaser identities into publisher policy with documented scripted steps.
+- [x] **OPS-02**: Maintainer can run doctor diagnostics and a rehearsal regression that explain tag-signing or attestation-verification blockers and validate the first trusted stable release ceremony.
 
 ## Future Requirements
 
@@ -86,15 +91,17 @@ Requirements committed for milestone `v10`. Phase 1 is now complete.
 | PUB-01 | v10 Phase 1 | Complete |
 | PUB-02 | v10 Phase 1 | Complete |
 | PUB-03 | v10 Phase 1 | Complete |
+| OPS-01 | v10 Phase 2 | Complete |
+| OPS-02 | v10 Phase 2 | Complete |
 
 **Coverage:**
 - v9 requirements: 12 total
 - Mapped to phases: 12
 - Unmapped: 0 ✓
-- v10 requirements: 3 total
-- Mapped to phases: 3
+- v10 requirements: 5 total
+- Mapped to phases: 5
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-09 after v10 Phase 1 implementation*
+*Last updated: 2026-03-09 after v10 Phase 2 implementation*

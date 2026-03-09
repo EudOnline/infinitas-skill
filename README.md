@@ -31,6 +31,7 @@ docs/
 ├─ metadata-schema.md    required `_meta.json` fields
 ├─ release-checklist.md  pre-publish / pre-promote review list
 ├─ release-strategy.md   version bump, changelog, and git tag guidance
+├─ signing-bootstrap.md  first trusted signer setup and doctor flow
 ├─ history-and-snapshots.md active overwrite snapshots and exact ancestry
 ├─ compatibility-matrix.md generated compatibility catalog guide
 ├─ multi-registry.md     source registry configuration and trust model
@@ -50,6 +51,8 @@ scripts/
 ├─ bump-skill-version.sh bump semver and seed changelog entries
 ├─ release-skill-tag.sh  print, create, sign, and optionally push a skill/<name>/v<version> git tag
 ├─ check-release-state.py verify clean-tree, upstream-sync, and signed-tag release invariants
+├─ bootstrap-signing.py  create or wire SSH signing identities into repo policy
+├─ doctor-signing.py     explain signer, tag, and attestation readiness blockers
 ├─ release-skill.sh      verify stable release state, tag, prepare release notes, and write provenance
 ├─ lineage-diff.sh       diff a skill against its declared ancestor
 ├─ switch-installed-skill.sh switch an installed copy to active or a historical version
@@ -129,6 +132,13 @@ scripts/snapshot-active-skill.sh my-skill --label pre-refactor
 # Preview release notes before tagging
 scripts/release-skill.sh my-skill --preview
 
+# Bootstrap the first trusted release signer
+python3 scripts/bootstrap-signing.py init-key --identity lvxiaoer --output ~/.ssh/infinitas-skill-release-signing
+python3 scripts/bootstrap-signing.py add-allowed-signer --identity lvxiaoer --key ~/.ssh/infinitas-skill-release-signing
+python3 scripts/bootstrap-signing.py configure-git --key ~/.ssh/infinitas-skill-release-signing
+python3 scripts/bootstrap-signing.py authorize-publisher --publisher lvxiaoer --signer lvxiaoer --releaser lvxiaoer
+python3 scripts/doctor-signing.py my-skill
+
 # Create, push, and verify the default signed release tag
 scripts/release-skill.sh my-skill --push-tag
 
@@ -139,6 +149,7 @@ scripts/check-release-state.py my-skill
 scripts/release-skill.sh my-skill --notes-out /tmp/my-skill-release.md --write-provenance --releaser lvxiaoer
 # verify the resulting attestation bundle against repo-managed signers
 scripts/verify-attestation.py catalog/provenance/my-skill-1.2.3.json
+python3 scripts/doctor-signing.py my-skill --provenance catalog/provenance/my-skill-1.2.3.json
 # optional legacy HMAC sidecars still work after the SSH attestation is verified
 scripts/release-skill.sh my-skill --write-provenance --sign-provenance
 scripts/release-skill.sh my-skill --write-provenance --ssh-sign-provenance --ssh-key ~/.ssh/id_ed25519
@@ -174,6 +185,7 @@ GitHub Actions runs `scripts/check-all.sh` on pushes and pull requests. That val
 - publisher namespace / transfer regression checks
 - stable release invariant regression checks
 - asymmetric attestation regression checks
+- signing bootstrap / doctor rehearsal regression checks
 
 If CI fails because catalog files changed, run:
 
