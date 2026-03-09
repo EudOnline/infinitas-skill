@@ -26,7 +26,10 @@ SRC="$ROOT/skills/active/$NAME"
 [[ -d "$SRC" ]] || { echo "missing active skill: $NAME" >&2; exit 1; }
 "$ROOT/scripts/check-skill.sh" "$SRC" >/dev/null
 
-readarray -t META < <(python3 - "$SRC/_meta.json" <<'PY'
+META=()
+while IFS= read -r line; do
+  META+=("$line")
+done < <(python3 - "$SRC/_meta.json" <<'PY'
 import json, sys
 with open(sys.argv[1], 'r', encoding='utf-8') as f:
     meta = json.load(f)

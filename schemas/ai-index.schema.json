@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openai.invalid/infinitas-skill/ai-index.schema.json",
+  "title": "infinitas-skill AI install index",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at",
+    "registry",
+    "install_policy",
+    "skills"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "registry": {
+      "type": "object",
+      "required": [
+        "default_registry"
+      ],
+      "properties": {
+        "default_registry": {
+          "type": ["string", "null"]
+        }
+      },
+      "additionalProperties": true
+    },
+    "install_policy": {
+      "type": "object",
+      "required": [
+        "mode",
+        "direct_source_install_allowed",
+        "require_attestation",
+        "require_sha256"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "const": "immutable-only"
+        },
+        "direct_source_install_allowed": {
+          "type": "boolean",
+          "const": false
+        },
+        "require_attestation": {
+          "type": "boolean",
+          "const": true
+        },
+        "require_sha256": {
+          "type": "boolean",
+          "const": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "qualified_name",
+          "summary",
+          "use_when",
+          "avoid_when",
+          "agent_compatible",
+          "default_install_version",
+          "latest_version",
+          "available_versions",
+          "entrypoints",
+          "requires",
+          "versions"
+        ],
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "publisher": {"type": ["string", "null"]},
+          "qualified_name": {"type": "string", "minLength": 1},
+          "summary": {"type": "string"},
+          "use_when": {"type": "array", "items": {"type": "string"}},
+          "avoid_when": {"type": "array", "items": {"type": "string"}},
+          "agent_compatible": {"type": "array", "items": {"type": "string"}},
+          "default_install_version": {"type": "string", "minLength": 1},
+          "latest_version": {"type": "string", "minLength": 1},
+          "available_versions": {"type": "array", "items": {"type": "string"}},
+          "entrypoints": {
+            "type": "object",
+            "required": ["skill_md"],
+            "properties": {
+              "skill_md": {"type": "string", "minLength": 1}
+            },
+            "additionalProperties": true
+          },
+          "requires": {
+            "type": "object",
+            "required": ["tools", "env"],
+            "properties": {
+              "tools": {"type": "array", "items": {"type": "string"}},
+              "env": {"type": "array", "items": {"type": "string"}}
+            },
+            "additionalProperties": true
+          },
+          "versions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "required": [
+                "manifest_path",
+                "bundle_path",
+                "bundle_sha256",
+                "attestation_path",
+                "published_at",
+                "stability",
+                "installable",
+                "resolution"
+              ],
+              "properties": {
+                "manifest_path": {"type": "string", "minLength": 1},
+                "bundle_path": {"type": "string", "minLength": 1},
+                "bundle_sha256": {"type": "string", "minLength": 1},
+                "attestation_path": {"type": "string", "minLength": 1},
+                "attestation_signature_path": {"type": ["string", "null"]},
+                "published_at": {"type": "string", "minLength": 1},
+                "stability": {"type": "string", "minLength": 1},
+                "installable": {"type": "boolean"},
+                "resolution": {
+                  "type": "object",
+                  "required": ["preferred_source", "fallback_allowed"],
+                  "properties": {
+                    "preferred_source": {"type": "string", "const": "distribution-manifest"},
+                    "fallback_allowed": {"type": "boolean", "const": false}
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

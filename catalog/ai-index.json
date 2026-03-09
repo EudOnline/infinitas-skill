@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-03-09T13:28:58Z",
+  "registry": {
+    "default_registry": null
+  },
+  "install_policy": {
+    "mode": "immutable-only",
+    "direct_source_install_allowed": false,
+    "require_attestation": true,
+    "require_sha256": true
+  },
+  "skills": []
+}

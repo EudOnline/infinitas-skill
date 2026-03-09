@@ -12,13 +12,14 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-root = Path(os.environ['ROOT'])
+root = Path(os.environ['ROOT']).resolve()
 sys.path.insert(0, str(root / 'scripts'))
 
 from registry_source_lib import load_registry_config, registry_identity, resolve_registry_root  # noqa: E402
 from review_lib import ReviewPolicyError, evaluate_review_state, load_reviews  # noqa: E402
 from skill_identity_lib import display_name, normalize_skill_identity  # noqa: E402
 from distribution_lib import DistributionError, manifest_index_entry  # noqa: E402
+from ai_index_lib import build_ai_index  # noqa: E402
 
 
 def expected_skill_tag(name, version):
@@ -82,6 +83,7 @@ out_active = root / 'catalog' / 'active.json'
 out_compat = root / 'catalog' / 'compatibility.json'
 out_registries = root / 'catalog' / 'registries.json'
 out_distributions = root / 'catalog' / 'distributions.json'
+out_ai_index = root / 'catalog' / 'ai-index.json'
 
 
 def dist_identity_key(entry):
@@ -210,13 +212,17 @@ compatibility = {
 registries_export = []
 for reg in cfg.get('registries', []):
     item = dict(reg)
-    lp = item.get('local_path')
-    if lp:
-        item['resolved_root'] = str((root / lp).resolve()) if not Path(lp).is_absolute() else str(Path(lp).resolve())
-    elif item.get('kind') == 'git':
-        item['resolved_root'] = str((root / '.cache' / 'registries' / item.get('name')).resolve())
+    reg_root = resolve_registry_root(root, reg)
+    if reg_root == root and (reg.get('update_policy') or {}).get('mode') == 'local-only':
+        item['resolved_root'] = '.'
     else:
-        item['resolved_root'] = None
+        lp = item.get('local_path')
+        if lp:
+            item['resolved_root'] = str((root / lp).resolve()) if not Path(lp).is_absolute() else str(Path(lp).resolve())
+        elif item.get('kind') == 'git':
+            item['resolved_root'] = str((root / '.cache' / 'registries' / item.get('name')).resolve())
+        else:
+            item['resolved_root'] = None
     identity = stable_catalog_identity(reg, registry_identity(root, reg))
     item['resolved_ref'] = identity.get('registry_ref')
     item['resolved_commit'] = identity.get('registry_commit')
@@ -233,6 +239,8 @@ distributions_view = {
     'count': len(distribution_entries),
     'skills': distribution_entries,
 }
+ai_index = build_ai_index(root=root, catalog_entries=entries, distribution_entries=distribution_entries)
+ai_index['generated_at'] = catalog['generated_at']
 
 
 def normalized(payload):
@@ -256,4 +264,5 @@ write_if_changed(out_active, active)
 write_if_changed(out_compat, compatibility)
 write_if_changed(out_registries, registries_view)
 write_if_changed(out_distributions, distributions_view)
+write_if_changed(out_ai_index, ai_index)
 PY

@@ -46,7 +46,10 @@ fi
 MANIFEST="$TARGET_DIR/.infinitas-skill-install-manifest.json"
 [[ -f "$MANIFEST" ]] || { echo "missing manifest: $MANIFEST" >&2; exit 1; }
 
-readarray -t ROLLBACK_INFO < <(python3 - "$MANIFEST" "$NAME" "$STEPS" <<'PY'
+ROLLBACK_INFO=()
+while IFS= read -r line; do
+  ROLLBACK_INFO+=("$line")
+done < <(python3 - "$MANIFEST" "$NAME" "$STEPS" <<'PY'
 import json, sys
 manifest_path, name, steps = sys.argv[1:4]
 steps = int(steps)

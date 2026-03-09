@@ -46,7 +46,10 @@ trap cleanup_materialized EXIT
 
 MANIFEST="$TARGET_DIR/.infinitas-skill-install-manifest.json"
 
-readarray -t INFO < <(python3 - "$MANIFEST" "$NAME" <<'PY'
+INFO=()
+while IFS= read -r line; do
+  INFO+=("$line")
+done < <(python3 - "$MANIFEST" "$NAME" <<'PY'
 import json, os, sys
 manifest_path, name = sys.argv[1:3]
 item = {}
