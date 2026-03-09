@@ -27,7 +27,7 @@ Requirements committed for milestone `v9`. Each requirement maps to exactly one 
 
 ### Release Attestation
 
-- [ ] **ATT-01**: Maintainer can create a release only from a clean, synchronized source state with the expected signed tag.
+- [x] **ATT-01**: Maintainer can create a release only from a clean, synchronized source state with the expected signed tag.
 - [ ] **ATT-02**: Release tooling emits provenance or attestation containing exact source commit or tag, registry context, dependency context, and signer identity.
 - [ ] **ATT-03**: Maintainer can verify release attestation with asymmetric keys using repository-managed allowed signers before distribution.
 
@@ -70,7 +70,7 @@ Requirements committed for milestone `v9`. Each requirement maps to exactly one 
 | REV-01 | Phase 3 | Complete |
 | REV-02 | Phase 3 | Complete |
 | REV-03 | Phase 3 | Complete |
-| ATT-01 | Phase 4 | Pending |
+| ATT-01 | Phase 4 | Complete |
 | ATT-02 | Phase 5 | Pending |
 | ATT-03 | Phase 5 | Pending |
 
@@ -81,4 +81,4 @@ Requirements committed for milestone `v9`. Each requirement maps to exactly one 
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-09 after Phase 3 implementation*
+*Last updated: 2026-03-09 after Phase 4 implementation*

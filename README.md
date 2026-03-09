@@ -48,8 +48,9 @@ scripts/
 ├─ promote-skill.sh      move a quorum-approved incubating skill into active/
 ├─ snapshot-active-skill.sh archive a timestamped copy of an active skill
 ├─ bump-skill-version.sh bump semver and seed changelog entries
-├─ release-skill-tag.sh  print or create a skill/<name>/v<version> git tag
-├─ release-skill.sh      check, tag, prepare release notes, and write provenance
+├─ release-skill-tag.sh  print, create, sign, and optionally push a skill/<name>/v<version> git tag
+├─ check-release-state.py verify clean-tree, upstream-sync, and signed-tag release invariants
+├─ release-skill.sh      verify stable release state, tag, prepare release notes, and write provenance
 ├─ lineage-diff.sh       diff a skill against its declared ancestor
 ├─ switch-installed-skill.sh switch an installed copy to active or a historical version
 ├─ rollback-installed-skill.sh rollback using manifest history
@@ -117,9 +118,19 @@ scripts/install-skill.sh my-skill ~/.openclaw/skills --version 0.1.0 --force
 # Snapshot the current active copy before a risky overwrite
 scripts/snapshot-active-skill.sh my-skill --label pre-refactor
 
-# Prepare a release summary and signed provenance (and optionally tag it)
+# Preview release notes before tagging
+scripts/release-skill.sh my-skill --preview
+
+# Create, push, and verify the default signed release tag
+scripts/release-skill.sh my-skill --push-tag
+
+# Confirm the repository is release-ready
+scripts/check-release-state.py my-skill
+
+# Write immutable release notes and provenance from the pushed signed tag
+scripts/release-skill.sh my-skill --notes-out /tmp/my-skill-release.md --write-provenance
+# optional symmetric or SSH provenance signing still works after the tag is verified
 scripts/release-skill.sh my-skill --write-provenance --sign-provenance
-# or with SSH signing
 scripts/release-skill.sh my-skill --write-provenance --ssh-sign-provenance --ssh-key ~/.ssh/id_ed25519
 
 # Switch an installed copy to a different historical version
@@ -149,6 +160,7 @@ GitHub Actions runs `scripts/check-all.sh` on pushes and pull requests. That val
 - deterministic catalog generation
 - compatibility catalog generation
 - computed review-group quorum enforcement
+- stable release invariant regression checks
 
 If CI fails because catalog files changed, run:
 
@@ -180,7 +192,8 @@ and commit the updated `catalog/*.json`.
 - **Promotion is policy-driven**. Active skills now pass a dedicated promotion policy check instead of relying only on ad-hoc conventions.
 - **Computed review state is authoritative**. `_meta.json.review_state` is kept for compatibility, but promotion and catalog data now derive from `reviews.json` plus repository policy.
 - **Reviewer groups and quorum are enforced**. Promotion policy can require configured reviewer groups, stage/risk-specific quorum, and rejection-free latest decisions.
-- **Releases can emit signed provenance**. Release tooling can write machine-readable provenance records and sign/verify them.
+- **Stable releases require signed pushed tags**. Release notes and provenance now resolve against a verified `refs/tags/skill/<name>/v<version>` snapshot instead of best-effort `HEAD` state.
+- **Releases can emit signed provenance**. Provenance generation now depends on that immutable release snapshot, and symmetric or SSH sidecar signing can still be layered on afterward.
 
 ## Safety rules
 

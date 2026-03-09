@@ -52,12 +52,11 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: Add reviewer-group and quorum policy schema plus defaults
 - [x] 03-01: Add reviewer-group and quorum policy schema plus defaults
 - [x] 03-02: Refactor review request/status/approval scripts to compute authoritative review state
 - [x] 03-03: Enforce computed quorum in promotion, catalog generation, and docs
 
-#### Phase 4: Signed Release Invariants
+#### ✅ Phase 4: Signed Release Invariants
 **Goal**: Make release creation depend on a clean, synchronized repository state and a signed git tag before any release is considered valid.
 **Depends on**: Phase 3
 **Requirements**: [ATT-01]
@@ -68,8 +67,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: Add clean-tree, upstream-sync, and signed-tag guards to release workflows
-- [ ] 04-02: Update release docs/checklists to make immutable signed releases the default path
+- [x] 04-01: Add clean-tree, upstream-sync, and signed-tag guards to release workflows
+- [x] 04-02: Update release docs/checklists to make immutable signed releases the default path
 
 #### Phase 5: Asymmetric Attestation and Verification
 **Goal**: Produce and verify release attestations that capture exact source and dependency context with asymmetric signatures managed by the repository.
@@ -93,5 +92,5 @@ Plans:
 | 1. Registry Source Policy and Safe Sync | v9 | 3/3 | Completed | 2026-03-08 |
 | 2. Dependency Upgrade Planning and Conflict Solver | v9 | 3/3 | Completed | 2026-03-08 |
 | 3. Reviewer Groups and Quorum Enforcement | v9 | 3/3 | Completed | 2026-03-09 |
-| 4. Signed Release Invariants | v9 | 0/2 | Not started | - |
+| 4. Signed Release Invariants | v9 | 2/2 | Completed | 2026-03-09 |
 | 5. Asymmetric Attestation and Verification | v9 | 0/3 | Not started | - |

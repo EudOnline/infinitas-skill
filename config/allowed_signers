@@ -1,0 +1,8 @@
+# Populate this file with trusted SSH signers before creating stable release tags
+# or verifying SSH-signed provenance bundles.
+#
+# Format:
+#   <identity> <public-key>
+#
+# Example:
+#   release-bot ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExamplePublicKeyMaterialHere

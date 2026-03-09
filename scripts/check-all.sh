@@ -9,6 +9,9 @@ python3 scripts/validate-registry.py
 python3 scripts/check-registry-integrity.py
 python3 scripts/check-promotion-policy.py
 python3 scripts/test-review-governance.py
+if [[ "${INFINITAS_SKIP_RELEASE_TESTS:-0}" != "1" ]]; then
+  python3 scripts/test-release-invariants.py
+fi
 
 while IFS= read -r dir; do
   [[ -n "$dir" ]] || continue

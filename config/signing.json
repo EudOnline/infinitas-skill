@@ -2,5 +2,12 @@
   "namespace": "infinitas-skill",
   "allowed_signers": "config/allowed_signers",
   "signature_ext": ".sshsig",
-  "note": "SSH signing settings for provenance bundles"
+  "git_tag": {
+    "format": "ssh",
+    "allowed_signers": "config/allowed_signers",
+    "remote": "origin",
+    "signing_key_env": "INFINITAS_SKILL_GIT_SIGNING_KEY",
+    "note": "Stable releases require repo-managed verified SSH-signed git tags"
+  },
+  "note": "SSH signing settings for provenance bundles and stable release tags"
 }

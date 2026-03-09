@@ -19,3 +19,14 @@ Before pushing or promoting a skill:
 - [ ] No tokens, API keys, cookies, or auth exports are committed
 - [ ] Skill was manually tested on at least one realistic task
 - [ ] `scripts/build-catalog.sh` has been run after metadata changes
+
+Before creating stable release output for an active skill:
+
+- [ ] `config/allowed_signers` contains at least one trusted release signer entry committed in-repo
+- [ ] `git status --short` is empty for the repository worktree
+- [ ] current branch tracks its upstream and is neither ahead nor behind it
+- [ ] expected tag `skill/<name>/v<version>` does not already point at the wrong commit
+- [ ] default stable tag is created with `scripts/release-skill.sh <name> --push-tag` or `scripts/release-skill-tag.sh <name> --create --push`
+- [ ] `scripts/check-release-state.py <name>` passes before writing notes, provenance, or GitHub releases
+- [ ] release notes or provenance reference `refs/tags/skill/<name>/v<version>` instead of local-only `HEAD`
+- [ ] any optional provenance signing happens after the signed git tag has already been verified

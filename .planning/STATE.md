@@ -2,24 +2,24 @@
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-03-08)
+See: `.planning/PROJECT.md` (updated 2026-03-09)
 
 **Core value:** Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
-**Current focus:** Phase 4 — Signed Release Invariants
+**Current focus:** Phase 5 — Asymmetric Attestation and Verification
 
 ## Current Position
 
-Phase: 4 of 5 (Signed Release Invariants)
+Phase: 5 of 5 (Asymmetric Attestation and Verification)
 Plan: —
 Status: Ready to plan
-Last activity: 2026-03-09 — Completed Phase 3 implementation for reviewer groups, computed quorum state, and promotion enforcement
+Last activity: 2026-03-09 — Completed Phase 4 implementation for signed release invariants, stable tag verification, and immutable release snapshot output
 
-Progress: [██████░░░░] 60%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
+- Total plans completed: 11
 - Average duration: n/a
 - Total execution time: n/a
 
@@ -30,9 +30,10 @@ Progress: [██████░░░░] 60%
 | 1 | 3 | n/a | n/a |
 | 2 | 3 | n/a | n/a |
 | 3 | 3 | n/a | n/a |
+| 4 | 2 | n/a | n/a |
 
 **Recent Trend:**
-- Last 5 plans: 02-02, 02-03, 03-01, 03-02, 03-03
+- Last 5 plans: 03-01, 03-02, 03-03, 04-01, 04-02
 - Trend: Advancing
 
 ## Accumulated Context
@@ -50,6 +51,7 @@ Decisions are logged in `PROJECT.md`.
 - 2026-03-08: Make install and sync plan the full dependency graph before copying files, and fail on dependency lock violations or reverse conflicts.
 - 2026-03-09: Make computed review state authoritative, while keeping `_meta.json.review_state` synced as a compatibility field.
 - 2026-03-09: Drive reviewer allowlists and quorum from policy-defined reviewer groups with stage/risk overrides.
+- 2026-03-09: Make signed, pushed `skill/<name>/v<version>` tags the authoritative stable release snapshot and require explicit preview mode for pre-release note inspection.
 
 ### Pending Todos
 
@@ -57,10 +59,10 @@ None yet.
 
 ### Blockers/Concerns
 
-- `config/allowed_signers` is empty and the repository has no git tags; Phase 4 and Phase 5 need bootstrap decisions before release enforcement can ship.
+- `config/allowed_signers` now contains only bootstrap guidance comments; maintainers must commit real trusted signer entries before the first actual stable release or Phase 5 attestation verification can succeed.
 
 ## Session Continuity
 
-Last session: 2026-03-09 07:25 GMT+8
-Stopped at: Phase 3 implementation complete; Phase 4 is the next planning target
+Last session: 2026-03-09 08:17 GMT+8
+Stopped at: Phase 4 completed; Phase 5 is the next planning target
 Resume file: None

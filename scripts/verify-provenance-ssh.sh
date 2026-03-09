@@ -45,6 +45,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 [[ -n "$IDENTITY" ]] || { echo "--identity is required" >&2; exit 1; }
+if ! grep -Eq '^[[:space:]]*[^#[:space:]]' "$ALLOWED" 2>/dev/null; then
+  echo "allowed signers file has no trusted entries: $ALLOWED" >&2
+  exit 1
+fi
 SIG="$FILE.ssig"
 [[ -f "$SIG" ]] || { echo "missing SSH signature: $SIG" >&2; exit 1; }
 ssh-keygen -Y verify -f "$ALLOWED" -I "$IDENTITY" -n "$NAMESPACE" -s "$SIG" < "$FILE"
