@@ -3,6 +3,8 @@
 ## Milestones
 
 - ✅ **v9 Registry Trust, Quorum, and Attestation** - Phases 1-5 (completed 2026-03-09)
+- 🚧 **v10 Publisher Identity and Verified Distribution** - Phases 1-5 (planned)
+- 🗂️ **v11 Policy-as-Code and Organizational Controls** - Phases 1-3 (planned)
 
 ## Phases
 
@@ -85,6 +87,133 @@ Plans:
 - [x] 05-02: Make SSH/asymmetric signing and verification first-class in release tooling
 - [x] 05-03: Enforce attestation verification in release/distribution paths and document the bootstrap flow
 
+### 🚧 v10 Publisher Identity and Verified Distribution (Planned)
+
+**Milestone Goal:** Turn the hardened Git-native registry into a verified distribution system with explicit publisher identity, bootstrap-safe signing, and consumer-friendly install/search flows.
+
+#### Phase 1: Publisher / Namespace Model
+**Goal**: Introduce first-class publisher and namespace identity so skill ownership, release authority, and trusted actors are explicit instead of implied by repository write access.
+**Depends on**: v9 completed
+**Requirements**: [PUB-01, PUB-02, PUB-03]
+**Success Criteria** (what must be TRUE):
+  1. Skill metadata and catalogs can represent a fully-qualified identity such as `publisher/skill`, plus owners and maintainers.
+  2. Validation and release tooling reject namespace claims or transfers that are not authorized by repository policy.
+  3. Author, reviewer, releaser, and signer identities are recorded in machine-readable outputs so governance decisions are auditable.
+**Plans**: 3 plans
+
+Plans:
+- [ ] 10-01: Define publisher/namespace metadata schema, migration rules, and compatibility behavior for legacy unqualified skill names
+- [ ] 10-02: Enforce namespace ownership plus actor-role recording in validation, promotion, and release tooling
+- [ ] 10-03: Export fully-qualified identities in catalogs, install manifests, and user-facing docs/CLI output
+
+#### Phase 2: Signing Bootstrap and Operator Doctoring
+**Goal**: Make the first trusted-signer setup repeatable, diagnosable, and safe for maintainers who are not already signing experts.
+**Depends on**: Phase 1
+**Requirements**: [OPS-01, OPS-02]
+**Success Criteria** (what must be TRUE):
+  1. Maintainers can initialize signer material or wire existing signer identities into repository policy with documented, scripted steps.
+  2. Doctor/diagnostic tooling explains exactly why tag signing or attestation verification is blocked and how to fix it.
+  3. A first stable release rehearsal can be completed without manual spelunking through repo internals.
+**Plans**: 3 plans
+
+Plans:
+- [ ] 10-04: Add signing bootstrap helpers and docs for `allowed_signers`, SSH signing, and first stable tag flow
+- [ ] 10-05: Add doctor-style diagnostics for signer state, tag signing readiness, and attestation verification prerequisites
+- [ ] 10-06: Write and test an end-to-end bootstrap rehearsal for the first trusted stable release
+
+#### Phase 3: Verified Artifact Format and Distribution Manifest
+**Goal**: Promote release output from ad-hoc repository state into a versioned, immutable distribution unit with manifest, digest, and attached verification material.
+**Depends on**: Phase 2
+**Requirements**: [DIST-01, DIST-02, DIST-03]
+**Success Criteria** (what must be TRUE):
+  1. Stable releases emit a manifest that identifies the artifact, its digests, source snapshot, attestation bundle, and dependency context.
+  2. Install and sync can consume the distribution manifest instead of inferring everything from working-tree layout.
+  3. Historical installs and verification resolve immutable release artifacts, not just whichever files are currently checked out.
+**Plans**: 3 plans
+
+Plans:
+- [ ] 10-07: Define stable skill bundle / manifest format plus catalog references to digests and attestation payloads
+- [ ] 10-08: Teach install/sync flows to fetch and verify distribution manifests before mutating target directories
+- [ ] 10-09: Document historical install and rollback behavior against immutable release artifacts
+
+#### Phase 4: CI-native Attestations and Verification
+**Goal**: Add CI-generated provenance and attestation paths so release trust can be established from both local and automated workflows.
+**Depends on**: Phase 3
+**Requirements**: [CI-ATT-01, CI-ATT-02]
+**Success Criteria** (what must be TRUE):
+  1. CI can emit provenance/attestation records that bind artifact digests to workflow identity, commit SHA, and release metadata.
+  2. Local tooling can verify both repository-managed SSH attestations and CI-native attestations with clear trust policy boundaries.
+  3. Release/distribution policy can require one or both attestation paths without ambiguity.
+**Plans**: 3 plans
+
+Plans:
+- [ ] 10-10: Add CI workflow(s) that generate signed build provenance for release artifacts
+- [ ] 10-11: Extend verification tooling and policy config for CI-native attestation trust decisions
+- [ ] 10-12: Document offline/online verification flows and compatibility with the existing SSH-based path
+
+#### Phase 5: Search, Discovery, and Consumer UX
+**Goal**: Make the registry easier to consume by adding structured discovery, inspectability, and better explanations of install and policy decisions.
+**Depends on**: Phase 4
+**Requirements**: [UX-01, UX-02, UX-03]
+**Success Criteria** (what must be TRUE):
+  1. Maintainers and agents can search/filter skills by tags, compatibility, publisher, and status without scraping raw metadata.
+  2. Install and upgrade flows can explain what will change, why a skill was chosen, and why a policy block occurred.
+  3. Registry consumers can inspect a skill's compatibility, dependency plan, release provenance, and trust status through stable CLI output.
+**Plans**: 3 plans
+
+Plans:
+- [ ] 10-13: Add search/inspect command(s) and catalog fields for tags, compatibility, publisher, and trust state
+- [ ] 10-14: Add explain-style output for install plans, upgrade choices, and policy rejections
+- [ ] 10-15: Update docs and release notes so the verified distribution path is the default consumer experience
+
+### 🗂️ v11 Policy-as-Code and Organizational Controls (Planned)
+
+**Milestone Goal:** Extend the private registry from single-maintainer governance into explainable, team-oriented policy enforcement with federation-ready controls.
+
+#### Phase 1: Policy Packs and Explainable Decisions
+**Goal**: Move repository policy toward reusable, inspectable policy packs with explicit decision traces.
+**Depends on**: v10 completed
+**Requirements**: [POL-01, POL-02]
+**Success Criteria** (what must be TRUE):
+  1. Reusable policy bundles can describe reviewer, release, install, and distribution requirements without hardcoding every rule into scripts.
+  2. Tooling can emit explainable decision traces for policy allow/deny outcomes.
+  3. Policy changes remain Git-reviewable and deterministic in local and CI execution.
+**Plans**: 2 plans
+
+Plans:
+- [ ] 11-01: Define policy-pack structure plus repository-level loading/override rules
+- [ ] 11-02: Add explain/debug output for policy evaluation across validation, promotion, and release flows
+
+#### Phase 2: Multi-Team Governance and Exceptions
+**Goal**: Support team-level ownership, delegated approval scopes, and explicit break-glass exceptions without weakening auditability.
+**Depends on**: Phase 1
+**Requirements**: [TEAM-01, TEAM-02, TEAM-03]
+**Success Criteria** (what must be TRUE):
+  1. Teams or groups can own namespaces and approval scopes without collapsing into a single global maintainer list.
+  2. Time-bounded or reviewable exceptions can be granted for urgent releases and clearly recorded.
+  3. Audit outputs can reconstruct who approved, who overrode, and why.
+**Plans**: 3 plans
+
+Plans:
+- [ ] 11-03: Add team/group ownership models and delegated namespace or review policy scopes
+- [ ] 11-04: Add break-glass / exception records with expiration and justification fields
+- [ ] 11-05: Extend audit exports and release metadata to capture exception usage and delegated approvals
+
+#### Phase 3: Federation, Mirrors, and Audit Export
+**Goal**: Prepare the registry for multi-workspace and multi-registry operation without losing trust guarantees or operator visibility.
+**Depends on**: Phase 2
+**Requirements**: [FED-01, FED-02]
+**Success Criteria** (what must be TRUE):
+  1. The registry can mirror or federate selected upstream sources while preserving publisher identity, trust policy, and immutable artifact verification.
+  2. Consumers can export audit and inventory views suitable for external review or developer portal integration.
+  3. Federation rules do not silently bypass local policy or signer trust roots.
+**Plans**: 3 plans
+
+Plans:
+- [ ] 11-06: Define mirror/federation rules for trusted upstream registries and namespace mapping
+- [ ] 11-07: Add audit/inventory export formats for portal, compliance, or reporting integrations
+- [ ] 11-08: Document federation trust boundaries, failure modes, and recovery procedures
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -94,3 +223,11 @@ Plans:
 | 3. Reviewer Groups and Quorum Enforcement | v9 | 3/3 | Completed | 2026-03-09 |
 | 4. Signed Release Invariants | v9 | 2/2 | Completed | 2026-03-09 |
 | 5. Asymmetric Attestation and Verification | v9 | 3/3 | Completed | 2026-03-09 |
+| 1. Publisher / Namespace Model | v10 | 0/3 | Planned | - |
+| 2. Signing Bootstrap and Operator Doctoring | v10 | 0/3 | Planned | - |
+| 3. Verified Artifact Format and Distribution Manifest | v10 | 0/3 | Planned | - |
+| 4. CI-native Attestations and Verification | v10 | 0/3 | Planned | - |
+| 5. Search, Discovery, and Consumer UX | v10 | 0/3 | Planned | - |
+| 1. Policy Packs and Explainable Decisions | v11 | 0/2 | Planned | - |
+| 2. Multi-Team Governance and Exceptions | v11 | 0/3 | Planned | - |
+| 3. Federation, Mirrors, and Audit Export | v11 | 0/3 | Planned | - |

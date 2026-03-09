@@ -5,16 +5,16 @@
 See: `.planning/PROJECT.md` (updated 2026-03-09)
 
 **Core value:** Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
-**Current focus:** v9 complete — prepare milestone closeout or plan the next milestone
+**Current focus:** v10 Phase 1 — Publisher / Namespace Model
 
 ## Current Position
 
-Phase: 5 of 5 (Asymmetric Attestation and Verification)
+Phase: 1 of 5 (Publisher / Namespace Model)
 Plan: —
-Status: Completed
-Last activity: 2026-03-09 — Completed Phase 5 implementation for verified SSH release attestations, dependency-aware provenance, and policy-gated release artifacts
+Status: Ready to plan
+Last activity: 2026-03-09 — Added v10/v11 roadmap based on registry, publisher-governance, and provenance reference research
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -24,18 +24,13 @@ Progress: [██████████] 100%
 - Total execution time: n/a
 
 **By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 1 | 3 | n/a | n/a |
-| 2 | 3 | n/a | n/a |
-| 3 | 3 | n/a | n/a |
-| 4 | 2 | n/a | n/a |
-| 5 | 3 | n/a | n/a |
+- v9: 14 plans completed across 5 phases
+- v10: 0 plans completed across 5 phases
+- v11: 0 plans completed across 3 phases
 
 **Recent Trend:**
 - Last 5 plans: 03-03, 04-01, 04-02, 05-01, 05-02, 05-03
-- Trend: Milestone completed
+- Trend: Completed v9, queued v10
 
 ## Accumulated Context
 
@@ -54,17 +49,22 @@ Decisions are logged in `PROJECT.md`.
 - 2026-03-09: Drive reviewer allowlists and quorum from policy-defined reviewer groups with stage/risk overrides.
 - 2026-03-09: Make signed, pushed `skill/<name>/v<version>` tags the authoritative stable release snapshot and require explicit preview mode for pre-release note inspection.
 - 2026-03-09: Make SSH-signed, repo-verified release attestations mandatory for written release artifacts when the v9 attestation policy is enabled.
+- 2026-03-09: Next milestone should prioritize publisher identity, signer bootstrap, verified distribution manifests, and consumer install/search UX before public marketplace or on-chain ideas.
 
 ### Pending Todos
 
-None yet.
+- Plan and execute v10 Phase 1 (publisher / namespace model).
+- Bootstrap real trusted signer entries in `config/allowed_signers` before the first actual stable release.
+- Decide whether CI-native attestations should be additive to, or eventually authoritative over, the repo-managed SSH path.
 
 ### Blockers/Concerns
 
-- `config/allowed_signers` now contains only bootstrap guidance comments; maintainers must commit real trusted signer entries before the first actual stable release or Phase 5 attestation verification can succeed.
+- `config/allowed_signers` still contains bootstrap guidance comments only; that remains the main operational blocker for a real stable-release ceremony.
+- The repository still uses unqualified skill identities; publisher/namespace migration must preserve backward compatibility for current install and sync flows.
+- v10 should stay Git-native and private-first; public marketplace features, social features, and on-chain reputation are intentionally deferred.
 
 ## Session Continuity
 
-Last session: 2026-03-09 09:16 GMT+8
-Stopped at: v9 milestone completed; next logical step is milestone closeout or planning the next milestone
+Last session: 2026-03-09 10:28 GMT+8
+Stopped at: v10/v11 roadmap recorded; next logical step is implementing v10 Phase 1
 Resume file: None
