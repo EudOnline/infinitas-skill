@@ -77,6 +77,12 @@ scripts/publish-skill.sh <skill> [--version <semver>] [--mode auto|confirm]
 }
 ```
 
+## OpenClaw Context
+
+- 如果 skill 最初来自 OpenClaw 本地工作区，先使用 `scripts/import-openclaw-skill.sh` 导入 registry，再发布
+- `publish-skill.sh` 只负责 registry → immutable release，不负责直接写入 OpenClaw 运行时目录
+- 若后续要进入 ClawHub，必须先从已发布版本导出，再由人工执行 `clawhub publish`
+
 ## Forbidden Assumptions
 
 - 不得把“代码已合并”视为“已发布”

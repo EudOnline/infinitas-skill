@@ -55,31 +55,27 @@ def scaffold_fixture(repo: Path):
             'name': FIXTURE_NAME,
             'version': FIXTURE_VERSION,
             'status': 'active',
-            'summary': 'Fixture skill for ai-index tests',
+            'summary': 'Fixture skill for openclaw export tests',
             'owner': 'release-test',
             'owners': ['release-test'],
             'author': 'release-test',
             'review_state': 'approved',
-            'distribution': {
-                'installable': True,
-                'channel': 'git',
-            },
         }
     )
     write_json(fixture_dir / '_meta.json', meta)
     (fixture_dir / 'SKILL.md').write_text(
         '---\n'
         f'name: {FIXTURE_NAME}\n'
-        'description: Fixture skill for ai-index tests.\n'
+        'description: Fixture skill for openclaw export tests.\n'
         '---\n\n'
         '# Release Fixture\n\n'
-        'Used only by automated AI index tests.\n',
+        'Used only by automated OpenClaw export tests.\n',
         encoding='utf-8',
     )
     (fixture_dir / 'CHANGELOG.md').write_text(
         '# Changelog\n\n'
         f'## {FIXTURE_VERSION} - 2026-03-09\n'
-        '- Added AI index fixture release.\n',
+        '- Added OpenClaw export fixture release.\n',
         encoding='utf-8',
     )
     write_json(
@@ -90,7 +86,7 @@ def scaffold_fixture(repo: Path):
                 {
                     'requested_at': '2026-03-09T00:00:00Z',
                     'requested_by': 'release-test',
-                    'note': 'Fixture approval for AI index tests',
+                    'note': 'Fixture approval for OpenClaw export tests',
                 }
             ],
             'entries': [
@@ -106,7 +102,7 @@ def scaffold_fixture(repo: Path):
 
 
 def prepare_repo():
-    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-ai-index-test-'))
+    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-openclaw-export-test-'))
     repo = tmpdir / 'repo'
     origin = tmpdir / 'origin.git'
     shutil.copytree(
@@ -139,76 +135,94 @@ def prepare_repo():
     run(['git', 'add', 'config/allowed_signers'], cwd=repo)
     run(['git', 'commit', '-m', 'add release signer'], cwd=repo)
     run(['git', 'push'], cwd=repo)
-    return tmpdir, repo
-
-
-def release_fixture(repo: Path):
     run(
         [str(repo / 'scripts' / 'release-skill.sh'), FIXTURE_NAME, '--push-tag', '--write-provenance'],
         cwd=repo,
         env=make_env(),
     )
+    return tmpdir, repo
 
 
-def main():
+def test_confirm_mode_returns_release_export_plan():
     tmpdir, repo = prepare_repo()
     try:
-        release_fixture(repo)
-        ai_index_path = repo / 'catalog' / 'ai-index.json'
-        if not ai_index_path.exists():
-            fail(f'missing AI index: {ai_index_path}')
-
-        payload = json.loads(ai_index_path.read_text(encoding='utf-8'))
-        if payload['install_policy']['mode'] != 'immutable-only':
-            fail(f"expected immutable-only install policy, got {payload['install_policy']['mode']!r}")
-        if payload['install_policy']['direct_source_install_allowed'] is not False:
-            fail('expected direct_source_install_allowed to be false')
-        if not payload.get('skills'):
-            fail('expected ai-index to contain at least one skill entry')
-        entry = payload['skills'][0]
-        versions = entry.get('versions') or {}
-        if FIXTURE_VERSION not in versions:
-            fail(f'expected version {FIXTURE_VERSION!r} in ai-index versions')
-        version_entry = versions[FIXTURE_VERSION]
-        for field in ['manifest_path', 'bundle_path', 'bundle_sha256', 'attestation_path']:
-            if not version_entry.get(field):
-                fail(f'missing version field {field!r}')
-
-        interop = ((entry.get('interop') or {}).get('openclaw') or {})
-        if interop.get('import_supported') is not True:
-            fail(f"expected interop.openclaw.import_supported=true, got {interop.get('import_supported')!r}")
-        if interop.get('export_supported') is not True:
-            fail(f"expected interop.openclaw.export_supported=true, got {interop.get('export_supported')!r}")
-        if interop.get('runtime_targets') != ['~/.openclaw/skills', '~/.openclaw/workspace/skills']:
-            fail(f"unexpected runtime_targets: {interop.get('runtime_targets')!r}")
-
-        original_ai_index = json.loads(ai_index_path.read_text(encoding='utf-8'))
-        original_ai_index['skills'][0]['default_install_version'] = '9.9.9'
-        write_json(ai_index_path, original_ai_index)
-        result = run([sys.executable, str(repo / 'scripts' / 'validate-registry.py')], cwd=repo, expect=1)
-        combined = result.stdout + result.stderr
-        if 'default_install_version' not in combined:
-            fail(f'expected validation failure mentioning default_install_version\n{combined}')
-
-        run([str(repo / 'scripts' / 'build-catalog.sh')], cwd=repo)
-
-        skill_md_path = repo / 'skills' / 'active' / FIXTURE_NAME / 'SKILL.md'
-        original_skill_md = skill_md_path.read_text(encoding='utf-8')
-        skill_md_path.write_text(original_skill_md.replace(f'name: {FIXTURE_NAME}', 'name: wrong-name', 1), encoding='utf-8')
-        result = run([sys.executable, str(repo / 'scripts' / 'validate-registry.py')], cwd=repo, expect=1)
-        combined = result.stdout + result.stderr
-        if 'frontmatter name' not in combined:
-            fail(f'expected validation failure mentioning frontmatter name\n{combined}')
-
-        skill_md_path.write_text(original_skill_md.replace('description: Fixture skill for ai-index tests.', 'description:', 1), encoding='utf-8')
-        result = run([sys.executable, str(repo / 'scripts' / 'validate-registry.py')], cwd=repo, expect=1)
-        combined = result.stdout + result.stderr
-        if 'frontmatter description' not in combined:
-            fail(f'expected validation failure mentioning frontmatter description\n{combined}')
+        out_dir = tmpdir / 'exported'
+        result = run(
+            [
+                str(repo / 'scripts' / 'export-openclaw-skill.sh'),
+                FIXTURE_NAME,
+                '--version',
+                FIXTURE_VERSION,
+                '--out',
+                str(out_dir),
+                '--mode',
+                'confirm',
+            ],
+            cwd=repo,
+        )
+        payload = json.loads(result.stdout)
+        if payload.get('ok') is not True:
+            fail(f'expected ok=true in confirm mode, got {payload!r}')
+        if payload.get('state') != 'planned':
+            fail(f"expected planned state, got {payload.get('state')!r}")
+        export_dir = Path(payload.get('export_dir') or '').resolve()
+        if export_dir != (out_dir / FIXTURE_NAME).resolve():
+            fail(f'expected export_dir {(out_dir / FIXTURE_NAME).resolve()}, got {export_dir}')
+        if out_dir.exists():
+            fail('confirm mode unexpectedly created output directory')
+        if payload.get('suggested_publish_command') != ['clawhub', 'publish', str((out_dir / FIXTURE_NAME).resolve())]:
+            fail(f"unexpected publish suggestion: {payload.get('suggested_publish_command')!r}")
     finally:
         shutil.rmtree(tmpdir)
 
-    print('OK: ai-index checks passed')
+
+def test_auto_mode_materializes_release_bundle_as_openclaw_folder():
+    tmpdir, repo = prepare_repo()
+    try:
+        out_dir = tmpdir / 'exported'
+        result = run(
+            [
+                str(repo / 'scripts' / 'export-openclaw-skill.sh'),
+                FIXTURE_NAME,
+                '--version',
+                FIXTURE_VERSION,
+                '--out',
+                str(out_dir),
+            ],
+            cwd=repo,
+        )
+        payload = json.loads(result.stdout)
+        if payload.get('ok') is not True:
+            fail(f'expected ok=true in auto mode, got {payload!r}')
+        if payload.get('state') != 'exported':
+            fail(f"expected exported state, got {payload.get('state')!r}")
+
+        export_dir = out_dir / FIXTURE_NAME
+        if not export_dir.is_dir():
+            fail(f'missing exported skill directory {export_dir}')
+        if not (export_dir / 'SKILL.md').is_file():
+            fail('missing exported SKILL.md')
+        if not (export_dir / '_meta.json').is_file():
+            fail('missing exported _meta.json')
+
+        manifest_path = Path(payload.get('manifest_path') or '')
+        bundle_path = Path(payload.get('bundle_path') or '')
+        if not manifest_path.exists():
+            fail(f'missing manifest path {manifest_path}')
+        if not bundle_path.exists():
+            fail(f'missing bundle path {bundle_path}')
+        if payload.get('resolved_version') != FIXTURE_VERSION:
+            fail(f"expected resolved_version {FIXTURE_VERSION!r}, got {payload.get('resolved_version')!r}")
+        if payload.get('suggested_publish_command') != ['clawhub', 'publish', str(export_dir.resolve())]:
+            fail(f"unexpected publish suggestion: {payload.get('suggested_publish_command')!r}")
+    finally:
+        shutil.rmtree(tmpdir)
+
+
+def main():
+    test_confirm_mode_returns_release_export_plan()
+    test_auto_mode_materializes_release_bundle_as_openclaw_folder()
+    print('OK: openclaw export checks passed')
 
 
 if __name__ == '__main__':

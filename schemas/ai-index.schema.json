@@ -75,6 +75,7 @@
           "available_versions",
           "entrypoints",
           "requires",
+          "interop",
           "versions"
         ],
         "properties": {
@@ -102,6 +103,47 @@
             "properties": {
               "tools": {"type": "array", "items": {"type": "string"}},
               "env": {"type": "array", "items": {"type": "string"}}
+            },
+            "additionalProperties": true
+          },
+          "interop": {
+            "type": "object",
+            "required": ["openclaw"],
+            "properties": {
+              "openclaw": {
+                "type": "object",
+                "required": [
+                  "runtime_targets",
+                  "import_supported",
+                  "export_supported",
+                  "public_publish"
+                ],
+                "properties": {
+                  "runtime_targets": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                  },
+                  "import_supported": {"type": "boolean", "const": true},
+                  "export_supported": {"type": "boolean", "const": true},
+                  "public_publish": {
+                    "type": "object",
+                    "required": ["clawhub"],
+                    "properties": {
+                      "clawhub": {
+                        "type": "object",
+                        "required": ["supported", "default"],
+                        "properties": {
+                          "supported": {"type": "boolean", "const": true},
+                          "default": {"type": "boolean", "const": false}
+                        },
+                        "additionalProperties": true
+                      }
+                    },
+                    "additionalProperties": true
+                  }
+                },
+                "additionalProperties": true
+              }
             },
             "additionalProperties": true
           },

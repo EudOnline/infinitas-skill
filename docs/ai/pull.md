@@ -77,6 +77,12 @@ scripts/pull-skill.sh <qualified-name> <target-dir> [--version <semver>] [--mode
 }
 ```
 
+## OpenClaw Context
+
+- 推荐目标目录是 `~/.openclaw/skills` 或 `~/.openclaw/workspace/skills`
+- `pull-skill.sh` 只从 immutable release artifacts 安装，不从本地原型目录复制
+- 若 AI 看到的是 OpenClaw 本地原型目录，应先走 `scripts/import-openclaw-skill.sh`，而不是直接安装
+
 ## Forbidden Assumptions
 
 - 不得从 `skills/active` 或 `skills/incubating` 直接安装

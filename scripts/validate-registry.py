@@ -13,6 +13,7 @@ from skill_identity_lib import NamespacePolicyError, load_namespace_policy, name
 ROOT = Path(__file__).resolve().parent.parent
 NAME_RE = re.compile(r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
 SEMVER_RE = re.compile(r'^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9_.-]+)?$')
+FRONTMATTER_RE = re.compile(r'^---\n(.*?)\n---\n?', re.DOTALL)
 ALLOWED_STATUS = {'incubating', 'active', 'archived'}
 ALLOWED_REVIEW = {'draft', 'under-review', 'approved', 'rejected'}
 ALLOWED_RISK = {'low', 'medium', 'high'}
@@ -29,6 +30,32 @@ def _is_registry_skill_dir(skill_dir: Path) -> bool:
         return True
     except ValueError:
         return False
+
+
+def _parse_frontmatter(skill_md_path: Path):
+    content = skill_md_path.read_text(encoding='utf-8')
+    match = FRONTMATTER_RE.match(content)
+    if not match:
+        raise ValueError(f'missing YAML frontmatter in {skill_md_path}')
+
+    fields = {}
+    for raw_line in match.group(1).splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith('#') or ':' not in line:
+            continue
+        key, value = line.split(':', 1)
+        cleaned = value.strip()
+        if len(cleaned) >= 2 and cleaned[0] == cleaned[-1] and cleaned[0] in {'"', "'"}:
+            cleaned = cleaned[1:-1]
+        fields[key.strip()] = cleaned
+
+    name = fields.get('name')
+    if not isinstance(name, str) or not name.strip():
+        raise ValueError(f'missing frontmatter name in {skill_md_path}')
+    description = fields.get('description')
+    if not isinstance(description, str) or not description.strip():
+        raise ValueError(f'missing frontmatter description in {skill_md_path}')
+    return fields
 
 
 def validate_meta(skill_dir: Path, namespace_policy=None) -> int:
@@ -53,12 +80,24 @@ def validate_meta(skill_dir: Path, namespace_policy=None) -> int:
     for key in ['name', 'version', 'status', 'summary', 'owner', 'review_state', 'risk_level', 'distribution']:
         req(key)
 
+    frontmatter = {}
+    try:
+        frontmatter = _parse_frontmatter(skill_md)
+    except ValueError as exc:
+        fail(f'{skill_dir}: {exc}')
+        errors += 1
+
     name = meta.get('name')
     if not isinstance(name, str) or not NAME_RE.match(name):
         fail(f'{skill_dir}: invalid name {name!r}')
         errors += 1
     elif skill_dir.parent.name != 'archived' and name != skill_dir.name:
         fail(f'{skill_dir}: meta name {name!r} does not match folder name {skill_dir.name!r}')
+        errors += 1
+
+    frontmatter_name = frontmatter.get('name') if isinstance(frontmatter, dict) else None
+    if isinstance(frontmatter_name, str) and frontmatter_name != name:
+        fail(f'{skill_dir}: frontmatter name {frontmatter_name!r} does not match _meta.json name {name!r}')
         errors += 1
 
     version = meta.get('version')
@@ -170,6 +209,12 @@ def validate_meta(skill_dir: Path, namespace_policy=None) -> int:
             fail(f'{skill_dir}: distribution.channel must be non-empty string')
             errors += 1
 
+    if distribution and distribution.get('installable') is True:
+        description = frontmatter.get('description') if isinstance(frontmatter, dict) else None
+        if not isinstance(description, str) or not description.strip():
+            fail(f'{skill_dir}: missing frontmatter description for installable skill')
+            errors += 1
+
     if _is_registry_skill_dir(skill_dir):
         report = namespace_policy_report(skill_dir, root=ROOT, policy=namespace_policy)
         for message in report.get('errors', []):
@@ -177,8 +222,6 @@ def validate_meta(skill_dir: Path, namespace_policy=None) -> int:
             errors += 1
 
     return errors
-
-
 
 
 def validate_ai_index(root: Path) -> int:
@@ -194,6 +237,7 @@ def validate_ai_index(root: Path) -> int:
     for error in errors:
         fail(f'{path}: {error}')
     return len(errors)
+
 
 def collect_dirs(args):
     if args:

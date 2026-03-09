@@ -13,6 +13,18 @@ INSTALL_POLICY = {
     'require_sha256': True,
 }
 
+OPENCLAW_INTEROP = {
+    'runtime_targets': ['~/.openclaw/skills', '~/.openclaw/workspace/skills'],
+    'import_supported': True,
+    'export_supported': True,
+    'public_publish': {
+        'clawhub': {
+            'supported': True,
+            'default': False,
+        }
+    },
+}
+
 
 def _utc_now_iso():
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
@@ -72,6 +84,20 @@ def _meta_for_entry(root: Path, entry):
         return _load_json(meta_path)
     except Exception:
         return {}
+
+
+def _openclaw_interop_payload():
+    return {
+        'runtime_targets': list(OPENCLAW_INTEROP['runtime_targets']),
+        'import_supported': True,
+        'export_supported': True,
+        'public_publish': {
+            'clawhub': {
+                'supported': True,
+                'default': False,
+            }
+        },
+    }
 
 
 def build_ai_index(*, root: Path, catalog_entries: list, distribution_entries: list) -> dict:
@@ -134,6 +160,9 @@ def build_ai_index(*, root: Path, catalog_entries: list, distribution_entries: l
                 'requires': {
                     'tools': requires.get('tools') or [],
                     'env': requires.get('env') or [],
+                },
+                'interop': {
+                    'openclaw': _openclaw_interop_payload(),
                 },
                 'versions': {version: version_map[version] for version in versions},
             }
@@ -220,6 +249,34 @@ def validate_ai_index_payload(payload: dict) -> list:
                 if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
                     errors.append(f'{prefix}.requires.{field} must be an array of strings')
 
+        interop = skill.get('interop')
+        if not isinstance(interop, dict):
+            errors.append(f'{prefix}.interop must be an object')
+        else:
+            openclaw = interop.get('openclaw')
+            if not isinstance(openclaw, dict):
+                errors.append(f'{prefix}.interop.openclaw must be an object')
+            else:
+                runtime_targets = openclaw.get('runtime_targets')
+                if runtime_targets != OPENCLAW_INTEROP['runtime_targets']:
+                    errors.append(f'{prefix}.interop.openclaw.runtime_targets must equal the documented OpenClaw targets')
+                if openclaw.get('import_supported') is not True:
+                    errors.append(f'{prefix}.interop.openclaw.import_supported must be true')
+                if openclaw.get('export_supported') is not True:
+                    errors.append(f'{prefix}.interop.openclaw.export_supported must be true')
+                public_publish = openclaw.get('public_publish')
+                if not isinstance(public_publish, dict):
+                    errors.append(f'{prefix}.interop.openclaw.public_publish must be an object')
+                else:
+                    clawhub = public_publish.get('clawhub')
+                    if not isinstance(clawhub, dict):
+                        errors.append(f'{prefix}.interop.openclaw.public_publish.clawhub must be an object')
+                    else:
+                        if clawhub.get('supported') is not True:
+                            errors.append(f'{prefix}.interop.openclaw.public_publish.clawhub.supported must be true')
+                        if clawhub.get('default') is not False:
+                            errors.append(f'{prefix}.interop.openclaw.public_publish.clawhub.default must be false')
+
         available_versions = skill.get('available_versions') if isinstance(skill.get('available_versions'), list) else []
         versions = skill.get('versions')
         if not isinstance(versions, dict):
@@ -234,24 +291,26 @@ def validate_ai_index_payload(payload: dict) -> list:
         for version in available_versions:
             if version not in versions:
                 errors.append(f'{prefix}.available_versions contains {version!r} missing from versions')
-        for version, payload in versions.items():
+        for version, version_payload in versions.items():
             version_prefix = f'{prefix}.versions.{version}'
-            if not isinstance(payload, dict):
+            if not isinstance(version_payload, dict):
                 errors.append(f'{version_prefix} must be an object')
                 continue
-            if payload.get('installable') is True:
+            if version_payload.get('installable') is True:
                 for field in ['manifest_path', 'bundle_path', 'bundle_sha256', 'attestation_path', 'published_at']:
-                    value = payload.get(field)
+                    value = version_payload.get(field)
                     if not isinstance(value, str) or not value.strip():
                         errors.append(f'{version_prefix}.{field} must be a non-empty string')
                 for field in ['manifest_path', 'bundle_path', 'attestation_path']:
-                    value = payload.get(field)
+                    value = version_payload.get(field)
                     if isinstance(value, str) and value.strip() and not _relative_repo_path(value):
                         errors.append(f'{version_prefix}.{field} must be repo-relative')
-                signature_path = payload.get('attestation_signature_path')
-                if signature_path is not None and (not isinstance(signature_path, str) or not signature_path.strip() or not _relative_repo_path(signature_path)):
+                signature_path = version_payload.get('attestation_signature_path')
+                if signature_path is not None and (
+                    not isinstance(signature_path, str) or not signature_path.strip() or not _relative_repo_path(signature_path)
+                ):
                     errors.append(f'{version_prefix}.attestation_signature_path must be repo-relative when present')
-                resolution = payload.get('resolution')
+                resolution = version_payload.get('resolution')
                 if not isinstance(resolution, dict):
                     errors.append(f'{version_prefix}.resolution must be an object')
                 else:
