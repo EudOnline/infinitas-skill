@@ -1,7 +1,8 @@
 {
+  "$schema": "../schemas/signing.schema.json",
   "namespace": "infinitas-skill",
   "allowed_signers": "config/allowed_signers",
-  "signature_ext": ".sshsig",
+  "signature_ext": ".ssig",
   "git_tag": {
     "format": "ssh",
     "allowed_signers": "config/allowed_signers",
@@ -9,5 +10,18 @@
     "signing_key_env": "INFINITAS_SKILL_GIT_SIGNING_KEY",
     "note": "Stable releases require repo-managed verified SSH-signed git tags"
   },
-  "note": "SSH signing settings for provenance bundles and stable release tags"
+  "attestation": {
+    "format": "ssh",
+    "namespace": "infinitas-skill",
+    "allowed_signers": "config/allowed_signers",
+    "signature_ext": ".ssig",
+    "signing_key_env": "INFINITAS_SKILL_GIT_SIGNING_KEY",
+    "policy": {
+      "mode": "enforce",
+      "require_verified_attestation_for_release_output": true,
+      "require_verified_attestation_for_distribution": true
+    },
+    "note": "Stable release provenance must be SSH-signed and verified against repo-managed allowed signers"
+  },
+  "note": "SSH signing settings for stable release tags and release attestations"
 }

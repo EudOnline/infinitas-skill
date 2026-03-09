@@ -1,70 +1,149 @@
 #!/usr/bin/env python3
+import argparse
 import json
 import sys
 from datetime import datetime, timezone
-from pathlib import Path
 
-from release_lib import ROOT, collect_release_state, resolve_skill, ReleaseError
+from attestation_lib import AttestationError, load_attestation_config, resolve_attestation_signer
+from dependency_lib import plan_from_skill_dir
+from registry_source_lib import find_registry, load_registry_config, registry_identity
+from release_lib import ROOT, ReleaseError, collect_release_state, resolve_skill
 
-if len(sys.argv) != 2:
-    print('usage: scripts/generate-provenance.py <skill-dir>', file=sys.stderr)
-    raise SystemExit(1)
 
-try:
-    skill_dir = resolve_skill(ROOT, sys.argv[1])
-    state = collect_release_state(skill_dir, mode='stable-release')
-except ReleaseError as exc:
-    print(f'FAIL: {exc}', file=sys.stderr)
-    raise SystemExit(1)
+def parse_args():
+    parser = argparse.ArgumentParser(description='Generate a stable release attestation payload for a skill')
+    parser.add_argument('skill', help='Skill name or path')
+    parser.add_argument(
+        '--output-name',
+        help='Final attestation filename; used to record the detached signature sidecar name',
+    )
+    parser.add_argument(
+        '--signer',
+        help='Attestation signer identity; defaults to the verified release tag signer',
+    )
+    return parser.parse_args()
 
-if not state['release_ready']:
-    for error in state['errors']:
-        print(f'FAIL: {error}', file=sys.stderr)
-    raise SystemExit(1)
 
-meta = json.loads((skill_dir / '_meta.json').read_text(encoding='utf-8'))
-default_registry = json.loads((ROOT / 'config' / 'registry-sources.json').read_text(encoding='utf-8')).get('default_registry')
-remote_tag = state['git']['remote_tag']
-local_tag = state['git']['local_tag']
-tag_name = state['git']['expected_tag']
-commit = remote_tag.get('target_commit') or local_tag.get('target_commit') or state['git']['head_commit']
+def unique(values):
+    result = []
+    seen = set()
+    for value in values:
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+    return result
 
-out = {
-    'generated_at': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
-    'skill': {
-        'name': meta.get('name'),
-        'version': meta.get('version'),
-        'status': meta.get('status'),
-        'path': str(skill_dir.relative_to(ROOT)),
-        'derived_from': meta.get('derived_from'),
-        'snapshot_of': meta.get('snapshot_of'),
-    },
-    'git': {
-        'repo_url': state['git'].get('repo_url'),
-        'branch': state['git'].get('branch'),
-        'upstream': state['git'].get('upstream'),
-        'commit': commit,
-        'head_commit': state['git'].get('head_commit'),
-        'expected_tag': tag_name,
-        'release_ref': f'refs/tags/{tag_name}',
-        'remote': remote_tag.get('name'),
-        'remote_tag_object': remote_tag.get('tag_object'),
-        'remote_tag_commit': remote_tag.get('target_commit'),
-        'signed_tag_verified': True,
-        'tag_signer': local_tag.get('signer'),
-    },
-    'source_snapshot': {
-        'kind': 'git-tag',
-        'tag': tag_name,
-        'ref': f'refs/tags/{tag_name}',
-        'commit': commit,
-        'remote': remote_tag.get('name'),
-        'upstream': state['git'].get('upstream'),
-        'immutable': True,
-        'pushed': True,
-    },
-    'registry': {
-        'default_registry': default_registry,
-    },
-}
-print(json.dumps(out, ensure_ascii=False, indent=2))
+
+def main():
+    args = parse_args()
+    try:
+        skill_dir = resolve_skill(ROOT, args.skill)
+        state = collect_release_state(skill_dir, mode='stable-release')
+    except ReleaseError as exc:
+        print(f'FAIL: {exc}', file=sys.stderr)
+        raise SystemExit(1)
+
+    if not state['release_ready']:
+        for error in state['errors']:
+            print(f'FAIL: {error}', file=sys.stderr)
+        raise SystemExit(1)
+
+    try:
+        attestation_cfg = load_attestation_config(ROOT)
+        signer_identity = resolve_attestation_signer(args.signer, state)
+    except AttestationError as exc:
+        print(f'FAIL: {exc}', file=sys.stderr)
+        raise SystemExit(1)
+
+    meta = json.loads((skill_dir / '_meta.json').read_text(encoding='utf-8'))
+    registry_cfg = load_registry_config(ROOT)
+    default_registry = registry_cfg.get('default_registry')
+    default_registry_entry = find_registry(registry_cfg, default_registry) if default_registry else None
+    source_info = registry_identity(ROOT, default_registry_entry) if default_registry_entry else {'registry_name': default_registry}
+    dependency_plan = plan_from_skill_dir(
+        skill_dir,
+        source_registry=default_registry,
+        source_info=source_info,
+        mode='install',
+    )
+
+    consulted_registries = unique(
+        [default_registry]
+        + list(dependency_plan.get('registries_consulted', []))
+        + [step.get('registry') for step in dependency_plan.get('steps', [])]
+    )
+    resolved_registries = []
+    for name in consulted_registries:
+        reg = find_registry(registry_cfg, name)
+        if reg:
+            resolved_registries.append(registry_identity(ROOT, reg))
+        else:
+            resolved_registries.append({'registry_name': name, 'missing': True})
+
+    remote_tag = state['git']['remote_tag']
+    local_tag = state['git']['local_tag']
+    tag_name = state['git']['expected_tag']
+    commit = remote_tag.get('target_commit') or local_tag.get('target_commit') or state['git']['head_commit']
+    output_name = args.output_name or f"{meta.get('name')}-{meta.get('version')}.json"
+
+    out = {
+        '$schema': 'schemas/provenance.schema.json',
+        'schema_version': 1,
+        'kind': 'skill-release-attestation',
+        'generated_at': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+        'skill': {
+            'name': meta.get('name'),
+            'version': meta.get('version'),
+            'status': meta.get('status'),
+            'path': str(skill_dir.relative_to(ROOT)),
+            'derived_from': meta.get('derived_from'),
+            'snapshot_of': meta.get('snapshot_of'),
+        },
+        'git': {
+            'repo_url': state['git'].get('repo_url'),
+            'branch': state['git'].get('branch'),
+            'upstream': state['git'].get('upstream'),
+            'commit': commit,
+            'head_commit': state['git'].get('head_commit'),
+            'expected_tag': tag_name,
+            'release_ref': f'refs/tags/{tag_name}',
+            'remote': remote_tag.get('name'),
+            'remote_tag_object': remote_tag.get('tag_object'),
+            'remote_tag_commit': remote_tag.get('target_commit'),
+            'signed_tag_verified': True,
+            'tag_signer': local_tag.get('signer'),
+        },
+        'source_snapshot': {
+            'kind': 'git-tag',
+            'tag': tag_name,
+            'ref': f'refs/tags/{tag_name}',
+            'commit': commit,
+            'remote': remote_tag.get('name'),
+            'upstream': state['git'].get('upstream'),
+            'immutable': True,
+            'pushed': True,
+        },
+        'registry': {
+            'default_registry': default_registry,
+            'registries_consulted': consulted_registries,
+            'resolved': resolved_registries,
+        },
+        'dependencies': dependency_plan,
+        'attestation': {
+            'format': attestation_cfg['format'],
+            'namespace': attestation_cfg['namespace'],
+            'allowed_signers': attestation_cfg['allowed_signers_rel'],
+            'signature_file': f'{output_name}{attestation_cfg["signature_ext"]}',
+            'signature_ext': attestation_cfg['signature_ext'],
+            'signer_identity': signer_identity,
+            'policy_mode': attestation_cfg['policy_mode'],
+            'require_verified_attestation_for_release_output': attestation_cfg['require_release_output'],
+            'require_verified_attestation_for_distribution': attestation_cfg['require_distribution'],
+        },
+    }
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+
+
+if __name__ == '__main__':
+    main()

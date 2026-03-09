@@ -2,11 +2,11 @@
 
 ## Milestones
 
-- 🚧 **v9 Registry Trust, Quorum, and Attestation** - Phases 1-5 (in progress)
+- ✅ **v9 Registry Trust, Quorum, and Attestation** - Phases 1-5 (completed 2026-03-09)
 
 ## Phases
 
-### 🚧 v9 Registry Trust, Quorum, and Attestation (In Progress)
+### ✅ v9 Registry Trust, Quorum, and Attestation (Completed)
 
 **Milestone Goal:** Turn existing registry governance intent into enforced policy for remote registry updates, dependency resolution, reviewer quorum, and release authenticity.
 
@@ -70,7 +70,7 @@ Plans:
 - [x] 04-01: Add clean-tree, upstream-sync, and signed-tag guards to release workflows
 - [x] 04-02: Update release docs/checklists to make immutable signed releases the default path
 
-#### Phase 5: Asymmetric Attestation and Verification
+#### ✅ Phase 5: Asymmetric Attestation and Verification
 **Goal**: Produce and verify release attestations that capture exact source and dependency context with asymmetric signatures managed by the repository.
 **Depends on**: Phase 4
 **Requirements**: [ATT-02, ATT-03]
@@ -81,9 +81,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 05-01: Expand provenance schema and generation to capture immutable release context
-- [ ] 05-02: Make SSH/asymmetric signing and verification first-class in release tooling
-- [ ] 05-03: Enforce attestation verification in release/distribution paths and document the bootstrap flow
+- [x] 05-01: Expand provenance schema and generation to capture immutable release context
+- [x] 05-02: Make SSH/asymmetric signing and verification first-class in release tooling
+- [x] 05-03: Enforce attestation verification in release/distribution paths and document the bootstrap flow
 
 ## Progress
 
@@ -93,4 +93,4 @@ Plans:
 | 2. Dependency Upgrade Planning and Conflict Solver | v9 | 3/3 | Completed | 2026-03-08 |
 | 3. Reviewer Groups and Quorum Enforcement | v9 | 3/3 | Completed | 2026-03-09 |
 | 4. Signed Release Invariants | v9 | 2/2 | Completed | 2026-03-09 |
-| 5. Asymmetric Attestation and Verification | v9 | 0/3 | Not started | - |
+| 5. Asymmetric Attestation and Verification | v9 | 3/3 | Completed | 2026-03-09 |

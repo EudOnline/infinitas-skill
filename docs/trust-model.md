@@ -21,7 +21,9 @@ Agent-created or agent-edited skills should land in `skills/incubating/` first.
 Promotion into `skills/active/` should require a human check, even if the change is small.
 
 ### 3. Secrets never live in skills
-API keys, cookies, bearer tokens, SSH material, and auth exports do not belong in this repo.
+API keys, cookies, bearer tokens, private SSH keys, and auth exports do not belong in this repo.
+
+Repository-managed public signer entries in `config/allowed_signers` are allowed and expected for stable release verification.
 
 ### 4. Distribution is opt-in
 A skill being present in the registry does not mean every agent should load it. Install or sync into local runtime directories deliberately.

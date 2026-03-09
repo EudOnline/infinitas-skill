@@ -36,6 +36,7 @@ def write_json(path: Path, payload):
 def make_env(extra=None):
     env = os.environ.copy()
     env['INFINITAS_SKIP_RELEASE_TESTS'] = '1'
+    env['INFINITAS_SKIP_ATTESTATION_TESTS'] = '1'
     if extra:
         env.update(extra)
     return env
@@ -213,7 +214,7 @@ def scenario_signed_tag_must_be_pushed():
 
 
 def scenario_signed_pushed_release_succeeds():
-    tmpdir, repo, _origin, _key_path, _identity = prepare_repo(include_signers=True)
+    tmpdir, repo, _origin, _key_path, identity = prepare_repo(include_signers=True)
     try:
         notes_path = tmpdir / 'release-notes.md'
         result = run(
@@ -234,6 +235,7 @@ def scenario_signed_pushed_release_succeeds():
         assert_contains(notes, '## Source Snapshot', 'release notes snapshot block')
         assert_contains(notes, FIXTURE_TAG, 'release notes tag reference')
         provenance_path = repo / 'catalog' / 'provenance' / f'{FIXTURE_NAME}-{FIXTURE_VERSION}.json'
+        signature_path = provenance_path.with_suffix(provenance_path.suffix + '.ssig')
         provenance = json.loads(provenance_path.read_text(encoding='utf-8'))
         if provenance['source_snapshot']['immutable'] is not True:
             fail(f"expected immutable source snapshot, got {provenance['source_snapshot']['immutable']!r}")
@@ -247,6 +249,19 @@ def scenario_signed_pushed_release_succeeds():
         remote_tag = run(['git', 'ls-remote', '--tags', 'origin', f'refs/tags/{FIXTURE_TAG}^{{}}'], cwd=repo).stdout.strip().split('\t', 1)[0]
         if provenance['git']['remote_tag_commit'] != remote_tag:
             fail(f"expected remote_tag_commit {remote_tag}, got {provenance['git']['remote_tag_commit']!r}")
+        if provenance.get('kind') != 'skill-release-attestation':
+            fail(f"unexpected provenance kind {provenance.get('kind')!r}")
+        if provenance.get('attestation', {}).get('signer_identity') != identity:
+            fail(
+                f"expected attestation signer_identity {identity!r}, got {provenance.get('attestation', {}).get('signer_identity')!r}"
+            )
+        if not provenance.get('registry', {}).get('resolved'):
+            fail('expected resolved registry context in release attestation')
+        if not provenance.get('dependencies', {}).get('steps'):
+            fail('expected dependency steps in release attestation')
+        if not signature_path.exists():
+            fail(f'missing SSH attestation signature {signature_path}')
+        run([sys.executable, str(repo / 'scripts' / 'verify-attestation.py'), str(provenance_path)], cwd=repo, env=make_env())
     finally:
         shutil.rmtree(tmpdir)
 

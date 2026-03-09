@@ -5,21 +5,21 @@
 See: `.planning/PROJECT.md` (updated 2026-03-09)
 
 **Core value:** Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
-**Current focus:** Phase 5 — Asymmetric Attestation and Verification
+**Current focus:** v9 complete — prepare milestone closeout or plan the next milestone
 
 ## Current Position
 
 Phase: 5 of 5 (Asymmetric Attestation and Verification)
 Plan: —
-Status: Ready to plan
-Last activity: 2026-03-09 — Completed Phase 4 implementation for signed release invariants, stable tag verification, and immutable release snapshot output
+Status: Completed
+Last activity: 2026-03-09 — Completed Phase 5 implementation for verified SSH release attestations, dependency-aware provenance, and policy-gated release artifacts
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
+- Total plans completed: 14
 - Average duration: n/a
 - Total execution time: n/a
 
@@ -31,10 +31,11 @@ Progress: [████████░░] 80%
 | 2 | 3 | n/a | n/a |
 | 3 | 3 | n/a | n/a |
 | 4 | 2 | n/a | n/a |
+| 5 | 3 | n/a | n/a |
 
 **Recent Trend:**
-- Last 5 plans: 03-01, 03-02, 03-03, 04-01, 04-02
-- Trend: Advancing
+- Last 5 plans: 03-03, 04-01, 04-02, 05-01, 05-02, 05-03
+- Trend: Milestone completed
 
 ## Accumulated Context
 
@@ -52,6 +53,7 @@ Decisions are logged in `PROJECT.md`.
 - 2026-03-09: Make computed review state authoritative, while keeping `_meta.json.review_state` synced as a compatibility field.
 - 2026-03-09: Drive reviewer allowlists and quorum from policy-defined reviewer groups with stage/risk overrides.
 - 2026-03-09: Make signed, pushed `skill/<name>/v<version>` tags the authoritative stable release snapshot and require explicit preview mode for pre-release note inspection.
+- 2026-03-09: Make SSH-signed, repo-verified release attestations mandatory for written release artifacts when the v9 attestation policy is enabled.
 
 ### Pending Todos
 
@@ -63,6 +65,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-09 08:17 GMT+8
-Stopped at: Phase 4 completed; Phase 5 is the next planning target
+Last session: 2026-03-09 09:16 GMT+8
+Stopped at: v9 milestone completed; next logical step is milestone closeout or planning the next milestone
 Resume file: None

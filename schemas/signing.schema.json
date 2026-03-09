@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openai.invalid/infinitas-skill/signing.schema.json",
+  "title": "infinitas-skill signing configuration",
+  "type": "object",
+  "required": [
+    "namespace",
+    "allowed_signers",
+    "signature_ext",
+    "git_tag",
+    "attestation"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "namespace": {
+      "type": "string",
+      "minLength": 1
+    },
+    "allowed_signers": {
+      "type": "string",
+      "minLength": 1
+    },
+    "signature_ext": {
+      "type": "string",
+      "pattern": "^\\..+"
+    },
+    "git_tag": {
+      "type": "object",
+      "required": [
+        "format",
+        "allowed_signers",
+        "remote",
+        "signing_key_env"
+      ],
+      "properties": {
+        "format": {
+          "type": "string",
+          "enum": [
+            "ssh",
+            "openpgp",
+            "x509"
+          ]
+        },
+        "allowed_signers": {
+          "type": "string",
+          "minLength": 1
+        },
+        "remote": {
+          "type": "string",
+          "minLength": 1
+        },
+        "signing_key_env": {
+          "type": "string",
+          "minLength": 1
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "attestation": {
+      "type": "object",
+      "required": [
+        "format",
+        "namespace",
+        "allowed_signers",
+        "signature_ext",
+        "signing_key_env",
+        "policy"
+      ],
+      "properties": {
+        "format": {
+          "type": "string",
+          "const": "ssh"
+        },
+        "namespace": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allowed_signers": {
+          "type": "string",
+          "minLength": 1
+        },
+        "signature_ext": {
+          "type": "string",
+          "pattern": "^\\..+"
+        },
+        "signing_key_env": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policy": {
+          "type": "object",
+          "required": [
+            "mode",
+            "require_verified_attestation_for_release_output",
+            "require_verified_attestation_for_distribution"
+          ],
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "advisory",
+                "enforce"
+              ]
+            },
+            "require_verified_attestation_for_release_output": {
+              "type": "boolean"
+            },
+            "require_verified_attestation_for_distribution": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "note": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": true
+}

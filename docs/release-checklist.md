@@ -28,5 +28,8 @@ Before creating stable release output for an active skill:
 - [ ] expected tag `skill/<name>/v<version>` does not already point at the wrong commit
 - [ ] default stable tag is created with `scripts/release-skill.sh <name> --push-tag` or `scripts/release-skill-tag.sh <name> --create --push`
 - [ ] `scripts/check-release-state.py <name>` passes before writing notes, provenance, or GitHub releases
+- [ ] any command that writes release notes or distribution output also includes `--write-provenance` while the v9 attestation policy is enabled
 - [ ] release notes or provenance reference `refs/tags/skill/<name>/v<version>` instead of local-only `HEAD`
-- [ ] any optional provenance signing happens after the signed git tag has already been verified
+- [ ] `catalog/provenance/<name>-<version>.json` records the resolved registry context, dependency plan, and attestation signer identity
+- [ ] `scripts/verify-attestation.py catalog/provenance/<name>-<version>.json` passes against repo-managed allowed signers
+- [ ] any optional legacy HMAC provenance signing happens after the required SSH attestation has already been verified

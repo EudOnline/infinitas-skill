@@ -5,12 +5,16 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 python3 scripts/check-registry-sources.py
+python3 scripts/check-signing-config.py
 python3 scripts/validate-registry.py
 python3 scripts/check-registry-integrity.py
 python3 scripts/check-promotion-policy.py
 python3 scripts/test-review-governance.py
 if [[ "${INFINITAS_SKIP_RELEASE_TESTS:-0}" != "1" ]]; then
   python3 scripts/test-release-invariants.py
+fi
+if [[ "${INFINITAS_SKIP_ATTESTATION_TESTS:-0}" != "1" ]]; then
+  python3 scripts/test-attestation-verification.py
 fi
 
 while IFS= read -r dir; do

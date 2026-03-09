@@ -26,14 +26,14 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - ✓ Maintainer can validate skill metadata, registry integrity, and promotion policy locally and in CI via `scripts/check-skill.sh`, `scripts/check-all.sh`, and `.github/workflows/validate.yml`.
 - ✓ Maintainer can promote approved skills and regenerate install/search catalogs via `scripts/promote-skill.sh` and `scripts/build-catalog.sh`.
 - ✓ Maintainer can install, sync, switch, and roll back skills into agent-local directories via `scripts/install-skill.sh`, `scripts/sync-skill.sh`, `scripts/switch-installed-skill.sh`, and `scripts/rollback-installed-skill.sh`.
-- ✓ Maintainer can preview a release, verify stable release invariants, create signed tags, and emit immutable release notes/provenance via `scripts/check-release-state.py`, `scripts/release-skill-tag.sh`, `scripts/release-skill.sh`, and `scripts/generate-provenance.py`.
+- ✓ Maintainer can preview a release, verify stable release invariants, create signed tags, emit dependency-aware release attestations, and verify those attestations via `scripts/check-release-state.py`, `scripts/release-skill-tag.sh`, `scripts/release-skill.sh`, `scripts/generate-provenance.py`, and `scripts/verify-attestation.py`.
 
 ### Active
 
-- [ ] Registry sync respects explicit remote fetch/update policy, trust enforcement, and immutable source selection.
+- [x] Registry sync respects explicit remote fetch/update policy, trust enforcement, and immutable source selection.
 - ✓ Dependency upgrade planning can detect and reject cross-source or cross-version conflicts deterministically.
 - [x] Promotion depends on computed reviewer-group quorum instead of mutable review metadata.
-- [ ] Releases require asymmetric attestation payloads and repository-managed verification beyond the signed-tag invariant.
+- [x] Releases require asymmetric attestation payloads and repository-managed verification beyond the signed-tag invariant.
 
 ### Out of Scope
 
@@ -50,6 +50,7 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - Dependency validation exists today (`scripts/check-registry-integrity.py`, `scripts/check-install-target.py`), but deterministic upgrade planning and conflict solving did not exist before v9.
 - Review and promotion governance exists today (`scripts/request-review.sh`, `scripts/approve-skill.sh`, `scripts/review-status.py`, `policy/promotion-policy.json`), and Phase 3 made computed review state authoritative.
 - Stable release tooling now rejects dirty or out-of-sync repositories, requires a verified signed `skill/<name>/v<version>` tag, and records immutable pushed source snapshots in release output.
+- Stable release attestations now record resolved registry context, dependency resolution context, and signer identity, and written release artifacts are gated on SSH verification against repository-managed allowed signers.
 - `config/allowed_signers` is still bootstrapped with guidance comments only; maintainers must commit real trusted signer entries before the first actual stable release or Phase 5 attestation verification can succeed.
 
 ## Constraints
@@ -69,6 +70,7 @@ Maintainers can publish and distribute private skills with deterministic, audita
 | Keep the v9 implementation shell/python/json-native | This minimizes migration risk and fits the current execution model | ✓ Good |
 | Treat computed quorum and asymmetric attestation as enforcement points, not documentation-only guidance | The highest-risk gaps are governance and authenticity paths that are currently optional or mutable | ✓ Good |
 | Make stable release output depend on verified, pushed `skill/<name>/v<version>` tags | Release notes and provenance must resolve against immutable source snapshots instead of best-effort local branch state | ✓ Good |
+| Require verified SSH attestations for written release artifacts | Release notes and distribution output need source, dependency, and signer context bound to a repo-managed trust root | ✓ Good |
 
 ---
-*Last updated: 2026-03-09 after Phase 4 implementation*
+*Last updated: 2026-03-09 after Phase 5 implementation*

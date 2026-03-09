@@ -1,4 +1,4 @@
-# Release and Tag Strategy
+# Release, Tag, and Attestation Strategy
 
 This repository tracks skill evolution inside git, but stable release artifacts now resolve against immutable git tags instead of best-effort local branch state.
 
@@ -48,6 +48,15 @@ Stable release tooling enforces all of the following before it will write releas
 
 If any of those invariants fail, `scripts/release-skill.sh` and `scripts/check-release-state.py` exit with actionable errors.
 
+## Stable attestation policy
+
+Phase 5 adds a second enforcement layer on top of the signed-tag baseline.
+
+- `scripts/release-skill.sh <name> --write-provenance` now writes a release attestation payload that includes the immutable source snapshot, resolved registry context, dependency resolution plan, and signer identity.
+- That payload is SSH-signed and verified against `config/allowed_signers` before the release helper accepts it as valid.
+- When the v9 attestation policy is enabled, commands that write release artifacts or distribution output must also use `--write-provenance`; otherwise the helper rejects them with an actionable error.
+- Use `scripts/verify-attestation.py <attestation.json>` to verify a generated attestation bundle directly.
+
 ## Bootstrap the signer allowlist
 
 This repository intentionally keeps the stable release trust root in-versioned files.
@@ -59,6 +68,8 @@ release-bot ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI...
 ```
 
 Then commit and push that change before creating the tag. A comment-only or empty `config/allowed_signers` file blocks stable releases by design.
+
+Committed signer entries are expected to contain only public signer identities and public keys. Never commit private SSH keys.
 
 ## Git SSH signing setup
 
@@ -132,13 +143,18 @@ scripts/check-release-state.py repo-audit
 
 # write release notes and provenance from the pushed signed tag
 scripts/release-skill.sh repo-audit --notes-out /tmp/repo-audit-release.md --write-provenance
+
+# verify the resulting attestation bundle
+scripts/verify-attestation.py catalog/provenance/repo-audit-0.3.0.json
 ```
 
 If you also pass `--github-release`, the helper will call `gh release create` with notes that include the immutable source snapshot.
 
+Under the v9 policy, `--github-release` and `--notes-out` must be paired with `--write-provenance` so the emitted artifact is backed by a verified attestation.
+
 ## Provenance signing
 
-Once the signed git tag is already verified, you can optionally add provenance sidecar signatures.
+Once the signed git tag is already verified, the SSH release attestation is the authoritative verification path. You can still add optional sidecar signatures afterward.
 
 If `INFINITAS_SKILL_SIGNING_KEY` is set, release tooling can sign provenance bundles via:
 
@@ -146,18 +162,19 @@ If `INFINITAS_SKILL_SIGNING_KEY` is set, release tooling can sign provenance bun
 scripts/release-skill.sh repo-audit --write-provenance --sign-provenance
 ```
 
-That produces a sidecar signature file (`.sig.json`) and verifies it immediately.
+That produces a legacy HMAC sidecar (`.sig.json`) and verifies it immediately. It does not replace the required SSH attestation.
 
 ## SSH provenance signing
 
-In addition to HMAC signing, provenance can be signed with SSH keys:
+In addition to the automatic SSH attestation flow in `scripts/release-skill.sh --write-provenance`, you can sign a payload manually with SSH keys:
 
 ```bash
 scripts/release-skill.sh repo-audit --write-provenance --ssh-sign-provenance --ssh-key ~/.ssh/id_ed25519
 ```
 
-To verify, provide the signer identity and an allowed signers file:
+To verify, either use the high-level attestation verifier or the shell wrapper:
 
 ```bash
+scripts/verify-attestation.py catalog/provenance/repo-audit-0.3.0.json
 scripts/release-skill.sh repo-audit --write-provenance --ssh-verify-provenance --signer registry-signer
 ```

@@ -107,6 +107,25 @@ config = json.loads((root / 'config' / 'signing.json').read_text(encoding='utf-8
 print((config.get('git_tag') or {}).get('remote', 'origin'))
 PY
 )"
+ALLOWED_SIGNERS_REL="$(python3 - "$ROOT" <<'PY'
+import json, sys
+from pathlib import Path
+root = Path(sys.argv[1])
+config = json.loads((root / 'config' / 'signing.json').read_text(encoding='utf-8'))
+tag = config.get('git_tag') or {}
+print(tag.get('allowed_signers') or config.get('allowed_signers') or 'config/allowed_signers')
+PY
+)"
+ALLOWED_SIGNERS_PATH="$(python3 - "$ROOT" <<'PY'
+import json, sys
+from pathlib import Path
+root = Path(sys.argv[1])
+config = json.loads((root / 'config' / 'signing.json').read_text(encoding='utf-8'))
+tag = config.get('git_tag') or {}
+allowed = tag.get('allowed_signers') or config.get('allowed_signers') or 'config/allowed_signers'
+print((root / allowed).resolve())
+PY
+)"
 
 signing_key_value() {
   local env_value="${!SIGNING_KEY_ENV:-}"
@@ -118,10 +137,10 @@ signing_key_value() {
 }
 
 ensure_repo_signers() {
-  if grep -Eq '^[[:space:]]*[^#[:space:]]' "$ROOT/config/allowed_signers" 2>/dev/null; then
+  if grep -Eq '^[[:space:]]*[^#[:space:]]' "$ALLOWED_SIGNERS_PATH" 2>/dev/null; then
     return 0
   fi
-  echo "FAIL: config/allowed_signers has no signer entries; add trusted release signers before creating stable release tags" >&2
+  echo "FAIL: $ALLOWED_SIGNERS_REL has no signer entries; add trusted release signers before creating stable release tags" >&2
   exit 1
 }
 

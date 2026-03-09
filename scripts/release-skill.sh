@@ -25,6 +25,22 @@ SSH_SIGN_PROVENANCE=0
 SSH_VERIFY_PROVENANCE=0
 SSH_KEY=""
 SIGNER=""
+readarray -t ATT_CFG < <(python3 - <<'PY' "$ROOT"
+import json, sys
+from pathlib import Path
+root = Path(sys.argv[1])
+config = json.loads((root / 'config' / 'signing.json').read_text(encoding='utf-8'))
+att = config.get('attestation') or {}
+policy = att.get('policy') or {}
+mode = policy.get('mode', 'enforce')
+print(att.get('signature_ext') or config.get('signature_ext') or '.ssig')
+print('1' if policy.get('require_verified_attestation_for_release_output', mode == 'enforce') else '0')
+print('1' if policy.get('require_verified_attestation_for_distribution', mode == 'enforce') else '0')
+PY
+)
+ATT_SIGNATURE_EXT="${ATT_CFG[0]}"
+ATT_REQUIRE_RELEASE="${ATT_CFG[1]}"
+ATT_REQUIRE_DISTRIBUTION="${ATT_CFG[2]}"
 
 resolve_skill() {
   local name="$1"
@@ -163,6 +179,25 @@ if [[ $UNSIGNED_TAG -eq 1 && ($PUSH_TAG -eq 1 || $GITHUB_RELEASE -eq 1 || $WRITE
   exit 1
 fi
 
+if [[ $ATT_REQUIRE_RELEASE -eq 1 && -n "$NOTES_OUT" && $WRITE_PROVENANCE -eq 0 ]]; then
+  rm -f "$META_JSON"
+  echo "v9 attestation policy requires --write-provenance before writing release notes or other release artifacts" >&2
+  exit 1
+fi
+
+if [[ $ATT_REQUIRE_DISTRIBUTION -eq 1 && $GITHUB_RELEASE -eq 1 && $WRITE_PROVENANCE -eq 0 ]]; then
+  rm -f "$META_JSON"
+  echo "v9 attestation policy requires --write-provenance before creating a GitHub release" >&2
+  exit 1
+fi
+
+AUTO_VERIFY_ATTESTATION=0
+if [[ $WRITE_PROVENANCE -eq 1 && ($ATT_REQUIRE_RELEASE -eq 1 || $ATT_REQUIRE_DISTRIBUTION -eq 1) ]]; then
+  AUTO_VERIFY_ATTESTATION=1
+  SSH_SIGN_PROVENANCE=1
+  SSH_VERIFY_PROVENANCE=1
+fi
+
 print_raw_notes() {
   python3 - <<'PY' "$META_JSON"
 import json, sys
@@ -249,6 +284,12 @@ import json, sys
 print(json.load(open(sys.argv[1], encoding='utf-8'))['git']['local_tag'].get('signer') or '')
 PY
 )"
+  ATTESTATION_KEY="$(python3 - <<'PY' "$STATE_JSON"
+import json, sys
+state = json.load(open(sys.argv[1], encoding='utf-8'))
+print((state.get('signing') or {}).get('signing_key') or '')
+PY
+)"
   echo "skill: $NAME"
   echo "version: $VERSION"
   echo "status: $STATUS"
@@ -272,8 +313,26 @@ if [[ $WRITE_PROVENANCE -eq 1 ]]; then
   mkdir -p "$ROOT/catalog/provenance"
   PROV="$ROOT/catalog/provenance/$NAME-$VERSION.json"
   TMP_PROV="$(mktemp)"
-  python3 "$ROOT/scripts/generate-provenance.py" "$DIR" > "$TMP_PROV"
+  EFFECTIVE_SIGNER="$SIGNER"
+  [[ -n "$EFFECTIVE_SIGNER" ]] || EFFECTIVE_SIGNER="$SIGNER_NAME"
+  EFFECTIVE_SSH_KEY="$SSH_KEY"
+  [[ -n "$EFFECTIVE_SSH_KEY" ]] || EFFECTIVE_SSH_KEY="$ATTESTATION_KEY"
+  GENERATE_ARGS=(python3 "$ROOT/scripts/generate-provenance.py" "$DIR" --output-name "$(basename "$PROV")")
+  if [[ -n "$EFFECTIVE_SIGNER" ]]; then
+    GENERATE_ARGS+=(--signer "$EFFECTIVE_SIGNER")
+  fi
+  "${GENERATE_ARGS[@]}" > "$TMP_PROV"
+  TMP_SSH_SIG="$TMP_PROV$ATT_SIGNATURE_EXT"
+  PROV_SSH_SIG="$PROV$ATT_SIGNATURE_EXT"
+  if [[ $SSH_SIGN_PROVENANCE -eq 1 ]]; then
+    [[ -n "$EFFECTIVE_SIGNER" ]] || { echo "cannot determine attestation signer identity; pass --signer or create a verified repo-managed signed tag first" >&2; rm -f "$TMP_PROV"; exit 1; }
+    [[ -n "$EFFECTIVE_SSH_KEY" ]] || { echo "missing SSH attestation signing key; pass --ssh-key or configure the repo signing key before writing provenance" >&2; rm -f "$TMP_PROV"; exit 1; }
+    "$ROOT/scripts/sign-provenance-ssh.sh" "$TMP_PROV" --key "$EFFECTIVE_SSH_KEY" >/dev/null
+  fi
   mv "$TMP_PROV" "$PROV"
+  if [[ -f "$TMP_SSH_SIG" ]]; then
+    mv "$TMP_SSH_SIG" "$PROV_SSH_SIG"
+  fi
   echo "wrote provenance: $PROV"
   if [[ $SIGN_PROVENANCE -eq 1 ]]; then
     python3 "$ROOT/scripts/sign-provenance.py" "$PROV" >/dev/null
@@ -281,14 +340,17 @@ if [[ $WRITE_PROVENANCE -eq 1 ]]; then
     echo "signed provenance: $PROV.sig.json"
   fi
   if [[ $SSH_SIGN_PROVENANCE -eq 1 ]]; then
-    [[ -n "$SSH_KEY" ]] || { echo "--ssh-key is required for --ssh-sign-provenance" >&2; exit 1; }
-    "$ROOT/scripts/sign-provenance-ssh.sh" "$PROV" --key "$SSH_KEY" >/dev/null
-    echo "ssh-signed provenance: $PROV.ssig"
+    echo "ssh-signed provenance: $PROV_SSH_SIG"
   fi
   if [[ $SSH_VERIFY_PROVENANCE -eq 1 ]]; then
-    [[ -n "$SIGNER" ]] || { echo "--signer is required for --ssh-verify-provenance" >&2; exit 1; }
-    "$ROOT/scripts/verify-provenance-ssh.sh" "$PROV" --identity "$SIGNER" >/dev/null
-    echo "ssh-verified provenance: $PROV.ssig"
+    VERIFY_ARGS=("$ROOT/scripts/verify-provenance-ssh.sh" "$PROV")
+    [[ -n "$EFFECTIVE_SIGNER" ]] && VERIFY_ARGS+=(--identity "$EFFECTIVE_SIGNER")
+    "${VERIFY_ARGS[@]}" >/dev/null
+    if [[ $AUTO_VERIFY_ATTESTATION -eq 1 ]]; then
+      echo "verified attestation: $PROV_SSH_SIG"
+    else
+      echo "ssh-verified provenance: $PROV_SSH_SIG"
+    fi
   fi
 fi
 

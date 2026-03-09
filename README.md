@@ -58,6 +58,7 @@ scripts/
 ├─ resolve-install-plan.py preflight deterministic dependency resolution plans
 ├─ list-registry-sources.py list configured registry sources
 ├─ check-registry-sources.py validate multi-registry source config
+├─ check-signing-config.py validate signing policy and allowed signer wiring
 ├─ sync-registry-source.sh sync one configured git registry into cache
 ├─ sync-all-registries.sh sync all enabled git registries
 ├─ check-registry-integrity.py validate dependency refs and graph integrity
@@ -65,10 +66,11 @@ scripts/
 ├─ request-review.sh     mark a skill under review and log the request
 ├─ review-status.py      summarize current computed approval quorum status
 ├─ approve-skill.sh      record reviewer approvals or rejections
-├─ sign-provenance.py    sign provenance bundles with an HMAC key
-├─ verify-provenance.py  verify signed provenance bundles
+├─ sign-provenance.py    sign provenance bundles with a legacy HMAC sidecar
+├─ verify-provenance.py  verify legacy HMAC provenance sidecars
 ├─ sign-provenance-ssh.sh sign provenance bundles with SSH keys
 ├─ verify-provenance-ssh.sh verify SSH-signed provenance bundles
+├─ verify-attestation.py verify release attestations against repo-managed SSH signers
 └─ diff-skill.sh         compare two skill folders or names
 
 skills/
@@ -129,7 +131,9 @@ scripts/check-release-state.py my-skill
 
 # Write immutable release notes and provenance from the pushed signed tag
 scripts/release-skill.sh my-skill --notes-out /tmp/my-skill-release.md --write-provenance
-# optional symmetric or SSH provenance signing still works after the tag is verified
+# verify the resulting attestation bundle against repo-managed signers
+scripts/verify-attestation.py catalog/provenance/my-skill-1.2.3.json
+# optional legacy HMAC sidecars still work after the SSH attestation is verified
 scripts/release-skill.sh my-skill --write-provenance --sign-provenance
 scripts/release-skill.sh my-skill --write-provenance --ssh-sign-provenance --ssh-key ~/.ssh/id_ed25519
 
@@ -159,8 +163,10 @@ GitHub Actions runs `scripts/check-all.sh` on pushes and pull requests. That val
 - secret scan
 - deterministic catalog generation
 - compatibility catalog generation
+- signing config and allowed-signer validation
 - computed review-group quorum enforcement
 - stable release invariant regression checks
+- asymmetric attestation regression checks
 
 If CI fails because catalog files changed, run:
 
@@ -193,7 +199,9 @@ and commit the updated `catalog/*.json`.
 - **Computed review state is authoritative**. `_meta.json.review_state` is kept for compatibility, but promotion and catalog data now derive from `reviews.json` plus repository policy.
 - **Reviewer groups and quorum are enforced**. Promotion policy can require configured reviewer groups, stage/risk-specific quorum, and rejection-free latest decisions.
 - **Stable releases require signed pushed tags**. Release notes and provenance now resolve against a verified `refs/tags/skill/<name>/v<version>` snapshot instead of best-effort `HEAD` state.
-- **Releases can emit signed provenance**. Provenance generation now depends on that immutable release snapshot, and symmetric or SSH sidecar signing can still be layered on afterward.
+- **Release attestations are authoritative under v9 policy**. Any written release artifact must be accompanied by a verified SSH attestation generated from the immutable release snapshot.
+- **Attestations capture dependency and registry context**. Release provenance now records the consulted registries, their resolved identity, and the dependency resolution plan used for the released skill.
+- **Legacy HMAC sidecars remain optional only**. `sign-provenance.py` / `verify-provenance.py` still work for compatibility, but repo-managed SSH attestation is the trusted verification path.
 
 ## Safety rules
 
