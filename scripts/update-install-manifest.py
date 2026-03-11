@@ -5,6 +5,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from install_manifest_lib import load_install_manifest, write_install_manifest
 from skill_identity_lib import normalize_skill_identity
 
 if len(sys.argv) not in {7, 8}:
@@ -39,11 +40,7 @@ try:
 except Exception:
     repo_url = None
 
-if manifest_path.exists():
-    manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
-else:
-    manifest = {'repo': repo_url, 'updated_at': None, 'skills': {}, 'history': {}}
-
+manifest = load_install_manifest(target_dir, repo=repo_url, allow_missing=True)
 manifest['repo'] = repo_url or manifest.get('repo')
 manifest['updated_at'] = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
 manifest.setdefault('skills', {})
@@ -110,5 +107,5 @@ manifest_entry = {
 if resolution_plan is not None:
     manifest_entry['resolution_plan'] = resolution_plan
 manifest['skills'][name] = manifest_entry
-manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+manifest_path = write_install_manifest(target_dir, manifest, repo=repo_url)
 print(f'updated manifest: {manifest_path}')

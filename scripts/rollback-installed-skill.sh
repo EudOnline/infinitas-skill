@@ -44,17 +44,27 @@ if [[ ${#POSITIONAL[@]} -eq 1 ]]; then
 fi
 
 MANIFEST="$TARGET_DIR/.infinitas-skill-install-manifest.json"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 [[ -f "$MANIFEST" ]] || { echo "missing manifest: $MANIFEST" >&2; exit 1; }
 
 ROLLBACK_INFO=()
 while IFS= read -r line; do
   ROLLBACK_INFO+=("$line")
-done < <(python3 - "$MANIFEST" "$NAME" "$STEPS" <<'PY'
-import json, sys
-manifest_path, name, steps = sys.argv[1:4]
+done < <(python3 - "$ROOT" "$MANIFEST" "$NAME" "$STEPS" <<'PY'
+import os
+import sys
+
+sys.path.insert(0, os.path.join(sys.argv[1], 'scripts'))
+from install_manifest_lib import InstallManifestError, load_install_manifest
+
+_manifest_root, manifest_path, name, steps = sys.argv[1:5]
 steps = int(steps)
-with open(manifest_path, 'r', encoding='utf-8') as f:
-    manifest = json.load(f)
+try:
+    manifest = load_install_manifest(manifest_path)
+except InstallManifestError as exc:
+    print(str(exc), file=sys.stderr)
+    raise SystemExit(1)
+
 history = list((manifest.get('history') or {}).get(name) or [])
 if len(history) < steps:
     raise SystemExit(f'not enough history entries for {name}; have {len(history)}, need {steps}')

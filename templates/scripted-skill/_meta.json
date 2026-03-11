@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "name": "scripted-skill",
   "version": "0.1.0",
   "status": "incubating",

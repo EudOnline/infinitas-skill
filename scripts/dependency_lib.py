@@ -5,6 +5,7 @@ from functools import cmp_to_key
 from pathlib import Path
 
 from distribution_lib import load_distribution_index
+from install_manifest_lib import InstallManifestError, load_install_manifest
 from registry_source_lib import load_registry_config, registry_identity, resolve_registry_root
 from skill_identity_lib import derive_qualified_name, normalize_skill_identity, parse_requested_skill
 
@@ -429,12 +430,12 @@ def _candidate_catalog_compare(left, right):
 
 def load_installed_state(target_dir):
     target = Path(target_dir)
-    manifest_path = target / '.infinitas-skill-install-manifest.json'
-    manifest = {}
-    if manifest_path.exists():
-        manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+    try:
+        manifest = load_install_manifest(target, allow_missing=True)
+    except InstallManifestError as exc:
+        raise DependencyError(str(exc)) from exc
     installed = {}
-    manifest_skills = (manifest.get('skills') or {}) if isinstance(manifest, dict) else {}
+    manifest_skills = manifest.get('skills') or {}
     if target.exists():
         for child in sorted(path for path in target.iterdir() if path.is_dir() and (path / '_meta.json').exists()):
             meta = load_meta(child / '_meta.json')

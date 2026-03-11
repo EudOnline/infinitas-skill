@@ -55,6 +55,16 @@ If a derived skill declares:
 
 `lineage-diff.sh` will try to resolve that exact ancestor version first. It prefers an archived snapshot when available, then falls back to a same-version active/incubating copy, and only then falls back to the plain skill name.
 
+## Compatibility guarantees
+
+The following behaviors are treated as compatibility guarantees for persisted installs:
+
+- `locked_version` remains authoritative for preventing silent unsafe upgrades
+- archived exact-version snapshot resolution remains available for historical installs
+- install-history based rollback must preserve enough source metadata to re-resolve the previous state
+
+These guarantees are part of `docs/compatibility-contract.md`, not just implementation details.
+
 ## Version-locked installs
 
 `install-skill.sh --version <active-version>` records a `locked_version` in the install manifest.
@@ -83,4 +93,10 @@ scripts/rollback-installed-skill.sh repo-audit ~/.openclaw/skills --force
 
 Manifest history stores previous install states so rollback can choose the last known version source automatically.
 
+If older local installs are still missing manifest schema metadata, use `scripts/migrate-install-manifest.py` before tightening validation in automation or CI.
+
 With V10 Phase 3, those stored states can now re-resolve immutable release artifacts through verified distribution manifests instead of depending only on a still-present working-tree copy under `skills/active/` or `skills/archived/`.
+
+## Regression coverage
+
+Compatibility-sensitive snapshot and rollback behavior should stay covered by `scripts/test-compat-regression.py` together with install-flow tests such as `scripts/test-distribution-install.py`.

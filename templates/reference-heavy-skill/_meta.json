@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "name": "reference-heavy-skill",
   "version": "0.1.0",
   "status": "incubating",

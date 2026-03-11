@@ -35,3 +35,15 @@ The matrix is only a generated view; edit `_meta.json`, then run:
 ```bash
 scripts/build-catalog.sh
 ```
+
+## What this does not guarantee
+
+`catalog/compatibility.json` reflects runtime compatibility claims derived from `_meta.json.agent_compatible`.
+
+It does **not** guarantee:
+
+- `_meta.json` file-format compatibility across schema versions
+- install-manifest compatibility across tool versions
+- migration support for persisted state
+
+Those concerns are defined separately in `docs/compatibility-contract.md`.

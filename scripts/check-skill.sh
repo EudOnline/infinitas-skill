@@ -40,6 +40,7 @@ from pathlib import Path
 root, path, basename, parent_stage, skill_name = sys.argv[1:6]
 sys.path.insert(0, os.path.join(root, 'scripts'))
 from skill_identity_lib import NamespacePolicyError, load_namespace_policy, namespace_policy_report, validate_identity_metadata
+from schema_version_lib import validate_schema_version
 
 meta_path = os.path.join(path, '_meta.json')
 status = 0
@@ -50,6 +51,11 @@ with open(meta_path, 'r', encoding='utf-8') as f:
     except Exception as e:
         print(f'FAIL: invalid JSON in _meta.json: {e}', file=sys.stderr)
         sys.exit(1)
+
+schema_version, schema_errors = validate_schema_version(meta)
+for error in schema_errors:
+    print(f'FAIL: {error}', file=sys.stderr)
+    status = 1
 
 root_path = Path(root).resolve()
 skill_path = Path(path).resolve()

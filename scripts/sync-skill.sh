@@ -49,13 +49,21 @@ MANIFEST="$TARGET_DIR/.infinitas-skill-install-manifest.json"
 INFO=()
 while IFS= read -r line; do
   INFO+=("$line")
-done < <(python3 - "$MANIFEST" "$NAME" <<'PY'
-import json, os, sys
-manifest_path, name = sys.argv[1:3]
+done < <(python3 - "$ROOT" "$MANIFEST" "$NAME" <<'PY'
+import os
+import sys
+
+sys.path.insert(0, os.path.join(sys.argv[1], 'scripts'))
+from install_manifest_lib import InstallManifestError, load_install_manifest
+
+_manifest_root, manifest_path, name = sys.argv[1:4]
 item = {}
 if os.path.isfile(manifest_path):
-    with open(manifest_path, 'r', encoding='utf-8') as f:
-        manifest = json.load(f)
+    try:
+        manifest = load_install_manifest(manifest_path)
+    except InstallManifestError as exc:
+        print(str(exc), file=sys.stderr)
+        raise SystemExit(1)
     skills = manifest.get('skills') or {}
     item = skills.get(name) or {}
     if not item:

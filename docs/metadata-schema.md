@@ -6,6 +6,7 @@ Every registry-managed skill should include `_meta.json`.
 
 ```json
 {
+  "schema_version": 1,
   "name": "repo-audit",
   "publisher": "lvxiaoer",
   "qualified_name": "lvxiaoer/repo-audit",
@@ -28,6 +29,7 @@ Every registry-managed skill should include `_meta.json`.
 
 ```json
 {
+  "schema_version": 1,
   "name": "repo-audit",
   "publisher": "lvxiaoer",
   "qualified_name": "lvxiaoer/repo-audit",
@@ -76,6 +78,18 @@ Every registry-managed skill should include `_meta.json`.
   }
 }
 ```
+
+## Schema-version compatibility
+
+- `schema_version` is the file-format version for `_meta.json`
+- current writers should emit `schema_version: 1`
+- missing `schema_version` is treated as legacy schema version `1` for backward compatibility
+- unsupported future schema versions should fail clearly instead of being silently rewritten
+- when `_meta.json` evolves incompatibly, provide a migration command rather than relying on manual edits
+
+See `docs/compatibility-contract.md` for the broader compatibility guarantees.
+
+Use `scripts/migrate-skill-meta.py` to add `schema_version` to older skill metadata files without editing them by hand.
 
 ## Field notes
 

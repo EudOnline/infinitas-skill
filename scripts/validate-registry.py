@@ -9,6 +9,7 @@ from dependency_lib import DependencyError, normalize_meta_dependencies
 from ai_index_lib import validate_ai_index_payload
 from registry_source_lib import load_registry_config
 from skill_identity_lib import NamespacePolicyError, load_namespace_policy, namespace_policy_report, validate_identity_metadata
+from schema_version_lib import validate_schema_version
 
 ROOT = Path(__file__).resolve().parent.parent
 NAME_RE = re.compile(r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
@@ -70,6 +71,11 @@ def validate_meta(skill_dir: Path, namespace_policy=None) -> int:
     except Exception as e:
         fail(f'{skill_dir}: invalid JSON in _meta.json: {e}')
         return 1
+
+    _schema_version, schema_errors = validate_schema_version(meta)
+    for error in schema_errors:
+        fail(f'{skill_dir}: {error}')
+        errors += 1
 
     def req(key):
         nonlocal errors

@@ -209,6 +209,7 @@ GitHub Actions runs `scripts/check-all.sh` on pushes and pull requests. That val
 - secret scan
 - deterministic catalog generation
 - compatibility catalog generation
+- compatibility regression coverage for legacy metadata, install-manifest, lock, snapshot, and bare-name resolution behavior
 - signing config and allowed-signer validation
 - computed review-group quorum enforcement
 - publisher namespace / transfer regression checks
@@ -223,6 +224,18 @@ scripts/build-catalog.sh
 ```
 
 and commit the updated `catalog/*.json`.
+
+## Compatibility Contract
+
+Compatibility-sensitive repository behavior is documented in `docs/compatibility-contract.md`.
+
+Use that document as the source of truth for:
+
+- stable vs soft compatibility surfaces
+- schema-version expectations for `_meta.json` and install manifests
+- deprecation windows for persisted state
+- migration and regression-test expectations
+- migration commands: `scripts/migrate-skill-meta.py` and `scripts/migrate-install-manifest.py`
 
 ## Registry model
 

@@ -3,13 +3,23 @@ set -euo pipefail
 
 TARGET_DIR="${1:-$HOME/.openclaw/skills}"
 MANIFEST="$TARGET_DIR/.infinitas-skill-install-manifest.json"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 [[ -f "$MANIFEST" ]] || { echo "missing manifest: $MANIFEST" >&2; exit 1; }
-python3 - "$MANIFEST" <<'PY'
-import json, sys
-p = sys.argv[1]
-with open(p, 'r', encoding='utf-8') as f:
-    data = json.load(f)
+python3 - "$ROOT" "$MANIFEST" <<'PY'
+import os
+import sys
+
+sys.path.insert(0, os.path.join(sys.argv[1], 'scripts'))
+from install_manifest_lib import InstallManifestError, load_install_manifest
+
+manifest_path = sys.argv[2]
+try:
+    data = load_install_manifest(manifest_path)
+except InstallManifestError as exc:
+    print(str(exc), file=sys.stderr)
+    raise SystemExit(1)
+
 print(f"repo: {data.get('repo')}")
 print(f"updated_at: {data.get('updated_at')}")
 for name, meta in sorted(data.get('skills', {}).items()):

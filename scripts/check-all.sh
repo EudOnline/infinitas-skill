@@ -11,6 +11,7 @@ python3 scripts/test-namespace-identity.py
 python3 scripts/check-registry-integrity.py
 python3 scripts/check-promotion-policy.py
 python3 scripts/test-review-governance.py
+python3 scripts/test-compat-regression.py
 if [[ "${INFINITAS_SKIP_RELEASE_TESTS:-0}" != "1" ]]; then
   python3 scripts/test-release-invariants.py
 fi
