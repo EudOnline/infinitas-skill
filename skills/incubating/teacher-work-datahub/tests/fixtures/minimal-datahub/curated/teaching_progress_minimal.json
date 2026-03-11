@@ -1,0 +1,26 @@
+{
+  "schema_version": "teaching-progress.v2",
+  "city": "测试市",
+  "academic_year": "2099-2100",
+  "semester": "S1",
+  "semester_label": "第一学期",
+  "grade_scope": "highschool",
+  "entries": [
+    {
+      "grade": "测试高一",
+      "subject": "物理",
+      "midterm": {
+        "text": "测试范围：第一章",
+        "status": "ok",
+        "semantic_type": "scope_text",
+        "raw_text": "测试范围：第一章"
+      },
+      "final": {
+        "text": "测试范围：第一章至第二章",
+        "status": "ok",
+        "semantic_type": "scope_text",
+        "raw_text": "测试范围：第一章至第二章"
+      }
+    }
+  ]
+}

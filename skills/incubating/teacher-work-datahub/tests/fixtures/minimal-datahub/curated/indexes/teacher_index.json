@@ -1,0 +1,15 @@
+{
+  "teachers": {
+    "测试教师A": {
+      "canonical_name": "测试教师A",
+      "subjects": ["物理"],
+      "classes": ["9901班", "9902班"],
+      "grade_labels": ["测试高一"],
+      "sheet_scope": "fixture",
+      "evidence": [
+        {"teacher_raw": "测试教师A", "class": "9901班", "subject": "物理", "sheet": "fixture"},
+        {"teacher_raw": "测试教师A", "class": "9902班", "subject": "物理", "sheet": "fixture"}
+      ]
+    }
+  }
+}

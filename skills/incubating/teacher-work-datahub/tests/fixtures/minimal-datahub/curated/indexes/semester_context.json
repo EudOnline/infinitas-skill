@@ -1,0 +1,9 @@
+{
+  "schema_version": "teacher-work-datahub.semester-context.v1",
+  "current": {
+    "academic_year": "2099-2100",
+    "semester": "S1",
+    "grade_scope": "highschool",
+    "city": "测试市"
+  }
+}

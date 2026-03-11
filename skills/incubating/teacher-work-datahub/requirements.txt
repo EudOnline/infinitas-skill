@@ -1,0 +1,10 @@
+# Runtime dependencies for the full teacher-work-datahub workflow.
+#
+# Notes:
+# - Some core query/selfcheck scripts only require Python stdlib.
+# - Install this file when you want the full parser + delivery + adapter toolchain.
+
+Pillow>=10.0.0
+openpyxl>=3.1.0
+requests>=2.31.0
+xlrd>=2.0.1

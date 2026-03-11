@@ -1,0 +1,33 @@
+{
+  "name": "teacher-work-datahub",
+  "publisher": "lvxiaoer",
+  "qualified_name": "lvxiaoer/teacher-work-datahub",
+  "version": "0.1.1",
+  "status": "incubating",
+  "summary": "Workspace-scoped teacher-work datahub for traceable teacher allocation, timetable, and teaching-progress workflows, with indexes, active source arbitration, query entrypoints, receipts, and health checks. Best suited for private/incubating distribution rather than zero-config public use.",
+  "owner": "lvxiaoer",
+  "owners": ["lvxiaoer"],
+  "author": "lvxiaoer",
+  "maintainers": ["lvxiaoer"],
+  "tags": ["education", "teacher", "timetable", "teaching-progress", "datahub"],
+  "agent_compatible": ["openclaw"],
+  "visibility": "private",
+  "review_state": "draft",
+  "release_positioning": "workspace-scoped private/incubating skill; not zero-config public",
+  "risk_level": "medium",
+  "requires": {
+    "tools": ["read", "write", "edit", "exec"],
+    "bins": ["python3"],
+    "env": []
+  },
+  "entrypoints": {
+    "skill_md": "SKILL.md"
+  },
+  "tests": {
+    "smoke": "tests/smoke.md"
+  },
+  "distribution": {
+    "installable": true,
+    "channel": "git"
+  }
+}

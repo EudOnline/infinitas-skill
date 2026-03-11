@@ -1,0 +1,41 @@
+{
+  "dataset_id": "fixture-grade-schedule-minimal",
+  "title": "测试课表（最小样例）",
+  "school": "测试学校",
+  "academic_year": "2099-2100",
+  "semester": "S1",
+  "grade": "测试高一",
+  "student_cohort": "2099",
+  "notes": ["fixture", "minimal"],
+  "source": {"kind": "fixture", "name": "fixture::grade_schedule_minimal.json"},
+  "class_count": 2,
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "class_count": 2,
+      "classes": [
+        {
+          "class": "9901班",
+          "head_teacher": "测试班主任A",
+          "schedule": {
+            "1": {"一": "物理", "二": "语文", "三": "数学", "四": "英语", "五": "化学"},
+            "2": {"一": "数学", "二": "物理", "三": "英语", "四": "语文", "五": "体育"},
+            "晚1": {"一": "物理", "二": "自习", "三": "自习", "四": "自习", "五": "自习"}
+          }
+        },
+        {
+          "class": "9902班",
+          "head_teacher": "测试班主任B",
+          "schedule": {
+            "1": {"一": "英语", "二": "化学", "三": "语文", "四": "物理", "五": "数学"},
+            "2": {"一": "语文", "二": "英语", "三": "物理", "四": "数学", "五": "体育"},
+            "晚1": {"一": "自习", "二": "物理", "三": "自习", "四": "自习", "五": "自习"}
+          }
+        }
+      ]
+    }
+  ],
+  "created_at": "2099-09-01T00:00:00",
+  "updated_at": "2099-09-01T00:00:00",
+  "status": "active"
+}

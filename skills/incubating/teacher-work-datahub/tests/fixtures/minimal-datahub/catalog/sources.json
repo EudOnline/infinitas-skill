@@ -1,0 +1,33 @@
+{
+  "schema_version": "teacher-work-datahub.sources.v1",
+  "records": [
+    {
+      "record_id": "fixture-src-teacher-allocation-001",
+      "kind": "teacher_allocation",
+      "semester": "S1",
+      "academic_year": "2099-2100",
+      "source_name": "fixture::teacher_allocation_minimal.json",
+      "status": "active",
+      "tags": ["fixture", "minimal"]
+    },
+    {
+      "record_id": "fixture-src-grade-schedule-001",
+      "kind": "grade_schedule_with_selfstudy",
+      "semester": "S1",
+      "academic_year": "2099-2100",
+      "source_name": "fixture::grade_schedule_minimal.json",
+      "status": "active",
+      "tags": ["fixture", "minimal"]
+    },
+    {
+      "record_id": "fixture-src-progress-001",
+      "kind": "teaching_progress_total_table",
+      "semester": "S1",
+      "academic_year": "2099-2100",
+      "source_name": "fixture::teaching_progress_minimal.json",
+      "curated_path": "skills/teacher-work-datahub/tests/fixtures/minimal-datahub/curated/teaching_progress_minimal.json",
+      "status": "active",
+      "tags": ["fixture", "minimal"]
+    }
+  ]
+}
