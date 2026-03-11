@@ -187,6 +187,7 @@ scripts/export-openclaw-skill.sh my-skill --version 1.2.3 --out /tmp/openclaw-ex
 
 For AI-driven publishing, import, export, and installation, treat the following files as the machine-facing contract:
 
+- `docs/ai/agent-operations.md` — agent-facing common operations manual
 - `docs/ai/openclaw.md` — OpenClaw / ClawHub bridge contract
 - `docs/ai/publish.md` — protocol for `scripts/publish-skill.sh`
 - `docs/ai/pull.md` — protocol for `scripts/pull-skill.sh`

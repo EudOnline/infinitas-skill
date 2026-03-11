@@ -5,6 +5,7 @@
 当 AI 需要理解本仓库与 OpenClaw / ClawHub 的关系时，只应优先读取以下文件：
 
 - `README.md`
+- `docs/ai/agent-operations.md`
 - `docs/ai/openclaw.md`
 - `docs/ai/publish.md`
 - `docs/ai/pull.md`
