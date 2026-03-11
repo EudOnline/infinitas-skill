@@ -1,9 +1,20 @@
 {
-  "generated_at": "2026-03-08T03:53:36Z",
+  "generated_at": "2026-03-11T16:34:01Z",
   "stage_counts": {
-    "incubating": 0,
+    "incubating": 1,
     "active": 0,
     "archived": 0
   },
-  "agents": {}
+  "agents": {
+    "openclaw": [
+      {
+        "name": "teacher-work-datahub",
+        "publisher": "lvxiaoer",
+        "qualified_name": "lvxiaoer/teacher-work-datahub",
+        "version": "0.1.1",
+        "status": "incubating",
+        "path": "skills/incubating/teacher-work-datahub"
+      }
+    ]
+  }
 }

@@ -1,5 +1,62 @@
 {
-  "generated_at": "2026-03-08T03:21:40Z",
-  "count": 0,
-  "skills": []
+  "generated_at": "2026-03-11T16:34:01Z",
+  "count": 1,
+  "skills": [
+    {
+      "name": "teacher-work-datahub",
+      "publisher": "lvxiaoer",
+      "qualified_name": "lvxiaoer/teacher-work-datahub",
+      "identity_mode": "qualified",
+      "version": "0.1.1",
+      "status": "incubating",
+      "summary": "Workspace-scoped teacher-work datahub for traceable teacher allocation, timetable, and teaching-progress workflows, with indexes, active source arbitration, query entrypoints, receipts, and health checks. Best suited for private/incubating distribution rather than zero-config public use.",
+      "author": "lvxiaoer",
+      "owner": "lvxiaoer",
+      "owners": [
+        "lvxiaoer"
+      ],
+      "maintainers": [
+        "lvxiaoer"
+      ],
+      "tags": [
+        "education",
+        "teacher",
+        "timetable",
+        "teaching-progress",
+        "datahub"
+      ],
+      "review_state": "draft",
+      "declared_review_state": "draft",
+      "risk_level": "medium",
+      "derived_from": null,
+      "snapshot_of": null,
+      "depends_on": [],
+      "conflicts_with": [],
+      "agent_compatible": [
+        "openclaw"
+      ],
+      "installable": true,
+      "approval_count": 0,
+      "rejection_count": 0,
+      "blocking_rejection_count": 0,
+      "required_approvals": 1,
+      "quorum_met": false,
+      "review_gate_pass": false,
+      "required_reviewer_groups": [],
+      "covered_reviewer_groups": [],
+      "missing_reviewer_groups": [],
+      "reviewers": [],
+      "path": "skills/incubating/teacher-work-datahub",
+      "source_registry": "self",
+      "source_registry_url": "https://github.com/EudOnline/infinitas-skill.git",
+      "source_registry_ref": "refs/heads/main",
+      "source_registry_commit": null,
+      "source_registry_tag": null,
+      "source_registry_trust": "private",
+      "source_update_mode": "local-only",
+      "source_pin_mode": "branch",
+      "source_pin_value": "main",
+      "expected_tag": "skill/teacher-work-datahub/v0.1.1"
+    }
+  ]
 }

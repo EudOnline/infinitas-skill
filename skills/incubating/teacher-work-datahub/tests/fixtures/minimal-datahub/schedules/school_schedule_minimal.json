@@ -1,0 +1,13 @@
+{
+  "dataset_id": "fixture-school-schedule-minimal",
+  "title": "测试全校课表（最小样例）",
+  "school": "测试学校",
+  "academic_year": "2099-2100",
+  "semester": "S1",
+  "notes": ["fixture", "minimal"],
+  "classes": [
+    {"class": "9901班"},
+    {"class": "9902班"}
+  ],
+  "status": "active"
+}

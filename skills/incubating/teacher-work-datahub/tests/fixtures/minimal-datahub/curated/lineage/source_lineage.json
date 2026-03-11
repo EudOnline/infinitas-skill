@@ -1,0 +1,19 @@
+{
+  "schema_version": "teacher-work-datahub.source-lineage.v1",
+  "records": [
+    {
+      "record_id": "fixture-src-grade-schedule-001",
+      "source_name": "fixture::grade_schedule_minimal.json",
+      "kind": "grade_schedule_with_selfstudy",
+      "status": "active",
+      "upstream": []
+    },
+    {
+      "record_id": "fixture-src-progress-001",
+      "source_name": "fixture::teaching_progress_minimal.json",
+      "kind": "teaching_progress",
+      "status": "active",
+      "upstream": []
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "9901班": {
+    "class_name": "9901班",
+    "teachers": [{"teacher": "测试教师A", "subject": "物理"}],
+    "grade_label": "测试高一"
+  },
+  "9902班": {
+    "class_name": "9902班",
+    "teachers": [{"teacher": "测试教师A", "subject": "物理"}],
+    "grade_label": "测试高一"
+  }
+}
