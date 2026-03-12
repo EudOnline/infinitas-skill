@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://infinitas.local/schemas/discovery-index.schema.json",
+  "title": "Discovery Index",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at",
+    "default_registry",
+    "sources",
+    "resolution_policy",
+    "skills"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "default_registry": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "resolution_policy": {
+      "type": "object",
+      "required": [
+        "private_registry_first",
+        "external_requires_confirmation",
+        "auto_install_mutable_sources"
+      ],
+      "properties": {
+        "private_registry_first": {
+          "type": "boolean",
+          "const": true
+        },
+        "external_requires_confirmation": {
+          "type": "boolean",
+          "const": true
+        },
+        "auto_install_mutable_sources": {
+          "type": "boolean",
+          "const": false
+        }
+      },
+      "additionalProperties": true
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "qualified_name",
+          "source_registry",
+          "source_priority",
+          "match_names",
+          "default_install_version",
+          "latest_version",
+          "available_versions",
+          "agent_compatible",
+          "install_requires_confirmation",
+          "trust_level",
+          "use_when",
+          "avoid_when"
+        ],
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "qualified_name": {"type": "string", "minLength": 1},
+          "publisher": {"type": ["string", "null"]},
+          "summary": {"type": "string"},
+          "source_registry": {"type": "string", "minLength": 1},
+          "source_priority": {"type": "integer"},
+          "match_names": {"type": "array", "items": {"type": "string"}},
+          "default_install_version": {"type": "string", "minLength": 1},
+          "latest_version": {"type": "string", "minLength": 1},
+          "available_versions": {"type": "array", "items": {"type": "string"}},
+          "agent_compatible": {"type": "array", "items": {"type": "string"}},
+          "install_requires_confirmation": {"type": "boolean"},
+          "trust_level": {"type": "string", "minLength": 1},
+          "use_when": {"type": "array", "items": {"type": "string"}},
+          "avoid_when": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

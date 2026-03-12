@@ -122,6 +122,18 @@ scripts/promote-skill.sh my-skill
 # Preview or apply the deterministic dependency plan for an install
 scripts/resolve-install-plan.py --skill-dir skills/active/my-skill --target-dir ~/.openclaw/skills
 
+# Resolve an installable skill by short name
+scripts/resolve-skill.sh my-skill
+
+# Install by name from the private-first discovery layer
+scripts/install-by-name.sh my-skill ~/.openclaw/skills
+
+# Check whether an installed skill has a newer stable version
+scripts/check-skill-update.sh my-skill ~/.openclaw/skills
+
+# Upgrade an installed skill from its recorded source
+scripts/upgrade-skill.sh my-skill ~/.openclaw/skills
+
 # Install a stable skill into an OpenClaw-managed local skills dir and lock it to the current version
 scripts/install-skill.sh my-skill ~/.openclaw/skills --version 0.2.0
 
@@ -188,6 +200,7 @@ scripts/export-openclaw-skill.sh my-skill --version 1.2.3 --out /tmp/openclaw-ex
 For AI-driven publishing, import, export, and installation, treat the following files as the machine-facing contract:
 
 - `docs/ai/agent-operations.md` — agent-facing common operations manual
+- `docs/ai/discovery.md` — private-first discovery, install-by-name, and upgrade contract
 - `docs/ai/openclaw.md` — OpenClaw / ClawHub bridge contract
 - `docs/ai/publish.md` — protocol for `scripts/publish-skill.sh`
 - `docs/ai/pull.md` — protocol for `scripts/pull-skill.sh`
@@ -211,6 +224,7 @@ GitHub Actions runs `scripts/check-all.sh` on pushes and pull requests. That val
 - deterministic catalog generation
 - compatibility catalog generation
 - compatibility regression coverage for legacy metadata, install-manifest, lock, snapshot, and bare-name resolution behavior
+- discovery-index, name-resolution, install-by-name, and source-aware upgrade regression coverage
 - signing config and allowed-signer validation
 - computed review-group quorum enforcement
 - publisher namespace / transfer regression checks

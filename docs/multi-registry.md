@@ -113,6 +113,18 @@ Use `publisher/skill` when you need to disambiguate two publishers that share th
 
 Install and sync manifests persist the same identity so `scripts/list-installed.sh` can show where a skill came from with its publisher namespace plus exact registry commit/tag.
 
+## Discovery across registries
+
+The registry now also exports `catalog/discovery-index.json` as a private-first discovery layer.
+
+Discovery follows these rules:
+
+1. local private registry entries are considered first
+2. synced external registries only contribute candidates when the private registry has no suitable match
+3. external matches are discoverable, but `install-by-name` keeps them confirmation-gated by default
+
+That means multiple agents can share a single local search/install surface without silently treating every configured registry as equally trusted.
+
 ## Dependency resolution rules
 
 Dependency planning now follows a deterministic registry-aware order:

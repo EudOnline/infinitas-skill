@@ -7,6 +7,7 @@ from pathlib import Path
 
 from dependency_lib import DependencyError, normalize_meta_dependencies
 from ai_index_lib import validate_ai_index_payload
+from discovery_index_lib import validate_discovery_index_payload
 from registry_source_lib import load_registry_config
 from skill_identity_lib import NamespacePolicyError, load_namespace_policy, namespace_policy_report, validate_identity_metadata
 from schema_version_lib import validate_schema_version
@@ -245,6 +246,21 @@ def validate_ai_index(root: Path) -> int:
     return len(errors)
 
 
+def validate_discovery_index(root: Path) -> int:
+    path = root / 'catalog' / 'discovery-index.json'
+    if not path.exists():
+        return 0
+    try:
+        payload = json.loads(path.read_text(encoding='utf-8'))
+    except Exception as exc:
+        fail(f'{path}: invalid JSON: {exc}')
+        return 1
+    errors = validate_discovery_index_payload(payload)
+    for error in errors:
+        fail(f'{path}: {error}')
+    return len(errors)
+
+
 def collect_dirs(args):
     if args:
         dirs = []
@@ -284,6 +300,7 @@ def main():
     for d in dirs:
         errors += validate_meta(d, namespace_policy=namespace_policy)
     errors += validate_ai_index(ROOT)
+    errors += validate_discovery_index(ROOT)
     if errors:
         print(f'Validation failed with {errors} error(s).', file=sys.stderr)
         return 1

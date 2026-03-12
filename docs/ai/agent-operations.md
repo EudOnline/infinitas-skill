@@ -6,6 +6,7 @@
 
 - `README.md`
 - `docs/ai/agent-operations.md`
+- `docs/ai/discovery.md`
 - `docs/ai/openclaw.md`
 - `docs/ai/publish.md`
 - `docs/ai/pull.md`
@@ -23,7 +24,7 @@
 - 什么时候只能做人工步骤
 - 什么时候必须先停下来而不是继续猜测
 
-将本文件视为**决策手册**；将 `docs/ai/publish.md` 与 `docs/ai/pull.md` 视为**严格执行协议**。
+将本文件视为**决策手册**；将 `docs/ai/discovery.md`、`docs/ai/publish.md` 与 `docs/ai/pull.md` 视为**严格执行协议**。
 
 ## Core Model
 
@@ -47,6 +48,7 @@
 当用户表达以下意图时，agent 应优先选择这些命令：
 
 - **“创建一个新的 registry skill”** → `scripts/new-skill.sh`
+- **“按名字找一个可安装的 skill”** → `scripts/resolve-skill.sh`
 - **“把 OpenClaw 本地技能纳入平台治理”** → `scripts/import-openclaw-skill.sh`
 - **“检查这个 skill 是否合规”** → `scripts/check-skill.sh`
 - **“准备评审 / 请求评审”** → `scripts/request-review.sh`

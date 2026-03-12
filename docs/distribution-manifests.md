@@ -110,3 +110,23 @@ That gives downstream consumers a stable place to discover:
 The bundle/manifest path is only authoritative once the release attestation can be verified.
 
 If `config/allowed_signers` still has no real trusted signer entries, stable verified distribution remains operationally blocked even though the code path and tests are present.
+
+## Discovery and by-name install
+
+The discovery layer does not replace distribution manifests; it resolves to them.
+
+Commands such as:
+
+```bash
+scripts/install-by-name.sh my-skill ~/.openclaw/skills
+scripts/check-skill-update.sh my-skill ~/.openclaw/skills
+scripts/upgrade-skill.sh my-skill ~/.openclaw/skills
+```
+
+still rely on immutable release metadata underneath:
+
+1. discovery resolves a candidate skill and source registry
+2. install or upgrade resolves an exact installable version
+3. the final materialization step still uses the released distribution manifest, bundle digest, and attestation path
+
+So “install by name” is a convenience layer, not a mutable-source shortcut.

@@ -3,7 +3,7 @@
 ## Command
 
 ```bash
-scripts/pull-skill.sh <qualified-name> <target-dir> [--version <semver>] [--mode auto|confirm]
+scripts/pull-skill.sh <qualified-name> <target-dir> [--version <semver>] [--registry <name>] [--mode auto|confirm]
 ```
 
 ## Inputs
@@ -11,11 +11,12 @@ scripts/pull-skill.sh <qualified-name> <target-dir> [--version <semver>] [--mode
 - `qualified-name`: publisher-qualified name，或 AI index 中可唯一解析的技能名
 - `target-dir`: 本地安装目标目录
 - `--version <semver>`: 可选；未指定时使用 AI index 中声明的 `default_install_version`
+- `--registry <name>`: 可选；从指定已配置 registry 的 `catalog/ai-index.json` 解析和安装技能
 - `--mode auto|confirm`: 可选；默认值为 `auto`
 
 ## Preconditions
 
-- `catalog/ai-index.json` 存在且有效
+- 默认或指定 registry 的 `catalog/ai-index.json` 存在且有效
 - 目标 skill 在 AI index 中可解析
 - 所选版本在 AI index 中存在
 - 所选版本必须具备 manifest、bundle digest 与 attestation 引用
@@ -23,7 +24,7 @@ scripts/pull-skill.sh <qualified-name> <target-dir> [--version <semver>] [--mode
 
 ## Ordered Execution Steps
 
-1. 读取并校验 `catalog/ai-index.json`
+1. 解析目标 registry，读取并校验对应的 `catalog/ai-index.json`
 2. 解析目标 skill 和目标版本
 3. 若未显式指定版本，则读取 `default_install_version`
 4. 校验 manifest 路径、bundle 路径、sha256 与 attestation 路径
@@ -81,6 +82,7 @@ scripts/pull-skill.sh <qualified-name> <target-dir> [--version <semver>] [--mode
 
 - 推荐目标目录是 `~/.openclaw/skills` 或 `~/.openclaw/workspace/skills`
 - `pull-skill.sh` 只从 immutable release artifacts 安装，不从本地原型目录复制
+- 即使指定了 `--registry`，也只允许读取该 registry 已发布的 immutable 索引与产物
 - 若 AI 看到的是 OpenClaw 本地原型目录，应先走 `scripts/import-openclaw-skill.sh`，而不是直接安装
 
 ## Forbidden Assumptions

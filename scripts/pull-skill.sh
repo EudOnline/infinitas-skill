@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: scripts/pull-skill.sh <qualified-name-or-name> <target-dir> [--version X.Y.Z] [--mode auto|confirm]" >&2
+  echo "usage: scripts/pull-skill.sh <qualified-name-or-name> <target-dir> [--version X.Y.Z] [--registry NAME] [--mode auto|confirm]" >&2
 }
 
 if [[ $# -lt 2 ]]; then
@@ -14,6 +14,7 @@ REQUESTED_NAME="$1"
 TARGET_DIR="$2"
 shift 2 || true
 RESOLVED_VERSION=""
+REGISTRY_NAME=""
 MODE="auto"
 
 while [[ $# -gt 0 ]]; do
@@ -21,6 +22,11 @@ while [[ $# -gt 0 ]]; do
     --version)
       RESOLVED_VERSION="${2:-}"
       [[ -n "$RESOLVED_VERSION" ]] || { echo "missing value for --version" >&2; exit 1; }
+      shift 2
+      ;;
+    --registry)
+      REGISTRY_NAME="${2:-}"
+      [[ -n "$REGISTRY_NAME" ]] || { echo "missing value for --registry" >&2; exit 1; }
       shift 2
       ;;
     --mode)
@@ -36,7 +42,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PLAN_JSON="$(python3 - "$ROOT" "$REQUESTED_NAME" "$TARGET_DIR" "$RESOLVED_VERSION" "$MODE" <<'PY'
+PLAN_JSON="$(python3 - "$ROOT" "$REQUESTED_NAME" "$TARGET_DIR" "$RESOLVED_VERSION" "$REGISTRY_NAME" "$MODE" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -45,12 +51,55 @@ root = Path(sys.argv[1]).resolve()
 requested = sys.argv[2]
 target_dir = sys.argv[3]
 requested_version = sys.argv[4] or None
-mode = sys.argv[5]
+requested_registry = sys.argv[5] or None
+mode = sys.argv[6]
 
 sys.path.insert(0, str(root / 'scripts'))
 from ai_index_lib import validate_ai_index_payload  # noqa: E402
+from registry_source_lib import find_registry, load_registry_config, resolve_registry_root  # noqa: E402
 
+resolved_registry_name = 'self'
+resolved_registry_root = root
 index_path = root / 'catalog' / 'ai-index.json'
+
+if requested_registry:
+    cfg = load_registry_config(root)
+    reg = find_registry(cfg, requested_registry)
+    if not reg:
+        print(json.dumps({
+            'ok': False,
+            'state': 'failed',
+            'failed_at_step': 'resolved',
+            'error_code': 'unknown-registry',
+            'message': f'unknown registry {requested_registry!r}',
+            'suggested_action': 'use scripts/list-registry-sources.py',
+        }, ensure_ascii=False))
+        raise SystemExit(1)
+    if reg.get('enabled') is False:
+        print(json.dumps({
+            'ok': False,
+            'state': 'failed',
+            'failed_at_step': 'resolved',
+            'error_code': 'registry-disabled',
+            'message': f'registry {requested_registry!r} is disabled',
+            'suggested_action': 'enable the registry in config/registry-sources.json',
+        }, ensure_ascii=False))
+        raise SystemExit(1)
+    reg_root = resolve_registry_root(root, reg)
+    if reg_root is None or not reg_root.exists():
+        print(json.dumps({
+            'ok': False,
+            'state': 'failed',
+            'failed_at_step': 'resolved',
+            'error_code': 'registry-root-unavailable',
+            'message': f'registry root is unavailable for {requested_registry!r}',
+            'suggested_action': 'sync or configure the registry root first',
+        }, ensure_ascii=False))
+        raise SystemExit(1)
+    resolved_registry_name = requested_registry
+    resolved_registry_root = reg_root
+    index_path = reg_root / 'catalog' / 'ai-index.json'
+
 if not index_path.exists():
     print(json.dumps({
         'ok': False,
@@ -58,7 +107,7 @@ if not index_path.exists():
         'failed_at_step': 'resolved',
         'error_code': 'missing-ai-index',
         'message': f'missing AI index: {index_path}',
-        'suggested_action': 'run scripts/build-catalog.sh',
+        'suggested_action': 'run scripts/build-catalog.sh or sync the target registry cache',
     }, ensure_ascii=False))
     raise SystemExit(1)
 
@@ -148,7 +197,7 @@ if missing:
     raise SystemExit(1)
 
 for field in ['manifest_path', 'bundle_path', 'attestation_path']:
-    full = root / version_entry[field]
+    full = resolved_registry_root / version_entry[field]
     if not full.exists():
         print(json.dumps({
             'ok': False,
@@ -166,6 +215,9 @@ plan = {
     'qualified_name': selected_skill.get('qualified_name') or selected_skill.get('name'),
     'requested_version': requested_version,
     'resolved_version': resolved_version,
+    'registry_name': resolved_registry_name,
+    'registry_root': str(resolved_registry_root),
+    'ai_index_path': 'catalog/ai-index.json',
     'target_dir': target_dir,
     'state': 'planned' if mode == 'confirm' else 'selected_version',
     'manifest_path': version_entry.get('manifest_path'),
@@ -173,7 +225,7 @@ plan = {
     'bundle_sha256': version_entry.get('bundle_sha256'),
     'attestation_path': version_entry.get('attestation_path'),
     'install_name': install_name,
-    'install_command': ['scripts/install-skill.sh', install_name, target_dir, '--version', resolved_version],
+    'install_command': ['scripts/install-skill.sh', install_name, target_dir, '--version', resolved_version] + (['--registry', resolved_registry_name] if requested_registry else []),
     'next_step': 'run-install' if mode == 'auto' else 'confirm-or-run',
 }
 print(json.dumps(plan, ensure_ascii=False))
@@ -205,7 +257,11 @@ PY
 )"
 LOCKFILE_PATH="$TARGET_DIR/.infinitas-skill-install-manifest.json"
 INSTALL_LOG="$(mktemp)"
-if ! ./scripts/install-skill.sh "$INSTALL_NAME" "$TARGET_DIR" --version "$RESOLVED_INSTALL_VERSION" >"$INSTALL_LOG" 2>&1; then
+INSTALL_ARGS=(./scripts/install-skill.sh "$INSTALL_NAME" "$TARGET_DIR" --version "$RESOLVED_INSTALL_VERSION")
+if [[ -n "$REGISTRY_NAME" ]]; then
+  INSTALL_ARGS+=(--registry "$REGISTRY_NAME")
+fi
+if ! "${INSTALL_ARGS[@]}" >"$INSTALL_LOG" 2>&1; then
   python3 - <<'PY' "$PLAN_JSON" "$INSTALL_LOG"
 import json, sys
 from pathlib import Path

@@ -36,9 +36,11 @@ for name, meta in sorted(data.get('skills', {}).items()):
     history_len = len((data.get('history') or {}).get(name) or [])
     resolution_plan = meta.get('resolution_plan') or {}
     resolution_steps = len((resolution_plan.get('steps') or [])) if isinstance(resolution_plan, dict) else 0
+    checked_at = meta.get('last_checked_at')
     lock_note = f", locked={locked}" if locked else ""
     hist_note = f", history={history_len}" if history_len else ""
     plan_note = f", plan_steps={resolution_steps}" if resolution_steps else ""
+    checked_note = f", checked={checked_at}" if checked_at else ""
     source_note = f"{registry}/{src_type}"
     if commit:
         source_note += f"@{commit[:12]}"
@@ -46,5 +48,5 @@ for name, meta in sorted(data.get('skills', {}).items()):
         source_note += f" tag={tag}"
     elif ref:
         source_note += f" ref={ref}"
-    print(f"- {display}: {version}{lock_note} [{stage}] ({meta.get('action')}) -> {meta.get('target_path')} from {source_note}:{src}{hist_note}{plan_note}")
+    print(f"- {display}: {version}{lock_note} [{stage}] ({meta.get('action')}) -> {meta.get('target_path')} from {source_note}:{src}{hist_note}{plan_note}{checked_note}")
 PY

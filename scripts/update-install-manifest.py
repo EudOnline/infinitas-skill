@@ -101,6 +101,13 @@ manifest_entry = {
     'source_attestation_sha256': source_info.get('distribution_attestation_sha256'),
     'source_attestation_signature_sha256': source_info.get('distribution_attestation_signature_sha256'),
     'target_path': str(dest_dir.relative_to(target_dir)),
+    'install_target': str(target_dir),
+    'installed_version': meta.get('version'),
+    'resolved_release_digest': source_info.get('distribution_bundle_sha256'),
+    'installed_at': manifest['updated_at'],
+    'last_checked_at': manifest['updated_at'],
+    'target_agent': source_info.get('target_agent'),
+    'install_mode': action,
     'action': action,
     'updated_at': manifest['updated_at'],
 }

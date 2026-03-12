@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-03-12T00:42:03Z",
+  "default_registry": "self",
+  "sources": [
+    {
+      "name": "self",
+      "kind": "git",
+      "priority": 100,
+      "trust_level": "private",
+      "root": "/Users/lvxiaoer/Documents/codeWork/infinitas-skill/.worktrees/discovery-distribution",
+      "status": "ready"
+    }
+  ],
+  "resolution_policy": {
+    "private_registry_first": true,
+    "external_requires_confirmation": true,
+    "auto_install_mutable_sources": false
+  },
+  "skills": []
+}

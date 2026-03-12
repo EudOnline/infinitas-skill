@@ -20,6 +20,7 @@ from review_lib import ReviewPolicyError, evaluate_review_state, load_reviews  #
 from skill_identity_lib import display_name, normalize_skill_identity  # noqa: E402
 from distribution_lib import DistributionError, manifest_index_entry  # noqa: E402
 from ai_index_lib import build_ai_index  # noqa: E402
+from discovery_index_lib import build_discovery_index  # noqa: E402
 
 
 def expected_skill_tag(name, version):
@@ -84,6 +85,7 @@ out_compat = root / 'catalog' / 'compatibility.json'
 out_registries = root / 'catalog' / 'registries.json'
 out_distributions = root / 'catalog' / 'distributions.json'
 out_ai_index = root / 'catalog' / 'ai-index.json'
+out_discovery_index = root / 'catalog' / 'discovery-index.json'
 
 
 def dist_identity_key(entry):
@@ -241,6 +243,8 @@ distributions_view = {
 }
 ai_index = build_ai_index(root=root, catalog_entries=entries, distribution_entries=distribution_entries)
 ai_index['generated_at'] = catalog['generated_at']
+discovery_index = build_discovery_index(root=root, local_ai_index=ai_index, registry_config=cfg)
+discovery_index['generated_at'] = catalog['generated_at']
 
 
 def normalized(payload):
@@ -265,4 +269,5 @@ write_if_changed(out_compat, compatibility)
 write_if_changed(out_registries, registries_view)
 write_if_changed(out_distributions, distributions_view)
 write_if_changed(out_ai_index, ai_index)
+write_if_changed(out_discovery_index, discovery_index)
 PY
