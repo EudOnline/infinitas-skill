@@ -34,6 +34,23 @@ def _load_json(path: Path):
     return json.loads(path.read_text(encoding='utf-8'))
 
 
+def _stable_source_root(root: Path, reg: dict, reg_root: Path | None):
+    if reg_root is None:
+        return None
+    if reg_root == root:
+        return '.'
+    local_path = reg.get('local_path')
+    if isinstance(local_path, str) and local_path.strip():
+        candidate = Path(local_path.strip())
+        if candidate.is_absolute():
+            return str(candidate.resolve())
+        return str(candidate)
+    try:
+        return str(reg_root.relative_to(root))
+    except ValueError:
+        return str(reg_root)
+
+
 def normalize_discovery_skill(skill: dict, *, source_registry: str, source_priority: int, trust_level: str, default_registry: str) -> dict:
     qualified_name = skill.get('qualified_name') or skill.get('name')
     latest_version = skill.get('latest_version') or skill.get('default_install_version') or ''
@@ -107,7 +124,7 @@ def build_discovery_index(*, root: Path, local_ai_index: dict, registry_config: 
                 'kind': reg.get('kind'),
                 'priority': reg.get('priority', 0),
                 'trust_level': reg.get('trust'),
-                'root': str(reg_root) if reg_root else None,
+                'root': _stable_source_root(root, reg, reg_root),
                 'status': status,
             }
         )

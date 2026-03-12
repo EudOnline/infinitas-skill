@@ -7,6 +7,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from discovery_index_lib import build_discovery_index
+
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE_NAME = 'release-fixture'
 FIXTURE_VERSION = '1.2.3'
@@ -34,6 +36,59 @@ def run(command, cwd, expect=0, env=None):
 def write_json(path: Path, payload):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+
+def load_json(path: Path):
+    return json.loads(path.read_text(encoding='utf-8'))
+
+
+def normalized_catalog_payload(path: Path):
+    payload = load_json(path)
+    payload.pop('generated_at', None)
+    return payload
+
+
+def assert_discovery_payload_stable_across_roots():
+    local_ai_index = {
+        'skills': [
+            {
+                'name': FIXTURE_NAME,
+                'qualified_name': FIXTURE_NAME,
+                'summary': 'Fixture skill for discovery-index tests',
+                'agent_compatible': ['codex'],
+                'default_install_version': FIXTURE_VERSION,
+                'latest_version': FIXTURE_VERSION,
+                'available_versions': [FIXTURE_VERSION],
+                'use_when': [],
+                'avoid_when': [],
+            }
+        ]
+    }
+    registry_config = {
+        'default_registry': 'self',
+        'registries': [
+            {
+                'name': 'self',
+                'kind': 'git',
+                'local_path': '.',
+                'priority': 100,
+                'enabled': True,
+                'trust': 'private',
+                'update_policy': {'mode': 'local-only'},
+            }
+        ],
+    }
+    primary = build_discovery_index(root=Path('/tmp/primary-repo'), local_ai_index=local_ai_index, registry_config=registry_config)
+    linked = build_discovery_index(root=Path('/tmp/primary-repo/.worktrees/linked'), local_ai_index=local_ai_index, registry_config=registry_config)
+    primary.pop('generated_at', None)
+    linked.pop('generated_at', None)
+    if primary != linked:
+        fail('expected discovery-index payload to stay stable across linked worktrees')
+    self_source = next((item for item in primary.get('sources') or [] if item.get('name') == 'self'), None)
+    if not self_source:
+        fail('expected discovery-index to include self source entry')
+    if self_source.get('root') != '.':
+        fail(f"expected self source root '.', got {self_source.get('root')!r}")
 
 
 def make_env(extra=None):
@@ -269,7 +324,15 @@ def main():
         if not isinstance(first.get('install_requires_confirmation'), bool):
             fail('expected first skill install_requires_confirmation to be a bool')
 
-        broken = json.loads(discovery_index_path.read_text(encoding='utf-8'))
+        assert_discovery_payload_stable_across_roots()
+
+        self_source = next((item for item in payload.get('sources') or [] if item.get('name') == 'self'), None)
+        if not self_source:
+            fail('expected discovery-index to include self source entry')
+        if self_source.get('root') != '.':
+            fail(f"expected self source root '.', got {self_source.get('root')!r}")
+
+        broken = load_json(discovery_index_path)
         broken['skills'][0]['match_names'] = 'not-a-list'
         write_json(discovery_index_path, broken)
         result = run([sys.executable, str(repo / 'scripts' / 'validate-registry.py')], cwd=repo, expect=1)
