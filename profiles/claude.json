@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "platform": "claude",
+  "runtime": {
+    "skill_dir_candidates": [
+      ".claude/skills",
+      "~/.claude/skills"
+    ],
+    "entrypoint": "SKILL.md"
+  },
+  "capabilities": {
+    "supports_subagents": true,
+    "supports_commands": true,
+    "supports_supporting_docs": true
+  },
+  "constraints": {
+    "text_only_public_bundle": false,
+    "plugin_packaging_stable": false
+  },
+  "contract": {
+    "sources": [
+      "https://docs.anthropic.com/en/docs/claude-code/skills",
+      "https://docs.anthropic.com/en/docs/claude-code/slash-commands#custom-slash-commands",
+      "https://docs.anthropic.com/en/docs/claude-code/sub-agents#project-subagents"
+    ],
+    "last_verified": "2026-03-12"
+  }
+}

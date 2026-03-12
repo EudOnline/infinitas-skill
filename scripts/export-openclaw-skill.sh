@@ -50,6 +50,7 @@ done
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 python3 - "$ROOT" "$REQUESTED_NAME" "$OUT_DIR" "$RESOLVED_VERSION" "$MODE" "$FORCE" <<'PY'
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -86,10 +87,17 @@ try:
         'suggested_publish_command': ['clawhub', 'publish', str(export_dir)],
     }
     if mode == 'confirm':
+        temp_export_dir = (root / '.tmp-openclaw-export-preview' / (selected_skill.get('name') or requested)).resolve()
+        result = export_release_to_directory(root, manifest_path, temp_export_dir, force=True, public_ready=True)
+        payload['public_ready'] = result['public_ready']
+        payload['validation_errors'] = result['validation_errors']
+        shutil.rmtree(temp_export_dir.parent, ignore_errors=True)
         payload['next_step'] = 'run-export'
     else:
-        result = export_release_to_directory(root, manifest_path, export_dir, force=force)
+        result = export_release_to_directory(root, manifest_path, export_dir, force=force, public_ready=True)
         payload['files'] = result['files']
+        payload['public_ready'] = result['public_ready']
+        payload['validation_errors'] = result['validation_errors']
         payload['next_step'] = 'review-or-publish-manually'
     print(json.dumps(payload, ensure_ascii=False))
 except OpenClawBridgeError as exc:

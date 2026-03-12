@@ -58,7 +58,7 @@ scripts/pull-skill.sh <qualified-name-or-name> <target-dir> [--version <semver>]
 scripts/export-openclaw-skill.sh <qualified-name-or-name> --out DIR [--version <semver>] [--mode auto|confirm] [--force]
 ```
 
-用途：把一个已发布版本导出成独立目录，供人工审查或手动 `clawhub publish`。
+用途：把一个已发布版本导出成独立目录，经过规范化渲染和 OpenClaw 兼容性检查后，供人工审查或手动 `clawhub publish`。
 
 ## Canonical Workflows
 
@@ -78,6 +78,19 @@ scripts/export-openclaw-skill.sh <qualified-name-or-name> --out DIR [--version <
 4. 人工执行 `clawhub publish <export-dir>`
 
 **默认不是 public publish。**
+
+## Export validation
+
+`export-openclaw-skill.sh` 现在会返回：
+
+- `public_ready`: 当前导出目录是否满足公开发布约束
+- `validation_errors`: 若不满足，列出阻止公开发布的原因
+
+这意味着：
+
+- 导出成功 ≠ 可以直接公开发布
+- `public_ready: true` 才表示导出内容通过了当前公开发布门禁
+- 即使 `public_ready: false`，仍可用于人工审查或私有运行时场景
 
 ## Hard Rules for AI
 

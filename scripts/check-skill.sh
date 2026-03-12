@@ -10,6 +10,20 @@ fi
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 [[ -d "$DIR" ]] || { echo "missing directory: $DIR" >&2; exit 1; }
+if [[ -f "$DIR/skill.json" && ! -f "$DIR/_meta.json" ]]; then
+  python3 "$ROOT/scripts/validate-registry.py" "$DIR" >/dev/null
+  STATUS=0
+  if grep -RInE '(gh[pousr]_|github_pat_|sk-[A-Za-z0-9_-]{10,}|AIza[0-9A-Za-z_-]{20,}|xox[baprs]-|-----BEGIN (RSA|OPENSSH|EC|DSA|PGP|PRIVATE KEY)|Authorization:[[:space:]]*Bearer[[:space:]]+[A-Za-z0-9._-]+)' "$DIR" >/tmp/skill-check-secrets.$$ 2>/dev/null; then
+    echo "FAIL: possible secrets detected" >&2
+    sed -n '1,20p' /tmp/skill-check-secrets.$$ >&2
+    STATUS=1
+  fi
+  rm -f /tmp/skill-check-secrets.$$
+  if [[ $STATUS -eq 0 ]]; then
+    echo "OK: $DIR"
+  fi
+  exit $STATUS
+fi
 [[ -f "$DIR/SKILL.md" ]] || { echo "missing SKILL.md in $DIR" >&2; exit 1; }
 [[ -f "$DIR/_meta.json" ]] || { echo "missing _meta.json in $DIR" >&2; exit 1; }
 if [[ "$(basename "$(dirname "$DIR")")" != "templates" ]]; then

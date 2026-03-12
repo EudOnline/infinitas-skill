@@ -21,6 +21,7 @@ from skill_identity_lib import display_name, normalize_skill_identity  # noqa: E
 from distribution_lib import DistributionError, manifest_index_entry  # noqa: E402
 from ai_index_lib import build_ai_index  # noqa: E402
 from discovery_index_lib import build_discovery_index  # noqa: E402
+from compatibility_evidence_lib import load_compatibility_evidence, merge_declared_and_verified_support  # noqa: E402
 
 
 def expected_skill_tag(name, version):
@@ -105,6 +106,12 @@ if distribution_root.exists():
         distribution_entries.append(entry)
         distribution_lookup[dist_identity_key(entry)] = entry
 
+try:
+    compatibility_evidence = load_compatibility_evidence(root)
+except ValueError as exc:
+    print(f'FAIL: {exc}', file=sys.stderr)
+    raise SystemExit(1)
+
 entries = []
 compat_agents = {}
 stage_counts = {'incubating': 0, 'active': 0, 'archived': 0}
@@ -184,6 +191,7 @@ for stage in ['incubating', 'active', 'archived']:
                 'source_snapshot_commit': dist.get('source_snapshot_commit'),
                 'generated_at': dist.get('generated_at'),
             }
+        item = merge_declared_and_verified_support(item, compatibility_evidence)
         entries.append(item)
         stage_counts[item['status']] = stage_counts.get(item['status'], 0) + 1
         for agent in agent_compatible:
@@ -210,6 +218,19 @@ compatibility = {
     'generated_at': catalog['generated_at'],
     'stage_counts': stage_counts,
     'agents': {k: sorted(v, key=lambda x: (x['name'], x['version'] or '')) for k, v in sorted(compat_agents.items())},
+    'skills': [
+        {
+            'name': entry.get('name'),
+            'publisher': entry.get('publisher'),
+            'qualified_name': entry.get('qualified_name'),
+            'version': entry.get('version'),
+            'status': entry.get('status'),
+            'path': entry.get('path'),
+            'declared_support': entry.get('declared_support') or [],
+            'verified_support': entry.get('verified_support') or {},
+        }
+        for entry in sorted(entries, key=lambda x: (x.get('name') or '', x.get('version') or ''))
+    ],
 }
 registries_export = []
 for reg in cfg.get('registries', []):

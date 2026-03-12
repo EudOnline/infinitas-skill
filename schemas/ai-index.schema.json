@@ -26,7 +26,10 @@
       ],
       "properties": {
         "default_registry": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "additionalProperties": true
@@ -79,36 +82,95 @@
           "versions"
         ],
         "properties": {
-          "name": {"type": "string", "minLength": 1},
-          "publisher": {"type": ["string", "null"]},
-          "qualified_name": {"type": "string", "minLength": 1},
-          "summary": {"type": "string"},
-          "use_when": {"type": "array", "items": {"type": "string"}},
-          "avoid_when": {"type": "array", "items": {"type": "string"}},
-          "agent_compatible": {"type": "array", "items": {"type": "string"}},
-          "default_install_version": {"type": "string", "minLength": 1},
-          "latest_version": {"type": "string", "minLength": 1},
-          "available_versions": {"type": "array", "items": {"type": "string"}},
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "publisher": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "qualified_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "summary": {
+            "type": "string"
+          },
+          "use_when": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "avoid_when": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "agent_compatible": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "default_install_version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "latest_version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "available_versions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "entrypoints": {
             "type": "object",
-            "required": ["skill_md"],
+            "required": [
+              "skill_md"
+            ],
             "properties": {
-              "skill_md": {"type": "string", "minLength": 1}
+              "skill_md": {
+                "type": "string",
+                "minLength": 1
+              }
             },
             "additionalProperties": true
           },
           "requires": {
             "type": "object",
-            "required": ["tools", "env"],
+            "required": [
+              "tools",
+              "env"
+            ],
             "properties": {
-              "tools": {"type": "array", "items": {"type": "string"}},
-              "env": {"type": "array", "items": {"type": "string"}}
+              "tools": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "env": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
             },
             "additionalProperties": true
           },
           "interop": {
             "type": "object",
-            "required": ["openclaw"],
+            "required": [
+              "openclaw"
+            ],
             "properties": {
               "openclaw": {
                 "type": "object",
@@ -121,20 +183,39 @@
                 "properties": {
                   "runtime_targets": {
                     "type": "array",
-                    "items": {"type": "string"}
+                    "items": {
+                      "type": "string"
+                    }
                   },
-                  "import_supported": {"type": "boolean", "const": true},
-                  "export_supported": {"type": "boolean", "const": true},
+                  "import_supported": {
+                    "type": "boolean",
+                    "const": true
+                  },
+                  "export_supported": {
+                    "type": "boolean",
+                    "const": true
+                  },
                   "public_publish": {
                     "type": "object",
-                    "required": ["clawhub"],
+                    "required": [
+                      "clawhub"
+                    ],
                     "properties": {
                       "clawhub": {
                         "type": "object",
-                        "required": ["supported", "default"],
+                        "required": [
+                          "supported",
+                          "default"
+                        ],
                         "properties": {
-                          "supported": {"type": "boolean", "const": true},
-                          "default": {"type": "boolean", "const": false}
+                          "supported": {
+                            "type": "boolean",
+                            "const": true
+                          },
+                          "default": {
+                            "type": "boolean",
+                            "const": false
+                          }
                         },
                         "additionalProperties": true
                       }
@@ -162,26 +243,108 @@
                 "resolution"
               ],
               "properties": {
-                "manifest_path": {"type": "string", "minLength": 1},
-                "bundle_path": {"type": "string", "minLength": 1},
-                "bundle_sha256": {"type": "string", "minLength": 1},
-                "attestation_path": {"type": "string", "minLength": 1},
-                "attestation_signature_path": {"type": ["string", "null"]},
-                "published_at": {"type": "string", "minLength": 1},
-                "stability": {"type": "string", "minLength": 1},
-                "installable": {"type": "boolean"},
+                "manifest_path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "bundle_path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "bundle_sha256": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "attestation_path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "attestation_signature_path": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "published_at": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "stability": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "installable": {
+                  "type": "boolean"
+                },
                 "resolution": {
                   "type": "object",
-                  "required": ["preferred_source", "fallback_allowed"],
+                  "required": [
+                    "preferred_source",
+                    "fallback_allowed"
+                  ],
                   "properties": {
-                    "preferred_source": {"type": "string", "const": "distribution-manifest"},
-                    "fallback_allowed": {"type": "boolean", "const": false}
+                    "preferred_source": {
+                      "type": "string",
+                      "const": "distribution-manifest"
+                    },
+                    "fallback_allowed": {
+                      "type": "boolean",
+                      "const": false
+                    }
                   },
                   "additionalProperties": true
                 }
               },
               "additionalProperties": true
             }
+          },
+          "compatibility": {
+            "type": "object",
+            "required": [
+              "declared_support",
+              "verified_support"
+            ],
+            "properties": {
+              "declared_support": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "verified_support": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "required": [
+                    "state"
+                  ],
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "checked_at": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "checker": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "evidence_path": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "note": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            },
+            "additionalProperties": true
           }
         },
         "additionalProperties": true

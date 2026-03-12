@@ -39,12 +39,13 @@ def make_env(extra=None):
     env['INFINITAS_SKIP_DISTRIBUTION_TESTS'] = '1'
     env['INFINITAS_SKIP_BOOTSTRAP_TESTS'] = '1'
     env['INFINITAS_SKIP_AI_WRAPPER_TESTS'] = '1'
+    env['INFINITAS_SKIP_COMPAT_PIPELINE_TESTS'] = '1'
     if extra:
         env.update(extra)
     return env
 
 
-def scaffold_fixture(repo: Path):
+def scaffold_fixture(repo: Path, *, include_binary: bool = False):
     fixture_dir = repo / 'skills' / 'active' / FIXTURE_NAME
     if fixture_dir.exists():
         shutil.rmtree(fixture_dir)
@@ -78,6 +79,8 @@ def scaffold_fixture(repo: Path):
         '- Added OpenClaw export fixture release.\n',
         encoding='utf-8',
     )
+    if include_binary:
+        (fixture_dir / 'blob.bin').write_bytes(b'\x00\x01\x02fixture-binary\x00')
     write_json(
         fixture_dir / 'reviews.json',
         {
@@ -101,7 +104,7 @@ def scaffold_fixture(repo: Path):
     )
 
 
-def prepare_repo():
+def prepare_repo(*, include_binary: bool = False):
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-openclaw-export-test-'))
     repo = tmpdir / 'repo'
     origin = tmpdir / 'origin.git'
@@ -110,7 +113,7 @@ def prepare_repo():
         repo,
         ignore=shutil.ignore_patterns('.git', '.planning', '__pycache__', '.cache', 'scripts/__pycache__'),
     )
-    scaffold_fixture(repo)
+    scaffold_fixture(repo, include_binary=include_binary)
     run(['git', 'init', '--bare', str(origin)], cwd=tmpdir)
     run(['git', 'init', '-b', 'main'], cwd=repo)
     run(['git', 'config', 'user.name', 'Release Fixture'], cwd=repo)
@@ -172,6 +175,11 @@ def test_confirm_mode_returns_release_export_plan():
             fail('confirm mode unexpectedly created output directory')
         if payload.get('suggested_publish_command') != ['clawhub', 'publish', str((out_dir / FIXTURE_NAME).resolve())]:
             fail(f"unexpected publish suggestion: {payload.get('suggested_publish_command')!r}")
+        if payload.get('public_ready') is not False:
+            fail(f"expected confirm-mode public_ready=false without MIT-0 metadata, got {payload.get('public_ready')!r}")
+        validation_errors = payload.get('validation_errors') or []
+        if not any('MIT-0' in item for item in validation_errors):
+            fail(f"expected confirm-mode validation errors to mention MIT-0, got {validation_errors!r}")
     finally:
         shutil.rmtree(tmpdir)
 
@@ -204,6 +212,9 @@ def test_auto_mode_materializes_release_bundle_as_openclaw_folder():
             fail('missing exported SKILL.md')
         if not (export_dir / '_meta.json').is_file():
             fail('missing exported _meta.json')
+        skill_md = (export_dir / 'SKILL.md').read_text(encoding='utf-8')
+        if 'metadata.openclaw.requires:' not in skill_md:
+            fail(f'expected exported SKILL.md to include metadata.openclaw.requires\n{skill_md}')
 
         manifest_path = Path(payload.get('manifest_path') or '')
         bundle_path = Path(payload.get('bundle_path') or '')
@@ -215,6 +226,41 @@ def test_auto_mode_materializes_release_bundle_as_openclaw_folder():
             fail(f"expected resolved_version {FIXTURE_VERSION!r}, got {payload.get('resolved_version')!r}")
         if payload.get('suggested_publish_command') != ['clawhub', 'publish', str(export_dir.resolve())]:
             fail(f"unexpected publish suggestion: {payload.get('suggested_publish_command')!r}")
+        if payload.get('public_ready') is not False:
+            fail(f"expected auto-mode public_ready=false without MIT-0 metadata, got {payload.get('public_ready')!r}")
+        validation_errors = payload.get('validation_errors') or []
+        if not any('MIT-0' in item for item in validation_errors):
+            fail(f"expected auto-mode validation errors to mention MIT-0, got {validation_errors!r}")
+
+        run([sys.executable, str(repo / 'scripts' / 'check-openclaw-compat.py'), '--skill-dir', str(export_dir)], cwd=repo)
+    finally:
+        shutil.rmtree(tmpdir)
+
+
+def test_public_ready_checker_rejects_binary_exports():
+    tmpdir, repo = prepare_repo(include_binary=True)
+    try:
+        out_dir = tmpdir / 'exported'
+        run(
+            [
+                str(repo / 'scripts' / 'export-openclaw-skill.sh'),
+                FIXTURE_NAME,
+                '--version',
+                FIXTURE_VERSION,
+                '--out',
+                str(out_dir),
+            ],
+            cwd=repo,
+        )
+        export_dir = out_dir / FIXTURE_NAME
+        result = run(
+            [sys.executable, str(repo / 'scripts' / 'check-openclaw-compat.py'), '--skill-dir', str(export_dir), '--public-ready'],
+            cwd=repo,
+            expect=1,
+        )
+        combined = result.stdout + result.stderr
+        if 'text-only' not in combined and 'MIT-0' not in combined:
+            fail(f'expected public-ready checker failure to mention text-only or MIT-0\n{combined}')
     finally:
         shutil.rmtree(tmpdir)
 
@@ -222,6 +268,7 @@ def test_auto_mode_materializes_release_bundle_as_openclaw_folder():
 def main():
     test_confirm_mode_returns_release_export_plan()
     test_auto_mode_materializes_release_bundle_as_openclaw_folder()
+    test_public_ready_checker_rejects_binary_exports()
     print('OK: openclaw export checks passed')
 
 

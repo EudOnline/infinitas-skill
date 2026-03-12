@@ -5,6 +5,8 @@ import shutil
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
+_TEXT_EXTENSIONS = {'.md', '.json', '.txt', '.yaml', '.yml', '.toml', '.cfg', '.ini', '.sh', '.py', '.js', '.ts', '.tsx', '.jsx', '.css', '.html'}
+
 _FRONTMATTER_RE = re.compile(r'^---\n(.*?)\n---\n?', re.DOTALL)
 
 
@@ -173,6 +175,58 @@ def select_ai_skill(ai_index: Dict[str, object], requested: str) -> Dict[str, ob
     raise OpenClawBridgeError(f'ambiguous skill name {requested}: {choices}')
 
 
+def _is_probably_text_file(path: Path) -> bool:
+    if path.suffix.lower() in _TEXT_EXTENSIONS:
+        return True
+    try:
+        data = path.read_bytes()
+    except Exception:
+        return False
+    if b'\x00' in data[:8192]:
+        return False
+    return True
+
+
+def validate_exported_openclaw_dir(skill_dir: Path, public_ready: bool = False) -> Dict[str, object]:
+    skill_dir = Path(skill_dir).resolve()
+    errors = []
+    skill_md = skill_dir / 'SKILL.md'
+    if not skill_md.is_file():
+        errors.append(f'missing SKILL.md: {skill_md}')
+        return {'ok': False, 'skill_dir': str(skill_dir), 'public_ready': False, 'errors': errors}
+    try:
+        frontmatter = parse_skill_frontmatter(skill_md)
+    except OpenClawBridgeError as exc:
+        errors.append(str(exc))
+        return {'ok': False, 'skill_dir': str(skill_dir), 'public_ready': False, 'errors': errors}
+
+    requires = frontmatter.get('metadata.openclaw.requires')
+    if not isinstance(requires, str) or not requires.strip():
+        errors.append('missing metadata.openclaw.requires in SKILL.md frontmatter')
+
+    if public_ready:
+        license_value = frontmatter.get('metadata.openclaw.license')
+        if license_value != 'MIT-0':
+            errors.append('public-ready exports require metadata.openclaw.license: MIT-0')
+
+        total_size = 0
+        for path in sorted(skill_dir.rglob('*')):
+            if not path.is_file():
+                continue
+            total_size += path.stat().st_size
+            if not _is_probably_text_file(path):
+                errors.append(f'public-ready exports must be text-only: {path.relative_to(skill_dir)}')
+        if total_size > 50 * 1024 * 1024:
+            errors.append('public-ready exports must stay under 50MB')
+
+    return {
+        'ok': not errors,
+        'skill_dir': str(skill_dir),
+        'public_ready': public_ready and not errors,
+        'errors': errors,
+    }
+
+
 def resolve_ai_release(root: Path, requested: str, requested_version: Optional[str] = None) -> Tuple[Dict[str, object], str, Dict[str, object]]:
     ai_index = load_ai_index(root)
     policy = ai_index.get('install_policy') or {}
@@ -203,8 +257,10 @@ def resolve_ai_release(root: Path, requested: str, requested_version: Optional[s
     return selected_skill, resolved_version, version_entry
 
 
-def export_release_to_directory(root: Path, manifest_path: Path, export_dir: Path, force: bool = False) -> Dict[str, object]:
+def export_release_to_directory(root: Path, manifest_path: Path, export_dir: Path, force: bool = False, public_ready: bool = False) -> Dict[str, object]:
     from distribution_lib import materialize_distribution_source
+    from render_skill_lib import load_platform_profile, render_skill
+    from canonical_skill_lib import load_skill_source
 
     export_dir = export_dir.resolve()
     if export_dir.exists():
@@ -223,17 +279,17 @@ def export_release_to_directory(root: Path, manifest_path: Path, export_dir: Pat
     source_dir = Path(materialized['materialized_path']).resolve()
     cleanup_dir = materialized.get('cleanup_dir')
     try:
-        shutil.copytree(source_dir, export_dir)
+        profile = load_platform_profile(Path(root).resolve(), 'openclaw')
+        source = load_skill_source(source_dir)
+        rendered = render_skill(source=source, platform='openclaw', out_dir=export_dir, profile=profile)
+        validation = validate_exported_openclaw_dir(export_dir, public_ready=public_ready)
     finally:
         if cleanup_dir:
             shutil.rmtree(cleanup_dir, ignore_errors=True)
 
-    files = []
-    for path in sorted(export_dir.rglob('*')):
-        if path.is_file():
-            files.append(str(path.relative_to(export_dir)))
-
     return {
         'export_dir': str(export_dir),
-        'files': files,
+        'files': rendered['files'],
+        'public_ready': validation['public_ready'],
+        'validation_errors': validation['errors'],
     }
