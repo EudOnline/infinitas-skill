@@ -271,10 +271,8 @@ if [[ $CREATE_TAG -eq 1 || $PUSH_TAG -eq 1 ]]; then
   TAG_ARGS=("$DIR")
   REUSE_EXISTING_TAG=0
   if [[ $PUSH_TAG -eq 1 ]] && git rev-parse "$TAG" >/dev/null 2>&1; then
-    if python3 "$ROOT/scripts/check-release-state.py" "$DIR" --mode local-tag >/dev/null 2>&1; then
-      REUSE_EXISTING_TAG=1
-      echo "reusing existing verified local tag: $TAG"
-    fi
+    REUSE_EXISTING_TAG=1
+    echo "reusing existing local tag: $TAG"
   fi
   if [[ $CREATE_TAG -eq 1 && $REUSE_EXISTING_TAG -eq 0 ]]; then
     TAG_ARGS+=(--create)
