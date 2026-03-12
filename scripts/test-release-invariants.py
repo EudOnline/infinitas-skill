@@ -110,6 +110,7 @@ def prepare_repo(include_signers=False):
         repo,
         ignore=shutil.ignore_patterns('.git', '.planning', '__pycache__', '.cache', 'scripts/__pycache__'),
     )
+    (repo / 'config' / 'allowed_signers').write_text('', encoding='utf-8')
     scaffold_fixture(repo)
     run(['git', 'init', '--bare', str(origin)], cwd=tmpdir)
     run(['git', 'init', '-b', 'main'], cwd=repo)
