@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-12T12:16:14Z",
+  "generated_at": "2026-03-12T12:52:01Z",
   "stage_counts": {
     "incubating": 0,
     "active": 1,
@@ -11,7 +11,7 @@
         "name": "operate-infinitas-skill",
         "publisher": "lvxiaoer",
         "qualified_name": "lvxiaoer/operate-infinitas-skill",
-        "version": "0.1.0",
+        "version": "0.1.1",
         "status": "active",
         "path": "skills/active/operate-infinitas-skill"
       }
@@ -21,7 +21,7 @@
         "name": "operate-infinitas-skill",
         "publisher": "lvxiaoer",
         "qualified_name": "lvxiaoer/operate-infinitas-skill",
-        "version": "0.1.0",
+        "version": "0.1.1",
         "status": "active",
         "path": "skills/active/operate-infinitas-skill"
       }
@@ -31,7 +31,7 @@
         "name": "operate-infinitas-skill",
         "publisher": "lvxiaoer",
         "qualified_name": "lvxiaoer/operate-infinitas-skill",
-        "version": "0.1.0",
+        "version": "0.1.1",
         "status": "active",
         "path": "skills/active/operate-infinitas-skill"
       }
@@ -41,7 +41,7 @@
         "name": "operate-infinitas-skill",
         "publisher": "lvxiaoer",
         "qualified_name": "lvxiaoer/operate-infinitas-skill",
-        "version": "0.1.0",
+        "version": "0.1.1",
         "status": "active",
         "path": "skills/active/operate-infinitas-skill"
       }
@@ -52,7 +52,7 @@
       "name": "operate-infinitas-skill",
       "publisher": "lvxiaoer",
       "qualified_name": "lvxiaoer/operate-infinitas-skill",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "status": "active",
       "path": "skills/active/operate-infinitas-skill",
       "declared_support": [

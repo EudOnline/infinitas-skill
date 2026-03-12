@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-12T12:16:14Z",
+  "generated_at": "2026-03-12T12:52:01Z",
   "count": 1,
   "skills": [
     {
@@ -7,7 +7,7 @@
       "publisher": "lvxiaoer",
       "qualified_name": "lvxiaoer/operate-infinitas-skill",
       "identity_mode": "qualified",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "status": "active",
       "summary": "Teach OpenClaw, Codex, and Claude Code how to operate inside the infinitas-skill repository.",
       "author": "lvxiaoer",
@@ -71,7 +71,7 @@
       "source_update_mode": "local-only",
       "source_pin_mode": "branch",
       "source_pin_value": "main",
-      "expected_tag": "skill/operate-infinitas-skill/v0.1.0",
+      "expected_tag": "skill/operate-infinitas-skill/v0.1.1",
       "declared_support": [
         "openclaw",
         "claude",
