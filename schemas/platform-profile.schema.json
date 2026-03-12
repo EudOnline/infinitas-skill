@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openai.invalid/infinitas-skill/platform-profile.schema.json",
+  "title": "infinitas-skill platform profile",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "platform",
+    "runtime",
+    "capabilities",
+    "constraints",
+    "contract"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "platform": {
+      "type": "string",
+      "minLength": 1
+    },
+    "runtime": {
+      "type": "object",
+      "required": ["skill_dir_candidates", "entrypoint"],
+      "properties": {
+        "skill_dir_candidates": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "entrypoint": {
+          "type": "string",
+          "const": "SKILL.md"
+        }
+      },
+      "additionalProperties": true
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": {
+        "type": ["boolean", "string", "number", "null"]
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "additionalProperties": {
+        "type": ["boolean", "string", "number", "null"]
+      }
+    },
+    "contract": {
+      "type": "object",
+      "required": ["sources", "last_verified"],
+      "properties": {
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^https://"
+          }
+        },
+        "last_verified": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

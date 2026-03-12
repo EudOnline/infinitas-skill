@@ -6,7 +6,8 @@ The registry now exports a machine-readable compatibility view at:
 
 ## What it contains
 
-- per-agent skill listings derived from `_meta.json.agent_compatible`
+- declared support exported from author metadata such as `_meta.json.agent_compatible`
+- verified support derived from compatibility evidence and platform-specific checks
 - stage counts for `incubating`, `active`, and `archived`
 - version + path data for quick lookup
 
@@ -21,6 +22,11 @@ As the registry grows, consumers often need to answer questions like:
 `catalog/compatibility.json` gives you a single generated file for that.
 
 ## Current compatibility source of truth
+
+During the migration window, compatibility has two sources of truth with different meanings:
+
+- **declared support** is still read from author metadata such as `_meta.json.agent_compatible`
+- **verified support** is produced by platform-specific compatibility checks and evidence files
 
 Compatibility is still declared manually in each skill's `_meta.json`:
 
@@ -38,7 +44,7 @@ scripts/build-catalog.sh
 
 ## What this does not guarantee
 
-`catalog/compatibility.json` reflects runtime compatibility claims derived from `_meta.json.agent_compatible`.
+`catalog/compatibility.json` currently reflects declared support from `_meta.json.agent_compatible`, and will increasingly add verified support from compatibility evidence as the new pipeline lands.
 
 It does **not** guarantee:
 

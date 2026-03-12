@@ -151,6 +151,10 @@ def build_ai_index(*, root: Path, catalog_entries: list, distribution_entries: l
                 'use_when': [],
                 'avoid_when': [],
                 'agent_compatible': current.get('agent_compatible') or [],
+                'compatibility': {
+                    'declared_support': current.get('declared_support') or current.get('agent_compatible') or [],
+                    'verified_support': current.get('verified_support') or {},
+                },
                 'default_install_version': latest_version,
                 'latest_version': latest_version,
                 'available_versions': versions,
@@ -229,6 +233,34 @@ def validate_ai_index_payload(payload: dict) -> list:
             value = skill.get(field)
             if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
                 errors.append(f'{prefix}.{field} must be an array of strings')
+
+        compatibility = skill.get('compatibility')
+        if compatibility is not None:
+            if not isinstance(compatibility, dict):
+                errors.append(f'{prefix}.compatibility must be an object when present')
+            else:
+                declared_support = compatibility.get('declared_support')
+                if not isinstance(declared_support, list) or not all(isinstance(item, str) for item in declared_support):
+                    errors.append(f'{prefix}.compatibility.declared_support must be an array of strings')
+                verified_support = compatibility.get('verified_support')
+                if not isinstance(verified_support, dict):
+                    errors.append(f'{prefix}.compatibility.verified_support must be an object')
+                else:
+                    for platform, payload in verified_support.items():
+                        platform_prefix = f'{prefix}.compatibility.verified_support.{platform}'
+                        if not isinstance(platform, str) or not platform.strip():
+                            errors.append(f'{prefix}.compatibility.verified_support keys must be non-empty strings')
+                            continue
+                        if not isinstance(payload, dict):
+                            errors.append(f'{platform_prefix} must be an object')
+                            continue
+                        state = payload.get('state')
+                        if not isinstance(state, str) or not state.strip():
+                            errors.append(f'{platform_prefix}.state must be a non-empty string')
+                        for field in ['checked_at', 'checker', 'evidence_path', 'note']:
+                            value = payload.get(field)
+                            if value is not None and (not isinstance(value, str) or not value.strip()):
+                                errors.append(f'{platform_prefix}.{field} must be a non-empty string when present')
 
         entrypoints = skill.get('entrypoints')
         if not isinstance(entrypoints, dict):

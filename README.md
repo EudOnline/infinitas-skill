@@ -21,7 +21,8 @@ This repository is meant to hold private skills, templates, helper scripts, and 
 catalog/
 ├─ catalog.json          machine-readable index for all skills
 ├─ active.json           install-focused index for active skills only
-├─ compatibility.json    agent/tool compatibility view
+├─ compatibility.json    declared + verified compatibility view
+├─ compatibility-evidence/ per-platform verification evidence records
 ├─ registries.json       configured registry sources view
 ├─ distributions.json    immutable distribution manifest index
 ├─ provenance/           generated release provenance records
@@ -37,6 +38,7 @@ docs/
 ├─ distribution-manifests.md verified bundles, manifests, and immutable install flow
 ├─ history-and-snapshots.md active overwrite snapshots and exact ancestry
 ├─ compatibility-matrix.md generated compatibility catalog guide
+├─ platform-contracts/   per-platform contract-watch documents
 ├─ multi-registry.md     source registry configuration and trust model
 ├─ promotion-policy.md   promotion rules for active skills
 ├─ review-workflow.md    request/approval flow for skill promotion
@@ -251,6 +253,17 @@ Use that document as the source of truth for:
 - deprecation windows for persisted state
 - migration and regression-test expectations
 - migration commands: `scripts/migrate-skill-meta.py` and `scripts/migrate-install-manifest.py`
+- declared support vs verified support compatibility reporting
+- compatibility evidence recorded separately from author declarations
+
+## Compatibility pipeline
+
+- Author intent is still declared in `_meta.json.agent_compatible` or canonical `skills-src/*/skill.json` metadata.
+- Platform adapters render generated outputs under `build/` or export targets via `scripts/export-codex-skill.sh`, `scripts/export-claude-skill.sh`, and `scripts/export-openclaw-skill.sh`.
+- Platform-specific verification evidence lives under `catalog/compatibility-evidence/<platform>/<skill>/<version>.json`.
+- `catalog/compatibility.json` now separates `declared_support` from `verified_support` while preserving the legacy top-level `agents` view.
+- Contract-watch docs in `docs/platform-contracts/` record stable assumptions, volatile assumptions, official sources, and the last manual verification date for Claude, Codex, and OpenClaw.
+- Run `python3 scripts/check-platform-contracts.py --max-age-days 30` to spot stale platform assumptions before claiming compatibility.
 
 ## Registry model
 

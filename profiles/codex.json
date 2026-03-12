@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "platform": "codex",
+  "runtime": {
+    "skill_dir_candidates": [
+      ".agents/skills",
+      "~/.agents/skills"
+    ],
+    "entrypoint": "SKILL.md"
+  },
+  "capabilities": {
+    "supports_subagents": true,
+    "supports_commands": false,
+    "supports_repo_instruction_layer": true
+  },
+  "constraints": {
+    "text_only_public_bundle": false,
+    "aggressively_evolving_surface": true
+  },
+  "contract": {
+    "sources": [
+      "https://platform.openai.com/docs/codex/overview#agentsmd",
+      "https://platform.openai.com/docs/codex/overview#skills"
+    ],
+    "last_verified": "2026-03-12"
+  }
+}

@@ -8,9 +8,11 @@ from pathlib import Path
 from dependency_lib import DependencyError, normalize_meta_dependencies
 from ai_index_lib import validate_ai_index_payload
 from discovery_index_lib import validate_discovery_index_payload
+from compatibility_evidence_lib import compatibility_evidence_root, validate_compatibility_evidence_payload
 from registry_source_lib import load_registry_config
 from skill_identity_lib import NamespacePolicyError, load_namespace_policy, namespace_policy_report, validate_identity_metadata
 from schema_version_lib import validate_schema_version
+from canonical_skill_lib import CanonicalSkillError, is_canonical_skill_dir, validate_canonical_payload
 
 ROOT = Path(__file__).resolve().parent.parent
 NAME_RE = re.compile(r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
@@ -60,7 +62,35 @@ def _parse_frontmatter(skill_md_path: Path):
     return fields
 
 
+def validate_canonical_skill(skill_dir: Path) -> int:
+    errors = 0
+    payload_path = skill_dir / 'skill.json'
+    instructions_path = skill_dir / 'instructions.md'
+    if not payload_path.exists():
+        fail(f'{skill_dir}: missing skill.json')
+        return 1
+    try:
+        payload = json.loads(payload_path.read_text(encoding='utf-8'))
+    except Exception as exc:
+        fail(f'{skill_dir}: invalid JSON in skill.json: {exc}')
+        return 1
+    for error in validate_canonical_payload(payload):
+        fail(f'{skill_dir}: {error}')
+        errors += 1
+    instructions_rel = payload.get('instructions_body', 'instructions.md') if isinstance(payload, dict) else 'instructions.md'
+    if not (skill_dir / instructions_rel).is_file():
+        fail(f'{skill_dir}: missing canonical instructions body {instructions_rel!r}')
+        errors += 1
+    platforms_dir = skill_dir / 'platforms'
+    if platforms_dir.exists() and not platforms_dir.is_dir():
+        fail(f'{skill_dir}: platforms must be a directory when present')
+        errors += 1
+    return errors
+
+
 def validate_meta(skill_dir: Path, namespace_policy=None) -> int:
+    if is_canonical_skill_dir(skill_dir):
+        return validate_canonical_skill(skill_dir)
     errors = 0
     meta_path = skill_dir / '_meta.json'
     skill_md = skill_dir / 'SKILL.md'
@@ -261,15 +291,36 @@ def validate_discovery_index(root: Path) -> int:
     return len(errors)
 
 
+def validate_compatibility_evidence(root: Path) -> int:
+    evidence_root = compatibility_evidence_root(root)
+    if not evidence_root.exists():
+        return 0
+
+    errors = 0
+    for path in sorted(evidence_root.rglob('*.json')):
+        try:
+            payload = json.loads(path.read_text(encoding='utf-8'))
+        except Exception as exc:
+            fail(f'{path}: invalid JSON: {exc}')
+            errors += 1
+            continue
+        rel_path = path.relative_to(evidence_root)
+        payload_errors = validate_compatibility_evidence_payload(payload, path=rel_path)
+        for error in payload_errors:
+            fail(f'{path}: {error}')
+            errors += 1
+    return errors
+
+
 def collect_dirs(args):
     if args:
         dirs = []
         for arg in args:
             p = (ROOT / arg).resolve() if not os.path.isabs(arg) else Path(arg)
-            if p.is_dir() and (p / '_meta.json').exists():
+            if p.is_dir() and ((p / '_meta.json').exists() or is_canonical_skill_dir(p)):
                 dirs.append(p)
             elif p.is_dir():
-                for child in sorted(x for x in p.iterdir() if x.is_dir() and (x / '_meta.json').exists()):
+                for child in sorted(x for x in p.iterdir() if x.is_dir() and ((x / '_meta.json').exists() or is_canonical_skill_dir(x))):
                     dirs.append(child)
             else:
                 fail(f'path does not exist or is not a directory: {arg}')
@@ -277,10 +328,10 @@ def collect_dirs(args):
         return dirs
 
     dirs = []
-    for base in [ROOT / 'skills' / 'incubating', ROOT / 'skills' / 'active', ROOT / 'skills' / 'archived', ROOT / 'templates']:
+    for base in [ROOT / 'skills' / 'incubating', ROOT / 'skills' / 'active', ROOT / 'skills' / 'archived', ROOT / 'templates', ROOT / 'skills-src']:
         if not base.exists():
             continue
-        for child in sorted(x for x in base.iterdir() if x.is_dir() and (x / '_meta.json').exists()):
+        for child in sorted(x for x in base.iterdir() if x.is_dir() and ((x / '_meta.json').exists() or is_canonical_skill_dir(x))):
             dirs.append(child)
     return dirs
 
@@ -301,6 +352,7 @@ def main():
         errors += validate_meta(d, namespace_policy=namespace_policy)
     errors += validate_ai_index(ROOT)
     errors += validate_discovery_index(ROOT)
+    errors += validate_compatibility_evidence(ROOT)
     if errors:
         print(f'Validation failed with {errors} error(s).', file=sys.stderr)
         return 1

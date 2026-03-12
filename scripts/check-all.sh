@@ -12,6 +12,16 @@ python3 scripts/check-registry-integrity.py
 python3 scripts/check-promotion-policy.py
 python3 scripts/test-review-governance.py
 python3 scripts/test-compat-regression.py
+if [[ "${INFINITAS_SKIP_COMPAT_PIPELINE_TESTS:-0}" != "1" ]]; then
+  python3 scripts/test-canonical-contracts.py
+  python3 scripts/test-canonical-skill.py
+  python3 scripts/test-render-skill.py
+  python3 scripts/test-openclaw-export.py
+  python3 scripts/test-codex-export.py
+  python3 scripts/test-claude-export.py
+  python3 scripts/test-compatibility-evidence.py
+  python3 scripts/test-platform-contracts.py
+fi
 if [[ "${INFINITAS_SKIP_RELEASE_TESTS:-0}" != "1" ]]; then
   python3 scripts/test-release-invariants.py
 fi
@@ -30,7 +40,6 @@ if [[ "${INFINITAS_SKIP_AI_WRAPPER_TESTS:-0}" != "1" ]]; then
   python3 scripts/test-ai-pull.py
   python3 scripts/test-ai-publish.py
   python3 scripts/test-openclaw-import.py
-  python3 scripts/test-openclaw-export.py
 fi
 if [[ "${INFINITAS_SKIP_BOOTSTRAP_TESTS:-0}" != "1" ]]; then
   python3 scripts/test-signing-bootstrap.py

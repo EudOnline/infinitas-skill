@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "platform": "openclaw",
+  "runtime": {
+    "skill_dir_candidates": [
+      "~/.openclaw/skills",
+      "~/.openclaw/workspace/skills"
+    ],
+    "entrypoint": "SKILL.md"
+  },
+  "capabilities": {
+    "supports_subagents": false,
+    "supports_commands": false,
+    "supports_public_publish": true
+  },
+  "constraints": {
+    "text_only_public_bundle": true,
+    "public_license": "MIT-0",
+    "size_budget_mb": 50
+  },
+  "contract": {
+    "sources": [
+      "https://github.com/openclaw/clawhub/blob/main/docs/skill-format.md",
+      "https://github.com/openclaw/clawhub/blob/main/README.md"
+    ],
+    "last_verified": "2026-03-12"
+  }
+}

@@ -85,6 +85,11 @@ The standard repository verification path should run `scripts/test-compat-regres
 
 ## Notes on runtime vs format compatibility
 
-`agent_compatible` is a runtime compatibility declaration: it says which agent runtimes a skill claims to support.
+`agent_compatible` is a runtime compatibility declaration: it says which agent runtimes a skill claims to support. That declaration is now treated as **declared support**, not the final compatibility verdict.
+
+As the multi-platform pipeline evolves, the repository distinguishes between:
+
+- **declared support**: what the author says a skill intends to support
+- **verified support**: what recent platform-specific checks and evidence files have confirmed
 
 It is **not** the same thing as registry file-format compatibility. File-format compatibility is governed by versioned schemas, migration guarantees, and regression tests.
