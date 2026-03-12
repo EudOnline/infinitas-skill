@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-12T08:52:47Z",
+  "generated_at": "2026-03-12T12:16:14Z",
   "count": 1,
   "skills": [
     {
@@ -8,7 +8,7 @@
       "qualified_name": "lvxiaoer/operate-infinitas-skill",
       "identity_mode": "qualified",
       "version": "0.1.0",
-      "status": "incubating",
+      "status": "active",
       "summary": "Teach OpenClaw, Codex, and Claude Code how to operate inside the infinitas-skill repository.",
       "author": "lvxiaoer",
       "owner": "lvxiaoer",
@@ -25,8 +25,8 @@
         "claude-code",
         "operations"
       ],
-      "review_state": "draft",
-      "declared_review_state": "draft",
+      "review_state": "approved",
+      "declared_review_state": "approved",
       "risk_level": "low",
       "derived_from": null,
       "snapshot_of": null,
@@ -39,17 +39,29 @@
         "codex"
       ],
       "installable": true,
-      "approval_count": 0,
+      "approval_count": 1,
       "rejection_count": 0,
       "blocking_rejection_count": 0,
       "required_approvals": 1,
-      "quorum_met": false,
-      "review_gate_pass": false,
-      "required_reviewer_groups": [],
-      "covered_reviewer_groups": [],
+      "quorum_met": true,
+      "review_gate_pass": true,
+      "required_reviewer_groups": [
+        "maintainers"
+      ],
+      "covered_reviewer_groups": [
+        "maintainers",
+        "security"
+      ],
       "missing_reviewer_groups": [],
-      "reviewers": [],
-      "path": "skills/incubating/operate-infinitas-skill",
+      "reviewers": [
+        {
+          "reviewer": "lvxiaoer",
+          "decision": "approved",
+          "at": "2026-03-12T12:14:51Z",
+          "note": "Solo-maintainer fallback approval for first stable release"
+        }
+      ],
+      "path": "skills/active/operate-infinitas-skill",
       "source_registry": "self",
       "source_registry_url": "https://github.com/EudOnline/infinitas-skill.git",
       "source_registry_ref": "refs/heads/main",
