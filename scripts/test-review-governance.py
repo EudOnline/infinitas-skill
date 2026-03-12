@@ -116,6 +116,78 @@ def rewrite_policy(repo: Path):
     )
 
 
+def rewrite_solo_owner_policy(repo: Path):
+    write_json(
+        repo / 'policy' / 'promotion-policy.json',
+        {
+            '$schema': '../schemas/promotion-policy.schema.json',
+            'version': 4,
+            'active_requires': {
+                'review_state': ['approved'],
+                'require_changelog': True,
+                'require_smoke_test': True,
+                'require_owner': True,
+            },
+            'reviews': {
+                'require_reviews_file': True,
+                'reviewer_must_differ_from_owner': True,
+                'allow_owner_when_no_distinct_reviewer': True,
+                'block_on_rejection': True,
+                'groups': {
+                    'maintainers': {
+                        'members': ['owner'],
+                    },
+                },
+                'quorum': {
+                    'defaults': {
+                        'min_approvals': 1,
+                        'required_groups': [],
+                    },
+                    'stage_overrides': {
+                        'active': {
+                            'min_approvals': 1,
+                            'required_groups': ['maintainers'],
+                        },
+                    },
+                },
+            },
+            'high_risk_active_requires': {
+                'min_maintainers': 1,
+                'require_requires_block': True,
+            },
+            'dependency_rules': {
+                'allow_name_only_refs': True,
+                'allow_version_pins': True,
+                'require_resolvable_refs_for_active': True,
+                'auto_install_dependencies_default': True,
+            },
+        },
+    )
+
+
+def verify_owner_fallback_for_solo_maintainer():
+    with tempfile.TemporaryDirectory(prefix='infinitas-review-solo-test-') as tmpdir:
+        repo = Path(tmpdir) / 'repo'
+        shutil.copytree(
+            ROOT,
+            repo,
+            ignore=shutil.ignore_patterns('.git', '.planning', '__pycache__', '.cache', 'catalog'),
+        )
+        (repo / 'catalog').mkdir(exist_ok=True)
+        rewrite_solo_owner_policy(repo)
+        write_skill(repo, 'solo-owner-fixture')
+
+        run([str(repo / 'scripts' / 'request-review.sh'), 'solo-owner-fixture', '--note', 'Solo maintainer release'], cwd=repo)
+        run([str(repo / 'scripts' / 'approve-skill.sh'), 'solo-owner-fixture', '--reviewer', 'owner', '--decision', 'approved'], cwd=repo)
+
+        status = run([sys.executable, str(repo / 'scripts' / 'review-status.py'), 'solo-owner-fixture', '--as-active'], cwd=repo)
+        if 'approval_count: 1' not in status.stdout:
+            fail(f'expected fallback owner approval to count\n{status.stdout}')
+        if 'missing_groups: -' not in status.stdout:
+            fail(f'expected no missing groups after owner fallback\n{status.stdout}')
+        run([sys.executable, str(repo / 'scripts' / 'review-status.py'), 'solo-owner-fixture', '--as-active', '--require-pass'], cwd=repo)
+
+
 def main():
     with tempfile.TemporaryDirectory(prefix='infinitas-review-test-') as tmpdir:
         repo = Path(tmpdir) / 'repo'
@@ -182,6 +254,7 @@ def main():
         if item.get('review_gate_pass') is not True:
             fail(f"expected review_gate_pass true, got {item.get('review_gate_pass')!r}")
 
+    verify_owner_fallback_for_solo_maintainer()
     print('OK: review governance checks passed')
 
 

@@ -9,6 +9,7 @@ Before pushing or promoting a skill:
 - [ ] full registry validation passes via `scripts/check-all.sh`
 - [ ] `_meta.json.status` matches the parent directory
 - [ ] computed review quorum passes for the target stage via `scripts/review-status.py <name> --as-active --require-pass`
+- [ ] if this is a solo-maintainer repo, confirm `policy/promotion-policy.json` intentionally enables `reviews.allow_owner_when_no_distinct_reviewer` before relying on owner approval fallback
 - [ ] `_meta.json.version` was bumped appropriately for behavioral changes
 - [ ] `CHANGELOG.md` was updated
 - [ ] Trigger description clearly states when the skill should activate
@@ -37,3 +38,4 @@ Before creating stable release output for an active skill:
 - [ ] `scripts/verify-attestation.py catalog/provenance/<name>-<version>.json` passes against repo-managed allowed signers
 - [ ] `python3 scripts/doctor-signing.py <name> --provenance catalog/provenance/<name>-<version>.json` reports no blocking failures after the rehearsal
 - [ ] any optional legacy HMAC provenance signing happens after the required SSH attestation has already been verified
+- [ ] platform evidence was refreshed with `python3 scripts/record-verified-support.py <name> --platform codex --platform claude --platform openclaw --build-catalog` if verified compatibility claims changed

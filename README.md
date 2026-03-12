@@ -261,6 +261,7 @@ Use that document as the source of truth for:
 - Author intent is still declared in `_meta.json.agent_compatible` or canonical `skills-src/*/skill.json` metadata.
 - Platform adapters render generated outputs under `build/` or export targets via `scripts/export-codex-skill.sh`, `scripts/export-claude-skill.sh`, and `scripts/export-openclaw-skill.sh`.
 - Platform-specific verification evidence lives under `catalog/compatibility-evidence/<platform>/<skill>/<version>.json`.
+- Use `python3 scripts/record-verified-support.py <skill> --platform codex --platform claude --platform openclaw --build-catalog` to record fresh evidence from the real export/check pipeline after a stable release exists.
 - `catalog/compatibility.json` now separates `declared_support` from `verified_support` while preserving the legacy top-level `agents` view.
 - Contract-watch docs in `docs/platform-contracts/` record stable assumptions, volatile assumptions, official sources, and the last manual verification date for Claude, Codex, and OpenClaw.
 - Run `python3 scripts/check-platform-contracts.py --max-age-days 30` to spot stale platform assumptions before claiming compatibility.

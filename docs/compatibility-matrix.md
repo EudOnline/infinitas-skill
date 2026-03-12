@@ -27,6 +27,7 @@ During the migration window, compatibility has two sources of truth with differe
 
 - **declared support** is still read from author metadata such as `_meta.json.agent_compatible`
 - **verified support** is produced by platform-specific compatibility checks and evidence files
+- `python3 scripts/record-verified-support.py <skill> --platform ... --build-catalog` is the canonical way to refresh verified support evidence after a real release/export check
 
 Compatibility is still declared manually in each skill's `_meta.json`:
 

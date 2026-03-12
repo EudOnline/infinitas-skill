@@ -22,6 +22,9 @@ if [[ "${INFINITAS_SKIP_COMPAT_PIPELINE_TESTS:-0}" != "1" ]]; then
   python3 scripts/test-codex-export.py
   python3 scripts/test-claude-export.py
   python3 scripts/test-compatibility-evidence.py
+  if [[ "${INFINITAS_SKIP_RECORD_VERIFIED_SUPPORT_TESTS:-0}" != "1" ]]; then
+    python3 scripts/test-record-verified-support.py
+  fi
   python3 scripts/test-platform-contracts.py
 fi
 if [[ "${INFINITAS_SKIP_RELEASE_TESTS:-0}" != "1" ]]; then

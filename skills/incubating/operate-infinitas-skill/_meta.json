@@ -30,7 +30,7 @@
   "derived_from": null,
   "replaces": null,
   "visibility": "private",
-  "review_state": "draft",
+  "review_state": "approved",
   "risk_level": "low",
   "requires": {
     "tools": [
