@@ -1,0 +1,10 @@
+{
+  "platform": "claude",
+  "skill": "operate-infinitas-skill",
+  "qualified_name": "lvxiaoer/operate-infinitas-skill",
+  "version": "0.1.1",
+  "state": "adapted",
+  "checked_at": "2026-03-12T12:56:55Z",
+  "checker": "check-claude-compat.py",
+  "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py."
+}
