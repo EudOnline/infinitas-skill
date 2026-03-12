@@ -3,7 +3,7 @@
   "name": "operate-infinitas-skill",
   "publisher": "lvxiaoer",
   "qualified_name": "lvxiaoer/operate-infinitas-skill",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "status": "active",
   "summary": "Teach OpenClaw, Codex, and Claude Code how to operate inside the infinitas-skill repository.",
   "owner": "lvxiaoer",
