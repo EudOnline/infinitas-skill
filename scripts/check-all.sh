@@ -15,6 +15,8 @@ python3 scripts/test-compat-regression.py
 if [[ "${INFINITAS_SKIP_COMPAT_PIPELINE_TESTS:-0}" != "1" ]]; then
   python3 scripts/test-canonical-contracts.py
   python3 scripts/test-canonical-skill.py
+  python3 scripts/test-new-skill.py
+  python3 scripts/test-operate-infinitas-skill.py
   python3 scripts/test-render-skill.py
   python3 scripts/test-openclaw-export.py
   python3 scripts/test-codex-export.py

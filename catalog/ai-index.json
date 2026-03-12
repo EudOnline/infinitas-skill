@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-03-09T13:28:58Z",
+  "generated_at": "2026-03-12T08:52:47Z",
   "registry": {
-    "default_registry": null
+    "default_registry": "self"
   },
   "install_policy": {
     "mode": "immutable-only",

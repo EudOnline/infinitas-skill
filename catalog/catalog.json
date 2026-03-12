@@ -1,5 +1,81 @@
 {
-  "generated_at": "2026-03-08T03:21:40Z",
-  "count": 0,
-  "skills": []
+  "generated_at": "2026-03-12T08:52:47Z",
+  "count": 1,
+  "skills": [
+    {
+      "name": "operate-infinitas-skill",
+      "publisher": "lvxiaoer",
+      "qualified_name": "lvxiaoer/operate-infinitas-skill",
+      "identity_mode": "qualified",
+      "version": "0.1.0",
+      "status": "incubating",
+      "summary": "Teach OpenClaw, Codex, and Claude Code how to operate inside the infinitas-skill repository.",
+      "author": "lvxiaoer",
+      "owner": "lvxiaoer",
+      "owners": [
+        "lvxiaoer"
+      ],
+      "maintainers": [
+        "lvxiaoer"
+      ],
+      "tags": [
+        "registry",
+        "openclaw",
+        "codex",
+        "claude-code",
+        "operations"
+      ],
+      "review_state": "draft",
+      "declared_review_state": "draft",
+      "risk_level": "low",
+      "derived_from": null,
+      "snapshot_of": null,
+      "depends_on": [],
+      "conflicts_with": [],
+      "agent_compatible": [
+        "openclaw",
+        "claude",
+        "claude-code",
+        "codex"
+      ],
+      "installable": true,
+      "approval_count": 0,
+      "rejection_count": 0,
+      "blocking_rejection_count": 0,
+      "required_approvals": 1,
+      "quorum_met": false,
+      "review_gate_pass": false,
+      "required_reviewer_groups": [],
+      "covered_reviewer_groups": [],
+      "missing_reviewer_groups": [],
+      "reviewers": [],
+      "path": "skills/incubating/operate-infinitas-skill",
+      "source_registry": "self",
+      "source_registry_url": "https://github.com/EudOnline/infinitas-skill.git",
+      "source_registry_ref": "refs/heads/main",
+      "source_registry_commit": null,
+      "source_registry_tag": null,
+      "source_registry_trust": "private",
+      "source_update_mode": "local-only",
+      "source_pin_mode": "branch",
+      "source_pin_value": "main",
+      "expected_tag": "skill/operate-infinitas-skill/v0.1.0",
+      "declared_support": [
+        "openclaw",
+        "claude",
+        "codex"
+      ],
+      "verified_support": {
+        "openclaw": {
+          "state": "unknown"
+        },
+        "claude": {
+          "state": "unknown"
+        },
+        "codex": {
+          "state": "unknown"
+        }
+      }
+    }
+  ]
 }
