@@ -44,7 +44,23 @@ mkdir -p "$TARGET_ROOT"
 cp -R "$SRC" "$DEST"
 
 if [[ -f "$DEST/SKILL.md" ]]; then
-  sed -i "s/^name: .*/name: $SLUG/" "$DEST/SKILL.md"
+  python3 - "$DEST/SKILL.md" "$SLUG" <<'PY'
+from pathlib import Path
+import sys
+
+skill_md_path = Path(sys.argv[1])
+name = sys.argv[2]
+lines = skill_md_path.read_text(encoding='utf-8').splitlines()
+updated = []
+replaced = False
+for line in lines:
+    if not replaced and line.startswith('name: '):
+        updated.append(f'name: {name}')
+        replaced = True
+    else:
+        updated.append(line)
+skill_md_path.write_text('\n'.join(updated) + '\n', encoding='utf-8')
+PY
 fi
 if [[ -f "$DEST/_meta.json" ]]; then
   python3 - "$DEST/_meta.json" "$SRC_NAME" "$SLUG" "$PUBLISHER_SLUG" <<'PY'
