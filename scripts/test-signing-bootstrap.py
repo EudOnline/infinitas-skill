@@ -109,11 +109,32 @@ def rewrite_promotion_policy(repo: Path):
     reviews = policy.get('reviews') if isinstance(policy.get('reviews'), dict) else {}
     groups = reviews.get('groups') if isinstance(reviews.get('groups'), dict) else {}
     maintainers = groups.get('maintainers') if isinstance(groups.get('maintainers'), dict) else {}
-    maintainers['members'] = ['alice']
+    members = maintainers.get('members') if isinstance(maintainers.get('members'), list) else []
+    maintainers['members'] = list(dict.fromkeys([*members, 'alice']))
     groups['maintainers'] = maintainers
     reviews['groups'] = groups
     policy['reviews'] = reviews
     write_json(policy_path, policy)
+
+
+def stabilize_active_operate_skill_reviews(repo: Path):
+    skill_dir = repo / 'skills' / 'active' / 'operate-infinitas-skill'
+    if not skill_dir.is_dir():
+        return
+    reviews_path = skill_dir / 'reviews.json'
+    reviews = json.loads(reviews_path.read_text(encoding='utf-8')) if reviews_path.exists() else {'version': 1, 'requests': [], 'entries': []}
+    entries = reviews.get('entries') if isinstance(reviews.get('entries'), list) else []
+    if not any(item.get('reviewer') == 'alice' and item.get('decision') == 'approved' for item in entries):
+        entries.append(
+            {
+                'reviewer': 'alice',
+                'decision': 'approved',
+                'at': '2026-03-12T00:10:00Z',
+                'note': 'Fixture-compatible approval for active operate skill',
+            }
+        )
+    reviews['entries'] = entries
+    write_json(reviews_path, reviews)
 
 
 def prepare_repo():
@@ -126,6 +147,8 @@ def prepare_repo():
         ignore=shutil.ignore_patterns('.git', '.planning', '__pycache__', '.cache', 'scripts/__pycache__'),
     )
     rewrite_promotion_policy(repo)
+    (repo / 'config' / 'allowed_signers').write_text('', encoding='utf-8')
+    stabilize_active_operate_skill_reviews(repo)
     scaffold_fixture(repo)
     run(['git', 'init', '--bare', str(origin)], cwd=tmpdir)
     run(['git', 'init', '-b', 'main'], cwd=repo)

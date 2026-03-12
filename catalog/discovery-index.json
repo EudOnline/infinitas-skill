@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-03-12T02:31:09Z",
+  "generated_at": "2026-03-12T12:56:45Z",
   "default_registry": "self",
   "sources": [
     {
@@ -17,5 +17,33 @@
     "external_requires_confirmation": true,
     "auto_install_mutable_sources": false
   },
-  "skills": []
+  "skills": [
+    {
+      "name": "operate-infinitas-skill",
+      "qualified_name": "lvxiaoer/operate-infinitas-skill",
+      "publisher": "lvxiaoer",
+      "summary": "Teach OpenClaw, Codex, and Claude Code how to operate inside the infinitas-skill repository.",
+      "source_registry": "self",
+      "source_priority": 100,
+      "match_names": [
+        "lvxiaoer/operate-infinitas-skill",
+        "operate-infinitas-skill"
+      ],
+      "default_install_version": "0.1.1",
+      "latest_version": "0.1.1",
+      "available_versions": [
+        "0.1.1"
+      ],
+      "agent_compatible": [
+        "openclaw",
+        "claude",
+        "claude-code",
+        "codex"
+      ],
+      "install_requires_confirmation": false,
+      "trust_level": "private",
+      "use_when": [],
+      "avoid_when": []
+    }
+  ]
 }

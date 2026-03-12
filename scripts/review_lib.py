@@ -282,6 +282,25 @@ def effective_quorum_rule(policy, stage, risk_level):
     return rule
 
 
+def owner_review_unavoidable(owner, reviewers, required_groups, min_approvals):
+    if not owner:
+        return False
+    non_owner_reviewers = {
+        reviewer: data
+        for reviewer, data in (reviewers or {}).items()
+        if reviewer != owner
+    }
+    if len(non_owner_reviewers) < (min_approvals or 0):
+        return True
+    if required_groups:
+        covered_groups = set()
+        for reviewer_data in non_owner_reviewers.values():
+            covered_groups.update(reviewer_data.get('groups', []))
+        if any(group_name not in covered_groups for group_name in required_groups):
+            return True
+    return False
+
+
 def validate_promotion_policy(policy):
     errors = []
     if not isinstance(policy, dict):
@@ -307,7 +326,7 @@ def validate_promotion_policy(policy):
         errors.append('reviews must be an object')
         return errors
 
-    for key in ['require_reviews_file', 'reviewer_must_differ_from_owner', 'block_on_rejection']:
+    for key in ['require_reviews_file', 'reviewer_must_differ_from_owner', 'allow_owner_when_no_distinct_reviewer', 'block_on_rejection']:
         if key in reviews_cfg and not isinstance(reviews_cfg.get(key), bool):
             errors.append(f'reviews.{key} must be boolean when present')
 
@@ -380,6 +399,15 @@ def evaluate_review_state(skill_dir: Path, root: Path = ROOT, stage: Optional[st
     risk_level = meta.get('risk_level')
     owner = meta.get('owner')
     quorum_rule = effective_quorum_rule(policy, evaluated_stage, risk_level)
+    owner_fallback_allowed = (
+        reviews_cfg.get('allow_owner_when_no_distinct_reviewer')
+        and owner_review_unavoidable(
+            owner,
+            reviewers,
+            quorum_rule.get('required_groups', []),
+            quorum_rule.get('min_approvals', 0),
+        )
+    )
 
     approvals = []
     rejections = []
@@ -396,7 +424,7 @@ def evaluate_review_state(skill_dir: Path, root: Path = ROOT, stage: Optional[st
             reasons.append('unconfigured reviewer')
         if decision not in ALLOWED_DECISIONS:
             reasons.append('invalid decision')
-        if reviewer == owner and reviews_cfg.get('reviewer_must_differ_from_owner'):
+        if reviewer == owner and reviews_cfg.get('reviewer_must_differ_from_owner') and not owner_fallback_allowed:
             reasons.append('reviewer is owner')
         counted = not reasons
         item = {

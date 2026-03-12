@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-12T08:52:47Z",
+  "generated_at": "2026-03-12T12:56:55Z",
   "count": 1,
   "skills": [
     {
@@ -7,8 +7,8 @@
       "publisher": "lvxiaoer",
       "qualified_name": "lvxiaoer/operate-infinitas-skill",
       "identity_mode": "qualified",
-      "version": "0.1.0",
-      "status": "incubating",
+      "version": "0.1.1",
+      "status": "active",
       "summary": "Teach OpenClaw, Codex, and Claude Code how to operate inside the infinitas-skill repository.",
       "author": "lvxiaoer",
       "owner": "lvxiaoer",
@@ -25,8 +25,8 @@
         "claude-code",
         "operations"
       ],
-      "review_state": "draft",
-      "declared_review_state": "draft",
+      "review_state": "approved",
+      "declared_review_state": "approved",
       "risk_level": "low",
       "derived_from": null,
       "snapshot_of": null,
@@ -39,17 +39,29 @@
         "codex"
       ],
       "installable": true,
-      "approval_count": 0,
+      "approval_count": 1,
       "rejection_count": 0,
       "blocking_rejection_count": 0,
       "required_approvals": 1,
-      "quorum_met": false,
-      "review_gate_pass": false,
-      "required_reviewer_groups": [],
-      "covered_reviewer_groups": [],
+      "quorum_met": true,
+      "review_gate_pass": true,
+      "required_reviewer_groups": [
+        "maintainers"
+      ],
+      "covered_reviewer_groups": [
+        "maintainers",
+        "security"
+      ],
       "missing_reviewer_groups": [],
-      "reviewers": [],
-      "path": "skills/incubating/operate-infinitas-skill",
+      "reviewers": [
+        {
+          "reviewer": "lvxiaoer",
+          "decision": "approved",
+          "at": "2026-03-12T12:14:51Z",
+          "note": "Solo-maintainer fallback approval for first stable release"
+        }
+      ],
+      "path": "skills/active/operate-infinitas-skill",
       "source_registry": "self",
       "source_registry_url": "https://github.com/EudOnline/infinitas-skill.git",
       "source_registry_ref": "refs/heads/main",
@@ -59,21 +71,43 @@
       "source_update_mode": "local-only",
       "source_pin_mode": "branch",
       "source_pin_value": "main",
-      "expected_tag": "skill/operate-infinitas-skill/v0.1.0",
+      "expected_tag": "skill/operate-infinitas-skill/v0.1.1",
+      "verified_distribution": {
+        "manifest_path": "catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.1/manifest.json",
+        "bundle_path": "catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.1/skill.tar.gz",
+        "bundle_sha256": "ee193440e2376d498f88a2b0ed9ea99dce3a0183eec7125fefefa8abaf07f500",
+        "attestation_path": "catalog/provenance/operate-infinitas-skill-0.1.1.json",
+        "attestation_signature_path": "catalog/provenance/operate-infinitas-skill-0.1.1.json.ssig",
+        "source_snapshot_tag": "skill/operate-infinitas-skill/v0.1.1",
+        "source_snapshot_commit": "50f1370101ae36cc509516cd9b75571742c2bf3b",
+        "generated_at": "2026-03-12T12:56:45Z"
+      },
       "declared_support": [
         "openclaw",
         "claude",
         "codex"
       ],
       "verified_support": {
-        "openclaw": {
-          "state": "unknown"
-        },
         "claude": {
-          "state": "unknown"
+          "state": "adapted",
+          "checked_at": "2026-03-12T12:56:55Z",
+          "checker": "check-claude-compat.py",
+          "evidence_path": "catalog/compatibility-evidence/claude/operate-infinitas-skill/0.1.1.json",
+          "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py."
         },
         "codex": {
-          "state": "unknown"
+          "state": "adapted",
+          "checked_at": "2026-03-12T12:56:55Z",
+          "checker": "check-codex-compat.py",
+          "evidence_path": "catalog/compatibility-evidence/codex/operate-infinitas-skill/0.1.1.json",
+          "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py."
+        },
+        "openclaw": {
+          "state": "adapted",
+          "checked_at": "2026-03-12T12:56:55Z",
+          "checker": "check-openclaw-compat.py",
+          "evidence_path": "catalog/compatibility-evidence/openclaw/operate-infinitas-skill/0.1.1.json",
+          "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py."
         }
       }
     }

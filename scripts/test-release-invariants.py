@@ -110,6 +110,7 @@ def prepare_repo(include_signers=False):
         repo,
         ignore=shutil.ignore_patterns('.git', '.planning', '__pycache__', '.cache', 'scripts/__pycache__'),
     )
+    (repo / 'config' / 'allowed_signers').write_text('', encoding='utf-8')
     scaffold_fixture(repo)
     run(['git', 'init', '--bare', str(origin)], cwd=tmpdir)
     run(['git', 'init', '-b', 'main'], cwd=repo)
@@ -272,6 +273,28 @@ def scenario_signed_pushed_release_succeeds():
         shutil.rmtree(tmpdir)
 
 
+def scenario_existing_signed_tag_can_resume_release():
+    tmpdir, repo, _origin, _key_path, identity = prepare_repo(include_signers=True)
+    try:
+        run([str(repo / 'scripts' / 'release-skill-tag.sh'), FIXTURE_NAME, '--create', '--push'], cwd=repo, env=make_env())
+        result = run(
+            [
+                str(repo / 'scripts' / 'release-skill.sh'),
+                FIXTURE_NAME,
+                '--push-tag',
+                '--write-provenance',
+                '--releaser',
+                identity,
+            ],
+            cwd=repo,
+            env=make_env(),
+        )
+        combined = result.stdout + result.stderr
+        assert_contains(combined, 'verified attestation:', 'resume release attestation summary')
+    finally:
+        shutil.rmtree(tmpdir)
+
+
 def main():
     scenario_missing_signers_blocks_tag_creation()
     scenario_missing_tag_blocks_release()
@@ -280,6 +303,7 @@ def main():
     scenario_unsigned_tag_is_rejected()
     scenario_signed_tag_must_be_pushed()
     scenario_signed_pushed_release_succeeds()
+    scenario_existing_signed_tag_can_resume_release()
     print('OK: release invariant checks passed')
 
 

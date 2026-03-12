@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "requests": [
+    {
+      "requested_at": "2026-03-12T12:14:27Z",
+      "note": "Ready for stable release"
+    }
+  ],
+  "entries": [
+    {
+      "reviewer": "lvxiaoer",
+      "decision": "approved",
+      "note": "Solo-maintainer fallback approval for first stable release",
+      "at": "2026-03-12T12:14:51Z"
+    }
+  ]
+}

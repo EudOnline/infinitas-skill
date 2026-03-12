@@ -10,6 +10,7 @@
   "reviews": {
     "require_reviews_file": true,
     "reviewer_must_differ_from_owner": true,
+    "allow_owner_when_no_distinct_reviewer": true,
     "block_on_rejection": true,
     "groups": {
       "maintainers": {

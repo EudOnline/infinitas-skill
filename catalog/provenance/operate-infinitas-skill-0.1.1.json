@@ -1,0 +1,183 @@
+{
+  "$schema": "schemas/provenance.schema.json",
+  "schema_version": 1,
+  "kind": "skill-release-attestation",
+  "generated_at": "2026-03-12T12:56:45Z",
+  "skill": {
+    "name": "operate-infinitas-skill",
+    "publisher": "lvxiaoer",
+    "qualified_name": "lvxiaoer/operate-infinitas-skill",
+    "identity_mode": "qualified",
+    "version": "0.1.1",
+    "status": "active",
+    "summary": "Teach OpenClaw, Codex, and Claude Code how to operate inside the infinitas-skill repository.",
+    "path": "skills/active/operate-infinitas-skill",
+    "author": "lvxiaoer",
+    "owners": [
+      "lvxiaoer"
+    ],
+    "maintainers": [
+      "lvxiaoer"
+    ],
+    "derived_from": null,
+    "snapshot_of": null,
+    "depends_on": [],
+    "conflicts_with": []
+  },
+  "git": {
+    "repo_url": "git@github-eudonline:EudOnline/infinitas-skill.git",
+    "branch": "codex/signer-bootstrap-evidence",
+    "upstream": "origin/codex/signer-bootstrap-evidence",
+    "commit": "50f1370101ae36cc509516cd9b75571742c2bf3b",
+    "head_commit": "50f1370101ae36cc509516cd9b75571742c2bf3b",
+    "expected_tag": "skill/operate-infinitas-skill/v0.1.1",
+    "release_ref": "refs/tags/skill/operate-infinitas-skill/v0.1.1",
+    "remote": "origin",
+    "remote_tag_object": "f8d21641c154a8341ba32c198ed2d3bb50b0c6ea",
+    "remote_tag_commit": "50f1370101ae36cc509516cd9b75571742c2bf3b",
+    "signed_tag_verified": true,
+    "tag_signer": "lvxiaoer"
+  },
+  "source_snapshot": {
+    "kind": "git-tag",
+    "tag": "skill/operate-infinitas-skill/v0.1.1",
+    "ref": "refs/tags/skill/operate-infinitas-skill/v0.1.1",
+    "commit": "50f1370101ae36cc509516cd9b75571742c2bf3b",
+    "remote": "origin",
+    "upstream": "origin/codex/signer-bootstrap-evidence",
+    "immutable": true,
+    "pushed": true
+  },
+  "registry": {
+    "default_registry": "self",
+    "registries_consulted": [
+      "self"
+    ],
+    "resolved": [
+      {
+        "registry_name": "self",
+        "registry_kind": "git",
+        "registry_url": "https://github.com/EudOnline/infinitas-skill.git",
+        "registry_host": "github.com",
+        "registry_priority": 100,
+        "registry_trust": "private",
+        "registry_root": "/Users/lvxiaoer/Documents/codeWork/infinitas-skill/.worktrees/signer-bootstrap-evidence",
+        "registry_pin_mode": "branch",
+        "registry_pin_value": "main",
+        "registry_ref": "refs/heads/main",
+        "registry_allowed_refs": [
+          "refs/heads/main"
+        ],
+        "registry_allowed_hosts": [
+          "github.com"
+        ],
+        "registry_update_mode": "local-only",
+        "registry_commit": "50f1370101ae36cc509516cd9b75571742c2bf3b",
+        "registry_tag": "skill/operate-infinitas-skill/v0.1.1",
+        "registry_branch": "codex/signer-bootstrap-evidence",
+        "registry_origin_url": "git@github-eudonline:EudOnline/infinitas-skill.git",
+        "registry_origin_host": "github-eudonline"
+      }
+    ]
+  },
+  "dependencies": {
+    "mode": "install",
+    "root": {
+      "name": "operate-infinitas-skill",
+      "publisher": "lvxiaoer",
+      "qualified_name": "lvxiaoer/operate-infinitas-skill",
+      "version": "0.1.1",
+      "registry": "self",
+      "stage": "active",
+      "path": "/Users/lvxiaoer/Documents/codeWork/infinitas-skill/.worktrees/signer-bootstrap-evidence/skills/active/operate-infinitas-skill",
+      "source_type": "working-tree",
+      "distribution_manifest": null,
+      "source_snapshot_tag": null,
+      "source_snapshot_commit": null
+    },
+    "steps": [
+      {
+        "order": 1,
+        "name": "operate-infinitas-skill",
+        "publisher": "lvxiaoer",
+        "qualified_name": "lvxiaoer/operate-infinitas-skill",
+        "identity_mode": "qualified",
+        "version": "0.1.1",
+        "registry": "self",
+        "stage": "active",
+        "path": "/Users/lvxiaoer/Documents/codeWork/infinitas-skill/.worktrees/signer-bootstrap-evidence/skills/active/operate-infinitas-skill",
+        "skill_path": "/Users/lvxiaoer/Documents/codeWork/infinitas-skill/.worktrees/signer-bootstrap-evidence/skills/active/operate-infinitas-skill",
+        "relative_path": null,
+        "source_type": "working-tree",
+        "distribution_manifest": null,
+        "distribution_bundle": null,
+        "distribution_bundle_sha256": null,
+        "distribution_attestation": null,
+        "distribution_attestation_signature": null,
+        "action": "install",
+        "needs_apply": true,
+        "requested_by": [],
+        "depends_on": [],
+        "conflicts_with": [],
+        "root": true,
+        "source_commit": "50f1370101ae36cc509516cd9b75571742c2bf3b",
+        "source_ref": "refs/heads/main",
+        "source_tag": "skill/operate-infinitas-skill/v0.1.1",
+        "source_snapshot_kind": null,
+        "source_snapshot_tag": null,
+        "source_snapshot_ref": null,
+        "source_snapshot_commit": null
+      }
+    ],
+    "registries_consulted": [
+      "self"
+    ]
+  },
+  "review": {
+    "reviewers": [
+      {
+        "reviewer": "lvxiaoer",
+        "decision": "approved",
+        "at": "2026-03-12T12:14:51Z",
+        "note": "Solo-maintainer fallback approval for first stable release"
+      }
+    ]
+  },
+  "release": {
+    "releaser_identity": "lvxiaoer",
+    "namespace_policy_path": "policy/namespace-policy.json",
+    "namespace_policy_version": 1,
+    "transfer_required": false,
+    "transfer_authorized": true,
+    "transfer_matches": [],
+    "competing_claims": [],
+    "authorized_signers": [
+      "lvxiaoer"
+    ],
+    "authorized_releasers": [
+      "lvxiaoer"
+    ]
+  },
+  "attestation": {
+    "format": "ssh",
+    "namespace": "infinitas-skill",
+    "allowed_signers": "config/allowed_signers",
+    "signature_file": "operate-infinitas-skill-0.1.1.json.ssig",
+    "signature_ext": ".ssig",
+    "signer_identity": "lvxiaoer",
+    "policy_mode": "enforce",
+    "require_verified_attestation_for_release_output": true,
+    "require_verified_attestation_for_distribution": true
+  },
+  "distribution": {
+    "manifest_path": "catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.1/manifest.json",
+    "bundle": {
+      "path": "catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.1/skill.tar.gz",
+      "format": "tar.gz",
+      "sha256": "ee193440e2376d498f88a2b0ed9ea99dce3a0183eec7125fefefa8abaf07f500",
+      "size": 3060,
+      "root_dir": "operate-infinitas-skill",
+      "file_count": 8
+    }
+  }
+}

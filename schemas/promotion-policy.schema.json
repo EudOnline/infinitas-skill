@@ -58,6 +58,9 @@
         "reviewer_must_differ_from_owner": {
           "type": "boolean"
         },
+        "allow_owner_when_no_distinct_reviewer": {
+          "type": "boolean"
+        },
         "block_on_rejection": {
           "type": "boolean"
         },

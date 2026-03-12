@@ -30,7 +30,8 @@ scripts/publish-skill.sh <skill> [--version <semver>] [--mode auto|confirm]
 6. 生成 bundle、manifest、provenance / attestation
 7. 验证发布物完整性
 8. 更新 catalog 与 AI index
-9. 输出结构化 JSON 结果
+9. 如需刷新 `verified_support`，再运行 `python3 scripts/record-verified-support.py <skill> --platform ... --build-catalog`
+10. 输出结构化 JSON 结果
 
 ## Stop Conditions
 
@@ -82,6 +83,7 @@ scripts/publish-skill.sh <skill> [--version <semver>] [--mode auto|confirm]
 - 如果 skill 最初来自 OpenClaw 本地工作区，先使用 `scripts/import-openclaw-skill.sh` 导入 registry，再发布
 - `publish-skill.sh` 只负责 registry → immutable release，不负责直接写入 OpenClaw 运行时目录
 - 若后续要进入 ClawHub，必须先从已发布版本导出；该导出会返回 `public_ready` 和 `validation_errors`，再由人工决定是否执行 `clawhub publish`
+- 若需要让 `catalog/compatibility.json` 反映 Claude / Codex / OpenClaw 的最新实测状态，发布后还需要运行 `scripts/record-verified-support.py`
 
 ## Forbidden Assumptions
 

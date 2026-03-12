@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SKILL_DIR = ROOT / 'skills' / 'incubating' / 'operate-infinitas-skill'
+SKILL_NAME = 'operate-infinitas-skill'
 
 
 def fail(message):
@@ -24,13 +24,24 @@ def assert_contains(text: str, needle: str, label: str):
         fail(f'missing {label}: expected to find {needle!r}')
 
 
-def main():
-    if not SKILL_DIR.is_dir():
-        fail(f'missing skill directory: {SKILL_DIR}')
+def resolve_skill_dir():
+    candidates = [
+        ROOT / 'skills' / 'incubating' / SKILL_NAME,
+        ROOT / 'skills' / 'active' / SKILL_NAME,
+    ]
+    matches = [path for path in candidates if path.is_dir()]
+    if not matches:
+        fail(f'missing skill directory: expected one of {", ".join(str(path) for path in candidates)}')
+    if len(matches) > 1:
+        fail(f'expected exactly one lifecycle directory for {SKILL_NAME}, found {matches!r}')
+    return matches[0]
 
-    skill_md_path = SKILL_DIR / 'SKILL.md'
-    meta_path = SKILL_DIR / '_meta.json'
-    smoke_path = SKILL_DIR / 'tests' / 'smoke.md'
+
+def main():
+    skill_dir = resolve_skill_dir()
+    skill_md_path = skill_dir / 'SKILL.md'
+    meta_path = skill_dir / '_meta.json'
+    smoke_path = skill_dir / 'tests' / 'smoke.md'
 
     if not skill_md_path.is_file():
         fail(f'missing SKILL.md: {skill_md_path}')
