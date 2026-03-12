@@ -166,7 +166,9 @@ def main():
             fail('expected direct_source_install_allowed to be false')
         if not payload.get('skills'):
             fail('expected ai-index to contain at least one skill entry')
-        entry = payload['skills'][0]
+        entry = next((item for item in payload['skills'] if item.get('name') == FIXTURE_NAME), None)
+        if entry is None:
+            fail(f'expected ai-index to contain {FIXTURE_NAME}, got {payload.get("skills")!r}')
         versions = entry.get('versions') or {}
         if FIXTURE_VERSION not in versions:
             fail(f'expected version {FIXTURE_VERSION!r} in ai-index versions')
@@ -184,7 +186,10 @@ def main():
             fail(f"unexpected runtime_targets: {interop.get('runtime_targets')!r}")
 
         original_ai_index = json.loads(ai_index_path.read_text(encoding='utf-8'))
-        original_ai_index['skills'][0]['default_install_version'] = '9.9.9'
+        target = next((item for item in original_ai_index['skills'] if item.get('name') == FIXTURE_NAME), None)
+        if target is None:
+            fail(f'expected mutable ai-index entry for {FIXTURE_NAME}')
+        target['default_install_version'] = '9.9.9'
         write_json(ai_index_path, original_ai_index)
         result = run([sys.executable, str(repo / 'scripts' / 'validate-registry.py')], cwd=repo, expect=1)
         combined = result.stdout + result.stderr
