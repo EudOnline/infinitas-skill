@@ -7,7 +7,8 @@ from urllib.parse import urlparse
 
 TRUST_TIERS = {'private', 'trusted', 'public', 'untrusted'}
 PIN_MODES = {'branch', 'tag', 'commit'}
-UPDATE_MODES = {'local-only', 'track', 'pinned'}
+UPDATE_MODES = {'local-only', 'track', 'pinned', 'remote-only'}
+AUTH_MODES = {'none', 'token'}
 COMMIT_RE = re.compile(r'^[0-9a-fA-F]{40}$')
 
 
@@ -17,6 +18,16 @@ def registry_sources_path(root: Path) -> Path:
 
 def load_registry_config(root: Path):
     return json.loads(registry_sources_path(root).read_text(encoding='utf-8'))
+
+
+def registry_remote_url(reg):
+    if not isinstance(reg, dict):
+        return None
+    for key in ['url', 'base_url']:
+        value = reg.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
 
 
 def extract_git_host(url):
@@ -81,14 +92,26 @@ def normalized_pin(reg):
 
 def normalized_update_policy(reg):
     policy = reg.get('update_policy') if isinstance(reg.get('update_policy'), dict) else {}
+    if reg.get('kind') == 'http':
+        mode = policy.get('mode', 'remote-only')
+        return {'mode': mode}
     default_mode = 'local-only' if reg.get('kind') == 'local' or reg.get('local_path') else 'track'
     mode = policy.get('mode', default_mode)
     return {'mode': mode}
 
 
+def normalized_auth(reg):
+    auth = reg.get('auth') if isinstance(reg.get('auth'), dict) else {}
+    mode = auth.get('mode', 'none')
+    env = auth.get('env')
+    if isinstance(env, str):
+        env = env.strip()
+    return {'mode': mode, 'env': env or None}
+
+
 def normalized_allowed_hosts(reg):
     hosts = [value.lower() for value in _clean_string_list(reg.get('allowed_hosts'))]
-    host = extract_git_host(reg.get('url'))
+    host = extract_git_host(registry_remote_url(reg))
     if not hosts and host:
         hosts = [host]
     return hosts
@@ -160,9 +183,11 @@ def git_repo_identity(repo: Path, preferred_tag=None):
 def registry_identity(root: Path, reg):
     pin = normalized_pin(reg)
     update_policy = normalized_update_policy(reg)
+    auth = normalized_auth(reg)
     reg_root = resolve_registry_root(root, reg)
     preferred_tag = short_pin_value(pin.get('mode'), pin.get('value')) if pin.get('mode') == 'tag' else None
-    git_identity = git_repo_identity(reg_root, preferred_tag=preferred_tag) if reg_root and reg_root.exists() else {
+    remote_url = registry_remote_url(reg)
+    git_identity = git_repo_identity(reg_root, preferred_tag=preferred_tag) if reg.get('kind') == 'git' and reg_root and reg_root.exists() else {
         'commit': None,
         'tag': None,
         'branch': None,
@@ -172,8 +197,9 @@ def registry_identity(root: Path, reg):
     return {
         'registry_name': reg.get('name'),
         'registry_kind': reg.get('kind'),
-        'registry_url': reg.get('url'),
-        'registry_host': extract_git_host(reg.get('url')),
+        'registry_url': remote_url,
+        'registry_base_url': reg.get('base_url'),
+        'registry_host': extract_git_host(remote_url),
         'registry_priority': reg.get('priority', 0),
         'registry_trust': reg.get('trust'),
         'registry_root': str(reg_root) if reg_root else None,
@@ -183,6 +209,8 @@ def registry_identity(root: Path, reg):
         'registry_allowed_refs': normalized_allowed_refs(reg),
         'registry_allowed_hosts': normalized_allowed_hosts(reg),
         'registry_update_mode': update_policy.get('mode'),
+        'registry_auth_mode': auth.get('mode'),
+        'registry_auth_env': auth.get('env'),
         'registry_commit': git_identity.get('commit'),
         'registry_tag': git_identity.get('tag'),
         'registry_branch': git_identity.get('branch'),
@@ -228,8 +256,8 @@ def validate_registry_config(root: Path, cfg):
         else:
             seen.add(name)
 
-        if kind not in {'git', 'local'}:
-            errors.append(f'registry {name!r} kind must be git or local')
+        if kind not in {'git', 'local', 'http'}:
+            errors.append(f'registry {name!r} kind must be git, local, or http')
 
         if trust not in TRUST_TIERS:
             errors.append(f'registry {name!r} trust must be one of {sorted(TRUST_TIERS)}')
@@ -312,6 +340,36 @@ def validate_registry_config(root: Path, cfg):
                 errors.append(f'local registry {name!r} missing non-empty local_path')
             if reg.get('update_policy') is not None and update_policy.get('mode') != 'local-only':
                 errors.append(f'local registry {name!r} may only use update_policy.mode=local-only')
+
+        if kind == 'http':
+            base_url = reg.get('base_url')
+            if not isinstance(base_url, str) or not base_url.strip():
+                errors.append(f"http registry {name!r} missing non-empty base_url")
+            parsed_base = urlparse(base_url.strip()) if isinstance(base_url, str) and base_url.strip() else None
+            if parsed_base and not parsed_base.hostname:
+                errors.append(f'registry {name!r} base_url must include a hostname')
+            if parsed_base and trust in {'private', 'trusted', 'public'} and parsed_base.scheme.lower() != 'https':
+                errors.append(f"registry {name!r} with trust {trust!r} must use an https base_url")
+
+            auth = reg.get('auth')
+            auth_cfg = normalized_auth(reg)
+            if auth is not None and not isinstance(auth, dict):
+                errors.append(f'registry {name!r} auth must be an object when present')
+            if auth_cfg.get('mode') not in AUTH_MODES:
+                errors.append(f"registry {name!r} auth.mode must be one of {sorted(AUTH_MODES)!r}")
+            if auth_cfg.get('mode') == 'token' and not auth_cfg.get('env'):
+                errors.append(f'registry {name!r} token auth requires auth.env')
+            if auth_cfg.get('mode') == 'none' and isinstance(auth, dict) and auth.get('env') not in {None, ''}:
+                errors.append(f"registry {name!r} auth.env must be omitted when auth.mode='none'")
+
+            if reg.get('catalog_paths') is not None:
+                catalog_paths = reg.get('catalog_paths')
+                if not isinstance(catalog_paths, dict):
+                    errors.append(f'registry {name!r} catalog_paths must be an object when present')
+                else:
+                    for key in ['ai_index', 'distributions', 'compatibility']:
+                        if key in catalog_paths and (not isinstance(catalog_paths.get(key), str) or not catalog_paths.get(key).strip()):
+                            errors.append(f'registry {name!r} catalog_paths.{key} must be a non-empty string when set')
 
     if cfg.get('default_registry') not in seen:
         errors.append('default_registry must match one configured registry name')

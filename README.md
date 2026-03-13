@@ -4,6 +4,11 @@ Private skill registry for Claude Code, Codex, and OpenClaw.
 
 This repository is meant to hold private skills, templates, helper scripts, and review guidance for skills that should not live in a public repository. The MVP goal is simple: make skills easy to create, validate, promote, install, and sync across multiple personal agents without turning the repo into an uncontrolled prompt dump.
 
+The current release/install model supports both:
+
+- local or Git-backed registry sources for operators working inside the repository
+- hosted HTTP registry sources for consumers that should install immutable artifacts without cloning the full repository
+
 ## Recommended workflow
 
 1. Scaffold a new skill from a template
@@ -203,6 +208,7 @@ For AI-driven publishing, import, export, and installation, treat the following 
 
 - `docs/ai/agent-operations.md` — agent-facing common operations manual
 - `docs/ai/discovery.md` — private-first discovery, install-by-name, and upgrade contract
+- `docs/ai/hosted-registry.md` — hosted registry endpoints, auth, and immutable download contract
 - `docs/ai/openclaw.md` — OpenClaw / ClawHub bridge contract
 - `docs/ai/publish.md` — protocol for `scripts/publish-skill.sh`
 - `docs/ai/pull.md` — protocol for `scripts/pull-skill.sh`

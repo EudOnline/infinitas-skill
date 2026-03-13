@@ -93,6 +93,46 @@ For tracked or pinned remote registries, sync now:
 4. resolves an exact commit, and
 5. checks out that commit in detached state.
 
+## Hosted HTTP registries
+
+The registry source model now also supports a hosted distribution source:
+
+```json
+{
+  "name": "hosted",
+  "kind": "http",
+  "base_url": "https://skills.example.com/registry",
+  "enabled": true,
+  "priority": 100,
+  "trust": "private",
+  "auth": {
+    "mode": "token",
+    "env": "INFINITAS_REGISTRY_TOKEN"
+  }
+}
+```
+
+Use `kind: "http"` when operators want clients to install from hosted immutable artifacts instead of cloning or caching a Git checkout.
+
+Hosted registries differ from Git registries in three important ways:
+
+1. they resolve through HTTPS endpoints instead of a local repository root
+2. they do not expose Git commit / tag identity at install time
+3. they are intended to serve generated catalog views and immutable release artifacts
+
+For `private`, `trusted`, and `public` hosted registries, `base_url` must use HTTPS.
+
+Optional `catalog_paths` overrides may be provided only when the registry does not serve the default paths:
+
+- `ai_index`
+- `distributions`
+- `compatibility`
+
+Auth currently supports:
+
+- `none`
+- `token` via an environment variable named in `auth.env`
+
 ## Resolution and install identity
 
 `resolve-skill-source.py --json` now includes registry policy and exact git identity fields such as:
@@ -112,6 +152,13 @@ For tracked or pinned remote registries, sync now:
 Use `publisher/skill` when you need to disambiguate two publishers that share the same bare skill slug. Legacy unqualified names still resolve for backward compatibility.
 
 Install and sync manifests persist the same identity so `scripts/list-installed.sh` can show where a skill came from with its publisher namespace plus exact registry commit/tag.
+
+For hosted registries, manifests should instead persist:
+
+- `registry_name`
+- `registry_url` / `registry_base_url`
+- resolved hosted version
+- any compatible publisher-qualified skill identity
 
 ## Discovery across registries
 

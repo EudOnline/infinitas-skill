@@ -59,8 +59,47 @@
           "enum": [
             "local-only",
             "track",
-            "pinned"
+            "pinned",
+            "remote-only"
           ]
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "none",
+            "token"
+          ]
+        },
+        "env": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "catalog_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ai_index": {
+          "type": "string",
+          "minLength": 1
+        },
+        "distributions": {
+          "type": "string",
+          "minLength": 1
+        },
+        "compatibility": {
+          "type": "string",
+          "minLength": 1
         }
       }
     },
@@ -83,10 +122,15 @@
           "type": "string",
           "enum": [
             "git",
-            "local"
+            "local",
+            "http"
           ]
         },
         "url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "base_url": {
           "type": "string",
           "minLength": 1
         },
@@ -133,6 +177,12 @@
         "update_policy": {
           "$ref": "#/$defs/update_policy"
         },
+        "auth": {
+          "$ref": "#/$defs/auth"
+        },
+        "catalog_paths": {
+          "$ref": "#/$defs/catalog_paths"
+        },
         "notes": {
           "type": "string"
         }
@@ -167,6 +217,20 @@
           "then": {
             "required": [
               "local_path"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "http"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "base_url"
             ]
           }
         }
