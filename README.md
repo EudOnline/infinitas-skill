@@ -88,6 +88,14 @@ scripts/
 ├─ verify-attestation.py verify release attestations against repo-managed SSH signers
 └─ diff-skill.sh         compare two skill folders or names
 
+server/
+├─ app.py                FastAPI entrypoint for the hosted control plane
+├─ auth.py               bearer-token auth helpers for hosted APIs
+├─ db.py                 SQLAlchemy engine + session wiring
+├─ models.py             users, submissions, reviews, and jobs tables
+├─ settings.py           env-driven hosted server configuration
+└─ templates/            lightweight hosted control plane HTML pages
+
 skills/
 ├─ incubating/           work in progress
 ├─ active/               ready-to-use skills
@@ -200,7 +208,26 @@ scripts/publish-skill.sh my-skill
 scripts/pull-skill.sh my-skill ~/.openclaw/skills
 scripts/import-openclaw-skill.sh ~/.openclaw/workspace/skills/my-skill --owner lvxiaoer
 scripts/export-openclaw-skill.sh my-skill --version 1.2.3 --out /tmp/openclaw-export
+
+# Hosted control plane preview
+uv run python scripts/test-hosted-api.py
+uv run uvicorn server.app:app --reload
 ```
+
+## Hosted registry control plane preview
+
+The repository now includes a minimal hosted control plane under `server/` for the server-owned registry model. The first scaffold includes:
+
+- `GET /healthz` for readiness
+- `GET /` for a lightweight HTML dashboard
+- `GET /login` for auth bootstrap guidance
+- `GET /api/v1/me` for bearer-token identity checks
+
+The hosted server uses SQLite by default and can be configured with:
+
+- `INFINITAS_SERVER_DATABASE_URL`
+- `INFINITAS_SERVER_SECRET_KEY`
+- `INFINITAS_SERVER_BOOTSTRAP_USERS` (JSON array of `{username, display_name, role, token}`)
 
 ## AI Protocol
 

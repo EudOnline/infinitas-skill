@@ -1,0 +1,10 @@
+{% extends "layout.html" %}
+{% block body %}
+<ul>
+  <li>Database: <code>{{ database_url }}</code></li>
+  <li>Users: <code>{{ user_count }}</code></li>
+  <li>Submissions: <code>{{ submission_count }}</code></li>
+  <li>Jobs: <code>{{ job_count }}</code></li>
+</ul>
+<p>Available endpoints: <code>/healthz</code>, <code>/login</code>, <code>/api/v1/me</code>.</p>
+{% endblock %}
