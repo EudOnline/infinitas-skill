@@ -22,6 +22,9 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Inspect hosted registry job and submission state')
     parser.add_argument('--database-url', required=True, help='Database URL, currently sqlite:///... only')
     parser.add_argument('--limit', type=int, default=5, help='Number of recent rows to include in summaries')
+    parser.add_argument('--max-queued-jobs', type=int, default=None, help='Alert when queued job count exceeds this threshold')
+    parser.add_argument('--max-running-jobs', type=int, default=None, help='Alert when running job count exceeds this threshold')
+    parser.add_argument('--max-failed-jobs', type=int, default=None, help='Alert when failed job count exceeds this threshold')
     parser.add_argument('--json', action='store_true', help='Emit machine-readable JSON output')
     return parser.parse_args()
 
@@ -120,16 +123,41 @@ def summarize_submissions(session: Session, limit: int) -> dict:
     }
 
 
+def build_alerts(summary: dict, args: argparse.Namespace) -> list[dict]:
+    alerts = []
+    checks = [
+        ('queued_jobs', summary['jobs']['by_status'].get('queued', 0), args.max_queued_jobs),
+        ('running_jobs', summary['jobs']['by_status'].get('running', 0), args.max_running_jobs),
+        ('failed_jobs', summary['jobs']['by_status'].get('failed', 0), args.max_failed_jobs),
+    ]
+    for kind, actual, threshold in checks:
+        if threshold is None:
+            continue
+        if actual > threshold:
+            alerts.append(
+                {
+                    'kind': kind,
+                    'actual': actual,
+                    'threshold': threshold,
+                    'message': f'{kind} count {actual} exceeds threshold {threshold}',
+                }
+            )
+    return alerts
+
+
 def emit(summary: dict, as_json: bool):
     if as_json:
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         return
     jobs = summary['jobs']
     submissions = summary['submissions']
-    print(f"OK: jobs total={jobs['total']} queued={jobs['by_status'].get('queued', 0)} failed={jobs['by_status'].get('failed', 0)}")
-    print(f"OK: submissions total={submissions['total']} statuses={json.dumps(submissions['by_status'], ensure_ascii=False, sort_keys=True)}")
+    prefix = 'OK' if summary.get('ok') else 'ALERT'
+    print(f"{prefix}: jobs total={jobs['total']} queued={jobs['by_status'].get('queued', 0)} failed={jobs['by_status'].get('failed', 0)}")
+    print(f"{prefix}: submissions total={submissions['total']} statuses={json.dumps(submissions['by_status'], ensure_ascii=False, sort_keys=True)}")
     for item in jobs['recent_failed']:
         print(f"FAILED: job#{item['id']} kind={item['kind']} submission={item['submission_id']} error={item['error_message']}")
+    for alert in summary.get('alerts') or []:
+        print(f"ALERT: {alert['message']}")
 
 
 def main():
@@ -140,7 +168,6 @@ def main():
     engine = create_engine(args.database_url, future=True, connect_args={'check_same_thread': False})
     with Session(engine) as session:
         summary = {
-            'ok': True,
             'database': {
                 'kind': 'sqlite',
                 'path': str(db_path),
@@ -148,7 +175,11 @@ def main():
             'jobs': summarize_jobs(session, limit=max(args.limit, 1)),
             'submissions': summarize_submissions(session, limit=max(args.limit, 1)),
         }
+    alerts = build_alerts(summary, args)
+    summary['alerts'] = alerts
+    summary['ok'] = not alerts
     emit(summary, as_json=args.json)
+    raise SystemExit(2 if alerts else 0)
 
 
 if __name__ == '__main__':

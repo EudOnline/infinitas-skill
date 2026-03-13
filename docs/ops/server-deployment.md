@@ -62,6 +62,9 @@ Use the hosted state inspector alongside `server-healthcheck.py` when you need q
 python scripts/inspect-hosted-state.py \
   --database-url sqlite:////srv/infinitas/data/server.db \
   --limit 10 \
+  --max-queued-jobs 10 \
+  --max-running-jobs 2 \
+  --max-failed-jobs 0 \
   --json
 ```
 
@@ -71,6 +74,8 @@ This summarizes:
 - recent failed jobs with error messages
 - recent queued/running jobs
 - submissions by status
+
+When any configured threshold is exceeded, the script still emits its summary but exits with status code `2`. That makes it suitable for `systemd` oneshot health/alert runs.
 
 This is intentionally SQLite-first for the current single-node deployment shape.
 
@@ -97,6 +102,8 @@ The rendered directory contains:
 - `infinitas-hosted-worker.service`
 - `infinitas-hosted-backup.service`
 - `infinitas-hosted-backup.timer`
+- `infinitas-hosted-inspect.service`
+- `infinitas-hosted-inspect.timer`
 
 Suggested install flow:
 
@@ -108,8 +115,17 @@ Suggested install flow:
    - `sudo systemctl enable --now infinitas-hosted-api.service`
    - `sudo systemctl enable --now infinitas-hosted-worker.service`
    - `sudo systemctl enable --now infinitas-hosted-backup.timer`
+   - `sudo systemctl enable --now infinitas-hosted-inspect.timer`
 
-The API service starts `uvicorn`, the worker service runs `scripts/run-hosted-worker.py`, and the backup timer schedules `scripts/backup-hosted-registry.py`.
+The API service starts `uvicorn`, the worker service runs `scripts/run-hosted-worker.py`, the backup timer schedules `scripts/backup-hosted-registry.py`, and the inspect timer runs `scripts/inspect-hosted-state.py` with configured alert thresholds.
+
+For a small single-node deployment, a reasonable starting point is:
+
+- `--inspect-max-queued-jobs 10`
+- `--inspect-max-running-jobs 2`
+- `--inspect-max-failed-jobs 0`
+
+An inspect service failure means the queue or failure counts crossed a threshold. It does not necessarily mean the process crashed.
 
 ## Mirroring
 

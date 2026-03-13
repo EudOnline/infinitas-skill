@@ -219,8 +219,8 @@ uv run uvicorn server.app:app --reload
 python scripts/server-healthcheck.py --api-url http://127.0.0.1:8000 --repo-path /srv/infinitas/repo --artifact-path /srv/infinitas/artifacts --database-url sqlite:////srv/infinitas/data/server.db --json
 python scripts/backup-hosted-registry.py --repo-path /srv/infinitas/repo --artifact-path /srv/infinitas/artifacts --database-url sqlite:////srv/infinitas/data/server.db --output-dir /srv/infinitas/backups --label nightly
 python scripts/rehearse-hosted-restore.py --backup-dir /srv/infinitas/backups/20260314T010000Z-nightly --output-dir /tmp/infinitas-restore-drill --json
-python scripts/inspect-hosted-state.py --database-url sqlite:////srv/infinitas/data/server.db --limit 10 --json
-python scripts/render-hosted-systemd.py --output-dir /tmp/infinitas-systemd --repo-root /srv/infinitas/repo --python-bin /srv/infinitas/.venv/bin/python --env-file /etc/infinitas/hosted-registry.env --service-prefix infinitas-hosted --backup-output-dir /srv/infinitas/backups --backup-on-calendar daily --backup-label nightly
+python scripts/inspect-hosted-state.py --database-url sqlite:////srv/infinitas/data/server.db --limit 10 --max-queued-jobs 10 --max-running-jobs 2 --max-failed-jobs 0 --json
+python scripts/render-hosted-systemd.py --output-dir /tmp/infinitas-systemd --repo-root /srv/infinitas/repo --python-bin /srv/infinitas/.venv/bin/python --env-file /etc/infinitas/hosted-registry.env --service-prefix infinitas-hosted --backup-output-dir /srv/infinitas/backups --backup-on-calendar daily --backup-label nightly --inspect-on-calendar hourly --inspect-limit 10 --inspect-max-queued-jobs 10 --inspect-max-running-jobs 2 --inspect-max-failed-jobs 0
 
 # Mirror the hosted source-of-truth repo outward only
 scripts/mirror-registry.sh --remote github-mirror --dry-run
@@ -253,8 +253,8 @@ Phase 1 hosted ops automation now includes:
 - `scripts/server-healthcheck.py` to verify `/healthz`, repo checkout presence, artifact directory shape, and SQLite connectivity
 - `scripts/backup-hosted-registry.py` to create a point-in-time repo bundle + SQLite copy + artifact tarball backup set
 - `scripts/rehearse-hosted-restore.py` to validate a backup set by cloning and extracting it into a staging directory
-- `scripts/inspect-hosted-state.py` to summarize queue depth, failed jobs, and submission status counts from the hosted DB
-- `scripts/render-hosted-systemd.py` to generate a `systemd` deployment bundle for the API, worker, and scheduled backup timer
+- `scripts/inspect-hosted-state.py` to summarize queue depth, failed jobs, and submission status counts from the hosted DB, with optional threshold-based non-zero exits
+- `scripts/render-hosted-systemd.py` to generate a `systemd` deployment bundle for the API, worker, scheduled backup timer, and scheduled inspection timer
 - `scripts/run-hosted-worker.py` to provide a stable long-running worker entrypoint for the generated worker service
 
 These ops helpers are intentionally SQLite-first for the current single-node deployment model. PostgreSQL and object-storage automation remain future extensions.

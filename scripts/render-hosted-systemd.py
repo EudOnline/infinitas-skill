@@ -19,6 +19,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--backup-output-dir', required=True, help='Directory where scheduled backups should be written')
     parser.add_argument('--backup-on-calendar', default='daily', help='systemd OnCalendar expression for backups')
     parser.add_argument('--backup-label', default='scheduled', help='Backup label passed to the backup helper')
+    parser.add_argument('--inspect-on-calendar', default='hourly', help='systemd OnCalendar expression for queue inspection runs')
+    parser.add_argument('--inspect-limit', type=int, default=10, help='Number of recent rows included in each inspection run')
+    parser.add_argument('--inspect-max-queued-jobs', type=int, default=None, help='Alert when queued job count exceeds this threshold')
+    parser.add_argument('--inspect-max-running-jobs', type=int, default=None, help='Alert when running job count exceeds this threshold')
+    parser.add_argument('--inspect-max-failed-jobs', type=int, default=0, help='Alert when failed job count exceeds this threshold')
     parser.add_argument('--artifact-path', default='', help='Override artifact path for the env template and backup service')
     parser.add_argument('--database-url', default='', help='Override database URL for the env template and backup service')
     parser.add_argument('--repo-lock-path', default='', help='Override repo lock path for the env template')
@@ -118,6 +123,45 @@ WantedBy=timers.target
 """
 
 
+def render_inspect_service(args: argparse.Namespace) -> str:
+    database_url = args.database_url or f'sqlite:///{args.repo_root.rstrip("/")}/data/server.db'
+    extra = []
+    if args.inspect_max_queued_jobs is not None:
+        extra.extend(['--max-queued-jobs', str(args.inspect_max_queued_jobs)])
+    if args.inspect_max_running_jobs is not None:
+        extra.extend(['--max-running-jobs', str(args.inspect_max_running_jobs)])
+    if args.inspect_max_failed_jobs is not None:
+        extra.extend(['--max-failed-jobs', str(args.inspect_max_failed_jobs)])
+    extra_flags = ' '.join(extra)
+    if extra_flags:
+        extra_flags = f' {extra_flags}'
+    return f"""[Unit]
+Description=Infinitas Hosted Registry Queue Inspection
+After=network-online.target
+
+[Service]
+Type=oneshot
+User={args.service_user}
+WorkingDirectory={args.repo_root}
+EnvironmentFile={args.env_file}
+ExecStart={args.python_bin} {args.repo_root}/scripts/inspect-hosted-state.py --database-url {database_url} --limit {args.inspect_limit} --json{extra_flags}
+"""
+
+
+def render_inspect_timer(args: argparse.Namespace) -> str:
+    return f"""[Unit]
+Description=Schedule Infinitas Hosted Registry inspections
+
+[Timer]
+OnCalendar={args.inspect_on_calendar}
+Persistent=true
+Unit={args.service_prefix}-inspect.service
+
+[Install]
+WantedBy=timers.target
+"""
+
+
 def write_file(path: Path, content: str):
     path.write_text(content, encoding='utf-8')
     print(f'wrote {path}')
@@ -133,6 +177,8 @@ def main():
     write_file(output_dir / f'{args.service_prefix}-worker.service', render_worker_service(args))
     write_file(output_dir / f'{args.service_prefix}-backup.service', render_backup_service(args))
     write_file(output_dir / f'{args.service_prefix}-backup.timer', render_backup_timer(args))
+    write_file(output_dir / f'{args.service_prefix}-inspect.service', render_inspect_service(args))
+    write_file(output_dir / f'{args.service_prefix}-inspect.timer', render_inspect_timer(args))
 
 
 if __name__ == '__main__':
