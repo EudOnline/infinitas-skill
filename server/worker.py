@@ -59,6 +59,7 @@ def _repo_env(settings) -> dict:
         'INFINITAS_SKIP_BOOTSTRAP_TESTS': '1',
         'INFINITAS_SKIP_AI_WRAPPER_TESTS': '1',
         'INFINITAS_SKIP_COMPAT_PIPELINE_TESTS': '1',
+        'INFINITAS_SKIP_HOSTED_E2E_TESTS': '1',
     }
 
 

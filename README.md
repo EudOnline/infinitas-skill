@@ -219,6 +219,9 @@ uv run uvicorn server.app:app --reload
 
 # Mirror the hosted source-of-truth repo outward only
 scripts/mirror-registry.sh --remote github-mirror --dry-run
+
+# Run the hosted end-to-end publish -> serve -> install rehearsal
+uv run python scripts/test-hosted-registry-e2e.py
 ```
 
 ## Hosted registry control plane preview
@@ -278,6 +281,7 @@ GitHub Actions runs `scripts/check-all.sh` on pushes and pull requests. That val
 - stable release invariant regression checks
 - asymmetric attestation regression checks
 - signing bootstrap / doctor rehearsal regression checks
+- hosted end-to-end publish / serve / install coverage when the Python environment includes the hosted control plane dependencies
 
 If CI fails because catalog files changed, run:
 
@@ -286,6 +290,8 @@ scripts/build-catalog.sh
 ```
 
 and commit the updated `catalog/*.json`.
+
+If you want hosted control plane coverage in a minimal environment, install the `pyproject.toml` dependencies first or run with a prepared tool like `uv`. To force failure instead of skipping when those dependencies are missing, set `INFINITAS_REQUIRE_HOSTED_E2E_TESTS=1`.
 
 ## Compatibility Contract
 

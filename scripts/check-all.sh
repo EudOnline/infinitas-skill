@@ -52,6 +52,23 @@ if [[ "${INFINITAS_SKIP_BOOTSTRAP_TESTS:-0}" != "1" ]]; then
   python3 scripts/test-signing-bootstrap.py
 fi
 
+if [[ "${INFINITAS_SKIP_HOSTED_E2E_TESTS:-0}" != "1" ]]; then
+  if python3 - <<'PY' >/dev/null 2>&1
+import fastapi  # noqa: F401
+import httpx  # noqa: F401
+import jinja2  # noqa: F401
+import sqlalchemy  # noqa: F401
+PY
+  then
+    python3 scripts/test-hosted-registry-e2e.py
+  elif [[ "${INFINITAS_REQUIRE_HOSTED_E2E_TESTS:-0}" == "1" ]]; then
+    echo "FAIL: hosted registry e2e checks require fastapi/httpx/jinja2/sqlalchemy in the current python environment" >&2
+    exit 1
+  else
+    echo "SKIP: hosted registry e2e checks (missing fastapi/httpx/jinja2/sqlalchemy in current python environment)"
+  fi
+fi
+
 while IFS= read -r dir; do
   [[ -n "$dir" ]] || continue
   scripts/check-skill.sh "$dir"
