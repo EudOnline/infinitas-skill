@@ -218,6 +218,7 @@ uv run python scripts/test-hosted-api.py
 uv run uvicorn server.app:app --reload
 python scripts/server-healthcheck.py --api-url http://127.0.0.1:8000 --repo-path /srv/infinitas/repo --artifact-path /srv/infinitas/artifacts --database-url sqlite:////srv/infinitas/data/server.db --json
 python scripts/backup-hosted-registry.py --repo-path /srv/infinitas/repo --artifact-path /srv/infinitas/artifacts --database-url sqlite:////srv/infinitas/data/server.db --output-dir /srv/infinitas/backups --label nightly
+python scripts/render-hosted-systemd.py --output-dir /tmp/infinitas-systemd --repo-root /srv/infinitas/repo --python-bin /srv/infinitas/.venv/bin/python --env-file /etc/infinitas/hosted-registry.env --service-prefix infinitas-hosted --backup-output-dir /srv/infinitas/backups --backup-on-calendar daily --backup-label nightly
 
 # Mirror the hosted source-of-truth repo outward only
 scripts/mirror-registry.sh --remote github-mirror --dry-run
@@ -249,6 +250,8 @@ Phase 1 hosted ops automation now includes:
 
 - `scripts/server-healthcheck.py` to verify `/healthz`, repo checkout presence, artifact directory shape, and SQLite connectivity
 - `scripts/backup-hosted-registry.py` to create a point-in-time repo bundle + SQLite copy + artifact tarball backup set
+- `scripts/render-hosted-systemd.py` to generate a `systemd` deployment bundle for the API, worker, and scheduled backup timer
+- `scripts/run-hosted-worker.py` to provide a stable long-running worker entrypoint for the generated worker service
 
 These ops helpers are intentionally SQLite-first for the current single-node deployment model. PostgreSQL and object-storage automation remain future extensions.
 

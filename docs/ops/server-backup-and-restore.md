@@ -38,6 +38,13 @@ Each backup directory contains:
 
 The backup helper refuses dirty repo snapshots so operators do not accidentally capture an in-flight publish worktree.
 
+If you install the generated `systemd` bundle from `scripts/render-hosted-systemd.py`, enable the matching backup timer so this command runs on a predictable schedule:
+
+```bash
+sudo systemctl enable --now infinitas-hosted-backup.timer
+sudo systemctl list-timers infinitas-hosted-backup.timer
+```
+
 ## Restore sequence
 
 1. Restore the repo snapshot to the server-owned checkout path

@@ -2,11 +2,13 @@
 
 This runbook describes the smallest hosted deployment for the server-owned `infinitas-skill` registry.
 
+The recommended single-node deployment shape now includes a generated `systemd` bundle so operators do not have to hand-write service units for the API, worker, and scheduled backups.
+
 ## Core services
 
 - **Reverse proxy**: terminate TLS and expose the hosted API plus static artifact paths
 - **App**: run `uvicorn server.app:app`
-- **Worker**: run `server.worker` on the same host or a trusted sibling process
+- **Worker**: run `scripts/run-hosted-worker.py` on the same host or a trusted sibling process
 - **Repo path**: a writable checkout of the private source-of-truth repository
 - **Artifact path**: a filesystem directory served over HTTPS for `ai-index.json`, `catalog/`, provenance, and bundles
 - **Secrets**: bootstrap user tokens, SSH signing key wiring, and any database credentials
@@ -27,7 +29,7 @@ This runbook describes the smallest hosted deployment for the server-owned `infi
 3. Point `INFINITAS_SERVER_REPO_PATH` at the writable checkout
 4. Point `INFINITAS_SERVER_ARTIFACT_PATH` at a durable filesystem path
 5. Start the API app with `uv run uvicorn server.app:app --host 0.0.0.0 --port 8000`
-6. Start a worker loop process that drains queued validate / promote / publish jobs
+6. Start a worker loop process that drains queued validate / promote / publish jobs, for example `python scripts/run-hosted-worker.py --poll-interval 5`
 7. Configure the reverse proxy so hosted registry clients reach the API and immutable artifacts over HTTPS
 
 ## Health checks
@@ -51,6 +53,43 @@ This checks:
 - the configured SQLite database file exists and answers a simple query
 
 Phase 1 automation validates SQLite deployments only. PostgreSQL health probes can be added later without changing the hosted artifact contract.
+
+## `systemd` bundle
+
+Generate a ready-to-install deployment bundle with:
+
+```bash
+python scripts/render-hosted-systemd.py \
+  --output-dir /tmp/infinitas-systemd \
+  --repo-root /srv/infinitas/repo \
+  --python-bin /srv/infinitas/.venv/bin/python \
+  --env-file /etc/infinitas/hosted-registry.env \
+  --service-prefix infinitas-hosted \
+  --backup-output-dir /srv/infinitas/backups \
+  --backup-on-calendar daily \
+  --backup-label nightly
+```
+
+The rendered directory contains:
+
+- `infinitas-hosted.env.example`
+- `infinitas-hosted-api.service`
+- `infinitas-hosted-worker.service`
+- `infinitas-hosted-backup.service`
+- `infinitas-hosted-backup.timer`
+
+Suggested install flow:
+
+1. Copy `*.service` and `*.timer` into `/etc/systemd/system/`
+2. Copy `infinitas-hosted.env.example` to `/etc/infinitas/hosted-registry.env`
+3. Replace placeholder secrets and bootstrap tokens in the env file
+4. Run `sudo systemctl daemon-reload`
+5. Enable and start:
+   - `sudo systemctl enable --now infinitas-hosted-api.service`
+   - `sudo systemctl enable --now infinitas-hosted-worker.service`
+   - `sudo systemctl enable --now infinitas-hosted-backup.timer`
+
+The API service starts `uvicorn`, the worker service runs `scripts/run-hosted-worker.py`, and the backup timer schedules `scripts/backup-hosted-registry.py`.
 
 ## Mirroring
 
