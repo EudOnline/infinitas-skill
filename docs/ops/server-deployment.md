@@ -30,6 +30,28 @@ This runbook describes the smallest hosted deployment for the server-owned `infi
 6. Start a worker loop process that drains queued validate / promote / publish jobs
 7. Configure the reverse proxy so hosted registry clients reach the API and immutable artifacts over HTTPS
 
+## Health checks
+
+Use the hosted ops health check to verify the minimum single-node deployment contract:
+
+```bash
+python scripts/server-healthcheck.py \
+  --api-url http://127.0.0.1:8000 \
+  --repo-path /srv/infinitas/repo \
+  --artifact-path /srv/infinitas/artifacts \
+  --database-url sqlite:////srv/infinitas/data/server.db \
+  --json
+```
+
+This checks:
+
+- `GET /healthz` responds with `ok=true`
+- the server-owned repo path is a real git worktree
+- the artifact directory contains `ai-index.json` and `catalog/`
+- the configured SQLite database file exists and answers a simple query
+
+Phase 1 automation validates SQLite deployments only. PostgreSQL health probes can be added later without changing the hosted artifact contract.
+
 ## Mirroring
 
 GitHub is an optional **one-way mirror** only. The hosted server remains the writable source of truth.

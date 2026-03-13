@@ -216,6 +216,8 @@ scripts/export-openclaw-skill.sh my-skill --version 1.2.3 --out /tmp/openclaw-ex
 # Hosted control plane preview
 uv run python scripts/test-hosted-api.py
 uv run uvicorn server.app:app --reload
+python scripts/server-healthcheck.py --api-url http://127.0.0.1:8000 --repo-path /srv/infinitas/repo --artifact-path /srv/infinitas/artifacts --database-url sqlite:////srv/infinitas/data/server.db --json
+python scripts/backup-hosted-registry.py --repo-path /srv/infinitas/repo --artifact-path /srv/infinitas/artifacts --database-url sqlite:////srv/infinitas/data/server.db --output-dir /srv/infinitas/backups --label nightly
 
 # Mirror the hosted source-of-truth repo outward only
 scripts/mirror-registry.sh --remote github-mirror --dry-run
@@ -243,6 +245,12 @@ The hosted server uses SQLite by default and can be configured with:
 
 Hosted submission and review APIs are documented in `docs/ai/server-api.md`. The matching CLI wrapper is `scripts/registryctl.py`, which talks to the hosted API instead of editing repository state directly.
 Operational runbooks live in `docs/ops/server-deployment.md` and `docs/ops/server-backup-and-restore.md`.
+Phase 1 hosted ops automation now includes:
+
+- `scripts/server-healthcheck.py` to verify `/healthz`, repo checkout presence, artifact directory shape, and SQLite connectivity
+- `scripts/backup-hosted-registry.py` to create a point-in-time repo bundle + SQLite copy + artifact tarball backup set
+
+These ops helpers are intentionally SQLite-first for the current single-node deployment model. PostgreSQL and object-storage automation remain future extensions.
 
 ## AI Protocol
 
