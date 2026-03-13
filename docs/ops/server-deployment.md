@@ -54,6 +54,26 @@ This checks:
 
 Phase 1 automation validates SQLite deployments only. PostgreSQL health probes can be added later without changing the hosted artifact contract.
 
+## State inspection
+
+Use the hosted state inspector alongside `server-healthcheck.py` when you need queue depth and failed-job visibility:
+
+```bash
+python scripts/inspect-hosted-state.py \
+  --database-url sqlite:////srv/infinitas/data/server.db \
+  --limit 10 \
+  --json
+```
+
+This summarizes:
+
+- jobs by status
+- recent failed jobs with error messages
+- recent queued/running jobs
+- submissions by status
+
+This is intentionally SQLite-first for the current single-node deployment shape.
+
 ## `systemd` bundle
 
 Generate a ready-to-install deployment bundle with:

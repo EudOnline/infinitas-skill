@@ -45,6 +45,27 @@ sudo systemctl enable --now infinitas-hosted-backup.timer
 sudo systemctl list-timers infinitas-hosted-backup.timer
 ```
 
+## Restore rehearsal
+
+Before restoring onto a real server path, rehearse the backup into a staging directory:
+
+```bash
+python scripts/rehearse-hosted-restore.py \
+  --backup-dir /srv/infinitas/backups/20260314T010000Z-nightly \
+  --output-dir /tmp/infinitas-restore-drill \
+  --json
+```
+
+This drill:
+
+- validates `manifest.json`
+- verifies the git bundle
+- clones the repo bundle into a staging checkout
+- copies and opens the SQLite DB backup
+- extracts artifacts and confirms `ai-index.json` plus `catalog/`
+
+Treat this as the safest first step before pointing any restored files at production service paths.
+
 ## Restore sequence
 
 1. Restore the repo snapshot to the server-owned checkout path
