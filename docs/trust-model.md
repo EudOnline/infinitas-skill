@@ -36,3 +36,10 @@ Track derivation with `_meta.json.derived_from` or a CHANGELOG entry so consumer
 - Registry source: private Git repo
 - Runtime install target: `~/.openclaw/skills` or `<workspace>/skills`
 - Optional: generate catalogs and install/sync from those rather than loading the whole repo directly as a shared skills directory
+
+## Hosted server pattern
+
+- A hosted deployment may keep the writable source-of-truth repo on one trusted server
+- Clients should install from immutable hosted artifacts, not from editable source folders
+- GitHub or another forge can be a **one-way mirror** for backup and code review convenience
+- Reverse-sync from the mirror back into the hosted source-of-truth repo is not trusted

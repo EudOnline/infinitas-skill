@@ -91,9 +91,13 @@ scripts/
 server/
 ├─ app.py                FastAPI entrypoint for the hosted control plane
 ├─ auth.py               bearer-token auth helpers for hosted APIs
+├─ artifact_ops.py       hosted catalog / bundle sync helpers
 ├─ db.py                 SQLAlchemy engine + session wiring
+├─ jobs.py               queue helpers and job serialization
 ├─ models.py             users, submissions, reviews, and jobs tables
+├─ repo_ops.py           locked repo mutation helpers for worker jobs
 ├─ settings.py           env-driven hosted server configuration
+├─ worker.py             sequential hosted validate / promote / publish worker
 └─ templates/            lightweight hosted control plane HTML pages
 
 skills/
@@ -212,6 +216,9 @@ scripts/export-openclaw-skill.sh my-skill --version 1.2.3 --out /tmp/openclaw-ex
 # Hosted control plane preview
 uv run python scripts/test-hosted-api.py
 uv run uvicorn server.app:app --reload
+
+# Mirror the hosted source-of-truth repo outward only
+scripts/mirror-registry.sh --remote github-mirror --dry-run
 ```
 
 ## Hosted registry control plane preview
@@ -228,8 +235,11 @@ The hosted server uses SQLite by default and can be configured with:
 - `INFINITAS_SERVER_DATABASE_URL`
 - `INFINITAS_SERVER_SECRET_KEY`
 - `INFINITAS_SERVER_BOOTSTRAP_USERS` (JSON array of `{username, display_name, role, token}`)
+- `INFINITAS_SERVER_REPO_PATH`
+- `INFINITAS_SERVER_ARTIFACT_PATH`
 
 Hosted submission and review APIs are documented in `docs/ai/server-api.md`. The matching CLI wrapper is `scripts/registryctl.py`, which talks to the hosted API instead of editing repository state directly.
+Operational runbooks live in `docs/ops/server-deployment.md` and `docs/ops/server-backup-and-restore.md`.
 
 ## AI Protocol
 
@@ -304,6 +314,7 @@ Use that document as the source of truth for:
 ## Registry model
 
 - **Repo is source-of-truth**. Runtime still happens from a local skills directory.
+- **Hosted server can own writes**. The control plane can mutate a server-owned checkout and publish immutable artifacts without clients cloning the whole repository.
 - **Incubating is where experiments land**. Agents can contribute here.
 - **Active is curated**. Only reviewed skills should be promoted here.
 - **Archived keeps history**. Don't delete lineage unless you mean it.
@@ -333,6 +344,7 @@ Use that document as the source of truth for:
 - **Release actor decisions are auditable**. Machine-readable release outputs now record author, reviewers, releaser, signer, and namespace-policy context.
 - **Attestations capture dependency and registry context**. Release provenance now records the consulted registries, their resolved identity, and the dependency resolution plan used for the released skill.
 - **Legacy HMAC sidecars remain optional only**. `sign-provenance.py` / `verify-provenance.py` still work for compatibility, but repo-managed SSH attestation is the trusted verification path.
+- **GitHub is a mirror, not an authority**. Hosted deployments may push outward with `scripts/mirror-registry.sh`, but must not reverse-sync GitHub back into the server-owned repo.
 
 ## Safety rules
 
