@@ -39,3 +39,12 @@ Before creating stable release output for an active skill:
 - [ ] `python3 scripts/doctor-signing.py <name> --provenance catalog/provenance/<name>-<version>.json` reports no blocking failures after the rehearsal
 - [ ] any optional legacy HMAC provenance signing happens after the required SSH attestation has already been verified
 - [ ] platform evidence was refreshed with `python3 scripts/record-verified-support.py <name> --platform codex --platform claude --platform openclaw --build-catalog` if verified compatibility claims changed
+
+When the hosted control plane performs the release:
+
+- [ ] queued jobs were created by a maintainer-authorized action and linked back to the reviewed submission
+- [ ] the server-owned repo checkout is locked for exclusive mutation during validate / promote / publish
+- [ ] validation job materializes the submitted skill into `skills/incubating/` and commits the exact reviewed payload
+- [ ] promotion job commits and pushes the `skills/incubating/` → `skills/active/` move before publish begins
+- [ ] publish job syncs `catalog/`, `catalog/provenance/`, and immutable distribution outputs into the hosted artifact directory after release succeeds
+- [ ] job logs capture every invoked script so operators can audit validate / promote / publish execution

@@ -6,6 +6,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from server.api.jobs import router as jobs_router
 from server.api.reviews import router as reviews_router
 from server.api.skills import router as skills_router
 from server.api.submissions import router as submissions_router
@@ -62,6 +63,7 @@ def create_app() -> FastAPI:
     app.include_router(submissions_router)
     app.include_router(reviews_router)
     app.include_router(skills_router)
+    app.include_router(jobs_router)
 
     return app
 

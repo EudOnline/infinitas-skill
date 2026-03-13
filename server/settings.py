@@ -32,6 +32,9 @@ class Settings:
     secret_key: str
     template_dir: Path
     bootstrap_users: list[dict]
+    repo_path: Path
+    artifact_path: Path
+    repo_lock_path: Path
 
 
 def _normalize_bootstrap_users(payload: object) -> list[dict]:
@@ -69,6 +72,9 @@ def get_settings() -> Settings:
 
     default_db_path = ROOT / '.state' / 'server.db'
     database_url = os.environ.get('INFINITAS_SERVER_DATABASE_URL') or f'sqlite:///{default_db_path}'
+    repo_path = Path(os.environ.get('INFINITAS_SERVER_REPO_PATH') or ROOT).expanduser().resolve()
+    artifact_path = Path(os.environ.get('INFINITAS_SERVER_ARTIFACT_PATH') or (ROOT / '.state' / 'artifacts')).expanduser().resolve()
+    repo_lock_path = Path(os.environ.get('INFINITAS_SERVER_REPO_LOCK_PATH') or (ROOT / '.state' / 'repo.lock')).expanduser().resolve()
 
     return Settings(
         app_name='infinitas-hosted-registry',
@@ -77,4 +83,7 @@ def get_settings() -> Settings:
         secret_key=os.environ.get('INFINITAS_SERVER_SECRET_KEY', 'change-me'),
         template_dir=ROOT / 'server' / 'templates',
         bootstrap_users=_normalize_bootstrap_users(bootstrap_payload),
+        repo_path=repo_path,
+        artifact_path=artifact_path,
+        repo_lock_path=repo_lock_path,
     )

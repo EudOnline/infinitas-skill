@@ -6,10 +6,11 @@ from typing import Iterable
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from server.auth import get_current_user
+from server.auth import get_current_user, require_role
 from server.db import get_db
+from server.jobs import enqueue_job, serialize_job
 from server.models import Review, Submission, User, utcnow
-from server.schemas import SubmissionCreateRequest, SubmissionView, TransitionRequest, ReviewView, StatusLogEntry
+from server.schemas import JobEnqueueResponse, SubmissionCreateRequest, SubmissionView, TransitionRequest, ReviewView, StatusLogEntry
 
 router = APIRouter(prefix='/api/v1/submissions', tags=['submissions'])
 
@@ -190,3 +191,53 @@ def request_review(
     db.refresh(submission)
     db.refresh(review)
     return serialize_submission(submission, review)
+
+
+@router.post('/{submission_id}/queue-validation', response_model=JobEnqueueResponse, status_code=status.HTTP_202_ACCEPTED)
+def queue_validation(
+    submission_id: int,
+    payload: TransitionRequest,
+    user: User = Depends(require_role('maintainer')),
+    db: Session = Depends(get_db),
+):
+    submission = get_submission_or_404(db, submission_id)
+    job = enqueue_job(
+        db,
+        kind='validate_submission',
+        payload={'submission_id': submission.id, 'skill_name': submission.skill_name},
+        requested_by=user,
+        submission_id=submission.id,
+        note=payload.note,
+    )
+    return JobEnqueueResponse(
+        ok=True,
+        status='queued',
+        detail='validation job queued',
+        job=serialize_job(job),
+    )
+
+
+@router.post('/{submission_id}/queue-promote', response_model=JobEnqueueResponse, status_code=status.HTTP_202_ACCEPTED)
+def queue_promote(
+    submission_id: int,
+    payload: TransitionRequest,
+    user: User = Depends(require_role('maintainer')),
+    db: Session = Depends(get_db),
+):
+    submission = get_submission_or_404(db, submission_id)
+    if submission.status not in {'approved', 'validated', 'review_requested'}:
+        raise HTTPException(status_code=409, detail=f'submission status {submission.status!r} cannot be promoted')
+    job = enqueue_job(
+        db,
+        kind='promote_submission',
+        payload={'submission_id': submission.id, 'skill_name': submission.skill_name},
+        requested_by=user,
+        submission_id=submission.id,
+        note=payload.note,
+    )
+    return JobEnqueueResponse(
+        ok=True,
+        status='queued',
+        detail='promotion job queued',
+        job=serialize_job(job),
+    )

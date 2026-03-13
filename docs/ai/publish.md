@@ -33,6 +33,13 @@ scripts/publish-skill.sh <skill> [--version <semver>] [--mode auto|confirm]
 9. 如需刷新 `verified_support`，再运行 `python3 scripts/record-verified-support.py <skill> --platform ... --build-catalog`
 10. 输出结构化 JSON 结果
 
+## Hosted control plane notes
+
+- hosted server mode can queue `validate_submission`、`promote_submission`、`publish_submission` jobs instead of mutating the repository directly from the API request
+- queued publish jobs must execute against the server-owned source-of-truth repo, not a contributor clone
+- worker execution may skip self-referential bootstrap test suites while running release scripts, but must still preserve signed tag, provenance, and immutable distribution output requirements
+- after publish completes, the worker must sync the generated `catalog/` outputs into the hosted artifact directory used by HTTP registry clients
+
 ## Stop Conditions
 
 出现以下任一情况必须立即停止，并返回失败结果：

@@ -11,6 +11,11 @@ class ReviewDecisionRequest(BaseModel):
     note: str = ''
 
 
+class PublishRequest(BaseModel):
+    submission_id: int | None = None
+    note: str = ''
+
+
 class SubmissionCreateRequest(BaseModel):
     skill_name: str
     publisher: str = 'local'
@@ -55,8 +60,31 @@ class SubmissionView(BaseModel):
     review: ReviewView | None = None
 
 
+class JobView(BaseModel):
+    id: int
+    kind: str
+    status: str
+    submission_id: int | None = None
+    requested_by: str | None = None
+    note: str = ''
+    log: str = ''
+    error_message: str = ''
+    created_at: str
+    updated_at: str
+    started_at: str | None = None
+    finished_at: str | None = None
+
+
+class JobEnqueueResponse(BaseModel):
+    ok: bool
+    status: str
+    detail: str
+    job: JobView
+
+
 class SkillPublishResponse(BaseModel):
     ok: bool
     skill_name: str
     status: str
     detail: str
+    job: JobView | None = None
