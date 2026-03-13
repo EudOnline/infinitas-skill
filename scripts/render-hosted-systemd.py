@@ -19,6 +19,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--backup-output-dir', required=True, help='Directory where scheduled backups should be written')
     parser.add_argument('--backup-on-calendar', default='daily', help='systemd OnCalendar expression for backups')
     parser.add_argument('--backup-label', default='scheduled', help='Backup label passed to the backup helper')
+    parser.add_argument('--prune-on-calendar', default='daily', help='systemd OnCalendar expression for backup retention pruning')
+    parser.add_argument('--prune-keep-last', type=int, default=7, help='How many newest backup directories the prune job should keep')
     parser.add_argument('--inspect-on-calendar', default='hourly', help='systemd OnCalendar expression for queue inspection runs')
     parser.add_argument('--inspect-limit', type=int, default=10, help='Number of recent rows included in each inspection run')
     parser.add_argument('--inspect-max-queued-jobs', type=int, default=None, help='Alert when queued job count exceeds this threshold')
@@ -123,6 +125,33 @@ WantedBy=timers.target
 """
 
 
+def render_prune_service(args: argparse.Namespace) -> str:
+    return f"""[Unit]
+Description=Infinitas Hosted Registry Backup Retention Prune
+After=network-online.target
+
+[Service]
+Type=oneshot
+User={args.service_user}
+WorkingDirectory={args.repo_root}
+ExecStart={args.python_bin} {args.repo_root}/scripts/prune-hosted-backups.py --backup-root {args.backup_output_dir} --keep-last {args.prune_keep_last} --json
+"""
+
+
+def render_prune_timer(args: argparse.Namespace) -> str:
+    return f"""[Unit]
+Description=Schedule Infinitas Hosted Registry backup pruning
+
+[Timer]
+OnCalendar={args.prune_on_calendar}
+Persistent=true
+Unit={args.service_prefix}-prune.service
+
+[Install]
+WantedBy=timers.target
+"""
+
+
 def render_inspect_service(args: argparse.Namespace) -> str:
     database_url = args.database_url or f'sqlite:///{args.repo_root.rstrip("/")}/data/server.db'
     extra = []
@@ -177,6 +206,8 @@ def main():
     write_file(output_dir / f'{args.service_prefix}-worker.service', render_worker_service(args))
     write_file(output_dir / f'{args.service_prefix}-backup.service', render_backup_service(args))
     write_file(output_dir / f'{args.service_prefix}-backup.timer', render_backup_timer(args))
+    write_file(output_dir / f'{args.service_prefix}-prune.service', render_prune_service(args))
+    write_file(output_dir / f'{args.service_prefix}-prune.timer', render_prune_timer(args))
     write_file(output_dir / f'{args.service_prefix}-inspect.service', render_inspect_service(args))
     write_file(output_dir / f'{args.service_prefix}-inspect.timer', render_inspect_timer(args))
 

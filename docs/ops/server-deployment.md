@@ -92,7 +92,9 @@ python scripts/render-hosted-systemd.py \
   --service-prefix infinitas-hosted \
   --backup-output-dir /srv/infinitas/backups \
   --backup-on-calendar daily \
-  --backup-label nightly
+  --backup-label nightly \
+  --prune-on-calendar daily \
+  --prune-keep-last 7
 ```
 
 The rendered directory contains:
@@ -102,6 +104,8 @@ The rendered directory contains:
 - `infinitas-hosted-worker.service`
 - `infinitas-hosted-backup.service`
 - `infinitas-hosted-backup.timer`
+- `infinitas-hosted-prune.service`
+- `infinitas-hosted-prune.timer`
 - `infinitas-hosted-inspect.service`
 - `infinitas-hosted-inspect.timer`
 
@@ -115,17 +119,20 @@ Suggested install flow:
    - `sudo systemctl enable --now infinitas-hosted-api.service`
    - `sudo systemctl enable --now infinitas-hosted-worker.service`
    - `sudo systemctl enable --now infinitas-hosted-backup.timer`
+   - `sudo systemctl enable --now infinitas-hosted-prune.timer`
    - `sudo systemctl enable --now infinitas-hosted-inspect.timer`
 
-The API service starts `uvicorn`, the worker service runs `scripts/run-hosted-worker.py`, the backup timer schedules `scripts/backup-hosted-registry.py`, and the inspect timer runs `scripts/inspect-hosted-state.py` with configured alert thresholds.
+The API service starts `uvicorn`, the worker service runs `scripts/run-hosted-worker.py`, the backup timer schedules `scripts/backup-hosted-registry.py`, the prune timer runs `scripts/prune-hosted-backups.py` against the backup root, and the inspect timer runs `scripts/inspect-hosted-state.py` with configured alert thresholds.
 
 For a small single-node deployment, a reasonable starting point is:
 
+- `--prune-keep-last 7`
 - `--inspect-max-queued-jobs 10`
 - `--inspect-max-running-jobs 2`
 - `--inspect-max-failed-jobs 0`
 
 An inspect service failure means the queue or failure counts crossed a threshold. It does not necessarily mean the process crashed.
+The prune service deletes only older recognized hosted backup snapshots, not arbitrary folders under the backup root.
 
 ## Mirroring
 

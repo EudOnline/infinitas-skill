@@ -45,6 +45,31 @@ sudo systemctl enable --now infinitas-hosted-backup.timer
 sudo systemctl list-timers infinitas-hosted-backup.timer
 ```
 
+## Retention pruning
+
+For a small single-node deployment, a reasonable starting retention policy is to keep the newest 7 hosted backup snapshots:
+
+```bash
+python scripts/prune-hosted-backups.py \
+  --backup-root /srv/infinitas/backups \
+  --keep-last 7 \
+  --json
+```
+
+The prune helper only deletes directories that:
+
+- match the hosted backup timestamp naming convention
+- contain `manifest.json`
+
+Anything else under the backup root is left untouched and reported as `ignored`.
+
+If you install the generated `systemd` bundle, enable the prune timer so retention cleanup stays aligned with scheduled backups:
+
+```bash
+sudo systemctl enable --now infinitas-hosted-prune.timer
+sudo systemctl list-timers infinitas-hosted-prune.timer
+```
+
 ## Restore rehearsal
 
 Before restoring onto a real server path, rehearse the backup into a staging directory:
