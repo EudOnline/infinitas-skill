@@ -2,14 +2,31 @@
 import json
 from pathlib import Path
 
-from discovery_index_lib import validate_discovery_index_payload
+from ai_index_lib import validate_ai_index_payload
+from discovery_index_lib import build_discovery_index, validate_discovery_index_payload
+from registry_source_lib import load_registry_config
 
 
 def load_discovery_index(root: Path) -> dict:
-    path = Path(root).resolve() / 'catalog' / 'discovery-index.json'
-    if not path.exists():
-        raise ValueError(f'missing discovery index: {path}')
-    payload = json.loads(path.read_text(encoding='utf-8'))
+    root = Path(root).resolve()
+    cfg = load_registry_config(root)
+    should_build_dynamic = any(reg.get('enabled', True) and reg.get('kind') == 'http' for reg in cfg.get('registries', []))
+    path = root / 'catalog' / 'discovery-index.json'
+    if not should_build_dynamic and path.exists():
+        payload = json.loads(path.read_text(encoding='utf-8'))
+    else:
+        ai_index_path = root / 'catalog' / 'ai-index.json'
+        if not ai_index_path.exists():
+            raise ValueError(f'missing AI index: {ai_index_path}')
+        local_ai_index = json.loads(ai_index_path.read_text(encoding='utf-8'))
+        ai_errors = validate_ai_index_payload(local_ai_index)
+        if ai_errors:
+            raise ValueError('; '.join(ai_errors))
+        payload = build_discovery_index(
+            root=root,
+            local_ai_index=local_ai_index,
+            registry_config=cfg,
+        )
     errors = validate_discovery_index_payload(payload)
     if errors:
         raise ValueError('; '.join(errors))

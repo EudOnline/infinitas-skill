@@ -9,6 +9,7 @@ from gzip import GzipFile
 from pathlib import Path
 
 from attestation_lib import AttestationError, verify_attestation
+from http_registry_lib import fetch_binary
 from release_lib import ROOT
 
 
@@ -182,8 +183,9 @@ def _resolve_manifest_ref(path, ref, root=None):
     return (Path(path).resolve().parent / ref_path).resolve()
 
 
-def verify_distribution_manifest(manifest_path, root=None):
+def verify_distribution_manifest(manifest_path, root=None, attestation_root=None):
     root = Path(root or ROOT).resolve()
+    attestation_root = Path(attestation_root or root).resolve()
     manifest_path = Path(manifest_path).resolve()
     try:
         payload = load_json(manifest_path)
@@ -216,7 +218,7 @@ def verify_distribution_manifest(manifest_path, root=None):
         raise DistributionError('bundle size does not match manifest')
 
     try:
-        attestation_result = verify_attestation(provenance_path, root=root)
+        attestation_result = verify_attestation(provenance_path, root=attestation_root)
     except AttestationError as exc:
         raise DistributionError(str(exc)) from exc
 
@@ -298,8 +300,14 @@ def materialize_distribution_source(source_info, root=None):
     manifest_path = info.get('distribution_manifest') or info.get('path')
     if not manifest_path:
         raise DistributionError('distribution-manifest source is missing manifest path')
+    if info.get('registry_kind') == 'http':
+        return _materialize_remote_distribution_source(info)
     verified = verify_distribution_manifest(manifest_path, root=root)
     payload = verified['manifest']
+    expected_bundle_sha = info.get('distribution_bundle_sha256')
+    manifest_bundle_sha = (payload.get('bundle') or {}).get('sha256')
+    if expected_bundle_sha and manifest_bundle_sha and expected_bundle_sha != manifest_bundle_sha:
+        raise DistributionError('bundle digest does not match registry metadata')
     bundle_path = verified['bundle_path']
     temp_root = Path(tempfile.mkdtemp(prefix='infinitas-distribution-'))
     materialized_path = safely_extract_bundle(
@@ -328,6 +336,77 @@ def materialize_distribution_source(source_info, root=None):
             'source_stage': (payload.get('skill') or {}).get('status') or info.get('stage'),
             'registry_context': payload.get('registry'),
             'dependency_context': payload.get('dependencies'),
+        }
+    )
+    return info
+
+
+def _download_remote_ref(base_url, rel_path, temp_root, *, token_env=None):
+    ref_path = Path(rel_path)
+    if ref_path.is_absolute():
+        raise DistributionError(f'hosted artifact path must be relative: {rel_path}')
+    output = (Path(temp_root).resolve() / ref_path).resolve()
+    if not output.is_relative_to(Path(temp_root).resolve()):
+        raise DistributionError(f'unsafe hosted artifact path: {rel_path}')
+    fetch_binary(base_url, rel_path, output, token_env=token_env)
+    return output
+
+
+def _materialize_remote_distribution_source(info):
+    base_url = info.get('registry_base_url') or info.get('registry_url')
+    if not isinstance(base_url, str) or not base_url.strip():
+        raise DistributionError('hosted distribution source is missing registry_base_url')
+
+    token_env = info.get('registry_auth_env') if info.get('registry_auth_mode') == 'token' else None
+    manifest_ref = info.get('distribution_manifest') or info.get('path')
+    temp_root = Path(tempfile.mkdtemp(prefix='infinitas-http-distribution-'))
+    manifest_path = _download_remote_ref(base_url, manifest_ref, temp_root, token_env=token_env)
+    payload = load_json(manifest_path)
+
+    bundle_ref = (payload.get('bundle') or {}).get('path')
+    attestation_bundle = payload.get('attestation_bundle') or {}
+    provenance_ref = attestation_bundle.get('provenance_path')
+    signature_ref = attestation_bundle.get('signature_path')
+    if not bundle_ref or not provenance_ref or not signature_ref:
+        raise DistributionError('hosted distribution manifest is missing bundle or attestation references')
+
+    _download_remote_ref(base_url, bundle_ref, temp_root, token_env=token_env)
+    _download_remote_ref(base_url, provenance_ref, temp_root, token_env=token_env)
+    _download_remote_ref(base_url, signature_ref, temp_root, token_env=token_env)
+
+    verified = verify_distribution_manifest(manifest_path, root=temp_root, attestation_root=ROOT)
+    manifest_payload = verified['manifest']
+    expected_bundle_sha = info.get('distribution_bundle_sha256')
+    manifest_bundle_sha = (manifest_payload.get('bundle') or {}).get('sha256')
+    if expected_bundle_sha and manifest_bundle_sha and expected_bundle_sha != manifest_bundle_sha:
+        raise DistributionError('bundle digest does not match registry metadata')
+
+    materialized_path = safely_extract_bundle(
+        verified['bundle_path'],
+        temp_root / '__materialized__',
+        expected_root=(manifest_payload.get('bundle') or {}).get('root_dir'),
+    )
+    info.update(
+        {
+            'materialized_path': str(materialized_path),
+            'cleanup_dir': str(temp_root),
+            'distribution_manifest': manifest_ref,
+            'distribution_bundle': bundle_ref,
+            'distribution_bundle_sha256': manifest_bundle_sha,
+            'distribution_bundle_size': manifest_payload.get('bundle', {}).get('size'),
+            'distribution_bundle_root_dir': manifest_payload.get('bundle', {}).get('root_dir'),
+            'distribution_bundle_file_count': manifest_payload.get('bundle', {}).get('file_count'),
+            'distribution_attestation': provenance_ref,
+            'distribution_attestation_signature': signature_ref,
+            'distribution_attestation_sha256': attestation_bundle.get('provenance_sha256'),
+            'distribution_attestation_signature_sha256': attestation_bundle.get('signature_sha256'),
+            'source_snapshot_kind': manifest_payload.get('source_snapshot', {}).get('kind'),
+            'source_snapshot_tag': manifest_payload.get('source_snapshot', {}).get('tag'),
+            'source_snapshot_ref': manifest_payload.get('source_snapshot', {}).get('ref'),
+            'source_snapshot_commit': manifest_payload.get('source_snapshot', {}).get('commit'),
+            'source_stage': (manifest_payload.get('skill') or {}).get('status') or info.get('stage'),
+            'registry_context': manifest_payload.get('registry'),
+            'dependency_context': manifest_payload.get('dependencies'),
         }
     )
     return info

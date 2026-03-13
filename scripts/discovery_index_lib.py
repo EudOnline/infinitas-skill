@@ -4,7 +4,9 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
-from registry_source_lib import resolve_registry_root
+from ai_index_lib import validate_ai_index_payload
+from http_registry_lib import HostedRegistryError, fetch_json, registry_catalog_path
+from registry_source_lib import normalized_auth, resolve_registry_root
 
 SEMVER_RE = re.compile(r'^(\d+)\.(\d+)\.(\d+)(?:[-+]([A-Za-z0-9_.-]+))?$')
 
@@ -110,7 +112,22 @@ def build_discovery_index(*, root: Path, local_ai_index: dict, registry_config: 
         payload = local_ai_index if use_local_payload else None
         ai_index_path = (reg_root / 'catalog' / 'ai-index.json') if reg_root else None
         status = 'ready' if payload else 'missing-ai-index'
-        if not use_local_payload and ai_index_path and ai_index_path.exists():
+        if reg.get('kind') == 'http':
+            auth = normalized_auth(reg)
+            try:
+                payload = fetch_json(
+                    reg.get('base_url'),
+                    registry_catalog_path(reg, 'ai_index'),
+                    token_env=auth.get('env') if auth.get('mode') == 'token' else None,
+                )
+                errors = validate_ai_index_payload(payload)
+                status = 'ready' if not errors else 'invalid-ai-index'
+                if errors:
+                    payload = None
+            except HostedRegistryError:
+                payload = None
+                status = 'missing-ai-index'
+        elif not use_local_payload and ai_index_path and ai_index_path.exists():
             try:
                 payload = _load_json(ai_index_path)
                 status = 'ready'
@@ -118,16 +135,17 @@ def build_discovery_index(*, root: Path, local_ai_index: dict, registry_config: 
                 payload = None
                 status = 'invalid-ai-index'
 
-        sources.append(
-            {
-                'name': reg_name,
-                'kind': reg.get('kind'),
-                'priority': reg.get('priority', 0),
-                'trust_level': reg.get('trust'),
-                'root': _stable_source_root(root, reg, reg_root),
-                'status': status,
-            }
-        )
+        source_entry = {
+            'name': reg_name,
+            'kind': reg.get('kind'),
+            'priority': reg.get('priority', 0),
+            'trust_level': reg.get('trust'),
+            'root': _stable_source_root(root, reg, reg_root),
+            'status': status,
+        }
+        if reg.get('kind') == 'http':
+            source_entry['base_url'] = reg.get('base_url')
+        sources.append(source_entry)
 
         if not isinstance(payload, dict):
             continue

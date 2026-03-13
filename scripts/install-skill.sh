@@ -59,6 +59,9 @@ CLEANUP_DIRS=()
 
 cleanup_materialized() {
   local dir
+  if [[ ${#CLEANUP_DIRS[@]} -eq 0 ]]; then
+    return 0
+  fi
   for dir in "${CLEANUP_DIRS[@]}"; do
     [[ -n "$dir" && -d "$dir" ]] || continue
     rm -rf "$dir"

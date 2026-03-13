@@ -12,6 +12,7 @@ scripts/upgrade-skill.sh <installed-name> <target-dir> [--to-version <semver>] [
 ## Resolution policy
 
 - search the private registry first via `catalog/discovery-index.json`
+- when a configured registry uses `kind: "http"`, discovery may synthesize the same view dynamically from the hosted `ai-index.json`
 - if the private registry has one clear compatible match, it wins
 - if the private registry has multiple plausible matches, return `ambiguous`
 - only search configured external registries when the private registry has no suitable match
@@ -80,4 +81,5 @@ scripts/upgrade-skill.sh <installed-name> <target-dir> [--to-version <semver>] [
 - do not treat discovery as permission to install mutable source directories
 - do not auto-install external matches without confirmation
 - do not infer installable versions from working tree state; use generated indexes
+- do not require a full repository clone when the configured source is a hosted immutable registry
 - do not silently change source registry during upgrade

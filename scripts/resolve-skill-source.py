@@ -4,7 +4,8 @@ import json
 from pathlib import Path
 
 from distribution_lib import load_distribution_index
-from registry_source_lib import load_registry_config, registry_identity, resolve_registry_root
+from http_registry_lib import HostedRegistryError, fetch_json, registry_catalog_path
+from registry_source_lib import load_registry_config, normalized_auth, registry_identity, resolve_registry_root
 from skill_identity_lib import normalize_skill_identity, parse_requested_skill
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -17,6 +18,8 @@ def expected_skill_tag(name, version):
 
 
 def scan_registry(reg):
+    if reg.get('kind') == 'http':
+        return scan_http_registry(reg)
     reg_root = resolve_registry_root(ROOT, reg)
     if reg_root is None or not reg_root.exists():
         return []
@@ -110,6 +113,68 @@ def scan_registry(reg):
             'registry_tag': distribution.get('source_snapshot_tag') or reg_info.get('registry_tag'),
             'registry_ref': distribution.get('source_snapshot_ref') or reg_info.get('registry_ref'),
         })
+    return items
+
+
+def scan_http_registry(reg):
+    reg_info = registry_identity(ROOT, reg)
+    auth = normalized_auth(reg)
+    try:
+        payload = fetch_json(
+            reg.get('base_url'),
+            registry_catalog_path(reg, 'ai_index'),
+            token_env=auth.get('env') if auth.get('mode') == 'token' else None,
+        )
+    except HostedRegistryError:
+        return []
+
+    items = []
+    for skill in payload.get('skills') or []:
+        if not isinstance(skill, dict):
+            continue
+        name = skill.get('name')
+        qualified_name = skill.get('qualified_name') or name
+        publisher = skill.get('publisher')
+        versions = skill.get('versions') or {}
+        default_version = skill.get('default_install_version') or skill.get('latest_version')
+        for version, version_info in versions.items():
+            if not isinstance(version_info, dict):
+                continue
+            stage = 'active' if version == default_version else 'archived'
+            items.append(
+                {
+                    **reg_info,
+                    'stage': stage,
+                    'path': version_info.get('manifest_path'),
+                    'skill_path': None,
+                    'relative_path': version_info.get('manifest_path'),
+                    'dir_name': name,
+                    'name': name,
+                    'publisher': publisher,
+                    'qualified_name': qualified_name,
+                    'identity_mode': skill.get('identity_mode'),
+                    'version': version,
+                    'status': stage,
+                    'snapshot_of': None,
+                    'snapshot_created_at': version_info.get('published_at'),
+                    'snapshot_label': None,
+                    'installable': bool(version_info.get('installable', True)),
+                    'expected_tag': expected_skill_tag(name, version),
+                    'source_type': 'distribution-manifest',
+                    'distribution_manifest': version_info.get('manifest_path'),
+                    'distribution_bundle': version_info.get('bundle_path'),
+                    'distribution_bundle_sha256': version_info.get('bundle_sha256'),
+                    'distribution_attestation': version_info.get('attestation_path'),
+                    'distribution_attestation_signature': version_info.get('attestation_signature_path'),
+                    'source_snapshot_kind': None,
+                    'source_snapshot_tag': None,
+                    'source_snapshot_ref': None,
+                    'source_snapshot_commit': None,
+                    'registry_commit': None,
+                    'registry_tag': None,
+                    'registry_ref': None,
+                }
+            )
     return items
 
 

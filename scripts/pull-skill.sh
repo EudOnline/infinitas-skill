@@ -56,11 +56,13 @@ mode = sys.argv[6]
 
 sys.path.insert(0, str(root / 'scripts'))
 from ai_index_lib import validate_ai_index_payload  # noqa: E402
-from registry_source_lib import find_registry, load_registry_config, resolve_registry_root  # noqa: E402
+from http_registry_lib import HostedRegistryError, fetch_json, registry_catalog_path  # noqa: E402
+from registry_source_lib import find_registry, load_registry_config, normalized_auth, resolve_registry_root  # noqa: E402
 
 resolved_registry_name = 'self'
 resolved_registry_root = root
 index_path = root / 'catalog' / 'ai-index.json'
+payload = None
 
 if requested_registry:
     cfg = load_registry_config(root)
@@ -85,22 +87,43 @@ if requested_registry:
             'suggested_action': 'enable the registry in config/registry-sources.json',
         }, ensure_ascii=False))
         raise SystemExit(1)
-    reg_root = resolve_registry_root(root, reg)
-    if reg_root is None or not reg_root.exists():
-        print(json.dumps({
-            'ok': False,
-            'state': 'failed',
-            'failed_at_step': 'resolved',
-            'error_code': 'registry-root-unavailable',
-            'message': f'registry root is unavailable for {requested_registry!r}',
-            'suggested_action': 'sync or configure the registry root first',
-        }, ensure_ascii=False))
-        raise SystemExit(1)
     resolved_registry_name = requested_registry
-    resolved_registry_root = reg_root
-    index_path = reg_root / 'catalog' / 'ai-index.json'
+    if reg.get('kind') == 'http':
+        auth = normalized_auth(reg)
+        try:
+            payload = fetch_json(
+                reg.get('base_url'),
+                registry_catalog_path(reg, 'ai_index'),
+                token_env=auth.get('env') if auth.get('mode') == 'token' else None,
+            )
+            index_path = registry_catalog_path(reg, 'ai_index')
+        except HostedRegistryError as exc:
+            print(json.dumps({
+                'ok': False,
+                'state': 'failed',
+                'failed_at_step': 'resolved',
+                'error_code': 'missing-ai-index',
+                'message': str(exc),
+                'suggested_action': 'check the hosted registry URL, auth token, or served catalog paths',
+            }, ensure_ascii=False))
+            raise SystemExit(1)
+        resolved_registry_root = None
+    else:
+        reg_root = resolve_registry_root(root, reg)
+        if reg_root is None or not reg_root.exists():
+            print(json.dumps({
+                'ok': False,
+                'state': 'failed',
+                'failed_at_step': 'resolved',
+                'error_code': 'registry-root-unavailable',
+                'message': f'registry root is unavailable for {requested_registry!r}',
+                'suggested_action': 'sync or configure the registry root first',
+            }, ensure_ascii=False))
+            raise SystemExit(1)
+        resolved_registry_root = reg_root
+        index_path = reg_root / 'catalog' / 'ai-index.json'
 
-if not index_path.exists():
+if payload is None and not Path(index_path).exists():
     print(json.dumps({
         'ok': False,
         'state': 'failed',
@@ -111,7 +134,8 @@ if not index_path.exists():
     }, ensure_ascii=False))
     raise SystemExit(1)
 
-payload = json.loads(index_path.read_text(encoding='utf-8'))
+if payload is None:
+    payload = json.loads(Path(index_path).read_text(encoding='utf-8'))
 errors = validate_ai_index_payload(payload)
 if errors:
     print(json.dumps({
@@ -183,6 +207,16 @@ if resolved_version not in versions:
     raise SystemExit(1)
 
 version_entry = versions[resolved_version]
+if version_entry.get('installable') is not True:
+    print(json.dumps({
+        'ok': False,
+        'state': 'failed',
+        'failed_at_step': 'selected_version',
+        'error_code': 'version-not-installable',
+        'message': f'version {resolved_version!r} is not installable for {selected_skill.get("qualified_name") or selected_skill.get("name")}',
+        'suggested_action': 'pick an installable released version',
+    }, ensure_ascii=False))
+    raise SystemExit(1)
 required_fields = ['manifest_path', 'bundle_path', 'bundle_sha256', 'attestation_path']
 missing = [field for field in required_fields if not isinstance(version_entry.get(field), str) or not version_entry.get(field).strip()]
 if missing:
@@ -196,18 +230,19 @@ if missing:
     }, ensure_ascii=False))
     raise SystemExit(1)
 
-for field in ['manifest_path', 'bundle_path', 'attestation_path']:
-    full = resolved_registry_root / version_entry[field]
-    if not full.exists():
-        print(json.dumps({
-            'ok': False,
-            'state': 'failed',
-            'failed_at_step': 'verified_manifest',
-            'error_code': 'missing-distribution-file',
-            'message': f'missing {field}: {version_entry[field]}',
-            'suggested_action': 'rebuild or republish the distribution artifacts',
-        }, ensure_ascii=False))
-        raise SystemExit(1)
+if resolved_registry_root is not None:
+    for field in ['manifest_path', 'bundle_path', 'attestation_path']:
+        full = resolved_registry_root / version_entry[field]
+        if not full.exists():
+            print(json.dumps({
+                'ok': False,
+                'state': 'failed',
+                'failed_at_step': 'verified_manifest',
+                'error_code': 'missing-distribution-file',
+                'message': f'missing {field}: {version_entry[field]}',
+                'suggested_action': 'rebuild or republish the distribution artifacts',
+            }, ensure_ascii=False))
+            raise SystemExit(1)
 
 install_name = selected_skill.get('qualified_name') or selected_skill.get('name')
 plan = {
@@ -216,14 +251,15 @@ plan = {
     'requested_version': requested_version,
     'resolved_version': resolved_version,
     'registry_name': resolved_registry_name,
-    'registry_root': str(resolved_registry_root),
-    'ai_index_path': 'catalog/ai-index.json',
+    'registry_root': str(resolved_registry_root) if resolved_registry_root is not None else None,
+    'ai_index_path': str(index_path),
     'target_dir': target_dir,
     'state': 'planned' if mode == 'confirm' else 'selected_version',
     'manifest_path': version_entry.get('manifest_path'),
     'bundle_path': version_entry.get('bundle_path'),
     'bundle_sha256': version_entry.get('bundle_sha256'),
     'attestation_path': version_entry.get('attestation_path'),
+    'registry_kind': 'http' if resolved_registry_root is None and requested_registry else 'local',
     'install_name': install_name,
     'install_command': ['scripts/install-skill.sh', install_name, target_dir, '--version', resolved_version] + (['--registry', resolved_registry_name] if requested_registry else []),
     'next_step': 'run-install' if mode == 'auto' else 'confirm-or-run',

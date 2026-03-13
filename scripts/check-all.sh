@@ -5,6 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 python3 scripts/check-registry-sources.py
+python3 scripts/test-hosted-registry-source.py
 python3 scripts/check-signing-config.py
 python3 scripts/validate-registry.py
 python3 scripts/test-namespace-identity.py
@@ -35,6 +36,7 @@ if [[ "${INFINITAS_SKIP_ATTESTATION_TESTS:-0}" != "1" ]]; then
 fi
 if [[ "${INFINITAS_SKIP_DISTRIBUTION_TESTS:-0}" != "1" ]]; then
   python3 scripts/test-distribution-install.py
+  python3 scripts/test-hosted-registry-install.py
 fi
 if [[ "${INFINITAS_SKIP_AI_WRAPPER_TESTS:-0}" != "1" ]]; then
   python3 scripts/test-discovery-index.py

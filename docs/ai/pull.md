@@ -12,6 +12,7 @@ scripts/pull-skill.sh <qualified-name> <target-dir> [--version <semver>] [--regi
 - `target-dir`: 本地安装目标目录
 - `--version <semver>`: 可选；未指定时使用 AI index 中声明的 `default_install_version`
 - `--registry <name>`: 可选；从指定已配置 registry 的 `catalog/ai-index.json` 解析和安装技能
+- 当 registry 是 `kind: "http"` 时，解析来自远程 hosted `ai-index.json`，而不是本地 clone
 - `--mode auto|confirm`: 可选；默认值为 `auto`
 
 ## Preconditions
@@ -24,7 +25,7 @@ scripts/pull-skill.sh <qualified-name> <target-dir> [--version <semver>] [--regi
 
 ## Ordered Execution Steps
 
-1. 解析目标 registry，读取并校验对应的 `catalog/ai-index.json`
+1. 解析目标 registry，读取并校验对应的本地或 hosted `ai-index.json`
 2. 解析目标 skill 和目标版本
 3. 若未显式指定版本，则读取 `default_install_version`
 4. 校验 manifest 路径、bundle 路径、sha256 与 attestation 路径
@@ -82,6 +83,7 @@ scripts/pull-skill.sh <qualified-name> <target-dir> [--version <semver>] [--regi
 
 - 推荐目标目录是 `~/.openclaw/skills` 或 `~/.openclaw/workspace/skills`
 - `pull-skill.sh` 只从 immutable release artifacts 安装，不从本地原型目录复制
+- 对 hosted registry，`pull-skill.sh` 会下载 manifest / bundle / provenance，再进行同样的不可变校验
 - 即使指定了 `--registry`，也只允许读取该 registry 已发布的 immutable 索引与产物
 - 若 AI 看到的是 OpenClaw 本地原型目录，应先走 `scripts/import-openclaw-skill.sh`，而不是直接安装
 
