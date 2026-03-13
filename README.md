@@ -229,6 +229,8 @@ The hosted server uses SQLite by default and can be configured with:
 - `INFINITAS_SERVER_SECRET_KEY`
 - `INFINITAS_SERVER_BOOTSTRAP_USERS` (JSON array of `{username, display_name, role, token}`)
 
+Hosted submission and review APIs are documented in `docs/ai/server-api.md`. The matching CLI wrapper is `scripts/registryctl.py`, which talks to the hosted API instead of editing repository state directly.
+
 ## AI Protocol
 
 For AI-driven publishing, import, export, and installation, treat the following files as the machine-facing contract:

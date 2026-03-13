@@ -6,6 +6,9 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from server.api.reviews import router as reviews_router
+from server.api.skills import router as skills_router
+from server.api.submissions import router as submissions_router
 from server.auth import get_current_user
 from server.db import ensure_database_ready, get_db
 from server.models import Job, Submission, User
@@ -55,6 +58,10 @@ def create_app() -> FastAPI:
             'display_name': user.display_name,
             'role': user.role,
         }
+
+    app.include_router(submissions_router)
+    app.include_router(reviews_router)
+    app.include_router(skills_router)
 
     return app
 

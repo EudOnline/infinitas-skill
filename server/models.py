@@ -35,6 +35,7 @@ class Submission(Base):
     status: Mapped[str] = mapped_column(String(64), default='draft', index=True)
     payload_json: Mapped[str] = mapped_column(Text, default='{}')
     payload_summary: Mapped[str] = mapped_column(Text, default='')
+    status_log_json: Mapped[str] = mapped_column(Text, default='[]')
     created_by_user_id: Mapped[int | None] = mapped_column(ForeignKey('users.id'))
     updated_by_user_id: Mapped[int | None] = mapped_column(ForeignKey('users.id'))
     review_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
