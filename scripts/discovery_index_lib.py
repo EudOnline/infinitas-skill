@@ -79,6 +79,10 @@ def normalize_discovery_skill(skill: dict, *, source_registry: str, source_prior
         'agent_compatible': list(skill.get('agent_compatible') or []),
         'install_requires_confirmation': source_registry != default_registry,
         'trust_level': trust_level,
+        'trust_state': skill.get('trust_state') or 'unknown',
+        'tags': list(skill.get('tags') or []),
+        'verified_support': dict(skill.get('verified_support') or {}),
+        'attestation_formats': list(((skill.get('versions') or {}).get(latest_version) or {}).get('attestation_formats') or ['ssh']),
         'use_when': list(skill.get('use_when') or []),
         'avoid_when': list(skill.get('avoid_when') or []),
     }
@@ -224,8 +228,12 @@ def validate_discovery_index_payload(payload: dict) -> list:
             errors.append(f'{prefix}.trust_level must be a non-empty string')
         if not isinstance(skill.get('install_requires_confirmation'), bool):
             errors.append(f'{prefix}.install_requires_confirmation must be a boolean')
-        for field in ['match_names', 'available_versions', 'agent_compatible', 'use_when', 'avoid_when']:
+        for field in ['match_names', 'available_versions', 'agent_compatible', 'use_when', 'avoid_when', 'tags', 'attestation_formats']:
             value = skill.get(field)
             if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
                 errors.append(f'{prefix}.{field} must be an array of strings')
+        if not isinstance(skill.get('trust_state'), str) or not skill.get('trust_state', '').strip():
+            errors.append(f'{prefix}.trust_state must be a non-empty string')
+        if not isinstance(skill.get('verified_support'), dict):
+            errors.append(f'{prefix}.verified_support must be an object')
     return errors

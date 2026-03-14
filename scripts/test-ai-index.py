@@ -57,6 +57,7 @@ def scaffold_fixture(repo: Path):
             'version': FIXTURE_VERSION,
             'status': 'active',
             'summary': 'Fixture skill for ai-index tests',
+            'tags': ['fixture', 'search'],
             'owner': 'release-test',
             'owners': ['release-test'],
             'author': 'release-test',
@@ -169,13 +170,28 @@ def main():
         entry = next((item for item in payload['skills'] if item.get('name') == FIXTURE_NAME), None)
         if entry is None:
             fail(f'expected ai-index to contain {FIXTURE_NAME}, got {payload.get("skills")!r}')
+        if entry.get('publisher') != 'release-test':
+            fail(f"expected publisher 'release-test', got {entry.get('publisher')!r}")
+        if entry.get('tags') != ['fixture', 'search']:
+            fail(f"expected fixture tags, got {entry.get('tags')!r}")
+        compatibility = entry.get('compatibility') or {}
+        if not isinstance(compatibility.get('verified_support'), dict):
+            fail('expected compatibility.verified_support to be an object')
+        if entry.get('verified_support') != compatibility.get('verified_support'):
+            fail('expected top-level verified_support to match compatibility.verified_support')
+        if not isinstance(entry.get('trust_state'), str) or not entry.get('trust_state').strip():
+            fail(f"expected trust_state to be a non-empty string, got {entry.get('trust_state')!r}")
         versions = entry.get('versions') or {}
         if FIXTURE_VERSION not in versions:
             fail(f'expected version {FIXTURE_VERSION!r} in ai-index versions')
         version_entry = versions[FIXTURE_VERSION]
-        for field in ['manifest_path', 'bundle_path', 'bundle_sha256', 'attestation_path']:
+        for field in ['manifest_path', 'distribution_manifest_path', 'bundle_path', 'bundle_sha256', 'attestation_path']:
             if not version_entry.get(field):
                 fail(f'missing version field {field!r}')
+        if not isinstance(version_entry.get('attestation_formats'), list) or not version_entry.get('attestation_formats'):
+            fail(f"expected attestation_formats for version entry, got {version_entry.get('attestation_formats')!r}")
+        if not isinstance(version_entry.get('trust_state'), str) or not version_entry.get('trust_state').strip():
+            fail(f"expected version trust_state to be non-empty, got {version_entry.get('trust_state')!r}")
 
         interop = ((entry.get('interop') or {}).get('openclaw') or {})
         if interop.get('import_supported') is not True:
@@ -195,6 +211,26 @@ def main():
         combined = result.stdout + result.stderr
         if 'default_install_version' not in combined:
             fail(f'expected validation failure mentioning default_install_version\n{combined}')
+
+        run([str(repo / 'scripts' / 'build-catalog.sh')], cwd=repo)
+        rebuilt_payload = json.loads(ai_index_path.read_text(encoding='utf-8'))
+        rebuilt_entry = next((item for item in rebuilt_payload['skills'] if item.get('name') == FIXTURE_NAME), None)
+        rebuilt_entry['versions'][FIXTURE_VERSION]['distribution_manifest_path'] = '/tmp/manifest.json'
+        write_json(ai_index_path, rebuilt_payload)
+        result = run([sys.executable, str(repo / 'scripts' / 'validate-registry.py')], cwd=repo, expect=1)
+        combined = result.stdout + result.stderr
+        if 'distribution_manifest_path' not in combined:
+            fail(f'expected validation failure mentioning distribution_manifest_path\n{combined}')
+
+        run([str(repo / 'scripts' / 'build-catalog.sh')], cwd=repo)
+        rebuilt_payload = json.loads(ai_index_path.read_text(encoding='utf-8'))
+        rebuilt_entry = next((item for item in rebuilt_payload['skills'] if item.get('name') == FIXTURE_NAME), None)
+        rebuilt_entry['versions'][FIXTURE_VERSION]['attestation_formats'] = 'ssh'
+        write_json(ai_index_path, rebuilt_payload)
+        result = run([sys.executable, str(repo / 'scripts' / 'validate-registry.py')], cwd=repo, expect=1)
+        combined = result.stdout + result.stderr
+        if 'attestation_formats' not in combined:
+            fail(f'expected validation failure mentioning attestation_formats\n{combined}')
 
         run([str(repo / 'scripts' / 'build-catalog.sh')], cwd=repo)
 

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-03-12T12:56:55Z",
+  "generated_at": "2026-03-14T10:42:29Z",
   "registry": {
     "default_registry": "self"
   },
@@ -16,6 +16,13 @@
       "publisher": "lvxiaoer",
       "qualified_name": "lvxiaoer/operate-infinitas-skill",
       "summary": "Teach OpenClaw, Codex, and Claude Code how to operate inside the infinitas-skill repository.",
+      "tags": [
+        "registry",
+        "openclaw",
+        "codex",
+        "claude-code",
+        "operations"
+      ],
       "use_when": [],
       "avoid_when": [],
       "agent_compatible": [
@@ -54,6 +61,30 @@
           }
         }
       },
+      "verified_support": {
+        "claude": {
+          "state": "adapted",
+          "checked_at": "2026-03-12T12:56:55Z",
+          "checker": "check-claude-compat.py",
+          "evidence_path": "catalog/compatibility-evidence/claude/operate-infinitas-skill/0.1.1.json",
+          "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py."
+        },
+        "codex": {
+          "state": "adapted",
+          "checked_at": "2026-03-12T12:56:55Z",
+          "checker": "check-codex-compat.py",
+          "evidence_path": "catalog/compatibility-evidence/codex/operate-infinitas-skill/0.1.1.json",
+          "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py."
+        },
+        "openclaw": {
+          "state": "adapted",
+          "checked_at": "2026-03-12T12:56:55Z",
+          "checker": "check-openclaw-compat.py",
+          "evidence_path": "catalog/compatibility-evidence/openclaw/operate-infinitas-skill/0.1.1.json",
+          "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py."
+        }
+      },
+      "trust_state": "verified",
       "default_install_version": "0.1.1",
       "latest_version": "0.1.1",
       "available_versions": [
@@ -88,6 +119,7 @@
       "versions": {
         "0.1.1": {
           "manifest_path": "catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.1/manifest.json",
+          "distribution_manifest_path": "catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.1/manifest.json",
           "bundle_path": "catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.1/skill.tar.gz",
           "bundle_sha256": "ee193440e2376d498f88a2b0ed9ea99dce3a0183eec7125fefefa8abaf07f500",
           "attestation_path": "catalog/provenance/operate-infinitas-skill-0.1.1.json",
@@ -95,6 +127,10 @@
           "published_at": "2026-03-12T12:56:45Z",
           "stability": "stable",
           "installable": true,
+          "attestation_formats": [
+            "ssh"
+          ],
+          "trust_state": "verified",
           "resolution": {
             "preferred_source": "distribution-manifest",
             "fallback_allowed": false

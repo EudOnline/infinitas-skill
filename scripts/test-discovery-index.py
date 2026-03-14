@@ -54,11 +54,21 @@ def assert_discovery_payload_stable_across_roots():
             {
                 'name': FIXTURE_NAME,
                 'qualified_name': FIXTURE_NAME,
+                'publisher': 'release-test',
                 'summary': 'Fixture skill for discovery-index tests',
+                'tags': ['fixture', 'search'],
                 'agent_compatible': ['codex'],
+                'verified_support': {'codex': {'state': 'adapted'}},
+                'trust_state': 'verified',
                 'default_install_version': FIXTURE_VERSION,
                 'latest_version': FIXTURE_VERSION,
                 'available_versions': [FIXTURE_VERSION],
+                'versions': {
+                    FIXTURE_VERSION: {
+                        'attestation_formats': ['ssh'],
+                        'distribution_manifest_path': f'catalog/distributions/{FIXTURE_NAME}/{FIXTURE_VERSION}/manifest.json',
+                    }
+                },
                 'use_when': [],
                 'avoid_when': [],
             }
@@ -89,6 +99,19 @@ def assert_discovery_payload_stable_across_roots():
         fail('expected discovery-index to include self source entry')
     if self_source.get('root') != '.':
         fail(f"expected self source root '.', got {self_source.get('root')!r}")
+    fixture = next((item for item in primary.get('skills') or [] if item.get('name') == FIXTURE_NAME), None)
+    if fixture is None:
+        fail(f'expected stable discovery payload to contain {FIXTURE_NAME}')
+    if fixture.get('publisher') != 'release-test':
+        fail(f"expected stable publisher 'release-test', got {fixture.get('publisher')!r}")
+    if fixture.get('tags') != ['fixture', 'search']:
+        fail(f"expected stable tags ['fixture', 'search'], got {fixture.get('tags')!r}")
+    if fixture.get('trust_state') != 'verified':
+        fail(f"expected stable trust_state 'verified', got {fixture.get('trust_state')!r}")
+    if fixture.get('verified_support') != {'codex': {'state': 'adapted'}}:
+        fail(f"expected stable verified_support, got {fixture.get('verified_support')!r}")
+    if fixture.get('attestation_formats') != ['ssh']:
+        fail(f"expected stable attestation_formats ['ssh'], got {fixture.get('attestation_formats')!r}")
 
 
 def make_env(extra=None):
@@ -116,6 +139,7 @@ def scaffold_fixture(repo: Path):
             'version': FIXTURE_VERSION,
             'status': 'active',
             'summary': 'Fixture skill for discovery-index tests',
+            'tags': ['fixture', 'search'],
             'owner': 'release-test',
             'owners': ['release-test'],
             'author': 'release-test',
@@ -182,9 +206,12 @@ def external_ai_index_payload():
                 'publisher': 'partner',
                 'qualified_name': f'partner/{EXTERNAL_SKILL_NAME}',
                 'summary': 'External fixture skill',
+                'tags': ['external', 'fixture'],
                 'use_when': ['Need external fixture coverage'],
                 'avoid_when': ['Testing unrelated behavior'],
                 'agent_compatible': ['openclaw', 'claude-code', 'codex'],
+                'verified_support': {'codex': {'state': 'adapted'}},
+                'trust_state': 'attested',
                 'default_install_version': EXTERNAL_SKILL_VERSION,
                 'latest_version': EXTERNAL_SKILL_VERSION,
                 'available_versions': [EXTERNAL_SKILL_VERSION],
@@ -208,6 +235,7 @@ def external_ai_index_payload():
                 'versions': {
                     EXTERNAL_SKILL_VERSION: {
                         'manifest_path': f'catalog/distributions/_legacy/{EXTERNAL_SKILL_NAME}/{EXTERNAL_SKILL_VERSION}/manifest.json',
+                        'distribution_manifest_path': f'catalog/distributions/_legacy/{EXTERNAL_SKILL_NAME}/{EXTERNAL_SKILL_VERSION}/manifest.json',
                         'bundle_path': f'catalog/distributions/_legacy/{EXTERNAL_SKILL_NAME}/{EXTERNAL_SKILL_VERSION}/bundle.tar.gz',
                         'bundle_sha256': 'deadbeef',
                         'attestation_path': f'catalog/provenance/{EXTERNAL_SKILL_NAME}-{EXTERNAL_SKILL_VERSION}.json',
@@ -318,14 +346,46 @@ def main():
         first = payload['skills'][0]
         if not first.get('qualified_name'):
             fail('expected first skill to have qualified_name')
+        if not first.get('publisher'):
+            fail('expected first skill to have publisher')
         if not first.get('source_registry'):
             fail('expected first skill to have source_registry')
         if not isinstance(first.get('match_names'), list):
             fail('expected first skill match_names to be a list')
         if not isinstance(first.get('install_requires_confirmation'), bool):
             fail('expected first skill install_requires_confirmation to be a bool')
+        if not isinstance(first.get('tags'), list):
+            fail('expected first skill tags to be a list')
+        if not isinstance(first.get('verified_support'), dict):
+            fail('expected first skill verified_support to be an object')
+        if not isinstance(first.get('attestation_formats'), list) or not first.get('attestation_formats'):
+            fail('expected first skill attestation_formats to be a non-empty list')
+        if not isinstance(first.get('trust_state'), str) or not first.get('trust_state').strip():
+            fail('expected first skill trust_state to be a non-empty string')
 
         assert_discovery_payload_stable_across_roots()
+
+        fixture = next((item for item in payload['skills'] if item.get('name') == FIXTURE_NAME), None)
+        if fixture is None:
+            fail(f'expected discovery-index to contain local fixture {FIXTURE_NAME}')
+        if fixture.get('publisher') != 'release-test':
+            fail(f"expected local publisher 'release-test', got {fixture.get('publisher')!r}")
+        if fixture.get('tags') != ['fixture', 'search']:
+            fail(f"expected local tags ['fixture', 'search'], got {fixture.get('tags')!r}")
+
+        external = next((item for item in payload['skills'] if item.get('name') == EXTERNAL_SKILL_NAME), None)
+        if external is None:
+            fail(f'expected discovery-index to contain external fixture {EXTERNAL_SKILL_NAME}')
+        if external.get('publisher') != 'partner':
+            fail(f"expected external publisher 'partner', got {external.get('publisher')!r}")
+        if external.get('tags') != ['external', 'fixture']:
+            fail(f"expected external tags ['external', 'fixture'], got {external.get('tags')!r}")
+        if external.get('trust_state') != 'attested':
+            fail(f"expected external trust_state 'attested', got {external.get('trust_state')!r}")
+        if external.get('verified_support') != {'codex': {'state': 'adapted'}}:
+            fail(f"expected external verified_support, got {external.get('verified_support')!r}")
+        if external.get('attestation_formats') != ['ssh']:
+            fail(f"expected external attestation_formats ['ssh'], got {external.get('attestation_formats')!r}")
 
         self_source = next((item for item in payload.get('sources') or [] if item.get('name') == 'self'), None)
         if not self_source:
@@ -340,6 +400,24 @@ def main():
         combined = result.stdout + result.stderr
         if 'match_names' not in combined:
             fail(f'expected validation failure mentioning match_names\n{combined}')
+
+        run([str(repo / 'scripts' / 'build-catalog.sh')], cwd=repo)
+        broken = load_json(discovery_index_path)
+        broken['skills'][0]['attestation_formats'] = 'ssh'
+        write_json(discovery_index_path, broken)
+        result = run([sys.executable, str(repo / 'scripts' / 'validate-registry.py')], cwd=repo, expect=1)
+        combined = result.stdout + result.stderr
+        if 'attestation_formats' not in combined:
+            fail(f'expected validation failure mentioning attestation_formats\n{combined}')
+
+        run([str(repo / 'scripts' / 'build-catalog.sh')], cwd=repo)
+        broken = load_json(discovery_index_path)
+        broken['skills'][0]['trust_state'] = ''
+        write_json(discovery_index_path, broken)
+        result = run([sys.executable, str(repo / 'scripts' / 'validate-registry.py')], cwd=repo, expect=1)
+        combined = result.stdout + result.stderr
+        if 'trust_state' not in combined:
+            fail(f'expected validation failure mentioning trust_state\n{combined}')
     finally:
         shutil.rmtree(tmpdir)
 

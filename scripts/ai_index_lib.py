@@ -100,6 +100,31 @@ def _openclaw_interop_payload():
     }
 
 
+def _publisher_for_entry(current, meta):
+    for candidate in [
+        current.get('publisher') if isinstance(current, dict) else None,
+        current.get('owner') if isinstance(current, dict) else None,
+        meta.get('publisher') if isinstance(meta, dict) else None,
+        meta.get('owner') if isinstance(meta, dict) else None,
+        meta.get('author') if isinstance(meta, dict) else None,
+    ]:
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate.strip()
+    return None
+
+
+def _trust_state_from_version_entry(version_entry):
+    if not isinstance(version_entry, dict):
+        return 'unknown'
+    if version_entry.get('attestation_signature_path'):
+        return 'verified'
+    if version_entry.get('attestation_path'):
+        return 'attested'
+    if version_entry.get('installable'):
+        return 'installable'
+    return 'unknown'
+
+
 def build_ai_index(*, root: Path, catalog_entries: list, distribution_entries: list) -> dict:
     root = Path(root).resolve()
     catalog_lookup = _catalog_entry_by_key(catalog_entries)
@@ -120,6 +145,7 @@ def build_ai_index(*, root: Path, catalog_entries: list, distribution_entries: l
             continue
         current = catalog_lookup.get(key) or grouped[key][0]
         meta = _meta_for_entry(root, current)
+        publisher = _publisher_for_entry(current, meta)
         requires = meta.get('requires') if isinstance(meta.get('requires'), dict) else {}
         entrypoints = meta.get('entrypoints') if isinstance(meta.get('entrypoints'), dict) else {}
         version_map = {}
@@ -129,6 +155,7 @@ def build_ai_index(*, root: Path, catalog_entries: list, distribution_entries: l
                 continue
             version_map[version] = {
                 'manifest_path': dist.get('manifest_path'),
+                'distribution_manifest_path': dist.get('manifest_path'),
                 'bundle_path': dist.get('bundle_path'),
                 'bundle_sha256': dist.get('bundle_sha256'),
                 'attestation_path': dist.get('attestation_path'),
@@ -136,18 +163,22 @@ def build_ai_index(*, root: Path, catalog_entries: list, distribution_entries: l
                 'published_at': dist.get('generated_at'),
                 'stability': 'stable',
                 'installable': True,
+                'attestation_formats': ['ssh', 'ci'] if dist.get('ci_attestation_path') else ['ssh'],
+                'trust_state': 'verified' if dist.get('attestation_signature_path') else 'attested',
                 'resolution': {
                     'preferred_source': 'distribution-manifest',
                     'fallback_allowed': False,
                 },
             }
         latest_version = versions[0]
+        latest_entry = version_map[latest_version]
         skills.append(
             {
                 'name': current.get('name'),
-                'publisher': current.get('publisher'),
-                'qualified_name': current.get('qualified_name') or current.get('name'),
+                'publisher': publisher,
+                'qualified_name': current.get('qualified_name') or (f'{publisher}/{current.get("name")}' if publisher and current.get('name') else current.get('name')),
                 'summary': current.get('summary') or '',
+                'tags': meta.get('tags') or [],
                 'use_when': [],
                 'avoid_when': [],
                 'agent_compatible': current.get('agent_compatible') or [],
@@ -155,6 +186,8 @@ def build_ai_index(*, root: Path, catalog_entries: list, distribution_entries: l
                     'declared_support': current.get('declared_support') or current.get('agent_compatible') or [],
                     'verified_support': current.get('verified_support') or {},
                 },
+                'verified_support': current.get('verified_support') or {},
+                'trust_state': _trust_state_from_version_entry(latest_entry),
                 'default_install_version': latest_version,
                 'latest_version': latest_version,
                 'available_versions': versions,
@@ -229,10 +262,14 @@ def validate_ai_index_payload(payload: dict) -> list:
         for field in ['name', 'qualified_name', 'summary', 'default_install_version', 'latest_version']:
             if not isinstance(skill.get(field), str) or not skill.get(field, '').strip():
                 errors.append(f'{prefix}.{field} must be a non-empty string')
-        for field in ['use_when', 'avoid_when', 'agent_compatible', 'available_versions']:
+        for field in ['use_when', 'avoid_when', 'agent_compatible', 'available_versions', 'tags']:
             value = skill.get(field)
             if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
                 errors.append(f'{prefix}.{field} must be an array of strings')
+        if not isinstance(skill.get('trust_state'), str) or not skill.get('trust_state', '').strip():
+            errors.append(f'{prefix}.trust_state must be a non-empty string')
+        if not isinstance(skill.get('verified_support'), dict):
+            errors.append(f'{prefix}.verified_support must be an object')
 
         compatibility = skill.get('compatibility')
         if compatibility is not None:
@@ -333,15 +370,25 @@ def validate_ai_index_payload(payload: dict) -> list:
                     value = version_payload.get(field)
                     if not isinstance(value, str) or not value.strip():
                         errors.append(f'{version_prefix}.{field} must be a non-empty string')
+                if not isinstance(version_payload.get('distribution_manifest_path'), str) or not version_payload.get('distribution_manifest_path', '').strip():
+                    errors.append(f'{version_prefix}.distribution_manifest_path must be a non-empty string')
                 for field in ['manifest_path', 'bundle_path', 'attestation_path']:
                     value = version_payload.get(field)
                     if isinstance(value, str) and value.strip() and not _relative_repo_path(value):
                         errors.append(f'{version_prefix}.{field} must be repo-relative')
+                distribution_manifest_path = version_payload.get('distribution_manifest_path')
+                if isinstance(distribution_manifest_path, str) and distribution_manifest_path.strip() and not _relative_repo_path(distribution_manifest_path):
+                    errors.append(f'{version_prefix}.distribution_manifest_path must be repo-relative')
                 signature_path = version_payload.get('attestation_signature_path')
                 if signature_path is not None and (
                     not isinstance(signature_path, str) or not signature_path.strip() or not _relative_repo_path(signature_path)
                 ):
                     errors.append(f'{version_prefix}.attestation_signature_path must be repo-relative when present')
+                if not isinstance(version_payload.get('trust_state'), str) or not version_payload.get('trust_state', '').strip():
+                    errors.append(f'{version_prefix}.trust_state must be a non-empty string')
+                attestation_formats = version_payload.get('attestation_formats')
+                if not isinstance(attestation_formats, list) or not all(isinstance(item, str) for item in attestation_formats):
+                    errors.append(f'{version_prefix}.attestation_formats must be an array of strings')
                 resolution = version_payload.get('resolution')
                 if not isinstance(resolution, dict):
                     errors.append(f'{version_prefix}.resolution must be an object')
