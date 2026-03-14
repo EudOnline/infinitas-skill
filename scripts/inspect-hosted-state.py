@@ -25,6 +25,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--max-queued-jobs', type=int, default=None, help='Alert when queued job count exceeds this threshold')
     parser.add_argument('--max-running-jobs', type=int, default=None, help='Alert when running job count exceeds this threshold')
     parser.add_argument('--max-failed-jobs', type=int, default=None, help='Alert when failed job count exceeds this threshold')
+    parser.add_argument('--max-warning-jobs', type=int, default=None, help='Alert when jobs with WARNING log entries exceed this threshold')
     parser.add_argument('--json', action='store_true', help='Emit machine-readable JSON output')
     return parser.parse_args()
 
@@ -78,9 +79,17 @@ def summarize_jobs(session: Session, limit: int) -> dict:
         .limit(limit)
         .all()
     )
+    warning_rows = (
+        session.query(Job)
+        .filter(Job.log.contains('WARNING:'))
+        .order_by(Job.updated_at.desc(), Job.id.desc())
+        .limit(limit)
+        .all()
+    )
     return {
         'total': counts['total'],
         'by_status': counts['by_status'],
+        'warning_count': session.scalar(select(func.count()).select_from(Job).where(Job.log.contains('WARNING:'))) or 0,
         'recent_failed': [
             {
                 'id': row.id,
@@ -100,6 +109,24 @@ def summarize_jobs(session: Session, limit: int) -> dict:
                 'updated_at': _iso(row.updated_at),
             }
             for row in active_rows
+        ],
+        'recent_warnings': [
+            {
+                'id': row.id,
+                'kind': row.kind,
+                'status': row.status,
+                'submission_id': row.submission_id,
+                'updated_at': _iso(row.updated_at),
+                'warning_excerpt': next(
+                    (
+                        line.strip()
+                        for line in (row.log or '').splitlines()
+                        if 'WARNING:' in line
+                    ),
+                    '',
+                ),
+            }
+            for row in warning_rows
         ],
     }
 
@@ -129,6 +156,7 @@ def build_alerts(summary: dict, args: argparse.Namespace) -> list[dict]:
         ('queued_jobs', summary['jobs']['by_status'].get('queued', 0), args.max_queued_jobs),
         ('running_jobs', summary['jobs']['by_status'].get('running', 0), args.max_running_jobs),
         ('failed_jobs', summary['jobs']['by_status'].get('failed', 0), args.max_failed_jobs),
+        ('warning_jobs', summary['jobs'].get('warning_count', 0), args.max_warning_jobs),
     ]
     for kind, actual, threshold in checks:
         if threshold is None:
@@ -152,10 +180,15 @@ def emit(summary: dict, as_json: bool):
     jobs = summary['jobs']
     submissions = summary['submissions']
     prefix = 'OK' if summary.get('ok') else 'ALERT'
-    print(f"{prefix}: jobs total={jobs['total']} queued={jobs['by_status'].get('queued', 0)} failed={jobs['by_status'].get('failed', 0)}")
+    print(
+        f"{prefix}: jobs total={jobs['total']} queued={jobs['by_status'].get('queued', 0)} "
+        f"failed={jobs['by_status'].get('failed', 0)} warnings={jobs.get('warning_count', 0)}"
+    )
     print(f"{prefix}: submissions total={submissions['total']} statuses={json.dumps(submissions['by_status'], ensure_ascii=False, sort_keys=True)}")
     for item in jobs['recent_failed']:
         print(f"FAILED: job#{item['id']} kind={item['kind']} submission={item['submission_id']} error={item['error_message']}")
+    for item in jobs.get('recent_warnings') or []:
+        print(f"WARNED: job#{item['id']} kind={item['kind']} status={item['status']} warning={item['warning_excerpt']}")
     for alert in summary.get('alerts') or []:
         print(f"ALERT: {alert['message']}")
 

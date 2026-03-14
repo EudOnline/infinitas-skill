@@ -29,6 +29,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--inspect-max-queued-jobs', type=int, default=None, help='Alert when queued job count exceeds this threshold')
     parser.add_argument('--inspect-max-running-jobs', type=int, default=None, help='Alert when running job count exceeds this threshold')
     parser.add_argument('--inspect-max-failed-jobs', type=int, default=0, help='Alert when failed job count exceeds this threshold')
+    parser.add_argument('--inspect-max-warning-jobs', type=int, default=None, help='Alert when jobs with WARNING log entries exceed this threshold')
     parser.add_argument('--artifact-path', default='', help='Override artifact path for the env template and backup service')
     parser.add_argument('--database-url', default='', help='Override database URL for the env template and backup service')
     parser.add_argument('--repo-lock-path', default='', help='Override repo lock path for the env template')
@@ -197,6 +198,8 @@ def render_inspect_service(args: argparse.Namespace) -> str:
         extra.extend(['--max-running-jobs', str(args.inspect_max_running_jobs)])
     if args.inspect_max_failed_jobs is not None:
         extra.extend(['--max-failed-jobs', str(args.inspect_max_failed_jobs)])
+    if args.inspect_max_warning_jobs is not None:
+        extra.extend(['--max-warning-jobs', str(args.inspect_max_warning_jobs)])
     extra_flags = ' '.join(extra)
     if extra_flags:
         extra_flags = f' {extra_flags}'

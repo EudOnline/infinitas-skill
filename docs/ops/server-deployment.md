@@ -67,6 +67,7 @@ python scripts/inspect-hosted-state.py \
   --max-queued-jobs 10 \
   --max-running-jobs 2 \
   --max-failed-jobs 0 \
+  --max-warning-jobs 0 \
   --json
 ```
 
@@ -75,9 +76,11 @@ This summarizes:
 - jobs by status
 - recent failed jobs with error messages
 - recent queued/running jobs
+- recent jobs whose logs contain `WARNING:`
 - submissions by status
 
 When any configured threshold is exceeded, the script still emits its summary but exits with status code `2`. That makes it suitable for `systemd` oneshot health/alert runs.
+This is especially useful for best-effort publish mirror hooks: a publish may still complete successfully while leaving a warning that operators should inspect.
 
 This is intentionally SQLite-first for the current single-node deployment shape.
 
@@ -96,7 +99,8 @@ python scripts/render-hosted-systemd.py \
   --backup-on-calendar daily \
   --backup-label nightly \
   --prune-on-calendar daily \
-  --prune-keep-last 7
+  --prune-keep-last 7 \
+  --inspect-max-warning-jobs 0
 ```
 
 To include optional one-way mirror automation in the same rendered bundle, render with:
@@ -115,7 +119,8 @@ python scripts/render-hosted-systemd.py \
   --mirror-branch main \
   --mirror-on-calendar daily \
   --prune-on-calendar daily \
-  --prune-keep-last 7
+  --prune-keep-last 7 \
+  --inspect-max-warning-jobs 0
 ```
 
 The rendered directory contains:
@@ -162,6 +167,7 @@ For a small single-node deployment, a reasonable starting point is:
 - `--inspect-max-queued-jobs 10`
 - `--inspect-max-running-jobs 2`
 - `--inspect-max-failed-jobs 0`
+- `--inspect-max-warning-jobs 0`
 
 An inspect service failure means the queue or failure counts crossed a threshold. It does not necessarily mean the process crashed.
 The prune service deletes only older recognized hosted backup snapshots, not arbitrary folders under the backup root.
