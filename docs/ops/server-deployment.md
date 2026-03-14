@@ -21,6 +21,8 @@ The recommended single-node deployment shape now includes a generated `systemd` 
 - `INFINITAS_SERVER_REPO_PATH`
 - `INFINITAS_SERVER_ARTIFACT_PATH`
 - optional `INFINITAS_SERVER_REPO_LOCK_PATH`
+- optional `INFINITAS_SERVER_MIRROR_REMOTE`
+- optional `INFINITAS_SERVER_MIRROR_BRANCH`
 
 ## Startup sequence
 
@@ -152,6 +154,7 @@ If mirror automation is enabled in the rendered bundle, also run:
 
 The API service starts `uvicorn`, the worker service runs `scripts/run-hosted-worker.py`, the backup timer schedules `scripts/backup-hosted-registry.py`, the prune timer runs `scripts/prune-hosted-backups.py` against the backup root, and the inspect timer runs `scripts/inspect-hosted-state.py` with configured alert thresholds.
 When configured, the mirror timer runs `scripts/mirror-registry.sh` for one-way outward mirroring only.
+If `INFINITAS_SERVER_MIRROR_REMOTE` is set in the worker environment, each successful publish also attempts an immediate best-effort one-way mirror push after artifact sync and the primary `origin` push complete.
 
 For a small single-node deployment, a reasonable starting point is:
 
@@ -169,8 +172,10 @@ GitHub is an optional **one-way mirror** only. The hosted server remains the wri
 
 - Use `scripts/mirror-registry.sh --remote <mirror-remote>`
 - Or render an optional `infinitas-hosted-mirror.timer` with `--mirror-remote <mirror-remote>`
+- Or set `INFINITAS_SERVER_MIRROR_REMOTE=<mirror-remote>` for an immediate best-effort publish-completion hook
 - Never fetch or merge GitHub back into the hosted repo
 - Mirror after successful publish or on a scheduled operator action
+- If the immediate publish hook warns, treat the scheduled mirror timer as the fallback safety net and inspect the publish job log
 
 ## Operational notes
 

@@ -39,6 +39,8 @@ scripts/publish-skill.sh <skill> [--version <semver>] [--mode auto|confirm]
 - queued publish jobs must execute against the server-owned source-of-truth repo, not a contributor clone
 - worker execution may skip self-referential bootstrap test suites while running release scripts, but must still preserve signed tag, provenance, and immutable distribution output requirements
 - after publish completes, the worker must sync the generated `catalog/` outputs into the hosted artifact directory used by HTTP registry clients
+- when `INFINITAS_SERVER_MIRROR_REMOTE` is configured, the worker may also run an immediate best-effort one-way mirror push after artifact sync and the primary `origin` push
+- a mirror-hook warning must not silently change the published release outcome; operators should inspect the job log and rely on the scheduled mirror timer as fallback if configured
 
 ## Stop Conditions
 

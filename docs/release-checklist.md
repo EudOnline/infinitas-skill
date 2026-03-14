@@ -47,4 +47,5 @@ When the hosted control plane performs the release:
 - [ ] validation job materializes the submitted skill into `skills/incubating/` and commits the exact reviewed payload
 - [ ] promotion job commits and pushes the `skills/incubating/` → `skills/active/` move before publish begins
 - [ ] publish job syncs `catalog/`, `catalog/provenance/`, and immutable distribution outputs into the hosted artifact directory after release succeeds
+- [ ] if `INFINITAS_SERVER_MIRROR_REMOTE` is configured, the publish job log shows either a successful one-way mirror command or an explicit warning reviewed by the operator
 - [ ] job logs capture every invoked script so operators can audit validate / promote / publish execution

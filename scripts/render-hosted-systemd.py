@@ -53,6 +53,9 @@ def render_env_example(args: argparse.Namespace) -> str:
             f'INFINITAS_SERVER_REPO_PATH={repo_root}',
             f'INFINITAS_SERVER_ARTIFACT_PATH={artifact_path}',
             f'INFINITAS_SERVER_REPO_LOCK_PATH={repo_lock_path}',
+            '# Optional immediate post-publish mirror hook; leave blank to disable.',
+            'INFINITAS_SERVER_MIRROR_REMOTE=',
+            'INFINITAS_SERVER_MIRROR_BRANCH=',
             '',
         ]
     )

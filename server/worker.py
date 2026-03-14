@@ -63,6 +63,18 @@ def _repo_env(settings) -> dict:
     }
 
 
+def _run_optional_publish_hooks(job: Job, settings):
+    if not settings.mirror_remote:
+        return
+    command = ['bash', 'scripts/mirror-registry.sh', '--remote', settings.mirror_remote]
+    if settings.mirror_branch:
+        command.extend(['--branch', settings.mirror_branch])
+    try:
+        append_job_log(job, run_command(settings.repo_path, command, env=_repo_env(settings)))
+    except RepoOpError as exc:
+        append_job_log(job, f'WARNING: publish mirror hook failed: {exc}')
+
+
 def _process_validate_job(session, job: Job, settings):
     submission = session.get(Submission, job.submission_id)
     if submission is None:
@@ -107,6 +119,7 @@ def _process_publish_job(session, job: Job, settings):
         append_job_log(job, f'synced hosted artifacts to {settings.artifact_path}')
         for entry in commit_and_push(settings.repo_path, message=f'worker: publish submission {submission.skill_name}'):
             append_job_log(job, entry)
+        _run_optional_publish_hooks(job, settings)
     submission.status = 'published'
     submission.updated_at = utcnow()
 

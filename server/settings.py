@@ -35,6 +35,8 @@ class Settings:
     repo_path: Path
     artifact_path: Path
     repo_lock_path: Path
+    mirror_remote: str
+    mirror_branch: str
 
 
 def _normalize_bootstrap_users(payload: object) -> list[dict]:
@@ -75,6 +77,8 @@ def get_settings() -> Settings:
     repo_path = Path(os.environ.get('INFINITAS_SERVER_REPO_PATH') or ROOT).expanduser().resolve()
     artifact_path = Path(os.environ.get('INFINITAS_SERVER_ARTIFACT_PATH') or (ROOT / '.state' / 'artifacts')).expanduser().resolve()
     repo_lock_path = Path(os.environ.get('INFINITAS_SERVER_REPO_LOCK_PATH') or (ROOT / '.state' / 'repo.lock')).expanduser().resolve()
+    mirror_remote = str(os.environ.get('INFINITAS_SERVER_MIRROR_REMOTE') or '').strip()
+    mirror_branch = str(os.environ.get('INFINITAS_SERVER_MIRROR_BRANCH') or '').strip()
 
     return Settings(
         app_name='infinitas-hosted-registry',
@@ -86,4 +90,6 @@ def get_settings() -> Settings:
         repo_path=repo_path,
         artifact_path=artifact_path,
         repo_lock_path=repo_lock_path,
+        mirror_remote=mirror_remote,
+        mirror_branch=mirror_branch,
     )

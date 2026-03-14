@@ -247,6 +247,8 @@ The hosted server uses SQLite by default and can be configured with:
 - `INFINITAS_SERVER_BOOTSTRAP_USERS` (JSON array of `{username, display_name, role, token}`)
 - `INFINITAS_SERVER_REPO_PATH`
 - `INFINITAS_SERVER_ARTIFACT_PATH`
+- optional `INFINITAS_SERVER_MIRROR_REMOTE`
+- optional `INFINITAS_SERVER_MIRROR_BRANCH`
 
 Hosted submission and review APIs are documented in `docs/ai/server-api.md`. The matching CLI wrapper is `scripts/registryctl.py`, which talks to the hosted API instead of editing repository state directly.
 Operational runbooks live in `docs/ops/server-deployment.md` and `docs/ops/server-backup-and-restore.md`.
@@ -261,6 +263,7 @@ Phase 1 hosted ops automation now includes:
 - `scripts/run-hosted-worker.py` to provide a stable long-running worker entrypoint for the generated worker service
 
 These ops helpers are intentionally SQLite-first for the current single-node deployment model. PostgreSQL and object-storage automation remain future extensions.
+If `INFINITAS_SERVER_MIRROR_REMOTE` is configured, hosted publish jobs also attempt an immediate best-effort one-way mirror push after syncing artifacts and pushing the primary repo.
 
 ## AI Protocol
 
