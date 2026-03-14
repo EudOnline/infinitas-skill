@@ -63,8 +63,17 @@ def scenario_recommend_returns_ranked_fields_for_real_catalog():
     ]:
         if key not in top:
             fail(f'missing recommendation field {key!r}')
+    factors = top.get('ranking_factors') or {}
+    for key in ['match_strength', 'compatibility', 'trust', 'quality', 'verification_freshness']:
+        if key not in factors:
+            fail(f'missing ranking_factors field {key!r}')
     if top.get('qualified_name') != QUALIFIED_NAME:
         fail(f"expected top recommendation {QUALIFIED_NAME!r}, got {top.get('qualified_name')!r}")
+    explanation = payload.get('explanation') or {}
+    if not isinstance(explanation.get('winner_reason'), str) or not explanation.get('winner_reason').strip():
+        fail(f"expected top-level winner_reason, got {explanation.get('winner_reason')!r}")
+    if explanation.get('winner') != QUALIFIED_NAME:
+        fail(f"expected explanation winner {QUALIFIED_NAME!r}, got {explanation.get('winner')!r}")
     if contains_absolute_path(payload):
         fail(f'expected recommendation payload to avoid raw filesystem paths\n{json.dumps(payload, ensure_ascii=False, indent=2)}')
 
@@ -192,6 +201,9 @@ def scenario_recommend_prefers_private_high_quality_match():
             fail('expected ranked results to include external candidate')
         if external.get('install_requires_confirmation') is not True:
             fail(f"expected external recommendation to require confirmation, got {external.get('install_requires_confirmation')!r}")
+        explanation = payload.get('explanation') or {}
+        if explanation.get('runner_up') != 'partner/ops-external':
+            fail(f"expected runner_up 'partner/ops-external', got {explanation.get('runner_up')!r}")
         if contains_absolute_path(payload):
             fail(f'expected recommendation payload to avoid raw filesystem paths\n{json.dumps(payload, ensure_ascii=False, indent=2)}')
     finally:

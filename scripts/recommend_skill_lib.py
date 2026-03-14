@@ -141,9 +141,25 @@ def recommend_skills(root: Path, task: str, target_agent: str | None = None, lim
 
     scored.sort(key=lambda entry: (-entry[0], entry[1], entry[2]))
     results = [entry[3] for entry in scored[: max(limit, 0)]]
+    explanation = {}
+    if results:
+        winner = results[0]
+        runner_up = results[1] if len(results) > 1 else None
+        winner_reason = winner.get('recommendation_reason') or 'top deterministic recommendation'
+        if runner_up:
+            winner_reason = (
+                f"{winner_reason}; outranked {runner_up.get('qualified_name')} via "
+                f"private-first and deterministic ranking factors"
+            )
+        explanation = {
+            'winner': winner.get('qualified_name'),
+            'winner_reason': winner_reason,
+            'runner_up': runner_up.get('qualified_name') if runner_up else None,
+        }
     return {
         'ok': True,
         'task': task,
         'target_agent': target_agent,
         'results': results,
+        'explanation': explanation,
     }
