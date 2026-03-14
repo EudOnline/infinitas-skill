@@ -86,20 +86,23 @@ PY
 )"
 
 if [[ -n "$SOURCE_REGISTRY_OVERRIDE" && "$SOURCE_REGISTRY_OVERRIDE" != "$SOURCE_REGISTRY" ]]; then
-  python3 - <<'PY' "$INFO_JSON" "$TARGET_DIR" "$SOURCE_REGISTRY_OVERRIDE"
+  python3 - <<'PY' "$ROOT" "$INFO_JSON" "$TARGET_DIR" "$SOURCE_REGISTRY_OVERRIDE"
 import json, sys
-info = json.loads(sys.argv[1])
+sys.path.insert(0, sys.argv[1] + '/scripts')
+from explain_install_lib import build_upgrade_explanation  # noqa: E402
+info = json.loads(sys.argv[2])
 payload = {
     'ok': False,
     'qualified_name': info.get('qualified_name'),
     'source_registry': info.get('source_registry'),
     'from_version': info.get('installed_version'),
-    'target_dir': sys.argv[2],
+    'target_dir': sys.argv[3],
     'state': 'failed',
     'error_code': 'cross-source-upgrade-not-allowed',
-    'message': f"refusing to switch source registry from {info.get('source_registry')!r} to {sys.argv[3]!r}",
+    'message': f"refusing to switch source registry from {info.get('source_registry')!r} to {sys.argv[4]!r}",
     'next_step': 'rerun without --registry or reinstall explicitly from the new source',
 }
+payload['explanation'] = build_upgrade_explanation(info, payload)
 print(json.dumps(payload, ensure_ascii=False))
 PY
   exit 1
@@ -122,42 +125,47 @@ PY
 )"
 
 if [[ "$MODE" == "confirm" ]]; then
-  python3 - <<'PY' "$INFO_JSON" "$PLAN_JSON" "$TARGET_DIR"
+  python3 - <<'PY' "$ROOT" "$INFO_JSON" "$PLAN_JSON" "$TARGET_DIR"
 import json, sys
-info = json.loads(sys.argv[1])
-plan = json.loads(sys.argv[2])
+sys.path.insert(0, sys.argv[1] + '/scripts')
+from explain_install_lib import build_upgrade_explanation  # noqa: E402
+info = json.loads(sys.argv[2])
+plan = json.loads(sys.argv[3])
 payload = {
     'ok': True,
     'qualified_name': info.get('qualified_name'),
     'source_registry': info.get('source_registry'),
     'from_version': info.get('installed_version'),
     'to_version': plan.get('resolved_version'),
-    'target_dir': sys.argv[3],
+    'target_dir': sys.argv[4],
     'state': 'planned',
     'manifest_path': plan.get('manifest_path'),
     'next_step': 'run upgrade-skill',
 }
-    
+payload['explanation'] = build_upgrade_explanation(info, payload)
 print(json.dumps(payload, ensure_ascii=False))
 PY
   exit 0
 fi
 
 if [[ -z "$TARGET_VERSION" || "$TARGET_VERSION" == "$INSTALLED_VERSION" ]]; then
-  python3 - <<'PY' "$INFO_JSON" "$TARGET_DIR"
+  python3 - <<'PY' "$ROOT" "$INFO_JSON" "$TARGET_DIR"
 import json, sys
-info = json.loads(sys.argv[1])
+sys.path.insert(0, sys.argv[1] + '/scripts')
+from explain_install_lib import build_upgrade_explanation  # noqa: E402
+info = json.loads(sys.argv[2])
 payload = {
     'ok': True,
     'qualified_name': info.get('qualified_name'),
     'source_registry': info.get('source_registry'),
     'from_version': info.get('installed_version'),
     'to_version': info.get('installed_version'),
-    'target_dir': sys.argv[2],
+    'target_dir': sys.argv[3],
     'state': 'up-to-date',
     'manifest_path': None,
     'next_step': 'use-installed-skill',
 }
+payload['explanation'] = build_upgrade_explanation(info, payload)
 print(json.dumps(payload, ensure_ascii=False))
 PY
   exit 0
@@ -169,19 +177,22 @@ SWITCH_OUTPUT="$(./scripts/switch-installed-skill.sh "$NAME" "$TARGET_DIR" --to-
   exit $status
 }
 
-python3 - <<'PY' "$INFO_JSON" "$TARGET_VERSION" "$TARGET_DIR"
+python3 - <<'PY' "$ROOT" "$INFO_JSON" "$TARGET_VERSION" "$TARGET_DIR"
 import json, sys
-info = json.loads(sys.argv[1])
+sys.path.insert(0, sys.argv[1] + '/scripts')
+from explain_install_lib import build_upgrade_explanation  # noqa: E402
+info = json.loads(sys.argv[2])
 payload = {
     'ok': True,
     'qualified_name': info.get('qualified_name'),
     'source_registry': info.get('source_registry'),
     'from_version': info.get('installed_version'),
-    'to_version': sys.argv[2],
-    'target_dir': sys.argv[3],
+    'to_version': sys.argv[3],
+    'target_dir': sys.argv[4],
     'state': 'installed',
-    'manifest_path': f"{sys.argv[3]}/.infinitas-skill-install-manifest.json",
+    'manifest_path': f"{sys.argv[4]}/.infinitas-skill-install-manifest.json",
     'next_step': 'use-installed-skill',
 }
+payload['explanation'] = build_upgrade_explanation(info, payload)
 print(json.dumps(payload, ensure_ascii=False))
 PY

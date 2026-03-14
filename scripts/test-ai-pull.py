@@ -165,9 +165,12 @@ def external_ai_index_payload():
                 'publisher': 'partner',
                 'qualified_name': f'partner/{EXTERNAL_SKILL_NAME}',
                 'summary': 'External fixture skill for registry-aware pull tests',
+                'tags': ['external', 'fixture'],
                 'use_when': ['Need external registry coverage'],
                 'avoid_when': [],
                 'agent_compatible': ['openclaw', 'claude-code', 'codex'],
+                'verified_support': {},
+                'trust_state': 'attested',
                 'default_install_version': EXTERNAL_SKILL_VERSION,
                 'latest_version': EXTERNAL_SKILL_VERSION,
                 'available_versions': [EXTERNAL_SKILL_VERSION],
@@ -191,6 +194,7 @@ def external_ai_index_payload():
                 'versions': {
                     EXTERNAL_SKILL_VERSION: {
                         'manifest_path': f'catalog/distributions/_legacy/{EXTERNAL_SKILL_NAME}/{EXTERNAL_SKILL_VERSION}/manifest.json',
+                        'distribution_manifest_path': f'catalog/distributions/_legacy/{EXTERNAL_SKILL_NAME}/{EXTERNAL_SKILL_VERSION}/manifest.json',
                         'bundle_path': f'catalog/distributions/_legacy/{EXTERNAL_SKILL_NAME}/{EXTERNAL_SKILL_VERSION}/bundle.tar.gz',
                         'bundle_sha256': 'deadbeef',
                         'attestation_path': f'catalog/provenance/{EXTERNAL_SKILL_NAME}-{EXTERNAL_SKILL_VERSION}.json',
@@ -198,6 +202,8 @@ def external_ai_index_payload():
                         'published_at': '2026-03-12T00:00:00Z',
                         'stability': 'stable',
                         'installable': True,
+                        'attestation_formats': ['ssh'],
+                        'trust_state': 'attested',
                         'resolution': {
                             'preferred_source': 'distribution-manifest',
                             'fallback_allowed': False,

@@ -16,6 +16,7 @@ shift 2 || true
 REQUESTED_VERSION=""
 TARGET_AGENT=""
 MODE="auto"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -65,24 +66,27 @@ PY
 )"
 
 if [[ "$MODE" == "auto" && "$REQUIRES_CONFIRMATION" == "true" ]]; then
-  python3 - <<'PY' "$RESOLVE_JSON" "$QUERY" "$TARGET_DIR" "$REQUESTED_VERSION"
+  python3 - <<'PY' "$ROOT" "$RESOLVE_JSON" "$QUERY" "$TARGET_DIR" "$REQUESTED_VERSION"
 import json, sys
-resolve_payload = json.loads(sys.argv[1])
+sys.path.insert(0, sys.argv[1] + '/scripts')
+from explain_install_lib import build_install_explanation  # noqa: E402
+resolve_payload = json.loads(sys.argv[2])
 resolved = resolve_payload.get('resolved') or {}
 payload = {
     'ok': False,
-    'query': sys.argv[2],
+    'query': sys.argv[3],
     'qualified_name': resolved.get('qualified_name'),
     'source_registry': resolved.get('source_registry'),
-    'requested_version': sys.argv[4] or None,
+    'requested_version': sys.argv[5] or None,
     'resolved_version': resolved.get('resolved_version'),
-    'target_dir': sys.argv[3],
+    'target_dir': sys.argv[4],
     'manifest_path': None,
     'state': 'failed',
     'requires_confirmation': True,
     'error_code': 'confirmation-required',
     'next_step': 'rerun with --mode confirm and explicit confirmation',
 }
+payload['explanation'] = build_install_explanation(resolve_payload, payload, requested_version=payload.get('requested_version'))
 print(json.dumps(payload, ensure_ascii=False))
 PY
   exit 1
@@ -126,23 +130,26 @@ PULL_JSON="$("${PULL_ARGS[@]}")" || {
   exit $status
 }
 
-python3 - <<'PY' "$RESOLVE_JSON" "$PULL_JSON" "$QUERY" "$TARGET_DIR" "$REQUESTED_VERSION"
+python3 - <<'PY' "$ROOT" "$RESOLVE_JSON" "$PULL_JSON" "$QUERY" "$TARGET_DIR" "$REQUESTED_VERSION"
 import json, sys
-resolve_payload = json.loads(sys.argv[1])
-pull_payload = json.loads(sys.argv[2])
+sys.path.insert(0, sys.argv[1] + '/scripts')
+from explain_install_lib import build_install_explanation  # noqa: E402
+resolve_payload = json.loads(sys.argv[2])
+pull_payload = json.loads(sys.argv[3])
 resolved = resolve_payload.get('resolved') or {}
 payload = {
     'ok': pull_payload.get('ok'),
-    'query': sys.argv[3],
+    'query': sys.argv[4],
     'qualified_name': pull_payload.get('qualified_name') or resolved.get('qualified_name'),
     'source_registry': pull_payload.get('registry_name') or resolved.get('source_registry'),
-    'requested_version': sys.argv[5] or pull_payload.get('requested_version'),
+    'requested_version': sys.argv[6] or pull_payload.get('requested_version'),
     'resolved_version': pull_payload.get('resolved_version') or resolved.get('resolved_version'),
-    'target_dir': sys.argv[4],
+    'target_dir': sys.argv[5],
     'manifest_path': pull_payload.get('lockfile_path') or pull_payload.get('manifest_path'),
     'state': pull_payload.get('state'),
     'requires_confirmation': resolve_payload.get('requires_confirmation'),
     'next_step': 'check-update-or-use' if pull_payload.get('state') == 'installed' else pull_payload.get('next_step'),
 }
+payload['explanation'] = build_install_explanation(resolve_payload, payload, requested_version=payload.get('requested_version'))
 print(json.dumps(payload, ensure_ascii=False))
 PY

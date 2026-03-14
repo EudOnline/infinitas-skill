@@ -40,6 +40,7 @@ target_agent = sys.argv[3] or None
 
 sys.path.insert(0, str(root / 'scripts'))
 from discovery_resolver_lib import load_discovery_index, resolve_skill  # noqa: E402
+from explain_install_lib import build_resolve_explanation  # noqa: E402
 
 try:
     payload = load_discovery_index(root)
@@ -56,5 +57,6 @@ except Exception as exc:
         'message': str(exc),
     }
 
+result['explanation'] = build_resolve_explanation(result)
 print(json.dumps(result, ensure_ascii=False))
 PY

@@ -56,6 +56,7 @@ mode = sys.argv[6]
 
 sys.path.insert(0, str(root / 'scripts'))
 from ai_index_lib import validate_ai_index_payload  # noqa: E402
+from explain_install_lib import build_pull_plan_explanation  # noqa: E402
 from http_registry_lib import HostedRegistryError, fetch_json, registry_catalog_path  # noqa: E402
 from registry_source_lib import find_registry, load_registry_config, normalized_auth, resolve_registry_root  # noqa: E402
 
@@ -264,6 +265,7 @@ plan = {
     'install_command': ['scripts/install-skill.sh', install_name, target_dir, '--version', resolved_version] + (['--registry', resolved_registry_name] if requested_registry else []),
     'next_step': 'run-install' if mode == 'auto' else 'confirm-or-run',
 }
+plan['explanation'] = build_pull_plan_explanation(plan, requested_version=requested_version)
 print(json.dumps(plan, ensure_ascii=False))
 PY
 )" || {
@@ -298,11 +300,13 @@ if [[ -n "$REGISTRY_NAME" ]]; then
   INSTALL_ARGS+=(--registry "$REGISTRY_NAME")
 fi
 if ! "${INSTALL_ARGS[@]}" >"$INSTALL_LOG" 2>&1; then
-  python3 - <<'PY' "$PLAN_JSON" "$INSTALL_LOG"
+  python3 - <<'PY' "$ROOT" "$PLAN_JSON" "$INSTALL_LOG"
 import json, sys
 from pathlib import Path
-plan = json.loads(sys.argv[1])
-message = Path(sys.argv[2]).read_text(encoding='utf-8').strip()
+sys.path.insert(0, sys.argv[1] + '/scripts')
+from explain_install_lib import build_pull_result_explanation  # noqa: E402
+plan = json.loads(sys.argv[2])
+message = Path(sys.argv[3]).read_text(encoding='utf-8').strip()
 payload = {
     'ok': False,
     'qualified_name': plan.get('qualified_name'),
@@ -315,6 +319,7 @@ payload = {
     'message': message,
     'suggested_action': 'inspect install output and distribution artifacts',
 }
+payload['explanation'] = build_pull_result_explanation(plan, payload)
 print(json.dumps(payload, ensure_ascii=False))
 PY
   rm -f "$INSTALL_LOG"
@@ -322,10 +327,12 @@ PY
 fi
 rm -f "$INSTALL_LOG"
 
-python3 - <<'PY' "$PLAN_JSON" "$LOCKFILE_PATH"
+python3 - <<'PY' "$ROOT" "$PLAN_JSON" "$LOCKFILE_PATH"
 import json, sys
-plan = json.loads(sys.argv[1])
-lockfile_path = sys.argv[2]
+sys.path.insert(0, sys.argv[1] + '/scripts')
+from explain_install_lib import build_pull_result_explanation  # noqa: E402
+plan = json.loads(sys.argv[2])
+lockfile_path = sys.argv[3]
 payload = {
     'ok': True,
     'qualified_name': plan.get('qualified_name'),
@@ -337,5 +344,6 @@ payload = {
     'installed_files_manifest': lockfile_path,
     'next_step': 'sync-or-use',
 }
+payload['explanation'] = build_pull_result_explanation(plan, payload)
 print(json.dumps(payload, ensure_ascii=False))
 PY
