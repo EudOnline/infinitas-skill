@@ -19,6 +19,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--backup-output-dir', required=True, help='Directory where scheduled backups should be written')
     parser.add_argument('--backup-on-calendar', default='daily', help='systemd OnCalendar expression for backups')
     parser.add_argument('--backup-label', default='scheduled', help='Backup label passed to the backup helper')
+    parser.add_argument('--mirror-remote', default='', help='Optional outward mirror remote; when set, render mirror service and timer')
+    parser.add_argument('--mirror-branch', default='', help='Optional branch passed to the mirror helper; defaults to current branch when omitted')
+    parser.add_argument('--mirror-on-calendar', default='daily', help='systemd OnCalendar expression for optional outward mirroring')
     parser.add_argument('--prune-on-calendar', default='daily', help='systemd OnCalendar expression for backup retention pruning')
     parser.add_argument('--prune-keep-last', type=int, default=7, help='How many newest backup directories the prune job should keep')
     parser.add_argument('--inspect-on-calendar', default='hourly', help='systemd OnCalendar expression for queue inspection runs')
@@ -152,6 +155,36 @@ WantedBy=timers.target
 """
 
 
+def render_mirror_service(args: argparse.Namespace) -> str:
+    extra_flags = ''
+    if args.mirror_branch:
+        extra_flags = f' --branch {args.mirror_branch}'
+    return f"""[Unit]
+Description=Infinitas Hosted Registry One-Way Mirror Push
+After=network-online.target
+
+[Service]
+Type=oneshot
+User={args.service_user}
+WorkingDirectory={args.repo_root}
+ExecStart=/usr/bin/env bash {args.repo_root}/scripts/mirror-registry.sh --remote {args.mirror_remote}{extra_flags}
+"""
+
+
+def render_mirror_timer(args: argparse.Namespace) -> str:
+    return f"""[Unit]
+Description=Schedule Infinitas Hosted Registry outward mirroring
+
+[Timer]
+OnCalendar={args.mirror_on_calendar}
+Persistent=true
+Unit={args.service_prefix}-mirror.service
+
+[Install]
+WantedBy=timers.target
+"""
+
+
 def render_inspect_service(args: argparse.Namespace) -> str:
     database_url = args.database_url or f'sqlite:///{args.repo_root.rstrip("/")}/data/server.db'
     extra = []
@@ -206,6 +239,9 @@ def main():
     write_file(output_dir / f'{args.service_prefix}-worker.service', render_worker_service(args))
     write_file(output_dir / f'{args.service_prefix}-backup.service', render_backup_service(args))
     write_file(output_dir / f'{args.service_prefix}-backup.timer', render_backup_timer(args))
+    if args.mirror_remote:
+        write_file(output_dir / f'{args.service_prefix}-mirror.service', render_mirror_service(args))
+        write_file(output_dir / f'{args.service_prefix}-mirror.timer', render_mirror_timer(args))
     write_file(output_dir / f'{args.service_prefix}-prune.service', render_prune_service(args))
     write_file(output_dir / f'{args.service_prefix}-prune.timer', render_prune_timer(args))
     write_file(output_dir / f'{args.service_prefix}-inspect.service', render_inspect_service(args))

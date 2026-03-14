@@ -97,6 +97,25 @@ python scripts/render-hosted-systemd.py \
   --prune-keep-last 7
 ```
 
+To include optional one-way mirror automation in the same rendered bundle, render with:
+
+```bash
+python scripts/render-hosted-systemd.py \
+  --output-dir /tmp/infinitas-systemd \
+  --repo-root /srv/infinitas/repo \
+  --python-bin /srv/infinitas/.venv/bin/python \
+  --env-file /etc/infinitas/hosted-registry.env \
+  --service-prefix infinitas-hosted \
+  --backup-output-dir /srv/infinitas/backups \
+  --backup-on-calendar daily \
+  --backup-label nightly \
+  --mirror-remote github-mirror \
+  --mirror-branch main \
+  --mirror-on-calendar daily \
+  --prune-on-calendar daily \
+  --prune-keep-last 7
+```
+
 The rendered directory contains:
 
 - `infinitas-hosted.env.example`
@@ -108,6 +127,11 @@ The rendered directory contains:
 - `infinitas-hosted-prune.timer`
 - `infinitas-hosted-inspect.service`
 - `infinitas-hosted-inspect.timer`
+
+When `--mirror-remote` is provided, it also contains:
+
+- `infinitas-hosted-mirror.service`
+- `infinitas-hosted-mirror.timer`
 
 Suggested install flow:
 
@@ -122,7 +146,12 @@ Suggested install flow:
    - `sudo systemctl enable --now infinitas-hosted-prune.timer`
    - `sudo systemctl enable --now infinitas-hosted-inspect.timer`
 
+If mirror automation is enabled in the rendered bundle, also run:
+
+- `sudo systemctl enable --now infinitas-hosted-mirror.timer`
+
 The API service starts `uvicorn`, the worker service runs `scripts/run-hosted-worker.py`, the backup timer schedules `scripts/backup-hosted-registry.py`, the prune timer runs `scripts/prune-hosted-backups.py` against the backup root, and the inspect timer runs `scripts/inspect-hosted-state.py` with configured alert thresholds.
+When configured, the mirror timer runs `scripts/mirror-registry.sh` for one-way outward mirroring only.
 
 For a small single-node deployment, a reasonable starting point is:
 
@@ -139,6 +168,7 @@ The prune service deletes only older recognized hosted backup snapshots, not arb
 GitHub is an optional **one-way mirror** only. The hosted server remains the writable source of truth.
 
 - Use `scripts/mirror-registry.sh --remote <mirror-remote>`
+- Or render an optional `infinitas-hosted-mirror.timer` with `--mirror-remote <mirror-remote>`
 - Never fetch or merge GitHub back into the hosted repo
 - Mirror after successful publish or on a scheduled operator action
 
