@@ -223,6 +223,8 @@ python scripts/rehearse-hosted-restore.py --backup-dir /srv/infinitas/backups/20
 python scripts/inspect-hosted-state.py --database-url sqlite:////srv/infinitas/data/server.db --limit 10 --max-queued-jobs 10 --max-running-jobs 2 --max-failed-jobs 0 --max-warning-jobs 0 --alert-webhook-url https://ops.example/hooks/infinitas --alert-fallback-file /var/lib/infinitas/alerts/latest-inspect-alert.json --json
 python scripts/render-hosted-systemd.py --output-dir /tmp/infinitas-systemd --repo-root /srv/infinitas/repo --python-bin /srv/infinitas/.venv/bin/python --env-file /etc/infinitas/hosted-registry.env --service-prefix infinitas-hosted --backup-output-dir /srv/infinitas/backups --backup-on-calendar daily --backup-label nightly --prune-on-calendar daily --prune-keep-last 7 --inspect-on-calendar hourly --inspect-limit 10 --inspect-max-queued-jobs 10 --inspect-max-running-jobs 2 --inspect-max-failed-jobs 0 --inspect-max-warning-jobs 0 --inspect-alert-webhook-url https://ops.example/hooks/infinitas --inspect-alert-fallback-file /var/lib/infinitas/alerts/latest-inspect-alert.json
 python scripts/render-hosted-systemd.py --output-dir /tmp/infinitas-systemd --repo-root /srv/infinitas/repo --python-bin /srv/infinitas/.venv/bin/python --env-file /etc/infinitas/hosted-registry.env --service-prefix infinitas-hosted --backup-output-dir /srv/infinitas/backups --backup-on-calendar daily --backup-label nightly --mirror-remote github-mirror --mirror-branch main --mirror-on-calendar daily --prune-on-calendar daily --prune-keep-last 7 --inspect-on-calendar hourly --inspect-limit 10 --inspect-max-queued-jobs 10 --inspect-max-running-jobs 2 --inspect-max-failed-jobs 0 --inspect-max-warning-jobs 0 --inspect-alert-webhook-url https://ops.example/hooks/infinitas --inspect-alert-fallback-file /var/lib/infinitas/alerts/latest-inspect-alert.json
+# hosted installers should target the built-in distribution surface, not the app root
+# example registry base_url: https://skills.example.com/registry
 
 # Mirror the hosted source-of-truth repo outward only
 scripts/mirror-registry.sh --remote github-mirror --dry-run
@@ -264,6 +266,16 @@ Phase 1 hosted ops automation now includes:
 - `scripts/inspect-hosted-state.py` can also write the latest alert summary to a stable fallback file when webhook delivery is unavailable
 - `scripts/render-hosted-systemd.py` to generate a `systemd` deployment bundle for the API, worker, scheduled backup/prune/inspect timers, plus an optional one-way mirror timer when `--mirror-remote` is provided
 - `scripts/run-hosted-worker.py` to provide a stable long-running worker entrypoint for the generated worker service
+
+The hosted app now also serves immutable install artifacts directly from `/registry/*`, including:
+
+- `/registry/ai-index.json`
+- `/registry/distributions.json`
+- `/registry/compatibility.json`
+- `/registry/skills/<publisher>/<skill>/<version>/manifest.json`
+- `/registry/skills/<publisher>/<skill>/<version>/skill.tar.gz`
+- `/registry/provenance/<skill>-<version>.json`
+- `/registry/provenance/<skill>-<version>.json.ssig`
 
 These ops helpers are intentionally SQLite-first for the current single-node deployment model. PostgreSQL and object-storage automation remain future extensions.
 If `INFINITAS_SERVER_MIRROR_REMOTE` is configured, hosted publish jobs also attempt an immediate best-effort one-way mirror push after syncing artifacts and pushing the primary repo.

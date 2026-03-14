@@ -37,6 +37,30 @@ Unless explicitly overridden in registry config, a hosted registry should expose
 
 These endpoints may be served directly or mapped from the repository’s generated `catalog/` outputs.
 
+## Built-in hosted app surface
+
+The built-in `server.app` serves this protocol from the hosted artifact root under:
+
+- `/registry/ai-index.json`
+- `/registry/distributions.json`
+- `/registry/compatibility.json`
+- `/registry/skills/<publisher>/<skill>/<version>/manifest.json`
+- `/registry/skills/<publisher>/<skill>/<version>/skill.tar.gz`
+- `/registry/provenance/<skill>-<version>.json`
+- `/registry/provenance/<skill>-<version>.json.ssig`
+
+When you use the built-in hosted app, set the registry `base_url` to the `/registry` prefix itself, for example:
+
+```json
+{
+  "name": "hosted",
+  "kind": "http",
+  "base_url": "https://skills.example.com/registry"
+}
+```
+
+This surface remains read-only and immutable-artifact-first. Publish jobs still generate artifacts on disk first, then the hosted app serves that synchronized artifact root.
+
 ## Registry source config
 
 Hosted registries are declared in `config/registry-sources.json` like this:

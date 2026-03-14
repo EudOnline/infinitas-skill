@@ -34,6 +34,13 @@ The recommended single-node deployment shape now includes a generated `systemd` 
 6. Start a worker loop process that drains queued validate / promote / publish jobs, for example `python scripts/run-hosted-worker.py --poll-interval 5`
 7. Configure the reverse proxy so hosted registry clients reach the API and immutable artifacts over HTTPS
 
+The built-in hosted app now serves immutable distribution artifacts directly from the synchronized artifact root under `/registry/*`. That means operators can expose both the control-plane API and hosted install surface through the same app process, for example:
+
+- `https://skills.example.com/healthz`
+- `https://skills.example.com/api/v1/...`
+- `https://skills.example.com/registry/ai-index.json`
+- `https://skills.example.com/registry/skills/<publisher>/<skill>/<version>/manifest.json`
+
 ## Health checks
 
 Use the hosted ops health check to verify the minimum single-node deployment contract:
@@ -55,6 +62,8 @@ This checks:
 - the configured SQLite database file exists and answers a simple query
 
 Phase 1 automation validates SQLite deployments only. PostgreSQL health probes can be added later without changing the hosted artifact contract.
+
+For hosted installs on other machines, point the registry source `base_url` at the `/registry` prefix, not the app root.
 
 ## State inspection
 
@@ -168,6 +177,7 @@ If mirror automation is enabled in the rendered bundle, also run:
 The API service starts `uvicorn`, the worker service runs `scripts/run-hosted-worker.py`, the backup timer schedules `scripts/backup-hosted-registry.py`, the prune timer runs `scripts/prune-hosted-backups.py` against the backup root, and the inspect timer runs `scripts/inspect-hosted-state.py` with configured alert thresholds.
 When configured, the mirror timer runs `scripts/mirror-registry.sh` for one-way outward mirroring only.
 If `INFINITAS_SERVER_MIRROR_REMOTE` is set in the worker environment, each successful publish also attempts an immediate best-effort one-way mirror push after artifact sync and the primary `origin` push complete.
+Published artifacts remain filesystem-backed under `INFINITAS_SERVER_ARTIFACT_PATH`, and the hosted app serves that synchronized artifact root read-only from `/registry/*`.
 
 For a small single-node deployment, a reasonable starting point is:
 

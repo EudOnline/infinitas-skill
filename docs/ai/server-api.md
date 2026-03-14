@@ -2,6 +2,8 @@
 
 The hosted control plane exposes a small bearer-token API for submission, review, and publish orchestration.
 
+The same hosted app also exposes a read-only distribution surface for installers. That surface is not part of the authenticated control-plane API; it serves immutable registry artifacts from `/registry/*`.
+
 ## Auth
 
 - Send `Authorization: Bearer <token>`
@@ -12,6 +14,13 @@ The hosted control plane exposes a small bearer-token API for submission, review
 ## Endpoints
 
 - `GET /healthz`
+- `GET /registry/ai-index.json`
+- `GET /registry/distributions.json`
+- `GET /registry/compatibility.json`
+- `GET /registry/skills/{publisher}/{skill}/{version}/manifest.json`
+- `GET /registry/skills/{publisher}/{skill}/{version}/skill.tar.gz`
+- `GET /registry/provenance/{skill}-{version}.json`
+- `GET /registry/provenance/{skill}-{version}.json.ssig`
 - `GET /api/v1/me`
 - `POST /api/v1/submissions`
 - `GET /api/v1/submissions/{id}`
@@ -32,3 +41,5 @@ The hosted control plane exposes a small bearer-token API for submission, review
 - `reviews approve`
 - `reviews reject`
 - `releases publish`
+
+Hosted installers and registry source configs should target the distribution surface with a `base_url` like `https://skills.example.com/registry`.
