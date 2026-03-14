@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then
-  echo "usage: scripts/inspect-skill.sh <qualified-or-name> [--version X.Y.Z]" >&2
+  echo "usage: scripts/inspect-skill.sh <qualified-or-name> [--version X.Y.Z] [--json]" >&2
   exit 1
 fi
 
@@ -16,6 +16,9 @@ while [[ $# -gt 0 ]]; do
     --version)
       VERSION="${2:-}"
       shift 2
+      ;;
+    --json)
+      shift
       ;;
     *)
       echo "unknown argument: $1" >&2

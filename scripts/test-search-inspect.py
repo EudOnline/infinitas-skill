@@ -60,6 +60,34 @@ def scenario_inspect_returns_distribution_and_dependency_views():
     for key in ['compatibility', 'dependencies', 'provenance', 'distribution', 'trust_state']:
         if key not in payload:
             fail(f'missing inspect field {key!r}')
+    compatibility = payload.get('compatibility') or {}
+    verified_summary = compatibility.get('verified_summary') or {}
+    if verified_summary.get('codex') != 'adapted':
+        fail(f"expected codex compatibility summary 'adapted', got {verified_summary.get('codex')!r}")
+    dependencies = payload.get('dependencies') or {}
+    summary = dependencies.get('summary') or {}
+    if summary.get('root_name') != 'operate-infinitas-skill':
+        fail(f"expected dependency root_name 'operate-infinitas-skill', got {summary.get('root_name')!r}")
+    if summary.get('root_source_type') != 'working-tree':
+        fail(f"expected dependency root_source_type 'working-tree', got {summary.get('root_source_type')!r}")
+    if summary.get('step_count', 0) < 1:
+        fail(f"expected dependency step_count >= 1, got {summary.get('step_count')!r}")
+    provenance = payload.get('provenance') or {}
+    if not provenance.get('release_provenance_path'):
+        fail('expected release_provenance_path in inspect provenance view')
+    if provenance.get('required_attestation_formats') != ['ssh']:
+        fail(f"expected required_attestation_formats ['ssh'], got {provenance.get('required_attestation_formats')!r}")
+    policy = provenance.get('policy') or {}
+    if policy.get('require_verified_attestation_for_distribution') is not True:
+        fail('expected inspect provenance policy to require verified attestation for distribution')
+    distribution = payload.get('distribution') or {}
+    if distribution.get('source_type') != 'distribution-manifest':
+        fail(f"expected distribution source_type 'distribution-manifest', got {distribution.get('source_type')!r}")
+    trust = payload.get('trust') or {}
+    if trust.get('state') != 'verified':
+        fail(f"expected inspect trust.state 'verified', got {trust.get('state')!r}")
+    if trust.get('signature_present') is not True:
+        fail(f"expected inspect trust.signature_present true, got {trust.get('signature_present')!r}")
 
 
 def main():

@@ -198,7 +198,19 @@ def assert_current_install(target_dir: Path, version: str, *, source_type='distr
 def scenario_install_switch_and_rollback_use_distribution_manifests():
     tmpdir, repo = prepare_repo()
     try:
-        release_current(repo, V1)
+        manifest_v1 = release_current(repo, V1)
+        manifest_payload = json.loads(manifest_v1.read_text(encoding='utf-8'))
+        dependency_root = (manifest_payload.get('dependencies') or {}).get('root') or {}
+        dependency_steps = (manifest_payload.get('dependencies') or {}).get('steps') or []
+        if dependency_root.get('name') != FIXTURE_NAME:
+            fail(f"expected distribution dependency root {FIXTURE_NAME!r}, got {dependency_root.get('name')!r}")
+        if len(dependency_steps) < 1:
+            fail('expected distribution manifest to include at least one dependency step')
+        attestation_bundle = manifest_payload.get('attestation_bundle') or {}
+        if not attestation_bundle.get('provenance_path'):
+            fail('expected distribution manifest to include provenance_path')
+        if not attestation_bundle.get('signature_path'):
+            fail('expected distribution manifest to include signature_path')
         commit_fixture_version(repo, V2)
         release_current(repo, V2)
 
