@@ -92,10 +92,33 @@
           "type": "string",
           "minLength": 1
         },
+        "ci": {
+          "type": "object",
+          "properties": {
+            "provider": {
+              "type": "string",
+              "minLength": 1
+            },
+            "issuer": {
+              "type": "string",
+              "minLength": 1
+            },
+            "repository": {
+              "type": "string",
+              "minLength": 1
+            },
+            "workflow": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": true
+        },
         "policy": {
           "type": "object",
           "required": [
             "mode",
+            "release_trust_mode",
             "require_verified_attestation_for_release_output",
             "require_verified_attestation_for_distribution"
           ],
@@ -105,6 +128,14 @@
               "enum": [
                 "advisory",
                 "enforce"
+              ]
+            },
+            "release_trust_mode": {
+              "type": "string",
+              "enum": [
+                "ssh",
+                "ci",
+                "both"
               ]
             },
             "require_verified_attestation_for_release_output": {

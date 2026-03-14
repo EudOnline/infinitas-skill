@@ -36,6 +36,8 @@ Before creating stable release output for an active skill:
 - [ ] release notes or provenance reference `refs/tags/skill/<name>/v<version>` instead of local-only `HEAD`
 - [ ] `catalog/provenance/<name>-<version>.json` records the resolved registry context, dependency plan, and attestation signer identity
 - [ ] `scripts/verify-attestation.py catalog/provenance/<name>-<version>.json` passes against repo-managed allowed signers
+- [ ] if CI attestation / CI-native attestation is enabled, `catalog/provenance/<name>-<version>.ci.json` was generated and `python3 scripts/verify-ci-attestation.py ...` passes
+- [ ] `config/signing.json` `attestation.policy.release_trust_mode` matches the intended rollout mode; the key `release_trust_mode` is set to `ssh`, `ci`, or `both`
 - [ ] `python3 scripts/doctor-signing.py <name> --provenance catalog/provenance/<name>-<version>.json` reports no blocking failures after the rehearsal
 - [ ] any optional legacy HMAC provenance signing happens after the required SSH attestation has already been verified
 - [ ] platform evidence was refreshed with `python3 scripts/record-verified-support.py <name> --platform codex --platform claude --platform openclaw --build-catalog` if verified compatibility claims changed

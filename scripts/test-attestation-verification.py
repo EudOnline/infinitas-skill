@@ -145,6 +145,50 @@ def assert_contains(text, needle, label):
         fail(f'{label} did not include {needle!r}\n{text}')
 
 
+def write_ci_attestation(repo: Path):
+    manifest_path = repo / 'catalog' / 'distributions' / '_legacy' / FIXTURE_NAME / FIXTURE_VERSION / 'manifest.json'
+    bundle_path = manifest_path.parent / 'skill.tar.gz'
+    manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+    bundle = manifest.get('bundle') or {}
+    head_commit = run(['git', 'rev-parse', 'HEAD'], cwd=repo).stdout.strip()
+    env = make_env(
+        {
+            'GITHUB_REPOSITORY': 'lvxiaoer/infinitas-skill',
+            'GITHUB_WORKFLOW': 'release-attestation',
+            'GITHUB_RUN_ID': '123456',
+            'GITHUB_RUN_ATTEMPT': '1',
+            'GITHUB_SHA': head_commit,
+            'GITHUB_REF': f'refs/tags/{FIXTURE_TAG}',
+            'GITHUB_EVENT_NAME': 'workflow_dispatch',
+            'GITHUB_SERVER_URL': 'https://github.com',
+        }
+    )
+    result = run(
+        [
+            sys.executable,
+            str(repo / 'scripts' / 'generate-ci-attestation.py'),
+            FIXTURE_NAME,
+            '--distribution-manifest-path',
+            str(manifest_path.relative_to(repo)),
+            '--distribution-bundle-path',
+            str(bundle_path.relative_to(repo)),
+            '--distribution-bundle-sha256',
+            bundle.get('sha256') or '',
+            '--distribution-bundle-size',
+            str(bundle.get('size') or 0),
+            '--distribution-bundle-root-dir',
+            bundle.get('root_dir') or '',
+            '--distribution-bundle-file-count',
+            str(bundle.get('file_count') or 0),
+        ],
+        cwd=repo,
+        env=env,
+    )
+    ci_path = repo / 'catalog' / 'provenance' / f'{FIXTURE_NAME}-{FIXTURE_VERSION}.ci.json'
+    ci_path.write_text(result.stdout, encoding='utf-8')
+    return ci_path, env
+
+
 def scenario_release_notes_require_attestation():
     tmpdir, repo, _origin, _key_path, _identity = prepare_repo(include_signers=True)
     try:
@@ -249,10 +293,50 @@ def scenario_tamper_breaks_attestation():
         shutil.rmtree(tmpdir)
 
 
+def scenario_both_mode_requires_ssh_and_ci():
+    tmpdir, repo, _origin, _key_path, _identity = prepare_repo(include_signers=True)
+    try:
+        provenance_path = repo / 'catalog' / 'provenance' / f'{FIXTURE_NAME}-{FIXTURE_VERSION}.json'
+        run(
+            [str(repo / 'scripts' / 'release-skill.sh'), FIXTURE_NAME, '--push-tag', '--write-provenance'],
+            cwd=repo,
+            env=make_env(),
+        )
+        ci_path, env = write_ci_attestation(repo)
+        signing_config_path = repo / 'config' / 'signing.json'
+        signing_config = json.loads(signing_config_path.read_text(encoding='utf-8'))
+        signing_config['attestation']['policy']['release_trust_mode'] = 'both'
+        signing_config_path.write_text(json.dumps(signing_config, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        result = run(
+            [sys.executable, str(repo / 'scripts' / 'verify-attestation.py'), str(provenance_path), '--json'],
+            cwd=repo,
+            env=env,
+        )
+        payload = json.loads(result.stdout)
+        if payload.get('policy_mode') != 'both':
+            fail(f"expected policy_mode 'both', got {payload.get('policy_mode')!r}")
+        if payload.get('formats_verified') != ['ssh', 'ci']:
+            fail(f"expected formats_verified ['ssh', 'ci'], got {payload.get('formats_verified')!r}")
+
+        ci_payload = json.loads(ci_path.read_text(encoding='utf-8'))
+        ci_payload['ci']['workflow'] = 'unexpected-workflow'
+        ci_path.write_text(json.dumps(ci_payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        result = run(
+            [sys.executable, str(repo / 'scripts' / 'verify-attestation.py'), str(provenance_path)],
+            cwd=repo,
+            expect=1,
+            env=env,
+        )
+        assert_contains(result.stdout + result.stderr, 'FAIL:', 'mixed-mode verifier failure')
+    finally:
+        shutil.rmtree(tmpdir)
+
+
 def main():
     scenario_release_notes_require_attestation()
     scenario_verified_attestation_bundle_is_emitted()
     scenario_tamper_breaks_attestation()
+    scenario_both_mode_requires_ssh_and_ci()
     print('OK: attestation verification checks passed')
 
 

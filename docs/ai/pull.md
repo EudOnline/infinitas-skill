@@ -36,6 +36,12 @@ scripts/pull-skill.sh <qualified-name> <target-dir> [--version <semver>] [--regi
 9. 写入本地 lock / install manifest
 10. 输出结构化 JSON 结果
 
+## CI attestation and manifest policy
+
+- distribution manifests now record `attestation_bundle.required_formats`
+- consumers must use `python3 scripts/verify-distribution-manifest.py <manifest.json>` so install policy enforces `ssh`, `ci`, or `both`
+- when `required_formats` includes `ci`, installation must fail if the CI attestation sidecar is missing or invalid
+
 ## Stop Conditions
 
 出现以下任一情况必须立即停止，并返回失败结果：

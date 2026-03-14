@@ -16,8 +16,14 @@
     "allowed_signers": "config/allowed_signers",
     "signature_ext": ".ssig",
     "signing_key_env": "INFINITAS_SKILL_GIT_SIGNING_KEY",
+    "ci": {
+      "provider": "github-actions",
+      "repository": "lvxiaoer/infinitas-skill",
+      "workflow": "release-attestation"
+    },
     "policy": {
       "mode": "enforce",
+      "release_trust_mode": "ssh",
       "require_verified_attestation_for_release_output": true,
       "require_verified_attestation_for_distribution": true
     },

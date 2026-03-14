@@ -252,8 +252,34 @@ def scenario_install_switch_and_rollback_use_distribution_manifests():
         shutil.rmtree(tmpdir)
 
 
+def scenario_manifest_required_ci_blocks_verification_without_ci_sidecar():
+    tmpdir, repo = prepare_repo()
+    try:
+        manifest_path = release_current(repo, V1)
+        manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+        attestation_bundle = manifest.get('attestation_bundle') or {}
+        attestation_bundle['required_formats'] = ['ci']
+        manifest['attestation_bundle'] = attestation_bundle
+        manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        ci_path = repo / 'catalog' / 'provenance' / f'{FIXTURE_NAME}-{V1}.ci.json'
+        if ci_path.exists():
+            ci_path.unlink()
+        result = run(
+            [sys.executable, str(repo / 'scripts' / 'verify-distribution-manifest.py'), str(manifest_path)],
+            cwd=repo,
+            env=make_env(),
+            expect=1,
+        )
+        combined = result.stdout + result.stderr
+        if 'missing CI attestation payload' not in combined:
+            fail(f'unexpected CI-required manifest failure:\n{combined}')
+    finally:
+        shutil.rmtree(tmpdir)
+
+
 def main():
     scenario_install_switch_and_rollback_use_distribution_manifests()
+    scenario_manifest_required_ci_blocks_verification_without_ci_sidecar()
     print('OK: distribution install checks passed')
 
 

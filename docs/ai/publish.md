@@ -33,6 +33,14 @@ scripts/publish-skill.sh <skill> [--version <semver>] [--mode auto|confirm]
 9. 如需刷新 `verified_support`，再运行 `python3 scripts/record-verified-support.py <skill> --platform ... --build-catalog`
 10. 输出结构化 JSON 结果
 
+## CI-native attestation
+
+- `config/signing.json` now supports `attestation.policy.release_trust_mode`
+- allowed values are `ssh`, `ci`, and `both`
+- when CI-native attestation is enabled, release verification may require a matching `catalog/provenance/<name>-<version>.ci.json`
+- use `python3 scripts/verify-ci-attestation.py <ci-attestation.json>` to verify the CI payload directly
+- use `python3 scripts/verify-attestation.py <attestation.json>` to enforce the repo policy end-to-end
+
 ## Hosted control plane notes
 
 - hosted server mode can queue `validate_submission`、`promote_submission`、`publish_submission` jobs instead of mutating the repository directly from the API request

@@ -252,28 +252,75 @@
       "additionalProperties": true
     },
     "attestation": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "format",
+            "namespace",
+            "allowed_signers",
+            "signature_file",
+            "signature_ext",
+            "signer_identity",
+            "policy_mode",
+            "require_verified_attestation_for_release_output",
+            "require_verified_attestation_for_distribution"
+          ],
+          "properties": {
+            "format": {"type": "string", "const": "ssh"},
+            "namespace": {"type": "string", "minLength": 1},
+            "allowed_signers": {"type": "string", "minLength": 1},
+            "signature_file": {"type": "string", "minLength": 1},
+            "signature_ext": {"type": "string", "pattern": "^\\..+"},
+            "signer_identity": {"type": "string", "minLength": 1},
+            "policy_mode": {"type": "string", "enum": ["advisory", "enforce"]},
+            "require_verified_attestation_for_release_output": {"type": "boolean"},
+            "require_verified_attestation_for_distribution": {"type": "boolean"}
+          },
+          "additionalProperties": true
+        },
+        {
+          "type": "object",
+          "required": [
+            "format",
+            "generator",
+            "policy_mode",
+            "require_verified_attestation_for_release_output",
+            "require_verified_attestation_for_distribution"
+          ],
+          "properties": {
+            "format": {"type": "string", "const": "ci"},
+            "generator": {"type": "string", "minLength": 1},
+            "output_name": {"type": "string", "minLength": 1},
+            "policy_mode": {"type": "string", "enum": ["advisory", "enforce"]},
+            "require_verified_attestation_for_release_output": {"type": "boolean"},
+            "require_verified_attestation_for_distribution": {"type": "boolean"}
+          },
+          "additionalProperties": true
+        }
+      ]
+    },
+    "ci": {
       "type": "object",
       "required": [
-        "format",
-        "namespace",
-        "allowed_signers",
-        "signature_file",
-        "signature_ext",
-        "signer_identity",
-        "policy_mode",
-        "require_verified_attestation_for_release_output",
-        "require_verified_attestation_for_distribution"
+        "provider",
+        "repository",
+        "workflow",
+        "run_id",
+        "run_attempt",
+        "sha",
+        "ref"
       ],
       "properties": {
-        "format": {"type": "string", "const": "ssh"},
-        "namespace": {"type": "string", "minLength": 1},
-        "allowed_signers": {"type": "string", "minLength": 1},
-        "signature_file": {"type": "string", "minLength": 1},
-        "signature_ext": {"type": "string", "pattern": "^\\..+"},
-        "signer_identity": {"type": "string", "minLength": 1},
-        "policy_mode": {"type": "string", "enum": ["advisory", "enforce"]},
-        "require_verified_attestation_for_release_output": {"type": "boolean"},
-        "require_verified_attestation_for_distribution": {"type": "boolean"}
+        "provider": {"type": "string", "minLength": 1},
+        "repository": {"type": "string", "minLength": 1},
+        "workflow": {"type": "string", "minLength": 1},
+        "run_id": {"type": "string", "minLength": 1},
+        "run_attempt": {"type": "string", "minLength": 1},
+        "sha": {"type": "string", "minLength": 1},
+        "ref": {"type": "string", "minLength": 1},
+        "event_name": {"type": ["string", "null"]},
+        "url": {"type": ["string", "null"]}
       },
       "additionalProperties": true
     },

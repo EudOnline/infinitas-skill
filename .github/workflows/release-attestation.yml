@@ -1,0 +1,99 @@
+name: release-attestation
+
+on:
+  workflow_dispatch:
+    inputs:
+      skill:
+        description: Skill name to attest
+        required: true
+        type: string
+      version:
+        description: Stable version to attest
+        required: true
+        type: string
+      manifest_path:
+        description: Repository-relative manifest path
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      skill:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+      manifest_path:
+        required: true
+        type: string
+
+jobs:
+  attest:
+    runs-on: ubuntu-latest
+    env:
+      SKILL_NAME: ${{ inputs.skill || github.event.inputs.skill }}
+      SKILL_VERSION: ${{ inputs.version || github.event.inputs.version }}
+      MANIFEST_PATH: ${{ inputs.manifest_path || github.event.inputs.manifest_path }}
+      GITHUB_SHA: ${{ github.sha }}
+      GITHUB_REF: ${{ github.ref }}
+      GITHUB_RUN_ID: ${{ github.run_id }}
+      GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+      GITHUB_WORKFLOW: ${{ github.workflow }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate release inputs
+        run: |
+          test -n "$SKILL_NAME"
+          test -n "$SKILL_VERSION"
+          test -n "$MANIFEST_PATH"
+          test -f "$MANIFEST_PATH"
+
+      - name: Rebuild release provenance
+        run: |
+          python3 scripts/generate-provenance.py "$SKILL_NAME" \
+            --distribution-manifest-path "$MANIFEST_PATH" \
+            > /tmp/release-attestation-provenance.json
+
+      - name: Emit CI attestation sidecar
+        run: |
+          mkdir -p catalog/provenance
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          out = Path('catalog/provenance') / f"{os.environ['SKILL_NAME']}-{os.environ['SKILL_VERSION']}.ci.json"
+          payload = {
+              'kind': 'skill-release-attestation',
+              'attestation': {
+                  'format': 'ci',
+                  'generator': 'release-attestation.yml',
+              },
+              'ci': {
+                  'provider': 'github-actions',
+                  'repository': os.environ['GITHUB_REPOSITORY'],
+                  'workflow': os.environ['GITHUB_WORKFLOW'],
+                  'run_id': os.environ['GITHUB_RUN_ID'],
+                  'run_attempt': os.environ['GITHUB_RUN_ATTEMPT'],
+                  'sha': os.environ['GITHUB_SHA'],
+                  'ref': os.environ['GITHUB_REF'],
+                  'manifest_path': os.environ['MANIFEST_PATH'],
+              },
+          }
+          out.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          print(out)
+          PY
+
+      - name: Upload CI attestation artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-attestation-${{ env.SKILL_NAME }}-${{ env.SKILL_VERSION }}
+          path: catalog/provenance/${{ env.SKILL_NAME }}-${{ env.SKILL_VERSION }}.ci.json

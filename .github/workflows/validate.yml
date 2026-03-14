@@ -17,5 +17,8 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Check CI attestation workflow contract
+        run: python3 scripts/test-ci-attestation-workflow.py
+
       - name: Run registry checks
         run: scripts/check-all.sh

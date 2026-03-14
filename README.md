@@ -85,7 +85,8 @@ scripts/
 ├─ verify-provenance.py  verify legacy HMAC provenance sidecars
 ├─ sign-provenance-ssh.sh sign provenance bundles with SSH keys
 ├─ verify-provenance-ssh.sh verify SSH-signed provenance bundles
-├─ verify-attestation.py verify release attestations against repo-managed SSH signers
+├─ verify-attestation.py verify release attestations against repo-managed SSH/CI policy
+├─ verify-ci-attestation.py verify CI-native release attestation payloads
 └─ diff-skill.sh         compare two skill folders or names
 
 server/
@@ -185,6 +186,7 @@ scripts/check-release-state.py my-skill
 scripts/release-skill.sh my-skill --notes-out /tmp/my-skill-release.md --write-provenance --releaser lvxiaoer
 # verify the resulting attestation bundle against repo-managed signers
 scripts/verify-attestation.py catalog/provenance/my-skill-1.2.3.json
+python3 scripts/verify-ci-attestation.py catalog/provenance/my-skill-1.2.3.ci.json
 python3 scripts/doctor-signing.py my-skill --provenance catalog/provenance/my-skill-1.2.3.json
 python3 scripts/verify-distribution-manifest.py catalog/distributions/_legacy/my-skill/1.2.3/manifest.json
 # optional legacy HMAC sidecars still work after the SSH attestation is verified
@@ -397,6 +399,7 @@ Use that document as the source of truth for:
 - **Reviewer groups and quorum are enforced**. Promotion policy can require configured reviewer groups, stage/risk-specific quorum, and rejection-free latest decisions.
 - **Stable releases require signed pushed tags**. Release notes and provenance now resolve against a verified `refs/tags/skill/<name>/v<version>` snapshot instead of best-effort `HEAD` state.
 - **Release attestations are authoritative under v9 policy**. Any written release artifact must be accompanied by a verified SSH attestation generated from the immutable release snapshot.
+- **CI-native attestation is now available for Phase 4**. `.github/workflows/release-attestation.yml` can generate a CI-side attestation payload, and repo policy can require `ssh`, `ci`, or `both`.
 - **Release actor decisions are auditable**. Machine-readable release outputs now record author, reviewers, releaser, signer, and namespace-policy context.
 - **Attestations capture dependency and registry context**. Release provenance now records the consulted registries, their resolved identity, and the dependency resolution plan used for the released skill.
 - **Legacy HMAC sidecars remain optional only**. `sign-provenance.py` / `verify-provenance.py` still work for compatibility, but repo-managed SSH attestation is the trusted verification path.

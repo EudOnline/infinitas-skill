@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from gzip import GzipFile
 from pathlib import Path
 
-from attestation_lib import AttestationError, verify_attestation
+from attestation_lib import AttestationError, load_attestation_config, verify_attestation, verify_ci_attestation
 from http_registry_lib import fetch_binary
 from release_lib import ROOT
 
@@ -162,6 +162,11 @@ def validate_distribution_manifest(payload):
             'allowed_signers',
         ]:
             require_string(attestation_bundle, key, f'attestation_bundle.{key}')
+        required_formats = attestation_bundle.get('required_formats')
+        if required_formats is not None and (not isinstance(required_formats, list) or not required_formats):
+            errors.append('attestation_bundle.required_formats must be a non-empty array when present')
+        elif isinstance(required_formats, list) and any(item not in {'ssh', 'ci'} for item in required_formats):
+            errors.append('attestation_bundle.required_formats entries must be ssh or ci')
 
     return errors
 
@@ -221,6 +226,21 @@ def verify_distribution_manifest(manifest_path, root=None, attestation_root=None
         attestation_result = verify_attestation(provenance_path, root=attestation_root)
     except AttestationError as exc:
         raise DistributionError(str(exc)) from exc
+    required_formats = attestation_bundle.get('required_formats') or ['ssh']
+    formats_verified = set(attestation_result.get('formats_verified') or [])
+    if 'ci' in required_formats and 'ci' not in formats_verified:
+        ci_ref = attestation_bundle.get('ci_provenance_path')
+        ci_path = _resolve_manifest_ref(manifest_path, ci_ref, root=root) if ci_ref else provenance_path.with_name(f'{provenance_path.stem}.ci.json')
+        if not ci_path.exists():
+            raise DistributionError(f'missing CI attestation payload: {ci_path}')
+        try:
+            verify_ci_attestation(ci_path, root=attestation_root)
+        except AttestationError as exc:
+            raise DistributionError(str(exc)) from exc
+        formats_verified.add('ci')
+    if 'ssh' in required_formats and 'ssh' not in formats_verified:
+        raise DistributionError('distribution manifest requires SSH attestation verification')
+    attestation_result['formats_verified'] = sorted(formats_verified)
 
     provenance = load_json(provenance_path)
     signed_distribution = provenance.get('distribution') or {}
@@ -477,9 +497,14 @@ def build_distribution_manifest_payload(provenance_path, bundle_path, root=None)
     signature_path = provenance_path.with_suffix(provenance_path.suffix + (provenance.get('attestation') or {}).get('signature_ext', '.ssig'))
     if not signature_path.exists():
         raise DistributionError(f'missing attestation signature: {signature_path}')
+    attestation_cfg = load_attestation_config(root)
+    required_formats = ['ssh']
+    ci_path = provenance_path.with_name(f'{provenance_path.stem}.ci.json')
+    if attestation_cfg.get('requires_ci_attestation'):
+        required_formats.append('ci')
 
     skill = provenance.get('skill') or {}
-    return {
+    payload = {
         '$schema': 'schemas/distribution-manifest.schema.json',
         'schema_version': 1,
         'kind': 'skill-distribution-manifest',
@@ -517,5 +542,10 @@ def build_distribution_manifest_payload(provenance_path, bundle_path, root=None)
             'signer_identity': (provenance.get('attestation') or {}).get('signer_identity'),
             'namespace': (provenance.get('attestation') or {}).get('namespace'),
             'allowed_signers': (provenance.get('attestation') or {}).get('allowed_signers'),
+            'required_formats': required_formats,
         },
     }
+    if ci_path.exists():
+        payload['attestation_bundle']['ci_provenance_path'] = _relative_from_root(root, ci_path)
+        payload['attestation_bundle']['ci_provenance_sha256'] = sha256_file(ci_path)
+    return payload

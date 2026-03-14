@@ -19,8 +19,14 @@ def load_attestation_config(root=None):
     config = load_json(root / 'config' / 'signing.json')
     git_tag = config.get('git_tag') if isinstance(config.get('git_tag'), dict) else {}
     attestation = config.get('attestation') if isinstance(config.get('attestation'), dict) else {}
+    ci = attestation.get('ci') if isinstance(attestation.get('ci'), dict) else {}
     policy = attestation.get('policy') if isinstance(attestation.get('policy'), dict) else {}
     mode = policy.get('mode', 'enforce')
+    release_trust_mode = policy.get('release_trust_mode', 'ssh')
+    if release_trust_mode not in {'ssh', 'ci', 'both'}:
+        raise AttestationError(
+            f"attestation.policy.release_trust_mode must be one of 'ssh', 'ci', or 'both', got {release_trust_mode!r}"
+        )
     allowed_rel = attestation.get('allowed_signers') or config.get('allowed_signers') or 'config/allowed_signers'
     namespace = attestation.get('namespace') or config.get('namespace') or 'infinitas-skill'
     signature_ext = attestation.get('signature_ext') or config.get('signature_ext') or '.ssig'
@@ -33,6 +39,15 @@ def load_attestation_config(root=None):
         'signature_ext': signature_ext,
         'signing_key_env': attestation.get('signing_key_env') or git_tag.get('signing_key_env') or 'INFINITAS_SKILL_GIT_SIGNING_KEY',
         'policy_mode': mode,
+        'release_trust_mode': release_trust_mode,
+        'requires_ssh_attestation': release_trust_mode in {'ssh', 'both'},
+        'requires_ci_attestation': release_trust_mode in {'ci', 'both'},
+        'ci': {
+            'provider': ci.get('provider'),
+            'issuer': ci.get('issuer'),
+            'repository': ci.get('repository'),
+            'workflow': ci.get('workflow'),
+        },
         'require_release_output': bool(
             policy.get('require_verified_attestation_for_release_output', mode == 'enforce')
         ),
@@ -173,19 +188,31 @@ def validate_provenance_payload(payload):
     if not isinstance(attestation, dict):
         errors.append('attestation must be an object')
     else:
-        if attestation.get('format') != 'ssh':
-            errors.append('attestation.format must be ssh')
-        require_string(attestation, 'namespace', 'attestation.namespace')
-        require_string(attestation, 'allowed_signers', 'attestation.allowed_signers')
-        require_string(attestation, 'signature_file', 'attestation.signature_file')
-        require_string(attestation, 'signature_ext', 'attestation.signature_ext')
-        require_string(attestation, 'signer_identity', 'attestation.signer_identity')
+        attestation_format = attestation.get('format')
+        if attestation_format not in {'ssh', 'ci'}:
+            errors.append('attestation.format must be ssh or ci')
         if attestation.get('policy_mode') not in {'advisory', 'enforce'}:
             errors.append('attestation.policy_mode must be advisory or enforce')
         if not isinstance(attestation.get('require_verified_attestation_for_release_output'), bool):
             errors.append('attestation.require_verified_attestation_for_release_output must be boolean')
         if not isinstance(attestation.get('require_verified_attestation_for_distribution'), bool):
             errors.append('attestation.require_verified_attestation_for_distribution must be boolean')
+        if attestation_format == 'ssh':
+            require_string(attestation, 'namespace', 'attestation.namespace')
+            require_string(attestation, 'allowed_signers', 'attestation.allowed_signers')
+            require_string(attestation, 'signature_file', 'attestation.signature_file')
+            require_string(attestation, 'signature_ext', 'attestation.signature_ext')
+            require_string(attestation, 'signer_identity', 'attestation.signer_identity')
+        if attestation_format == 'ci':
+            require_string(attestation, 'generator', 'attestation.generator')
+
+    ci = payload.get('ci')
+    if attestation and attestation.get('format') == 'ci':
+        if not isinstance(ci, dict):
+            errors.append('ci must be an object for CI attestations')
+        else:
+            for key in ['provider', 'repository', 'workflow', 'run_id', 'run_attempt', 'sha', 'ref']:
+                require_string(ci, key, f'ci.{key}')
 
     distribution = payload.get('distribution')
     if distribution is not None:
@@ -221,19 +248,9 @@ def _combined_output(result):
     return '\n'.join(part for part in parts if part).strip()
 
 
-def verify_attestation(provenance_path, identity=None, allowed_signers=None, namespace=None, root=None):
+def _verify_ssh_attestation(provenance_path, payload, cfg, identity=None, allowed_signers=None, namespace=None, root=None):
     root = Path(root or ROOT).resolve()
     provenance_path = Path(provenance_path).resolve()
-    try:
-        payload = load_json(provenance_path)
-    except Exception as exc:
-        raise AttestationError(f'could not parse attestation payload {provenance_path}: {exc}') from exc
-
-    errors = validate_provenance_payload(payload)
-    if errors:
-        raise AttestationError('; '.join(errors))
-
-    cfg = load_attestation_config(root)
     attestation = payload['attestation']
     identity = identity or attestation.get('signer_identity')
     expected_allowed_rel = cfg['allowed_signers_rel']
@@ -298,4 +315,100 @@ def verify_attestation(provenance_path, identity=None, allowed_signers=None, nam
         'allowed_signers': str(allowed_path),
         'signature_path': str(signature_path),
         'output': _combined_output(result),
+        'format': 'ssh',
     }
+
+
+def verify_ci_attestation(provenance_path, root=None):
+    root = Path(root or ROOT).resolve()
+    provenance_path = Path(provenance_path).resolve()
+    try:
+        payload = load_json(provenance_path)
+    except Exception as exc:
+        raise AttestationError(f'could not parse attestation payload {provenance_path}: {exc}') from exc
+
+    errors = validate_provenance_payload(payload)
+    if errors:
+        raise AttestationError('; '.join(errors))
+
+    attestation = payload['attestation']
+    if attestation.get('format') != 'ci':
+        raise AttestationError(f"expected CI attestation format, got {attestation.get('format')!r}")
+
+    cfg = load_attestation_config(root)
+    ci_cfg = cfg.get('ci') or {}
+    ci = payload.get('ci') or {}
+    for key in ['provider', 'repository', 'workflow']:
+        expected = ci_cfg.get(key)
+        actual = ci.get(key)
+        if expected and actual != expected:
+            raise AttestationError(f"ci.{key} {actual!r} does not match repo-managed {expected!r}")
+    if ci.get('sha') != payload.get('git', {}).get('commit'):
+        raise AttestationError('ci.sha does not match git.commit')
+    if ci.get('sha') != payload.get('source_snapshot', {}).get('commit'):
+        raise AttestationError('ci.sha does not match source_snapshot.commit')
+    if ci.get('ref') != payload.get('source_snapshot', {}).get('ref'):
+        raise AttestationError('ci.ref does not match source_snapshot.ref')
+
+    return {
+        'verified': True,
+        'skill': payload.get('skill', {}).get('name'),
+        'version': payload.get('skill', {}).get('version'),
+        'provider': ci.get('provider'),
+        'repository': ci.get('repository'),
+        'workflow': ci.get('workflow'),
+        'run_id': ci.get('run_id'),
+        'sha': ci.get('sha'),
+        'ref': ci.get('ref'),
+        'format': 'ci',
+    }
+
+
+def _companion_ci_path(provenance_path):
+    return provenance_path.with_name(f'{provenance_path.stem}.ci.json')
+
+
+def _companion_ssh_path(provenance_path):
+    name = provenance_path.name
+    if name.endswith('.ci.json'):
+        return provenance_path.with_name(f'{name[:-8]}.json')
+    raise AttestationError(f'cannot derive SSH companion path from {provenance_path}')
+
+
+def verify_attestation(provenance_path, identity=None, allowed_signers=None, namespace=None, root=None):
+    root = Path(root or ROOT).resolve()
+    provenance_path = Path(provenance_path).resolve()
+    try:
+        payload = load_json(provenance_path)
+    except Exception as exc:
+        raise AttestationError(f'could not parse attestation payload {provenance_path}: {exc}') from exc
+
+    errors = validate_provenance_payload(payload)
+    if errors:
+        raise AttestationError('; '.join(errors))
+
+    cfg = load_attestation_config(root)
+    attestation = payload['attestation']
+    formats_verified = []
+    if attestation.get('format') == 'ci':
+        result = verify_ci_attestation(provenance_path, root=root)
+        formats_verified.append('ci')
+        if cfg['requires_ssh_attestation']:
+            ssh_path = _companion_ssh_path(provenance_path)
+            if not ssh_path.exists():
+                raise AttestationError(f'missing required SSH attestation companion: {ssh_path}')
+            _verify_ssh_attestation(ssh_path, load_json(ssh_path), cfg, identity=identity, allowed_signers=allowed_signers, namespace=namespace, root=root)
+            formats_verified.append('ssh')
+    else:
+        result = _verify_ssh_attestation(provenance_path, payload, cfg, identity=identity, allowed_signers=allowed_signers, namespace=namespace, root=root)
+        formats_verified.append('ssh')
+        if cfg['requires_ci_attestation']:
+            ci_path = _companion_ci_path(provenance_path)
+            if not ci_path.exists():
+                raise AttestationError(f'missing required CI attestation companion: {ci_path}')
+            verify_ci_attestation(ci_path, root=root)
+            formats_verified.append('ci')
+
+    result['formats_verified'] = formats_verified
+    result['policy_mode'] = cfg['release_trust_mode']
+    return result

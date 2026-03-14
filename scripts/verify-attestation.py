@@ -7,7 +7,7 @@ from attestation_lib import AttestationError, verify_attestation
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Verify a release attestation against repo-managed SSH signers')
+    parser = argparse.ArgumentParser(description='Verify a release attestation against repo-managed SSH and CI policy')
     parser.add_argument('provenance', help='Path to the attestation JSON file')
     parser.add_argument('--identity', help='Override signer identity (defaults to attestation.signer_identity)')
     parser.add_argument('--allowed-signers', help='Override allowed signers file path')
