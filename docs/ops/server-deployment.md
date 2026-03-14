@@ -68,6 +68,7 @@ python scripts/inspect-hosted-state.py \
   --max-running-jobs 2 \
   --max-failed-jobs 0 \
   --max-warning-jobs 0 \
+  --alert-webhook-url https://ops.example/hooks/infinitas \
   --json
 ```
 
@@ -81,6 +82,7 @@ This summarizes:
 
 When any configured threshold is exceeded, the script still emits its summary but exits with status code `2`. That makes it suitable for `systemd` oneshot health/alert runs.
 This is especially useful for best-effort publish mirror hooks: a publish may still complete successfully while leaving a warning that operators should inspect.
+When `--alert-webhook-url` is provided, alerting runs also POST the full JSON summary to that endpoint and record delivery status in the returned `notification` block.
 
 This is intentionally SQLite-first for the current single-node deployment shape.
 
@@ -100,7 +102,8 @@ python scripts/render-hosted-systemd.py \
   --backup-label nightly \
   --prune-on-calendar daily \
   --prune-keep-last 7 \
-  --inspect-max-warning-jobs 0
+  --inspect-max-warning-jobs 0 \
+  --inspect-alert-webhook-url https://ops.example/hooks/infinitas
 ```
 
 To include optional one-way mirror automation in the same rendered bundle, render with:
@@ -120,7 +123,8 @@ python scripts/render-hosted-systemd.py \
   --mirror-on-calendar daily \
   --prune-on-calendar daily \
   --prune-keep-last 7 \
-  --inspect-max-warning-jobs 0
+  --inspect-max-warning-jobs 0 \
+  --inspect-alert-webhook-url https://ops.example/hooks/infinitas
 ```
 
 The rendered directory contains:
@@ -168,6 +172,7 @@ For a small single-node deployment, a reasonable starting point is:
 - `--inspect-max-running-jobs 2`
 - `--inspect-max-failed-jobs 0`
 - `--inspect-max-warning-jobs 0`
+- optional `--inspect-alert-webhook-url https://ops.example/hooks/infinitas`
 
 An inspect service failure means the queue or failure counts crossed a threshold. It does not necessarily mean the process crashed.
 The prune service deletes only older recognized hosted backup snapshots, not arbitrary folders under the backup root.

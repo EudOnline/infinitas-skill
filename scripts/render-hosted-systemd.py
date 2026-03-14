@@ -30,6 +30,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--inspect-max-running-jobs', type=int, default=None, help='Alert when running job count exceeds this threshold')
     parser.add_argument('--inspect-max-failed-jobs', type=int, default=0, help='Alert when failed job count exceeds this threshold')
     parser.add_argument('--inspect-max-warning-jobs', type=int, default=None, help='Alert when jobs with WARNING log entries exceed this threshold')
+    parser.add_argument('--inspect-alert-webhook-url', default='', help='Optional webhook URL for scheduled inspect alert delivery')
     parser.add_argument('--artifact-path', default='', help='Override artifact path for the env template and backup service')
     parser.add_argument('--database-url', default='', help='Override database URL for the env template and backup service')
     parser.add_argument('--repo-lock-path', default='', help='Override repo lock path for the env template')
@@ -200,6 +201,8 @@ def render_inspect_service(args: argparse.Namespace) -> str:
         extra.extend(['--max-failed-jobs', str(args.inspect_max_failed_jobs)])
     if args.inspect_max_warning_jobs is not None:
         extra.extend(['--max-warning-jobs', str(args.inspect_max_warning_jobs)])
+    if args.inspect_alert_webhook_url:
+        extra.extend(['--alert-webhook-url', args.inspect_alert_webhook_url])
     extra_flags = ' '.join(extra)
     if extra_flags:
         extra_flags = f' {extra_flags}'

@@ -5,6 +5,8 @@ import argparse
 import json
 import sqlite3
 import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 from sqlalchemy import create_engine, func, select
@@ -26,6 +28,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--max-running-jobs', type=int, default=None, help='Alert when running job count exceeds this threshold')
     parser.add_argument('--max-failed-jobs', type=int, default=None, help='Alert when failed job count exceeds this threshold')
     parser.add_argument('--max-warning-jobs', type=int, default=None, help='Alert when jobs with WARNING log entries exceed this threshold')
+    parser.add_argument('--alert-webhook-url', default='', help='Optional webhook URL that receives the alert summary JSON when alerts are present')
     parser.add_argument('--json', action='store_true', help='Emit machine-readable JSON output')
     return parser.parse_args()
 
@@ -173,6 +176,36 @@ def build_alerts(summary: dict, args: argparse.Namespace) -> list[dict]:
     return alerts
 
 
+def deliver_alert_webhook(summary: dict, webhook_url: str) -> dict:
+    if not webhook_url:
+        return {'attempted': False, 'delivered': False, 'url': ''}
+    data = json.dumps(summary, ensure_ascii=False).encode('utf-8')
+    request = urllib.request.Request(
+        webhook_url,
+        data=data,
+        headers={
+            'content-type': 'application/json; charset=utf-8',
+            'content-length': str(len(data)),
+        },
+        method='POST',
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=5) as response:
+            return {
+                'attempted': True,
+                'delivered': True,
+                'url': webhook_url,
+                'status_code': response.getcode(),
+            }
+    except (urllib.error.URLError, TimeoutError, ValueError) as exc:
+        return {
+            'attempted': True,
+            'delivered': False,
+            'url': webhook_url,
+            'error': str(exc),
+        }
+
+
 def emit(summary: dict, as_json: bool):
     if as_json:
         print(json.dumps(summary, ensure_ascii=False, indent=2))
@@ -191,6 +224,12 @@ def emit(summary: dict, as_json: bool):
         print(f"WARNED: job#{item['id']} kind={item['kind']} status={item['status']} warning={item['warning_excerpt']}")
     for alert in summary.get('alerts') or []:
         print(f"ALERT: {alert['message']}")
+    notification = summary.get('notification') or {}
+    if notification.get('attempted'):
+        if notification.get('delivered'):
+            print(f"WEBHOOK: delivered status={notification.get('status_code')} url={notification.get('url')}")
+        else:
+            print(f"WEBHOOK ERROR: {notification.get('error', 'delivery failed')} url={notification.get('url')}")
 
 
 def main():
@@ -211,6 +250,10 @@ def main():
     alerts = build_alerts(summary, args)
     summary['alerts'] = alerts
     summary['ok'] = not alerts
+    if alerts and args.alert_webhook_url:
+        summary['notification'] = deliver_alert_webhook(summary, args.alert_webhook_url)
+    else:
+        summary['notification'] = {'attempted': False, 'delivered': False, 'url': args.alert_webhook_url}
     emit(summary, as_json=args.json)
     raise SystemExit(2 if alerts else 0)
 
