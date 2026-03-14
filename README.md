@@ -43,6 +43,7 @@ docs/
 ├─ distribution-manifests.md verified bundles, manifests, and immutable install flow
 ├─ history-and-snapshots.md active overwrite snapshots and exact ancestry
 ├─ compatibility-matrix.md generated compatibility catalog guide
+├─ ai/search-and-inspect.md search, inspect, trust, and explanation-first consumer flow
 ├─ platform-contracts/   per-platform contract-watch documents
 ├─ multi-registry.md     source registry configuration and trust model
 ├─ promotion-policy.md   promotion rules for active skills
@@ -145,6 +146,13 @@ scripts/resolve-install-plan.py --skill-dir skills/active/my-skill --target-dir 
 # Resolve an installable skill by short name
 scripts/resolve-skill.sh my-skill
 
+# Search the discovery catalog before resolving or installing
+scripts/search-skills.sh operate
+scripts/search-skills.sh --publisher lvxiaoer --agent codex
+
+# Inspect trust state, compatibility, dependencies, and provenance first
+scripts/inspect-skill.sh lvxiaoer/my-skill
+
 # Install by name from the private-first discovery layer
 scripts/install-by-name.sh my-skill ~/.openclaw/skills
 
@@ -210,6 +218,8 @@ scripts/sync-registry-source.sh self
 ```
 
 # AI-first publish and pull wrappers
+scripts/search-skills.sh operate
+scripts/inspect-skill.sh lvxiaoer/my-skill
 scripts/publish-skill.sh my-skill
 scripts/pull-skill.sh my-skill ~/.openclaw/skills
 scripts/import-openclaw-skill.sh ~/.openclaw/workspace/skills/my-skill --owner lvxiaoer
@@ -302,6 +312,7 @@ For AI-driven publishing, import, export, and installation, treat the following 
 
 - `docs/ai/agent-operations.md` — agent-facing common operations manual
 - `docs/ai/discovery.md` — private-first discovery, install-by-name, and upgrade contract
+- `docs/ai/search-and-inspect.md` — search, inspect, trust state, compatibility, provenance, and explanation-first consumer workflow
 - `docs/ai/hosted-registry.md` — hosted registry endpoints, auth, and immutable download contract
 - `docs/ai/openclaw.md` — OpenClaw / ClawHub bridge contract
 - `docs/ai/publish.md` — protocol for `scripts/publish-skill.sh`
@@ -387,6 +398,9 @@ Use that document as the source of truth for:
 - **Installed copies can switch or roll back**. Manifest history now supports controlled source switching and version rollback.
 - **Stable releases emit verified bundles and manifests**. Catalog exports now index immutable release bundles under `catalog/distributions/` plus `catalog/distributions.json`.
 - **Install and sync prefer immutable release artifacts**. When a verified distribution manifest exists, resolver/install/sync materialize from that manifest instead of relying only on the live working-tree folder.
+- **Consumer discovery is search-first**. `scripts/search-skills.sh` filters the generated discovery surface by query, publisher, agent, and tag without scraping source paths.
+- **Inspect before install**. `scripts/inspect-skill.sh` exposes trust state, compatibility summaries, dependency summaries, provenance references, and the verified distribution manifest path as a stable JSON view.
+- **Resolver and upgrade payloads explain policy**. `scripts/resolve-skill.sh`, `scripts/install-by-name.sh`, `scripts/check-skill-update.sh`, and `scripts/upgrade-skill.sh` now emit additive `explanation` fields with `selection_reason`, `policy_reasons`, and `version_reason`.
 - **Compatibility is exported**. Consumers can read a generated compatibility matrix instead of scraping every `_meta.json`.
 - **Namespace ownership is policy-driven**. `policy/namespace-policy.json` declares valid publishers plus approved namespace transfers.
 - **Registry sources are policy-driven**. Source registries now declare trust, allowed hosts/refs, pinning, and update behavior in config.

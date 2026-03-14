@@ -3,11 +3,19 @@
 ## Commands
 
 ```bash
+scripts/search-skills.sh [query] [--publisher <publisher>] [--agent <agent>] [--tag <tag>] [--json]
+scripts/inspect-skill.sh <qualified-name> [--version <semver>] [--json]
 scripts/resolve-skill.sh <name> [--target-agent <agent>]
 scripts/install-by-name.sh <name> <target-dir> [--version <semver>] [--target-agent <agent>] [--mode auto|confirm]
 scripts/check-skill-update.sh <installed-name> <target-dir>
 scripts/upgrade-skill.sh <installed-name> <target-dir> [--to-version <semver>] [--registry <name>] [--mode auto|confirm]
 ```
+
+## Consumer workflow
+
+- search with `scripts/search-skills.sh` first when the caller only knows a topic, publisher, agent, or tag
+- inspect with `scripts/inspect-skill.sh` before install when the caller needs trust state, compatibility, dependency, distribution, or provenance details
+- resolve/install flows stay index-driven and immutable-only; they must not treat source folders as install candidates
 
 ## Resolution policy
 
@@ -52,6 +60,15 @@ scripts/upgrade-skill.sh <installed-name> <target-dir> [--to-version <semver>] [
   "next_step": "check-update-or-use"
 }
 ```
+
+All resolver, install, update, and upgrade payloads may now include an additive `explanation` object with:
+
+- `selection_reason`
+- `policy_reasons`
+- `version_reason`
+- `next_actions`
+
+Use this explanation section to understand why a private match won, why an external source requires confirmation, and which version or source registry was chosen.
 
 `check-skill-update.sh` returns:
 

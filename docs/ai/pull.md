@@ -22,6 +22,7 @@ scripts/pull-skill.sh <qualified-name> <target-dir> [--version <semver>] [--regi
 - 所选版本在 AI index 中存在
 - 所选版本必须具备 manifest、bundle digest 与 attestation 引用
 - 安装策略必须为 `immutable-only`
+- verified distribution manifests are the default consumer path; do not fall back to mutable working-tree folders for stable installs
 
 ## Ordered Execution Steps
 
@@ -41,6 +42,7 @@ scripts/pull-skill.sh <qualified-name> <target-dir> [--version <semver>] [--regi
 - distribution manifests now record `attestation_bundle.required_formats`
 - consumers must use `python3 scripts/verify-distribution-manifest.py <manifest.json>` so install policy enforces `ssh`, `ci`, or `both`
 - when `required_formats` includes `ci`, installation must fail if the CI attestation sidecar is missing or invalid
+- pull and inspect flows should surface trust state from the verified distribution manifest, provenance bundle, and attestation policy before installing
 
 ## Stop Conditions
 
@@ -92,6 +94,7 @@ scripts/pull-skill.sh <qualified-name> <target-dir> [--version <semver>] [--regi
 - 对 hosted registry，`pull-skill.sh` 会下载 manifest / bundle / provenance，再进行同样的不可变校验
 - 即使指定了 `--registry`，也只允许读取该 registry 已发布的 immutable 索引与产物
 - 若 AI 看到的是 OpenClaw 本地原型目录，应先走 `scripts/import-openclaw-skill.sh`，而不是直接安装
+- 如果需要先看 trust state、compatibility、dependency summary 或 provenance，优先运行 `scripts/inspect-skill.sh`
 
 ## Forbidden Assumptions
 

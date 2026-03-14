@@ -49,6 +49,8 @@
 
 - **“创建一个新的 registry skill”** → `scripts/new-skill.sh`
 - **“按名字找一个可安装的 skill”** → `scripts/resolve-skill.sh`
+- **“先搜索有哪些可安装 skill”** → `scripts/search-skills.sh`
+- **“安装前检查 trust state / compatibility / provenance”** → `scripts/inspect-skill.sh`
 - **“把 OpenClaw 本地技能纳入平台治理”** → `scripts/import-openclaw-skill.sh`
 - **“检查这个 skill 是否合规”** → `scripts/check-skill.sh`
 - **“准备评审 / 请求评审”** → `scripts/request-review.sh`
@@ -238,6 +240,27 @@ agent 不得默认自动执行这一步。
 对以下命令，`confirm` 模式都应保持无副作用：
 
 - `scripts/import-openclaw-skill.sh`
+
+## Search and inspect first
+
+当用户还没有明确技能名、或者在问“这个 skill 值不值得装”时，优先走这条路径：
+
+```bash
+scripts/search-skills.sh operate
+scripts/search-skills.sh --publisher lvxiaoer --agent codex
+scripts/inspect-skill.sh lvxiaoer/operate-infinitas-skill
+scripts/install-by-name.sh operate-infinitas-skill ~/.openclaw/skills --mode confirm
+```
+
+重点读取以下信号：
+
+- trust state
+- compatibility 的 verified summary
+- dependency root / steps summary
+- provenance 路径与 attestation policy
+- verified distribution manifest 路径
+
+如果 resolver、install、update、upgrade 输出包含 `explanation`，应优先用 `selection_reason`、`policy_reasons` 和 `version_reason` 向上层说明决策依据。
 - `scripts/publish-skill.sh`
 - `scripts/pull-skill.sh`
 - `scripts/export-openclaw-skill.sh`
