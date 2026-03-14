@@ -37,6 +37,7 @@ class Settings:
     repo_lock_path: Path
     mirror_remote: str
     mirror_branch: str
+    registry_read_tokens: list[str]
 
 
 def _normalize_bootstrap_users(payload: object) -> list[dict]:
@@ -64,13 +65,29 @@ def _normalize_bootstrap_users(payload: object) -> list[dict]:
     return normalized or list(DEFAULT_BOOTSTRAP_USERS)
 
 
+def _normalize_string_list(payload: object) -> list[str]:
+    if not isinstance(payload, list):
+        return []
+    normalized = []
+    for item in payload:
+        value = str(item or '').strip()
+        if value:
+            normalized.append(value)
+    return normalized
+
+
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     bootstrap_raw = os.environ.get('INFINITAS_SERVER_BOOTSTRAP_USERS', '')
+    registry_tokens_raw = os.environ.get('INFINITAS_REGISTRY_READ_TOKENS', '')
     try:
         bootstrap_payload = json.loads(bootstrap_raw) if bootstrap_raw else DEFAULT_BOOTSTRAP_USERS
     except json.JSONDecodeError:
         bootstrap_payload = DEFAULT_BOOTSTRAP_USERS
+    try:
+        registry_tokens_payload = json.loads(registry_tokens_raw) if registry_tokens_raw else []
+    except json.JSONDecodeError:
+        registry_tokens_payload = []
 
     default_db_path = ROOT / '.state' / 'server.db'
     database_url = os.environ.get('INFINITAS_SERVER_DATABASE_URL') or f'sqlite:///{default_db_path}'
@@ -92,4 +109,5 @@ def get_settings() -> Settings:
         repo_lock_path=repo_lock_path,
         mirror_remote=mirror_remote,
         mirror_branch=mirror_branch,
+        registry_read_tokens=_normalize_string_list(registry_tokens_payload),
     )

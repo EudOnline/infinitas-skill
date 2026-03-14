@@ -1,0 +1,34 @@
+{% extends "layout.html" %}
+{% block body %}
+<p class="muted">Showing the latest {{ items|length }} reviews (limit {{ limit }}).</p>
+{% if items %}
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Submission</th>
+      <th>Status</th>
+      <th>Requested By</th>
+      <th>Reviewed By</th>
+      <th>Note</th>
+      <th>Updated</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in items %}
+    <tr>
+      <td>{{ item.id }}</td>
+      <td>#{{ item.submission_id }}</td>
+      <td>{{ item.status }}</td>
+      <td>{{ item.requested_by or "-" }}</td>
+      <td>{{ item.reviewed_by or "-" }}</td>
+      <td>{{ item.note or "-" }}</td>
+      <td>{{ item.updated_at }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No reviews found.</p>
+{% endif %}
+{% endblock %}

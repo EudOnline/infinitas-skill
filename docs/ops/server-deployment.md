@@ -20,6 +20,7 @@ The recommended single-node deployment shape now includes a generated `systemd` 
 - `INFINITAS_SERVER_BOOTSTRAP_USERS`
 - `INFINITAS_SERVER_REPO_PATH`
 - `INFINITAS_SERVER_ARTIFACT_PATH`
+- optional `INFINITAS_REGISTRY_READ_TOKENS`
 - optional `INFINITAS_SERVER_REPO_LOCK_PATH`
 - optional `INFINITAS_SERVER_MIRROR_REMOTE`
 - optional `INFINITAS_SERVER_MIRROR_BRANCH`
@@ -40,6 +41,12 @@ The built-in hosted app now serves immutable distribution artifacts directly fro
 - `https://skills.example.com/api/v1/...`
 - `https://skills.example.com/registry/ai-index.json`
 - `https://skills.example.com/registry/skills/<publisher>/<skill>/<version>/manifest.json`
+- `https://skills.example.com/submissions`
+- `https://skills.example.com/reviews`
+- `https://skills.example.com/jobs`
+
+If `INFINITAS_REGISTRY_READ_TOKENS` is unset or empty, `/registry/*` stays public for local/dev compatibility.
+If it is set to a JSON array of bearer tokens, hosted installers must send one of those tokens when reading `/registry/*`.
 
 ## Health checks
 
@@ -64,6 +71,15 @@ This checks:
 Phase 1 automation validates SQLite deployments only. PostgreSQL health probes can be added later without changing the hosted artifact contract.
 
 For hosted installs on other machines, point the registry source `base_url` at the `/registry` prefix, not the app root.
+If the hosted registry requires bearer auth, set the registry source `auth.mode` to `token` and point `auth.env` at the local environment variable that holds one of the configured read tokens.
+
+For operators inspecting queue state manually, the hosted app now exposes minimal maintainer-only HTML views at `/submissions`, `/reviews`, and `/jobs`, and the matching CLI surface is available through:
+
+```bash
+python scripts/registryctl.py --base-url https://skills.example.com --token <maintainer-token> submissions list
+python scripts/registryctl.py --base-url https://skills.example.com --token <maintainer-token> reviews list
+python scripts/registryctl.py --base-url https://skills.example.com --token <maintainer-token> jobs list
+```
 
 ## State inspection
 

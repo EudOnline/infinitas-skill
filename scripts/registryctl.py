@@ -31,6 +31,9 @@ def base_parser() -> argparse.ArgumentParser:
     submissions = subparsers.add_parser('submissions', help='Manage hosted submissions')
     submissions_subparsers = submissions.add_subparsers(dest='subcommand')
 
+    submissions_list = submissions_subparsers.add_parser('list', help='List submissions')
+    submissions_list.set_defaults(func=command_submission_list)
+
     submissions_create = submissions_subparsers.add_parser('create', help='Create a submission')
     submissions_create.add_argument('--skill-name', required=True, help='Skill name to submit')
     submissions_create.add_argument('--publisher', default='local', help='Publisher namespace')
@@ -51,6 +54,9 @@ def base_parser() -> argparse.ArgumentParser:
     reviews = subparsers.add_parser('reviews', help='Review decisions')
     reviews_subparsers = reviews.add_subparsers(dest='subcommand')
 
+    reviews_list = reviews_subparsers.add_parser('list', help='List reviews')
+    reviews_list.set_defaults(func=command_review_list)
+
     reviews_approve = reviews_subparsers.add_parser('approve', help='Approve a review')
     reviews_approve.add_argument('review_id', type=int, help='Review identifier')
     reviews_approve.add_argument('--note', default='', help='Approval note')
@@ -60,6 +66,12 @@ def base_parser() -> argparse.ArgumentParser:
     reviews_reject.add_argument('review_id', type=int, help='Review identifier')
     reviews_reject.add_argument('--note', default='', help='Rejection note')
     reviews_reject.set_defaults(func=command_review_reject)
+
+    jobs = subparsers.add_parser('jobs', help='Inspect hosted jobs')
+    jobs_subparsers = jobs.add_subparsers(dest='subcommand')
+
+    jobs_list = jobs_subparsers.add_parser('list', help='List jobs')
+    jobs_list.set_defaults(func=command_job_list)
 
     releases = subparsers.add_parser('releases', help='Release queue operations')
     releases_subparsers = releases.add_subparsers(dest='subcommand')
@@ -104,6 +116,10 @@ def command_submission_create(args):
     )
 
 
+def command_submission_list(args):
+    return request_json(args, 'GET', '/api/v1/submissions')
+
+
 def command_submission_request_validation(args):
     return request_json(
         args,
@@ -126,8 +142,16 @@ def command_review_approve(args):
     return request_json(args, 'POST', f'/api/v1/reviews/{args.review_id}/approve', {'note': args.note})
 
 
+def command_review_list(args):
+    return request_json(args, 'GET', '/api/v1/reviews')
+
+
 def command_review_reject(args):
     return request_json(args, 'POST', f'/api/v1/reviews/{args.review_id}/reject', {'note': args.note})
+
+
+def command_job_list(args):
+    return request_json(args, 'GET', '/api/v1/jobs')
 
 
 def command_release_publish(args):

@@ -44,10 +44,17 @@ The built-in `server.app` serves this protocol from the hosted artifact root und
 - `/registry/ai-index.json`
 - `/registry/distributions.json`
 - `/registry/compatibility.json`
+- `/registry/discovery-index.json`
 - `/registry/skills/<publisher>/<skill>/<version>/manifest.json`
 - `/registry/skills/<publisher>/<skill>/<version>/skill.tar.gz`
 - `/registry/provenance/<skill>-<version>.json`
 - `/registry/provenance/<skill>-<version>.json.ssig`
+
+For compatibility with existing generated manifests, the built-in app also serves legacy catalog-backed refs such as:
+
+- `/registry/catalog/distributions/<publisher>/<skill>/<version>/manifest.json`
+- `/registry/catalog/distributions/<publisher>/<skill>/<version>/skill.tar.gz`
+- `/registry/catalog/provenance/<skill>-<version>.json`
 
 When you use the built-in hosted app, set the registry `base_url` to the `/registry` prefix itself, for example:
 
@@ -92,6 +99,12 @@ When `auth.mode` is `token`, clients should send:
 ```text
 Authorization: Bearer <value-of-auth.env>
 ```
+
+For the built-in hosted app, registry-read protection is configured separately from hosted API users:
+
+- `INFINITAS_REGISTRY_READ_TOKENS` — JSON array of raw bearer tokens allowed to read `/registry/*`
+- unset or empty means `/registry/*` stays public for local/dev compatibility
+- the control-plane API under `/api/v1/*` still uses hosted user tokens from `INFINITAS_SERVER_BOOTSTRAP_USERS`
 
 ## Hard rules
 

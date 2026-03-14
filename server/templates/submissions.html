@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% block body %}
+<p class="muted">Showing the latest {{ items|length }} submissions (limit {{ limit }}).</p>
+{% if items %}
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Skill</th>
+      <th>Status</th>
+      <th>Created By</th>
+      <th>Review</th>
+      <th>Updated</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in items %}
+    <tr>
+      <td>{{ item.id }}</td>
+      <td>{{ item.publisher }}/{{ item.skill_name }}</td>
+      <td>{{ item.status }}</td>
+      <td>{{ item.created_by or "-" }}</td>
+      <td>
+        {% if item.review %}
+        #{{ item.review.id }} · {{ item.review.status }}
+        {% else %}
+        -
+        {% endif %}
+      </td>
+      <td>{{ item.updated_at }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No submissions found.</p>
+{% endif %}
+{% endblock %}

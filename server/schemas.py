@@ -60,6 +60,11 @@ class SubmissionView(BaseModel):
     review: ReviewView | None = None
 
 
+class SubmissionListView(BaseModel):
+    items: list[SubmissionView] = Field(default_factory=list)
+    total: int = 0
+
+
 class JobView(BaseModel):
     id: int
     kind: str
@@ -73,6 +78,16 @@ class JobView(BaseModel):
     updated_at: str
     started_at: str | None = None
     finished_at: str | None = None
+
+
+class ReviewListView(BaseModel):
+    items: list[ReviewView] = Field(default_factory=list)
+    total: int = 0
+
+
+class JobListView(BaseModel):
+    items: list[JobView] = Field(default_factory=list)
+    total: int = 0
 
 
 class JobEnqueueResponse(BaseModel):

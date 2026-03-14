@@ -3,14 +3,22 @@ from __future__ import annotations
 import json
 from typing import Iterable
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from server.auth import get_current_user, require_role
 from server.db import get_db
 from server.jobs import enqueue_job, serialize_job
 from server.models import Review, Submission, User, utcnow
-from server.schemas import JobEnqueueResponse, SubmissionCreateRequest, SubmissionView, TransitionRequest, ReviewView, StatusLogEntry
+from server.schemas import (
+    JobEnqueueResponse,
+    ReviewView,
+    StatusLogEntry,
+    SubmissionCreateRequest,
+    SubmissionListView,
+    SubmissionView,
+    TransitionRequest,
+)
 
 router = APIRouter(prefix='/api/v1/submissions', tags=['submissions'])
 
@@ -100,6 +108,13 @@ def get_submission_or_404(db: Session, submission_id: int) -> Submission:
     return submission
 
 
+def visible_submissions_query(db: Session, user: User):
+    query = db.query(Submission)
+    if user.role != 'maintainer':
+        query = query.filter(Submission.created_by_user_id == user.id)
+    return query
+
+
 def require_status(submission: Submission, allowed: Iterable[str]):
     if submission.status not in set(allowed):
         raise HTTPException(
@@ -140,6 +155,21 @@ def create_submission(
     db.commit()
     db.refresh(submission)
     return serialize_submission(submission)
+
+
+@router.get('', response_model=SubmissionListView)
+def list_submissions(
+    limit: int = Query(default=20, ge=1, le=100),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    query = visible_submissions_query(db, user)
+    total = query.count()
+    items = query.order_by(Submission.updated_at.desc(), Submission.id.desc()).limit(limit).all()
+    return SubmissionListView(
+        items=[serialize_submission(submission, latest_review(db, submission.id)) for submission in items],
+        total=total,
+    )
 
 
 @router.get('/{submission_id}', response_model=SubmissionView)

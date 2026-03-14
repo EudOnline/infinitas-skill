@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from server.auth import require_role
+from server.auth import get_current_user, require_role
 from server.db import get_db
-from server.models import Review, User, utcnow
-from server.schemas import ReviewDecisionRequest, SubmissionView
-from server.api.submissions import append_status_transition, get_submission_or_404, serialize_submission
+from server.models import Review, Submission, User, utcnow
+from server.schemas import ReviewDecisionRequest, ReviewListView, SubmissionView
+from server.api.submissions import append_status_transition, get_submission_or_404, serialize_review, serialize_submission
 
 router = APIRouter(prefix='/api/v1/reviews', tags=['reviews'])
 
@@ -17,6 +17,20 @@ def get_review_or_404(db: Session, review_id: int) -> Review:
     if review is None:
         raise HTTPException(status_code=404, detail='review not found')
     return review
+
+
+@router.get('', response_model=ReviewListView)
+def list_reviews(
+    limit: int = Query(default=20, ge=1, le=100),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    query = db.query(Review).join(Submission, Review.submission_id == Submission.id)
+    if user.role != 'maintainer':
+        query = query.filter(Submission.created_by_user_id == user.id)
+    total = query.count()
+    items = query.order_by(Review.updated_at.desc(), Review.id.desc()).limit(limit).all()
+    return ReviewListView(items=[serialize_review(review) for review in items], total=total)
 
 
 @router.post('/{review_id}/approve', response_model=SubmissionView)

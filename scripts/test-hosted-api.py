@@ -21,6 +21,7 @@ def configure_env(tmpdir: Path):
     os.environ['INFINITAS_SERVER_DATABASE_URL'] = f'sqlite:///{tmpdir / "server.db"}'
     os.environ['INFINITAS_SERVER_SECRET_KEY'] = 'test-secret-key'
     os.environ['INFINITAS_SERVER_ARTIFACT_PATH'] = str(tmpdir / 'artifacts')
+    os.environ['INFINITAS_REGISTRY_READ_TOKENS'] = json.dumps(['registry-reader-token'])
     os.environ['INFINITAS_SERVER_BOOTSTRAP_USERS'] = json.dumps(
         [
             {
@@ -43,6 +44,7 @@ def scenario_health_login_and_me():
         from server.app import create_app
 
         client = TestClient(create_app())
+        maintainer_headers = {'Authorization': 'Bearer fixture-maintainer-token'}
 
         response = client.get('/healthz')
         if response.status_code != 200:
@@ -55,9 +57,16 @@ def scenario_health_login_and_me():
         if response.status_code != 200:
             fail(f'/login returned {response.status_code}: {response.text}')
 
+        response = client.get('/')
+        if response.status_code != 200:
+            fail(f'/ returned {response.status_code}: {response.text}')
+        for href in ['/submissions', '/reviews', '/jobs']:
+            if href not in response.text:
+                fail(f'index page missing operator link {href!r}')
+
         response = client.get(
             '/api/v1/me',
-            headers={'Authorization': 'Bearer fixture-maintainer-token'},
+            headers=maintainer_headers,
         )
         if response.status_code != 200:
             fail(f'/api/v1/me returned {response.status_code}: {response.text}')
@@ -67,15 +76,46 @@ def scenario_health_login_and_me():
         if payload.get('role') != 'maintainer':
             fail(f'unexpected role payload: {payload}')
 
+        response = client.get('/registry/ai-index.json')
+        if response.status_code != 401:
+            fail(f'expected /registry/ai-index.json without token to return 401, got {response.status_code}')
+
+        response = client.get(
+            '/registry/ai-index.json',
+            headers={'Authorization': 'Bearer fixture-maintainer-token'},
+        )
+        if response.status_code != 401:
+            fail(
+                'expected /registry/ai-index.json with hosted user token to return '
+                f'401, got {response.status_code}'
+            )
+
         for route in [
             '/registry/ai-index.json',
             '/registry/distributions.json',
             '/registry/compatibility.json',
             '/registry/skills/lvxiaoer/operate-infinitas-skill/0.1.1/manifest.json',
         ]:
-            response = client.get(route)
+            response = client.get(
+                route,
+                headers={'Authorization': 'Bearer registry-reader-token'},
+            )
             if response.status_code != 200:
                 fail(f'{route} returned {response.status_code}: {response.text}')
+
+        for route, heading in [
+            ('/submissions', 'Submissions'),
+            ('/reviews', 'Reviews'),
+            ('/jobs', 'Jobs'),
+        ]:
+            response = client.get(route)
+            if response.status_code != 401:
+                fail(f'expected {route} without token to return 401, got {response.status_code}')
+            response = client.get(route, headers=maintainer_headers)
+            if response.status_code != 200:
+                fail(f'expected {route} with maintainer token to return 200, got {response.status_code}: {response.text}')
+            if heading not in response.text:
+                fail(f'expected {route} page to contain heading {heading!r}')
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 

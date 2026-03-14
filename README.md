@@ -241,6 +241,8 @@ The repository now includes a minimal hosted control plane under `server/` for t
 - `GET /` for a lightweight HTML dashboard
 - `GET /login` for auth bootstrap guidance
 - `GET /api/v1/me` for bearer-token identity checks
+- `GET /submissions`, `GET /reviews`, and `GET /jobs` for maintainer-only operator views
+- `GET /api/v1/submissions`, `GET /api/v1/reviews`, and `GET /api/v1/jobs` for JSON list inspection
 
 The hosted server uses SQLite by default and can be configured with:
 
@@ -249,6 +251,7 @@ The hosted server uses SQLite by default and can be configured with:
 - `INFINITAS_SERVER_BOOTSTRAP_USERS` (JSON array of `{username, display_name, role, token}`)
 - `INFINITAS_SERVER_REPO_PATH`
 - `INFINITAS_SERVER_ARTIFACT_PATH`
+- optional `INFINITAS_REGISTRY_READ_TOKENS` (JSON array; when set, `/registry/*` requires one of these bearer tokens)
 - optional `INFINITAS_SERVER_MIRROR_REMOTE`
 - optional `INFINITAS_SERVER_MIRROR_BRANCH`
 
@@ -272,10 +275,21 @@ The hosted app now also serves immutable install artifacts directly from `/regis
 - `/registry/ai-index.json`
 - `/registry/distributions.json`
 - `/registry/compatibility.json`
+- `/registry/discovery-index.json`
 - `/registry/skills/<publisher>/<skill>/<version>/manifest.json`
 - `/registry/skills/<publisher>/<skill>/<version>/skill.tar.gz`
 - `/registry/provenance/<skill>-<version>.json`
 - `/registry/provenance/<skill>-<version>.json.ssig`
+
+The built-in hosted surface also preserves legacy `catalog/` artifact paths under `/registry/catalog/...` so older generated manifest refs continue to install cleanly.
+
+For hosted operators, `scripts/registryctl.py` now supports read-only inspection commands in addition to workflow mutations:
+
+```bash
+python scripts/registryctl.py --base-url http://127.0.0.1:8000 --token dev-maintainer-token submissions list
+python scripts/registryctl.py --base-url http://127.0.0.1:8000 --token dev-maintainer-token reviews list
+python scripts/registryctl.py --base-url http://127.0.0.1:8000 --token dev-maintainer-token jobs list
+```
 
 These ops helpers are intentionally SQLite-first for the current single-node deployment model. PostgreSQL and object-storage automation remain future extensions.
 If `INFINITAS_SERVER_MIRROR_REMOTE` is configured, hosted publish jobs also attempt an immediate best-effort one-way mirror push after syncing artifacts and pushing the primary repo.

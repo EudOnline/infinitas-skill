@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from server.db import get_db
 from server.models import User
+from server.settings import get_settings
 
 
 def _extract_bearer_token(authorization: str | None) -> str | None:
@@ -39,3 +40,15 @@ def require_role(*allowed_roles: str):
         return user
 
     return dependency
+
+
+def require_registry_reader(authorization: str | None = Header(default=None)) -> None:
+    settings = get_settings()
+    if not settings.registry_read_tokens:
+        return
+
+    token = _extract_bearer_token(authorization)
+    if not token:
+        raise HTTPException(status_code=401, detail='missing registry bearer token')
+    if token not in settings.registry_read_tokens:
+        raise HTTPException(status_code=401, detail='invalid registry bearer token')
