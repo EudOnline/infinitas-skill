@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-03-14T10:42:29Z",
+  "generated_at": "2026-03-14T23:53:52Z",
   "default_registry": "self",
   "sources": [
     {
@@ -50,6 +50,10 @@
         "claude-code",
         "operations"
       ],
+      "maturity": "unknown",
+      "quality_score": 0,
+      "last_verified_at": "2026-03-12T12:56:55Z",
+      "capabilities": [],
       "verified_support": {
         "claude": {
           "state": "adapted",

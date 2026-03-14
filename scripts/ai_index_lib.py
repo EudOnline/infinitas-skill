@@ -125,6 +125,45 @@ def _trust_state_from_version_entry(version_entry):
     return 'unknown'
 
 
+def _maturity_for_entry(meta):
+    value = meta.get('maturity') if isinstance(meta, dict) else None
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return 'unknown'
+
+
+def _quality_score_for_entry(meta):
+    value = meta.get('quality_score') if isinstance(meta, dict) else None
+    if isinstance(value, int):
+        return value
+    return 0
+
+
+def _capabilities_for_entry(meta):
+    value = meta.get('capabilities') if isinstance(meta, dict) else None
+    if isinstance(value, list):
+        return [item for item in value if isinstance(item, str) and item.strip()]
+    return []
+
+
+def _last_verified_at(verified_support, meta):
+    newest = None
+    if isinstance(verified_support, dict):
+        for payload in verified_support.values():
+            if not isinstance(payload, dict):
+                continue
+            checked_at = payload.get('checked_at')
+            if isinstance(checked_at, str) and checked_at.strip():
+                if newest is None or checked_at > newest:
+                    newest = checked_at
+    if newest:
+        return newest
+    fallback = meta.get('last_verified_at') if isinstance(meta, dict) else None
+    if isinstance(fallback, str) and fallback.strip():
+        return fallback.strip()
+    return None
+
+
 def build_ai_index(*, root: Path, catalog_entries: list, distribution_entries: list) -> dict:
     root = Path(root).resolve()
     catalog_lookup = _catalog_entry_by_key(catalog_entries)
@@ -146,6 +185,7 @@ def build_ai_index(*, root: Path, catalog_entries: list, distribution_entries: l
         current = catalog_lookup.get(key) or grouped[key][0]
         meta = _meta_for_entry(root, current)
         publisher = _publisher_for_entry(current, meta)
+        verified_support = current.get('verified_support') or {}
         requires = meta.get('requires') if isinstance(meta.get('requires'), dict) else {}
         entrypoints = meta.get('entrypoints') if isinstance(meta.get('entrypoints'), dict) else {}
         version_map = {}
@@ -179,14 +219,18 @@ def build_ai_index(*, root: Path, catalog_entries: list, distribution_entries: l
                 'qualified_name': current.get('qualified_name') or (f'{publisher}/{current.get("name")}' if publisher and current.get('name') else current.get('name')),
                 'summary': current.get('summary') or '',
                 'tags': meta.get('tags') or [],
+                'maturity': _maturity_for_entry(meta),
+                'quality_score': _quality_score_for_entry(meta),
+                'capabilities': _capabilities_for_entry(meta),
+                'last_verified_at': _last_verified_at(verified_support, meta),
                 'use_when': [],
                 'avoid_when': [],
                 'agent_compatible': current.get('agent_compatible') or [],
                 'compatibility': {
                     'declared_support': current.get('declared_support') or current.get('agent_compatible') or [],
-                    'verified_support': current.get('verified_support') or {},
+                    'verified_support': verified_support,
                 },
-                'verified_support': current.get('verified_support') or {},
+                'verified_support': verified_support,
                 'trust_state': _trust_state_from_version_entry(latest_entry),
                 'default_install_version': latest_version,
                 'latest_version': latest_version,
@@ -262,10 +306,17 @@ def validate_ai_index_payload(payload: dict) -> list:
         for field in ['name', 'qualified_name', 'summary', 'default_install_version', 'latest_version']:
             if not isinstance(skill.get(field), str) or not skill.get(field, '').strip():
                 errors.append(f'{prefix}.{field} must be a non-empty string')
-        for field in ['use_when', 'avoid_when', 'agent_compatible', 'available_versions', 'tags']:
+        for field in ['use_when', 'avoid_when', 'agent_compatible', 'available_versions', 'tags', 'capabilities']:
             value = skill.get(field)
             if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
                 errors.append(f'{prefix}.{field} must be an array of strings')
+        if not isinstance(skill.get('maturity'), str) or not skill.get('maturity', '').strip():
+            errors.append(f'{prefix}.maturity must be a non-empty string')
+        if not isinstance(skill.get('quality_score'), int):
+            errors.append(f'{prefix}.quality_score must be an integer')
+        last_verified_at = skill.get('last_verified_at')
+        if last_verified_at is not None and (not isinstance(last_verified_at, str) or not last_verified_at.strip()):
+            errors.append(f'{prefix}.last_verified_at must be a non-empty string when present')
         if not isinstance(skill.get('trust_state'), str) or not skill.get('trust_state', '').strip():
             errors.append(f'{prefix}.trust_state must be a non-empty string')
         if not isinstance(skill.get('verified_support'), dict):

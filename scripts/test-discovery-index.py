@@ -58,11 +58,15 @@ def assert_discovery_payload_stable_across_roots():
                 'summary': 'Fixture skill for discovery-index tests',
                 'tags': ['fixture', 'search'],
                 'agent_compatible': ['codex'],
-                'verified_support': {'codex': {'state': 'adapted'}},
+                'verified_support': {'codex': {'state': 'adapted', 'checked_at': '2026-03-14T00:00:00Z'}},
                 'trust_state': 'verified',
                 'default_install_version': FIXTURE_VERSION,
                 'latest_version': FIXTURE_VERSION,
                 'available_versions': [FIXTURE_VERSION],
+                'maturity': 'stable',
+                'quality_score': 91,
+                'last_verified_at': '2026-03-14T00:00:00Z',
+                'capabilities': ['fixture-testing', 'search'],
                 'versions': {
                     FIXTURE_VERSION: {
                         'attestation_formats': ['ssh'],
@@ -108,10 +112,18 @@ def assert_discovery_payload_stable_across_roots():
         fail(f"expected stable tags ['fixture', 'search'], got {fixture.get('tags')!r}")
     if fixture.get('trust_state') != 'verified':
         fail(f"expected stable trust_state 'verified', got {fixture.get('trust_state')!r}")
-    if fixture.get('verified_support') != {'codex': {'state': 'adapted'}}:
+    if fixture.get('verified_support') != {'codex': {'state': 'adapted', 'checked_at': '2026-03-14T00:00:00Z'}}:
         fail(f"expected stable verified_support, got {fixture.get('verified_support')!r}")
     if fixture.get('attestation_formats') != ['ssh']:
         fail(f"expected stable attestation_formats ['ssh'], got {fixture.get('attestation_formats')!r}")
+    if fixture.get('maturity') != 'stable':
+        fail(f"expected stable maturity 'stable', got {fixture.get('maturity')!r}")
+    if fixture.get('quality_score') != 91:
+        fail(f"expected stable quality_score 91, got {fixture.get('quality_score')!r}")
+    if fixture.get('last_verified_at') != '2026-03-14T00:00:00Z':
+        fail(f"expected stable last_verified_at, got {fixture.get('last_verified_at')!r}")
+    if fixture.get('capabilities') != ['fixture-testing', 'search']:
+        fail(f"expected stable capabilities, got {fixture.get('capabilities')!r}")
 
 
 def make_env(extra=None):
@@ -140,6 +152,9 @@ def scaffold_fixture(repo: Path):
             'status': 'active',
             'summary': 'Fixture skill for discovery-index tests',
             'tags': ['fixture', 'search'],
+            'maturity': 'stable',
+            'quality_score': 91,
+            'capabilities': ['fixture-testing', 'search'],
             'owner': 'release-test',
             'owners': ['release-test'],
             'author': 'release-test',
@@ -210,11 +225,15 @@ def external_ai_index_payload():
                 'use_when': ['Need external fixture coverage'],
                 'avoid_when': ['Testing unrelated behavior'],
                 'agent_compatible': ['openclaw', 'claude-code', 'codex'],
-                'verified_support': {'codex': {'state': 'adapted'}},
+                'verified_support': {'codex': {'state': 'adapted', 'checked_at': '2026-03-12T00:00:00Z'}},
                 'trust_state': 'attested',
                 'default_install_version': EXTERNAL_SKILL_VERSION,
                 'latest_version': EXTERNAL_SKILL_VERSION,
                 'available_versions': [EXTERNAL_SKILL_VERSION],
+                'maturity': 'beta',
+                'quality_score': 63,
+                'last_verified_at': '2026-03-12T00:00:00Z',
+                'capabilities': ['external-fixture'],
                 'entrypoints': {
                     'skill_md': f'skills/active/{EXTERNAL_SKILL_NAME}/SKILL.md',
                 },
@@ -362,6 +381,14 @@ def main():
             fail('expected first skill attestation_formats to be a non-empty list')
         if not isinstance(first.get('trust_state'), str) or not first.get('trust_state').strip():
             fail('expected first skill trust_state to be a non-empty string')
+        if not isinstance(first.get('maturity'), str) or not first.get('maturity').strip():
+            fail('expected first skill maturity to be a non-empty string')
+        if not isinstance(first.get('quality_score'), int):
+            fail('expected first skill quality_score to be an int')
+        if first.get('last_verified_at') is not None and not isinstance(first.get('last_verified_at'), str):
+            fail('expected first skill last_verified_at to be a string or null')
+        if not isinstance(first.get('capabilities'), list):
+            fail('expected first skill capabilities to be a list')
 
         assert_discovery_payload_stable_across_roots()
 
@@ -372,6 +399,12 @@ def main():
             fail(f"expected local publisher 'release-test', got {fixture.get('publisher')!r}")
         if fixture.get('tags') != ['fixture', 'search']:
             fail(f"expected local tags ['fixture', 'search'], got {fixture.get('tags')!r}")
+        if fixture.get('maturity') != 'stable':
+            fail(f"expected local maturity 'stable', got {fixture.get('maturity')!r}")
+        if fixture.get('quality_score') != 91:
+            fail(f"expected local quality_score 91, got {fixture.get('quality_score')!r}")
+        if fixture.get('capabilities') != ['fixture-testing', 'search']:
+            fail(f"expected local capabilities, got {fixture.get('capabilities')!r}")
 
         external = next((item for item in payload['skills'] if item.get('name') == EXTERNAL_SKILL_NAME), None)
         if external is None:
@@ -382,10 +415,18 @@ def main():
             fail(f"expected external tags ['external', 'fixture'], got {external.get('tags')!r}")
         if external.get('trust_state') != 'attested':
             fail(f"expected external trust_state 'attested', got {external.get('trust_state')!r}")
-        if external.get('verified_support') != {'codex': {'state': 'adapted'}}:
+        if external.get('verified_support') != {'codex': {'state': 'adapted', 'checked_at': '2026-03-12T00:00:00Z'}}:
             fail(f"expected external verified_support, got {external.get('verified_support')!r}")
         if external.get('attestation_formats') != ['ssh']:
             fail(f"expected external attestation_formats ['ssh'], got {external.get('attestation_formats')!r}")
+        if external.get('maturity') != 'beta':
+            fail(f"expected external maturity 'beta', got {external.get('maturity')!r}")
+        if external.get('quality_score') != 63:
+            fail(f"expected external quality_score 63, got {external.get('quality_score')!r}")
+        if external.get('last_verified_at') != '2026-03-12T00:00:00Z':
+            fail(f"expected external last_verified_at, got {external.get('last_verified_at')!r}")
+        if external.get('capabilities') != ['external-fixture']:
+            fail(f"expected external capabilities, got {external.get('capabilities')!r}")
 
         self_source = next((item for item in payload.get('sources') or [] if item.get('name') == 'self'), None)
         if not self_source:
@@ -418,6 +459,15 @@ def main():
         combined = result.stdout + result.stderr
         if 'trust_state' not in combined:
             fail(f'expected validation failure mentioning trust_state\n{combined}')
+
+        run([str(repo / 'scripts' / 'build-catalog.sh')], cwd=repo)
+        broken = load_json(discovery_index_path)
+        broken['skills'][0]['quality_score'] = 'high'
+        write_json(discovery_index_path, broken)
+        result = run([sys.executable, str(repo / 'scripts' / 'validate-registry.py')], cwd=repo, expect=1)
+        combined = result.stdout + result.stderr
+        if 'quality_score' not in combined:
+            fail(f'expected validation failure mentioning quality_score\n{combined}')
     finally:
         shutil.rmtree(tmpdir)
 

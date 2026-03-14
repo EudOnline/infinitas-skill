@@ -81,6 +81,10 @@ def normalize_discovery_skill(skill: dict, *, source_registry: str, source_prior
         'trust_level': trust_level,
         'trust_state': skill.get('trust_state') or 'unknown',
         'tags': list(skill.get('tags') or []),
+        'maturity': skill.get('maturity') or 'unknown',
+        'quality_score': skill.get('quality_score') if isinstance(skill.get('quality_score'), int) else 0,
+        'last_verified_at': skill.get('last_verified_at') if isinstance(skill.get('last_verified_at'), str) and skill.get('last_verified_at').strip() else None,
+        'capabilities': list(skill.get('capabilities') or []),
         'verified_support': dict(skill.get('verified_support') or {}),
         'attestation_formats': list(((skill.get('versions') or {}).get(latest_version) or {}).get('attestation_formats') or ['ssh']),
         'use_when': list(skill.get('use_when') or []),
@@ -228,10 +232,18 @@ def validate_discovery_index_payload(payload: dict) -> list:
             errors.append(f'{prefix}.trust_level must be a non-empty string')
         if not isinstance(skill.get('install_requires_confirmation'), bool):
             errors.append(f'{prefix}.install_requires_confirmation must be a boolean')
-        for field in ['match_names', 'available_versions', 'agent_compatible', 'use_when', 'avoid_when', 'tags', 'attestation_formats']:
+        for field in ['match_names', 'available_versions', 'agent_compatible', 'use_when', 'avoid_when', 'tags', 'attestation_formats', 'capabilities']:
             value = skill.get(field)
             if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
                 errors.append(f'{prefix}.{field} must be an array of strings')
+        if not isinstance(skill.get('maturity'), str) or not skill.get('maturity', '').strip():
+            errors.append(f'{prefix}.maturity must be a non-empty string')
+        if not isinstance(skill.get('quality_score'), int):
+            errors.append(f'{prefix}.quality_score must be an integer')
+        if skill.get('last_verified_at') is not None and (
+            not isinstance(skill.get('last_verified_at'), str) or not skill.get('last_verified_at', '').strip()
+        ):
+            errors.append(f'{prefix}.last_verified_at must be a non-empty string when present')
         if not isinstance(skill.get('trust_state'), str) or not skill.get('trust_state', '').strip():
             errors.append(f'{prefix}.trust_state must be a non-empty string')
         if not isinstance(skill.get('verified_support'), dict):

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-03-14T10:42:29Z",
+  "generated_at": "2026-03-14T23:53:52Z",
   "registry": {
     "default_registry": "self"
   },
@@ -23,6 +23,10 @@
         "claude-code",
         "operations"
       ],
+      "maturity": "unknown",
+      "quality_score": 0,
+      "capabilities": [],
+      "last_verified_at": "2026-03-12T12:56:55Z",
       "use_when": [],
       "avoid_when": [],
       "agent_compatible": [

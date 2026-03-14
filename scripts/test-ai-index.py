@@ -58,6 +58,9 @@ def scaffold_fixture(repo: Path):
             'status': 'active',
             'summary': 'Fixture skill for ai-index tests',
             'tags': ['fixture', 'search'],
+            'maturity': 'stable',
+            'quality_score': 88,
+            'capabilities': ['fixture-testing', 'search'],
             'owner': 'release-test',
             'owners': ['release-test'],
             'author': 'release-test',
@@ -174,6 +177,14 @@ def main():
             fail(f"expected publisher 'release-test', got {entry.get('publisher')!r}")
         if entry.get('tags') != ['fixture', 'search']:
             fail(f"expected fixture tags, got {entry.get('tags')!r}")
+        if entry.get('maturity') != 'stable':
+            fail(f"expected maturity 'stable', got {entry.get('maturity')!r}")
+        if entry.get('quality_score') != 88:
+            fail(f"expected quality_score 88, got {entry.get('quality_score')!r}")
+        if entry.get('capabilities') != ['fixture-testing', 'search']:
+            fail(f"expected capabilities ['fixture-testing', 'search'], got {entry.get('capabilities')!r}")
+        if entry.get('last_verified_at') is not None:
+            fail(f"expected last_verified_at None for fixture without evidence, got {entry.get('last_verified_at')!r}")
         compatibility = entry.get('compatibility') or {}
         if not isinstance(compatibility.get('verified_support'), dict):
             fail('expected compatibility.verified_support to be an object')
@@ -231,6 +242,16 @@ def main():
         combined = result.stdout + result.stderr
         if 'attestation_formats' not in combined:
             fail(f'expected validation failure mentioning attestation_formats\n{combined}')
+
+        run([str(repo / 'scripts' / 'build-catalog.sh')], cwd=repo)
+        rebuilt_payload = json.loads(ai_index_path.read_text(encoding='utf-8'))
+        rebuilt_entry = next((item for item in rebuilt_payload['skills'] if item.get('name') == FIXTURE_NAME), None)
+        rebuilt_entry['quality_score'] = 'high'
+        write_json(ai_index_path, rebuilt_payload)
+        result = run([sys.executable, str(repo / 'scripts' / 'validate-registry.py')], cwd=repo, expect=1)
+        combined = result.stdout + result.stderr
+        if 'quality_score' not in combined:
+            fail(f'expected validation failure mentioning quality_score\n{combined}')
 
         run([str(repo / 'scripts' / 'build-catalog.sh')], cwd=repo)
 
