@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-import http.server
 import json
 import os
 import shutil
-import socketserver
+import socket
 import subprocess
 import sys
 import tempfile
-import threading
-from functools import partial
+import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
 SKILL_NAME = 'hosted-e2e-skill'
 VERSION = '0.2.0'
 
@@ -220,32 +222,63 @@ def configure_hosted_registry(repo: Path, base_url: str):
     write_json(registry_path, payload)
 
 
-class QuietTCPServer(socketserver.TCPServer):
-    allow_reuse_address = True
+def reserve_port():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(('127.0.0.1', 0))
+        return sock.getsockname()[1]
 
 
-class HostedArtifactServer:
-    def __init__(self, directory: Path):
-        self.directory = directory
-        self.httpd = None
-        self.thread = None
+class HostedAppServer:
+    def __init__(self, repo: Path, env: dict[str, str]):
+        self.repo = repo
+        self.env = env
+        self.process = None
         self.base_url = None
 
     def __enter__(self):
-        handler = partial(http.server.SimpleHTTPRequestHandler, directory=str(self.directory))
-        self.httpd = QuietTCPServer(('127.0.0.1', 0), handler)
-        port = self.httpd.server_address[1]
-        self.base_url = f'http://127.0.0.1:{port}'
-        self.thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
-        self.thread.start()
+        port = reserve_port()
+        self.base_url = f'http://127.0.0.1:{port}/registry'
+        self.process = subprocess.Popen(
+            [
+                sys.executable,
+                '-m',
+                'uvicorn',
+                'server.app:app',
+                '--host',
+                '127.0.0.1',
+                '--port',
+                str(port),
+            ],
+            cwd=self.repo,
+            env=self.env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        health_url = f'http://127.0.0.1:{port}/healthz'
+        deadline = time.time() + 20
+        while time.time() < deadline:
+            if self.process.poll() is not None:
+                output = self.process.stdout.read() if self.process.stdout else ''
+                fail(f'hosted app exited before readiness\n{output}')
+            try:
+                with urllib.request.urlopen(health_url, timeout=1) as response:
+                    if response.status == 200:
+                        return self
+            except (urllib.error.URLError, TimeoutError):
+                time.sleep(0.2)
+        fail(f'hosted app did not become ready at {health_url}')
         return self
 
     def __exit__(self, exc_type, exc, tb):
-        if self.httpd is not None:
-            self.httpd.shutdown()
-            self.httpd.server_close()
-        if self.thread is not None:
-            self.thread.join(timeout=5)
+        if self.process is None:
+            return
+        self.process.terminate()
+        try:
+            self.process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            self.process.kill()
+            self.process.wait(timeout=5)
 
 
 def assert_install_success(repo: Path, runtime_dir: Path, base_url: str):
@@ -370,7 +403,7 @@ def scenario_hosted_registry_end_to_end():
         if doctor_payload.get('overall_status') != 'ok':
             fail(f"expected doctor overall_status 'ok', got {doctor_payload.get('overall_status')!r}")
 
-        with HostedArtifactServer(artifacts) as server:
+        with HostedAppServer(repo, os.environ.copy()) as server:
             configure_hosted_registry(repo, server.base_url)
             runtime_dir = tmpdir / 'runtime-skills'
             assert_install_success(repo, runtime_dir, server.base_url)

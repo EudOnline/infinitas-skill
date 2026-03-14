@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -22,6 +23,11 @@ templates = Jinja2Templates(directory=str(settings.template_dir))
 def create_app() -> FastAPI:
     ensure_database_ready()
     app = FastAPI(title='infinitas hosted registry')
+    app.mount(
+        '/registry',
+        StaticFiles(directory=str(settings.artifact_path), check_dir=False),
+        name='hosted-registry',
+    )
 
     @app.get('/healthz')
     def healthz(db: Session = Depends(get_db)):

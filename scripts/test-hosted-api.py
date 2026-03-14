@@ -6,6 +6,11 @@ import sys
 import tempfile
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from server.artifact_ops import sync_catalog_artifacts
+
 
 def fail(message):
     print(f'FAIL: {message}', file=sys.stderr)
@@ -15,6 +20,7 @@ def fail(message):
 def configure_env(tmpdir: Path):
     os.environ['INFINITAS_SERVER_DATABASE_URL'] = f'sqlite:///{tmpdir / "server.db"}'
     os.environ['INFINITAS_SERVER_SECRET_KEY'] = 'test-secret-key'
+    os.environ['INFINITAS_SERVER_ARTIFACT_PATH'] = str(tmpdir / 'artifacts')
     os.environ['INFINITAS_SERVER_BOOTSTRAP_USERS'] = json.dumps(
         [
             {
@@ -31,11 +37,12 @@ def scenario_health_login_and_me():
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-hosted-api-test-'))
     try:
         configure_env(tmpdir)
+        sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
 
         from fastapi.testclient import TestClient
-        from server.app import app
+        from server.app import create_app
 
-        client = TestClient(app)
+        client = TestClient(create_app())
 
         response = client.get('/healthz')
         if response.status_code != 200:
@@ -59,6 +66,16 @@ def scenario_health_login_and_me():
             fail(f'unexpected username payload: {payload}')
         if payload.get('role') != 'maintainer':
             fail(f'unexpected role payload: {payload}')
+
+        for route in [
+            '/registry/ai-index.json',
+            '/registry/distributions.json',
+            '/registry/compatibility.json',
+            '/registry/skills/lvxiaoer/operate-infinitas-skill/0.1.1/manifest.json',
+        ]:
+            response = client.get(route)
+            if response.status_code != 200:
+                fail(f'{route} returned {response.status_code}: {response.text}')
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
