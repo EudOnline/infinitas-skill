@@ -69,6 +69,7 @@ python scripts/inspect-hosted-state.py \
   --max-failed-jobs 0 \
   --max-warning-jobs 0 \
   --alert-webhook-url https://ops.example/hooks/infinitas \
+  --alert-fallback-file /var/lib/infinitas/alerts/latest-inspect-alert.json \
   --json
 ```
 
@@ -83,6 +84,7 @@ This summarizes:
 When any configured threshold is exceeded, the script still emits its summary but exits with status code `2`. That makes it suitable for `systemd` oneshot health/alert runs.
 This is especially useful for best-effort publish mirror hooks: a publish may still complete successfully while leaving a warning that operators should inspect.
 When `--alert-webhook-url` is provided, alerting runs also POST the full JSON summary to that endpoint and record delivery status in the returned `notification` block.
+When `--alert-fallback-file` is provided, alerting runs write the same JSON summary to that file whenever webhook delivery is unavailable, including webhook failures or runs with no webhook configured. The returned `notification.fallback` block records whether the fallback write was attempted, whether it succeeded, the target path, and any write error.
 
 This is intentionally SQLite-first for the current single-node deployment shape.
 
@@ -103,7 +105,8 @@ python scripts/render-hosted-systemd.py \
   --prune-on-calendar daily \
   --prune-keep-last 7 \
   --inspect-max-warning-jobs 0 \
-  --inspect-alert-webhook-url https://ops.example/hooks/infinitas
+  --inspect-alert-webhook-url https://ops.example/hooks/infinitas \
+  --inspect-alert-fallback-file /var/lib/infinitas/alerts/latest-inspect-alert.json
 ```
 
 To include optional one-way mirror automation in the same rendered bundle, render with:
@@ -124,7 +127,8 @@ python scripts/render-hosted-systemd.py \
   --prune-on-calendar daily \
   --prune-keep-last 7 \
   --inspect-max-warning-jobs 0 \
-  --inspect-alert-webhook-url https://ops.example/hooks/infinitas
+  --inspect-alert-webhook-url https://ops.example/hooks/infinitas \
+  --inspect-alert-fallback-file /var/lib/infinitas/alerts/latest-inspect-alert.json
 ```
 
 The rendered directory contains:
@@ -173,8 +177,10 @@ For a small single-node deployment, a reasonable starting point is:
 - `--inspect-max-failed-jobs 0`
 - `--inspect-max-warning-jobs 0`
 - optional `--inspect-alert-webhook-url https://ops.example/hooks/infinitas`
+- optional `--inspect-alert-fallback-file /var/lib/infinitas/alerts/latest-inspect-alert.json`
 
 An inspect service failure means the queue or failure counts crossed a threshold. It does not necessarily mean the process crashed.
+If both webhook delivery and the fallback file are configured, the webhook remains the primary alert path and the file becomes the durable local safety net only when delivery is unavailable.
 The prune service deletes only older recognized hosted backup snapshots, not arbitrary folders under the backup root.
 
 ## Mirroring

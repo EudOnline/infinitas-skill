@@ -5,6 +5,7 @@ import argparse
 import json
 import sqlite3
 import sys
+import tempfile
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -29,6 +30,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--max-failed-jobs', type=int, default=None, help='Alert when failed job count exceeds this threshold')
     parser.add_argument('--max-warning-jobs', type=int, default=None, help='Alert when jobs with WARNING log entries exceed this threshold')
     parser.add_argument('--alert-webhook-url', default='', help='Optional webhook URL that receives the alert summary JSON when alerts are present')
+    parser.add_argument('--alert-fallback-file', default='', help='Optional file path that stores the latest alert summary when webhook delivery is unavailable')
     parser.add_argument('--json', action='store_true', help='Emit machine-readable JSON output')
     return parser.parse_args()
 
@@ -206,6 +208,38 @@ def deliver_alert_webhook(summary: dict, webhook_url: str) -> dict:
         }
 
 
+def _write_json_atomic(path: Path, payload: dict):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile('w', encoding='utf-8', dir=path.parent, delete=False) as handle:
+        temp_path = Path(handle.name)
+        json.dump(payload, handle, ensure_ascii=False, indent=2)
+        handle.write('\n')
+    temp_path.replace(path)
+
+
+def maybe_write_alert_fallback(summary: dict, fallback_path: str) -> dict:
+    metadata = {
+        'attempted': False,
+        'written': False,
+        'path': fallback_path,
+    }
+    if not summary.get('alerts') or not fallback_path:
+        return metadata
+
+    notification = summary.get('notification') or {}
+    if notification.get('delivered') and notification.get('attempted'):
+        return metadata
+
+    metadata['attempted'] = True
+    path = Path(fallback_path)
+    try:
+        _write_json_atomic(path, summary)
+        metadata['written'] = True
+    except OSError as exc:
+        metadata['error'] = str(exc)
+    return metadata
+
+
 def emit(summary: dict, as_json: bool):
     if as_json:
         print(json.dumps(summary, ensure_ascii=False, indent=2))
@@ -230,6 +264,12 @@ def emit(summary: dict, as_json: bool):
             print(f"WEBHOOK: delivered status={notification.get('status_code')} url={notification.get('url')}")
         else:
             print(f"WEBHOOK ERROR: {notification.get('error', 'delivery failed')} url={notification.get('url')}")
+    fallback = notification.get('fallback') or {}
+    if fallback.get('attempted'):
+        if fallback.get('written'):
+            print(f"FALLBACK: wrote alert snapshot to {fallback.get('path')}")
+        else:
+            print(f"FALLBACK ERROR: {fallback.get('error', 'write failed')} path={fallback.get('path')}")
 
 
 def main():
@@ -254,6 +294,7 @@ def main():
         summary['notification'] = deliver_alert_webhook(summary, args.alert_webhook_url)
     else:
         summary['notification'] = {'attempted': False, 'delivered': False, 'url': args.alert_webhook_url}
+    summary['notification']['fallback'] = maybe_write_alert_fallback(summary, args.alert_fallback_file)
     emit(summary, as_json=args.json)
     raise SystemExit(2 if alerts else 0)
 
