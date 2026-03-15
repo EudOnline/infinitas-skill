@@ -5,14 +5,14 @@
 See: `.planning/PROJECT.md` (updated 2026-03-15)
 
 **Core value:** Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
-**Current focus:** v11 Phase 3 planning — Federation, Mirrors, and Audit Export
+**Current focus:** v11 Phase 3 planning — 11-06 Federation Trust Rules
 
 ## Current Position
 
 Phase: v11 Phase 3 of 3 (Federation, Mirrors, and Audit Export)
-Plan: `docs/plans/2026-03-15-delegated-audit-exports.md` (completed)
-Status: 11-05 complete; Phase 3 planning not started
-Last activity: 2026-03-15 — Completed 11-05 delegated audit exports and provenance persistence
+Plan: `docs/plans/2026-03-16-federation-trust-rules.md`
+Status: 11-05 complete; 11-06 planning underway
+Last activity: 2026-03-16 — Started 11-06 planning for federation trust rules and namespace mapping
 
 Progress: [██████████] 95%
 
@@ -30,7 +30,7 @@ Progress: [██████████] 95%
 
 **Recent Trend:**
 - Last 5 plans: 11-01, 11-02, 11-03, 11-04, 11-05
-- Trend: v11 Phase 2 is complete; federation and export-format planning is next
+- Trend: 11-06 planning is underway; export-format work remains queued behind federation rules
 
 ## Accumulated Context
 
@@ -61,7 +61,7 @@ Decisions are logged in `PROJECT.md`.
 - Bootstrap real trusted signer entries in `config/allowed_signers` before the first actual stable release.
 - Decide whether CI-native attestations should be additive to, or eventually authoritative over, the repo-managed SSH path.
 - Decide which Phase 3 audit or inventory exports should stay release/provenance-only versus become separate catalog-facing products.
-- Plan 11-06 federation or mirror trust rules without weakening the new delegated audit trail.
+- Execute 11-06 so federation trust rules and namespace mapping are explicit before standalone export work begins.
 
 ### Blockers/Concerns
 
@@ -74,5 +74,5 @@ Decisions are logged in `PROJECT.md`.
 ## Session Continuity
 
 Last session: 2026-03-15 09:00 GMT+8
-Stopped at: 11-05 complete; v11 Phase 3 planning not yet started
-Resume file: `docs/plans/2026-03-15-delegated-audit-exports.md`
+Stopped at: 11-06 planning underway
+Resume file: `docs/plans/2026-03-16-federation-trust-rules.md`
