@@ -9,6 +9,7 @@ python3 scripts/test-hosted-registry-source.py
 python3 scripts/check-policy-packs.py
 python3 scripts/test-policy-pack-loading.py
 python3 scripts/test-policy-evaluation-traces.py
+python3 scripts/test-break-glass-exceptions.py
 python3 scripts/test-team-governance-scopes.py
 python3 scripts/check-signing-config.py
 python3 scripts/validate-registry.py

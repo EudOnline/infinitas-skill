@@ -71,17 +71,17 @@ Requirements committed for milestone `v10`. Phase 6 is now complete.
 
 ## v11 Requirements
 
-Requirements committed for milestone `v11`. Phase 1 completed on 2026-03-15; Phase 2 is next.
+Requirements committed for milestone `v11`. Phase 2 is in progress after 11-04 completion on 2026-03-15; 11-05 is next.
 
 ### Policy Packs and Explainable Decisions
 
-- [ ] **POL-01**: Reusable policy packs can describe reviewer, release, install, and distribution requirements without hardcoding every rule into a single repository-local file.
-- [ ] **POL-02**: Repository tooling can load policy packs plus repository-local overrides deterministically so future allow or deny decisions can be traced and explained.
+- [x] **POL-01**: Reusable policy packs can describe reviewer, release, install, and distribution requirements without hardcoding every rule into a single repository-local file.
+- [x] **POL-02**: Repository tooling can load policy packs plus repository-local overrides deterministically so future allow or deny decisions can be traced and explained.
 
 ### Multi-Team Governance and Exceptions
 
 - [x] **TEAM-01**: Teams or groups can own namespaces and approval scopes without collapsing into a single global maintainer list.
-- [ ] **TEAM-02**: Time-bounded or reviewable exceptions can be granted for urgent releases and clearly recorded.
+- [x] **TEAM-02**: Time-bounded or reviewable exceptions can be granted for urgent releases and clearly recorded.
 - [ ] **TEAM-03**: Audit outputs can reconstruct who approved, who overrode, and why.
 
 ### Federation, Mirrors, and Audit Export
@@ -150,7 +150,7 @@ Requirements committed for milestone `v11`. Phase 1 completed on 2026-03-15; Pha
 | POL-01 | v11 Phase 1 | Complete |
 | POL-02 | v11 Phase 1 | Complete |
 | TEAM-01 | v11 Phase 2 | Complete |
-| TEAM-02 | v11 Phase 2 | Planned |
+| TEAM-02 | v11 Phase 2 | Complete |
 | TEAM-03 | v11 Phase 2 | Planned |
 | FED-01 | v11 Phase 3 | Planned |
 | FED-02 | v11 Phase 3 | Planned |
@@ -168,4 +168,4 @@ Requirements committed for milestone `v11`. Phase 1 completed on 2026-03-15; Pha
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-15 after v11 Phase 1 completion and Phase 2 planning kickoff*
+*Last updated: 2026-03-15 after 11-04 break-glass exceptions completion*

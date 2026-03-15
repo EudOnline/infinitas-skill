@@ -11,26 +11,26 @@ See: `.planning/PROJECT.md` (updated 2026-03-15)
 
 Phase: v11 Phase 2 of 3 (Multi-Team Governance and Exceptions)
 Plan: `docs/plans/2026-03-15-break-glass-exceptions.md`
-Status: 11-03 complete; 11-04 planning underway
-Last activity: 2026-03-15 — Completed 11-03 by adding shared team policy plus team-backed namespace and review scopes
+Status: 11-04 complete; 11-05 is next
+Last activity: 2026-03-15 — Completed 11-04 by adding shared exception policy plus exception-aware promotion and release traces
 
-Progress: [█████████░] 88%
+Progress: [█████████▓] 92%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 35
+- Total plans completed: 36
 - Average duration: n/a
 - Total execution time: n/a
 
 **By Phase:**
 - v9: 14 plans completed across 5 phases
 - v10: 18 plans completed across 6 phases
-- v11: 3 plans completed across 3 phases
+- v11: 4 plans completed across 3 phases
 
 **Recent Trend:**
-- Last 5 plans: 10-17, 10-18, 11-01, 11-02, 11-03
-- Trend: team-backed governance landed; break-glass exceptions are next
+- Last 5 plans: 10-18, 11-01, 11-02, 11-03, 11-04
+- Trend: break-glass exceptions landed; delegated audit export is next
 
 ## Accumulated Context
 
@@ -58,21 +58,21 @@ Decisions are logged in `PROJECT.md`.
 
 ### Pending Todos
 
-- Plan and execute 11-04 and 11-05 so exception usage becomes enforced first, then exported cleanly for audit.
+- Execute 11-05 so delegated approvals and exception usage are exported cleanly into audit-facing outputs.
 - Bootstrap real trusted signer entries in `config/allowed_signers` before the first actual stable release.
 - Decide whether CI-native attestations should be additive to, or eventually authoritative over, the repo-managed SSH path.
-- Decide which break-glass scopes should ship first (promotion, release, or both) and whether exception approvers must always resolve through teams.
+- Decide how much delegated approval and exception provenance should be exported into release metadata versus separate audit views in 11-05.
 
 ### Blockers/Concerns
 
 - `config/allowed_signers` still contains bootstrap guidance comments only; Phase 2 added the bootstrap and doctor flow, but a real production signer ceremony is still pending.
 - Phase 2 needs a shared team model that can expand into namespace ownership, reviewer groups, and future exception scopes without duplicating membership lists across policy files.
-- Break-glass records need a stable rule-id model so exceptions can be time-bounded without coupling them to brittle human-readable error strings.
+- 11-05 still needs a clean additive audit surface so delegated approvals and exception usage can be exported without baking transient debug details into release provenance.
 - The repository still installs skills by bare folder name for backward compatibility; future v10 work may revisit how far concurrent same-slug publisher installs should go.
 - v10 should stay Git-native and private-first; public marketplace features, social features, and on-chain reputation are intentionally deferred.
 
 ## Session Continuity
 
 Last session: 2026-03-15 09:00 GMT+8
-Stopped at: 11-03 implementation completed; next logical step is planning and executing 11-04
+Stopped at: 11-04 implementation completed; next logical step is planning and executing 11-05
 Resume file: `docs/plans/2026-03-15-break-glass-exceptions.md`

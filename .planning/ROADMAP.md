@@ -211,7 +211,7 @@ Plans:
 
 Plans:
 - [x] 11-03: Add team/group ownership models and delegated namespace or review policy scopes
-- [ ] 11-04: Add break-glass / exception records with expiration and justification fields
+- [x] 11-04: Add break-glass / exception records with expiration and justification fields
 - [ ] 11-05: Extend audit exports and release metadata to capture exception usage and delegated approvals
 
 #### Phase 3: Federation, Mirrors, and Audit Export
@@ -245,5 +245,5 @@ Plans:
 | 5. Search, Discovery, and Consumer UX | v10 | 3/3 | Completed | 2026-03-14 |
 | 6. Recommendation and Decision Support | v10 | 3/3 | Completed | 2026-03-15 |
 | 1. Policy Packs and Explainable Decisions | v11 | 2/2 | Completed | 2026-03-15 |
-| 2. Multi-Team Governance and Exceptions | v11 | 1/3 | In Progress | - |
+| 2. Multi-Team Governance and Exceptions | v11 | 2/3 | In Progress | - |
 | 3. Federation, Mirrors, and Audit Export | v11 | 0/3 | Planned | - |
