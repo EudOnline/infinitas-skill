@@ -42,6 +42,7 @@ def build_policy_trace(
     blocking_rules=None,
     reasons=None,
     next_actions=None,
+    exceptions=None,
 ):
     return {
         'domain': domain,
@@ -52,6 +53,7 @@ def build_policy_trace(
         'blocking_rules': _clean_rule_list(blocking_rules),
         'reasons': _dedupe_strings(reasons),
         'next_actions': _dedupe_strings(next_actions),
+        'exceptions': _clean_rule_list(exceptions),
     }
 
 
@@ -80,6 +82,24 @@ def render_policy_trace(trace):
         for item in values:
             if isinstance(item, dict):
                 text = item.get('rule') or item.get('message') or str(item)
+            else:
+                text = str(item)
+            lines.append(f'- {text}')
+    exceptions = trace.get('exceptions') or []
+    if exceptions:
+        lines.append('exceptions:')
+        for item in exceptions:
+            if isinstance(item, dict):
+                text = item.get('id') or item.get('rule') or item.get('message') or str(item)
+                justification = item.get('justification')
+                expires_at = item.get('expires_at')
+                detail = []
+                if justification:
+                    detail.append(f'justification={justification}')
+                if expires_at:
+                    detail.append(f'expires_at={expires_at}')
+                if detail:
+                    text = f'{text} ({", ".join(detail)})'
             else:
                 text = str(item)
             lines.append(f'- {text}')
