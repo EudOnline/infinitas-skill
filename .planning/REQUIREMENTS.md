@@ -33,7 +33,7 @@ Requirements committed for milestone `v9`. Each requirement maps to exactly one 
 
 ## v10 Requirements
 
-Requirements committed for milestone `v10`. Phase 2 is now complete.
+Requirements committed for milestone `v10`. Phase 6 is now complete.
 
 ### Publisher Identity and Namespace Governance
 
@@ -45,6 +45,49 @@ Requirements committed for milestone `v10`. Phase 2 is now complete.
 
 - [x] **OPS-01**: Maintainer can initialize or reuse an SSH signing key, commit the corresponding public signer entry into `config/allowed_signers`, and wire signer or releaser identities into publisher policy with documented scripted steps.
 - [x] **OPS-02**: Maintainer can run doctor diagnostics and a rehearsal regression that explain tag-signing or attestation-verification blockers and validate the first trusted stable release ceremony.
+
+### Verified Artifact Format and Distribution Manifest
+
+- [x] **DIST-01**: Stable releases emit a manifest that identifies the bundle, digests, source snapshot, dependency context, and attestation references for the released skill.
+- [x] **DIST-02**: Install and sync operations can consume the immutable distribution manifest instead of inferring release state only from the checked-out working tree.
+- [x] **DIST-03**: Historical install, rollback, and verification flows can resolve immutable release artifacts rather than whichever files currently exist in the repository checkout.
+
+### CI-native Attestation and Verification
+
+- [x] **CI-ATT-01**: CI can emit provenance or attestation records that bind artifact digests to workflow identity, commit SHA, ref, and release metadata.
+- [x] **CI-ATT-02**: Local tooling can verify repository-managed SSH attestations and CI-native attestations under an explicit trust mode of `ssh`, `ci`, or `both`.
+
+### Search, Discovery, and Consumer UX
+
+- [x] **UX-01**: Maintainers and agents can search and filter skills by tags, compatibility, publisher, and trust state without scraping raw source metadata.
+- [x] **UX-02**: Install, update, and upgrade flows explain selection, policy, and version decisions through stable additive output fields.
+- [x] **UX-03**: Consumers can inspect compatibility, dependency summaries, provenance references, and distribution-manifest references through stable CLI JSON views.
+
+### Recommendation and Decision Support
+
+- [x] **REC-01**: Maintainers and agents can request a ranked recommendation for a described task, optionally filtered by target agent compatibility, without exposing raw skill source filesystem paths.
+- [x] **REC-02**: Recommendation outputs expose machine-readable ranking factors and reasons driven by explicit metadata such as trust state, compatibility, maturity, quality score, and verification freshness.
+- [x] **REC-03**: Recommendation flows preserve existing safety constraints, including confirmation requirements for external-only installs and immutable verification requirements for release artifacts.
+
+## v11 Requirements
+
+Requirements committed for milestone `v11`. Phase 1 is next.
+
+### Policy Packs and Explainable Decisions
+
+- [ ] **POL-01**: Reusable policy packs can describe reviewer, release, install, and distribution requirements without hardcoding every rule into a single repository-local file.
+- [ ] **POL-02**: Repository tooling can load policy packs plus repository-local overrides deterministically so future allow or deny decisions can be traced and explained.
+
+### Multi-Team Governance and Exceptions
+
+- [ ] **TEAM-01**: Teams or groups can own namespaces and approval scopes without collapsing into a single global maintainer list.
+- [ ] **TEAM-02**: Time-bounded or reviewable exceptions can be granted for urgent releases and clearly recorded.
+- [ ] **TEAM-03**: Audit outputs can reconstruct who approved, who overrode, and why.
+
+### Federation, Mirrors, and Audit Export
+
+- [ ] **FED-01**: The registry can mirror or federate selected upstream sources while preserving publisher identity, trust policy, and immutable artifact verification.
+- [ ] **FED-02**: Consumers can export audit and inventory views suitable for external review or developer-portal integration.
 
 ## Future Requirements
 
@@ -93,15 +136,36 @@ Requirements committed for milestone `v10`. Phase 2 is now complete.
 | PUB-03 | v10 Phase 1 | Complete |
 | OPS-01 | v10 Phase 2 | Complete |
 | OPS-02 | v10 Phase 2 | Complete |
+| DIST-01 | v10 Phase 3 | Complete |
+| DIST-02 | v10 Phase 3 | Complete |
+| DIST-03 | v10 Phase 3 | Complete |
+| CI-ATT-01 | v10 Phase 4 | Complete |
+| CI-ATT-02 | v10 Phase 4 | Complete |
+| UX-01 | v10 Phase 5 | Complete |
+| UX-02 | v10 Phase 5 | Complete |
+| UX-03 | v10 Phase 5 | Complete |
+| REC-01 | v10 Phase 6 | Complete |
+| REC-02 | v10 Phase 6 | Complete |
+| REC-03 | v10 Phase 6 | Complete |
+| POL-01 | v11 Phase 1 | Planned |
+| POL-02 | v11 Phase 1 | Planned |
+| TEAM-01 | v11 Phase 2 | Planned |
+| TEAM-02 | v11 Phase 2 | Planned |
+| TEAM-03 | v11 Phase 2 | Planned |
+| FED-01 | v11 Phase 3 | Planned |
+| FED-02 | v11 Phase 3 | Planned |
 
 **Coverage:**
 - v9 requirements: 12 total
 - Mapped to phases: 12
 - Unmapped: 0 ✓
-- v10 requirements: 5 total
-- Mapped to phases: 5
+- v10 requirements: 16 total
+- Mapped to phases: 16
+- Unmapped: 0 ✓
+- v11 requirements: 7 total
+- Mapped to phases: 7
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-09 after v10 Phase 2 implementation*
+*Last updated: 2026-03-15 after v10 completion and v11 Phase 1 planning kickoff*

@@ -2,35 +2,35 @@
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-03-09)
+See: `.planning/PROJECT.md` (updated 2026-03-15)
 
 **Core value:** Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
-**Current focus:** v10 Phase 4 — CI-native Attestations and Verification
+**Current focus:** v11 Phase 1 — Policy Packs and Explainable Decisions
 
 ## Current Position
 
-Phase: 4 of 5 (CI-native Attestations and Verification)
-Plan: —
-Status: Phase 3 complete; ready to plan
-Last activity: 2026-03-09 — Completed v10 Phase 3 by adding verified distribution manifests, immutable release bundles, manifest-aware install/sync flows, and regression coverage for distribution installs
+Phase: v11 Phase 1 of 3 (Policy Packs and Explainable Decisions)
+Plan: `docs/plans/2026-03-15-policy-packs-and-loading-rules.md`
+Status: v10 complete; v11 kickoff plan drafted
+Last activity: 2026-03-15 — Completed v10 Phase 6 by adding recommendation metadata, deterministic ranking, recommendation docs, and full-validation coverage
 
-Progress: [██████░░░░] 60%
+Progress: [████████░░] 79%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20
+- Total plans completed: 32
 - Average duration: n/a
 - Total execution time: n/a
 
 **By Phase:**
 - v9: 14 plans completed across 5 phases
-- v10: 9 plans completed across 5 phases
+- v10: 18 plans completed across 6 phases
 - v11: 0 plans completed across 3 phases
 
 **Recent Trend:**
-- Last 5 plans: 10-05, 10-06, 10-07, 10-08, 10-09
-- Trend: v10 Phase 3 closed; CI-native attestation work is next
+- Last 5 plans: 10-14, 10-15, 10-16, 10-17, 10-18
+- Trend: v10 completed; policy-pack work is next
 
 ## Accumulated Context
 
@@ -52,21 +52,26 @@ Decisions are logged in `PROJECT.md`.
 - 2026-03-09: Preserve legacy unqualified identities while adding first-class publisher namespaces and machine-readable release actor auditing.
 - 2026-03-09: Add explicit bootstrap helpers for SSH signing keys, allowed signer trust roots, and publisher actor authorization instead of relying on manual repo spelunking.
 - 2026-03-09: Keep signing doctor output non-mutating and explanatory so it improves operator diagnostics without weakening the existing release and attestation gates.
+- 2026-03-14: Keep CI-native provenance as an explicit second trust path and let policy require `ssh`, `ci`, or `both` without collapsing the SSH-based release path.
+- 2026-03-14: Reuse generated discovery indexes and immutable manifests for search, inspect, and explain flows instead of adding a separate backend.
+- 2026-03-15: Add a deterministic recommendation layer as v10 Phase 6, driven by explicit metadata, trust state, compatibility evidence, quality, and verification freshness.
 
 ### Pending Todos
 
-- Plan and execute v10 Phase 4 (CI-native attestation generation and verification).
+- Plan and execute v11 Phase 1 (policy-pack structure plus repository-level loading and override rules).
 - Bootstrap real trusted signer entries in `config/allowed_signers` before the first actual stable release.
 - Decide whether CI-native attestations should be additive to, or eventually authoritative over, the repo-managed SSH path.
+- Decide which baseline policy packs should ship first (for example solo-maintainer, strict dual-attestation, and hosted-mirror-oriented defaults).
 
 ### Blockers/Concerns
 
 - `config/allowed_signers` still contains bootstrap guidance comments only; Phase 2 added the bootstrap and doctor flow, but a real production signer ceremony is still pending.
+- Policy loading is still split across file-specific helpers (`promotion-policy`, `namespace-policy`, `signing`, and `registry-sources`), so Phase 11-01 needs a careful compatibility-first convergence path.
 - The repository still installs skills by bare folder name for backward compatibility; future v10 work may revisit how far concurrent same-slug publisher installs should go.
 - v10 should stay Git-native and private-first; public marketplace features, social features, and on-chain reputation are intentionally deferred.
 
 ## Session Continuity
 
-Last session: 2026-03-09 14:26 GMT+8
-Stopped at: v10 Phase 3 complete; next logical step is planning v10 Phase 4
-Resume file: None
+Last session: 2026-03-15 09:00 GMT+8
+Stopped at: v10 Phase 6 implementation completed; next logical step is planning v11 Phase 1
+Resume file: `docs/plans/2026-03-15-policy-packs-and-loading-rules.md`

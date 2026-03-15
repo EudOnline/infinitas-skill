@@ -3,8 +3,8 @@
 ## Milestones
 
 - ✅ **v9 Registry Trust, Quorum, and Attestation** - Phases 1-5 (completed 2026-03-09)
-- 🚧 **v10 Publisher Identity and Verified Distribution** - Phases 1-5 (in progress)
-- 🗂️ **v11 Policy-as-Code and Organizational Controls** - Phases 1-3 (planned)
+- ✅ **v10 Publisher Identity and Verified Distribution** - Phases 1-6 (completed 2026-03-15)
+- 🚧 **v11 Policy-as-Code and Organizational Controls** - Phases 1-3 (in progress)
 
 ## Phases
 
@@ -87,7 +87,7 @@ Plans:
 - [x] 05-02: Make SSH/asymmetric signing and verification first-class in release tooling
 - [x] 05-03: Enforce attestation verification in release/distribution paths and document the bootstrap flow
 
-### 🚧 v10 Publisher Identity and Verified Distribution (In Progress)
+### ✅ v10 Publisher Identity and Verified Distribution (Completed)
 
 **Milestone Goal:** Turn the hardened Git-native registry into a verified distribution system with explicit publisher identity, bootstrap-safe signing, and consumer-friendly install/search flows.
 
@@ -136,7 +136,7 @@ Plans:
 - [x] 10-08: Teach install/sync flows to fetch and verify distribution manifests before mutating target directories
 - [x] 10-09: Document historical install and rollback behavior against immutable release artifacts
 
-#### Phase 4: CI-native Attestations and Verification
+#### ✅ Phase 4: CI-native Attestations and Verification
 **Goal**: Add CI-generated provenance and attestation paths so release trust can be established from both local and automated workflows.
 **Depends on**: Phase 3
 **Requirements**: [CI-ATT-01, CI-ATT-02]
@@ -147,11 +147,11 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 10-10: Add CI workflow(s) that generate signed build provenance for release artifacts
-- [ ] 10-11: Extend verification tooling and policy config for CI-native attestation trust decisions
-- [ ] 10-12: Document offline/online verification flows and compatibility with the existing SSH-based path
+- [x] 10-10: Add CI workflow(s) that generate signed build provenance for release artifacts
+- [x] 10-11: Extend verification tooling and policy config for CI-native attestation trust decisions
+- [x] 10-12: Document offline/online verification flows and compatibility with the existing SSH-based path
 
-#### Phase 5: Search, Discovery, and Consumer UX
+#### ✅ Phase 5: Search, Discovery, and Consumer UX
 **Goal**: Make the registry easier to consume by adding structured discovery, inspectability, and better explanations of install and policy decisions.
 **Depends on**: Phase 4
 **Requirements**: [UX-01, UX-02, UX-03]
@@ -162,11 +162,26 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 10-13: Add search/inspect command(s) and catalog fields for tags, compatibility, publisher, and trust state
-- [ ] 10-14: Add explain-style output for install plans, upgrade choices, and policy rejections
-- [ ] 10-15: Update docs and release notes so the verified distribution path is the default consumer experience
+- [x] 10-13: Add search/inspect command(s) and catalog fields for tags, compatibility, publisher, and trust state
+- [x] 10-14: Add explain-style output for install plans, upgrade choices, and policy rejections
+- [x] 10-15: Update docs and release notes so the verified distribution path is the default consumer experience
 
-### 🗂️ v11 Policy-as-Code and Organizational Controls (Planned)
+#### ✅ Phase 6: Recommendation and Decision Support
+**Goal**: Add an AI-usable recommendation layer that can rank and justify skill choices using explicit metadata, compatibility evidence, trust state, and verification freshness.
+**Depends on**: Phase 5
+**Requirements**: [REC-01, REC-02, REC-03]
+**Success Criteria** (what must be TRUE):
+  1. Maintainers and agents can request deterministic ranked recommendations for a described task without scraping raw metadata or filesystem paths.
+  2. Recommendation results expose machine-readable reasons, ranking factors, trust state, compatibility, maturity, quality, and verification freshness.
+  3. Recommendation flows preserve existing safety rules such as external-install confirmation and immutable verification requirements, and they are covered by focused plus `check-all` regression tests.
+**Plans**: 3 plans
+
+Plans:
+- [x] 10-16: Expose recommendation metadata in generated catalogs and discovery surfaces
+- [x] 10-17: Add `recommend-skill.sh` plus deterministic ranking and explanation helpers
+- [x] 10-18: Document recommendation workflows and wire Phase 6 regression coverage
+
+### 🚧 v11 Policy-as-Code and Organizational Controls (In Progress)
 
 **Milestone Goal:** Extend the private registry from single-maintainer governance into explainable, team-oriented policy enforcement with federation-ready controls.
 
@@ -226,8 +241,9 @@ Plans:
 | 1. Publisher / Namespace Model | v10 | 3/3 | Completed | 2026-03-09 |
 | 2. Signing Bootstrap and Operator Doctoring | v10 | 3/3 | Completed | 2026-03-09 |
 | 3. Verified Artifact Format and Distribution Manifest | v10 | 3/3 | Completed | 2026-03-09 |
-| 4. CI-native Attestations and Verification | v10 | 0/3 | Planned | - |
-| 5. Search, Discovery, and Consumer UX | v10 | 0/3 | Planned | - |
+| 4. CI-native Attestations and Verification | v10 | 3/3 | Completed | 2026-03-14 |
+| 5. Search, Discovery, and Consumer UX | v10 | 3/3 | Completed | 2026-03-14 |
+| 6. Recommendation and Decision Support | v10 | 3/3 | Completed | 2026-03-15 |
 | 1. Policy Packs and Explainable Decisions | v11 | 0/2 | Planned | - |
 | 2. Multi-Team Governance and Exceptions | v11 | 0/3 | Planned | - |
 | 3. Federation, Mirrors, and Audit Export | v11 | 0/3 | Planned | - |

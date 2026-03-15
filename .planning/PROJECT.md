@@ -8,15 +8,15 @@
 
 Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
 
-## Current Milestone: v10 Publisher Identity and Verified Distribution
+## Current Milestone: v11 Policy-as-Code and Organizational Controls
 
-**Goal:** Turn the hardened Git-native registry into a verified distribution system with explicit publisher identity, bootstrap-safe signing, and consumer-friendly install/search flows.
+**Goal:** Extend the private registry from single-maintainer governance into explainable, team-oriented policy enforcement with federation-ready controls.
 
 **Target features:**
-- Publisher-qualified skill identity and namespace policy enforcement
-- Auditable release actor recording for author, reviewer, releaser, and signer identities
-- Bootstrap-safe signer setup and operator diagnostics
-- Verified distribution manifests plus better consumer search/install UX
+- Reusable policy packs and repository-level loading or override rules
+- Explainable policy traces for validation, promotion, release, install, and distribution decisions
+- Team ownership models, delegated approval scopes, and explicit break-glass exceptions
+- Federation or mirror rules plus audit and inventory export surfaces
 
 ## Requirements
 
@@ -27,21 +27,22 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - ✓ Maintainer can promote approved skills and regenerate install/search catalogs via `scripts/promote-skill.sh` and `scripts/build-catalog.sh`.
 - ✓ Maintainer can install, sync, switch, and roll back skills into agent-local directories via `scripts/install-skill.sh`, `scripts/sync-skill.sh`, `scripts/switch-installed-skill.sh`, and `scripts/rollback-installed-skill.sh`.
 - ✓ Maintainer can preview a release, verify stable release invariants, create signed tags, emit dependency-aware release attestations, and verify those attestations via `scripts/check-release-state.py`, `scripts/release-skill-tag.sh`, `scripts/release-skill.sh`, `scripts/generate-provenance.py`, and `scripts/verify-attestation.py`.
+- ✓ Maintainer can generate and verify CI-native attestation payloads, and release policy can require `ssh`, `ci`, or `both`, via `.github/workflows/release-attestation.yml`, `scripts/generate-ci-attestation.py`, `scripts/verify-ci-attestation.py`, and `config/signing.json`.
 - ✓ Skill metadata, dependency refs, catalogs, release state, and attestations can now carry publisher-qualified identity plus author/reviewer/releaser/signer audit fields.
 - ✓ Maintainer can bootstrap SSH signer material, wire trusted signer identities into repository policy, diagnose release blockers, and rehearse the first stable release via `scripts/bootstrap-signing.py`, `scripts/doctor-signing.py`, and `scripts/test-signing-bootstrap.py`.
+- ✓ Stable releases emit immutable bundles and distribution manifests, and install or sync can materialize from those manifests instead of only the live working tree.
+- ✓ Consumers can search, inspect, explain, and recommend skills via `scripts/search-skills.sh`, `scripts/inspect-skill.sh`, `scripts/resolve-skill.sh`, `scripts/install-by-name.sh`, `scripts/check-skill-update.sh`, `scripts/upgrade-skill.sh`, and `scripts/recommend-skill.sh`.
 
 ### Active
 
-- [x] Publisher-qualified identity and namespace ownership are enforced in metadata validation, registry validation, and release-readiness checks.
-- [x] Catalogs, install manifests, dependency plans, and provenance now surface fully-qualified identity and actor audit fields.
-- [x] Signing bootstrap and operator diagnostics now cover key generation or reuse, repo trust-root wiring, namespace actor authorization, and first-release rehearsal.
-- [ ] Verified artifact format and distribution manifests are the next milestone focus.
-- [ ] Verified distribution manifests and consumer search/inspect UX remain upcoming v10 work.
+- [ ] Policy packs and repository-level loading rules are the current milestone focus.
+- [ ] Explainable policy decision traces remain upcoming v11 work.
+- [ ] Team governance, break-glass exceptions, and federation-ready audit exports remain upcoming v11 work.
 
 ### Out of Scope
 
-- Hosted registry service, database, or web UI — v10 keeps the repository Git-native and file-based.
-- Rebuilding the lifecycle, templating, or catalog system from scratch — v10 extends current workflows instead of replacing them.
+- Hosted registry service, database, or web UI — the repository remains intentionally Git-native and file-based.
+- Rebuilding the lifecycle, templating, or catalog system from scratch — current planning extends existing workflows instead of replacing them.
 - Public marketplace/package-manager integration — not needed to deliver private-registry distribution goals.
 - Full reconstruction of v1-v8 planning history — the repository does not contain authoritative phase-by-phase planning records for those versions.
 
@@ -52,21 +53,26 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - Qualified dependency refs such as `publisher/skill@1.2.3` now resolve through the same deterministic dependency planner as legacy refs.
 - Release state and attestation outputs now record publisher identity, review audit entries, releaser identity, signer identity, and namespace-policy context.
 - Phase 2 added stepwise bootstrap helpers, a signing doctor, and an automated first-release rehearsal so operators no longer need to spelunk through repo internals to wire the first trusted signer.
+- Phase 3 added immutable bundles, distribution manifests, and manifest-aware install or sync behavior for stable releases.
+- Phase 4 added GitHub Actions-backed CI attestation generation plus local verification policy gates for `ssh`, `ci`, and `both`.
+- Phase 5 added stable search, inspect, and explain-oriented consumer surfaces on top of generated discovery indexes and distribution manifests.
+- Phase 6 added deterministic recommendation ranking driven by trust state, compatibility evidence, maturity, quality score, and verification freshness.
 - `config/allowed_signers` is still intentionally bootstrapped with guidance comments only; maintainers must commit real trusted signer entries before the first actual stable release is operationally complete.
 
 ## Constraints
 
-- **Tech stack**: Keep v10 changes native to Bash, Python, JSON, and Markdown — the repository is already built around lightweight CLI tooling.
+- **Tech stack**: Keep v10/v11 changes native to Bash, Python, JSON, and Markdown — the repository is already built around lightweight CLI tooling.
 - **Compatibility**: Preserve the existing local-filesystem plus Git workflow so current install/sync/promotion commands remain usable.
 - **Security**: Shared-secret-only signing is insufficient for release authenticity; asymmetric verification remains the trusted path.
 - **Governance**: Publisher ownership, reviewer evidence, and release actor identity must be repository-configurable so policy changes are versioned and reviewable.
+- **v11 rollout**: Policy packs must stay additive at first; existing file paths should remain valid until pack loading is proven stable.
 - **History**: GSD planning begins at v9; earlier release history may be referenced, but not reconstructed as authoritative planning data.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Start GSD-managed planning history at v9 with phase numbering from 1 | The repo existed before `.planning/` and does not contain authoritative prior phase plans | — Pending |
+| Start GSD-managed planning history at v9 with phase numbering from 1 | The repo existed before `.planning/` and does not contain authoritative prior phase plans | ✓ Good |
 | Skip a separate research stage for v9 | The codebase map and repository docs already expose the required problem space for this milestone | ✓ Good |
 | Keep the v9/v10 implementation shell/python/json-native | This minimizes migration risk and fits the current execution model | ✓ Good |
 | Treat computed quorum and asymmetric attestation as enforcement points, not documentation-only guidance | The highest-risk gaps are governance and authenticity paths that are currently optional or mutable | ✓ Good |
@@ -77,6 +83,9 @@ Maintainers can publish and distribute private skills with deterministic, audita
 | Record author, reviewer, releaser, signer, and namespace context in machine-readable release outputs | Governance decisions need a durable audit trail instead of implied operator knowledge | ✓ Good |
 | Prefer stepwise signing bootstrap helpers over one-shot automation | Trusted signer enrollment changes both repo policy and local git config, so operators should be able to review and commit each step explicitly | ✓ Good |
 | Keep signing doctor diagnostics non-mutating and fix-oriented | Phase 2 should improve operator visibility and onboarding without weakening existing release invariants or attestation enforcement | ✓ Good |
+| Keep CI-native attestation as a second explicit trust path with policy-selectable `ssh`, `ci`, or `both` modes | Local and automated release trust need clear boundaries instead of replacing one proof system with another | ✓ Good |
+| Reuse generated discovery indexes and immutable manifests for search, inspect, explain, and recommend flows | Consumer features should stay deterministic and file-backed instead of inventing a new service layer | ✓ Good |
+| Make recommendation deterministic and metadata-driven | Agents need explainable, reviewable ranking instead of fuzzy install shortcuts | ✓ Good |
 
 ---
-*Last updated: 2026-03-09 after v10 Phase 2 implementation*
+*Last updated: 2026-03-15 after v10 completion and v11 Phase 1 planning kickoff*
