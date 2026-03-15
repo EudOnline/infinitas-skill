@@ -10,9 +10,9 @@ See: `.planning/PROJECT.md` (updated 2026-03-15)
 ## Current Position
 
 Phase: v11 Phase 2 of 3 (Multi-Team Governance and Exceptions)
-Plan: `docs/plans/2026-03-15-break-glass-exceptions.md`
-Status: 11-04 complete; 11-05 is next
-Last activity: 2026-03-15 — Completed 11-04 by adding shared exception policy plus exception-aware promotion and release traces
+Plan: `docs/plans/2026-03-15-delegated-audit-exports.md`
+Status: 11-04 complete; 11-05 planning underway
+Last activity: 2026-03-15 — Started 11-05 planning for delegated audit exports and release metadata
 
 Progress: [█████████▓] 92%
 
@@ -61,7 +61,7 @@ Decisions are logged in `PROJECT.md`.
 - Execute 11-05 so delegated approvals and exception usage are exported cleanly into audit-facing outputs.
 - Bootstrap real trusted signer entries in `config/allowed_signers` before the first actual stable release.
 - Decide whether CI-native attestations should be additive to, or eventually authoritative over, the repo-managed SSH path.
-- Decide how much delegated approval and exception provenance should be exported into release metadata versus separate audit views in 11-05.
+- Decide whether any 11-05 audit fields also belong in catalog-facing outputs, or should stay release/provenance-only until later export work.
 
 ### Blockers/Concerns
 
@@ -74,5 +74,5 @@ Decisions are logged in `PROJECT.md`.
 ## Session Continuity
 
 Last session: 2026-03-15 09:00 GMT+8
-Stopped at: 11-04 implementation completed; next logical step is planning and executing 11-05
-Resume file: `docs/plans/2026-03-15-break-glass-exceptions.md`
+Stopped at: 11-05 planning underway
+Resume file: `docs/plans/2026-03-15-delegated-audit-exports.md`
