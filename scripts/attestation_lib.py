@@ -3,6 +3,7 @@ import json
 import subprocess
 from pathlib import Path
 
+from policy_pack_lib import PolicyPackError, load_effective_policy_domain
 from release_lib import ROOT, ReleaseError, signer_entries, signing_key_path
 
 
@@ -16,7 +17,10 @@ def load_json(path):
 
 def load_attestation_config(root=None):
     root = Path(root or ROOT).resolve()
-    config = load_json(root / 'config' / 'signing.json')
+    try:
+        config = load_effective_policy_domain(root, 'signing')
+    except PolicyPackError as exc:
+        raise AttestationError('; '.join(exc.errors)) from exc
     git_tag = config.get('git_tag') if isinstance(config.get('git_tag'), dict) else {}
     attestation = config.get('attestation') if isinstance(config.get('attestation'), dict) else {}
     ci = attestation.get('ci') if isinstance(attestation.get('ci'), dict) else {}

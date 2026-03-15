@@ -5,6 +5,8 @@ import subprocess
 from pathlib import Path
 from urllib.parse import urlparse
 
+from policy_pack_lib import load_effective_policy_domain
+
 TRUST_TIERS = {'private', 'trusted', 'public', 'untrusted'}
 PIN_MODES = {'branch', 'tag', 'commit'}
 UPDATE_MODES = {'local-only', 'track', 'pinned', 'remote-only'}
@@ -17,7 +19,7 @@ def registry_sources_path(root: Path) -> Path:
 
 
 def load_registry_config(root: Path):
-    return json.loads(registry_sources_path(root).read_text(encoding='utf-8'))
+    return load_effective_policy_domain(root, 'registry_sources')
 
 
 def registry_remote_url(reg):

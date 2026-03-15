@@ -3,6 +3,8 @@ import json
 import re
 from pathlib import Path
 
+from policy_pack_lib import PolicyPackError, load_effective_policy_domain
+
 ROOT = Path(__file__).resolve().parent.parent
 SKILL_NAME_RE = re.compile(r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
 PUBLISHER_RE = re.compile(r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
@@ -127,14 +129,10 @@ def validate_identity_metadata(meta):
 
 def load_namespace_policy(root=ROOT):
     path = Path(root).resolve() / 'policy' / 'namespace-policy.json'
-    if not path.exists():
-        raise NamespacePolicyError([f'missing namespace policy file: {path}'])
     try:
-        payload = json.loads(path.read_text(encoding='utf-8'))
-    except Exception as exc:
-        raise NamespacePolicyError([f'invalid JSON in {path}: {exc}']) from exc
-    if not isinstance(payload, dict):
-        raise NamespacePolicyError([f'{path} must contain a JSON object'])
+        payload = load_effective_policy_domain(root, 'namespace_policy')
+    except PolicyPackError as exc:
+        raise NamespacePolicyError(exc.errors) from exc
 
     errors = []
     unknown_root = sorted(set(payload) - {'$schema', 'version', 'compatibility', 'publishers', 'transfers'})

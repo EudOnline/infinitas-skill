@@ -5,6 +5,8 @@ from typing import Optional
 from datetime import datetime, timezone
 from pathlib import Path
 
+from policy_pack_lib import PolicyPackError, load_effective_policy_domain
+
 ROOT = Path(__file__).resolve().parent.parent
 ALLOWED_DECISIONS = {'approved', 'rejected'}
 ALLOWED_REVIEW_STATES = {'draft', 'under-review', 'approved', 'rejected'}
@@ -362,8 +364,10 @@ def validate_promotion_policy(policy):
 
 
 def load_promotion_policy(root: Path = ROOT):
-    path = root / 'policy' / 'promotion-policy.json'
-    policy = load_json(path)
+    try:
+        policy = load_effective_policy_domain(root, 'promotion_policy')
+    except PolicyPackError as exc:
+        raise ReviewPolicyError(exc.errors) from exc
     errors = validate_promotion_policy(policy)
     if errors:
         raise ReviewPolicyError(errors)
