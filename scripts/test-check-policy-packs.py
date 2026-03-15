@@ -114,6 +114,21 @@ def baseline_pack():
                     }
                 ],
             },
+            'exception_policy': {
+                'version': 1,
+                'exceptions': [
+                    {
+                        'id': 'fixture-waiver',
+                        'scope': 'promotion',
+                        'skills': ['fixture-skill'],
+                        'rules': ['required-reviewer-groups'],
+                        'approved_by': ['fixture-approver'],
+                        'approved_at': '2026-03-15T00:00:00Z',
+                        'justification': 'Fixture break-glass exception',
+                        'expires_at': '2099-01-01T00:00:00Z',
+                    }
+                ],
+            },
         },
     }
 

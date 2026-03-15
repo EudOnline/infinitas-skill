@@ -5,32 +5,32 @@
 See: `.planning/PROJECT.md` (updated 2026-03-15)
 
 **Core value:** Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
-**Current focus:** v11 Phase 1 — Policy Packs and Explainable Decisions
+**Current focus:** v11 Phase 3 planning — Federation, Mirrors, and Audit Export
 
 ## Current Position
 
-Phase: v11 Phase 1 of 3 (Policy Packs and Explainable Decisions)
-Plan: `docs/plans/2026-03-15-policy-packs-and-loading-rules.md`
-Status: v10 complete; v11 kickoff plan drafted
-Last activity: 2026-03-15 — Completed v10 Phase 6 by adding recommendation metadata, deterministic ranking, recommendation docs, and full-validation coverage
+Phase: v11 Phase 3 of 3 (Federation, Mirrors, and Audit Export)
+Plan: `docs/plans/2026-03-15-delegated-audit-exports.md` (completed)
+Status: 11-05 complete; Phase 3 planning not started
+Last activity: 2026-03-15 — Completed 11-05 delegated audit exports and provenance persistence
 
-Progress: [████████░░] 79%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 32
+- Total plans completed: 36
 - Average duration: n/a
 - Total execution time: n/a
 
 **By Phase:**
 - v9: 14 plans completed across 5 phases
 - v10: 18 plans completed across 6 phases
-- v11: 0 plans completed across 3 phases
+- v11: 5 plans completed across 3 phases
 
 **Recent Trend:**
-- Last 5 plans: 10-14, 10-15, 10-16, 10-17, 10-18
-- Trend: v10 completed; policy-pack work is next
+- Last 5 plans: 11-01, 11-02, 11-03, 11-04, 11-05
+- Trend: v11 Phase 2 is complete; federation and export-format planning is next
 
 ## Accumulated Context
 
@@ -58,20 +58,21 @@ Decisions are logged in `PROJECT.md`.
 
 ### Pending Todos
 
-- Plan and execute v11 Phase 1 (policy-pack structure plus repository-level loading and override rules).
 - Bootstrap real trusted signer entries in `config/allowed_signers` before the first actual stable release.
 - Decide whether CI-native attestations should be additive to, or eventually authoritative over, the repo-managed SSH path.
-- Decide which baseline policy packs should ship first (for example solo-maintainer, strict dual-attestation, and hosted-mirror-oriented defaults).
+- Decide which Phase 3 audit or inventory exports should stay release/provenance-only versus become separate catalog-facing products.
+- Plan 11-06 federation or mirror trust rules without weakening the new delegated audit trail.
 
 ### Blockers/Concerns
 
 - `config/allowed_signers` still contains bootstrap guidance comments only; Phase 2 added the bootstrap and doctor flow, but a real production signer ceremony is still pending.
-- Policy loading is still split across file-specific helpers (`promotion-policy`, `namespace-policy`, `signing`, and `registry-sources`), so Phase 11-01 needs a careful compatibility-first convergence path.
+- Phase 2 needs a shared team model that can expand into namespace ownership, reviewer groups, and future exception scopes without duplicating membership lists across policy files.
+- Phase 3 still needs explicit federation or export boundaries so the new delegated audit metadata does not leak unstable debug-only fields or redundant catalog contracts.
 - The repository still installs skills by bare folder name for backward compatibility; future v10 work may revisit how far concurrent same-slug publisher installs should go.
 - v10 should stay Git-native and private-first; public marketplace features, social features, and on-chain reputation are intentionally deferred.
 
 ## Session Continuity
 
 Last session: 2026-03-15 09:00 GMT+8
-Stopped at: v10 Phase 6 implementation completed; next logical step is planning v11 Phase 1
-Resume file: `docs/plans/2026-03-15-policy-packs-and-loading-rules.md`
+Stopped at: 11-05 complete; v11 Phase 3 planning not yet started
+Resume file: `docs/plans/2026-03-15-delegated-audit-exports.md`

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import json
 import os
 import re
@@ -9,6 +10,8 @@ from dependency_lib import DependencyError, normalize_meta_dependencies
 from ai_index_lib import validate_ai_index_payload
 from discovery_index_lib import validate_discovery_index_payload
 from compatibility_evidence_lib import compatibility_evidence_root, validate_compatibility_evidence_payload
+from policy_pack_lib import PolicyPackError, load_policy_domain_resolution
+from policy_trace_lib import build_policy_trace, render_policy_trace
 from registry_source_lib import load_registry_config
 from skill_identity_lib import NamespacePolicyError, load_namespace_policy, namespace_policy_report, validate_identity_metadata
 from schema_version_lib import validate_schema_version
@@ -22,10 +25,21 @@ ALLOWED_STATUS = {'incubating', 'active', 'archived'}
 ALLOWED_REVIEW = {'draft', 'under-review', 'approved', 'rejected'}
 ALLOWED_RISK = {'low', 'medium', 'high'}
 KNOWN_REGISTRIES = {reg.get('name') for reg in load_registry_config(ROOT).get('registries', []) if reg.get('name')}
+ERROR_COLLECTOR = None
 
 
 def fail(msg: str):
     print(f'FAIL: {msg}', file=sys.stderr)
+    if isinstance(ERROR_COLLECTOR, list):
+        ERROR_COLLECTOR.append(msg)
+
+
+def _repo_relative_path(path: Path) -> str:
+    resolved = Path(path).resolve()
+    try:
+        return resolved.relative_to(ROOT.resolve()).as_posix()
+    except ValueError:
+        return str(path)
 
 
 def _is_registry_skill_dir(skill_dir: Path) -> bool:
@@ -316,11 +330,13 @@ def collect_dirs(args):
     if args:
         dirs = []
         for arg in args:
-            p = (ROOT / arg).resolve() if not os.path.isabs(arg) else Path(arg)
+            p = (ROOT / arg).resolve() if not os.path.isabs(arg) else Path(arg).resolve()
             if p.is_dir() and ((p / '_meta.json').exists() or is_canonical_skill_dir(p)):
                 dirs.append(p)
             elif p.is_dir():
-                for child in sorted(x for x in p.iterdir() if x.is_dir() and ((x / '_meta.json').exists() or is_canonical_skill_dir(x))):
+                for child in sorted(
+                    x.resolve() for x in p.iterdir() if x.is_dir() and ((x / '_meta.json').exists() or is_canonical_skill_dir(x))
+                ):
                     dirs.append(child)
             else:
                 fail(f'path does not exist or is not a directory: {arg}')
@@ -331,33 +347,143 @@ def collect_dirs(args):
     for base in [ROOT / 'skills' / 'incubating', ROOT / 'skills' / 'active', ROOT / 'skills' / 'archived', ROOT / 'templates', ROOT / 'skills-src']:
         if not base.exists():
             continue
-        for child in sorted(x for x in base.iterdir() if x.is_dir() and ((x / '_meta.json').exists() or is_canonical_skill_dir(x))):
+        for child in sorted(
+            x.resolve() for x in base.iterdir() if x.is_dir() and ((x / '_meta.json').exists() or is_canonical_skill_dir(x))
+        ):
             dirs.append(child)
     return dirs
 
 
+def build_namespace_policy_trace(skill_dir: Path, namespace_policy, effective_sources):
+    report = namespace_policy_report(skill_dir, root=ROOT, policy=namespace_policy)
+    identity = report.get('identity') or {}
+    competing_claims = report.get('competing_claims') or []
+    reasons = list(report.get('warnings') or [])
+    if report.get('transfer_required'):
+        reasons.append('namespace transfer review was required because another claim for the same skill name exists')
+    if competing_claims:
+        reasons.append(f'competing_claim_count={len(competing_claims)}')
+    return {
+        'skill_path': _repo_relative_path(skill_dir),
+        **build_policy_trace(
+            domain='namespace_policy',
+            decision='allow' if report.get('authorized') else 'deny',
+            summary='namespace policy accepted the skill identity claim' if report.get('authorized') else 'namespace policy rejected the skill identity claim',
+            effective_sources=effective_sources,
+            applied_rules=[
+                {'rule': 'publisher claims must exist in namespace policy', 'value': identity.get('publisher') or 'unqualified'},
+                {'rule': 'owners and maintainers must be authorized for the publisher', 'value': (identity.get('qualified_name') or identity.get('name'))},
+                {'rule': 'conflicting publisher claims require an authorized transfer', 'value': report.get('transfer_required', False)},
+            ],
+            blocking_rules=[{'rule': message, 'message': message} for message in report.get('errors', [])],
+            reasons=reasons,
+            next_actions=[
+                'review policy/namespace-policy.json and the active policy packs for publisher ownership',
+                'resolve unauthorized transfers or competing namespace claims',
+            ] if report.get('errors') else ['namespace policy accepted the current identity claim'],
+        ),
+    }
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Validate registry skill directories and generated catalogs')
+    parser.add_argument('paths', nargs='*', help='Skill directories or parent directories to validate')
+    parser.add_argument('--json', action='store_true', help='Print machine-readable validation output')
+    parser.add_argument('--debug-policy', action='store_true', help='Print human-readable policy traces')
+    return parser.parse_args()
+
+
+def _append_validation_errors(entries, *, scope, path, errors):
+    if errors:
+        entries.append(
+            {
+                'scope': scope,
+                'path': path,
+                'skill_path': path if scope == 'skill' else None,
+                'errors': list(errors),
+            }
+        )
+
+
 def main():
-    dirs = collect_dirs(sys.argv[1:])
+    global ERROR_COLLECTOR
+    args = parse_args()
+    dirs = collect_dirs(args.paths)
     if not dirs:
-        print('No skill directories found.' if len(sys.argv) == 1 else 'Nothing to validate.', file=sys.stderr)
+        print('No skill directories found.' if len(args.paths) == 0 else 'Nothing to validate.', file=sys.stderr)
         return 1
+    captured_errors = []
+    ERROR_COLLECTOR = captured_errors
+    namespace_policy_sources = []
     try:
+        namespace_resolution = load_policy_domain_resolution(ROOT, 'namespace_policy')
+        namespace_policy_sources = namespace_resolution.get('effective_sources', [])
         namespace_policy = load_namespace_policy(ROOT)
+    except PolicyPackError as exc:
+        for error in exc.errors:
+            fail(error)
+        return 1
     except NamespacePolicyError as exc:
         for error in exc.errors:
             fail(error)
         return 1
     errors = 0
-    for d in dirs:
-        errors += validate_meta(d, namespace_policy=namespace_policy)
-    errors += validate_ai_index(ROOT)
-    errors += validate_discovery_index(ROOT)
-    errors += validate_compatibility_evidence(ROOT)
-    if errors:
-        print(f'Validation failed with {errors} error(s).', file=sys.stderr)
-        return 1
-    print(f'OK: validated {len(dirs)} skill directories')
-    return 0
+    policy_traces = []
+    validation_errors = []
+    try:
+        for d in dirs:
+            before = len(captured_errors)
+            errors += validate_meta(d, namespace_policy=namespace_policy)
+            _append_validation_errors(
+                validation_errors,
+                scope='skill',
+                path=_repo_relative_path(d),
+                errors=captured_errors[before:],
+            )
+            if _is_registry_skill_dir(d):
+                policy_traces.append(build_namespace_policy_trace(d, namespace_policy, namespace_policy_sources))
+
+        for scope, path, validator in [
+            ('catalog', 'catalog/ai-index.json', validate_ai_index),
+            ('catalog', 'catalog/discovery-index.json', validate_discovery_index),
+            ('compatibility', 'compatibility-evidence', validate_compatibility_evidence),
+        ]:
+            before = len(captured_errors)
+            errors += validator(ROOT)
+            _append_validation_errors(
+                validation_errors,
+                scope=scope,
+                path=path,
+                errors=captured_errors[before:],
+            )
+        payload = {
+            'ok': errors == 0,
+            'validated_skill_count': len(dirs),
+            'error_count': errors,
+            'validation_errors': validation_errors,
+            'policy_traces': policy_traces,
+        }
+        if args.json:
+            print(json.dumps(payload, ensure_ascii=False, indent=2))
+        elif errors == 0:
+            print(f'OK: validated {len(dirs)} skill directories')
+            if args.debug_policy:
+                for trace in policy_traces:
+                    print()
+                    print(f"skill_path: {trace.get('skill_path')}")
+                    print(render_policy_trace(trace))
+        if errors:
+            if not args.json:
+                print(f'Validation failed with {errors} error(s).', file=sys.stderr)
+                if args.debug_policy:
+                    for trace in policy_traces:
+                        print()
+                        print(f"skill_path: {trace.get('skill_path')}", file=sys.stderr)
+                        print(render_policy_trace(trace), file=sys.stderr)
+            return 1
+        return 0
+    finally:
+        ERROR_COLLECTOR = None
 
 
 if __name__ == '__main__':

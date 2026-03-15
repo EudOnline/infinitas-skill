@@ -5,7 +5,10 @@ import re
 import subprocess
 from pathlib import Path
 
-from review_lib import load_reviews
+from exception_policy_lib import ExceptionPolicyError, load_exception_policy, match_active_exceptions
+from policy_pack_lib import PolicyPackError, load_policy_domain_resolution
+from policy_trace_lib import build_policy_trace
+from review_lib import ReviewPolicyError, evaluate_review_state, load_reviews
 from skill_identity_lib import NamespacePolicyError, load_namespace_policy, namespace_policy_report, normalize_skill_identity
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -15,6 +18,14 @@ SIGNATURE_MARKERS = ('BEGIN SSH SIGNATURE', 'BEGIN PGP SIGNATURE')
 
 class ReleaseError(Exception):
     pass
+
+
+def _issue(rule_id, message, *, rule=None):
+    return {
+        'id': rule_id,
+        'message': message,
+        'rule': rule or message,
+    }
 
 
 def git(root, *args, check=True, extra_config=None):
@@ -45,12 +56,18 @@ def resolve_skill(root, target):
 
 
 def load_signing_config(root):
-    config = load_json(root / 'config' / 'signing.json')
+    try:
+        resolution = load_policy_domain_resolution(root, 'signing')
+        config = resolution['effective']
+        policy_sources = resolution.get('effective_sources', [])
+    except PolicyPackError as exc:
+        raise ReleaseError('; '.join(exc.errors)) from exc
     tag_cfg = config.get('git_tag') or {}
     allowed_rel = tag_cfg.get('allowed_signers') or config.get('allowed_signers') or 'config/allowed_signers'
     key_env = tag_cfg.get('signing_key_env') or 'INFINITAS_SKILL_GIT_SIGNING_KEY'
     return {
         'config': config,
+        'policy_sources': policy_sources,
         'tag_format': tag_cfg.get('format', 'ssh'),
         'allowed_signers_rel': allowed_rel,
         'allowed_signers_path': (root / allowed_rel).resolve(),
@@ -250,6 +267,7 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
     local_tag['points_to_head'] = bool(local_tag['target_commit'] and local_tag['target_commit'] == head_commit)
     remote_tag = remote_tag_state(root, remote_name, expected_tag)
     review_entries = review_audit_entries(skill_dir)
+    review_evaluation = None
     releaser_identity = resolve_releaser_identity(root)
     namespace_report = {
         'policy_path': None,
@@ -263,18 +281,33 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
         'warnings': [],
         'errors': [],
     }
+    namespace_policy_sources = []
 
-    errors = []
+    issues = []
     warnings = []
+    exception_usage = []
+    try:
+        exception_policy = load_exception_policy(root)
+    except ExceptionPolicyError as exc:
+        raise ReleaseError('; '.join(exc.errors)) from exc
 
     try:
+        namespace_resolution = load_policy_domain_resolution(root, 'namespace_policy')
+        namespace_policy_sources = namespace_resolution.get('effective_sources', [])
         namespace_policy = load_namespace_policy(root)
         namespace_report = namespace_policy_report(skill_dir, root=root, policy=namespace_policy)
+    except PolicyPackError as exc:
+        issues.extend(_issue('namespace-policy', message) for message in exc.errors)
     except NamespacePolicyError as exc:
-        errors.extend(exc.errors)
+        issues.extend(_issue('namespace-policy', message) for message in exc.errors)
     else:
-        errors.extend(namespace_report.get('errors', []))
+        issues.extend(_issue('namespace-policy', message) for message in namespace_report.get('errors', []))
         warnings.extend(namespace_report.get('warnings', []))
+
+    try:
+        review_evaluation = evaluate_review_state(skill_dir, root=root)
+    except (PolicyPackError, ReviewPolicyError) as exc:
+        warnings.append(f'cannot evaluate review audit state: {"; ".join(exc.errors)}')
 
     if not releaser_identity:
         warnings.append('cannot determine releaser identity; set INFINITAS_SKILL_RELEASER or git config user.name/user.email')
@@ -288,47 +321,107 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
         )
 
     if dirty:
-        errors.append('worktree is dirty; commit or stash all changes before creating or publishing a stable release')
+        issues.append(
+            _issue(
+                'dirty-worktree',
+                'worktree is dirty; commit or stash all changes before creating or publishing a stable release',
+                rule='stable releases require a clean worktree',
+            )
+        )
     if not upstream:
-        errors.append(
-            f'branch {branch or "HEAD"} has no upstream; set one before creating or publishing a stable release'
+        issues.append(
+            _issue(
+                'missing-upstream',
+                f'branch {branch or "HEAD"} has no upstream; set one before creating or publishing a stable release',
+                rule='stable releases require upstream synchronization',
+            )
         )
     else:
         if ahead:
-            errors.append(f'branch is ahead of {upstream} by {ahead} commit(s); push before creating or publishing a stable release')
+            issues.append(
+                _issue(
+                    'ahead-of-upstream',
+                    f'branch is ahead of {upstream} by {ahead} commit(s); push before creating or publishing a stable release',
+                    rule='stable releases require upstream synchronization',
+                )
+            )
         if behind:
-            errors.append(f'branch is behind {upstream} by {behind} commit(s); update before creating or publishing a stable release')
+            issues.append(
+                _issue(
+                    'behind-of-upstream',
+                    f'branch is behind {upstream} by {behind} commit(s); update before creating or publishing a stable release',
+                    rule='stable releases require upstream synchronization',
+                )
+            )
 
     if mode in {'local-tag', 'stable-release'}:
         if not local_tag['exists']:
-            errors.append(
-                f'expected release tag is missing: {expected_tag}; create it with scripts/release-skill-tag.sh {meta["name"]} --create'
+            issues.append(
+                _issue(
+                    'missing-local-tag',
+                    f'expected release tag is missing: {expected_tag}; create it with scripts/release-skill-tag.sh {meta["name"]} --create',
+                    rule='stable releases require a signed verified local tag',
+                )
             )
         else:
             if local_tag['ref_type'] != 'tag':
-                errors.append(
-                    f'{expected_tag} is a lightweight tag; stable releases require a signed annotated tag'
+                issues.append(
+                    _issue(
+                        'lightweight-local-tag',
+                        f'{expected_tag} is a lightweight tag; stable releases require a signed annotated tag',
+                        rule='stable releases require a signed verified local tag',
+                    )
                 )
             if not local_tag['signed']:
-                errors.append(
-                    f'{expected_tag} is not signed; recreate it with scripts/release-skill-tag.sh {meta["name"]} --create --force'
+                issues.append(
+                    _issue(
+                        'unsigned-local-tag',
+                        f'{expected_tag} is not signed; recreate it with scripts/release-skill-tag.sh {meta["name"]} --create --force',
+                        rule='stable releases require a signed verified local tag',
+                    )
                 )
             if not local_tag['verified']:
                 detail = local_tag['verification_error'] or 'verification failed'
-                errors.append(f'{expected_tag} did not verify against repo-managed signers: {detail}')
+                issues.append(
+                    _issue(
+                        'unverified-local-tag',
+                        f'{expected_tag} did not verify against repo-managed signers: {detail}',
+                        rule='stable releases require a signed verified local tag',
+                    )
+                )
             if not local_tag['points_to_head']:
-                errors.append(f'{expected_tag} does not point at HEAD; retag the current release commit before publishing')
+                issues.append(
+                    _issue(
+                        'local-tag-not-head',
+                        f'{expected_tag} does not point at HEAD; retag the current release commit before publishing',
+                        rule='stable releases require a signed verified local tag',
+                    )
+                )
 
     if mode == 'stable-release':
         if not remote_tag['query_ok']:
-            errors.append(f'cannot verify pushed tag state on {remote_name}: {remote_tag["query_error"]}')
+            issues.append(
+                _issue(
+                    'remote-tag-query',
+                    f'cannot verify pushed tag state on {remote_name}: {remote_tag["query_error"]}',
+                    rule='stable releases require remote tag verification in stable-release mode',
+                )
+            )
         elif not remote_tag['tag_exists']:
-            errors.append(
-                f'{expected_tag} is not pushed to {remote_name}; push it before publishing release output'
+            issues.append(
+                _issue(
+                    'remote-tag-missing',
+                    f'{expected_tag} is not pushed to {remote_name}; push it before publishing release output',
+                    rule='stable releases require remote tag verification in stable-release mode',
+                )
             )
         elif remote_tag['target_commit'] != head_commit:
-            errors.append(
-                f'{expected_tag} on {remote_name} points to {remote_tag["target_commit"] or "an unexpected object"}, not HEAD {head_commit}'
+            issues.append(
+                _issue(
+                    'remote-tag-mismatch',
+                    f'{expected_tag} on {remote_name} points to {remote_tag["target_commit"] or "an unexpected object"}, not HEAD {head_commit}',
+                    rule='stable releases require remote tag verification in stable-release mode',
+                )
             )
 
     if mode == 'preflight' and not signer_entries(signing['allowed_signers_path']):
@@ -336,11 +429,75 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
             f"{signing['allowed_signers_rel']} has no signer entries yet; signed tag verification will stay blocked until it is populated"
         )
 
+    exception_usage = match_active_exceptions(
+        'release',
+        meta,
+        [item['id'] for item in issues],
+        root=root,
+        policy=exception_policy,
+    )
+    waived_rule_ids = {
+        matched_rule
+        for item in exception_usage
+        for matched_rule in item.get('matched_rules', [])
+        if isinstance(matched_rule, str) and matched_rule
+    }
+    remaining_issues = [item for item in issues if item.get('id') not in waived_rule_ids]
+    errors = [item['message'] for item in remaining_issues]
+
+    policy_trace = build_policy_trace(
+        domain='release_policy',
+        decision='allow' if not errors else 'deny',
+        summary='release readiness checks passed' if not errors else f'release readiness blocked by {len(errors)} issue(s)',
+        effective_sources=list(signing.get('policy_sources', [])) + list(namespace_policy_sources),
+        applied_rules=[
+            {'id': 'dirty-worktree', 'rule': 'stable releases require a clean worktree', 'value': not dirty},
+            {'id': 'upstream-synchronization', 'rule': 'stable releases require upstream synchronization', 'value': {'ahead': ahead, 'behind': behind}},
+            {'id': 'local-tag', 'rule': 'stable releases require a signed verified local tag', 'value': expected_tag},
+            {'id': 'remote-tag', 'rule': 'stable releases require remote tag verification in stable-release mode', 'value': mode == 'stable-release'},
+            {'id': 'signing-tag-format', 'rule': 'release signing config defines tag_format', 'value': signing['tag_format']},
+        ],
+        blocking_rules=[{'id': item['id'], 'rule': item['rule'], 'message': item['message']} for item in remaining_issues],
+        reasons=warnings + [
+            f"mode={mode}",
+            f"release_trust_mode={(((signing.get('config') or {}).get('attestation') or {}).get('policy') or {}).get('release_trust_mode', 'ssh')}",
+            f"exceptions_applied={len(exception_usage)}",
+        ],
+        next_actions=[
+            'fix the blocking release errors and rerun check-release-state',
+            'use --json for machine-readable policy diagnostics',
+        ] if errors else ['release policy is satisfied for the current mode'],
+        exceptions=exception_usage,
+    )
+
+    review_payload = {
+        'reviewers': review_entries,
+    }
+    if review_evaluation:
+        review_payload.update(
+            {
+                'effective_review_state': review_evaluation.get('effective_review_state'),
+                'required_approvals': review_evaluation.get('required_approvals'),
+                'required_groups': review_evaluation.get('required_groups', []),
+                'covered_groups': review_evaluation.get('covered_groups', []),
+                'missing_groups': review_evaluation.get('missing_groups', []),
+                'approval_count': review_evaluation.get('approval_count'),
+                'blocking_rejection_count': review_evaluation.get('blocking_rejection_count'),
+                'quorum_met': review_evaluation.get('quorum_met'),
+                'review_gate_pass': review_evaluation.get('review_gate_pass'),
+                'latest_decisions': review_evaluation.get('latest_decisions', []),
+                'ignored_decisions': review_evaluation.get('ignored_decisions', []),
+                'configured_groups': review_evaluation.get('configured_groups', {}),
+            }
+        )
+
     return {
         'mode': mode,
         'release_ready': not errors,
         'errors': errors,
         'warnings': warnings,
+        'exception_usage': exception_usage,
+        'policy_trace': policy_trace,
         'skill': {
             'name': meta.get('name'),
             'publisher': identity.get('publisher'),
@@ -353,9 +510,7 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
             'owners': identity.get('owners', []),
             'maintainers': identity.get('maintainers', []),
         },
-        'review': {
-            'reviewers': review_entries,
-        },
+        'review': review_payload,
         'release': {
             'releaser_identity': releaser_identity,
             'namespace_policy_path': namespace_report.get('policy_path'),
@@ -364,8 +519,10 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
             'transfer_authorized': namespace_report.get('transfer_authorized', True),
             'transfer_matches': namespace_report.get('transfer_matches', []),
             'competing_claims': namespace_report.get('competing_claims', []),
+            'delegated_teams': namespace_report.get('delegated_teams', {}),
             'authorized_signers': namespace_report.get('authorized_signers', []),
             'authorized_releasers': namespace_report.get('authorized_releasers', []),
+            'exception_usage': exception_usage,
         },
         'signing': {
             'tag_format': signing['tag_format'],

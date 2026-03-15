@@ -5,7 +5,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from policy_pack_lib import PolicyPackError, load_effective_policy_domain
+from policy_pack_lib import PolicyPackError, load_effective_policy_domain, load_policy_domain_resolution
 
 
 def fail(message):
@@ -156,6 +156,29 @@ def dual_attestation_pack():
                     }
                 }
             },
+            'team_policy': {
+                'version': 1,
+                'teams': {
+                    'release-operators': {
+                        'members': ['dual-release'],
+                    }
+                },
+            },
+            'exception_policy': {
+                'version': 1,
+                'exceptions': [
+                    {
+                        'id': 'pack-release-waiver',
+                        'scope': 'release',
+                        'skills': ['pack/fixture'],
+                        'rules': ['dirty-worktree'],
+                        'approved_by': ['pack-approver'],
+                        'approved_at': '2026-03-15T00:00:00Z',
+                        'justification': 'Fixture pack exception',
+                        'expires_at': '2099-01-01T00:00:00Z',
+                    }
+                ],
+            },
         },
     }
 
@@ -192,6 +215,37 @@ def repo_local_signing_override():
     }
 
 
+def repo_local_team_override():
+    return {
+        '$schema': '../schemas/team-policy.schema.json',
+        'version': 1,
+        'teams': {
+            'platform-admins': {
+                'members': ['repo-admin'],
+            }
+        },
+    }
+
+
+def repo_local_exception_override():
+    return {
+        '$schema': '../schemas/exception-policy.schema.json',
+        'version': 1,
+        'exceptions': [
+            {
+                'id': 'repo-promotion-waiver',
+                'scope': 'promotion',
+                'skills': ['repo-fixture'],
+                'rules': ['required-reviewer-groups'],
+                'approved_by': ['repo-approver'],
+                'approved_at': '2026-03-15T00:05:00Z',
+                'justification': 'Repository-local fixture exception',
+                'expires_at': '2099-01-02T00:00:00Z',
+            }
+        ],
+    }
+
+
 def make_repo():
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-policy-pack-loading-'))
     repo = tmpdir / 'repo'
@@ -200,6 +254,8 @@ def make_repo():
         write_json(repo / 'policy' / 'packs' / 'baseline.json', baseline_pack())
         write_json(repo / 'policy' / 'packs' / 'dual-attestation.json', dual_attestation_pack())
         write_json(repo / 'policy' / 'promotion-policy.json', repo_local_promotion_override())
+        write_json(repo / 'policy' / 'exception-policy.json', repo_local_exception_override())
+        write_json(repo / 'policy' / 'team-policy.json', repo_local_team_override())
         write_json(repo / 'config' / 'signing.json', repo_local_signing_override())
         (repo / 'config' / 'allowed_signers').write_text('# fixture\n', encoding='utf-8')
         return tmpdir, repo
@@ -211,6 +267,15 @@ def make_repo():
 def scenario_declared_pack_order_and_local_overrides():
     tmpdir, repo = make_repo()
     try:
+        resolution = load_policy_domain_resolution(repo, 'signing')
+        sources = resolution.get('effective_sources') or []
+        if [item.get('kind') for item in sources] != ['pack', 'pack', 'local_override']:
+            fail(f'unexpected policy source order: {sources!r}')
+        if [item.get('name') for item in sources[:2]] != ['baseline', 'dual-attestation']:
+            fail(f'unexpected pack source names: {sources!r}')
+        if sources[-1].get('path') != 'config/signing.json':
+            fail(f"expected local override path 'config/signing.json', got {sources[-1].get('path')!r}")
+
         effective_signing = load_effective_policy_domain(repo, 'signing')
         policy = ((effective_signing.get('attestation') or {}).get('policy') or {})
         if policy.get('release_trust_mode') != 'ci':
@@ -242,6 +307,25 @@ def scenario_declared_pack_order_and_local_overrides():
         registries = effective_registry.get('registries') or []
         if len(registries) != 1 or registries[0].get('name') != 'baseline':
             fail(f'expected registry-sources domain shape to stay compatible, got {registries!r}')
+
+        team_resolution = load_policy_domain_resolution(repo, 'team_policy')
+        team_sources = team_resolution.get('effective_sources') or []
+        if [item.get('kind') for item in team_sources] != ['pack', 'local_override']:
+            fail(f'unexpected team-policy source order: {team_sources!r}')
+        effective_team_policy = team_resolution.get('effective') or {}
+        teams = effective_team_policy.get('teams') or {}
+        if sorted(teams) != ['platform-admins', 'release-operators']:
+            fail(f'unexpected merged teams in team_policy: {sorted(teams)!r}')
+
+        exception_resolution = load_policy_domain_resolution(repo, 'exception_policy')
+        exception_sources = exception_resolution.get('effective_sources') or []
+        if [item.get('kind') for item in exception_sources] != ['pack', 'local_override']:
+            fail(f'unexpected exception-policy source order: {exception_sources!r}')
+        effective_exception_policy = exception_resolution.get('effective') or {}
+        exceptions = effective_exception_policy.get('exceptions') or []
+        ids = sorted(item.get('id') for item in exceptions if isinstance(item, dict))
+        if ids != ['pack-release-waiver', 'repo-promotion-waiver']:
+            fail(f'expected merged exception-policy ids, got {ids!r}')
     finally:
         shutil.rmtree(tmpdir)
 

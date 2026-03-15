@@ -48,24 +48,52 @@
         "minLength": 1
       }
     },
+    "teamList": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      }
+    },
     "publisher": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "owners"
+      "anyOf": [
+        {
+          "required": [
+            "owners"
+          ]
+        },
+        {
+          "required": [
+            "owner_teams"
+          ]
+        }
       ],
       "properties": {
         "owners": {
           "$ref": "#/$defs/actorList"
         },
+        "owner_teams": {
+          "$ref": "#/$defs/teamList"
+        },
         "maintainers": {
           "$ref": "#/$defs/actorList"
+        },
+        "maintainer_teams": {
+          "$ref": "#/$defs/teamList"
         },
         "authorized_signers": {
           "$ref": "#/$defs/actorList"
         },
+        "authorized_signer_teams": {
+          "$ref": "#/$defs/teamList"
+        },
         "authorized_releasers": {
           "$ref": "#/$defs/actorList"
+        },
+        "authorized_releaser_teams": {
+          "$ref": "#/$defs/teamList"
         }
       }
     },

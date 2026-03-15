@@ -146,6 +146,115 @@ def assert_contains(text, needle, label):
         fail(f'{label} did not include {needle!r}\n{text}')
 
 
+def write_exception_policy(repo: Path, exceptions):
+    write_json(
+        repo / 'policy' / 'exception-policy.json',
+        {
+            '$schema': '../schemas/exception-policy.schema.json',
+            'version': 1,
+            'exceptions': exceptions,
+        },
+    )
+
+
+def configure_delegated_audit_fixture(repo: Path):
+    fixture_meta_path = repo / 'skills' / 'active' / FIXTURE_NAME / '_meta.json'
+    meta = json.loads(fixture_meta_path.read_text(encoding='utf-8'))
+    meta.update(
+        {
+            'publisher': 'fixture-labs',
+            'owner': 'release-owner',
+            'owners': ['release-owner'],
+            'maintainers': ['release-maintainer'],
+            'qualified_name': f'fixture-labs/{FIXTURE_NAME}',
+        }
+    )
+    write_json(fixture_meta_path, meta)
+
+    reviews_path = repo / 'skills' / 'active' / FIXTURE_NAME / 'reviews.json'
+    reviews = json.loads(reviews_path.read_text(encoding='utf-8'))
+    reviews['entries'].append(
+        {
+            'reviewer': 'outsider',
+            'decision': 'rejected',
+            'at': '2026-03-09T00:06:00Z',
+            'note': 'Unconfigured reviewer should be ignored',
+        }
+    )
+    write_json(reviews_path, reviews)
+
+    write_json(
+        repo / 'policy' / 'team-policy.json',
+        {
+            '$schema': '../schemas/team-policy.schema.json',
+            'version': 1,
+            'teams': {
+                'release-owners': {
+                    'members': ['release-owner'],
+                },
+                'release-maintainers': {
+                    'members': ['release-maintainer'],
+                },
+                'security-review': {
+                    'members': ['lvxiaoer'],
+                },
+                'release-signers': {
+                    'members': ['release-test'],
+                },
+                'release-captains': {
+                    'members': ['Release Fixture'],
+                },
+            },
+        },
+    )
+    write_json(
+        repo / 'policy' / 'namespace-policy.json',
+        {
+            '$schema': '../schemas/namespace-policy.schema.json',
+            'version': 1,
+            'publishers': {
+                'fixture-labs': {
+                    'owner_teams': ['release-owners'],
+                    'maintainer_teams': ['release-maintainers'],
+                    'authorized_signer_teams': ['release-signers'],
+                    'authorized_releaser_teams': ['release-captains'],
+                }
+            },
+        },
+    )
+    write_json(
+        repo / 'policy' / 'promotion-policy.json',
+        {
+            '$schema': '../schemas/promotion-policy.schema.json',
+            'version': 4,
+            'active_requires': {
+                'review_state': ['approved'],
+                'require_changelog': True,
+                'require_owner': True,
+            },
+            'reviews': {
+                'require_reviews_file': True,
+                'reviewer_must_differ_from_owner': True,
+                'allow_owner_when_no_distinct_reviewer': False,
+                'block_on_rejection': True,
+                'groups': {
+                    'security': {
+                        'teams': ['security-review'],
+                    }
+                },
+                'quorum': {
+                    'stage_overrides': {
+                        'active': {
+                            'min_approvals': 1,
+                            'required_groups': ['security'],
+                        }
+                    }
+                },
+            },
+        },
+    )
+
+
 def scenario_missing_signers_blocks_tag_creation():
     tmpdir, repo, _origin, _key_path, _identity = prepare_repo(include_signers=False)
     try:
@@ -176,6 +285,156 @@ def scenario_dirty_worktree_is_rejected():
             env=make_env(),
         )
         assert_contains(result.stdout, 'worktree is dirty', 'dirty worktree error')
+    finally:
+        shutil.rmtree(tmpdir)
+
+
+def scenario_dirty_worktree_exception_can_pass_preflight():
+    tmpdir, repo, _origin, _key_path, _identity = prepare_repo(include_signers=True)
+    try:
+        (repo / 'DIRTY.txt').write_text('dirty\n', encoding='utf-8')
+        write_exception_policy(
+            repo,
+            [
+                {
+                    'id': 'dirty-worktree-waiver',
+                    'scope': 'release',
+                    'skills': [FIXTURE_NAME],
+                    'rules': ['dirty-worktree'],
+                    'approved_by': ['release-captain'],
+                    'approved_at': '2026-03-15T00:10:00Z',
+                    'justification': 'Emergency release preflight waiver',
+                    'expires_at': '2099-01-01T00:00:00Z',
+                }
+            ],
+        )
+        result = run(
+            [sys.executable, str(repo / 'scripts' / 'check-release-state.py'), FIXTURE_NAME, '--mode', 'preflight', '--json'],
+            cwd=repo,
+            env=make_env(),
+        )
+        payload = json.loads(result.stdout)
+        if payload.get('release_ready') is not True:
+            fail(f'expected dirty-worktree exception to allow preflight release, got {payload!r}')
+        usage = payload.get('exception_usage') or []
+        if not any(item.get('id') == 'dirty-worktree-waiver' for item in usage):
+            fail(f'expected exception_usage to mention dirty-worktree-waiver, got {usage!r}')
+        trace = payload.get('policy_trace') or {}
+        exceptions = trace.get('exceptions') or []
+        record = next((item for item in exceptions if item.get('id') == 'dirty-worktree-waiver'), None)
+        if not record:
+            fail(f'expected policy_trace.exceptions to mention dirty-worktree-waiver, got {exceptions!r}')
+        if record.get('justification') != 'Emergency release preflight waiver':
+            fail(f'expected trace justification to survive, got {record!r}')
+        if record.get('expires_at') != '2099-01-01T00:00:00Z':
+            fail(f'expected trace expires_at to survive, got {record!r}')
+    finally:
+        shutil.rmtree(tmpdir)
+
+
+def scenario_release_state_exports_delegated_audit_details():
+    tmpdir, repo, _origin, _key_path, _identity = prepare_repo(include_signers=True)
+    try:
+        configure_delegated_audit_fixture(repo)
+        (repo / 'DIRTY.txt').write_text('dirty\n', encoding='utf-8')
+        write_exception_policy(
+            repo,
+            [
+                {
+                    'id': 'dirty-worktree-waiver',
+                    'scope': 'release',
+                    'skills': [FIXTURE_NAME],
+                    'rules': ['dirty-worktree'],
+                    'approved_by': ['release-captain'],
+                    'approved_at': '2026-03-15T00:10:00Z',
+                    'justification': 'Emergency release preflight waiver',
+                    'expires_at': '2099-01-01T00:00:00Z',
+                }
+            ],
+        )
+        result = run(
+            [sys.executable, str(repo / 'scripts' / 'check-release-state.py'), FIXTURE_NAME, '--mode', 'preflight', '--json'],
+            cwd=repo,
+            env=make_env(),
+        )
+        payload = json.loads(result.stdout)
+        if payload.get('release_ready') is not True:
+            fail(f'expected delegated audit fixture to pass preflight, got {payload!r}')
+
+        review = payload.get('review') or {}
+        if review.get('effective_review_state') != 'approved':
+            fail(f"expected effective_review_state 'approved', got {review!r}")
+        if review.get('required_groups') != ['security']:
+            fail(f"expected required_groups ['security'], got {review.get('required_groups')!r}")
+        if review.get('approval_count') != 1:
+            fail(f"expected approval_count 1, got {review.get('approval_count')!r}")
+        if review.get('blocking_rejection_count') != 0:
+            fail(f"expected blocking_rejection_count 0, got {review.get('blocking_rejection_count')!r}")
+        if review.get('quorum_met') is not True:
+            fail(f'expected quorum_met true, got {review.get("quorum_met")!r}')
+        if review.get('review_gate_pass') is not True:
+            fail(f'expected review_gate_pass true, got {review.get("review_gate_pass")!r}')
+        covered_groups = review.get('covered_groups') or []
+        if 'security' not in covered_groups:
+            fail(f'expected covered_groups to include security, got {covered_groups!r}')
+        if review.get('missing_groups') != []:
+            fail(f"expected no missing_groups, got {review.get('missing_groups')!r}")
+        latest_decisions = review.get('latest_decisions') or []
+        if len(latest_decisions) != 2:
+            fail(f'expected two latest_decisions entries, got {latest_decisions!r}')
+        counted_approval = next((item for item in latest_decisions if item.get('reviewer') == 'lvxiaoer'), None)
+        if not counted_approval or 'security' not in (counted_approval.get('groups') or []):
+            fail(f'expected lvxiaoer latest_decisions entry to cover security, got {latest_decisions!r}')
+        ignored_decisions = review.get('ignored_decisions') or []
+        if len(ignored_decisions) != 1 or ignored_decisions[0].get('reviewer') != 'outsider':
+            fail(f'expected outsider ignored_decisions entry, got {ignored_decisions!r}')
+        groups = review.get('configured_groups') or {}
+        security = groups.get('security') or {}
+        if security.get('teams') != ['security-review']:
+            fail(f'unexpected configured_groups.security.teams {security!r}')
+
+        release = payload.get('release') or {}
+        delegated_teams = release.get('delegated_teams') or {}
+        if delegated_teams.get('owner_teams') != ['release-owners']:
+            fail(f'unexpected delegated owner_teams {delegated_teams!r}')
+        if delegated_teams.get('authorized_releaser_teams') != ['release-captains']:
+            fail(f'unexpected delegated authorized_releaser_teams {delegated_teams!r}')
+        release_exception_usage = release.get('exception_usage') or []
+        if not any(item.get('id') == 'dirty-worktree-waiver' for item in release_exception_usage):
+            fail(f'expected release.exception_usage to mention dirty-worktree-waiver, got {release_exception_usage!r}')
+    finally:
+        shutil.rmtree(tmpdir)
+
+
+def scenario_expired_dirty_worktree_exception_is_ignored():
+    tmpdir, repo, _origin, _key_path, _identity = prepare_repo(include_signers=True)
+    try:
+        (repo / 'DIRTY.txt').write_text('dirty\n', encoding='utf-8')
+        write_exception_policy(
+            repo,
+            [
+                {
+                    'id': 'dirty-worktree-waiver-expired',
+                    'scope': 'release',
+                    'skills': [FIXTURE_NAME],
+                    'rules': ['dirty-worktree'],
+                    'approved_by': ['release-captain'],
+                    'approved_at': '2024-01-01T00:10:00Z',
+                    'justification': 'Expired dirty-worktree waiver',
+                    'expires_at': '2024-01-02T00:00:00Z',
+                }
+            ],
+        )
+        result = run(
+            [sys.executable, str(repo / 'scripts' / 'check-release-state.py'), FIXTURE_NAME, '--mode', 'preflight', '--json'],
+            cwd=repo,
+            expect=1,
+            env=make_env(),
+        )
+        payload = json.loads(result.stdout)
+        errors = '\n'.join(payload.get('errors') or [])
+        if 'worktree is dirty' not in errors:
+            fail(f'expected expired exception to be ignored, got {payload!r}')
     finally:
         shutil.rmtree(tmpdir)
 
@@ -299,6 +558,9 @@ def main():
     scenario_missing_signers_blocks_tag_creation()
     scenario_missing_tag_blocks_release()
     scenario_dirty_worktree_is_rejected()
+    scenario_dirty_worktree_exception_can_pass_preflight()
+    scenario_release_state_exports_delegated_audit_details()
+    scenario_expired_dirty_worktree_exception_is_ignored()
     scenario_ahead_of_upstream_is_rejected()
     scenario_unsigned_tag_is_rejected()
     scenario_signed_tag_must_be_pushed()

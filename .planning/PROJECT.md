@@ -35,9 +35,12 @@ Maintainers can publish and distribute private skills with deterministic, audita
 
 ### Active
 
-- [ ] Policy packs and repository-level loading rules are the current milestone focus.
-- [ ] Explainable policy decision traces remain upcoming v11 work.
-- [ ] Team governance, break-glass exceptions, and federation-ready audit exports remain upcoming v11 work.
+- [x] Policy packs and repository-level loading rules are complete for v11 Phase 1.
+- [x] Explainable policy decision traces are complete for validation, promotion, release, and registry debug flows.
+- [x] Team governance plus delegated namespace/review scopes are complete for 11-03.
+- [x] Break-glass exceptions plus exception-aware promotion and release traces are complete for 11-04.
+- [x] Delegated audit exports plus provenance persistence are complete for 11-05.
+- [ ] Federation, mirrors, and standalone audit/export surfaces remain for v11 Phase 3.
 
 ### Out of Scope
 
@@ -57,6 +60,11 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - Phase 4 added GitHub Actions-backed CI attestation generation plus local verification policy gates for `ssh`, `ci`, and `both`.
 - Phase 5 added stable search, inspect, and explain-oriented consumer surfaces on top of generated discovery indexes and distribution manifests.
 - Phase 6 added deterministic recommendation ranking driven by trust state, compatibility evidence, maturity, quality score, and verification freshness.
+- v11 Phase 1 added reusable policy packs with ordered pack-to-local override resolution for promotion, namespace, signing, and registry source policy domains.
+- v11 Phase 1 also added additive policy evaluation traces plus structured validation error output so allow/deny decisions can be debugged without breaking existing CLI flows.
+- 11-03 added a shared team policy plus team-backed namespace ownership and reviewer-group resolution without breaking existing direct actor lists.
+- 11-04 added a shared exception policy, stable promotion/release blocker ids, and additive `exception_usage` plus `policy_trace.exceptions` output for active waivers.
+- 11-05 extends `check-release-state --json` and release provenance with stable delegated audit metadata such as review quorum context, delegated publisher teams, and applied release exception usage, while intentionally stopping short of a separate export product.
 - `config/allowed_signers` is still intentionally bootstrapped with guidance comments only; maintainers must commit real trusted signer entries before the first actual stable release is operationally complete.
 
 ## Constraints
@@ -88,4 +96,4 @@ Maintainers can publish and distribute private skills with deterministic, audita
 | Make recommendation deterministic and metadata-driven | Agents need explainable, reviewable ranking instead of fuzzy install shortcuts | ✓ Good |
 
 ---
-*Last updated: 2026-03-15 after v10 completion and v11 Phase 1 planning kickoff*
+*Last updated: 2026-03-15 after 11-05 delegated audit exports completion*

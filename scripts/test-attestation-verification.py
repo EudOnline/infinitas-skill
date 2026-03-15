@@ -145,6 +145,74 @@ def assert_contains(text, needle, label):
         fail(f'{label} did not include {needle!r}\n{text}')
 
 
+def write_exception_policy(repo: Path, exceptions):
+    path = repo / 'policy' / 'exception-policy.json'
+    payload = json.loads(path.read_text(encoding='utf-8'))
+    merged = list(payload.get('exceptions') or [])
+    merged.extend(exceptions)
+    payload['exceptions'] = merged
+    write_json(path, payload)
+
+
+def configure_delegated_audit_fixture(repo: Path):
+    fixture_meta_path = repo / 'skills' / 'active' / FIXTURE_NAME / '_meta.json'
+    meta = json.loads(fixture_meta_path.read_text(encoding='utf-8'))
+    meta.update(
+        {
+            'publisher': 'fixture-labs',
+            'owner': 'release-owner',
+            'owners': ['release-owner'],
+            'maintainers': ['release-maintainer'],
+            'qualified_name': f'fixture-labs/{FIXTURE_NAME}',
+        }
+    )
+    write_json(fixture_meta_path, meta)
+
+    reviews_path = repo / 'skills' / 'active' / FIXTURE_NAME / 'reviews.json'
+    reviews = json.loads(reviews_path.read_text(encoding='utf-8'))
+    reviews['entries'].append(
+        {
+            'reviewer': 'outsider',
+            'decision': 'rejected',
+            'at': '2026-03-09T00:06:00Z',
+            'note': 'Unconfigured reviewer should be ignored',
+        }
+    )
+    write_json(reviews_path, reviews)
+
+    team_path = repo / 'policy' / 'team-policy.json'
+    team_policy = json.loads(team_path.read_text(encoding='utf-8'))
+    teams = team_policy.setdefault('teams', {})
+    teams.update(
+        {
+            'release-owners': {
+                'members': ['release-owner'],
+            },
+            'release-maintainers': {
+                'members': ['release-maintainer'],
+            },
+            'release-signers': {
+                'members': ['release-test'],
+            },
+            'release-captains': {
+                'members': ['Release Fixture'],
+            },
+        }
+    )
+    write_json(team_path, team_policy)
+
+    namespace_path = repo / 'policy' / 'namespace-policy.json'
+    namespace_policy = json.loads(namespace_path.read_text(encoding='utf-8'))
+    publishers = namespace_policy.setdefault('publishers', {})
+    publishers['fixture-labs'] = {
+        'owner_teams': ['release-owners'],
+        'maintainer_teams': ['release-maintainers'],
+        'authorized_signer_teams': ['release-signers'],
+        'authorized_releaser_teams': ['release-captains'],
+    }
+    write_json(namespace_path, namespace_policy)
+
+
 def write_ci_attestation(repo: Path):
     manifest_path = repo / 'catalog' / 'distributions' / '_legacy' / FIXTURE_NAME / FIXTURE_VERSION / 'manifest.json'
     bundle_path = manifest_path.parent / 'skill.tar.gz'
@@ -269,6 +337,79 @@ def scenario_verified_attestation_bundle_is_emitted():
         shutil.rmtree(tmpdir)
 
 
+def scenario_provenance_persists_delegated_audit_details():
+    tmpdir, repo, _origin, _key_path, _identity = prepare_repo(include_signers=True)
+    try:
+        configure_delegated_audit_fixture(repo)
+        write_exception_policy(
+            repo,
+            [
+                {
+                    'id': 'dirty-worktree-waiver',
+                    'scope': 'release',
+                    'skills': [FIXTURE_NAME],
+                    'rules': ['dirty-worktree'],
+                    'approved_by': ['release-captain'],
+                    'approved_at': '2026-03-15T00:10:00Z',
+                    'justification': 'Emergency release preflight waiver',
+                    'expires_at': '2099-01-01T00:00:00Z',
+                }
+            ],
+        )
+        run([str(repo / 'scripts' / 'build-catalog.sh')], cwd=repo)
+        run(
+            [
+                'git',
+                'add',
+                f'skills/active/{FIXTURE_NAME}/_meta.json',
+                f'skills/active/{FIXTURE_NAME}/reviews.json',
+                'policy/team-policy.json',
+                'policy/namespace-policy.json',
+                'policy/exception-policy.json',
+                'catalog',
+            ],
+            cwd=repo,
+        )
+        run(['git', 'commit', '-m', 'configure delegated audit fixture'], cwd=repo)
+        run(['git', 'push'], cwd=repo)
+        dirty_marker = repo / '.planning' / 'dirty-worktree.txt'
+        dirty_marker.parent.mkdir(parents=True, exist_ok=True)
+        dirty_marker.write_text('dirty\n', encoding='utf-8')
+        run(
+            [str(repo / 'scripts' / 'release-skill.sh'), FIXTURE_NAME, '--push-tag', '--write-provenance'],
+            cwd=repo,
+            env=make_env(),
+        )
+        provenance_path = repo / 'catalog' / 'provenance' / f'{FIXTURE_NAME}-{FIXTURE_VERSION}.json'
+        provenance = json.loads(provenance_path.read_text(encoding='utf-8'))
+        review = provenance.get('review') or {}
+        latest_decisions = review.get('latest_decisions') or []
+        if len(latest_decisions) != 2:
+            fail(f'expected provenance review.latest_decisions, got {review!r}')
+        groups = review.get('configured_groups') or {}
+        security = groups.get('security') or {}
+        if 'lvxiaoer' not in (security.get('resolved_members') or []):
+            fail(f'unexpected provenance review.configured_groups.security {security!r}')
+        ignored_decisions = review.get('ignored_decisions') or []
+        if len(ignored_decisions) != 1 or ignored_decisions[0].get('reviewer') != 'outsider':
+            fail(f'unexpected provenance review.ignored_decisions {ignored_decisions!r}')
+
+        release = provenance.get('release') or {}
+        delegated_teams = release.get('delegated_teams') or {}
+        if delegated_teams.get('owner_teams') != ['release-owners']:
+            fail(f'unexpected provenance release.delegated_teams {delegated_teams!r}')
+        exception_usage = release.get('exception_usage') or []
+        exception = next((item for item in exception_usage if item.get('id') == 'dirty-worktree-waiver'), None)
+        if not exception:
+            fail(f'unexpected provenance release.exception_usage {exception_usage!r}')
+        if exception.get('justification') != 'Emergency release preflight waiver':
+            fail(f'unexpected provenance exception justification {exception!r}')
+        if exception.get('approved_by') != ['release-captain']:
+            fail(f'unexpected provenance exception approved_by {exception!r}')
+    finally:
+        shutil.rmtree(tmpdir)
+
+
 def scenario_tamper_breaks_attestation():
     tmpdir, repo, _origin, _key_path, _identity = prepare_repo(include_signers=True)
     try:
@@ -335,6 +476,7 @@ def scenario_both_mode_requires_ssh_and_ci():
 def main():
     scenario_release_notes_require_attestation()
     scenario_verified_attestation_bundle_is_emitted()
+    scenario_provenance_persists_delegated_audit_details()
     scenario_tamper_breaks_attestation()
     scenario_both_mode_requires_ssh_and_ci()
     print('OK: attestation verification checks passed')

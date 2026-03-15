@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from policy_pack_lib import PolicyPackError, load_effective_policy_domain
+from team_policy_lib import TeamPolicyError, expand_team_refs, load_team_policy
 
 ROOT = Path(__file__).resolve().parent.parent
 ALLOWED_DECISIONS = {'approved', 'rejected'}
@@ -31,6 +32,14 @@ def unique_strings(values):
         seen.add(value)
         result.append(value)
     return result
+
+
+def normalize_team_list(values):
+    if values is None:
+        return []
+    if not isinstance(values, list):
+        return []
+    return unique_strings([item.strip() for item in values if isinstance(item, str) and item.strip()])
 
 
 def load_json(path: Path):
@@ -100,24 +109,30 @@ def save_reviews(skill_dir: Path, reviews):
     write_json(skill_dir / 'reviews.json', reviews)
 
 
-def normalize_groups(raw_groups):
+def normalize_groups(raw_groups, root: Path = ROOT):
     errors = []
     normalized = {}
     if raw_groups is None:
         return normalized, errors
     if not isinstance(raw_groups, dict):
         return {}, ['reviews.groups must be an object']
+    try:
+        team_policy = load_team_policy(root)
+    except TeamPolicyError as exc:
+        return {}, list(exc.errors)
     for group_name, raw_group in raw_groups.items():
         if not isinstance(group_name, str) or not GROUP_NAME_RE.match(group_name):
             errors.append(f'reviews.groups contains invalid group name {group_name!r}')
             continue
         description = None
+        teams = []
         if isinstance(raw_group, list):
             members = raw_group
         elif isinstance(raw_group, dict):
             members = raw_group.get('members', [])
+            teams = raw_group.get('teams', [])
             description = raw_group.get('description')
-            unknown = sorted(set(raw_group) - {'members', 'description'})
+            unknown = sorted(set(raw_group) - {'members', 'teams', 'description'})
             if unknown:
                 errors.append(f'reviews.groups.{group_name} has unsupported keys: {", ".join(unknown)}')
         else:
@@ -126,11 +141,20 @@ def normalize_groups(raw_groups):
         if not isinstance(members, list) or not all(isinstance(item, str) and item.strip() for item in members):
             errors.append(f'reviews.groups.{group_name}.members must be an array of non-empty strings')
             members = []
+        if not isinstance(teams, list) or not all(isinstance(item, str) and item.strip() for item in teams):
+            errors.append(f'reviews.groups.{group_name}.teams must be an array of non-empty strings')
+            teams = []
         if description is not None and not isinstance(description, str):
             errors.append(f'reviews.groups.{group_name}.description must be a string when present')
             description = None
+        team_members = expand_team_refs(normalize_team_list(teams), team_policy)
+        for missing_team in team_members.get('missing_teams', []):
+            errors.append(f'reviews.groups.{group_name}.teams references unknown team {missing_team!r}')
+        direct_members = unique_strings([item.strip() for item in members if isinstance(item, str) and item.strip()])
         normalized[group_name] = {
-            'members': unique_strings([item.strip() for item in members if isinstance(item, str) and item.strip()]),
+            'members': direct_members,
+            'teams': normalize_team_list(teams),
+            'resolved_members': unique_strings(direct_members + team_members.get('actors', [])),
             'description': description.strip() if isinstance(description, str) and description.strip() else None,
         }
     return normalized, errors
@@ -254,12 +278,14 @@ def normalize_quorum(reviews_cfg):
     return normalized, errors
 
 
-def configured_reviewers(policy):
+def configured_reviewers(policy, root: Path = ROOT):
     reviews_cfg = policy.get('reviews', {}) if isinstance(policy, dict) else {}
-    groups, _ = normalize_groups(reviews_cfg.get('groups', {}))
+    groups, group_errors = normalize_groups(reviews_cfg.get('groups', {}), root=root)
+    if group_errors:
+        raise ReviewPolicyError(group_errors)
     reviewers = {}
     for group_name, group_data in groups.items():
-        for reviewer in group_data.get('members', []):
+        for reviewer in group_data.get('resolved_members', []):
             reviewers.setdefault(reviewer, {'groups': []})['groups'].append(group_name)
     for reviewer_data in reviewers.values():
         reviewer_data['groups'] = unique_strings(reviewer_data.get('groups', []))
@@ -303,7 +329,7 @@ def owner_review_unavoidable(owner, reviewers, required_groups, min_approvals):
     return False
 
 
-def validate_promotion_policy(policy):
+def validate_promotion_policy(policy, root: Path = ROOT):
     errors = []
     if not isinstance(policy, dict):
         return ['promotion policy must be a JSON object']
@@ -332,7 +358,7 @@ def validate_promotion_policy(policy):
         if key in reviews_cfg and not isinstance(reviews_cfg.get(key), bool):
             errors.append(f'reviews.{key} must be boolean when present')
 
-    groups, group_errors = normalize_groups(reviews_cfg.get('groups', {}))
+    groups, group_errors = normalize_groups(reviews_cfg.get('groups', {}), root=root)
     errors.extend(group_errors)
     quorum, quorum_errors = normalize_quorum(reviews_cfg)
     errors.extend(quorum_errors)
@@ -368,7 +394,7 @@ def load_promotion_policy(root: Path = ROOT):
         policy = load_effective_policy_domain(root, 'promotion_policy')
     except PolicyPackError as exc:
         raise ReviewPolicyError(exc.errors) from exc
-    errors = validate_promotion_policy(policy)
+    errors = validate_promotion_policy(policy, root=root)
     if errors:
         raise ReviewPolicyError(errors)
     return policy
@@ -396,7 +422,7 @@ def evaluate_review_state(skill_dir: Path, root: Path = ROOT, stage: Optional[st
     meta = load_meta(skill_dir)
     reviews = load_reviews(skill_dir)
     latest = latest_distinct_entries(reviews.get('entries', []))
-    groups, reviewers = configured_reviewers(policy)
+    groups, reviewers = configured_reviewers(policy, root=root)
     reviews_cfg = policy.get('reviews', {})
     actual_stage = meta.get('status') or skill_dir.parent.name
     evaluated_stage = 'active' if as_active else (stage or actual_stage)
@@ -525,7 +551,7 @@ def request_review(skill_dir: Path, note: str = '', root: Path = ROOT):
 def record_review_decision(skill_dir: Path, reviewer: str, decision: str, note: str = '', root: Path = ROOT):
     skill_dir = Path(skill_dir).resolve()
     policy = load_promotion_policy(root)
-    _, reviewers = configured_reviewers(policy)
+    _, reviewers = configured_reviewers(policy, root=root)
     if reviewer not in reviewers:
         configured = ', '.join(sorted(reviewers)) if reviewers else '(none configured)'
         raise ValueError(f'unknown reviewer: {reviewer} (configured reviewers: {configured})')
