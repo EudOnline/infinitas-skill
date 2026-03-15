@@ -80,7 +80,7 @@ Requirements committed for milestone `v11`. Phase 1 completed on 2026-03-15; Pha
 
 ### Multi-Team Governance and Exceptions
 
-- [ ] **TEAM-01**: Teams or groups can own namespaces and approval scopes without collapsing into a single global maintainer list.
+- [x] **TEAM-01**: Teams or groups can own namespaces and approval scopes without collapsing into a single global maintainer list.
 - [ ] **TEAM-02**: Time-bounded or reviewable exceptions can be granted for urgent releases and clearly recorded.
 - [ ] **TEAM-03**: Audit outputs can reconstruct who approved, who overrode, and why.
 
@@ -149,7 +149,7 @@ Requirements committed for milestone `v11`. Phase 1 completed on 2026-03-15; Pha
 | REC-03 | v10 Phase 6 | Complete |
 | POL-01 | v11 Phase 1 | Complete |
 | POL-02 | v11 Phase 1 | Complete |
-| TEAM-01 | v11 Phase 2 | Planned |
+| TEAM-01 | v11 Phase 2 | Complete |
 | TEAM-02 | v11 Phase 2 | Planned |
 | TEAM-03 | v11 Phase 2 | Planned |
 | FED-01 | v11 Phase 3 | Planned |

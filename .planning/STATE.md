@@ -10,27 +10,27 @@ See: `.planning/PROJECT.md` (updated 2026-03-15)
 ## Current Position
 
 Phase: v11 Phase 2 of 3 (Multi-Team Governance and Exceptions)
-Plan: `docs/plans/2026-03-15-team-governance-scopes.md`
-Status: v11 Phase 1 complete; 11-03 planning underway
-Last activity: 2026-03-15 — Completed v11 Phase 1 by adding policy-pack loading, ordered source resolution, and explainable policy traces
+Plan: `docs/plans/2026-03-15-break-glass-exceptions.md`
+Status: 11-03 complete; 11-04 planning underway
+Last activity: 2026-03-15 — Completed 11-03 by adding shared team policy plus team-backed namespace and review scopes
 
-Progress: [████████▓░] 85%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 34
+- Total plans completed: 35
 - Average duration: n/a
 - Total execution time: n/a
 
 **By Phase:**
 - v9: 14 plans completed across 5 phases
 - v10: 18 plans completed across 6 phases
-- v11: 2 plans completed across 3 phases
+- v11: 3 plans completed across 3 phases
 
 **Recent Trend:**
-- Last 5 plans: 10-16, 10-17, 10-18, 11-01, 11-02
-- Trend: v11 Phase 1 complete; team-governance work is next
+- Last 5 plans: 10-17, 10-18, 11-01, 11-02, 11-03
+- Trend: team-backed governance landed; break-glass exceptions are next
 
 ## Accumulated Context
 
@@ -58,20 +58,21 @@ Decisions are logged in `PROJECT.md`.
 
 ### Pending Todos
 
-- Plan and execute v11 Phase 2 (team governance scopes, break-glass exceptions, and delegated auditability).
+- Plan and execute 11-04 and 11-05 so exception usage becomes enforced first, then exported cleanly for audit.
 - Bootstrap real trusted signer entries in `config/allowed_signers` before the first actual stable release.
 - Decide whether CI-native attestations should be additive to, or eventually authoritative over, the repo-managed SSH path.
-- Decide which baseline team definitions and delegated approval patterns should ship first (for example platform-admins, security-review, and release-operators).
+- Decide which break-glass scopes should ship first (promotion, release, or both) and whether exception approvers must always resolve through teams.
 
 ### Blockers/Concerns
 
 - `config/allowed_signers` still contains bootstrap guidance comments only; Phase 2 added the bootstrap and doctor flow, but a real production signer ceremony is still pending.
 - Phase 2 needs a shared team model that can expand into namespace ownership, reviewer groups, and future exception scopes without duplicating membership lists across policy files.
+- Break-glass records need a stable rule-id model so exceptions can be time-bounded without coupling them to brittle human-readable error strings.
 - The repository still installs skills by bare folder name for backward compatibility; future v10 work may revisit how far concurrent same-slug publisher installs should go.
 - v10 should stay Git-native and private-first; public marketplace features, social features, and on-chain reputation are intentionally deferred.
 
 ## Session Continuity
 
 Last session: 2026-03-15 09:00 GMT+8
-Stopped at: v11 Phase 1 implementation completed; next logical step is planning and executing 11-03
-Resume file: `docs/plans/2026-03-15-team-governance-scopes.md`
+Stopped at: 11-03 implementation completed; next logical step is planning and executing 11-04
+Resume file: `docs/plans/2026-03-15-break-glass-exceptions.md`

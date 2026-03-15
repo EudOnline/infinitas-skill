@@ -37,7 +37,8 @@ Maintainers can publish and distribute private skills with deterministic, audita
 
 - [x] Policy packs and repository-level loading rules are complete for v11 Phase 1.
 - [x] Explainable policy decision traces are complete for validation, promotion, release, and registry debug flows.
-- [ ] Team governance, delegated approval scopes, break-glass exceptions, and federation-ready audit exports are the current v11 focus.
+- [x] Team governance plus delegated namespace/review scopes are complete for 11-03.
+- [ ] Break-glass exceptions and delegated audit exports are the current v11 focus.
 
 ### Out of Scope
 
@@ -59,6 +60,7 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - Phase 6 added deterministic recommendation ranking driven by trust state, compatibility evidence, maturity, quality score, and verification freshness.
 - v11 Phase 1 added reusable policy packs with ordered pack-to-local override resolution for promotion, namespace, signing, and registry source policy domains.
 - v11 Phase 1 also added additive policy evaluation traces plus structured validation error output so allow/deny decisions can be debugged without breaking existing CLI flows.
+- 11-03 added a shared team policy plus team-backed namespace ownership and reviewer-group resolution without breaking existing direct actor lists.
 - `config/allowed_signers` is still intentionally bootstrapped with guidance comments only; maintainers must commit real trusted signer entries before the first actual stable release is operationally complete.
 
 ## Constraints
