@@ -4,6 +4,8 @@
 
 This guide covers the bootstrap flow for that first trusted stable release.
 
+Signing defaults may now be seeded from ordered packs declared in `policy/policy-packs.json`, but `config/signing.json` still wins last as the repository-local override layer for the effective `signing` domain.
+
 ## 1. Generate or reuse a signing key
 
 Create a dedicated SSH signing key:
@@ -68,6 +70,8 @@ git push
 ```
 
 The stable release flow requires a clean, synchronized worktree, so this commit needs to land before tagging.
+
+If the repository uses policy packs, keep any long-lived shared defaults in `policy/packs/*.json` and reserve `config/signing.json` for repository-specific overrides that should beat pack defaults.
 
 ## 6. Run the signing doctor
 

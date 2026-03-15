@@ -9,6 +9,8 @@ The current release/install model supports both:
 - local or Git-backed registry sources for operators working inside the repository
 - hosted HTTP registry sources for consumers that should install immutable artifacts without cloning the full repository
 
+Policy composition now also supports ordered repository policy packs via `policy/policy-packs.json`, with repository-local policy files remaining the final override layer for compatibility.
+
 ## Recommended workflow
 
 1. Scaffold a new skill from a template
@@ -37,6 +39,7 @@ docs/
 ├─ conventions.md        naming, layout, lifecycle rules
 ├─ lifecycle.md          incubating → active → archived flow
 ├─ metadata-schema.md    required `_meta.json` fields
+├─ policy-packs.md       ordered policy-pack loading and override rules
 ├─ release-checklist.md  pre-publish / pre-promote review list
 ├─ release-strategy.md   version bump, changelog, and git tag guidance
 ├─ signing-bootstrap.md  first trusted signer setup and doctor flow
@@ -74,6 +77,7 @@ scripts/
 ├─ resolve-install-plan.py preflight deterministic dependency resolution plans
 ├─ list-registry-sources.py list configured registry sources
 ├─ check-registry-sources.py validate multi-registry source config
+├─ check-policy-packs.py validate policy pack selection and referenced packs
 ├─ check-signing-config.py validate signing policy and allowed signer wiring
 ├─ sync-registry-source.sh sync one configured git registry into cache
 ├─ sync-all-registries.sh sync all enabled git registries
@@ -127,6 +131,9 @@ scripts/check-skill.sh skills/incubating/my-skill
 
 # Rebuild the install/search catalog
 scripts/build-catalog.sh
+
+# Validate ordered policy packs and effective local policy overlays
+python3 scripts/check-policy-packs.py
 
 # Run the full local validation suite
 scripts/check-all.sh

@@ -2,6 +2,8 @@
 
 Version 9 turns `config/registry-sources.json` from descriptive metadata into enforced source policy.
 
+Version 11-01 keeps that file path compatible while allowing shared `registry_sources` defaults to come from ordered packs declared in `policy/policy-packs.json`.
+
 ## Why this exists
 
 A registry source now has to answer three operational questions explicitly:
@@ -41,6 +43,13 @@ That lets install, sync, and catalog outputs report an exact source identity ins
   ]
 }
 ```
+
+When policy packs are active, the effective registry-source policy is resolved in this order:
+
+1. ordered `registry_sources` domains from `policy/packs/*.json`
+2. final repository-local overrides from `config/registry-sources.json`
+
+That keeps existing operators and scripts compatible while still allowing reusable pack defaults.
 
 ## Field meanings
 
