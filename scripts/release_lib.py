@@ -8,7 +8,7 @@ from pathlib import Path
 from exception_policy_lib import ExceptionPolicyError, load_exception_policy, match_active_exceptions
 from policy_pack_lib import PolicyPackError, load_policy_domain_resolution
 from policy_trace_lib import build_policy_trace
-from review_lib import load_reviews
+from review_lib import ReviewPolicyError, evaluate_review_state, load_reviews
 from skill_identity_lib import NamespacePolicyError, load_namespace_policy, namespace_policy_report, normalize_skill_identity
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -267,6 +267,7 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
     local_tag['points_to_head'] = bool(local_tag['target_commit'] and local_tag['target_commit'] == head_commit)
     remote_tag = remote_tag_state(root, remote_name, expected_tag)
     review_entries = review_audit_entries(skill_dir)
+    review_evaluation = None
     releaser_identity = resolve_releaser_identity(root)
     namespace_report = {
         'policy_path': None,
@@ -302,6 +303,11 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
     else:
         issues.extend(_issue('namespace-policy', message) for message in namespace_report.get('errors', []))
         warnings.extend(namespace_report.get('warnings', []))
+
+    try:
+        review_evaluation = evaluate_review_state(skill_dir, root=root)
+    except (PolicyPackError, ReviewPolicyError) as exc:
+        warnings.append(f'cannot evaluate review audit state: {"; ".join(exc.errors)}')
 
     if not releaser_identity:
         warnings.append('cannot determine releaser identity; set INFINITAS_SKILL_RELEASER or git config user.name/user.email')
@@ -464,6 +470,27 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
         exceptions=exception_usage,
     )
 
+    review_payload = {
+        'reviewers': review_entries,
+    }
+    if review_evaluation:
+        review_payload.update(
+            {
+                'effective_review_state': review_evaluation.get('effective_review_state'),
+                'required_approvals': review_evaluation.get('required_approvals'),
+                'required_groups': review_evaluation.get('required_groups', []),
+                'covered_groups': review_evaluation.get('covered_groups', []),
+                'missing_groups': review_evaluation.get('missing_groups', []),
+                'approval_count': review_evaluation.get('approval_count'),
+                'blocking_rejection_count': review_evaluation.get('blocking_rejection_count'),
+                'quorum_met': review_evaluation.get('quorum_met'),
+                'review_gate_pass': review_evaluation.get('review_gate_pass'),
+                'latest_decisions': review_evaluation.get('latest_decisions', []),
+                'ignored_decisions': review_evaluation.get('ignored_decisions', []),
+                'configured_groups': review_evaluation.get('configured_groups', {}),
+            }
+        )
+
     return {
         'mode': mode,
         'release_ready': not errors,
@@ -483,9 +510,7 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
             'owners': identity.get('owners', []),
             'maintainers': identity.get('maintainers', []),
         },
-        'review': {
-            'reviewers': review_entries,
-        },
+        'review': review_payload,
         'release': {
             'releaser_identity': releaser_identity,
             'namespace_policy_path': namespace_report.get('policy_path'),
@@ -494,8 +519,10 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
             'transfer_authorized': namespace_report.get('transfer_authorized', True),
             'transfer_matches': namespace_report.get('transfer_matches', []),
             'competing_claims': namespace_report.get('competing_claims', []),
+            'delegated_teams': namespace_report.get('delegated_teams', {}),
             'authorized_signers': namespace_report.get('authorized_signers', []),
             'authorized_releasers': namespace_report.get('authorized_releasers', []),
+            'exception_usage': exception_usage,
         },
         'signing': {
             'tag_format': signing['tag_format'],

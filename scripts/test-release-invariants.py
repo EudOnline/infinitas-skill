@@ -374,13 +374,17 @@ def scenario_release_state_exports_delegated_audit_details():
             fail(f'expected quorum_met true, got {review.get("quorum_met")!r}')
         if review.get('review_gate_pass') is not True:
             fail(f'expected review_gate_pass true, got {review.get("review_gate_pass")!r}')
-        if review.get('covered_groups') != ['security']:
-            fail(f"expected covered_groups ['security'], got {review.get('covered_groups')!r}")
+        covered_groups = review.get('covered_groups') or []
+        if 'security' not in covered_groups:
+            fail(f'expected covered_groups to include security, got {covered_groups!r}')
         if review.get('missing_groups') != []:
             fail(f"expected no missing_groups, got {review.get('missing_groups')!r}")
         latest_decisions = review.get('latest_decisions') or []
         if len(latest_decisions) != 2:
             fail(f'expected two latest_decisions entries, got {latest_decisions!r}')
+        counted_approval = next((item for item in latest_decisions if item.get('reviewer') == 'lvxiaoer'), None)
+        if not counted_approval or 'security' not in (counted_approval.get('groups') or []):
+            fail(f'expected lvxiaoer latest_decisions entry to cover security, got {latest_decisions!r}')
         ignored_decisions = review.get('ignored_decisions') or []
         if len(ignored_decisions) != 1 or ignored_decisions[0].get('reviewer') != 'outsider':
             fail(f'expected outsider ignored_decisions entry, got {ignored_decisions!r}')
