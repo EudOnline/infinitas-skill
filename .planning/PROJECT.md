@@ -39,7 +39,8 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - [x] Explainable policy decision traces are complete for validation, promotion, release, and registry debug flows.
 - [x] Team governance plus delegated namespace/review scopes are complete for 11-03.
 - [x] Break-glass exceptions plus exception-aware promotion and release traces are complete for 11-04.
-- [ ] Delegated audit exports are the current v11 focus.
+- [x] Delegated audit exports plus provenance persistence are complete for 11-05.
+- [ ] Federation, mirrors, and standalone audit/export surfaces remain for v11 Phase 3.
 
 ### Out of Scope
 
@@ -63,6 +64,7 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - v11 Phase 1 also added additive policy evaluation traces plus structured validation error output so allow/deny decisions can be debugged without breaking existing CLI flows.
 - 11-03 added a shared team policy plus team-backed namespace ownership and reviewer-group resolution without breaking existing direct actor lists.
 - 11-04 added a shared exception policy, stable promotion/release blocker ids, and additive `exception_usage` plus `policy_trace.exceptions` output for active waivers.
+- 11-05 extends `check-release-state --json` and release provenance with stable delegated audit metadata such as review quorum context, delegated publisher teams, and applied release exception usage, while intentionally stopping short of a separate export product.
 - `config/allowed_signers` is still intentionally bootstrapped with guidance comments only; maintainers must commit real trusted signer entries before the first actual stable release is operationally complete.
 
 ## Constraints
@@ -94,4 +96,4 @@ Maintainers can publish and distribute private skills with deterministic, audita
 | Make recommendation deterministic and metadata-driven | Agents need explainable, reviewable ranking instead of fuzzy install shortcuts | ✓ Good |
 
 ---
-*Last updated: 2026-03-15 after 11-04 break-glass exceptions completion*
+*Last updated: 2026-03-15 after 11-05 delegated audit exports completion*

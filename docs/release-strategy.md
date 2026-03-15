@@ -49,11 +49,19 @@ Stable release tooling enforces all of the following before it will write releas
 
 If any of those invariants fail, `scripts/release-skill.sh` and `scripts/check-release-state.py` exit with actionable errors.
 
+## Delegated audit metadata
+
+11-05 keeps the audit surface on the existing release-state and provenance path instead of adding a separate export product.
+
+- `python3 scripts/check-release-state.py <name> --json` now exports richer review audit context, including `effective_review_state`, quorum counters, `latest_decisions`, `ignored_decisions`, and `configured_groups`.
+- That same JSON now records delegated release authority via `release.delegated_teams` and mirrors applied break-glass overrides into `release.exception_usage` while preserving the existing top-level `exception_usage`.
+- Generated provenance carries the same stable audit metadata so later reviewers can reconstruct delegated approvals plus release exceptions without depending on debug-only `policy_trace` output.
+
 ## Stable attestation policy
 
 Phase 5 adds a second enforcement layer on top of the signed-tag baseline.
 
-- `scripts/release-skill.sh <name> --write-provenance` now writes a release attestation payload that includes the immutable source snapshot, resolved registry context, dependency resolution plan, author, reviewer, releaser, and signer identities.
+- `scripts/release-skill.sh <name> --write-provenance` now writes a release attestation payload that includes the immutable source snapshot, resolved registry context, dependency resolution plan, author, reviewer, releaser, signer identities, delegated review context, delegated release authority, and applied release exceptions.
 - That payload is SSH-signed and verified against `config/allowed_signers` before the release helper accepts it as valid.
 - When the v9 attestation policy is enabled, commands that write release artifacts or distribution output must also use `--write-provenance`; otherwise the helper rejects them with an actionable error.
 - Use `scripts/verify-attestation.py <attestation.json>` to verify a generated attestation bundle directly.

@@ -71,7 +71,7 @@ Requirements committed for milestone `v10`. Phase 6 is now complete.
 
 ## v11 Requirements
 
-Requirements committed for milestone `v11`. Phase 2 is in progress after 11-04 completion on 2026-03-15; 11-05 is next.
+Requirements committed for milestone `v11`. Phase 2 is complete after 11-05 completion on 2026-03-15; Phase 3 is next.
 
 ### Policy Packs and Explainable Decisions
 
@@ -82,7 +82,7 @@ Requirements committed for milestone `v11`. Phase 2 is in progress after 11-04 c
 
 - [x] **TEAM-01**: Teams or groups can own namespaces and approval scopes without collapsing into a single global maintainer list.
 - [x] **TEAM-02**: Time-bounded or reviewable exceptions can be granted for urgent releases and clearly recorded.
-- [ ] **TEAM-03**: Audit outputs can reconstruct who approved, who overrode, and why.
+- [x] **TEAM-03**: Audit outputs can reconstruct who approved, who overrode, and why.
 
 ### Federation, Mirrors, and Audit Export
 
@@ -151,7 +151,7 @@ Requirements committed for milestone `v11`. Phase 2 is in progress after 11-04 c
 | POL-02 | v11 Phase 1 | Complete |
 | TEAM-01 | v11 Phase 2 | Complete |
 | TEAM-02 | v11 Phase 2 | Complete |
-| TEAM-03 | v11 Phase 2 | Planned |
+| TEAM-03 | v11 Phase 2 | Complete |
 | FED-01 | v11 Phase 3 | Planned |
 | FED-02 | v11 Phase 3 | Planned |
 
@@ -168,4 +168,4 @@ Requirements committed for milestone `v11`. Phase 2 is in progress after 11-04 c
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-15 after 11-04 break-glass exceptions completion*
+*Last updated: 2026-03-15 after 11-05 delegated audit exports completion*

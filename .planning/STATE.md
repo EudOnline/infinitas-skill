@@ -5,16 +5,16 @@
 See: `.planning/PROJECT.md` (updated 2026-03-15)
 
 **Core value:** Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
-**Current focus:** v11 Phase 2 — Multi-Team Governance and Exceptions
+**Current focus:** v11 Phase 3 planning — Federation, Mirrors, and Audit Export
 
 ## Current Position
 
-Phase: v11 Phase 2 of 3 (Multi-Team Governance and Exceptions)
-Plan: `docs/plans/2026-03-15-delegated-audit-exports.md`
-Status: 11-04 complete; 11-05 planning underway
-Last activity: 2026-03-15 — Started 11-05 planning for delegated audit exports and release metadata
+Phase: v11 Phase 3 of 3 (Federation, Mirrors, and Audit Export)
+Plan: `docs/plans/2026-03-15-delegated-audit-exports.md` (completed)
+Status: 11-05 complete; Phase 3 planning not started
+Last activity: 2026-03-15 — Completed 11-05 delegated audit exports and provenance persistence
 
-Progress: [█████████▓] 92%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
@@ -26,11 +26,11 @@ Progress: [█████████▓] 92%
 **By Phase:**
 - v9: 14 plans completed across 5 phases
 - v10: 18 plans completed across 6 phases
-- v11: 4 plans completed across 3 phases
+- v11: 5 plans completed across 3 phases
 
 **Recent Trend:**
-- Last 5 plans: 10-18, 11-01, 11-02, 11-03, 11-04
-- Trend: break-glass exceptions landed; delegated audit export is next
+- Last 5 plans: 11-01, 11-02, 11-03, 11-04, 11-05
+- Trend: v11 Phase 2 is complete; federation and export-format planning is next
 
 ## Accumulated Context
 
@@ -58,21 +58,21 @@ Decisions are logged in `PROJECT.md`.
 
 ### Pending Todos
 
-- Execute 11-05 so delegated approvals and exception usage are exported cleanly into audit-facing outputs.
 - Bootstrap real trusted signer entries in `config/allowed_signers` before the first actual stable release.
 - Decide whether CI-native attestations should be additive to, or eventually authoritative over, the repo-managed SSH path.
-- Decide whether any 11-05 audit fields also belong in catalog-facing outputs, or should stay release/provenance-only until later export work.
+- Decide which Phase 3 audit or inventory exports should stay release/provenance-only versus become separate catalog-facing products.
+- Plan 11-06 federation or mirror trust rules without weakening the new delegated audit trail.
 
 ### Blockers/Concerns
 
 - `config/allowed_signers` still contains bootstrap guidance comments only; Phase 2 added the bootstrap and doctor flow, but a real production signer ceremony is still pending.
 - Phase 2 needs a shared team model that can expand into namespace ownership, reviewer groups, and future exception scopes without duplicating membership lists across policy files.
-- 11-05 still needs a clean additive audit surface so delegated approvals and exception usage can be exported without baking transient debug details into release provenance.
+- Phase 3 still needs explicit federation or export boundaries so the new delegated audit metadata does not leak unstable debug-only fields or redundant catalog contracts.
 - The repository still installs skills by bare folder name for backward compatibility; future v10 work may revisit how far concurrent same-slug publisher installs should go.
 - v10 should stay Git-native and private-first; public marketplace features, social features, and on-chain reputation are intentionally deferred.
 
 ## Session Continuity
 
 Last session: 2026-03-15 09:00 GMT+8
-Stopped at: 11-05 planning underway
+Stopped at: 11-05 complete; v11 Phase 3 planning not yet started
 Resume file: `docs/plans/2026-03-15-delegated-audit-exports.md`

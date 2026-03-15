@@ -32,9 +32,11 @@ Before creating stable release output for an active skill:
 - [ ] expected tag `skill/<name>/v<version>` does not already point at the wrong commit
 - [ ] default stable tag is created with `scripts/release-skill.sh <name> --push-tag` or `scripts/release-skill-tag.sh <name> --create --push`
 - [ ] `scripts/check-release-state.py <name>` passes before writing notes, provenance, or GitHub releases
+- [ ] if delegated reviewer groups, delegated publisher teams, or break-glass waivers are involved, `python3 scripts/check-release-state.py <name> --mode preflight --json` shows the expected `review.latest_decisions`, `review.ignored_decisions`, `release.delegated_teams`, and `release.exception_usage`
 - [ ] any command that writes release notes or distribution output also includes `--write-provenance` while the v9 attestation policy is enabled
 - [ ] release notes or provenance reference `refs/tags/skill/<name>/v<version>` instead of local-only `HEAD`
 - [ ] `catalog/provenance/<name>-<version>.json` records the resolved registry context, dependency plan, and attestation signer identity
+- [ ] when delegated approvals or release exceptions were used, `catalog/provenance/<name>-<version>.json` preserves that audit context in `review.*` and `release.*` instead of relying on a separate export artifact
 - [ ] `scripts/verify-attestation.py catalog/provenance/<name>-<version>.json` passes against repo-managed allowed signers
 - [ ] if CI attestation / CI-native attestation is enabled, `catalog/provenance/<name>-<version>.ci.json` was generated and `python3 scripts/verify-ci-attestation.py ...` passes
 - [ ] `config/signing.json` `attestation.policy.release_trust_mode` matches the intended rollout mode; the key `release_trust_mode` is set to `ssh`, `ci`, or `both`
