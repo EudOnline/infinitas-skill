@@ -14,6 +14,7 @@ Give consumers a stable, index-first workflow for:
 ```bash
 scripts/search-skills.sh operate
 scripts/search-skills.sh --publisher lvxiaoer --agent codex
+scripts/recommend-skill.sh "Need a codex skill for repository operations"
 scripts/search-skills.sh --tag operations
 scripts/inspect-skill.sh lvxiaoer/operate-infinitas-skill
 scripts/install-by-name.sh operate-infinitas-skill ~/.openclaw/skills --mode confirm
@@ -35,6 +36,21 @@ The output is built from `catalog/discovery-index.json` and includes:
 - `source_registry`
 
 Do not scrape raw source paths from `skills/active/` or `skills/incubating/` for consumer discovery.
+
+## Recommend
+
+Use `scripts/recommend-skill.sh` when the caller describes a task instead of an exact skill name.
+
+The recommendation output should explain why the top result won through:
+
+- `recommendation_reason`
+- `ranking_factors`
+- trust state
+- compatibility
+- maturity
+- verification freshness
+
+Search gives a broad candidate set. Recommend gives a ranked best-fit view.
 
 ## Inspect
 
@@ -68,6 +84,11 @@ Read these keys first:
 - `policy_reasons`
 - `version_reason`
 - `next_actions`
+
+For recommendation flows, also read:
+
+- `recommendation_reason`
+- `ranking_factors`
 
 This explanation layer is the fast way to answer:
 

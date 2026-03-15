@@ -4,6 +4,7 @@
 
 ```bash
 scripts/search-skills.sh [query] [--publisher <publisher>] [--agent <agent>] [--tag <tag>] [--json]
+scripts/recommend-skill.sh <task-description> [--target-agent <agent>] [--limit <n>] [--json]
 scripts/inspect-skill.sh <qualified-name> [--version <semver>] [--json]
 scripts/resolve-skill.sh <name> [--target-agent <agent>]
 scripts/install-by-name.sh <name> <target-dir> [--version <semver>] [--target-agent <agent>] [--mode auto|confirm]
@@ -14,6 +15,7 @@ scripts/upgrade-skill.sh <installed-name> <target-dir> [--to-version <semver>] [
 ## Consumer workflow
 
 - search with `scripts/search-skills.sh` first when the caller only knows a topic, publisher, agent, or tag
+- recommend with `scripts/recommend-skill.sh` when the caller describes a job and wants the best-ranked candidate
 - inspect with `scripts/inspect-skill.sh` before install when the caller needs trust state, compatibility, dependency, distribution, or provenance details
 - resolve/install flows stay index-driven and immutable-only; they must not treat source folders as install candidates
 

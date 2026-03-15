@@ -44,11 +44,13 @@ if [[ "${INFINITAS_SKIP_AI_WRAPPER_TESTS:-0}" != "1" ]]; then
   python3 scripts/test-install-by-name.py
   python3 scripts/test-skill-update.py
   python3 scripts/test-explain-install.py
+  python3 scripts/test-recommend-skill.py
   python3 scripts/test-ai-index.py
   python3 scripts/test-ai-pull.py
   python3 scripts/test-ai-publish.py
   python3 scripts/test-openclaw-import.py
   python3 scripts/test-search-docs.py
+  python3 scripts/test-recommend-docs.py
 fi
 if [[ "${INFINITAS_SKIP_BOOTSTRAP_TESTS:-0}" != "1" ]]; then
   python3 scripts/test-signing-bootstrap.py
