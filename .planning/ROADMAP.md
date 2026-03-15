@@ -185,7 +185,7 @@ Plans:
 
 **Milestone Goal:** Extend the private registry from single-maintainer governance into explainable, team-oriented policy enforcement with federation-ready controls.
 
-#### Phase 1: Policy Packs and Explainable Decisions
+#### ✅ Phase 1: Policy Packs and Explainable Decisions (Completed 2026-03-15)
 **Goal**: Move repository policy toward reusable, inspectable policy packs with explicit decision traces.
 **Depends on**: v10 completed
 **Requirements**: [POL-01, POL-02]
@@ -196,10 +196,10 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 11-01: Define policy-pack structure plus repository-level loading/override rules
-- [ ] 11-02: Add explain/debug output for policy evaluation across validation, promotion, and release flows
+- [x] 11-01: Define policy-pack structure plus repository-level loading/override rules
+- [x] 11-02: Add explain/debug output for policy evaluation across validation, promotion, and release flows
 
-#### Phase 2: Multi-Team Governance and Exceptions
+#### 🚧 Phase 2: Multi-Team Governance and Exceptions
 **Goal**: Support team-level ownership, delegated approval scopes, and explicit break-glass exceptions without weakening auditability.
 **Depends on**: Phase 1
 **Requirements**: [TEAM-01, TEAM-02, TEAM-03]
@@ -244,6 +244,6 @@ Plans:
 | 4. CI-native Attestations and Verification | v10 | 3/3 | Completed | 2026-03-14 |
 | 5. Search, Discovery, and Consumer UX | v10 | 3/3 | Completed | 2026-03-14 |
 | 6. Recommendation and Decision Support | v10 | 3/3 | Completed | 2026-03-15 |
-| 1. Policy Packs and Explainable Decisions | v11 | 0/2 | Planned | - |
+| 1. Policy Packs and Explainable Decisions | v11 | 2/2 | Completed | 2026-03-15 |
 | 2. Multi-Team Governance and Exceptions | v11 | 0/3 | Planned | - |
 | 3. Federation, Mirrors, and Audit Export | v11 | 0/3 | Planned | - |

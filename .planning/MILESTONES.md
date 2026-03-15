@@ -8,4 +8,4 @@ Historical releases or internal versions before `v9` are not reconstructed here 
 
 - ✅ `v9` — Registry Trust, Quorum, and Attestation (completed 2026-03-09)
 - ✅ `v10` — Publisher Identity and Verified Distribution (completed 2026-03-15)
-- 🚧 `v11` — Policy-as-Code and Organizational Controls (Phase 1 planning started 2026-03-15)
+- 🚧 `v11` — Policy-as-Code and Organizational Controls (Phase 1 completed 2026-03-15; Phase 2 planning started 2026-03-15)

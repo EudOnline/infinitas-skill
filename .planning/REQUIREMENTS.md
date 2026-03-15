@@ -71,7 +71,7 @@ Requirements committed for milestone `v10`. Phase 6 is now complete.
 
 ## v11 Requirements
 
-Requirements committed for milestone `v11`. Phase 1 is next.
+Requirements committed for milestone `v11`. Phase 1 completed on 2026-03-15; Phase 2 is next.
 
 ### Policy Packs and Explainable Decisions
 
@@ -147,8 +147,8 @@ Requirements committed for milestone `v11`. Phase 1 is next.
 | REC-01 | v10 Phase 6 | Complete |
 | REC-02 | v10 Phase 6 | Complete |
 | REC-03 | v10 Phase 6 | Complete |
-| POL-01 | v11 Phase 1 | Planned |
-| POL-02 | v11 Phase 1 | Planned |
+| POL-01 | v11 Phase 1 | Complete |
+| POL-02 | v11 Phase 1 | Complete |
 | TEAM-01 | v11 Phase 2 | Planned |
 | TEAM-02 | v11 Phase 2 | Planned |
 | TEAM-03 | v11 Phase 2 | Planned |
@@ -168,4 +168,4 @@ Requirements committed for milestone `v11`. Phase 1 is next.
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-15 after v10 completion and v11 Phase 1 planning kickoff*
+*Last updated: 2026-03-15 after v11 Phase 1 completion and Phase 2 planning kickoff*

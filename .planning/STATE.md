@@ -5,32 +5,32 @@
 See: `.planning/PROJECT.md` (updated 2026-03-15)
 
 **Core value:** Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
-**Current focus:** v11 Phase 1 — Policy Packs and Explainable Decisions
+**Current focus:** v11 Phase 2 — Multi-Team Governance and Exceptions
 
 ## Current Position
 
-Phase: v11 Phase 1 of 3 (Policy Packs and Explainable Decisions)
-Plan: `docs/plans/2026-03-15-policy-packs-and-loading-rules.md`
-Status: v10 complete; v11 kickoff plan drafted
-Last activity: 2026-03-15 — Completed v10 Phase 6 by adding recommendation metadata, deterministic ranking, recommendation docs, and full-validation coverage
+Phase: v11 Phase 2 of 3 (Multi-Team Governance and Exceptions)
+Plan: `docs/plans/2026-03-15-team-governance-scopes.md`
+Status: v11 Phase 1 complete; 11-03 planning underway
+Last activity: 2026-03-15 — Completed v11 Phase 1 by adding policy-pack loading, ordered source resolution, and explainable policy traces
 
-Progress: [████████░░] 79%
+Progress: [████████▓░] 85%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 32
+- Total plans completed: 34
 - Average duration: n/a
 - Total execution time: n/a
 
 **By Phase:**
 - v9: 14 plans completed across 5 phases
 - v10: 18 plans completed across 6 phases
-- v11: 0 plans completed across 3 phases
+- v11: 2 plans completed across 3 phases
 
 **Recent Trend:**
-- Last 5 plans: 10-14, 10-15, 10-16, 10-17, 10-18
-- Trend: v10 completed; policy-pack work is next
+- Last 5 plans: 10-16, 10-17, 10-18, 11-01, 11-02
+- Trend: v11 Phase 1 complete; team-governance work is next
 
 ## Accumulated Context
 
@@ -58,20 +58,20 @@ Decisions are logged in `PROJECT.md`.
 
 ### Pending Todos
 
-- Plan and execute v11 Phase 1 (policy-pack structure plus repository-level loading and override rules).
+- Plan and execute v11 Phase 2 (team governance scopes, break-glass exceptions, and delegated auditability).
 - Bootstrap real trusted signer entries in `config/allowed_signers` before the first actual stable release.
 - Decide whether CI-native attestations should be additive to, or eventually authoritative over, the repo-managed SSH path.
-- Decide which baseline policy packs should ship first (for example solo-maintainer, strict dual-attestation, and hosted-mirror-oriented defaults).
+- Decide which baseline team definitions and delegated approval patterns should ship first (for example platform-admins, security-review, and release-operators).
 
 ### Blockers/Concerns
 
 - `config/allowed_signers` still contains bootstrap guidance comments only; Phase 2 added the bootstrap and doctor flow, but a real production signer ceremony is still pending.
-- Policy loading is still split across file-specific helpers (`promotion-policy`, `namespace-policy`, `signing`, and `registry-sources`), so Phase 11-01 needs a careful compatibility-first convergence path.
+- Phase 2 needs a shared team model that can expand into namespace ownership, reviewer groups, and future exception scopes without duplicating membership lists across policy files.
 - The repository still installs skills by bare folder name for backward compatibility; future v10 work may revisit how far concurrent same-slug publisher installs should go.
 - v10 should stay Git-native and private-first; public marketplace features, social features, and on-chain reputation are intentionally deferred.
 
 ## Session Continuity
 
 Last session: 2026-03-15 09:00 GMT+8
-Stopped at: v10 Phase 6 implementation completed; next logical step is planning v11 Phase 1
-Resume file: `docs/plans/2026-03-15-policy-packs-and-loading-rules.md`
+Stopped at: v11 Phase 1 implementation completed; next logical step is planning and executing 11-03
+Resume file: `docs/plans/2026-03-15-team-governance-scopes.md`
