@@ -9,7 +9,7 @@ The current release/install model supports both:
 - local or Git-backed registry sources for operators working inside the repository
 - hosted HTTP registry sources for consumers that should install immutable artifacts without cloning the full repository
 
-Policy composition now also supports ordered repository policy packs via `policy/policy-packs.json`, with repository-local policy files remaining the final override layer for compatibility.
+Policy composition now also supports ordered repository policy packs via `policy/policy-packs.json`, with repository-local policy files remaining the final override layer for compatibility. Shared team scopes can now be declared in `policy/team-policy.json` and referenced from namespace or review policy without duplicating membership lists.
 Policy-aware validation, promotion, and release checks now also expose additive `policy_trace` diagnostics in JSON mode, with registry validation returning structured `validation_errors`, and optional `--debug-policy` text rendering for operator troubleshooting.
 
 ## Recommended workflow

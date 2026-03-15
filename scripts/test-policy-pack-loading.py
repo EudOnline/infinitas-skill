@@ -156,6 +156,14 @@ def dual_attestation_pack():
                     }
                 }
             },
+            'team_policy': {
+                'version': 1,
+                'teams': {
+                    'release-operators': {
+                        'members': ['dual-release'],
+                    }
+                },
+            },
         },
     }
 
@@ -192,6 +200,18 @@ def repo_local_signing_override():
     }
 
 
+def repo_local_team_override():
+    return {
+        '$schema': '../schemas/team-policy.schema.json',
+        'version': 1,
+        'teams': {
+            'platform-admins': {
+                'members': ['repo-admin'],
+            }
+        },
+    }
+
+
 def make_repo():
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-policy-pack-loading-'))
     repo = tmpdir / 'repo'
@@ -200,6 +220,7 @@ def make_repo():
         write_json(repo / 'policy' / 'packs' / 'baseline.json', baseline_pack())
         write_json(repo / 'policy' / 'packs' / 'dual-attestation.json', dual_attestation_pack())
         write_json(repo / 'policy' / 'promotion-policy.json', repo_local_promotion_override())
+        write_json(repo / 'policy' / 'team-policy.json', repo_local_team_override())
         write_json(repo / 'config' / 'signing.json', repo_local_signing_override())
         (repo / 'config' / 'allowed_signers').write_text('# fixture\n', encoding='utf-8')
         return tmpdir, repo
@@ -251,6 +272,15 @@ def scenario_declared_pack_order_and_local_overrides():
         registries = effective_registry.get('registries') or []
         if len(registries) != 1 or registries[0].get('name') != 'baseline':
             fail(f'expected registry-sources domain shape to stay compatible, got {registries!r}')
+
+        team_resolution = load_policy_domain_resolution(repo, 'team_policy')
+        team_sources = team_resolution.get('effective_sources') or []
+        if [item.get('kind') for item in team_sources] != ['pack', 'local_override']:
+            fail(f'unexpected team-policy source order: {team_sources!r}')
+        effective_team_policy = team_resolution.get('effective') or {}
+        teams = effective_team_policy.get('teams') or {}
+        if sorted(teams) != ['platform-admins', 'release-operators']:
+            fail(f'unexpected merged teams in team_policy: {sorted(teams)!r}')
     finally:
         shutil.rmtree(tmpdir)
 

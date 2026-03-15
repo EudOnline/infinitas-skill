@@ -48,6 +48,7 @@ Load order is deterministic:
 - `namespace_policy`
 - `signing`
 - `registry_sources`
+- `team_policy`
 
 Each pack stores those domains under a top-level `domains` object in `policy/packs/<name>.json`.
 
@@ -71,8 +72,19 @@ After pack composition, loaders apply the legacy repository-local files as the l
 - `policy/namespace-policy.json`
 - `config/signing.json`
 - `config/registry-sources.json`
+- `policy/team-policy.json`
 
 This means policy packs are additive in 11-01, not a breaking replacement for the existing files.
+
+## Team governance scopes
+
+Version 11-03 adds a shared `team_policy` domain so repositories can declare team membership once and reuse it across namespace and review policy.
+
+- `policy/team-policy.json` defines named teams plus optional delegates.
+- `policy/namespace-policy.json` publisher entries can now use `owner_teams`, `maintainer_teams`, `authorized_signer_teams`, and `authorized_releaser_teams`.
+- `policy/promotion-policy.json` reviewer groups can now use `teams` alongside direct `members`.
+
+That keeps delegated ownership and delegated review scopes additive: direct actor lists still work, while team-backed scopes expand into the same validation, quorum, and trace outputs.
 
 ## Validation
 

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://infinitas-skill.local/schemas/team-policy.schema.json",
+  "title": "Team Policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "teams"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "teams": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/team"
+      }
+    }
+  },
+  "$defs": {
+    "actorList": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "team": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "members": {
+          "$ref": "#/$defs/actorList"
+        },
+        "delegates": {
+          "$ref": "#/$defs/actorList"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

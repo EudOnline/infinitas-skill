@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from policy_pack_lib import PolicyPackError, load_effective_policy_domain
+from team_policy_lib import TeamPolicyError, expand_team_refs, load_team_policy
 
 ROOT = Path(__file__).resolve().parent.parent
 SKILL_NAME_RE = re.compile(r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
@@ -29,6 +30,14 @@ def unique_strings(values):
 
 
 def normalize_actor_list(values):
+    if values is None:
+        return []
+    if not isinstance(values, list):
+        return []
+    return unique_strings([item.strip() for item in values if isinstance(item, str) and item.strip()])
+
+
+def normalize_team_list(values):
     if values is None:
         return []
     if not isinstance(values, list):
@@ -133,6 +142,10 @@ def load_namespace_policy(root=ROOT):
         payload = load_effective_policy_domain(root, 'namespace_policy')
     except PolicyPackError as exc:
         raise NamespacePolicyError(exc.errors) from exc
+    try:
+        team_policy = load_team_policy(root)
+    except TeamPolicyError as exc:
+        raise NamespacePolicyError(exc.errors) from exc
 
     errors = []
     unknown_root = sorted(set(payload) - {'$schema', 'version', 'compatibility', 'publishers', 'transfers'})
@@ -166,24 +179,70 @@ def load_namespace_policy(root=ROOT):
         if not isinstance(raw_entry, dict):
             errors.append(f'namespace-policy publishers.{name} must be an object')
             continue
-        unknown = sorted(set(raw_entry) - {'owners', 'maintainers', 'authorized_signers', 'authorized_releasers'})
+        unknown = sorted(
+            set(raw_entry)
+            - {
+                'owners',
+                'owner_teams',
+                'maintainers',
+                'maintainer_teams',
+                'authorized_signers',
+                'authorized_signer_teams',
+                'authorized_releasers',
+                'authorized_releaser_teams',
+            }
+        )
         if unknown:
             errors.append(f'namespace-policy publishers.{name} has unsupported keys: {", ".join(unknown)}')
         for field_name in ['owners', 'maintainers', 'authorized_signers', 'authorized_releasers']:
             value = raw_entry.get(field_name)
             if value is not None and not isinstance(value, list):
                 errors.append(f'namespace-policy publishers.{name}.{field_name} must be an array when present')
+        for field_name in ['owner_teams', 'maintainer_teams', 'authorized_signer_teams', 'authorized_releaser_teams']:
+            value = raw_entry.get(field_name)
+            if value is not None and not isinstance(value, list):
+                errors.append(f'namespace-policy publishers.{name}.{field_name} must be an array when present')
         owners = normalize_actor_list(raw_entry.get('owners'))
+        owner_teams = normalize_team_list(raw_entry.get('owner_teams'))
         maintainers = normalize_actor_list(raw_entry.get('maintainers'))
-        authorized_signers = normalize_actor_list(raw_entry.get('authorized_signers')) or unique_strings(owners + maintainers)
-        authorized_releasers = normalize_actor_list(raw_entry.get('authorized_releasers')) or unique_strings(owners + maintainers)
-        if not owners:
-            errors.append(f'namespace-policy publishers.{name}.owners must include at least one actor')
+        maintainer_teams = normalize_team_list(raw_entry.get('maintainer_teams'))
+        authorized_signer_teams = normalize_team_list(raw_entry.get('authorized_signer_teams'))
+        authorized_releaser_teams = normalize_team_list(raw_entry.get('authorized_releaser_teams'))
+
+        resolved_owner_teams = expand_team_refs(owner_teams, team_policy)
+        resolved_maintainer_teams = expand_team_refs(maintainer_teams, team_policy)
+        resolved_signer_teams = expand_team_refs(authorized_signer_teams, team_policy)
+        resolved_releaser_teams = expand_team_refs(authorized_releaser_teams, team_policy)
+        for field_name, report in [
+            ('owner_teams', resolved_owner_teams),
+            ('maintainer_teams', resolved_maintainer_teams),
+            ('authorized_signer_teams', resolved_signer_teams),
+            ('authorized_releaser_teams', resolved_releaser_teams),
+        ]:
+            for missing_team in report.get('missing_teams', []):
+                errors.append(f'namespace-policy publishers.{name}.{field_name} references unknown team {missing_team!r}')
+
+        resolved_owners = unique_strings(owners + resolved_owner_teams.get('actors', []))
+        resolved_maintainers = unique_strings(resolved_owners + maintainers + resolved_maintainer_teams.get('actors', []))
+        authorized_signers = normalize_actor_list(raw_entry.get('authorized_signers')) or unique_strings(
+            resolved_maintainers + resolved_signer_teams.get('actors', [])
+        )
+        authorized_releasers = normalize_actor_list(raw_entry.get('authorized_releasers')) or unique_strings(
+            resolved_maintainers + resolved_releaser_teams.get('actors', [])
+        )
+        if not owners and not owner_teams:
+            errors.append(f'namespace-policy publishers.{name} must include at least one owner actor or owner team')
         publishers[name] = {
             'owners': owners,
+            'owner_teams': owner_teams,
             'maintainers': maintainers,
+            'maintainer_teams': maintainer_teams,
             'authorized_signers': authorized_signers,
+            'authorized_signer_teams': authorized_signer_teams,
             'authorized_releasers': authorized_releasers,
+            'authorized_releaser_teams': authorized_releaser_teams,
+            'resolved_owners': resolved_owners,
+            'resolved_maintainers': resolved_maintainers,
         }
 
     transfers = []
@@ -237,6 +296,7 @@ def load_namespace_policy(root=ROOT):
         'compatibility': {
             'allow_unqualified_names': allow_unqualified,
         },
+        'team_policy': team_policy,
         'publishers': publishers,
         'transfers': transfers,
     }
@@ -279,12 +339,12 @@ def namespace_policy_report(skill_dir, root=ROOT, policy=None):
         if publisher_entry is None:
             errors.append(f'{skill_dir}: publisher {identity["publisher"]!r} is not declared in policy/namespace-policy.json')
         else:
-            missing_owners = [item for item in identity.get('owners', []) if item not in publisher_entry.get('owners', [])]
+            missing_owners = [item for item in identity.get('owners', []) if item not in publisher_entry.get('resolved_owners', [])]
             if missing_owners:
                 errors.append(
                     f'{skill_dir}: owners {", ".join(missing_owners)} are not authorized owners for publisher {identity["publisher"]!r}'
                 )
-            allowed_maintainers = set(publisher_entry.get('owners', [])) | set(publisher_entry.get('maintainers', []))
+            allowed_maintainers = set(publisher_entry.get('resolved_owners', [])) | set(publisher_entry.get('resolved_maintainers', []))
             missing_maintainers = [item for item in identity.get('maintainers', []) if item not in allowed_maintainers]
             if missing_maintainers:
                 errors.append(
@@ -354,6 +414,12 @@ def namespace_policy_report(skill_dir, root=ROOT, policy=None):
         'transfer_authorized': transfer_authorized,
         'transfer_matches': transfer_matches,
         'competing_claims': competing_claims,
+        'delegated_teams': {
+            'owner_teams': list((publisher_entry or {}).get('owner_teams', [])),
+            'maintainer_teams': list((publisher_entry or {}).get('maintainer_teams', [])),
+            'authorized_signer_teams': list((publisher_entry or {}).get('authorized_signer_teams', [])),
+            'authorized_releaser_teams': list((publisher_entry or {}).get('authorized_releaser_teams', [])),
+        },
         'authorized_signers': authorized_signers,
         'authorized_releasers': authorized_releasers,
     }

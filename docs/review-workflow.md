@@ -32,6 +32,7 @@ The current promotion policy can require:
 
 - `reviews.json` to exist
 - reviewer identities to belong to configured policy groups
+- reviewer groups to resolve through shared teams declared in `policy/team-policy.json`
 - reviewer identities distinct from the skill owner
 - a stage/risk-specific minimum number of counted approvals
 - coverage from required reviewer groups
@@ -49,6 +50,8 @@ scripts/review-status.py repo-audit --as-active --require-pass
 ```
 
 The status command counts the latest distinct decision per reviewer, ignores unconfigured reviewers, applies the current policy quorum rules, and reports missing reviewer-group coverage.
+
+When a reviewer group uses `teams`, the same command still reports coverage by group name; team membership simply becomes the source of who is allowed to satisfy that group.
 
 ## Source of truth
 

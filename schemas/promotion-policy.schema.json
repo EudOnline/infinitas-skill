@@ -121,8 +121,17 @@
     "group": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "members"
+      "anyOf": [
+        {
+          "required": [
+            "members"
+          ]
+        },
+        {
+          "required": [
+            "teams"
+          ]
+        }
       ],
       "properties": {
         "members": {
@@ -130,6 +139,13 @@
           "items": {
             "type": "string",
             "minLength": 1
+          }
+        },
+        "teams": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
           }
         },
         "description": {

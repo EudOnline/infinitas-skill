@@ -3,12 +3,13 @@ import copy
 import json
 from pathlib import Path
 
-SUPPORTED_DOMAINS = {'promotion_policy', 'namespace_policy', 'signing', 'registry_sources'}
+SUPPORTED_DOMAINS = {'promotion_policy', 'namespace_policy', 'signing', 'registry_sources', 'team_policy'}
 LOCAL_OVERRIDE_PATHS = {
     'promotion_policy': Path('policy/promotion-policy.json'),
     'namespace_policy': Path('policy/namespace-policy.json'),
     'signing': Path('config/signing.json'),
     'registry_sources': Path('config/registry-sources.json'),
+    'team_policy': Path('policy/team-policy.json'),
 }
 PACK_KEYS = {'$schema', 'schema_version', 'name', 'description', 'domains'}
 SELECTION_KEYS = {'$schema', 'version', 'description', 'compatibility_version', 'active_packs'}
