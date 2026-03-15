@@ -21,7 +21,7 @@ def unique(values):
 def collect_release_context(skill, root=None, releaser=None, ignore_errors=None):
     root = Path(root or ROOT).resolve()
     skill_dir = resolve_skill(root, skill)
-    state = collect_release_state(skill_dir, mode='stable-release')
+    state = collect_release_state(skill_dir, mode='stable-release', root=root)
     ignore_errors = ignore_errors or []
     filtered_errors = [
         error for error in state['errors'] if not any(ignored in error for ignored in ignore_errors)
@@ -88,6 +88,10 @@ def collect_release_context(skill, root=None, releaser=None, ignore_errors=None)
 def build_common_payload(context):
     meta = context['meta']
     state = context['state']
+    review_payload = dict(context.get('review') or {})
+    review_payload.setdefault('reviewers', [])
+    release_payload = dict(context.get('release') or {})
+    release_payload['releaser_identity'] = context['releaser_identity']
     return {
         '$schema': 'schemas/provenance.schema.json',
         'schema_version': 1,
@@ -140,20 +144,8 @@ def build_common_payload(context):
             'resolved': context['resolved_registries'],
         },
         'dependencies': context['dependency_plan'],
-        'review': {
-            'reviewers': context['review'].get('reviewers', []),
-        },
-        'release': {
-            'releaser_identity': context['releaser_identity'],
-            'namespace_policy_path': context['release'].get('namespace_policy_path'),
-            'namespace_policy_version': context['release'].get('namespace_policy_version'),
-            'transfer_required': context['release'].get('transfer_required', False),
-            'transfer_authorized': context['release'].get('transfer_authorized', True),
-            'transfer_matches': context['release'].get('transfer_matches', []),
-            'competing_claims': context['release'].get('competing_claims', []),
-            'authorized_signers': context['release'].get('authorized_signers', []),
-            'authorized_releasers': context['release'].get('authorized_releasers', []),
-        },
+        'review': review_payload,
+        'release': release_payload,
     }
 
 

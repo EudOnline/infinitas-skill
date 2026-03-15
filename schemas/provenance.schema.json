@@ -225,6 +225,90 @@
             },
             "additionalProperties": true
           }
+        },
+        "effective_review_state": {"type": ["string", "null"]},
+        "required_approvals": {"type": ["integer", "null"]},
+        "required_groups": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "covered_groups": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "missing_groups": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "approval_count": {"type": ["integer", "null"]},
+        "blocking_rejection_count": {"type": ["integer", "null"]},
+        "quorum_met": {"type": ["boolean", "null"]},
+        "review_gate_pass": {"type": ["boolean", "null"]},
+        "latest_decisions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "reviewer": {"type": ["string", "null"]},
+              "decision": {"type": ["string", "null"]},
+              "at": {"type": ["string", "null"]},
+              "note": {"type": ["string", "null"]},
+              "groups": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "counted": {"type": ["boolean", "null"]},
+              "reasons": {
+                "type": "array",
+                "items": {"type": "string"}
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "ignored_decisions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "reviewer": {"type": ["string", "null"]},
+              "decision": {"type": ["string", "null"]},
+              "at": {"type": ["string", "null"]},
+              "note": {"type": ["string", "null"]},
+              "groups": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "counted": {"type": ["boolean", "null"]},
+              "reasons": {
+                "type": "array",
+                "items": {"type": "string"}
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "configured_groups": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "members": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "teams": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "resolved_members": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "description": {"type": ["string", "null"]}
+            },
+            "additionalProperties": true
+          }
         }
       },
       "additionalProperties": true
@@ -246,8 +330,68 @@
         "transfer_authorized": {"type": "boolean"},
         "transfer_matches": {"type": "array"},
         "competing_claims": {"type": "array"},
+        "delegated_teams": {
+          "type": "object",
+          "properties": {
+            "owner_teams": {
+              "type": "array",
+              "items": {"type": "string"}
+            },
+            "maintainer_teams": {
+              "type": "array",
+              "items": {"type": "string"}
+            },
+            "authorized_signer_teams": {
+              "type": "array",
+              "items": {"type": "string"}
+            },
+            "authorized_releaser_teams": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          },
+          "additionalProperties": true
+        },
         "authorized_signers": {"type": "array", "items": {"type": "string"}},
-        "authorized_releasers": {"type": "array", "items": {"type": "string"}}
+        "authorized_releasers": {"type": "array", "items": {"type": "string"}},
+        "exception_usage": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {"type": ["string", "null"]},
+              "scope": {"type": ["string", "null"]},
+              "skills": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "rules": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "matched_rules": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "approved_by": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "approved_by_teams": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "resolved_approved_by": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "approved_at": {"type": ["string", "null"]},
+              "justification": {"type": ["string", "null"]},
+              "expires_at": {"type": ["string", "null"]}
+            },
+            "additionalProperties": true
+          }
+        }
       },
       "additionalProperties": true
     },
