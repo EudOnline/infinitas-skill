@@ -10,6 +10,7 @@ The current release/install model supports both:
 - hosted HTTP registry sources for consumers that should install immutable artifacts without cloning the full repository
 
 Policy composition now also supports ordered repository policy packs via `policy/policy-packs.json`, with repository-local policy files remaining the final override layer for compatibility.
+Policy-aware validation, promotion, and release checks now also expose additive `policy_trace` diagnostics in JSON mode, with registry validation returning structured `validation_errors`, and optional `--debug-policy` text rendering for operator troubleshooting.
 
 ## Recommended workflow
 
@@ -134,6 +135,11 @@ scripts/build-catalog.sh
 
 # Validate ordered policy packs and effective local policy overlays
 python3 scripts/check-policy-packs.py
+
+# Inspect machine-readable policy traces when promotion, validation, or release checks are blocked
+python3 scripts/check-promotion-policy.py --json --as-active skills/active/operate-infinitas-skill
+python3 scripts/check-release-state.py operate-infinitas-skill --json
+python3 scripts/validate-registry.py --json
 
 # Run the full local validation suite
 scripts/check-all.sh

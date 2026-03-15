@@ -84,14 +84,34 @@ python3 scripts/check-policy-packs.py
 
 `scripts/check-all.sh` now runs the same validation as part of the standard repository checks.
 
+## Debugging policy evaluation
+
+Version 11-02 adds additive policy-evaluation traces to the main governance entrypoints:
+
+- `python3 scripts/check-promotion-policy.py --json --as-active <skill>`
+- `python3 scripts/check-release-state.py <skill> --json`
+- `python3 scripts/validate-registry.py --json`
+
+Each command now emits `policy_trace` or `policy_traces` data that includes:
+
+- the evaluated policy domain
+- the allow/deny decision
+- ordered `effective_sources`
+- `applied_rules`
+- `blocking_rules`
+- human-readable reasons and next actions
+
+`scripts/validate-registry.py --json` also returns structured `validation_errors` entries so callers can see per-skill failures alongside namespace-policy traces.
+
+When debugging interactively, use `--debug-policy` to keep the existing text output and append a rendered policy trace for the same decision.
+
 ## Deferred to 11-02
 
 11-01 intentionally stops at structure, loading, precedence, and compatibility-safe integration.
+11-02 adds decision traces and ordered source visibility, but still defers full field-level provenance.
 
 The following are explicitly deferred to 11-02:
 
-- explainable decision traces
-- richer introspection about which pack supplied each field
 - remote fetching or shared hosted pack registries
 - executable hooks or plugin-style policy evaluators
 

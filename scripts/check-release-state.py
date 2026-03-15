@@ -3,6 +3,7 @@ import argparse
 import json
 import sys
 
+from policy_trace_lib import render_policy_trace
 from release_lib import ROOT, collect_release_state, format_release_state, resolve_skill, ReleaseError
 
 
@@ -16,6 +17,7 @@ def parse_args():
         help='Which release invariant set to enforce',
     )
     parser.add_argument('--json', action='store_true', help='Print machine-readable state')
+    parser.add_argument('--debug-policy', action='store_true', help='Print a human-readable policy trace')
     return parser.parse_args()
 
 
@@ -32,6 +34,9 @@ def main():
         print(json.dumps(state, ensure_ascii=False, indent=2))
     else:
         print(format_release_state(state))
+        if args.debug_policy:
+            print()
+            print(render_policy_trace(state.get('policy_trace') or {}))
 
     if not state['release_ready']:
         raise SystemExit(1)

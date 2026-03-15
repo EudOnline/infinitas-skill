@@ -7,8 +7,11 @@ cd "$ROOT"
 python3 scripts/check-registry-sources.py
 python3 scripts/test-hosted-registry-source.py
 python3 scripts/check-policy-packs.py
+python3 scripts/test-policy-pack-loading.py
+python3 scripts/test-policy-evaluation-traces.py
 python3 scripts/check-signing-config.py
 python3 scripts/validate-registry.py
+python3 scripts/test-policy-trace-docs.py
 python3 scripts/test-namespace-identity.py
 python3 scripts/check-registry-integrity.py
 python3 scripts/check-promotion-policy.py

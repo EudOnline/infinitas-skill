@@ -5,7 +5,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from policy_pack_lib import PolicyPackError, load_effective_policy_domain
+from policy_pack_lib import PolicyPackError, load_effective_policy_domain, load_policy_domain_resolution
 
 
 def fail(message):
@@ -211,6 +211,15 @@ def make_repo():
 def scenario_declared_pack_order_and_local_overrides():
     tmpdir, repo = make_repo()
     try:
+        resolution = load_policy_domain_resolution(repo, 'signing')
+        sources = resolution.get('effective_sources') or []
+        if [item.get('kind') for item in sources] != ['pack', 'pack', 'local_override']:
+            fail(f'unexpected policy source order: {sources!r}')
+        if [item.get('name') for item in sources[:2]] != ['baseline', 'dual-attestation']:
+            fail(f'unexpected pack source names: {sources!r}')
+        if sources[-1].get('path') != 'config/signing.json':
+            fail(f"expected local override path 'config/signing.json', got {sources[-1].get('path')!r}")
+
         effective_signing = load_effective_policy_domain(repo, 'signing')
         policy = ((effective_signing.get('attestation') or {}).get('policy') or {})
         if policy.get('release_trust_mode') != 'ci':

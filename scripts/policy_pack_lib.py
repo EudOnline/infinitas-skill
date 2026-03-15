@@ -143,13 +143,14 @@ def load_policy_pack(root: Path, name: str) -> dict:
     return payload
 
 
-def load_effective_policy_domain(root: Path, domain: str) -> dict:
+def load_policy_domain_resolution(root: Path, domain: str) -> dict:
     root = Path(root).resolve()
     if domain not in SUPPORTED_DOMAINS:
         raise PolicyPackError([f'unsupported policy domain: {domain!r}'])
 
     effective = {}
     saw_source = False
+    effective_sources = []
     selection = load_policy_pack_selection(root)
     for name in selection.get('active_packs', []):
         pack = load_policy_pack(root, name)
@@ -158,13 +159,35 @@ def load_effective_policy_domain(root: Path, domain: str) -> dict:
             continue
         saw_source = True
         effective = _merge_values(effective, domains.get(domain) or {})
+        effective_sources.append(
+            {
+                'kind': 'pack',
+                'name': name,
+                'path': f'policy/packs/{name}.json',
+            }
+        )
 
     local_path = root / LOCAL_OVERRIDE_PATHS[domain]
     if local_path.exists():
         saw_source = True
         local_payload = _load_json_object(local_path, f'{domain} override file')
         effective = _merge_values(effective, local_payload)
+        effective_sources.append(
+            {
+                'kind': 'local_override',
+                'name': local_path.name,
+                'path': str(local_path.relative_to(root).as_posix()),
+            }
+        )
 
     if not saw_source:
         raise PolicyPackError([f'missing policy source for domain {domain!r}: expected {local_path} or an active pack entry'])
-    return effective
+    return {
+        'domain': domain,
+        'effective': effective,
+        'effective_sources': effective_sources,
+    }
+
+
+def load_effective_policy_domain(root: Path, domain: str) -> dict:
+    return load_policy_domain_resolution(root, domain)['effective']

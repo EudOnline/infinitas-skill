@@ -5,6 +5,8 @@ import re
 import subprocess
 from pathlib import Path
 
+from policy_pack_lib import PolicyPackError, load_policy_domain_resolution
+from policy_trace_lib import build_policy_trace
 from review_lib import load_reviews
 from skill_identity_lib import NamespacePolicyError, load_namespace_policy, namespace_policy_report, normalize_skill_identity
 
@@ -45,12 +47,18 @@ def resolve_skill(root, target):
 
 
 def load_signing_config(root):
-    config = load_json(root / 'config' / 'signing.json')
+    try:
+        resolution = load_policy_domain_resolution(root, 'signing')
+        config = resolution['effective']
+        policy_sources = resolution.get('effective_sources', [])
+    except PolicyPackError as exc:
+        raise ReleaseError('; '.join(exc.errors)) from exc
     tag_cfg = config.get('git_tag') or {}
     allowed_rel = tag_cfg.get('allowed_signers') or config.get('allowed_signers') or 'config/allowed_signers'
     key_env = tag_cfg.get('signing_key_env') or 'INFINITAS_SKILL_GIT_SIGNING_KEY'
     return {
         'config': config,
+        'policy_sources': policy_sources,
         'tag_format': tag_cfg.get('format', 'ssh'),
         'allowed_signers_rel': allowed_rel,
         'allowed_signers_path': (root / allowed_rel).resolve(),
@@ -263,13 +271,18 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
         'warnings': [],
         'errors': [],
     }
+    namespace_policy_sources = []
 
     errors = []
     warnings = []
 
     try:
+        namespace_resolution = load_policy_domain_resolution(root, 'namespace_policy')
+        namespace_policy_sources = namespace_resolution.get('effective_sources', [])
         namespace_policy = load_namespace_policy(root)
         namespace_report = namespace_policy_report(skill_dir, root=root, policy=namespace_policy)
+    except PolicyPackError as exc:
+        errors.extend(exc.errors)
     except NamespacePolicyError as exc:
         errors.extend(exc.errors)
     else:
@@ -336,11 +349,35 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
             f"{signing['allowed_signers_rel']} has no signer entries yet; signed tag verification will stay blocked until it is populated"
         )
 
+    policy_trace = build_policy_trace(
+        domain='release_policy',
+        decision='allow' if not errors else 'deny',
+        summary='release readiness checks passed' if not errors else f'release readiness blocked by {len(errors)} issue(s)',
+        effective_sources=list(signing.get('policy_sources', [])) + list(namespace_policy_sources),
+        applied_rules=[
+            {'rule': 'stable releases require a clean worktree', 'value': not dirty},
+            {'rule': 'stable releases require upstream synchronization', 'value': {'ahead': ahead, 'behind': behind}},
+            {'rule': 'stable releases require a signed verified local tag', 'value': expected_tag},
+            {'rule': 'stable releases require remote tag verification in stable-release mode', 'value': mode == 'stable-release'},
+            {'rule': 'release signing config defines tag_format', 'value': signing['tag_format']},
+        ],
+        blocking_rules=[{'rule': message, 'message': message} for message in errors],
+        reasons=warnings + [
+            f"mode={mode}",
+            f"release_trust_mode={(((signing.get('config') or {}).get('attestation') or {}).get('policy') or {}).get('release_trust_mode', 'ssh')}",
+        ],
+        next_actions=[
+            'fix the blocking release errors and rerun check-release-state',
+            'use --json for machine-readable policy diagnostics',
+        ] if errors else ['release policy is satisfied for the current mode'],
+    )
+
     return {
         'mode': mode,
         'release_ready': not errors,
         'errors': errors,
         'warnings': warnings,
+        'policy_trace': policy_trace,
         'skill': {
             'name': meta.get('name'),
             'publisher': identity.get('publisher'),
