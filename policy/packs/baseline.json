@@ -1,0 +1,160 @@
+{
+  "$schema": "../../schemas/policy-pack.schema.json",
+  "schema_version": 1,
+  "name": "baseline",
+  "description": "Baseline repository policy defaults that can be composed with repository-local overrides.",
+  "domains": {
+    "promotion_policy": {
+      "$schema": "../schemas/promotion-policy.schema.json",
+      "version": 4,
+      "active_requires": {
+        "review_state": [
+          "approved"
+        ],
+        "require_changelog": true,
+        "require_smoke_test": true,
+        "require_owner": true
+      },
+      "reviews": {
+        "require_reviews_file": true,
+        "reviewer_must_differ_from_owner": true,
+        "allow_owner_when_no_distinct_reviewer": true,
+        "block_on_rejection": true,
+        "groups": {
+          "maintainers": {
+            "members": [
+              "lvxiaoer"
+            ],
+            "description": "Repository maintainers who can approve routine promotions."
+          },
+          "security": {
+            "members": [
+              "lvxiaoer"
+            ],
+            "description": "Security-focused reviewers required for higher-risk promotions."
+          }
+        },
+        "quorum": {
+          "defaults": {
+            "min_approvals": 1,
+            "required_groups": []
+          },
+          "stage_overrides": {
+            "active": {
+              "min_approvals": 1,
+              "required_groups": [
+                "maintainers"
+              ]
+            }
+          },
+          "risk_overrides": {
+            "high": {
+              "min_approvals": 2,
+              "required_groups": [
+                "maintainers",
+                "security"
+              ]
+            }
+          }
+        }
+      },
+      "high_risk_active_requires": {
+        "min_maintainers": 1,
+        "require_requires_block": true
+      },
+      "dependency_rules": {
+        "allow_name_only_refs": true,
+        "allow_version_pins": true,
+        "require_resolvable_refs_for_active": true,
+        "auto_install_dependencies_default": true
+      }
+    },
+    "namespace_policy": {
+      "$schema": "../schemas/namespace-policy.schema.json",
+      "version": 1,
+      "compatibility": {
+        "allow_unqualified_names": true
+      },
+      "publishers": {
+        "lvxiaoer": {
+          "owners": [
+            "lvxiaoer"
+          ],
+          "maintainers": [
+            "lvxiaoer"
+          ],
+          "authorized_signers": [
+            "lvxiaoer"
+          ],
+          "authorized_releasers": [
+            "lvxiaoer"
+          ]
+        }
+      },
+      "transfers": []
+    },
+    "signing": {
+      "$schema": "../schemas/signing.schema.json",
+      "namespace": "infinitas-skill",
+      "allowed_signers": "config/allowed_signers",
+      "signature_ext": ".ssig",
+      "git_tag": {
+        "format": "ssh",
+        "allowed_signers": "config/allowed_signers",
+        "remote": "origin",
+        "signing_key_env": "INFINITAS_SKILL_GIT_SIGNING_KEY",
+        "note": "Stable releases require repo-managed verified SSH-signed git tags"
+      },
+      "attestation": {
+        "format": "ssh",
+        "namespace": "infinitas-skill",
+        "allowed_signers": "config/allowed_signers",
+        "signature_ext": ".ssig",
+        "signing_key_env": "INFINITAS_SKILL_GIT_SIGNING_KEY",
+        "ci": {
+          "provider": "github-actions",
+          "repository": "lvxiaoer/infinitas-skill",
+          "workflow": "release-attestation"
+        },
+        "policy": {
+          "mode": "enforce",
+          "release_trust_mode": "ssh",
+          "require_verified_attestation_for_release_output": true,
+          "require_verified_attestation_for_distribution": true
+        },
+        "note": "Stable release provenance must be SSH-signed and verified against repo-managed allowed signers"
+      },
+      "note": "SSH signing settings for stable release tags and release attestations"
+    },
+    "registry_sources": {
+      "$schema": "../schemas/registry-sources.schema.json",
+      "default_registry": "self",
+      "registries": [
+        {
+          "name": "self",
+          "kind": "git",
+          "url": "https://github.com/EudOnline/infinitas-skill.git",
+          "local_path": ".",
+          "branch": "main",
+          "priority": 100,
+          "enabled": true,
+          "trust": "private",
+          "allowed_hosts": [
+            "github.com"
+          ],
+          "allowed_refs": [
+            "refs/heads/main"
+          ],
+          "pin": {
+            "mode": "branch",
+            "value": "main"
+          },
+          "update_policy": {
+            "mode": "local-only"
+          },
+          "notes": "Primary private registry for local development and promotion"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://infinitas-skill.local/schemas/policy-pack.schema.json",
+  "title": "Policy Pack",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "name",
+    "domains"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "description": {
+      "type": "string"
+    },
+    "domains": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "promotion_policy": {
+          "type": "object"
+        },
+        "namespace_policy": {
+          "type": "object"
+        },
+        "signing": {
+          "type": "object"
+        },
+        "registry_sources": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

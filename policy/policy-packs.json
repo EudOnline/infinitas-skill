@@ -1,0 +1,9 @@
+{
+  "$schema": "../schemas/policy-pack-selection.schema.json",
+  "version": 1,
+  "compatibility_version": "11-01",
+  "description": "Repository-local selection of additive policy packs. Local policy files remain the final override layer during migration.",
+  "active_packs": [
+    "baseline"
+  ]
+}
