@@ -3,13 +3,14 @@ import copy
 import json
 from pathlib import Path
 
-SUPPORTED_DOMAINS = {'promotion_policy', 'namespace_policy', 'signing', 'registry_sources', 'team_policy'}
+SUPPORTED_DOMAINS = {'promotion_policy', 'namespace_policy', 'signing', 'registry_sources', 'team_policy', 'exception_policy'}
 LOCAL_OVERRIDE_PATHS = {
     'promotion_policy': Path('policy/promotion-policy.json'),
     'namespace_policy': Path('policy/namespace-policy.json'),
     'signing': Path('config/signing.json'),
     'registry_sources': Path('config/registry-sources.json'),
     'team_policy': Path('policy/team-policy.json'),
+    'exception_policy': Path('policy/exception-policy.json'),
 }
 PACK_KEYS = {'$schema', 'schema_version', 'name', 'description', 'domains'}
 SELECTION_KEYS = {'$schema', 'version', 'description', 'compatibility_version', 'active_packs'}
@@ -116,6 +117,45 @@ def _merge_values(base, overlay):
     return copy.deepcopy(overlay)
 
 
+def _merge_exception_lists(base, overlay):
+    base_items = base if isinstance(base, list) else []
+    overlay_items = overlay if isinstance(overlay, list) else []
+
+    ordered_ids = []
+    merged = {}
+    extras = []
+    for source in [base_items, overlay_items]:
+        for item in source:
+            if isinstance(item, dict):
+                raw_id = item.get('id')
+                if isinstance(raw_id, str) and raw_id.strip():
+                    record_id = raw_id.strip()
+                    if record_id not in ordered_ids:
+                        ordered_ids.append(record_id)
+                        merged[record_id] = copy.deepcopy(item)
+                    else:
+                        merged[record_id] = _merge_values(merged[record_id], item)
+                    continue
+            extras.append(copy.deepcopy(item))
+
+    result = [merged[record_id] for record_id in ordered_ids]
+    result.extend(extras)
+    return result
+
+
+def _merge_domain_payload(domain, base, overlay):
+    merged = _merge_values(base, overlay)
+    if domain != 'exception_policy':
+        return merged
+
+    base_exceptions = base.get('exceptions') if isinstance(base, dict) else None
+    overlay_exceptions = overlay.get('exceptions') if isinstance(overlay, dict) else None
+    if base_exceptions is None and overlay_exceptions is None:
+        return merged
+    merged['exceptions'] = _merge_exception_lists(base_exceptions, overlay_exceptions)
+    return merged
+
+
 def load_policy_pack_selection(root: Path) -> dict:
     root = Path(root).resolve()
     path = root / 'policy' / 'policy-packs.json'
@@ -159,7 +199,7 @@ def load_policy_domain_resolution(root: Path, domain: str) -> dict:
         if domain not in domains:
             continue
         saw_source = True
-        effective = _merge_values(effective, domains.get(domain) or {})
+        effective = _merge_domain_payload(domain, effective, domains.get(domain) or {})
         effective_sources.append(
             {
                 'kind': 'pack',
@@ -172,7 +212,7 @@ def load_policy_domain_resolution(root: Path, domain: str) -> dict:
     if local_path.exists():
         saw_source = True
         local_payload = _load_json_object(local_path, f'{domain} override file')
-        effective = _merge_values(effective, local_payload)
+        effective = _merge_domain_payload(domain, effective, local_payload)
         effective_sources.append(
             {
                 'kind': 'local_override',

@@ -43,6 +43,9 @@
         },
         "team_policy": {
           "type": "object"
+        },
+        "exception_policy": {
+          "type": "object"
         }
       }
     }

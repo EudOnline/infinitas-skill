@@ -164,6 +164,21 @@ def dual_attestation_pack():
                     }
                 },
             },
+            'exception_policy': {
+                'version': 1,
+                'exceptions': [
+                    {
+                        'id': 'pack-release-waiver',
+                        'scope': 'release',
+                        'skills': ['pack/fixture'],
+                        'rules': ['dirty-worktree'],
+                        'approved_by': ['pack-approver'],
+                        'approved_at': '2026-03-15T00:00:00Z',
+                        'justification': 'Fixture pack exception',
+                        'expires_at': '2099-01-01T00:00:00Z',
+                    }
+                ],
+            },
         },
     }
 
@@ -212,6 +227,25 @@ def repo_local_team_override():
     }
 
 
+def repo_local_exception_override():
+    return {
+        '$schema': '../schemas/exception-policy.schema.json',
+        'version': 1,
+        'exceptions': [
+            {
+                'id': 'repo-promotion-waiver',
+                'scope': 'promotion',
+                'skills': ['repo-fixture'],
+                'rules': ['required-reviewer-groups'],
+                'approved_by': ['repo-approver'],
+                'approved_at': '2026-03-15T00:05:00Z',
+                'justification': 'Repository-local fixture exception',
+                'expires_at': '2099-01-02T00:00:00Z',
+            }
+        ],
+    }
+
+
 def make_repo():
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-policy-pack-loading-'))
     repo = tmpdir / 'repo'
@@ -220,6 +254,7 @@ def make_repo():
         write_json(repo / 'policy' / 'packs' / 'baseline.json', baseline_pack())
         write_json(repo / 'policy' / 'packs' / 'dual-attestation.json', dual_attestation_pack())
         write_json(repo / 'policy' / 'promotion-policy.json', repo_local_promotion_override())
+        write_json(repo / 'policy' / 'exception-policy.json', repo_local_exception_override())
         write_json(repo / 'policy' / 'team-policy.json', repo_local_team_override())
         write_json(repo / 'config' / 'signing.json', repo_local_signing_override())
         (repo / 'config' / 'allowed_signers').write_text('# fixture\n', encoding='utf-8')
@@ -281,6 +316,16 @@ def scenario_declared_pack_order_and_local_overrides():
         teams = effective_team_policy.get('teams') or {}
         if sorted(teams) != ['platform-admins', 'release-operators']:
             fail(f'unexpected merged teams in team_policy: {sorted(teams)!r}')
+
+        exception_resolution = load_policy_domain_resolution(repo, 'exception_policy')
+        exception_sources = exception_resolution.get('effective_sources') or []
+        if [item.get('kind') for item in exception_sources] != ['pack', 'local_override']:
+            fail(f'unexpected exception-policy source order: {exception_sources!r}')
+        effective_exception_policy = exception_resolution.get('effective') or {}
+        exceptions = effective_exception_policy.get('exceptions') or []
+        ids = sorted(item.get('id') for item in exceptions if isinstance(item, dict))
+        if ids != ['pack-release-waiver', 'repo-promotion-waiver']:
+            fail(f'expected merged exception-policy ids, got {ids!r}')
     finally:
         shutil.rmtree(tmpdir)
 

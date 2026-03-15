@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SUPPORTED_DOMAINS = {'promotion_policy', 'namespace_policy', 'signing', 'registry_sources', 'team_policy'}
+SUPPORTED_DOMAINS = {'promotion_policy', 'namespace_policy', 'signing', 'registry_sources', 'team_policy', 'exception_policy'}
 NAME_KEYS = {'$schema', 'schema_version', 'name', 'description', 'domains'}
 SELECTOR_KEYS = {'$schema', 'version', 'description', 'compatibility_version', 'active_packs'}
 
