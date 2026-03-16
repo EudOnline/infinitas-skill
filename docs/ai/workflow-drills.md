@@ -168,3 +168,7 @@ scripts/pull-skill.sh lvxiaoer/release-infinitas-skill ~/.openclaw/skills
 - read generated indexes and structured wrapper output before opening repository internals
 - do not treat `skills/active/` or `skills/incubating/` as install artifacts
 - inspect first when trust state, compatibility, provenance, or runtime assumptions matter
+- if `install-by-name.sh` returns `ambiguous-skill-name`, stop and ask for a `qualified_name`
+- if `install-by-name.sh` returns `incompatible-target-agent`, stop and report the compatibility mismatch instead of dropping the agent filter
+- if `pull-skill.sh` returns `missing-distribution-fields` or `missing-distribution-file`, stop and ask for rebuild or republish of immutable artifacts
+- when immutable artifacts are missing, do not fall back to mutable source folders or local prototypes

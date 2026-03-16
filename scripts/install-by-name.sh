@@ -55,7 +55,67 @@ PY
 )"
 
 if [[ "$STATE" == "ambiguous" || "$STATE" == "not-found" || "$STATE" == "incompatible" || "$STATE" == "failed" ]]; then
-  printf '%s\n' "$RESOLVE_JSON"
+  python3 - <<'PY' "$ROOT" "$RESOLVE_JSON" "$QUERY" "$TARGET_DIR" "$REQUESTED_VERSION" "$TARGET_AGENT"
+import json, sys
+sys.path.insert(0, sys.argv[1] + '/scripts')
+from explain_install_lib import build_install_explanation  # noqa: E402
+
+resolve_payload = json.loads(sys.argv[2])
+query = sys.argv[3]
+target_dir = sys.argv[4]
+requested_version = sys.argv[5] or None
+target_agent = sys.argv[6] or None
+state = resolve_payload.get('state') or 'failed'
+resolved = resolve_payload.get('resolved') or {}
+candidates = resolve_payload.get('candidates') or []
+
+def candidate_names():
+    return ', '.join(
+        candidate.get('qualified_name') or candidate.get('name') or '?'
+        for candidate in candidates
+        if isinstance(candidate, dict)
+    )
+
+if state == 'ambiguous':
+    message = f"ambiguous skill name {query!r}: {candidate_names()}"
+    suggested_action = 'choose a qualified_name and rerun install-by-name.sh'
+    error_code = 'ambiguous-skill-name'
+elif state == 'not-found':
+    message = f'no install candidate found for {query!r}'
+    suggested_action = 'search discovery-index results or use a known qualified_name'
+    error_code = 'skill-not-found'
+elif state == 'incompatible':
+    if target_agent:
+        message = f"no compatible install candidate found for {query!r} with target_agent {target_agent!r}"
+        suggested_action = f'pick a skill compatible with {target_agent} or change --target-agent'
+    else:
+        message = f'no compatible install candidate found for {query!r}'
+        suggested_action = 'pick a compatible skill before retrying install-by-name.sh'
+    error_code = 'incompatible-target-agent'
+else:
+    message = resolve_payload.get('message') or f'skill resolution failed for {query!r}'
+    suggested_action = 'fix discovery-index generation or resolver errors and retry'
+    error_code = 'resolver-failed'
+
+payload = {
+    'ok': False,
+    'query': query,
+    'qualified_name': resolved.get('qualified_name'),
+    'source_registry': resolved.get('source_registry'),
+    'requested_version': requested_version,
+    'resolved_version': resolved.get('resolved_version'),
+    'target_dir': target_dir,
+    'manifest_path': None,
+    'state': 'failed',
+    'requires_confirmation': False,
+    'error_code': error_code,
+    'message': message,
+    'suggested_action': suggested_action,
+    'next_step': resolve_payload.get('recommended_next_step') or suggested_action,
+}
+payload['explanation'] = build_install_explanation(resolve_payload, payload, requested_version=requested_version)
+print(json.dumps(payload, ensure_ascii=False))
+PY
   exit 1
 fi
 

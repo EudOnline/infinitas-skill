@@ -56,7 +56,7 @@ mode = sys.argv[6]
 
 sys.path.insert(0, str(root / 'scripts'))
 from ai_index_lib import validate_ai_index_payload  # noqa: E402
-from explain_install_lib import build_pull_plan_explanation  # noqa: E402
+from explain_install_lib import build_pull_failure_explanation, build_pull_plan_explanation  # noqa: E402
 from http_registry_lib import HostedRegistryError, fetch_json, registry_catalog_path  # noqa: E402
 from registry_source_lib import find_registry, load_registry_config, normalized_auth, resolve_registry_root  # noqa: E402
 
@@ -65,29 +65,56 @@ resolved_registry_root = root
 index_path = root / 'catalog' / 'ai-index.json'
 payload = None
 
+
+def fail(error_code, message, suggested_action, *, failed_at_step, qualified_name=None, resolved_version=None, next_step=None, registry_name=None):
+    payload = {
+        'ok': False,
+        'state': 'failed',
+        'failed_at_step': failed_at_step,
+        'error_code': error_code,
+        'message': message,
+        'suggested_action': suggested_action,
+        'target_dir': target_dir,
+    }
+    if qualified_name:
+        payload['qualified_name'] = qualified_name
+    if requested_version is not None:
+        payload['requested_version'] = requested_version
+    if resolved_version is not None:
+        payload['resolved_version'] = resolved_version
+    if next_step:
+        payload['next_step'] = next_step
+
+    context = {
+        'registry_name': registry_name or requested_registry or resolved_registry_name,
+        'requested_version': requested_version,
+        'resolved_version': resolved_version,
+        'requires_confirmation': False,
+        'next_step': next_step,
+    }
+    payload['explanation'] = build_pull_failure_explanation(context, payload)
+    print(json.dumps(payload, ensure_ascii=False))
+    raise SystemExit(1)
+
 if requested_registry:
     cfg = load_registry_config(root)
     reg = find_registry(cfg, requested_registry)
     if not reg:
-        print(json.dumps({
-            'ok': False,
-            'state': 'failed',
-            'failed_at_step': 'resolved',
-            'error_code': 'unknown-registry',
-            'message': f'unknown registry {requested_registry!r}',
-            'suggested_action': 'use scripts/list-registry-sources.py',
-        }, ensure_ascii=False))
-        raise SystemExit(1)
+        fail(
+            'unknown-registry',
+            f'unknown registry {requested_registry!r}',
+            'use scripts/list-registry-sources.py',
+            failed_at_step='resolved',
+            registry_name=requested_registry,
+        )
     if reg.get('enabled') is False:
-        print(json.dumps({
-            'ok': False,
-            'state': 'failed',
-            'failed_at_step': 'resolved',
-            'error_code': 'registry-disabled',
-            'message': f'registry {requested_registry!r} is disabled',
-            'suggested_action': 'enable the registry in config/registry-sources.json',
-        }, ensure_ascii=False))
-        raise SystemExit(1)
+        fail(
+            'registry-disabled',
+            f'registry {requested_registry!r} is disabled',
+            'enable the registry in config/registry-sources.json',
+            failed_at_step='resolved',
+            registry_name=requested_registry,
+        )
     resolved_registry_name = requested_registry
     if reg.get('kind') == 'http':
         auth = normalized_auth(reg)
@@ -99,67 +126,54 @@ if requested_registry:
             )
             index_path = registry_catalog_path(reg, 'ai_index')
         except HostedRegistryError as exc:
-            print(json.dumps({
-                'ok': False,
-                'state': 'failed',
-                'failed_at_step': 'resolved',
-                'error_code': 'missing-ai-index',
-                'message': str(exc),
-                'suggested_action': 'check the hosted registry URL, auth token, or served catalog paths',
-            }, ensure_ascii=False))
-            raise SystemExit(1)
+            fail(
+                'missing-ai-index',
+                str(exc),
+                'check the hosted registry URL, auth token, or served catalog paths',
+                failed_at_step='resolved',
+                registry_name=requested_registry,
+            )
         resolved_registry_root = None
     else:
         reg_root = resolve_registry_root(root, reg)
         if reg_root is None or not reg_root.exists():
-            print(json.dumps({
-                'ok': False,
-                'state': 'failed',
-                'failed_at_step': 'resolved',
-                'error_code': 'registry-root-unavailable',
-                'message': f'registry root is unavailable for {requested_registry!r}',
-                'suggested_action': 'sync or configure the registry root first',
-            }, ensure_ascii=False))
-            raise SystemExit(1)
+            fail(
+                'registry-root-unavailable',
+                f'registry root is unavailable for {requested_registry!r}',
+                'sync or configure the registry root first',
+                failed_at_step='resolved',
+                registry_name=requested_registry,
+            )
         resolved_registry_root = reg_root
         index_path = reg_root / 'catalog' / 'ai-index.json'
 
 if payload is None and not Path(index_path).exists():
-    print(json.dumps({
-        'ok': False,
-        'state': 'failed',
-        'failed_at_step': 'resolved',
-        'error_code': 'missing-ai-index',
-        'message': f'missing AI index: {index_path}',
-        'suggested_action': 'run scripts/build-catalog.sh or sync the target registry cache',
-    }, ensure_ascii=False))
-    raise SystemExit(1)
+    fail(
+        'missing-ai-index',
+        f'missing AI index: {index_path}',
+        'run scripts/build-catalog.sh or sync the target registry cache',
+        failed_at_step='resolved',
+    )
 
 if payload is None:
     payload = json.loads(Path(index_path).read_text(encoding='utf-8'))
 errors = validate_ai_index_payload(payload)
 if errors:
-    print(json.dumps({
-        'ok': False,
-        'state': 'failed',
-        'failed_at_step': 'resolved',
-        'error_code': 'invalid-ai-index',
-        'message': '; '.join(errors),
-        'suggested_action': 'regenerate and validate catalog/ai-index.json',
-    }, ensure_ascii=False))
-    raise SystemExit(1)
+    fail(
+        'invalid-ai-index',
+        '; '.join(errors),
+        'regenerate and validate catalog/ai-index.json',
+        failed_at_step='resolved',
+    )
 
 policy = payload.get('install_policy') or {}
 if policy.get('mode') != 'immutable-only' or policy.get('direct_source_install_allowed') is not False:
-    print(json.dumps({
-        'ok': False,
-        'state': 'failed',
-        'failed_at_step': 'resolved',
-        'error_code': 'invalid-install-policy',
-        'message': 'AI install policy must be immutable-only with direct source installs disabled',
-        'suggested_action': 'fix catalog/ai-index.json install_policy',
-    }, ensure_ascii=False))
-    raise SystemExit(1)
+    fail(
+        'invalid-install-policy',
+        'AI install policy must be immutable-only with direct source installs disabled',
+        'fix catalog/ai-index.json install_policy',
+        failed_at_step='resolved',
+    )
 
 matches = []
 for skill in payload.get('skills', []):
@@ -167,15 +181,12 @@ for skill in payload.get('skills', []):
         matches.append(skill)
 
 if not matches:
-    print(json.dumps({
-        'ok': False,
-        'state': 'failed',
-        'failed_at_step': 'resolved',
-        'error_code': 'skill-not-found',
-        'message': f'no AI-index entry found for {requested}',
-        'suggested_action': 'check the skill name or regenerate catalog/ai-index.json',
-    }, ensure_ascii=False))
-    raise SystemExit(1)
+    fail(
+        'skill-not-found',
+        f'no AI-index entry found for {requested}',
+        'check the skill name or regenerate catalog/ai-index.json',
+        failed_at_step='resolved',
+    )
 
 exact = [skill for skill in matches if requested == skill.get('qualified_name')]
 if exact:
@@ -184,66 +195,59 @@ elif len(matches) == 1:
     selected_skill = matches[0]
 else:
     choices = ', '.join(sorted(skill.get('qualified_name') or skill.get('name') or '?' for skill in matches))
-    print(json.dumps({
-        'ok': False,
-        'state': 'failed',
-        'failed_at_step': 'resolved',
-        'error_code': 'ambiguous-skill-name',
-        'message': f'ambiguous skill name {requested}: {choices}',
-        'suggested_action': 'use the qualified_name',
-    }, ensure_ascii=False))
-    raise SystemExit(1)
+    fail(
+        'ambiguous-skill-name',
+        f'ambiguous skill name {requested}: {choices}',
+        'use the qualified_name',
+        failed_at_step='resolved',
+    )
 
 resolved_version = requested_version or selected_skill.get('default_install_version')
 versions = selected_skill.get('versions') or {}
 if resolved_version not in versions:
-    print(json.dumps({
-        'ok': False,
-        'state': 'failed',
-        'failed_at_step': 'selected_version',
-        'error_code': 'version-not-found',
-        'message': f'version {resolved_version!r} is not available for {selected_skill.get("qualified_name") or selected_skill.get("name")}',
-        'suggested_action': 'use one of available_versions from catalog/ai-index.json',
-    }, ensure_ascii=False))
-    raise SystemExit(1)
+    fail(
+        'version-not-found',
+        f'version {resolved_version!r} is not available for {selected_skill.get("qualified_name") or selected_skill.get("name")}',
+        'use one of available_versions from catalog/ai-index.json',
+        failed_at_step='selected_version',
+        qualified_name=selected_skill.get('qualified_name') or selected_skill.get('name'),
+        resolved_version=resolved_version,
+    )
 
 version_entry = versions[resolved_version]
 if version_entry.get('installable') is not True:
-    print(json.dumps({
-        'ok': False,
-        'state': 'failed',
-        'failed_at_step': 'selected_version',
-        'error_code': 'version-not-installable',
-        'message': f'version {resolved_version!r} is not installable for {selected_skill.get("qualified_name") or selected_skill.get("name")}',
-        'suggested_action': 'pick an installable released version',
-    }, ensure_ascii=False))
-    raise SystemExit(1)
+    fail(
+        'version-not-installable',
+        f'version {resolved_version!r} is not installable for {selected_skill.get("qualified_name") or selected_skill.get("name")}',
+        'pick an installable released version',
+        failed_at_step='selected_version',
+        qualified_name=selected_skill.get('qualified_name') or selected_skill.get('name'),
+        resolved_version=resolved_version,
+    )
 required_fields = ['manifest_path', 'bundle_path', 'bundle_sha256', 'attestation_path']
 missing = [field for field in required_fields if not isinstance(version_entry.get(field), str) or not version_entry.get(field).strip()]
 if missing:
-    print(json.dumps({
-        'ok': False,
-        'state': 'failed',
-        'failed_at_step': 'verified_manifest',
-        'error_code': 'missing-distribution-fields',
-        'message': f'missing distribution fields: {", ".join(missing)}',
-        'suggested_action': 'republish the skill and rebuild the catalog',
-    }, ensure_ascii=False))
-    raise SystemExit(1)
+    fail(
+        'missing-distribution-fields',
+        f'missing distribution fields: {", ".join(missing)}',
+        'republish the skill and rebuild the catalog',
+        failed_at_step='verified_manifest',
+        qualified_name=selected_skill.get('qualified_name') or selected_skill.get('name'),
+        resolved_version=resolved_version,
+    )
 
 if resolved_registry_root is not None:
     for field in ['manifest_path', 'bundle_path', 'attestation_path']:
         full = resolved_registry_root / version_entry[field]
         if not full.exists():
-            print(json.dumps({
-                'ok': False,
-                'state': 'failed',
-                'failed_at_step': 'verified_manifest',
-                'error_code': 'missing-distribution-file',
-                'message': f'missing {field}: {version_entry[field]}',
-                'suggested_action': 'rebuild or republish the distribution artifacts',
-            }, ensure_ascii=False))
-            raise SystemExit(1)
+            fail(
+                'missing-distribution-file',
+                f'missing {field}: {version_entry[field]}',
+                'rebuild or republish the distribution artifacts',
+                failed_at_step='verified_manifest',
+                qualified_name=selected_skill.get('qualified_name') or selected_skill.get('name'),
+                resolved_version=resolved_version,
+            )
 
 install_name = selected_skill.get('qualified_name') or selected_skill.get('name')
 plan = {

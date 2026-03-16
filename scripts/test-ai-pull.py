@@ -252,6 +252,7 @@ def main():
     tmpdir, repo = prepare_repo()
     try:
         configure_external_registry(repo, tmpdir)
+        external_repo = tmpdir / EXTERNAL_REGISTRY_NAME
         target = tmpdir / 'installed'
         result = run([str(repo / 'scripts' / 'pull-skill.sh'), FIXTURE_NAME, str(target)], cwd=repo)
         payload = json.loads(result.stdout)
@@ -334,6 +335,88 @@ def main():
             fail('pull external bad-version result schema errors:\n' + '\n'.join(errors))
         if 'version-not-found' not in combined:
             fail(f'expected version-not-found in external registry failure\n{combined}')
+
+        manifest_path = external_repo / 'catalog' / 'distributions' / '_legacy' / EXTERNAL_SKILL_NAME / EXTERNAL_SKILL_VERSION / 'manifest.json'
+        bundle_path = external_repo / 'catalog' / 'distributions' / '_legacy' / EXTERNAL_SKILL_NAME / EXTERNAL_SKILL_VERSION / 'bundle.tar.gz'
+        attestation_path = external_repo / 'catalog' / 'provenance' / f'{EXTERNAL_SKILL_NAME}-{EXTERNAL_SKILL_VERSION}.json'
+
+        manifest_backup = manifest_path.read_text(encoding='utf-8')
+        manifest_path.unlink()
+        missing_manifest = run(
+            [
+                str(repo / 'scripts' / 'pull-skill.sh'),
+                f'partner/{EXTERNAL_SKILL_NAME}',
+                str(external_target),
+                '--registry',
+                EXTERNAL_REGISTRY_NAME,
+            ],
+            cwd=repo,
+            expect=1,
+        )
+        missing_manifest_payload = json.loads(missing_manifest.stdout)
+        errors = validate_pull_result(missing_manifest_payload)
+        if errors:
+            fail('pull missing-manifest result schema errors:\n' + '\n'.join(errors))
+        if missing_manifest_payload.get('error_code') != 'missing-distribution-file':
+            fail(f"expected missing-distribution-file for missing manifest, got {missing_manifest_payload!r}")
+        if 'manifest_path' not in (missing_manifest_payload.get('message') or ''):
+            fail(f'expected missing manifest message to mention manifest_path, got {missing_manifest_payload!r}')
+        explanation = missing_manifest_payload.get('explanation') or {}
+        if not explanation.get('policy_reasons'):
+            fail(f'expected explanation on missing manifest failure, got {missing_manifest_payload!r}')
+        manifest_path.write_text(manifest_backup, encoding='utf-8')
+
+        bundle_backup = bundle_path.read_text(encoding='utf-8')
+        bundle_path.unlink()
+        missing_bundle = run(
+            [
+                str(repo / 'scripts' / 'pull-skill.sh'),
+                f'partner/{EXTERNAL_SKILL_NAME}',
+                str(external_target),
+                '--registry',
+                EXTERNAL_REGISTRY_NAME,
+            ],
+            cwd=repo,
+            expect=1,
+        )
+        missing_bundle_payload = json.loads(missing_bundle.stdout)
+        errors = validate_pull_result(missing_bundle_payload)
+        if errors:
+            fail('pull missing-bundle result schema errors:\n' + '\n'.join(errors))
+        if missing_bundle_payload.get('error_code') != 'missing-distribution-file':
+            fail(f"expected missing-distribution-file for missing bundle, got {missing_bundle_payload!r}")
+        if 'bundle_path' not in (missing_bundle_payload.get('message') or ''):
+            fail(f'expected missing bundle message to mention bundle_path, got {missing_bundle_payload!r}')
+        explanation = missing_bundle_payload.get('explanation') or {}
+        if not explanation.get('next_actions'):
+            fail(f'expected explanation on missing bundle failure, got {missing_bundle_payload!r}')
+        bundle_path.write_text(bundle_backup, encoding='utf-8')
+
+        attestation_backup = attestation_path.read_text(encoding='utf-8')
+        attestation_path.unlink()
+        missing_attestation = run(
+            [
+                str(repo / 'scripts' / 'pull-skill.sh'),
+                f'partner/{EXTERNAL_SKILL_NAME}',
+                str(external_target),
+                '--registry',
+                EXTERNAL_REGISTRY_NAME,
+            ],
+            cwd=repo,
+            expect=1,
+        )
+        missing_attestation_payload = json.loads(missing_attestation.stdout)
+        errors = validate_pull_result(missing_attestation_payload)
+        if errors:
+            fail('pull missing-attestation result schema errors:\n' + '\n'.join(errors))
+        if missing_attestation_payload.get('error_code') != 'missing-distribution-file':
+            fail(f"expected missing-distribution-file for missing attestation, got {missing_attestation_payload!r}")
+        if 'attestation_path' not in (missing_attestation_payload.get('message') or ''):
+            fail(f'expected missing attestation message to mention attestation_path, got {missing_attestation_payload!r}')
+        explanation = missing_attestation_payload.get('explanation') or {}
+        if not explanation.get('selection_reason'):
+            fail(f'expected explanation on missing attestation failure, got {missing_attestation_payload!r}')
+        attestation_path.write_text(attestation_backup, encoding='utf-8')
     finally:
         shutil.rmtree(tmpdir)
 

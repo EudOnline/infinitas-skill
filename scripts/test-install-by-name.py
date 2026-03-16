@@ -36,6 +36,10 @@ def write_json(path: Path, payload):
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
 
+def load_json(path: Path):
+    return json.loads(path.read_text(encoding='utf-8'))
+
+
 def make_env(extra=None):
     env = os.environ.copy()
     env['INFINITAS_SKIP_RELEASE_TESTS'] = '1'
@@ -209,6 +213,13 @@ def configure_external_registry(repo: Path, tmpdir: Path):
     run([str(repo / 'scripts' / 'build-catalog.sh')], cwd=repo)
 
 
+def add_discovery_fixture(repo: Path, entry):
+    index_path = repo / 'catalog' / 'discovery-index.json'
+    payload = load_json(index_path)
+    payload.setdefault('skills', []).append(entry)
+    write_json(index_path, payload)
+
+
 def read_install_manifest(target_dir: Path):
     manifest = target_dir / '.infinitas-skill-install-manifest.json'
     if not manifest.exists():
@@ -299,6 +310,135 @@ def main():
             fail(f"expected planned state for confirm mode, got {payload.get('state')!r}")
         if payload.get('requires_confirmation') is not True:
             fail(f"expected requires_confirmation true, got {payload.get('requires_confirmation')!r}")
+
+        add_discovery_fixture(
+            repo,
+            {
+                'name': 'ambiguous-skill',
+                'qualified_name': 'alpha/ambiguous-skill',
+                'publisher': 'alpha',
+                'summary': 'First ambiguous drill skill',
+                'source_registry': 'self',
+                'source_priority': 100,
+                'match_names': ['ambiguous-skill', 'alpha/ambiguous-skill'],
+                'default_install_version': '1.0.0',
+                'latest_version': '1.0.0',
+                'available_versions': ['1.0.0'],
+                'agent_compatible': ['codex'],
+                'install_requires_confirmation': False,
+                'trust_level': 'private',
+                'trust_state': 'verified',
+                'tags': ['ambiguous'],
+                'maturity': 'stable',
+                'quality_score': 80,
+                'last_verified_at': '2026-03-16T00:00:00Z',
+                'capabilities': ['ambiguous-fixture'],
+                'verified_support': {},
+                'attestation_formats': ['ssh'],
+                'use_when': ['Need alpha ambiguous fixture'],
+                'avoid_when': [],
+                'runtime_assumptions': ['Discovery fixture only'],
+            },
+        )
+        add_discovery_fixture(
+            repo,
+            {
+                'name': 'ambiguous-skill',
+                'qualified_name': 'beta/ambiguous-skill',
+                'publisher': 'beta',
+                'summary': 'Second ambiguous drill skill',
+                'source_registry': 'self',
+                'source_priority': 100,
+                'match_names': ['ambiguous-skill', 'beta/ambiguous-skill'],
+                'default_install_version': '2.0.0',
+                'latest_version': '2.0.0',
+                'available_versions': ['2.0.0'],
+                'agent_compatible': ['codex'],
+                'install_requires_confirmation': False,
+                'trust_level': 'private',
+                'trust_state': 'verified',
+                'tags': ['ambiguous'],
+                'maturity': 'stable',
+                'quality_score': 79,
+                'last_verified_at': '2026-03-16T00:00:00Z',
+                'capabilities': ['ambiguous-fixture'],
+                'verified_support': {},
+                'attestation_formats': ['ssh'],
+                'use_when': ['Need beta ambiguous fixture'],
+                'avoid_when': [],
+                'runtime_assumptions': ['Discovery fixture only'],
+            },
+        )
+        ambiguous_target = tmpdir / 'ambiguous-target'
+        ambiguous = run(
+            [str(repo / 'scripts' / 'install-by-name.sh'), 'ambiguous-skill', str(ambiguous_target)],
+            cwd=repo,
+            expect=1,
+        )
+        ambiguous_payload = json.loads(ambiguous.stdout)
+        if ambiguous_payload.get('ok') is not False:
+            fail(f'expected ambiguous install failure payload, got {ambiguous_payload!r}')
+        if ambiguous_payload.get('state') != 'failed':
+            fail(f"expected failed ambiguous install state, got {ambiguous_payload.get('state')!r}")
+        if ambiguous_payload.get('error_code') != 'ambiguous-skill-name':
+            fail(f"expected ambiguous-skill-name, got {ambiguous_payload.get('error_code')!r}")
+        if 'qualified_name' not in (ambiguous_payload.get('suggested_action') or ''):
+            fail(f'expected suggested_action to mention qualified_name, got {ambiguous_payload!r}')
+        explanation = ambiguous_payload.get('explanation') or {}
+        if not explanation.get('selection_reason'):
+            fail(f'expected explanation on ambiguous install failure, got {ambiguous_payload!r}')
+
+        add_discovery_fixture(
+            repo,
+            {
+                'name': 'incompatible-skill',
+                'qualified_name': 'partner/incompatible-skill',
+                'publisher': 'partner',
+                'summary': 'Incompatible drill skill',
+                'source_registry': 'self',
+                'source_priority': 100,
+                'match_names': ['incompatible-skill', 'partner/incompatible-skill'],
+                'default_install_version': '0.1.0',
+                'latest_version': '0.1.0',
+                'available_versions': ['0.1.0'],
+                'agent_compatible': ['openclaw'],
+                'install_requires_confirmation': False,
+                'trust_level': 'private',
+                'trust_state': 'verified',
+                'tags': ['incompatible'],
+                'maturity': 'beta',
+                'quality_score': 40,
+                'last_verified_at': '2026-03-16T00:00:00Z',
+                'capabilities': ['incompatible-fixture'],
+                'verified_support': {},
+                'attestation_formats': ['ssh'],
+                'use_when': ['Need openclaw-only fixture'],
+                'avoid_when': [],
+                'runtime_assumptions': ['Discovery fixture only'],
+            },
+        )
+        incompatible_target = tmpdir / 'incompatible-target'
+        incompatible = run(
+            [
+                str(repo / 'scripts' / 'install-by-name.sh'),
+                'incompatible-skill',
+                str(incompatible_target),
+                '--target-agent',
+                'codex',
+            ],
+            cwd=repo,
+            expect=1,
+        )
+        incompatible_payload = json.loads(incompatible.stdout)
+        if incompatible_payload.get('ok') is not False:
+            fail(f'expected incompatible install failure payload, got {incompatible_payload!r}')
+        if incompatible_payload.get('error_code') != 'incompatible-target-agent':
+            fail(f"expected incompatible-target-agent, got {incompatible_payload.get('error_code')!r}")
+        if not incompatible_payload.get('suggested_action'):
+            fail(f'expected suggested_action on incompatible install failure, got {incompatible_payload!r}')
+        explanation = incompatible_payload.get('explanation') or {}
+        if not explanation.get('policy_reasons'):
+            fail(f'expected explanation policy_reasons on incompatible install failure, got {incompatible_payload!r}')
     finally:
         shutil.rmtree(tmpdir)
 

@@ -48,6 +48,11 @@ def load_stdout_json(command):
         fail(f'could not parse JSON from {command!r}: {exc}\nstdout:\n{result.stdout}')
 
 
+def write_json(path: Path, payload):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+
 def scenario_docs_define_public_workflow_surface():
     workflow_doc = ROOT / 'docs' / 'ai' / 'workflow-drills.md'
     agent_ops = ROOT / 'docs' / 'ai' / 'agent-operations.md'
@@ -133,10 +138,98 @@ def scenario_publish_pull_confirm_drill():
         shutil.rmtree(temp_root)
 
 
+def scenario_ambiguous_install_failure_drill():
+    temp_root = Path(tempfile.mkdtemp(prefix='infinitas-ai-workflow-drill-ambiguous-'))
+    try:
+        repo = temp_root / 'repo'
+        shutil.copytree(
+            ROOT,
+            repo,
+            ignore=shutil.ignore_patterns('.git', '.planning', '__pycache__', '.cache', 'scripts/__pycache__', '.worktrees'),
+        )
+        discovery_index = repo / 'catalog' / 'discovery-index.json'
+        payload = json.loads(discovery_index.read_text(encoding='utf-8'))
+        payload.setdefault('skills', []).extend(
+            [
+                {
+                    'name': 'ambiguous-skill',
+                    'qualified_name': 'alpha/ambiguous-skill',
+                    'publisher': 'alpha',
+                    'summary': 'First ambiguous drill skill',
+                    'source_registry': 'self',
+                    'source_priority': 100,
+                    'match_names': ['ambiguous-skill', 'alpha/ambiguous-skill'],
+                    'default_install_version': '1.0.0',
+                    'latest_version': '1.0.0',
+                    'available_versions': ['1.0.0'],
+                    'agent_compatible': ['codex'],
+                    'install_requires_confirmation': False,
+                    'trust_level': 'private',
+                    'trust_state': 'verified',
+                    'tags': ['ambiguous'],
+                    'maturity': 'stable',
+                    'quality_score': 80,
+                    'last_verified_at': '2026-03-16T00:00:00Z',
+                    'capabilities': ['ambiguous-fixture'],
+                    'verified_support': {},
+                    'attestation_formats': ['ssh'],
+                    'use_when': ['Need alpha ambiguous fixture'],
+                    'avoid_when': [],
+                    'runtime_assumptions': ['Discovery fixture only'],
+                },
+                {
+                    'name': 'ambiguous-skill',
+                    'qualified_name': 'beta/ambiguous-skill',
+                    'publisher': 'beta',
+                    'summary': 'Second ambiguous drill skill',
+                    'source_registry': 'self',
+                    'source_priority': 100,
+                    'match_names': ['ambiguous-skill', 'beta/ambiguous-skill'],
+                    'default_install_version': '2.0.0',
+                    'latest_version': '2.0.0',
+                    'available_versions': ['2.0.0'],
+                    'agent_compatible': ['codex'],
+                    'install_requires_confirmation': False,
+                    'trust_level': 'private',
+                    'trust_state': 'verified',
+                    'tags': ['ambiguous'],
+                    'maturity': 'stable',
+                    'quality_score': 79,
+                    'last_verified_at': '2026-03-16T00:00:00Z',
+                    'capabilities': ['ambiguous-fixture'],
+                    'verified_support': {},
+                    'attestation_formats': ['ssh'],
+                    'use_when': ['Need beta ambiguous fixture'],
+                    'avoid_when': [],
+                    'runtime_assumptions': ['Discovery fixture only'],
+                },
+            ]
+        )
+        write_json(discovery_index, payload)
+        target_dir = temp_root / 'target'
+        result = run(
+            [str(repo / 'scripts' / 'install-by-name.sh'), 'ambiguous-skill', str(target_dir)],
+            cwd=repo,
+            expect=1,
+        )
+        payload = json.loads(result.stdout)
+        if payload.get('ok') is not False:
+            fail(f'expected ambiguous drill failure payload, got {payload!r}')
+        if payload.get('state') != 'failed':
+            fail(f"expected failed state for ambiguous drill, got {payload.get('state')!r}")
+        if payload.get('error_code') != 'ambiguous-skill-name':
+            fail(f"expected ambiguous-skill-name in drill, got {payload!r}")
+        if not payload.get('suggested_action'):
+            fail(f'expected suggested_action in ambiguous drill failure, got {payload!r}')
+    finally:
+        shutil.rmtree(temp_root)
+
+
 def main():
     scenario_docs_define_public_workflow_surface()
     scenario_search_recommend_inspect_drill()
     scenario_publish_pull_confirm_drill()
+    scenario_ambiguous_install_failure_drill()
     print('OK: ai workflow drill checks passed')
 
 

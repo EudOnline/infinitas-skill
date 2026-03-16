@@ -56,6 +56,7 @@ scripts/pull-skill.sh <qualified-name> <target-dir> [--version <semver>] [--regi
 - 请求的 publisher 不在 registry 的 `allowed_publishers` 中，或只命中了 `mirror` registry
 - 安装策略不是 `immutable-only`
 - 缺少 manifest、bundle digest 或 attestation
+- released manifest、bundle、或 attestation 文件路径存在于 AI index，但对应的 immutable artifact 实际缺失
 - 任何校验失败
 - 目标目录已存在不兼容安装且未显式允许覆盖
 - 本地 lock / install manifest 写入失败
@@ -131,9 +132,25 @@ Stable integration consumers should validate stdout JSON against:
   "failed_at_step": "verified_manifest",
   "error_code": "manifest-verification-failed",
   "message": "...",
-  "suggested_action": "..."
+  "suggested_action": "...",
+  "explanation": {
+    "selection_reason": "...",
+    "registry_used": "self",
+    "confirmation_required": false,
+    "version_reason": "...",
+    "policy_reasons": ["..."],
+    "next_actions": ["..."]
+  }
 }
 ```
+
+Important wrapper failures to handle explicitly:
+
+- `ambiguous-skill-name`: stop and ask for the exact `qualified_name`; do not guess from a short name
+- `missing-distribution-fields`: stop and tell the publisher to republish the immutable release metadata
+- `missing-distribution-file`: stop and tell the publisher to rebuild or republish the immutable artifacts
+
+When `error_code` is `missing-distribution-fields` or `missing-distribution-file`, never fall back to `skills/active`, `skills/incubating`, or any mutable source folder. The only valid repair path is to rebuild or republish the immutable release artifacts and regenerate the catalog if needed.
 
 ## OpenClaw Context
 

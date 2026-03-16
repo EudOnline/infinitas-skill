@@ -72,6 +72,14 @@ All resolver, install, update, and upgrade payloads may now include an additive 
 
 Use this explanation section to understand why a private match won, why an external source requires confirmation, and which version or source registry was chosen.
 
+When `install-by-name.sh` fails before materialization, it normalizes resolver states into wrapper-level failure payloads with:
+
+- `ok: false`
+- `state: failed`
+- stable `error_code`
+- actionable `suggested_action`
+- additive `explanation`
+
 `check-skill-update.sh` returns:
 
 ```json
@@ -94,6 +102,14 @@ Use this explanation section to understand why a private match won, why an exter
 - `incompatible` — matches exist, but not for the requested target agent
 - `confirmation-required` — the chosen install source is external and the caller requested auto mode
 - `cross-source-upgrade-not-allowed` — an upgrade request tried to change registry source implicitly
+- `ambiguous-skill-name` — `install-by-name.sh` must stop, surface the candidate list, and ask the caller for a `qualified_name`
+- `incompatible-target-agent` — `install-by-name.sh` must stop and report that no compatible candidate matched the requested target agent
+- `skill-not-found` — install-by-name could not find a discovery match worth materializing
+- `resolver-failed` — discovery indexes or resolver inputs were invalid enough that install could not choose any candidate
+
+For `ambiguous-skill-name`, do not guess. Ask the human for a `qualified_name`, then rerun the wrapper with that exact name.
+
+For `incompatible-target-agent`, do not silently drop the compatibility filter. Report the mismatch and let the human choose a different skill or agent target.
 
 ## Forbidden assumptions
 

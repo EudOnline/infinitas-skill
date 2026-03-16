@@ -94,6 +94,68 @@ def build_pull_plan_explanation(plan, *, requested_version=None):
     }
 
 
+def build_pull_failure_explanation(context, payload):
+    context = context if isinstance(context, dict) else {}
+    payload = payload if isinstance(payload, dict) else {}
+    error_code = payload.get('error_code') or 'unknown'
+    resolved_version = _coalesce_string(
+        payload.get('resolved_version'),
+        context.get('resolved_version'),
+        payload.get('requested_version'),
+        context.get('requested_version'),
+    )
+    reasons = ['immutable-only install policy requires released distribution artifacts']
+
+    if error_code in {'missing-distribution-fields', 'missing-distribution-file'}:
+        selection_reason = 'blocked install because required immutable distribution artifacts are incomplete'
+        reasons.append('never fall back to mutable source folders when released artifacts are missing')
+    elif error_code == 'ambiguous-skill-name':
+        selection_reason = 'blocked install because the requested name matches multiple released skills'
+        reasons.append('choose a qualified_name before materializing immutable artifacts')
+    elif error_code == 'version-not-found':
+        selection_reason = 'blocked install because the requested release version is not present in the AI index'
+        reasons.append('immutable installs must use a released version advertised in the AI index')
+    elif error_code == 'version-not-installable':
+        selection_reason = 'blocked install because the selected release version is marked non-installable'
+        reasons.append('only installable released versions may be materialized')
+    elif error_code == 'skill-not-found':
+        selection_reason = 'blocked install because the AI index has no matching released skill entry'
+        reasons.append('discovery must find a released entry before immutable install can proceed')
+    elif error_code == 'invalid-install-policy':
+        selection_reason = 'blocked install because the registry policy does not enforce immutable-only installs'
+        reasons.append('AI installs require immutable-only policy with direct source installs disabled')
+    elif error_code in {'missing-ai-index', 'invalid-ai-index'}:
+        selection_reason = 'blocked install because the registry AI index is unavailable or invalid'
+        reasons.append('catalog metadata must validate before selecting immutable artifacts')
+    elif error_code in {'unknown-registry', 'registry-disabled', 'registry-root-unavailable'}:
+        selection_reason = 'blocked install because the requested registry could not be used safely'
+        reasons.append('registry configuration must resolve before immutable artifact selection')
+    else:
+        selection_reason = 'blocked install before immutable artifacts could be materialized safely'
+        reasons.append('stop and repair registry metadata or release artifacts before retrying')
+
+    version_reason = (
+        f'using resolved version {resolved_version} from the AI index'
+        if resolved_version
+        else 'no released version could be selected before the failure occurred'
+    )
+    next_actions = _dedupe_strings(
+        [
+            payload.get('suggested_action'),
+            payload.get('next_step'),
+            context.get('next_step'),
+        ]
+    )
+    return {
+        'selection_reason': selection_reason,
+        'registry_used': _coalesce_string(payload.get('registry_name'), context.get('registry_name')),
+        'confirmation_required': bool(context.get('requires_confirmation')),
+        'version_reason': version_reason,
+        'policy_reasons': reasons,
+        'next_actions': next_actions,
+    }
+
+
 def build_pull_result_explanation(plan, payload):
     plan = plan if isinstance(plan, dict) else {}
     payload = payload if isinstance(payload, dict) else {}
@@ -143,6 +205,14 @@ def build_install_explanation(resolve_payload, payload=None, *, requested_versio
         selection_reason = 'prepared an install plan for the resolver winner without materializing files'
     elif payload.get('error_code') == 'confirmation-required':
         selection_reason = 'blocked auto-install because the selected registry requires confirmation'
+    elif payload.get('error_code') == 'ambiguous-skill-name':
+        selection_reason = 'blocked install because the requested name matched multiple skills'
+    elif payload.get('error_code') == 'incompatible-target-agent':
+        selection_reason = 'blocked install because no compatible candidate matched the requested target agent'
+    elif payload.get('error_code') == 'skill-not-found':
+        selection_reason = 'blocked install because discovery found no matching skill'
+    elif payload.get('error_code') == 'resolver-failed':
+        selection_reason = 'blocked install because skill resolution failed before a candidate was selected'
     else:
         selection_reason = base.get('selection_reason')
 
@@ -154,12 +224,14 @@ def build_install_explanation(resolve_payload, payload=None, *, requested_versio
     next_actions = _dedupe_strings(
         _listify((payload.get('explanation') or {}).get('next_actions'))
         + _listify(base.get('next_actions'))
-        + [payload.get('next_step')]
+        + [payload.get('suggested_action'), payload.get('next_step')]
     )
     return {
         'selection_reason': selection_reason,
         'registry_used': _coalesce_string(payload.get('source_registry'), resolved.get('source_registry'), base.get('registry_used')),
-        'confirmation_required': bool(resolve_payload.get('requires_confirmation')),
+        'confirmation_required': bool(
+            payload.get('requires_confirmation') if 'requires_confirmation' in payload else resolve_payload.get('requires_confirmation')
+        ),
         'version_reason': version_reason,
         'policy_reasons': reasons,
         'next_actions': next_actions,
