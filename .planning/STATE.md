@@ -5,21 +5,21 @@
 See: `.planning/PROJECT.md` (updated 2026-03-16)
 
 **Core value:** Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
-**Current focus:** v12 Phase 1 planning — Decision Metadata and AI Result Contracts
+**Current focus:** Post-v12 closeout and selection of the next milestone after the AI-usable skill ecosystem.
 
 ## Current Position
 
-Phase: v12 Phase 1 of 3 (Decision Metadata and AI Result Contracts)
-Plan: `docs/plans/2026-03-16-ai-decision-metadata-and-contracts.md`
-Status: Phase 1 planned; 12-01 is the first implementation slice
-Last activity: 2026-03-16 — Selected v12 AI-usable skill ecosystem and wrote the Phase 1 implementation plan
+Phase: v12 completed (3 of 3 phases)
+Plan: `docs/plans/2026-03-16-platform-usage-guide.md`
+Status: v12 complete on `main`; next milestone not yet selected
+Last activity: 2026-03-16 — Merged 12-01 through 12-09 plus follow-up fixture hardening into `main`
 
-Progress: [----------] 0%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 39
+- Total plans completed: 49
 - Average duration: n/a
 - Total execution time: n/a
 
@@ -27,11 +27,11 @@ Progress: [----------] 0%
 - v9: 14 plans completed across 5 phases
 - v10: 18 plans completed across 6 phases
 - v11: 8 plans completed across 3 phases
-- v12: 0 plans completed across 3 phases
+- v12: 9 plans completed across 3 phases
 
 **Recent Trend:**
-- Last 5 plans: 11-04, 11-05, 11-06, 11-07, 11-08
-- Trend: v11 is complete; v12 starts by making AI decision metadata and wrapper contracts canonical before adding more inventory or ranking depth
+- Last 5 plans: 12-05, 12-06, 12-07, 12-08, 12-09
+- Trend: v12 is complete on `main`; the next decision is whether to plan post-v12 roadmap work or resolve longer-running operational follow-ups such as trusted signer enrollment
 
 ## Accumulated Context
 
@@ -58,26 +58,24 @@ Decisions are logged in `PROJECT.md`.
 - 2026-03-15: Add a deterministic recommendation layer as v10 Phase 6, driven by explicit metadata, trust state, compatibility evidence, quality, and verification freshness.
 - 2026-03-16: Treat the current platform as "M1 complete: AI-first registry core" and adopt "M2: AI-usable skill ecosystem" as v12.
 - 2026-03-16: Start v12 by making AI decision metadata and `publish-skill` / `pull-skill` result schemas canonical before adding more real skills or ranking heuristics.
+- 2026-03-16: Complete all three v12 phases on `main`, including canonical decision metadata, real skill inventory, AI-only drills, failure-path hardening, comparative recommendation signals, and a stable usage guide.
 
 ### Pending Todos
 
-- Execute 12-01 so `_meta.json`, templates, and docs can describe `use_when`, `avoid_when`, `capabilities`, and runtime assumptions with validation.
-- Follow 12-01 with 12-02 and 12-03 so generated indexes and AI wrapper outputs consume the canonical metadata and stable result schemas.
+- Choose and plan the next post-v12 milestone; no `12-10` or later plan is defined yet in `.planning/ROADMAP.md`.
 - Bootstrap real trusted signer entries in `config/allowed_signers` before the first actual stable release.
-- Decide whether CI-native attestations should be additive to, or eventually authoritative over, the repo-managed SSH path.
-- Decide whether the future registry-ops and supply-chain backlog items belong after v12 or should remain deferred behind ecosystem usefulness work.
+- Decide whether CI-native attestations should remain additive to, or eventually become authoritative over, the repo-managed SSH path.
+- Decide whether the future registry-ops and supply-chain backlog items belong immediately after v12 or should remain deferred behind operator-readiness work.
 
 ### Blockers/Concerns
 
-- `catalog/ai-index.json` currently exposes only one real skill, and that entry still has empty `use_when` / `avoid_when` guidance.
-- `publish-skill.sh` and `pull-skill.sh` return JSON, but there are not yet dedicated schema files governing those result payloads.
-- `config/allowed_signers` still contains bootstrap guidance comments only; Phase 2 added the bootstrap and doctor flow, but a real production signer ceremony is still pending.
-- Future v12 work should avoid slipping back into more registry machinery unless it directly improves AI usability, selection quality, or learnability.
-- The repository still installs skills by bare folder name for backward compatibility; future v10 work may revisit how far concurrent same-slug publisher installs should go.
-- v10 should stay Git-native and private-first; public marketplace features, social features, and on-chain reputation are intentionally deferred.
+- `config/allowed_signers` still contains bootstrap guidance comments only; the bootstrap and doctor flow exist, but a real production signer ceremony is still pending.
+- The next milestone after v12 is not yet planned, so roadmap continuity now depends on choosing between operator-readiness, governance, registry-ops, or supply-chain follow-up work.
+- The repository still installs skills by bare folder name for backward compatibility; any future multi-publisher same-slug work should stay compatibility-aware.
+- The project should stay Git-native and private-first; public marketplace features, social features, and on-chain reputation remain intentionally deferred.
 
 ## Session Continuity
 
-Last session: 2026-03-16 09:40 GMT+8
-Stopped at: v12 Phase 1 planning ready
-Resume file: `docs/plans/2026-03-16-ai-decision-metadata-and-contracts.md`
+Last session: 2026-03-16 15:46 GMT+8
+Stopped at: v12 complete on `main`; post-v12 planning not yet selected
+Resume file: `.planning/ROADMAP.md`

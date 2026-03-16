@@ -230,11 +230,11 @@ Plans:
 - [x] 11-07: Add audit/inventory export formats for portal, compliance, or reporting integrations
 - [x] 11-08: Document federation trust boundaries, failure modes, and recovery procedures
 
-### 🚧 v12 AI-Usable Skill Ecosystem (In Progress)
+### ✅ v12 AI-Usable Skill Ecosystem (Completed 2026-03-16)
 
 **Milestone Goal:** Turn the trustworthy registry core into a small but genuinely useful AI-facing skill ecosystem with canonical decision metadata, schema-stable wrapper contracts, and enough real skills to make ranking meaningful.
 
-#### 🚧 Phase 1: Decision Metadata and AI Result Contracts
+#### ✅ Phase 1: Decision Metadata and AI Result Contracts (Completed 2026-03-16)
 **Goal**: Make skill-selection metadata and AI wrapper JSON contracts first-class, validated, and exported through canonical indexes instead of hand-maintained or empty defaults.
 **Depends on**: v11 completed
 **Requirements**: [ECO-01, ECO-02, ECO-03]
@@ -245,11 +245,11 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 12-01: Extend skill metadata schema, templates, and docs for AI decision fields
-- [ ] 12-02: Emit canonical decision metadata into AI/discovery indexes and recommendation/search surfaces
-- [ ] 12-03: Add AI wrapper result schemas and publish/pull contract validation
+- [x] 12-01: Extend skill metadata schema, templates, and docs for AI decision fields
+- [x] 12-02: Emit canonical decision metadata into AI/discovery indexes and recommendation/search surfaces
+- [x] 12-03: Add AI wrapper result schemas and publish/pull contract validation
 
-#### ⏳ Phase 2: Real Skill Inventory and Learnability
+#### ✅ Phase 2: Real Skill Inventory and Learnability (Completed 2026-03-16)
 **Goal**: Add enough real, well-described skills and task-level protocol drills that agents can succeed using the public AI surfaces instead of repo internals.
 **Depends on**: Phase 1
 **Requirements**: [ECO-04, ECO-05]
@@ -260,11 +260,11 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 12-04: Add real registry skills with explicit runtime assumptions and decision metadata
-- [ ] 12-05: Add AI-only workflow drills for search, recommend, inspect, publish, and pull
-- [ ] 12-06: Add failure-path regression coverage for ambiguous resolution and missing immutable artifacts
+- [x] 12-04: Add real registry skills with explicit runtime assumptions and decision metadata
+- [x] 12-05: Add AI-only workflow drills for search, recommend, inspect, publish, and pull
+- [x] 12-06: Add failure-path regression coverage for ambiguous resolution and missing immutable artifacts
 
-#### ⏳ Phase 3: Comparative Ranking and Usage Guide
+#### ✅ Phase 3: Comparative Ranking and Usage Guide (Completed 2026-03-16)
 **Goal**: Make multi-skill selection explainable by adding stronger comparative signals and a stable usage guide for humans and agents.
 **Depends on**: Phase 2
 **Requirements**: [ECO-06, ECO-07]
@@ -275,9 +275,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 12-07: Add comparative quality/confidence signals to recommendation outputs
-- [ ] 12-08: Reduce duplicated decision metadata across source, generated indexes, and docs
-- [ ] 12-09: Publish the stable platform usage guide for humans and agents
+- [x] 12-07: Add comparative quality/confidence signals to recommendation outputs
+- [x] 12-08: Reduce duplicated decision metadata across source, generated indexes, and docs
+- [x] 12-09: Publish the stable platform usage guide for humans and agents
 
 ## Progress
 
@@ -297,6 +297,6 @@ Plans:
 | 1. Policy Packs and Explainable Decisions | v11 | 2/2 | Completed | 2026-03-15 |
 | 2. Multi-Team Governance and Exceptions | v11 | 3/3 | Completed | 2026-03-15 |
 | 3. Federation, Mirrors, and Audit Export | v11 | 3/3 | Completed | 2026-03-16 |
-| 1. Decision Metadata and AI Result Contracts | v12 | 0/3 | Planned | 2026-03-16 |
-| 2. Real Skill Inventory and Learnability | v12 | 0/3 | Pending | - |
-| 3. Comparative Ranking and Usage Guide | v12 | 0/3 | Pending | - |
+| 1. Decision Metadata and AI Result Contracts | v12 | 3/3 | Completed | 2026-03-16 |
+| 2. Real Skill Inventory and Learnability | v12 | 3/3 | Completed | 2026-03-16 |
+| 3. Comparative Ranking and Usage Guide | v12 | 3/3 | Completed | 2026-03-16 |

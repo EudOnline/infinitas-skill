@@ -36,10 +36,9 @@ Maintainers can publish and distribute private skills with deterministic, audita
 
 ### Active
 
-- [ ] v12 Phase 1 planning is ready in `docs/plans/2026-03-16-ai-decision-metadata-and-contracts.md`.
-- [ ] 12-01 will extend `_meta.json`, templates, and docs with validated AI decision fields such as `use_when`, `avoid_when`, `capabilities`, and runtime assumptions.
-- [ ] 12-02 will emit canonical decision metadata into `catalog/ai-index.json`, `catalog/discovery-index.json`, and related search/recommend surfaces instead of hardcoded blanks.
-- [ ] 12-03 will add dedicated result schemas plus contract regression coverage for `publish-skill.sh` and `pull-skill.sh`.
+- [ ] Select the first post-v12 milestone; no follow-on plan is defined after `12-09`.
+- [ ] Bootstrap real trusted signer entries in `config/allowed_signers` before the first production stable release ceremony.
+- [ ] Decide whether the next roadmap slice should prioritize operator readiness, future registry operations, or deferred supply-chain work.
 
 ### Out of Scope
 
@@ -68,8 +67,8 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - 11-07 adds `catalog/inventory-export.json` and `catalog/audit-export.json`, generated from catalog and provenance artifacts, plus repository validation so portal/compliance consumers can rely on a stable JSON contract without depending on debug traces or live release-state recomputation.
 - 11-08 adds a dedicated federation operations guide that defines authoritative surfaces, common failure modes, and operator recovery order for policy drift, stale mirrors, missing provenance, and stale export artifacts.
 - `docs/platform-review-memo.md` recommends treating the current system as "M1 complete: AI-first registry core" and shifting the next milestone to "M2: AI-usable skill ecosystem".
-- `catalog/ai-index.json` currently exposes only one real skill and still emits empty `use_when` / `avoid_when` arrays, so the platform is installable before it is strongly decision-useful.
-- v12 starts by making AI decision metadata and wrapper result contracts canonical before adding more ecosystem content or ranking heuristics.
+- v12 completed the AI-usable skill ecosystem milestone by shipping canonical decision metadata, schema-backed publish/pull contracts, real skill inventory, AI-only workflow drills, failure-path hardening, comparative recommendation signals, and a stable usage guide.
+- `catalog/ai-index.json` now exposes multiple real skills with authored selection guidance, runtime assumptions, verified compatibility evidence, and additive comparative recommendation signals.
 - `config/allowed_signers` is still intentionally bootstrapped with guidance comments only; maintainers must commit real trusted signer entries before the first actual stable release is operationally complete.
 
 ## Constraints
@@ -109,4 +108,4 @@ Maintainers can publish and distribute private skills with deterministic, audita
 | Keep v12 additive and Git-native | The goal is to make the existing registry more useful to AI agents, not replace it with a new service layer | ✓ Good |
 
 ---
-*Last updated: 2026-03-16 after selecting v12 AI-usable skill ecosystem and planning 12-01*
+*Last updated: 2026-03-16 after completing v12 AI-usable skill ecosystem on `main`*
