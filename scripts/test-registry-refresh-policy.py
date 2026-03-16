@@ -4,6 +4,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from registry_source_lib import validate_registry_config
@@ -96,7 +97,7 @@ def create_remote_registry_fixture(tmpdir: Path):
     return remote, commit
 
 
-def registry_config_with_remote(remote_url: str):
+def registry_config_with_remote(remote_url: str, *, stale_policy='warn', interval_hours=24, max_cache_age_hours=72):
     config = load_base_config()
     config['default_registry'] = 'upstream'
     config['registries'] = [
@@ -112,13 +113,24 @@ def registry_config_with_remote(remote_url: str):
             'pin': {'mode': 'tag', 'value': 'v1.0.0'},
             'update_policy': {'mode': 'pinned'},
             'refresh_policy': {
-                'interval_hours': 24,
-                'max_cache_age_hours': 72,
-                'stale_policy': 'warn',
+                'interval_hours': interval_hours,
+                'max_cache_age_hours': max_cache_age_hours,
+                'stale_policy': stale_policy,
             },
         },
     ]
     return config
+
+
+def make_stale_refresh_timestamp(hours_ago):
+    return (datetime.now(timezone.utc) - timedelta(hours=hours_ago)).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
+
+
+def write_stale_refresh_state(repo: Path, registry_name: str, *, hours_ago: int):
+    state_path = repo / '.cache' / 'registries' / '_state' / f'{registry_name}.json'
+    payload = json.loads(state_path.read_text(encoding='utf-8'))
+    payload['refreshed_at'] = make_stale_refresh_timestamp(hours_ago)
+    write_json(state_path, payload)
 
 
 def expect_no_errors(config, root):
@@ -250,6 +262,65 @@ def scenario_status_handles_local_only_registry_without_state():
         shutil.rmtree(tmpdir)
 
 
+def scenario_stale_warn_allows_resolution_with_warning():
+    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-refresh-policy-stale-warn-test-'))
+    try:
+        repo = copy_repo(tmpdir)
+        remote, expected_commit = create_remote_registry_fixture(tmpdir)
+        write_json(repo / 'config' / 'registry-sources.json', registry_config_with_remote(str(remote), stale_policy='warn'))
+
+        run(['bash', 'scripts/sync-registry-source.sh', 'upstream'], cwd=repo)
+        write_stale_refresh_state(repo, 'upstream', hours_ago=96)
+
+        result = run(['python3', 'scripts/resolve-skill-source.py', 'demo', '--registry', 'upstream', '--json'], cwd=repo)
+        payload = json.loads(result.stdout)
+        if payload.get('name') != 'demo':
+            fail(f"expected resolved skill 'demo', got {payload!r}")
+        if payload.get('registry_name') != 'upstream':
+            fail(f"expected registry_name 'upstream', got {payload!r}")
+        if payload.get('source_snapshot_commit') not in {None, expected_commit} and payload.get('registry_commit') != expected_commit:
+            fail(f'expected resolved payload to preserve upstream commit identity, got {payload!r}')
+        if payload.get('registry_freshness_state') != 'stale-warning':
+            fail(f"expected registry_freshness_state 'stale-warning', got {payload!r}")
+        warning = payload.get('registry_freshness_warning')
+        if not isinstance(warning, str) or 'scripts/sync-registry-source.sh upstream' not in warning:
+            fail(f'expected actionable registry_freshness_warning, got {payload!r}')
+        if payload.get('registry_refresh_age_hours') is None or payload.get('registry_refresh_age_hours') <= 72:
+            fail(f'expected registry_refresh_age_hours > 72, got {payload!r}')
+    finally:
+        shutil.rmtree(tmpdir)
+
+
+def scenario_stale_fail_blocks_resolution_until_resynced():
+    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-refresh-policy-stale-fail-test-'))
+    try:
+        repo = copy_repo(tmpdir)
+        remote, expected_commit = create_remote_registry_fixture(tmpdir)
+        write_json(repo / 'config' / 'registry-sources.json', registry_config_with_remote(str(remote), stale_policy='fail'))
+
+        run(['bash', 'scripts/sync-registry-source.sh', 'upstream'], cwd=repo)
+        write_stale_refresh_state(repo, 'upstream', hours_ago=96)
+
+        blocked = run(['python3', 'scripts/resolve-skill-source.py', 'demo', '--registry', 'upstream', '--json'], cwd=repo, expect=1)
+        blocked_output = f'{blocked.stdout}\n{blocked.stderr}'
+        if 'stale' not in blocked_output.lower():
+            fail(f'expected stale-cache error output, got {blocked_output!r}')
+        if 'scripts/sync-registry-source.sh upstream' not in blocked_output:
+            fail(f'expected actionable resync command in error output, got {blocked_output!r}')
+
+        run(['bash', 'scripts/sync-registry-source.sh', 'upstream'], cwd=repo)
+        resolved = run(['python3', 'scripts/resolve-skill-source.py', 'demo', '--registry', 'upstream', '--json'], cwd=repo)
+        payload = json.loads(resolved.stdout)
+        if payload.get('registry_freshness_state') != 'fresh':
+            fail(f"expected registry_freshness_state 'fresh' after resync, got {payload!r}")
+        if payload.get('registry_freshness_warning') not in {None, ''}:
+            fail(f'expected no registry_freshness_warning after resync, got {payload!r}')
+        if payload.get('registry_commit') != expected_commit:
+            fail(f'expected registry_commit to match refreshed upstream commit, got {payload!r}')
+    finally:
+        shutil.rmtree(tmpdir)
+
+
 def main():
     scenario_valid_refresh_policy_is_allowed()
     scenario_interval_hours_must_be_positive()
@@ -258,6 +329,8 @@ def main():
     scenario_local_only_registry_may_omit_refresh_policy()
     scenario_sync_writes_refresh_state_and_status()
     scenario_status_handles_local_only_registry_without_state()
+    scenario_stale_warn_allows_resolution_with_warning()
+    scenario_stale_fail_blocks_resolution_until_resynced()
     print('OK: registry refresh policy checks passed')
 
 

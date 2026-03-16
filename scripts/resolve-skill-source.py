@@ -5,12 +5,15 @@ from pathlib import Path
 
 from distribution_lib import load_distribution_index
 from http_registry_lib import HostedRegistryError, fetch_json, registry_catalog_path
+from registry_refresh_state_lib import evaluate_refresh_status, refresh_resolution_message, refresh_status_blocks_resolution
 from registry_source_lib import (
     apply_registry_federation,
+    find_registry,
     load_registry_config,
     normalized_auth,
     registry_identity,
     registry_is_resolution_candidate,
+    registry_uses_refresh_cache,
     resolve_registry_root,
 )
 from skill_identity_lib import normalize_skill_identity, parse_requested_skill
@@ -28,6 +31,20 @@ def append_registry_item(reg, items, payload):
     resolved = apply_registry_federation(reg, payload)
     if resolved is not None:
         items.append(resolved)
+
+
+def decorate_registry_freshness(payload, status):
+    decorated = dict(payload)
+    warning = refresh_resolution_message(status)
+    decorated.update({
+        'registry_has_refresh_state': status.get('has_state'),
+        'registry_refresh_state_file': status.get('state_file'),
+        'registry_refresh_age_seconds': status.get('age_seconds'),
+        'registry_refresh_age_hours': status.get('age_hours'),
+        'registry_freshness_state': status.get('freshness_state'),
+        'registry_freshness_warning': warning,
+    })
+    return decorated
 
 
 def scan_registry(reg):
@@ -196,6 +213,7 @@ def scan_http_registry(reg):
 def load_candidates(registry=None):
     cfg = load_registry_config(ROOT)
     items = []
+    blocked = []
     explicit_registry = bool(registry)
     for reg in cfg.get('registries', []):
         if not reg.get('enabled', True):
@@ -204,8 +222,19 @@ def load_candidates(registry=None):
             continue
         if not registry_is_resolution_candidate(reg, explicit_registry=explicit_registry):
             continue
-        items.extend(scan_registry(reg))
-    return items
+        freshness = evaluate_refresh_status(ROOT, reg) if registry_uses_refresh_cache(reg) else None
+        if freshness and refresh_status_blocks_resolution(freshness):
+            blocked.append({
+                'registry': reg.get('name'),
+                'message': refresh_resolution_message(freshness),
+                'freshness': freshness,
+            })
+            continue
+        reg_items = scan_registry(reg)
+        if freshness:
+            reg_items = [decorate_registry_freshness(item, freshness) for item in reg_items]
+        items.extend(reg_items)
+    return cfg, items, blocked
 
 
 def sort_key(item):
@@ -236,7 +265,8 @@ def main():
 
     requested_publisher, requested_name = parse_requested_skill(args.name)
     candidates = []
-    for item in load_candidates(args.registry):
+    cfg, loaded_candidates, blocked = load_candidates(args.registry)
+    for item in loaded_candidates:
         if requested_publisher:
             if item.get('qualified_name') == args.name:
                 candidates.append(item)
@@ -270,6 +300,16 @@ def main():
             reason = 'active-default'
 
     if resolved is None:
+        if args.registry:
+            blocked_registry = next((item for item in blocked if item.get('registry') == args.registry), None)
+            if blocked_registry and blocked_registry.get('message'):
+                raise SystemExit(blocked_registry.get('message'))
+            reg = find_registry(cfg, args.registry)
+            if reg and registry_uses_refresh_cache(reg):
+                freshness = evaluate_refresh_status(ROOT, reg)
+                message = refresh_resolution_message(freshness)
+                if message and refresh_status_blocks_resolution(freshness):
+                    raise SystemExit(message)
         suffix = f' from registry {args.registry}' if args.registry else ''
         raise SystemExit(f'No matching skill source found for {args.name}{"@" + args.version if args.version else ""}{suffix}.')
 

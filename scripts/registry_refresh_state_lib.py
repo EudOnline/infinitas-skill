@@ -3,8 +3,6 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from registry_source_lib import normalized_refresh_policy, resolve_registry_root
-
 
 def refresh_state_dir(root: Path) -> Path:
     return (root / '.cache' / 'registries' / '_state').resolve()
@@ -70,6 +68,8 @@ def load_refresh_state(root: Path, registry_name: str):
 
 
 def evaluate_refresh_status(root: Path, reg, *, now=None):
+    from registry_source_lib import normalized_refresh_policy, resolve_registry_root
+
     registry_name = reg.get('name')
     state_path, state = load_refresh_state(root, registry_name)
     policy = normalized_refresh_policy(reg)
@@ -92,7 +92,23 @@ def evaluate_refresh_status(root: Path, reg, *, now=None):
 
     freshness_state = 'not-configured'
     if has_policy and state is None:
-        freshness_state = 'missing-state'
+        if stale_policy == 'fail':
+            freshness_state = 'stale-fail'
+        elif stale_policy == 'warn':
+            freshness_state = 'stale-warning'
+        elif stale_policy == 'ignore':
+            freshness_state = 'stale-ignored'
+        else:
+            freshness_state = 'missing-state'
+    elif has_policy and refreshed_at is None:
+        if stale_policy == 'fail':
+            freshness_state = 'stale-fail'
+        elif stale_policy == 'warn':
+            freshness_state = 'stale-warning'
+        elif stale_policy == 'ignore':
+            freshness_state = 'stale-ignored'
+        else:
+            freshness_state = 'missing-state'
     elif has_policy and age_hours is not None:
         if isinstance(max_cache_age_hours, int) and age_hours > max_cache_age_hours:
             if stale_policy == 'fail':
@@ -130,3 +146,52 @@ def evaluate_refresh_status(root: Path, reg, *, now=None):
         'age_seconds': age_seconds,
         'age_hours': age_hours,
     }
+
+
+def _format_hours(value):
+    if value is None:
+        return 'unknown age'
+    rounded = round(float(value), 2)
+    if rounded.is_integer():
+        return f'{int(rounded)}h'
+    return f'{rounded}h'
+
+
+def refresh_resolution_message(status):
+    if not isinstance(status, dict):
+        return None
+
+    state = status.get('freshness_state')
+    if state in {None, 'fresh', 'not-configured', 'stale-ignored'}:
+        return None
+
+    registry_name = status.get('registry') or 'unknown'
+    refresh_command = f'scripts/sync-registry-source.sh {registry_name}'
+    has_state = bool(status.get('has_state'))
+    refreshed_at = status.get('refreshed_at')
+    age_hours = status.get('age_hours')
+    interval_hours = status.get('refresh_interval_hours')
+    max_cache_age_hours = status.get('max_cache_age_hours')
+
+    if state == 'refresh-due':
+        return (
+            f"Registry '{registry_name}' cache refresh is due "
+            f"({_format_hours(age_hours)} old, interval {interval_hours}h). "
+            f'Run {refresh_command} to refresh it.'
+        )
+
+    if not has_state or not refreshed_at:
+        return (
+            f"Registry '{registry_name}' has no recorded refresh state. "
+            f'Run {refresh_command} to refresh it before relying on this cache.'
+        )
+
+    return (
+        f"Registry '{registry_name}' cache is stale "
+        f"({_format_hours(age_hours)} old, max {max_cache_age_hours}h). "
+        f'Run {refresh_command} to refresh it.'
+    )
+
+
+def refresh_status_blocks_resolution(status):
+    return isinstance(status, dict) and status.get('freshness_state') == 'stale-fail'
