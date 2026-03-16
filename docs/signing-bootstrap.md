@@ -1,8 +1,18 @@
 # Signing Bootstrap and First Stable Release
 
-`config/allowed_signers` intentionally starts with comments only. That keeps stable release trust blocked until maintainers explicitly commit the first trusted signer identities.
+Fresh repositories typically begin with comment-only guidance in `config/allowed_signers` until maintainers commit the first trusted signer identities.
+
+This repository is already bootstrapped with a committed `lvxiaoer` signer entry plus a verified stable release for `operate-infinitas-skill`.
 
 This guide covers the bootstrap flow for that first trusted stable release.
+
+For the current repository state, check the live status first:
+
+```bash
+python3 scripts/report-signing-readiness.py --skill my-skill --json
+```
+
+If you need the steady-state operator playbook after bootstrap is already complete, see `docs/signing-operations.md`.
 
 Signing defaults may now be seeded from ordered packs declared in `policy/policy-packs.json`, but `config/signing.json` still wins last as the repository-local override layer for the effective `signing` domain.
 
@@ -93,6 +103,12 @@ Doctor reports:
 - whether the signed tag or attestation bundle already exists
 
 Resolve every `FAIL` item before creating the first stable tag.
+
+For repository-level status beyond a single skill, use:
+
+```bash
+python3 scripts/report-signing-readiness.py --skill my-skill --json
+```
 
 ## 7. Rehearse the first stable release
 

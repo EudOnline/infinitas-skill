@@ -86,13 +86,21 @@ Phase 5 adds a second enforcement layer on top of the signed-tag baseline.
 
 This repository intentionally keeps the stable release trust root in-versioned files.
 
-Before the first stable release tag can be verified, populate `config/allowed_signers` with one or more trusted signer identities:
+For a fresh repository's first stable release tag, populate `config/allowed_signers` with one or more trusted signer identities:
 
 ```text
 release-bot ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI...
 ```
 
 Then commit and push that change before creating the tag. A comment-only or empty `config/allowed_signers` file blocks stable releases by design.
+
+This repository already has a committed `lvxiaoer` signer entry, so the usual operator path is to confirm current state with:
+
+```bash
+python3 scripts/report-signing-readiness.py --skill operate-infinitas-skill --json
+```
+
+For the steady-state playbook after bootstrap, see `docs/signing-operations.md`.
 
 Committed signer entries are expected to contain only public signer identities and public keys. Never commit private SSH keys.
 
@@ -154,7 +162,7 @@ scripts/release-skill-tag.sh repo-audit --create --push
 
 ## First trusted signer bootstrap
 
-New repositories start with comments only in `config/allowed_signers`, so the first stable tag is intentionally blocked until maintainers commit a trusted signer identity.
+Fresh repositories may start with comments only in `config/allowed_signers`, so the first stable tag is intentionally blocked until maintainers commit a trusted signer identity.
 
 Use the bootstrap helper to:
 

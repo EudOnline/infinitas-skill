@@ -5,7 +5,12 @@
 - ✅ **v9 Registry Trust, Quorum, and Attestation** - Phases 1-5 (completed 2026-03-09)
 - ✅ **v10 Publisher Identity and Verified Distribution** - Phases 1-6 (completed 2026-03-15)
 - ✅ **v11 Policy-as-Code and Organizational Controls** - Phases 1-3 (completed 2026-03-16)
-- 🚧 **v12 AI-Usable Skill Ecosystem** - Phase 1 planned
+- ✅ **v12 AI-Usable Skill Ecosystem** - Phases 1-3 (completed 2026-03-16)
+
+## Current Follow-up
+
+- `docs/plans/2026-03-16-production-signer-readiness.md` is the active closeout plan for syncing signer readiness reporting, steady-state docs, and planning to the already-completed `lvxiaoer` signer bootstrap.
+- No `v13` milestone is selected yet; choose between operator-readiness follow-up, registry operations, or deferred supply-chain work after this closeout lands.
 
 ## Phases
 

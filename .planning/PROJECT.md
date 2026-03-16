@@ -8,16 +8,14 @@
 
 Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
 
-## Current Milestone: v12 AI-Usable Skill Ecosystem
+## Current Milestone: Post-v12 Signer Readiness Closeout
 
-**Goal:** Turn the trustworthy registry core into a small but genuinely useful AI-facing skill ecosystem with canonical decision metadata, schema-stable wrapper contracts, and enough real skill inventory to make ranking meaningful.
+**Goal:** Reflect the now-bootstrapped signer and stable-release state in repository tooling, operator docs, and planning so post-v12 roadmap work starts from the real trust baseline instead of stale bootstrap assumptions.
 
 **Target features:**
-- Canonical AI decision metadata in `_meta.json`, templates, and generated indexes
-- Schema-validated `publish-skill` and `pull-skill` result contracts
-- Explicit runtime assumptions and capability metadata for authors and agents
-- More real skills plus AI-only protocol drills that rely on stable docs and indexes
-- Better comparative ranking signals and a stable human/agent usage guide
+- Repository-level signing readiness report for trusted signers, SSH key configuration, stable tags, and provenance
+- Steady-state signing operations guidance now that the first signer and first stable release already exist
+- Synced `.planning` state so the next roadmap decision no longer assumes signer bootstrap is unfinished
 
 ## Requirements
 
@@ -36,9 +34,9 @@ Maintainers can publish and distribute private skills with deterministic, audita
 
 ### Active
 
-- [ ] Select the first post-v12 milestone; no follow-on plan is defined after `12-09`.
-- [ ] Bootstrap real trusted signer entries in `config/allowed_signers` before the first production stable release ceremony.
-- [ ] Decide whether the next roadmap slice should prioritize operator readiness, future registry operations, or deferred supply-chain work.
+- [ ] Add and validate a repository-level signing readiness report plus regression coverage.
+- [ ] Publish steady-state signing operations guidance and remove stale first-bootstrap wording from planning/docs.
+- [ ] Decide whether the next roadmap slice should prioritize registry operations, supply-chain follow-up work, or another operator-readiness pass after this closeout.
 
 ### Out of Scope
 
@@ -69,7 +67,8 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - `docs/platform-review-memo.md` recommends treating the current system as "M1 complete: AI-first registry core" and shifting the next milestone to "M2: AI-usable skill ecosystem".
 - v12 completed the AI-usable skill ecosystem milestone by shipping canonical decision metadata, schema-backed publish/pull contracts, real skill inventory, AI-only workflow drills, failure-path hardening, comparative recommendation signals, and a stable usage guide.
 - `catalog/ai-index.json` now exposes multiple real skills with authored selection guidance, runtime assumptions, verified compatibility evidence, and additive comparative recommendation signals.
-- `config/allowed_signers` is still intentionally bootstrapped with guidance comments only; maintainers must commit real trusted signer entries before the first actual stable release is operationally complete.
+- `config/allowed_signers` now contains a committed `lvxiaoer` trusted signer entry.
+- `operate-infinitas-skill` already has a signed pushed stable tag plus verified provenance in `catalog/provenance/operate-infinitas-skill-0.1.1.json`.
 
 ## Constraints
 
@@ -108,4 +107,4 @@ Maintainers can publish and distribute private skills with deterministic, audita
 | Keep v12 additive and Git-native | The goal is to make the existing registry more useful to AI agents, not replace it with a new service layer | ✓ Good |
 
 ---
-*Last updated: 2026-03-16 after completing v12 AI-usable skill ecosystem on `main`*
+*Last updated: 2026-03-16 while starting post-v12 signer readiness closeout on `codex/production-signer-readiness`*

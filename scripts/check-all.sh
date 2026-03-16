@@ -60,6 +60,7 @@ if [[ "${INFINITAS_SKIP_AI_WRAPPER_TESTS:-0}" != "1" ]]; then
 fi
 if [[ "${INFINITAS_SKIP_BOOTSTRAP_TESTS:-0}" != "1" ]]; then
   python3 scripts/test-signing-bootstrap.py
+  python3 scripts/test-signing-readiness-report.py
 fi
 
 if [[ "${INFINITAS_SKIP_HOSTED_E2E_TESTS:-0}" != "1" ]]; then

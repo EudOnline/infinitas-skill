@@ -5,16 +5,16 @@
 See: `.planning/PROJECT.md` (updated 2026-03-16)
 
 **Core value:** Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
-**Current focus:** Post-v12 closeout and selection of the next milestone after the AI-usable skill ecosystem.
+**Current focus:** Post-v12 signer readiness closeout plus selection of the next milestone after the AI-usable skill ecosystem.
 
 ## Current Position
 
-Phase: v12 completed (3 of 3 phases)
-Plan: `docs/plans/2026-03-16-platform-usage-guide.md`
-Status: v12 complete on `main`; next milestone not yet selected
-Last activity: 2026-03-16 — Merged 12-01 through 12-09 plus follow-up fixture hardening into `main`
+Phase: post-v12 closeout
+Plan: `docs/plans/2026-03-16-production-signer-readiness.md`
+Status: signer readiness closeout in progress on `codex/production-signer-readiness`; next milestone not yet selected
+Last activity: 2026-03-16 — Started repository-level signing readiness reporting and post-bootstrap doc/planning sync
 
-Progress: [##########] 100%
+Progress: [##--------] 20%
 
 ## Performance Metrics
 
@@ -31,7 +31,7 @@ Progress: [##########] 100%
 
 **Recent Trend:**
 - Last 5 plans: 12-05, 12-06, 12-07, 12-08, 12-09
-- Trend: v12 is complete on `main`; the next decision is whether to plan post-v12 roadmap work or resolve longer-running operational follow-ups such as trusted signer enrollment
+- Trend: v12 is complete on `main`; the immediate closeout is to sync tooling/docs/planning with the already-completed signer bootstrap and stable release path
 
 ## Accumulated Context
 
@@ -62,20 +62,22 @@ Decisions are logged in `PROJECT.md`.
 
 ### Pending Todos
 
+- Finish the signing readiness closeout plan in `docs/plans/2026-03-16-production-signer-readiness.md`.
 - Choose and plan the next post-v12 milestone; no `12-10` or later plan is defined yet in `.planning/ROADMAP.md`.
-- Bootstrap real trusted signer entries in `config/allowed_signers` before the first actual stable release.
 - Decide whether CI-native attestations should remain additive to, or eventually become authoritative over, the repo-managed SSH path.
 - Decide whether the future registry-ops and supply-chain backlog items belong immediately after v12 or should remain deferred behind operator-readiness work.
 
 ### Blockers/Concerns
 
-- `config/allowed_signers` still contains bootstrap guidance comments only; the bootstrap and doctor flow exist, but a real production signer ceremony is still pending.
+- `config/allowed_signers` now contains a committed `lvxiaoer` trusted signer entry.
+- `operate-infinitas-skill` already has a signed pushed stable tag plus verified provenance.
+- The remaining gap is documentation and roadmap continuity, not first-time signer bootstrap.
 - The next milestone after v12 is not yet planned, so roadmap continuity now depends on choosing between operator-readiness, governance, registry-ops, or supply-chain follow-up work.
 - The repository still installs skills by bare folder name for backward compatibility; any future multi-publisher same-slug work should stay compatibility-aware.
 - The project should stay Git-native and private-first; public marketplace features, social features, and on-chain reputation remain intentionally deferred.
 
 ## Session Continuity
 
-Last session: 2026-03-16 15:46 GMT+8
-Stopped at: v12 complete on `main`; post-v12 planning not yet selected
+Last session: 2026-03-16 17:39 GMT+8
+Stopped at: signing readiness report implemented; doc/planning sync in progress
 Resume file: `.planning/ROADMAP.md`

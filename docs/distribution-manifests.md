@@ -109,7 +109,9 @@ That gives downstream consumers a stable place to discover:
 
 The bundle/manifest path is only authoritative once the release attestation can be verified.
 
-If `config/allowed_signers` still has no real trusted signer entries, stable verified distribution remains operationally blocked even though the code path and tests are present.
+Fresh repositories without real trusted signer entries in `config/allowed_signers` remain operationally blocked even though the code path and tests are present.
+
+This repository already has a committed `lvxiaoer` signer plus verified provenance for `operate-infinitas-skill`; use `python3 scripts/report-signing-readiness.py --skill operate-infinitas-skill --json` when you need to confirm the current release-trust state before relying on immutable distribution artifacts.
 
 ## Discovery and by-name install
 
