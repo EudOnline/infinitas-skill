@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://infinitas-skill.local/schemas/inventory-export.schema.json",
+  "title": "Inventory Export",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at",
+    "default_registry",
+    "counts",
+    "registries",
+    "skills"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "default_registry": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "counts": {
+      "type": "object",
+      "required": [
+        "registries",
+        "skills",
+        "installable_skills",
+        "released_skills"
+      ],
+      "properties": {
+        "registries": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "skills": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "installable_skills": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "released_skills": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": true
+    },
+    "registries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "kind",
+          "trust",
+          "resolver_candidate"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 1
+          },
+          "trust": {
+            "type": "string",
+            "minLength": 1
+          },
+          "resolver_candidate": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "qualified_name",
+          "version",
+          "source_registry",
+          "installable",
+          "released"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "qualified_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_registry": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "installable": {
+            "type": "boolean"
+          },
+          "released": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

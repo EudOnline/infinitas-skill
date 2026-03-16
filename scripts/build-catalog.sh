@@ -87,10 +87,22 @@ out_registries = root / 'catalog' / 'registries.json'
 out_distributions = root / 'catalog' / 'distributions.json'
 out_ai_index = root / 'catalog' / 'ai-index.json'
 out_discovery_index = root / 'catalog' / 'discovery-index.json'
+out_inventory_export = root / 'catalog' / 'inventory-export.json'
+out_audit_export = root / 'catalog' / 'audit-export.json'
 
 
 def dist_identity_key(entry):
     return (entry.get('qualified_name') or entry.get('name'), entry.get('version'))
+
+
+def load_json_if_exists(path):
+    path = Path(path)
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding='utf-8'))
+    except Exception:
+        return None
 
 
 distribution_entries = []
@@ -272,6 +284,118 @@ ai_index['generated_at'] = catalog['generated_at']
 discovery_index = build_discovery_index(root=root, local_ai_index=ai_index, registry_config=cfg)
 discovery_index['generated_at'] = catalog['generated_at']
 
+registry_by_name = {item.get('name'): item for item in registries_export if isinstance(item, dict) and item.get('name')}
+
+inventory_skills = []
+for entry in entries:
+    source_registry = registry_by_name.get(entry.get('source_registry'))
+    verified_distribution = entry.get('verified_distribution') or {}
+    inventory_skills.append(
+        {
+            'name': entry.get('name'),
+            'publisher': entry.get('publisher'),
+            'qualified_name': entry.get('qualified_name'),
+            'identity_mode': entry.get('identity_mode'),
+            'version': entry.get('version'),
+            'status': entry.get('status'),
+            'summary': entry.get('summary'),
+            'path': entry.get('path'),
+            'installable': bool(entry.get('installable', False)),
+            'released': bool(verified_distribution.get('attestation_path')),
+            'source_registry': entry.get('source_registry'),
+            'source_registry_url': entry.get('source_registry_url'),
+            'source_registry_trust': entry.get('source_registry_trust'),
+            'source_registry_ref': entry.get('source_registry_ref'),
+            'source_registry_commit': entry.get('source_registry_commit'),
+            'source_registry_tag': entry.get('source_registry_tag'),
+            'source_update_mode': entry.get('source_update_mode'),
+            'source_pin_mode': entry.get('source_pin_mode'),
+            'source_pin_value': entry.get('source_pin_value'),
+            'source_federation_mode': source_registry.get('resolved_federation_mode') if source_registry else None,
+            'resolver_candidate': source_registry.get('resolver_candidate') if source_registry else None,
+            'distribution_manifest_path': verified_distribution.get('manifest_path'),
+            'distribution_bundle_path': verified_distribution.get('bundle_path'),
+            'release_attestation_path': verified_distribution.get('attestation_path'),
+            'release_attestation_signature_path': verified_distribution.get('attestation_signature_path'),
+            'release_source_snapshot_tag': verified_distribution.get('source_snapshot_tag'),
+            'release_source_snapshot_commit': verified_distribution.get('source_snapshot_commit'),
+        }
+    )
+
+inventory_export = {
+    '$schema': '../schemas/inventory-export.schema.json',
+    'schema_version': 1,
+    'generated_at': catalog['generated_at'],
+    'default_registry': cfg.get('default_registry'),
+    'counts': {
+        'registries': len(registries_export),
+        'skills': len(inventory_skills),
+        'installable_skills': sum(1 for item in inventory_skills if item.get('installable')),
+        'released_skills': sum(1 for item in inventory_skills if item.get('released')),
+    },
+    'registries': [
+        {
+            'name': item.get('name'),
+            'kind': item.get('kind'),
+            'priority': item.get('priority'),
+            'enabled': item.get('enabled'),
+            'trust': item.get('trust'),
+            'resolver_candidate': item.get('resolver_candidate'),
+            'federation_mode': item.get('resolved_federation_mode'),
+            'allowed_publishers': item.get('resolved_allowed_publishers'),
+            'publisher_map': item.get('resolved_publisher_map'),
+            'require_immutable_artifacts': item.get('resolved_require_immutable_artifacts'),
+            'resolved_root': item.get('resolved_root'),
+            'resolved_ref': item.get('resolved_ref'),
+            'resolved_commit': item.get('resolved_commit'),
+            'resolved_tag': item.get('resolved_tag'),
+            'resolved_origin_url': item.get('resolved_origin_url'),
+        }
+        for item in registries_export
+    ],
+    'skills': sorted(inventory_skills, key=lambda item: (item.get('qualified_name') or '', item.get('version') or '')),
+}
+
+audit_releases = []
+for entry in sorted(distribution_entries, key=lambda item: (item.get('qualified_name') or item.get('name') or '', item.get('version') or '')):
+    provenance_ref = entry.get('attestation_path')
+    if not provenance_ref:
+        continue
+    provenance_payload = load_json_if_exists(root / provenance_ref)
+    if not isinstance(provenance_payload, dict):
+        continue
+    audit_releases.append(
+        {
+            'name': entry.get('name'),
+            'publisher': entry.get('publisher'),
+            'qualified_name': entry.get('qualified_name'),
+            'identity_mode': entry.get('identity_mode'),
+            'version': entry.get('version'),
+            'status': entry.get('status'),
+            'provenance_path': provenance_ref,
+            'signature_path': entry.get('attestation_signature_path'),
+            'manifest_path': entry.get('manifest_path'),
+            'bundle_path': entry.get('bundle_path'),
+            'bundle_sha256': entry.get('bundle_sha256'),
+            'bundle_size': entry.get('bundle_size'),
+            'source_snapshot': provenance_payload.get('source_snapshot') or {},
+            'review': provenance_payload.get('review') or {},
+            'release': provenance_payload.get('release') or {},
+            'registry': provenance_payload.get('registry') or {},
+            'dependencies': provenance_payload.get('dependencies') or {},
+        }
+    )
+
+audit_export = {
+    '$schema': '../schemas/audit-export.schema.json',
+    'schema_version': 1,
+    'generated_at': catalog['generated_at'],
+    'counts': {
+        'releases': len(audit_releases),
+    },
+    'releases': audit_releases,
+}
+
 
 def normalized(payload):
     clone = dict(payload)
@@ -296,4 +420,6 @@ write_if_changed(out_registries, registries_view)
 write_if_changed(out_distributions, distributions_view)
 write_if_changed(out_ai_index, ai_index)
 write_if_changed(out_discovery_index, discovery_index)
+write_if_changed(out_inventory_export, inventory_export)
+write_if_changed(out_audit_export, audit_export)
 PY
