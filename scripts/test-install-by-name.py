@@ -130,6 +130,7 @@ def external_ai_index_payload():
                 'tags': ['external', 'fixture'],
                 'use_when': ['Need external registry coverage'],
                 'avoid_when': [],
+                'runtime_assumptions': ['A trusted external registry is configured'],
                 'agent_compatible': ['openclaw', 'claude-code', 'codex'],
                 'maturity': 'stable',
                 'quality_score': 64,
