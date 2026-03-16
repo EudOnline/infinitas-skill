@@ -2,35 +2,35 @@
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-03-15)
+See: `.planning/PROJECT.md` (updated 2026-03-16)
 
 **Core value:** Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
-**Current focus:** v11 Phase 3 planning — 11-06 Federation Trust Rules
+**Current focus:** v11 Phase 3 execution — 11-07 Audit and Inventory Export Formats
 
 ## Current Position
 
 Phase: v11 Phase 3 of 3 (Federation, Mirrors, and Audit Export)
 Plan: `docs/plans/2026-03-16-federation-trust-rules.md`
-Status: 11-05 complete; 11-06 planning underway
-Last activity: 2026-03-16 — Started 11-06 planning for federation trust rules and namespace mapping
+Status: 11-06 complete; 11-07 next
+Last activity: 2026-03-16 — Completed 11-06 federation trust rules, namespace mapping, and resolver/catalog explainability
 
-Progress: [██████████] 95%
+Progress: [██████████] 97%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 36
+- Total plans completed: 37
 - Average duration: n/a
 - Total execution time: n/a
 
 **By Phase:**
 - v9: 14 plans completed across 5 phases
 - v10: 18 plans completed across 6 phases
-- v11: 5 plans completed across 3 phases
+- v11: 6 plans completed across 3 phases
 
 **Recent Trend:**
-- Last 5 plans: 11-01, 11-02, 11-03, 11-04, 11-05
-- Trend: 11-06 planning is underway; export-format work remains queued behind federation rules
+- Last 5 plans: 11-02, 11-03, 11-04, 11-05, 11-06
+- Trend: federation trust rules are now in place; standalone export-format work is the next active gap
 
 ## Accumulated Context
 
@@ -61,18 +61,18 @@ Decisions are logged in `PROJECT.md`.
 - Bootstrap real trusted signer entries in `config/allowed_signers` before the first actual stable release.
 - Decide whether CI-native attestations should be additive to, or eventually authoritative over, the repo-managed SSH path.
 - Decide which Phase 3 audit or inventory exports should stay release/provenance-only versus become separate catalog-facing products.
-- Execute 11-06 so federation trust rules and namespace mapping are explicit before standalone export work begins.
+- Define 11-07 export targets so audit and inventory outputs can reuse 11-06 federation identity fields without inventing a second source-of-truth contract.
 
 ### Blockers/Concerns
 
 - `config/allowed_signers` still contains bootstrap guidance comments only; Phase 2 added the bootstrap and doctor flow, but a real production signer ceremony is still pending.
 - Phase 2 needs a shared team model that can expand into namespace ownership, reviewer groups, and future exception scopes without duplicating membership lists across policy files.
-- Phase 3 still needs explicit federation or export boundaries so the new delegated audit metadata does not leak unstable debug-only fields or redundant catalog contracts.
+- Phase 3 still needs explicit standalone export boundaries so the new federation metadata and delegated audit fields do not leak unstable debug-only contracts into later portal-facing outputs.
 - The repository still installs skills by bare folder name for backward compatibility; future v10 work may revisit how far concurrent same-slug publisher installs should go.
 - v10 should stay Git-native and private-first; public marketplace features, social features, and on-chain reputation are intentionally deferred.
 
 ## Session Continuity
 
 Last session: 2026-03-15 09:00 GMT+8
-Stopped at: 11-06 planning underway
+Stopped at: 11-06 implementation complete
 Resume file: `docs/plans/2026-03-16-federation-trust-rules.md`

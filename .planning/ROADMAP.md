@@ -4,7 +4,7 @@
 
 - ✅ **v9 Registry Trust, Quorum, and Attestation** - Phases 1-5 (completed 2026-03-09)
 - ✅ **v10 Publisher Identity and Verified Distribution** - Phases 1-6 (completed 2026-03-15)
-- 🚧 **v11 Policy-as-Code and Organizational Controls** - Phases 1-2 completed, Phase 3 next
+- 🚧 **v11 Policy-as-Code and Organizational Controls** - Phases 1-2 completed, Phase 3 in progress
 
 ## Phases
 
@@ -214,7 +214,7 @@ Plans:
 - [x] 11-04: Add break-glass / exception records with expiration and justification fields
 - [x] 11-05: Extend audit exports and release metadata to capture exception usage and delegated approvals
 
-#### Phase 3: Federation, Mirrors, and Audit Export
+#### 🚧 Phase 3: Federation, Mirrors, and Audit Export
 **Goal**: Prepare the registry for multi-workspace and multi-registry operation without losing trust guarantees or operator visibility.
 **Depends on**: Phase 2
 **Requirements**: [FED-01, FED-02]
@@ -225,7 +225,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 11-06: Define mirror/federation rules for trusted upstream registries and namespace mapping
+- [x] 11-06: Define mirror/federation rules for trusted upstream registries and namespace mapping
 - [ ] 11-07: Add audit/inventory export formats for portal, compliance, or reporting integrations
 - [ ] 11-08: Document federation trust boundaries, failure modes, and recovery procedures
 
@@ -246,4 +246,4 @@ Plans:
 | 6. Recommendation and Decision Support | v10 | 3/3 | Completed | 2026-03-15 |
 | 1. Policy Packs and Explainable Decisions | v11 | 2/2 | Completed | 2026-03-15 |
 | 2. Multi-Team Governance and Exceptions | v11 | 3/3 | Completed | 2026-03-15 |
-| 3. Federation, Mirrors, and Audit Export | v11 | 0/3 | Planned | - |
+| 3. Federation, Mirrors, and Audit Export | v11 | 1/3 | In Progress | 2026-03-16 (11-06 complete) |

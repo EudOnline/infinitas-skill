@@ -31,6 +31,12 @@ A skill being present in the registry does not mean every agent should load it. 
 ### 5. Lineage matters
 Track derivation with `_meta.json.derived_from` or a CHANGELOG entry so consumers can understand where a skill came from.
 
+### 6. Federation is explicit policy, not an implied sync shortcut
+- A registry may federate only when its configured trust tier, pinning policy, and namespace mapping pass validation.
+- The working repository itself is never a federated upstream; `self` stays the writable source-of-truth.
+- `mirror` registries are visible for operator inventory and backup, but they are not authoritative default resolver candidates.
+- When publisher namespaces are mapped, tooling must preserve the original upstream publisher identity alongside the mapped local namespace.
+
 ## Recommended runtime pattern
 
 - Registry source: private Git repo
@@ -43,3 +49,4 @@ Track derivation with `_meta.json.derived_from` or a CHANGELOG entry so consumer
 - Clients should install from immutable hosted artifacts, not from editable source folders
 - GitHub or another forge can be a **one-way mirror** for backup and code review convenience
 - Reverse-sync from the mirror back into the hosted source-of-truth repo is not trusted
+- Federation rules belong in repository policy (`config/registry-sources.json`), not in ad-hoc environment variables or mirror hooks

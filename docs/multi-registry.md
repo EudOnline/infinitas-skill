@@ -84,6 +84,37 @@ Branch- and tag-based registries must declare the exact refs that are allowed to
 - `track` — fetch the configured branch and materialize the current branch head into a detached cache checkout.
 - `pinned` — fetch and materialize an exact tag or commit into a detached cache checkout.
 
+### `federation`
+
+Selected upstream registries may now declare an additive `federation` block:
+
+```json
+{
+  "federation": {
+    "mode": "federated",
+    "allowed_publishers": ["partner"],
+    "publisher_map": {
+      "partner": "partner-labs"
+    },
+    "require_immutable_artifacts": true
+  }
+}
+```
+
+`mode` may be:
+
+- `federated` — the upstream registry can satisfy normal resolver queries, and publisher-qualified requests may be rewritten into a local namespace through `publisher_map`.
+- `mirror` — the registry remains visible in operator and catalog views, but it is not a default resolver candidate.
+
+Validation enforces the current trust boundary:
+
+- the working repository root (`self` / `local_path = "."`) cannot declare a federation block
+- `untrusted` registries cannot use `federation.mode = "federated"`
+- federated Git registries cannot use `update_policy.mode = "track"`
+- `publisher_map` keys must be valid publisher slugs and must stay inside `allowed_publishers` when that list is present
+
+`require_immutable_artifacts` is an explicit trust contract. It tells downstream tooling and exports that this upstream should only be consumed through immutable release artifacts, rather than being treated as an authoritative mutable working tree.
+
 ## Safe sync semantics
 
 `self` now uses `update_policy.mode = local-only` together with `local_path = "."`.
@@ -149,6 +180,10 @@ Auth currently supports:
 - `publisher`
 - `qualified_name`
 - `identity_mode`
+- `upstream_publisher`
+- `upstream_qualified_name`
+- `federation_mode`
+- `publisher_mapping_applied`
 - `registry_name`
 - `registry_ref`
 - `registry_commit`
@@ -159,6 +194,8 @@ Auth currently supports:
 - `expected_tag`
 
 Use `publisher/skill` when you need to disambiguate two publishers that share the same bare skill slug. Legacy unqualified names still resolve for backward compatibility.
+
+For federated registries, the resolved `publisher` / `qualified_name` may be the mapped local namespace, while `upstream_publisher` / `upstream_qualified_name` preserve the original upstream identity for auditability.
 
 Install and sync manifests persist the same identity so `scripts/list-installed.sh` can show where a skill came from with its publisher namespace plus exact registry commit/tag.
 
@@ -178,6 +215,7 @@ Discovery follows these rules:
 1. local private registry entries are considered first
 2. synced external registries only contribute candidates when the private registry has no suitable match
 3. external matches are discoverable, but `install-by-name` keeps them confirmation-gated by default
+4. registries with `federation.mode = "mirror"` remain visible to operators, but they do not participate as normal resolver candidates
 
 That means multiple agents can share a single local search/install surface without silently treating every configured registry as equally trusted.
 
@@ -203,5 +241,10 @@ Dependency planning now follows a deterministic registry-aware order:
 - `resolved_commit`
 - `resolved_tag`
 - `resolved_origin_url`
+- `resolved_federation_mode`
+- `resolved_allowed_publishers`
+- `resolved_publisher_map`
+- `resolved_require_immutable_artifacts`
+- `resolver_candidate`
 
 When the local repository itself is the catalog source in `local-only` mode, catalog generation intentionally leaves `resolved_commit` / `resolved_tag` (and per-skill `source_registry_commit` / `source_registry_tag`) empty. That keeps committed catalog snapshots stable instead of making every new commit invalidate `catalog/registries.json` on the next validation pass. Operators can still inspect the live checkout identity with `scripts/list-registry-sources.py`.

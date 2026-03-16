@@ -16,7 +16,7 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - Reusable policy packs and repository-level loading or override rules
 - Explainable policy traces for validation, promotion, release, install, and distribution decisions
 - Team ownership models, delegated approval scopes, and explicit break-glass exceptions
-- Federation or mirror rules plus audit and inventory export surfaces
+- Federation or mirror trust rules, namespace mapping, and later audit or inventory export surfaces
 
 ## Requirements
 
@@ -40,7 +40,8 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - [x] Team governance plus delegated namespace/review scopes are complete for 11-03.
 - [x] Break-glass exceptions plus exception-aware promotion and release traces are complete for 11-04.
 - [x] Delegated audit exports plus provenance persistence are complete for 11-05.
-- [ ] Federation, mirrors, and standalone audit/export surfaces remain for v11 Phase 3.
+- [x] Federation and mirror trust rules plus namespace mapping are complete for 11-06.
+- [ ] Standalone audit/export surfaces remain for 11-07 and 11-08.
 
 ### Out of Scope
 
@@ -65,6 +66,7 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - 11-03 added a shared team policy plus team-backed namespace ownership and reviewer-group resolution without breaking existing direct actor lists.
 - 11-04 added a shared exception policy, stable promotion/release blocker ids, and additive `exception_usage` plus `policy_trace.exceptions` output for active waivers.
 - 11-05 extends `check-release-state --json` and release provenance with stable delegated audit metadata such as review quorum context, delegated publisher teams, and applied release exception usage, while intentionally stopping short of a separate export product.
+- 11-06 adds validated `registry_sources.federation` rules for `mirror` and `federated` upstreams, mapped publisher namespaces, additive resolver/catalog identity fields, and explicit non-authoritative mirror behavior while intentionally leaving standalone export formats to 11-07.
 - `config/allowed_signers` is still intentionally bootstrapped with guidance comments only; maintainers must commit real trusted signer entries before the first actual stable release is operationally complete.
 
 ## Constraints
@@ -94,6 +96,8 @@ Maintainers can publish and distribute private skills with deterministic, audita
 | Keep CI-native attestation as a second explicit trust path with policy-selectable `ssh`, `ci`, or `both` modes | Local and automated release trust need clear boundaries instead of replacing one proof system with another | ✓ Good |
 | Reuse generated discovery indexes and immutable manifests for search, inspect, explain, and recommend flows | Consumer features should stay deterministic and file-backed instead of inventing a new service layer | ✓ Good |
 | Make recommendation deterministic and metadata-driven | Agents need explainable, reviewable ranking instead of fuzzy install shortcuts | ✓ Good |
+| Keep federation policy in `config/registry-sources.json` instead of env-var mirror settings | Mirror hooks are operational details, but federation trust rules must be consumer-visible, reviewable, and pack-compatible | ✓ Good |
+| Keep `mirror` registries visible but non-authoritative for default resolution | Operators need inventory visibility without letting backup surfaces silently outrank trusted federated sources | ✓ Good |
 
 ---
-*Last updated: 2026-03-15 after 11-05 delegated audit exports completion*
+*Last updated: 2026-03-16 after 11-06 federation trust rules completion*

@@ -9,6 +9,7 @@ scripts/pull-skill.sh <qualified-name> <target-dir> [--version <semver>] [--regi
 ## Inputs
 
 - `qualified-name`: publisher-qualified name，或 AI index 中可唯一解析的技能名
+- 当所选 registry 配置了 `federation.mode = "federated"` 时，`qualified-name` 可以是映射后的本地 publisher 名称；解析结果仍必须保留 upstream publisher 身份
 - `target-dir`: 本地安装目标目录
 - `--version <semver>`: 可选；未指定时使用 AI index 中声明的 `default_install_version`
 - `--registry <name>`: 可选；从指定已配置 registry 的 `catalog/ai-index.json` 解析和安装技能
@@ -23,19 +24,21 @@ scripts/pull-skill.sh <qualified-name> <target-dir> [--version <semver>] [--regi
 - 所选版本必须具备 manifest、bundle digest 与 attestation 引用
 - 安装策略必须为 `immutable-only`
 - verified distribution manifests are the default consumer path; do not fall back to mutable working-tree folders for stable installs
+- `mirror` registries 不参与默认解析；若请求的 namespace 只存在于 mirror 视图中，pull 必须失败并提示改用 authoritative source
 
 ## Ordered Execution Steps
 
 1. 解析目标 registry，读取并校验对应的本地或 hosted `ai-index.json`
-2. 解析目标 skill 和目标版本
-3. 若未显式指定版本，则读取 `default_install_version`
-4. 校验 manifest 路径、bundle 路径、sha256 与 attestation 路径
-5. 验证 manifest、bundle、attestation
-6. 校验兼容性与运行前置条件
-7. 在临时位置物化安装内容
-8. 原子写入目标目录
-9. 写入本地 lock / install manifest
-10. 输出结构化 JSON 结果
+2. 若 registry 声明了 federation 规则，则先把请求 namespace 映射到允许的 upstream publisher，并记录映射前后的身份
+3. 解析目标 skill 和目标版本
+4. 若未显式指定版本，则读取 `default_install_version`
+5. 校验 manifest 路径、bundle 路径、sha256 与 attestation 路径
+6. 验证 manifest、bundle、attestation
+7. 校验兼容性与运行前置条件
+8. 在临时位置物化安装内容
+9. 原子写入目标目录
+10. 写入本地 lock / install manifest
+11. 输出结构化 JSON 结果
 
 ## CI attestation and manifest policy
 
@@ -50,6 +53,7 @@ scripts/pull-skill.sh <qualified-name> <target-dir> [--version <semver>] [--regi
 
 - AI index 不存在或无效
 - skill 或版本在 AI index 中不存在
+- 请求的 publisher 不在 registry 的 `allowed_publishers` 中，或只命中了 `mirror` registry
 - 安装策略不是 `immutable-only`
 - 缺少 manifest、bundle digest 或 attestation
 - 任何校验失败
@@ -92,6 +96,7 @@ scripts/pull-skill.sh <qualified-name> <target-dir> [--version <semver>] [--regi
 - 推荐目标目录是 `~/.openclaw/skills` 或 `~/.openclaw/workspace/skills`
 - `pull-skill.sh` 只从 immutable release artifacts 安装，不从本地原型目录复制
 - 对 hosted registry，`pull-skill.sh` 会下载 manifest / bundle / provenance，再进行同样的不可变校验
+- 对 federated registry，pull 输出应同时暴露 mapped publisher identity 与 upstream publisher identity，避免把 namespace 映射误解成来源变更
 - 即使指定了 `--registry`，也只允许读取该 registry 已发布的 immutable 索引与产物
 - 若 AI 看到的是 OpenClaw 本地原型目录，应先走 `scripts/import-openclaw-skill.sh`，而不是直接安装
 - 如果需要先看 trust state、compatibility、dependency summary 或 provenance，优先运行 `scripts/inspect-skill.sh`

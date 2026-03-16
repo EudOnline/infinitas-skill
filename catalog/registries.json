@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-10T04:34:29Z",
+  "generated_at": "2026-03-16T00:33:00Z",
   "default_registry": "self",
   "registries": [
     {
@@ -29,7 +29,12 @@
       "resolved_ref": "refs/heads/main",
       "resolved_commit": null,
       "resolved_tag": null,
-      "resolved_origin_url": "git@github-eudonline:EudOnline/infinitas-skill.git"
+      "resolved_origin_url": "git@github-eudonline:EudOnline/infinitas-skill.git",
+      "resolved_federation_mode": null,
+      "resolved_allowed_publishers": [],
+      "resolved_publisher_map": {},
+      "resolved_require_immutable_artifacts": false,
+      "resolver_candidate": true
     }
   ]
 }
