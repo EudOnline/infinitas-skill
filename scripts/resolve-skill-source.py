@@ -5,7 +5,14 @@ from pathlib import Path
 
 from distribution_lib import load_distribution_index
 from http_registry_lib import HostedRegistryError, fetch_json, registry_catalog_path
-from registry_source_lib import load_registry_config, normalized_auth, registry_identity, resolve_registry_root
+from registry_source_lib import (
+    apply_registry_federation,
+    load_registry_config,
+    normalized_auth,
+    registry_identity,
+    registry_is_resolution_candidate,
+    resolve_registry_root,
+)
 from skill_identity_lib import normalize_skill_identity, parse_requested_skill
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -15,6 +22,12 @@ def expected_skill_tag(name, version):
     if not name or not version:
         return None
     return f'skill/{name}/v{version}'
+
+
+def append_registry_item(reg, items, payload):
+    resolved = apply_registry_federation(reg, payload)
+    if resolved is not None:
+        items.append(resolved)
 
 
 def scan_registry(reg):
@@ -42,7 +55,7 @@ def scan_registry(reg):
                 continue
             identity = normalize_skill_identity(meta)
             distribution = distribution_by_identity.get((identity.get('qualified_name') or meta.get('name'), meta.get('version')))
-            items.append({
+            append_registry_item(reg, items, {
                 **reg_info,
                 'stage': distribution.get('status') if distribution else stage,
                 'path': str((reg_root / distribution.get('manifest_path')).resolve()) if distribution else str(d),
@@ -81,7 +94,7 @@ def scan_registry(reg):
         key = (distribution.get('qualified_name') or distribution.get('name'), distribution.get('version'))
         if key in matched_distribution:
             continue
-        items.append({
+        append_registry_item(reg, items, {
             **reg_info,
             'stage': distribution.get('status') or 'archived',
             'path': str((reg_root / distribution.get('manifest_path')).resolve()),
@@ -141,7 +154,9 @@ def scan_http_registry(reg):
             if not isinstance(version_info, dict):
                 continue
             stage = 'active' if version == default_version else 'archived'
-            items.append(
+            append_registry_item(
+                reg,
+                items,
                 {
                     **reg_info,
                     'stage': stage,
@@ -173,7 +188,7 @@ def scan_http_registry(reg):
                     'registry_commit': None,
                     'registry_tag': None,
                     'registry_ref': None,
-                }
+                },
             )
     return items
 
@@ -181,10 +196,13 @@ def scan_http_registry(reg):
 def load_candidates(registry=None):
     cfg = load_registry_config(ROOT)
     items = []
+    explicit_registry = bool(registry)
     for reg in cfg.get('registries', []):
         if not reg.get('enabled', True):
             continue
         if registry and reg.get('name') != registry:
+            continue
+        if not registry_is_resolution_candidate(reg, explicit_registry=explicit_registry):
             continue
         items.extend(scan_registry(reg))
     return items

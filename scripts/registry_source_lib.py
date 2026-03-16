@@ -73,6 +73,17 @@ def _clean_string_mapping(values):
     return result
 
 
+def _qualified_name(name, publisher=None, fallback=None):
+    if isinstance(name, str) and name.strip():
+        skill_name = name.strip()
+        if isinstance(publisher, str) and publisher.strip():
+            return f'{publisher.strip()}/{skill_name}'
+        return skill_name
+    if isinstance(fallback, str) and fallback.strip():
+        return fallback.strip()
+    return None
+
+
 def short_pin_value(mode, value):
     if not isinstance(value, str):
         return value
@@ -137,6 +148,42 @@ def normalized_federation(reg):
         'publisher_map': _clean_string_mapping(federation.get('publisher_map')),
         'require_immutable_artifacts': require_immutable_artifacts if isinstance(require_immutable_artifacts, bool) else False,
     }
+
+
+def registry_is_resolution_candidate(reg, *, explicit_registry=False):
+    mode = normalized_federation(reg).get('mode')
+    if mode == 'mirror' and not explicit_registry:
+        return False
+    return True
+
+
+def apply_registry_federation(reg, item):
+    if not isinstance(item, dict):
+        return None
+
+    clone = dict(item)
+    federation = normalized_federation(reg)
+    mode = federation.get('mode')
+    upstream_publisher = clone.get('publisher')
+    upstream_qualified_name = _qualified_name(clone.get('name'), upstream_publisher, fallback=clone.get('qualified_name'))
+
+    clone['federation_mode'] = mode
+    clone['upstream_publisher'] = upstream_publisher
+    clone['upstream_qualified_name'] = upstream_qualified_name
+    clone['publisher_mapping_applied'] = False
+
+    if mode not in FEDERATION_MODES:
+        return clone
+
+    allowed_publishers = federation.get('allowed_publishers')
+    if allowed_publishers and upstream_publisher not in allowed_publishers:
+        return None
+
+    local_publisher = federation.get('publisher_map', {}).get(upstream_publisher, upstream_publisher)
+    clone['publisher'] = local_publisher
+    clone['qualified_name'] = _qualified_name(clone.get('name'), local_publisher, fallback=upstream_qualified_name)
+    clone['publisher_mapping_applied'] = clone.get('publisher') != upstream_publisher
+    return clone
 
 
 def normalized_allowed_hosts(reg):
