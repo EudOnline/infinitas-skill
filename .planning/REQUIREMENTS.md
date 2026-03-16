@@ -89,6 +89,26 @@ Requirements committed for milestone `v11`. 11-08 completed the final Phase 3 do
 - [x] **FED-01**: The registry can mirror or federate selected upstream sources while preserving publisher identity, trust policy, and immutable artifact verification.
 - [x] **FED-02**: Consumers can export audit and inventory views suitable for external review or developer-portal integration.
 
+## v12 Requirements
+
+Requirements committed for milestone `v12`. Phase 1 planning is in place on 2026-03-16 and starts with canonical AI decision metadata plus wrapper result contracts.
+
+### Decision Metadata and AI Result Contracts
+
+- [ ] **ECO-01**: Authors can declare AI decision guidance such as `use_when`, `avoid_when`, capabilities, and runtime assumptions in machine-validated source metadata.
+- [ ] **ECO-02**: Generated AI and discovery indexes surface canonical decision metadata from source records instead of hardcoded empty defaults.
+- [ ] **ECO-03**: `publish-skill.sh` and `pull-skill.sh` return stable JSON results that validate against dedicated schema files and regression tests.
+
+### Real Skill Inventory and Learnability
+
+- [ ] **ECO-04**: The registry contains multiple non-fixture skills with meaningful selection guidance, runtime assumptions, and verified compatibility evidence.
+- [ ] **ECO-05**: Agents can complete realistic search, recommend, inspect, publish, and pull workflows using AI docs and generated indexes without reading implementation internals.
+
+### Comparative Ranking and Usage Guide
+
+- [ ] **ECO-06**: Recommendation outputs expose comparative quality, confidence, freshness, and compatibility signals across multiple eligible skills.
+- [ ] **ECO-07**: The repository publishes a stable usage guide for humans and agents that explains when to search, recommend, inspect, publish, pull, and verify.
+
 ## Future Requirements
 
 ### Registry Operations
@@ -154,6 +174,13 @@ Requirements committed for milestone `v11`. 11-08 completed the final Phase 3 do
 | TEAM-03 | v11 Phase 2 | Complete |
 | FED-01 | v11 Phase 3 | Complete |
 | FED-02 | v11 Phase 3 | Complete |
+| ECO-01 | v12 Phase 1 | Planned |
+| ECO-02 | v12 Phase 1 | Planned |
+| ECO-03 | v12 Phase 1 | Planned |
+| ECO-04 | v12 Phase 2 | Planned |
+| ECO-05 | v12 Phase 2 | Planned |
+| ECO-06 | v12 Phase 3 | Planned |
+| ECO-07 | v12 Phase 3 | Planned |
 
 **Coverage:**
 - v9 requirements: 12 total
@@ -165,7 +192,10 @@ Requirements committed for milestone `v11`. 11-08 completed the final Phase 3 do
 - v11 requirements: 7 total
 - Mapped to phases: 7
 - Unmapped: 0 ✓
+- v12 requirements: 7 total
+- Mapped to phases: 7
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-16 after 11-08 federation trust boundary documentation completion*
+*Last updated: 2026-03-16 after selecting v12 AI-usable skill ecosystem and planning 12-01*

@@ -4,7 +4,8 @@
 
 - ✅ **v9 Registry Trust, Quorum, and Attestation** - Phases 1-5 (completed 2026-03-09)
 - ✅ **v10 Publisher Identity and Verified Distribution** - Phases 1-6 (completed 2026-03-15)
-- 🚧 **v11 Policy-as-Code and Organizational Controls** - Phases 1-2 completed, Phase 3 in progress
+- ✅ **v11 Policy-as-Code and Organizational Controls** - Phases 1-3 (completed 2026-03-16)
+- 🚧 **v12 AI-Usable Skill Ecosystem** - Phase 1 planned
 
 ## Phases
 
@@ -181,7 +182,7 @@ Plans:
 - [x] 10-17: Add `recommend-skill.sh` plus deterministic ranking and explanation helpers
 - [x] 10-18: Document recommendation workflows and wire Phase 6 regression coverage
 
-### 🚧 v11 Policy-as-Code and Organizational Controls (In Progress)
+### ✅ v11 Policy-as-Code and Organizational Controls (Completed)
 
 **Milestone Goal:** Extend the private registry from single-maintainer governance into explainable, team-oriented policy enforcement with federation-ready controls.
 
@@ -214,7 +215,7 @@ Plans:
 - [x] 11-04: Add break-glass / exception records with expiration and justification fields
 - [x] 11-05: Extend audit exports and release metadata to capture exception usage and delegated approvals
 
-#### 🚧 Phase 3: Federation, Mirrors, and Audit Export
+#### ✅ Phase 3: Federation, Mirrors, and Audit Export (Completed 2026-03-16)
 **Goal**: Prepare the registry for multi-workspace and multi-registry operation without losing trust guarantees or operator visibility.
 **Depends on**: Phase 2
 **Requirements**: [FED-01, FED-02]
@@ -228,6 +229,55 @@ Plans:
 - [x] 11-06: Define mirror/federation rules for trusted upstream registries and namespace mapping
 - [x] 11-07: Add audit/inventory export formats for portal, compliance, or reporting integrations
 - [x] 11-08: Document federation trust boundaries, failure modes, and recovery procedures
+
+### 🚧 v12 AI-Usable Skill Ecosystem (In Progress)
+
+**Milestone Goal:** Turn the trustworthy registry core into a small but genuinely useful AI-facing skill ecosystem with canonical decision metadata, schema-stable wrapper contracts, and enough real skills to make ranking meaningful.
+
+#### 🚧 Phase 1: Decision Metadata and AI Result Contracts
+**Goal**: Make skill-selection metadata and AI wrapper JSON contracts first-class, validated, and exported through canonical indexes instead of hand-maintained or empty defaults.
+**Depends on**: v11 completed
+**Requirements**: [ECO-01, ECO-02, ECO-03]
+**Success Criteria** (what must be TRUE):
+  1. Authors can declare `use_when`, `avoid_when`, capabilities, runtime assumptions, and related decision metadata in validated `_meta.json`.
+  2. `catalog/ai-index.json` and `catalog/discovery-index.json` surface canonical decision metadata from source records rather than hardcoded empty arrays or ad-hoc defaults.
+  3. `publish-skill.sh` and `pull-skill.sh` outputs are backed by dedicated JSON schemas plus regression tests and docs.
+**Plans**: 3 plans
+
+Plans:
+- [ ] 12-01: Extend skill metadata schema, templates, and docs for AI decision fields
+- [ ] 12-02: Emit canonical decision metadata into AI/discovery indexes and recommendation/search surfaces
+- [ ] 12-03: Add AI wrapper result schemas and publish/pull contract validation
+
+#### ⏳ Phase 2: Real Skill Inventory and Learnability
+**Goal**: Add enough real, well-described skills and task-level protocol drills that agents can succeed using the public AI surfaces instead of repo internals.
+**Depends on**: Phase 1
+**Requirements**: [ECO-04, ECO-05]
+**Success Criteria** (what must be TRUE):
+  1. The registry contains multiple non-fixture skills with meaningful selection guidance, runtime assumptions, and verified compatibility evidence.
+  2. End-to-end publish/pull/search/recommend drills can be completed using AI docs and generated indexes alone.
+  3. Failure-path tests cover missing artifacts, wrong versions, and ambiguous names with actionable output.
+**Plans**: 3 plans
+
+Plans:
+- [ ] 12-04: Add real registry skills with explicit runtime assumptions and decision metadata
+- [ ] 12-05: Add AI-only workflow drills for search, recommend, inspect, publish, and pull
+- [ ] 12-06: Add failure-path regression coverage for ambiguous resolution and missing immutable artifacts
+
+#### ⏳ Phase 3: Comparative Ranking and Usage Guide
+**Goal**: Make multi-skill selection explainable by adding stronger comparative signals and a stable usage guide for humans and agents.
+**Depends on**: Phase 2
+**Requirements**: [ECO-06, ECO-07]
+**Success Criteria** (what must be TRUE):
+  1. Recommendation outputs can compare multiple eligible skills using explicit quality, confidence, freshness, and compatibility signals.
+  2. Decision metadata duplication between author source, generated indexes, and docs is reduced or documented behind one canonical source.
+  3. Humans and agents have a stable guide for when to search, recommend, inspect, publish, pull, and verify.
+**Plans**: 3 plans
+
+Plans:
+- [ ] 12-07: Add comparative quality/confidence signals to recommendation outputs
+- [ ] 12-08: Reduce duplicated decision metadata across source, generated indexes, and docs
+- [ ] 12-09: Publish the stable platform usage guide for humans and agents
 
 ## Progress
 
@@ -247,3 +297,6 @@ Plans:
 | 1. Policy Packs and Explainable Decisions | v11 | 2/2 | Completed | 2026-03-15 |
 | 2. Multi-Team Governance and Exceptions | v11 | 3/3 | Completed | 2026-03-15 |
 | 3. Federation, Mirrors, and Audit Export | v11 | 3/3 | Completed | 2026-03-16 |
+| 1. Decision Metadata and AI Result Contracts | v12 | 0/3 | Planned | 2026-03-16 |
+| 2. Real Skill Inventory and Learnability | v12 | 0/3 | Pending | - |
+| 3. Comparative Ranking and Usage Guide | v12 | 0/3 | Pending | - |

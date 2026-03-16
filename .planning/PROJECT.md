@@ -8,16 +8,16 @@
 
 Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
 
-## Current Milestone: v11 Policy-as-Code and Organizational Controls
+## Current Milestone: v12 AI-Usable Skill Ecosystem
 
-**Goal:** Extend the private registry from single-maintainer governance into explainable, team-oriented policy enforcement with federation-ready controls.
+**Goal:** Turn the trustworthy registry core into a small but genuinely useful AI-facing skill ecosystem with canonical decision metadata, schema-stable wrapper contracts, and enough real skill inventory to make ranking meaningful.
 
 **Target features:**
-- Reusable policy packs and repository-level loading or override rules
-- Explainable policy traces for validation, promotion, release, install, and distribution decisions
-- Team ownership models, delegated approval scopes, and explicit break-glass exceptions
-- Federation or mirror trust rules, namespace mapping, and later audit or inventory export surfaces
-- Operator-facing federation trust-boundary and recovery documentation
+- Canonical AI decision metadata in `_meta.json`, templates, and generated indexes
+- Schema-validated `publish-skill` and `pull-skill` result contracts
+- Explicit runtime assumptions and capability metadata for authors and agents
+- More real skills plus AI-only protocol drills that rely on stable docs and indexes
+- Better comparative ranking signals and a stable human/agent usage guide
 
 ## Requirements
 
@@ -36,14 +36,10 @@ Maintainers can publish and distribute private skills with deterministic, audita
 
 ### Active
 
-- [x] Policy packs and repository-level loading rules are complete for v11 Phase 1.
-- [x] Explainable policy decision traces are complete for validation, promotion, release, and registry debug flows.
-- [x] Team governance plus delegated namespace/review scopes are complete for 11-03.
-- [x] Break-glass exceptions plus exception-aware promotion and release traces are complete for 11-04.
-- [x] Delegated audit exports plus provenance persistence are complete for 11-05.
-- [x] Federation and mirror trust rules plus namespace mapping are complete for 11-06.
-- [x] Standalone audit and inventory export surfaces are complete for 11-07.
-- [x] Federation trust-boundary, failure-mode, and recovery documentation is complete for 11-08.
+- [ ] v12 Phase 1 planning is ready in `docs/plans/2026-03-16-ai-decision-metadata-and-contracts.md`.
+- [ ] 12-01 will extend `_meta.json`, templates, and docs with validated AI decision fields such as `use_when`, `avoid_when`, `capabilities`, and runtime assumptions.
+- [ ] 12-02 will emit canonical decision metadata into `catalog/ai-index.json`, `catalog/discovery-index.json`, and related search/recommend surfaces instead of hardcoded blanks.
+- [ ] 12-03 will add dedicated result schemas plus contract regression coverage for `publish-skill.sh` and `pull-skill.sh`.
 
 ### Out of Scope
 
@@ -71,15 +67,19 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - 11-06 adds validated `registry_sources.federation` rules for `mirror` and `federated` upstreams, mapped publisher namespaces, additive resolver/catalog identity fields, and explicit non-authoritative mirror behavior while intentionally leaving standalone export formats to 11-07.
 - 11-07 adds `catalog/inventory-export.json` and `catalog/audit-export.json`, generated from catalog and provenance artifacts, plus repository validation so portal/compliance consumers can rely on a stable JSON contract without depending on debug traces or live release-state recomputation.
 - 11-08 adds a dedicated federation operations guide that defines authoritative surfaces, common failure modes, and operator recovery order for policy drift, stale mirrors, missing provenance, and stale export artifacts.
+- `docs/platform-review-memo.md` recommends treating the current system as "M1 complete: AI-first registry core" and shifting the next milestone to "M2: AI-usable skill ecosystem".
+- `catalog/ai-index.json` currently exposes only one real skill and still emits empty `use_when` / `avoid_when` arrays, so the platform is installable before it is strongly decision-useful.
+- v12 starts by making AI decision metadata and wrapper result contracts canonical before adding more ecosystem content or ranking heuristics.
 - `config/allowed_signers` is still intentionally bootstrapped with guidance comments only; maintainers must commit real trusted signer entries before the first actual stable release is operationally complete.
 
 ## Constraints
 
-- **Tech stack**: Keep v10/v11 changes native to Bash, Python, JSON, and Markdown — the repository is already built around lightweight CLI tooling.
+- **Tech stack**: Keep v12 changes native to Bash, Python, JSON, and Markdown — the repository is already built around lightweight CLI tooling.
+- **Architecture discipline**: Improve author metadata, generated indexes, tests, and docs before adding more registry services or background automation.
 - **Compatibility**: Preserve the existing local-filesystem plus Git workflow so current install/sync/promotion commands remain usable.
 - **Security**: Shared-secret-only signing is insufficient for release authenticity; asymmetric verification remains the trusted path.
 - **Governance**: Publisher ownership, reviewer evidence, and release actor identity must be repository-configurable so policy changes are versioned and reviewable.
-- **v11 rollout**: Policy packs must stay additive at first; existing file paths should remain valid until pack loading is proven stable.
+- **Private-first**: Keep the repository Git-native and private-registry-first; do not turn v12 into public marketplace or hosted-service scope creep.
 - **History**: GSD planning begins at v9; earlier release history may be referenced, but not reconstructed as authoritative planning data.
 
 ## Key Decisions
@@ -104,6 +104,9 @@ Maintainers can publish and distribute private skills with deterministic, audita
 | Keep `mirror` registries visible but non-authoritative for default resolution | Operators need inventory visibility without letting backup surfaces silently outrank trusted federated sources | ✓ Good |
 | Derive inventory exports from generated catalog state and audit exports from committed provenance | Integrations need stable, reviewable artifacts; recomputing live release state would make export results depend on mutable workspace conditions | ✓ Good |
 | Keep boundary and recovery guidance in one dedicated operations doc | Operators need a single place to understand disagreement between policy, exports, provenance, and mirrors without piecing together multiple partial docs | ✓ Good |
+| Adopt `M2: AI-usable skill ecosystem` as v12 instead of another release-engineering milestone | The platform review shows the core registry mechanics are strong enough; the main remaining gap is decision-useful content and metadata | ✓ Good |
+| Start v12 with canonical decision metadata and wrapper result schemas | The current AI index already carries trust and compatibility, but still hardcodes empty selection guidance and lacks dedicated publish/pull schemas | ✓ Good |
+| Keep v12 additive and Git-native | The goal is to make the existing registry more useful to AI agents, not replace it with a new service layer | ✓ Good |
 
 ---
-*Last updated: 2026-03-16 after 11-08 federation trust boundary documentation completion*
+*Last updated: 2026-03-16 after selecting v12 AI-usable skill ecosystem and planning 12-01*
