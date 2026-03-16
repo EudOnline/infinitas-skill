@@ -139,11 +139,15 @@ def _quality_score_for_entry(meta):
     return 0
 
 
-def _capabilities_for_entry(meta):
-    value = meta.get('capabilities') if isinstance(meta, dict) else None
+def _string_list_for_entry(meta, field):
+    value = meta.get(field) if isinstance(meta, dict) else None
     if isinstance(value, list):
-        return [item for item in value if isinstance(item, str) and item.strip()]
+        return [item.strip() for item in value if isinstance(item, str) and item.strip()]
     return []
+
+
+def _capabilities_for_entry(meta):
+    return _string_list_for_entry(meta, 'capabilities')
 
 
 def _last_verified_at(verified_support, meta):
@@ -223,8 +227,9 @@ def build_ai_index(*, root: Path, catalog_entries: list, distribution_entries: l
                 'quality_score': _quality_score_for_entry(meta),
                 'capabilities': _capabilities_for_entry(meta),
                 'last_verified_at': _last_verified_at(verified_support, meta),
-                'use_when': [],
-                'avoid_when': [],
+                'use_when': _string_list_for_entry(meta, 'use_when'),
+                'avoid_when': _string_list_for_entry(meta, 'avoid_when'),
+                'runtime_assumptions': _string_list_for_entry(meta, 'runtime_assumptions'),
                 'agent_compatible': current.get('agent_compatible') or [],
                 'compatibility': {
                     'declared_support': current.get('declared_support') or current.get('agent_compatible') or [],
@@ -306,7 +311,7 @@ def validate_ai_index_payload(payload: dict) -> list:
         for field in ['name', 'qualified_name', 'summary', 'default_install_version', 'latest_version']:
             if not isinstance(skill.get(field), str) or not skill.get(field, '').strip():
                 errors.append(f'{prefix}.{field} must be a non-empty string')
-        for field in ['use_when', 'avoid_when', 'agent_compatible', 'available_versions', 'tags', 'capabilities']:
+        for field in ['use_when', 'avoid_when', 'runtime_assumptions', 'agent_compatible', 'available_versions', 'tags', 'capabilities']:
             value = skill.get(field)
             if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
                 errors.append(f'{prefix}.{field} must be an array of strings')

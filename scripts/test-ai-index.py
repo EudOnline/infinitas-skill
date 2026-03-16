@@ -61,6 +61,9 @@ def scaffold_fixture(repo: Path):
             'maturity': 'stable',
             'quality_score': 88,
             'capabilities': ['fixture-testing', 'search'],
+            'use_when': ['Need to operate inside this repository'],
+            'avoid_when': ['Need unrelated public publishing help'],
+            'runtime_assumptions': ['A local repo checkout is available'],
             'owner': 'release-test',
             'owners': ['release-test'],
             'author': 'release-test',
@@ -183,6 +186,12 @@ def main():
             fail(f"expected quality_score 88, got {entry.get('quality_score')!r}")
         if entry.get('capabilities') != ['fixture-testing', 'search']:
             fail(f"expected capabilities ['fixture-testing', 'search'], got {entry.get('capabilities')!r}")
+        if entry.get('use_when') != ['Need to operate inside this repository']:
+            fail(f"expected canonical use_when, got {entry.get('use_when')!r}")
+        if entry.get('avoid_when') != ['Need unrelated public publishing help']:
+            fail(f"expected canonical avoid_when, got {entry.get('avoid_when')!r}")
+        if entry.get('runtime_assumptions') != ['A local repo checkout is available']:
+            fail(f"expected canonical runtime_assumptions, got {entry.get('runtime_assumptions')!r}")
         if entry.get('last_verified_at') is not None:
             fail(f"expected last_verified_at None for fixture without evidence, got {entry.get('last_verified_at')!r}")
         compatibility = entry.get('compatibility') or {}
@@ -252,6 +261,16 @@ def main():
         combined = result.stdout + result.stderr
         if 'quality_score' not in combined:
             fail(f'expected validation failure mentioning quality_score\n{combined}')
+
+        run([str(repo / 'scripts' / 'build-catalog.sh')], cwd=repo)
+        rebuilt_payload = json.loads(ai_index_path.read_text(encoding='utf-8'))
+        rebuilt_entry = next((item for item in rebuilt_payload['skills'] if item.get('name') == FIXTURE_NAME), None)
+        rebuilt_entry['runtime_assumptions'] = 'repo checkout required'
+        write_json(ai_index_path, rebuilt_payload)
+        result = run([sys.executable, str(repo / 'scripts' / 'validate-registry.py')], cwd=repo, expect=1)
+        combined = result.stdout + result.stderr
+        if 'runtime_assumptions' not in combined:
+            fail(f'expected validation failure mentioning runtime_assumptions\n{combined}')
 
         run([str(repo / 'scripts' / 'build-catalog.sh')], cwd=repo)
 

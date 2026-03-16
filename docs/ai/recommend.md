@@ -37,8 +37,16 @@ Look at these keys first:
 - `ranking_factors`
 - `trust_state`
 - `verified_support`
+- `use_when`
+- `avoid_when`
+- `capabilities`
+- `runtime_assumptions`
+- `maturity`
+- `quality_score`
 
 `ranking_factors` should make it clear how compatibility, maturity, trust state, quality, and verification freshness affected the result.
+
+The surfaced decision metadata is the canonical author-owned guidance from `_meta.json`. Use it to explain why a skill fits the task without reopening raw catalogs.
 
 ## Safety rules
 

@@ -73,8 +73,9 @@ def assert_discovery_payload_stable_across_roots():
                         'distribution_manifest_path': f'catalog/distributions/{FIXTURE_NAME}/{FIXTURE_VERSION}/manifest.json',
                     }
                 },
-                'use_when': [],
-                'avoid_when': [],
+                'use_when': ['Need to operate inside this repository'],
+                'avoid_when': ['Need unrelated public publishing help'],
+                'runtime_assumptions': ['A local repo checkout is available'],
             }
         ]
     }
@@ -124,6 +125,12 @@ def assert_discovery_payload_stable_across_roots():
         fail(f"expected stable last_verified_at, got {fixture.get('last_verified_at')!r}")
     if fixture.get('capabilities') != ['fixture-testing', 'search']:
         fail(f"expected stable capabilities, got {fixture.get('capabilities')!r}")
+    if fixture.get('use_when') != ['Need to operate inside this repository']:
+        fail(f"expected stable use_when, got {fixture.get('use_when')!r}")
+    if fixture.get('avoid_when') != ['Need unrelated public publishing help']:
+        fail(f"expected stable avoid_when, got {fixture.get('avoid_when')!r}")
+    if fixture.get('runtime_assumptions') != ['A local repo checkout is available']:
+        fail(f"expected stable runtime_assumptions, got {fixture.get('runtime_assumptions')!r}")
 
 
 def make_env(extra=None):
@@ -155,6 +162,9 @@ def scaffold_fixture(repo: Path):
             'maturity': 'stable',
             'quality_score': 91,
             'capabilities': ['fixture-testing', 'search'],
+            'use_when': ['Need to operate inside this repository'],
+            'avoid_when': ['Need unrelated public publishing help'],
+            'runtime_assumptions': ['A local repo checkout is available'],
             'owner': 'release-test',
             'owners': ['release-test'],
             'author': 'release-test',
@@ -224,6 +234,7 @@ def external_ai_index_payload():
                 'tags': ['external', 'fixture'],
                 'use_when': ['Need external fixture coverage'],
                 'avoid_when': ['Testing unrelated behavior'],
+                'runtime_assumptions': ['A trusted external registry is configured'],
                 'agent_compatible': ['openclaw', 'claude-code', 'codex'],
                 'verified_support': {'codex': {'state': 'adapted', 'checked_at': '2026-03-12T00:00:00Z'}},
                 'trust_state': 'attested',
@@ -389,6 +400,8 @@ def main():
             fail('expected first skill last_verified_at to be a string or null')
         if not isinstance(first.get('capabilities'), list):
             fail('expected first skill capabilities to be a list')
+        if not isinstance(first.get('runtime_assumptions'), list):
+            fail('expected first skill runtime_assumptions to be a list')
 
         assert_discovery_payload_stable_across_roots()
 
@@ -405,6 +418,12 @@ def main():
             fail(f"expected local quality_score 91, got {fixture.get('quality_score')!r}")
         if fixture.get('capabilities') != ['fixture-testing', 'search']:
             fail(f"expected local capabilities, got {fixture.get('capabilities')!r}")
+        if fixture.get('use_when') != ['Need to operate inside this repository']:
+            fail(f"expected local use_when, got {fixture.get('use_when')!r}")
+        if fixture.get('avoid_when') != ['Need unrelated public publishing help']:
+            fail(f"expected local avoid_when, got {fixture.get('avoid_when')!r}")
+        if fixture.get('runtime_assumptions') != ['A local repo checkout is available']:
+            fail(f"expected local runtime_assumptions, got {fixture.get('runtime_assumptions')!r}")
 
         external = next((item for item in payload['skills'] if item.get('name') == EXTERNAL_SKILL_NAME), None)
         if external is None:
@@ -427,6 +446,12 @@ def main():
             fail(f"expected external last_verified_at, got {external.get('last_verified_at')!r}")
         if external.get('capabilities') != ['external-fixture']:
             fail(f"expected external capabilities, got {external.get('capabilities')!r}")
+        if external.get('use_when') != ['Need external fixture coverage']:
+            fail(f"expected external use_when, got {external.get('use_when')!r}")
+        if external.get('avoid_when') != ['Testing unrelated behavior']:
+            fail(f"expected external avoid_when, got {external.get('avoid_when')!r}")
+        if external.get('runtime_assumptions') != ['A trusted external registry is configured']:
+            fail(f"expected external runtime_assumptions, got {external.get('runtime_assumptions')!r}")
 
         self_source = next((item for item in payload.get('sources') or [] if item.get('name') == 'self'), None)
         if not self_source:
@@ -468,6 +493,15 @@ def main():
         combined = result.stdout + result.stderr
         if 'quality_score' not in combined:
             fail(f'expected validation failure mentioning quality_score\n{combined}')
+
+        run([str(repo / 'scripts' / 'build-catalog.sh')], cwd=repo)
+        broken = load_json(discovery_index_path)
+        broken['skills'][0]['runtime_assumptions'] = 'repo checkout required'
+        write_json(discovery_index_path, broken)
+        result = run([sys.executable, str(repo / 'scripts' / 'validate-registry.py')], cwd=repo, expect=1)
+        combined = result.stdout + result.stderr
+        if 'runtime_assumptions' not in combined:
+            fail(f'expected validation failure mentioning runtime_assumptions\n{combined}')
     finally:
         shutil.rmtree(tmpdir)
 

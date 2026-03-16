@@ -69,6 +69,17 @@ def _dependency_summary(dependencies: dict) -> dict:
     }
 
 
+def _decision_metadata(entry: dict) -> dict:
+    return {
+        'use_when': list(entry.get('use_when') or []),
+        'avoid_when': list(entry.get('avoid_when') or []),
+        'capabilities': list(entry.get('capabilities') or []),
+        'runtime_assumptions': list(entry.get('runtime_assumptions') or []),
+        'maturity': entry.get('maturity') or 'unknown',
+        'quality_score': entry.get('quality_score') if isinstance(entry.get('quality_score'), int) else 0,
+    }
+
+
 def _derive_trust_state(version_entry: dict, manifest_payload: dict, provenance_payload: dict, distribution: dict) -> str:
     signature_present = bool(
         version_entry.get('attestation_signature_path')
@@ -120,6 +131,12 @@ def search_skills(root: Path, query: str | None = None, publisher: str | None = 
                 'tags': item.get('tags') or [],
                 'attestation_formats': item.get('attestation_formats') or [],
                 'source_registry': item.get('source_registry'),
+                'use_when': item.get('use_when') or [],
+                'avoid_when': item.get('avoid_when') or [],
+                'capabilities': item.get('capabilities') or [],
+                'runtime_assumptions': item.get('runtime_assumptions') or [],
+                'maturity': item.get('maturity') or 'unknown',
+                'quality_score': item.get('quality_score') if isinstance(item.get('quality_score'), int) else 0,
             }
         )
     return {
@@ -179,6 +196,7 @@ def inspect_skill(root: Path, name: str, version: str | None = None) -> dict:
         'version': resolved_version,
         'latest_version': skill_entry.get('latest_version'),
         'trust_state': trust_state,
+        'decision_metadata': _decision_metadata(skill_entry),
         'compatibility': {
             'declared_support': ((skill_entry.get('compatibility') or {}).get('declared_support') or []),
             'verified_support': verified_support,

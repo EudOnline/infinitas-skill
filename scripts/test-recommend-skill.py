@@ -60,6 +60,12 @@ def scenario_recommend_returns_ranked_fields_for_real_catalog():
         'ranking_factors',
         'trust_state',
         'verified_support',
+        'use_when',
+        'avoid_when',
+        'capabilities',
+        'runtime_assumptions',
+        'maturity',
+        'quality_score',
     ]:
         if key not in top:
             fail(f'missing recommendation field {key!r}')
@@ -69,6 +75,24 @@ def scenario_recommend_returns_ranked_fields_for_real_catalog():
             fail(f'missing ranking_factors field {key!r}')
     if top.get('qualified_name') != QUALIFIED_NAME:
         fail(f"expected top recommendation {QUALIFIED_NAME!r}, got {top.get('qualified_name')!r}")
+    if top.get('use_when') != [
+        'Need to operate inside the infinitas-skill repository',
+        'Need guidance on registry workflows, planning files, or release discipline',
+    ]:
+        fail(f"expected canonical recommendation use_when, got {top.get('use_when')!r}")
+    if top.get('avoid_when') != ['Need a general-purpose Git helper outside this repository']:
+        fail(f"expected canonical recommendation avoid_when, got {top.get('avoid_when')!r}")
+    if top.get('capabilities') != ['repo-operations', 'release-guidance', 'registry-debugging']:
+        fail(f"expected canonical recommendation capabilities, got {top.get('capabilities')!r}")
+    if top.get('runtime_assumptions') != [
+        'A Git checkout of infinitas-skill is available',
+        'Repository scripts can be executed from the workspace',
+    ]:
+        fail(f"expected canonical recommendation runtime_assumptions, got {top.get('runtime_assumptions')!r}")
+    if top.get('maturity') != 'stable':
+        fail(f"expected canonical recommendation maturity 'stable', got {top.get('maturity')!r}")
+    if top.get('quality_score') != 90:
+        fail(f"expected canonical recommendation quality_score 90, got {top.get('quality_score')!r}")
     explanation = payload.get('explanation') or {}
     if not isinstance(explanation.get('winner_reason'), str) or not explanation.get('winner_reason').strip():
         fail(f"expected top-level winner_reason, got {explanation.get('winner_reason')!r}")
@@ -113,6 +137,7 @@ def discovery_index_payload():
                 'attestation_formats': ['ssh'],
                 'use_when': ['Need to operate in this repo'],
                 'avoid_when': [],
+                'runtime_assumptions': ['A checkout of this repository is available'],
                 'maturity': 'stable',
                 'quality_score': 92,
                 'last_verified_at': '2026-03-15T00:00:00Z',
@@ -138,6 +163,7 @@ def discovery_index_payload():
                 'attestation_formats': ['ssh'],
                 'use_when': ['Need repo operations'],
                 'avoid_when': [],
+                'runtime_assumptions': ['A trusted external registry is configured'],
                 'maturity': 'beta',
                 'quality_score': 61,
                 'last_verified_at': '2026-03-10T00:00:00Z',
@@ -163,6 +189,7 @@ def discovery_index_payload():
                 'attestation_formats': ['ssh'],
                 'use_when': ['Need docs tooling'],
                 'avoid_when': [],
+                'runtime_assumptions': ['Documentation sources are available'],
                 'maturity': 'experimental',
                 'quality_score': 40,
                 'last_verified_at': None,
@@ -201,6 +228,13 @@ def scenario_recommend_prefers_private_high_quality_match():
             fail('expected ranked results to include external candidate')
         if external.get('install_requires_confirmation') is not True:
             fail(f"expected external recommendation to require confirmation, got {external.get('install_requires_confirmation')!r}")
+        if top.get('runtime_assumptions') != ['A checkout of this repository is available']:
+            fail(f"expected top runtime_assumptions to survive recommendation output, got {top.get('runtime_assumptions')!r}")
+        if external.get('runtime_assumptions') != ['A trusted external registry is configured']:
+            fail(
+                'expected external runtime_assumptions to survive recommendation output, '
+                f"got {external.get('runtime_assumptions')!r}"
+            )
         explanation = payload.get('explanation') or {}
         if explanation.get('runner_up') != 'partner/ops-external':
             fail(f"expected runner_up 'partner/ops-external', got {explanation.get('runner_up')!r}")

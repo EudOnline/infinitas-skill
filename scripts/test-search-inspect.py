@@ -37,9 +37,39 @@ def scenario_search_returns_trust_and_compatibility_fields():
     match = next((item for item in results if item.get('qualified_name') == QUALIFIED_NAME), None)
     if match is None:
         fail(f'expected search results to include {QUALIFIED_NAME!r}')
-    for key in ['qualified_name', 'publisher', 'latest_version', 'trust_state', 'verified_support']:
+    for key in [
+        'qualified_name',
+        'publisher',
+        'latest_version',
+        'trust_state',
+        'verified_support',
+        'use_when',
+        'avoid_when',
+        'capabilities',
+        'runtime_assumptions',
+        'maturity',
+        'quality_score',
+    ]:
         if key not in match:
             fail(f'missing search field {key!r}')
+    if match.get('use_when') != [
+        'Need to operate inside the infinitas-skill repository',
+        'Need guidance on registry workflows, planning files, or release discipline',
+    ]:
+        fail(f"expected canonical search use_when, got {match.get('use_when')!r}")
+    if match.get('avoid_when') != ['Need a general-purpose Git helper outside this repository']:
+        fail(f"expected canonical search avoid_when, got {match.get('avoid_when')!r}")
+    if match.get('capabilities') != ['repo-operations', 'release-guidance', 'registry-debugging']:
+        fail(f"expected canonical search capabilities, got {match.get('capabilities')!r}")
+    if match.get('runtime_assumptions') != [
+        'A Git checkout of infinitas-skill is available',
+        'Repository scripts can be executed from the workspace',
+    ]:
+        fail(f"expected canonical search runtime_assumptions, got {match.get('runtime_assumptions')!r}")
+    if match.get('maturity') != 'stable':
+        fail(f"expected canonical search maturity 'stable', got {match.get('maturity')!r}")
+    if match.get('quality_score') != 90:
+        fail(f"expected canonical search quality_score 90, got {match.get('quality_score')!r}")
 
 
 def scenario_search_filters_by_publisher_and_agent():
@@ -57,7 +87,7 @@ def scenario_inspect_returns_distribution_and_dependency_views():
     payload = json.loads(result.stdout)
     if payload.get('qualified_name') != QUALIFIED_NAME:
         fail(f"expected inspect qualified_name {QUALIFIED_NAME!r}, got {payload.get('qualified_name')!r}")
-    for key in ['compatibility', 'dependencies', 'provenance', 'distribution', 'trust_state']:
+    for key in ['compatibility', 'dependencies', 'provenance', 'distribution', 'trust_state', 'decision_metadata']:
         if key not in payload:
             fail(f'missing inspect field {key!r}')
     compatibility = payload.get('compatibility') or {}
@@ -88,6 +118,28 @@ def scenario_inspect_returns_distribution_and_dependency_views():
         fail(f"expected inspect trust.state 'verified', got {trust.get('state')!r}")
     if trust.get('signature_present') is not True:
         fail(f"expected inspect trust.signature_present true, got {trust.get('signature_present')!r}")
+    decision_metadata = payload.get('decision_metadata') or {}
+    if decision_metadata.get('use_when') != [
+        'Need to operate inside the infinitas-skill repository',
+        'Need guidance on registry workflows, planning files, or release discipline',
+    ]:
+        fail(f"expected inspect decision_metadata.use_when, got {decision_metadata.get('use_when')!r}")
+    if decision_metadata.get('avoid_when') != ['Need a general-purpose Git helper outside this repository']:
+        fail(f"expected inspect decision_metadata.avoid_when, got {decision_metadata.get('avoid_when')!r}")
+    if decision_metadata.get('capabilities') != ['repo-operations', 'release-guidance', 'registry-debugging']:
+        fail(f"expected inspect decision_metadata.capabilities, got {decision_metadata.get('capabilities')!r}")
+    if decision_metadata.get('runtime_assumptions') != [
+        'A Git checkout of infinitas-skill is available',
+        'Repository scripts can be executed from the workspace',
+    ]:
+        fail(
+            'expected inspect decision_metadata.runtime_assumptions, '
+            f"got {decision_metadata.get('runtime_assumptions')!r}"
+        )
+    if decision_metadata.get('maturity') != 'stable':
+        fail(f"expected inspect decision_metadata.maturity 'stable', got {decision_metadata.get('maturity')!r}")
+    if decision_metadata.get('quality_score') != 90:
+        fail(f"expected inspect decision_metadata.quality_score 90, got {decision_metadata.get('quality_score')!r}")
 
 
 def main():

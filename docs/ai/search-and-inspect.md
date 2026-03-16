@@ -32,6 +32,12 @@ The output is built from `catalog/discovery-index.json` and includes:
 - `latest_version`
 - `trust_state`
 - `verified_support`
+- `use_when`
+- `avoid_when`
+- `capabilities`
+- `runtime_assumptions`
+- `maturity`
+- `quality_score`
 - `attestation_formats`
 - `source_registry`
 
@@ -58,11 +64,21 @@ Use `scripts/inspect-skill.sh` before install when you need:
 
 - trust state
 - compatibility verified summary
+- canonical `decision_metadata` for fit checks
 - dependency root and steps summary
 - provenance paths and attestation policy
 - verified distribution manifest and bundle references
 
 The inspect surface is built from the generated AI index, distribution manifest, and release provenance. It is the preferred way to inspect a stable release without opening raw catalog internals.
+
+Read `decision_metadata` first when you need the author-owned selection hints:
+
+- `use_when`
+- `avoid_when`
+- `capabilities`
+- `runtime_assumptions`
+- `maturity`
+- `quality_score`
 
 ## Verified distribution manifests
 

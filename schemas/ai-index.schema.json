@@ -72,6 +72,7 @@
           "summary",
           "use_when",
           "avoid_when",
+          "runtime_assumptions",
           "agent_compatible",
           "default_install_version",
           "latest_version",
@@ -106,6 +107,12 @@
             }
           },
           "avoid_when": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "runtime_assumptions": {
             "type": "array",
             "items": {
               "type": "string"

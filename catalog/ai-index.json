@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-03-14T23:53:52Z",
+  "generated_at": "2026-03-16T02:50:35Z",
   "registry": {
     "default_registry": "self"
   },
@@ -23,12 +23,25 @@
         "claude-code",
         "operations"
       ],
-      "maturity": "unknown",
-      "quality_score": 0,
-      "capabilities": [],
+      "maturity": "stable",
+      "quality_score": 90,
+      "capabilities": [
+        "repo-operations",
+        "release-guidance",
+        "registry-debugging"
+      ],
       "last_verified_at": "2026-03-12T12:56:55Z",
-      "use_when": [],
-      "avoid_when": [],
+      "use_when": [
+        "Need to operate inside the infinitas-skill repository",
+        "Need guidance on registry workflows, planning files, or release discipline"
+      ],
+      "avoid_when": [
+        "Need a general-purpose Git helper outside this repository"
+      ],
+      "runtime_assumptions": [
+        "A Git checkout of infinitas-skill is available",
+        "Repository scripts can be executed from the workspace"
+      ],
       "agent_compatible": [
         "openclaw",
         "claude",
