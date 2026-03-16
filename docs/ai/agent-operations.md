@@ -5,6 +5,7 @@
 当 agent 需要在本仓库执行常见技能操作时，优先按以下顺序读取：
 
 - `README.md`
+- `docs/ai/usage-guide.md`
 - `docs/ai/agent-operations.md`
 - `docs/ai/workflow-drills.md`
 - `docs/ai/discovery.md`
@@ -25,7 +26,7 @@
 - 什么时候只能做人工步骤
 - 什么时候必须先停下来而不是继续猜测
 
-将本文件视为**决策手册**；将 `docs/ai/workflow-drills.md` 视为**可执行 drill 手册**；将 `docs/ai/discovery.md`、`docs/ai/publish.md` 与 `docs/ai/pull.md` 视为**严格执行协议**。
+将 `docs/ai/usage-guide.md` 视为**稳定入口指南**；将本文件视为**扩展操作手册**；将 `docs/ai/workflow-drills.md` 视为**可执行 drill 手册**；将 `docs/ai/discovery.md`、`docs/ai/publish.md` 与 `docs/ai/pull.md` 视为**严格执行协议**。
 
 ## Core Model
 

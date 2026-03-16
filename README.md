@@ -328,6 +328,7 @@ If `INFINITAS_SERVER_MIRROR_REMOTE` is configured, hosted publish jobs also atte
 For AI-driven publishing, import, export, and installation, treat the following files as the machine-facing contract:
 
 - `docs/ai/agent-operations.md` — agent-facing common operations manual
+- `docs/ai/usage-guide.md` — stable high-level guide for when to search, recommend, inspect, publish, pull, and verify
 - `docs/ai/workflow-drills.md` — search, recommend, inspect, publish, and pull drills that stay on public docs plus generated JSON surfaces
 - `docs/ai/discovery.md` — private-first discovery, install-by-name, and upgrade contract
 - `docs/ai/recommend.md` — recommendation workflow, ranking factors, and recommendation explanations
