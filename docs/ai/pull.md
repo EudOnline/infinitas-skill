@@ -99,6 +99,7 @@ scripts/pull-skill.sh <qualified-name> <target-dir> [--version <semver>] [--regi
 - 对 federated registry，pull 输出应同时暴露 mapped publisher identity 与 upstream publisher identity，避免把 namespace 映射误解成来源变更
 - 即使指定了 `--registry`，也只允许读取该 registry 已发布的 immutable 索引与产物
 - 面向 portal / compliance 的聚合读取应优先消费 `catalog/inventory-export.json` 与 `catalog/audit-export.json`，而不是把 `pull-skill` 的安装输出当作长期稳定集成契约
+- 若 pull 结果与 inventory / audit exports 或 registry policy 看起来冲突，先参考 [docs/federation-operations.md](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/.worktrees/codex-federation-trust-rules/docs/federation-operations.md) 中的恢复顺序，再决定是否调整 registry policy
 - 若 AI 看到的是 OpenClaw 本地原型目录，应先走 `scripts/import-openclaw-skill.sh`，而不是直接安装
 - 如果需要先看 trust state、compatibility、dependency summary 或 provenance，优先运行 `scripts/inspect-skill.sh`
 

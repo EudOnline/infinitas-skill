@@ -71,6 +71,8 @@ The split is intentional:
 
 Neither export includes raw `policy_trace`. Debug traces remain operator-oriented and live on the existing CLI surfaces.
 
+When release evidence, inventory exports, or federation state appear to disagree, use [docs/federation-operations.md](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/.worktrees/codex-federation-trust-rules/docs/federation-operations.md) as the recovery guide. The short version is: validate policy first, then rebuild catalog artifacts, then verify provenance and distribution manifests before trusting a released artifact again.
+
 ## Stable attestation policy
 
 Phase 5 adds a second enforcement layer on top of the signed-tag baseline.

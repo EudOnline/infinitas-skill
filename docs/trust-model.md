@@ -37,6 +37,8 @@ Track derivation with `_meta.json.derived_from` or a CHANGELOG entry so consumer
 - `mirror` registries are visible for operator inventory and backup, but they are not authoritative default resolver candidates.
 - When publisher namespaces are mapped, tooling must preserve the original upstream publisher identity alongside the mapped local namespace.
 
+Operational failure modes and recovery steps are documented in [docs/federation-operations.md](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/.worktrees/codex-federation-trust-rules/docs/federation-operations.md). Treat that guide as the operator playbook when policy, exports, or provenance appear to disagree.
+
 ## Recommended runtime pattern
 
 - Registry source: private Git repo
