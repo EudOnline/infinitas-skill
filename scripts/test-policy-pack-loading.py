@@ -122,6 +122,14 @@ def baseline_pack():
                         'update_policy': {
                             'mode': 'track',
                         },
+                        'federation': {
+                            'mode': 'mirror',
+                            'allowed_publishers': ['partner'],
+                            'publisher_map': {
+                                'partner': 'partner-labs',
+                            },
+                            'require_immutable_artifacts': True,
+                        },
                     }
                 ],
             },
@@ -307,6 +315,15 @@ def scenario_declared_pack_order_and_local_overrides():
         registries = effective_registry.get('registries') or []
         if len(registries) != 1 or registries[0].get('name') != 'baseline':
             fail(f'expected registry-sources domain shape to stay compatible, got {registries!r}')
+        federation = (registries[0].get('federation') or {})
+        if federation.get('mode') != 'mirror':
+            fail(f"expected registry_sources federation.mode 'mirror', got {federation!r}")
+        if federation.get('allowed_publishers') != ['partner']:
+            fail(f"expected registry_sources federation.allowed_publishers ['partner'], got {federation!r}")
+        if federation.get('publisher_map') != {'partner': 'partner-labs'}:
+            fail(f"expected registry_sources federation.publisher_map to survive pack merge, got {federation!r}")
+        if federation.get('require_immutable_artifacts') is not True:
+            fail(f'expected registry_sources federation.require_immutable_artifacts true, got {federation!r}')
 
         team_resolution = load_policy_domain_resolution(repo, 'team_policy')
         team_sources = team_resolution.get('effective_sources') or []
