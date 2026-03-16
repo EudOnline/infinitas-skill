@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-16T03:51:12Z",
+  "generated_at": "2026-03-16T03:53:17Z",
   "count": 4,
   "skills": [
     {
@@ -87,14 +87,26 @@
         "codex"
       ],
       "verified_support": {
-        "openclaw": {
-          "state": "unknown"
-        },
         "claude": {
-          "state": "unknown"
+          "state": "adapted",
+          "checked_at": "2026-03-16T03:52:58Z",
+          "checker": "check-claude-compat.py",
+          "evidence_path": "catalog/compatibility-evidence/claude/consume-infinitas-skill/0.1.0.json",
+          "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py."
         },
         "codex": {
-          "state": "unknown"
+          "state": "adapted",
+          "checked_at": "2026-03-16T03:52:58Z",
+          "checker": "check-codex-compat.py",
+          "evidence_path": "catalog/compatibility-evidence/codex/consume-infinitas-skill/0.1.0.json",
+          "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py."
+        },
+        "openclaw": {
+          "state": "adapted",
+          "checked_at": "2026-03-16T03:52:59Z",
+          "checker": "check-openclaw-compat.py",
+          "evidence_path": "catalog/compatibility-evidence/openclaw/consume-infinitas-skill/0.1.0.json",
+          "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py."
         }
       }
     },
@@ -166,16 +178,34 @@
       "source_pin_mode": "branch",
       "source_pin_value": "main",
       "expected_tag": "skill/federation-registry-ops/v0.1.0",
+      "verified_distribution": {
+        "manifest_path": "catalog/distributions/lvxiaoer/federation-registry-ops/0.1.0/manifest.json",
+        "bundle_path": "catalog/distributions/lvxiaoer/federation-registry-ops/0.1.0/skill.tar.gz",
+        "bundle_sha256": "2784d72ed2354558859f98fb695d62d33b6574d8a92aff73327c4fa52c7ab29d",
+        "attestation_path": "catalog/provenance/federation-registry-ops-0.1.0.json",
+        "attestation_signature_path": "catalog/provenance/federation-registry-ops-0.1.0.json.ssig",
+        "source_snapshot_tag": "skill/federation-registry-ops/v0.1.0",
+        "source_snapshot_commit": "893dd8f66ddab054086c0d99dc8ef5482ecc1e60",
+        "generated_at": "2026-03-16T03:52:23Z"
+      },
       "declared_support": [
         "claude",
         "codex"
       ],
       "verified_support": {
         "claude": {
-          "state": "unknown"
+          "state": "adapted",
+          "checked_at": "2026-03-16T03:53:17Z",
+          "checker": "check-claude-compat.py",
+          "evidence_path": "catalog/compatibility-evidence/claude/federation-registry-ops/0.1.0.json",
+          "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py."
         },
         "codex": {
-          "state": "unknown"
+          "state": "adapted",
+          "checked_at": "2026-03-16T03:53:17Z",
+          "checker": "check-codex-compat.py",
+          "evidence_path": "catalog/compatibility-evidence/codex/federation-registry-ops/0.1.0.json",
+          "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py."
         }
       }
     },
@@ -371,11 +401,19 @@
         "codex"
       ],
       "verified_support": {
-        "claude": {
-          "state": "unknown"
-        },
         "codex": {
-          "state": "unknown"
+          "state": "adapted",
+          "checked_at": "2026-03-16T03:52:41Z",
+          "checker": "check-codex-compat.py",
+          "evidence_path": "catalog/compatibility-evidence/codex/release-infinitas-skill/0.1.0.json",
+          "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py."
+        },
+        "claude": {
+          "state": "adapted",
+          "checked_at": "2026-03-16T03:52:42Z",
+          "checker": "check-claude-compat.py",
+          "evidence_path": "catalog/compatibility-evidence/claude/release-infinitas-skill/0.1.0.json",
+          "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py."
         }
       }
     }

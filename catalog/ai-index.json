@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-03-16T03:51:12Z",
+  "generated_at": "2026-03-16T03:53:17Z",
   "registry": {
     "default_registry": "self"
   },
@@ -31,7 +31,7 @@
         "immutable-install",
         "upgrade-planning"
       ],
-      "last_verified_at": null,
+      "last_verified_at": "2026-03-16T03:52:59Z",
       "use_when": [
         "Need to find the best released skill for a task",
         "Need to inspect, pull, install, or upgrade a stable released skill"
@@ -57,26 +57,50 @@
           "codex"
         ],
         "verified_support": {
-          "openclaw": {
-            "state": "unknown"
-          },
           "claude": {
-            "state": "unknown"
+            "state": "adapted",
+            "checked_at": "2026-03-16T03:52:58Z",
+            "checker": "check-claude-compat.py",
+            "evidence_path": "catalog/compatibility-evidence/claude/consume-infinitas-skill/0.1.0.json",
+            "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py."
           },
           "codex": {
-            "state": "unknown"
+            "state": "adapted",
+            "checked_at": "2026-03-16T03:52:58Z",
+            "checker": "check-codex-compat.py",
+            "evidence_path": "catalog/compatibility-evidence/codex/consume-infinitas-skill/0.1.0.json",
+            "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py."
+          },
+          "openclaw": {
+            "state": "adapted",
+            "checked_at": "2026-03-16T03:52:59Z",
+            "checker": "check-openclaw-compat.py",
+            "evidence_path": "catalog/compatibility-evidence/openclaw/consume-infinitas-skill/0.1.0.json",
+            "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py."
           }
         }
       },
       "verified_support": {
-        "openclaw": {
-          "state": "unknown"
-        },
         "claude": {
-          "state": "unknown"
+          "state": "adapted",
+          "checked_at": "2026-03-16T03:52:58Z",
+          "checker": "check-claude-compat.py",
+          "evidence_path": "catalog/compatibility-evidence/claude/consume-infinitas-skill/0.1.0.json",
+          "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py."
         },
         "codex": {
-          "state": "unknown"
+          "state": "adapted",
+          "checked_at": "2026-03-16T03:52:58Z",
+          "checker": "check-codex-compat.py",
+          "evidence_path": "catalog/compatibility-evidence/codex/consume-infinitas-skill/0.1.0.json",
+          "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py."
+        },
+        "openclaw": {
+          "state": "adapted",
+          "checked_at": "2026-03-16T03:52:59Z",
+          "checker": "check-openclaw-compat.py",
+          "evidence_path": "catalog/compatibility-evidence/openclaw/consume-infinitas-skill/0.1.0.json",
+          "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py."
         }
       },
       "trust_state": "verified",
@@ -120,6 +144,135 @@
           "attestation_path": "catalog/provenance/consume-infinitas-skill-0.1.0.json",
           "attestation_signature_path": "catalog/provenance/consume-infinitas-skill-0.1.0.json.ssig",
           "published_at": "2026-03-16T03:51:11Z",
+          "stability": "stable",
+          "installable": true,
+          "attestation_formats": [
+            "ssh"
+          ],
+          "trust_state": "verified",
+          "resolution": {
+            "preferred_source": "distribution-manifest",
+            "fallback_allowed": false
+          }
+        }
+      }
+    },
+    {
+      "name": "federation-registry-ops",
+      "publisher": "lvxiaoer",
+      "qualified_name": "lvxiaoer/federation-registry-ops",
+      "summary": "Help agents inspect registry sources, federation rules, mirror behavior, and audit or inventory exports inside infinitas-skill.",
+      "tags": [
+        "federation",
+        "mirror",
+        "audit",
+        "registry"
+      ],
+      "maturity": "beta",
+      "quality_score": 84,
+      "capabilities": [
+        "registry-source-debugging",
+        "federation-policy",
+        "inventory-export",
+        "audit-export"
+      ],
+      "last_verified_at": "2026-03-16T03:53:17Z",
+      "use_when": [
+        "Need to debug federated registry source, mirror, or namespace behavior",
+        "Need to inspect inventory export or audit export artifacts"
+      ],
+      "avoid_when": [
+        "Need to publish a new release from source",
+        "Need to install a skill into a runtime directory"
+      ],
+      "runtime_assumptions": [
+        "config/registry-sources.json and generated catalog exports are available",
+        "The task is about registry operations inside infinitas-skill rather than a generic Git repository"
+      ],
+      "agent_compatible": [
+        "claude",
+        "claude-code",
+        "codex"
+      ],
+      "compatibility": {
+        "declared_support": [
+          "claude",
+          "codex"
+        ],
+        "verified_support": {
+          "claude": {
+            "state": "adapted",
+            "checked_at": "2026-03-16T03:53:17Z",
+            "checker": "check-claude-compat.py",
+            "evidence_path": "catalog/compatibility-evidence/claude/federation-registry-ops/0.1.0.json",
+            "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py."
+          },
+          "codex": {
+            "state": "adapted",
+            "checked_at": "2026-03-16T03:53:17Z",
+            "checker": "check-codex-compat.py",
+            "evidence_path": "catalog/compatibility-evidence/codex/federation-registry-ops/0.1.0.json",
+            "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py."
+          }
+        }
+      },
+      "verified_support": {
+        "claude": {
+          "state": "adapted",
+          "checked_at": "2026-03-16T03:53:17Z",
+          "checker": "check-claude-compat.py",
+          "evidence_path": "catalog/compatibility-evidence/claude/federation-registry-ops/0.1.0.json",
+          "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py."
+        },
+        "codex": {
+          "state": "adapted",
+          "checked_at": "2026-03-16T03:53:17Z",
+          "checker": "check-codex-compat.py",
+          "evidence_path": "catalog/compatibility-evidence/codex/federation-registry-ops/0.1.0.json",
+          "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py."
+        }
+      },
+      "trust_state": "verified",
+      "default_install_version": "0.1.0",
+      "latest_version": "0.1.0",
+      "available_versions": [
+        "0.1.0"
+      ],
+      "entrypoints": {
+        "skill_md": "SKILL.md"
+      },
+      "requires": {
+        "tools": [
+          "read",
+          "exec"
+        ],
+        "env": []
+      },
+      "interop": {
+        "openclaw": {
+          "runtime_targets": [
+            "~/.openclaw/skills",
+            "~/.openclaw/workspace/skills"
+          ],
+          "import_supported": true,
+          "export_supported": true,
+          "public_publish": {
+            "clawhub": {
+              "supported": true,
+              "default": false
+            }
+          }
+        }
+      },
+      "versions": {
+        "0.1.0": {
+          "manifest_path": "catalog/distributions/lvxiaoer/federation-registry-ops/0.1.0/manifest.json",
+          "distribution_manifest_path": "catalog/distributions/lvxiaoer/federation-registry-ops/0.1.0/manifest.json",
+          "bundle_path": "catalog/distributions/lvxiaoer/federation-registry-ops/0.1.0/skill.tar.gz",
+          "bundle_sha256": "2784d72ed2354558859f98fb695d62d33b6574d8a92aff73327c4fa52c7ab29d",
+          "attestation_path": "catalog/provenance/federation-registry-ops-0.1.0.json",
+          "attestation_signature_path": "catalog/provenance/federation-registry-ops-0.1.0.json.ssig",
+          "published_at": "2026-03-16T03:52:23Z",
           "stability": "stable",
           "installable": true,
           "attestation_formats": [
@@ -296,7 +449,7 @@
         "immutable-release",
         "verified-support-recording"
       ],
-      "last_verified_at": null,
+      "last_verified_at": "2026-03-16T03:52:42Z",
       "use_when": [
         "Need to validate or publish an immutable release for a registry-managed skill",
         "Need to refresh stable release artifacts before other agents can install a skill"
@@ -320,20 +473,36 @@
           "codex"
         ],
         "verified_support": {
-          "claude": {
-            "state": "unknown"
-          },
           "codex": {
-            "state": "unknown"
+            "state": "adapted",
+            "checked_at": "2026-03-16T03:52:41Z",
+            "checker": "check-codex-compat.py",
+            "evidence_path": "catalog/compatibility-evidence/codex/release-infinitas-skill/0.1.0.json",
+            "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py."
+          },
+          "claude": {
+            "state": "adapted",
+            "checked_at": "2026-03-16T03:52:42Z",
+            "checker": "check-claude-compat.py",
+            "evidence_path": "catalog/compatibility-evidence/claude/release-infinitas-skill/0.1.0.json",
+            "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py."
           }
         }
       },
       "verified_support": {
-        "claude": {
-          "state": "unknown"
-        },
         "codex": {
-          "state": "unknown"
+          "state": "adapted",
+          "checked_at": "2026-03-16T03:52:41Z",
+          "checker": "check-codex-compat.py",
+          "evidence_path": "catalog/compatibility-evidence/codex/release-infinitas-skill/0.1.0.json",
+          "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py."
+        },
+        "claude": {
+          "state": "adapted",
+          "checked_at": "2026-03-16T03:52:42Z",
+          "checker": "check-claude-compat.py",
+          "evidence_path": "catalog/compatibility-evidence/claude/release-infinitas-skill/0.1.0.json",
+          "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py."
         }
       },
       "trust_state": "verified",

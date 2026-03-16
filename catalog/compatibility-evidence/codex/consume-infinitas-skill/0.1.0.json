@@ -1,0 +1,10 @@
+{
+  "platform": "codex",
+  "skill": "consume-infinitas-skill",
+  "qualified_name": "lvxiaoer/consume-infinitas-skill",
+  "version": "0.1.0",
+  "state": "adapted",
+  "checked_at": "2026-03-16T03:52:58Z",
+  "checker": "check-codex-compat.py",
+  "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py."
+}

@@ -1,13 +1,13 @@
 {
   "$schema": "../schemas/inventory-export.schema.json",
   "schema_version": 1,
-  "generated_at": "2026-03-16T03:51:12Z",
+  "generated_at": "2026-03-16T03:52:23Z",
   "default_registry": "self",
   "counts": {
     "registries": 1,
     "skills": 4,
     "installable_skills": 4,
-    "released_skills": 3
+    "released_skills": 4
   },
   "registries": [
     {
@@ -68,7 +68,7 @@
       "summary": "Help agents inspect registry sources, federation rules, mirror behavior, and audit or inventory exports inside infinitas-skill.",
       "path": "skills/active/federation-registry-ops",
       "installable": true,
-      "released": false,
+      "released": true,
       "source_registry": "self",
       "source_registry_url": "https://github.com/EudOnline/infinitas-skill.git",
       "source_registry_trust": "private",
@@ -80,12 +80,12 @@
       "source_pin_value": "main",
       "source_federation_mode": null,
       "resolver_candidate": true,
-      "distribution_manifest_path": null,
-      "distribution_bundle_path": null,
-      "release_attestation_path": null,
-      "release_attestation_signature_path": null,
-      "release_source_snapshot_tag": null,
-      "release_source_snapshot_commit": null
+      "distribution_manifest_path": "catalog/distributions/lvxiaoer/federation-registry-ops/0.1.0/manifest.json",
+      "distribution_bundle_path": "catalog/distributions/lvxiaoer/federation-registry-ops/0.1.0/skill.tar.gz",
+      "release_attestation_path": "catalog/provenance/federation-registry-ops-0.1.0.json",
+      "release_attestation_signature_path": "catalog/provenance/federation-registry-ops-0.1.0.json.ssig",
+      "release_source_snapshot_tag": "skill/federation-registry-ops/v0.1.0",
+      "release_source_snapshot_commit": "893dd8f66ddab054086c0d99dc8ef5482ecc1e60"
     },
     {
       "name": "operate-infinitas-skill",

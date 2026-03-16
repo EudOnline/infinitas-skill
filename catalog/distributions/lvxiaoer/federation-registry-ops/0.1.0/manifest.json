@@ -1,0 +1,146 @@
+{
+  "$schema": "schemas/distribution-manifest.schema.json",
+  "schema_version": 1,
+  "kind": "skill-distribution-manifest",
+  "generated_at": "2026-03-16T03:52:23Z",
+  "skill": {
+    "name": "federation-registry-ops",
+    "publisher": "lvxiaoer",
+    "qualified_name": "lvxiaoer/federation-registry-ops",
+    "identity_mode": "qualified",
+    "version": "0.1.0",
+    "status": "active",
+    "summary": "Help agents inspect registry sources, federation rules, mirror behavior, and audit or inventory exports inside infinitas-skill.",
+    "author": "lvxiaoer",
+    "owners": [
+      "lvxiaoer"
+    ],
+    "maintainers": [
+      "lvxiaoer"
+    ],
+    "depends_on": [],
+    "conflicts_with": []
+  },
+  "source_snapshot": {
+    "kind": "git-tag",
+    "tag": "skill/federation-registry-ops/v0.1.0",
+    "ref": "refs/tags/skill/federation-registry-ops/v0.1.0",
+    "commit": "893dd8f66ddab054086c0d99dc8ef5482ecc1e60",
+    "remote": null,
+    "upstream": null,
+    "immutable": true,
+    "pushed": false
+  },
+  "bundle": {
+    "path": "catalog/distributions/lvxiaoer/federation-registry-ops/0.1.0/skill.tar.gz",
+    "format": "tar.gz",
+    "sha256": "2784d72ed2354558859f98fb695d62d33b6574d8a92aff73327c4fa52c7ab29d",
+    "size": 2202,
+    "root_dir": "federation-registry-ops",
+    "file_count": 8
+  },
+  "registry": {
+    "default_registry": "self",
+    "registries_consulted": [
+      "self"
+    ],
+    "resolved": [
+      {
+        "registry_name": "self",
+        "registry_kind": "git",
+        "registry_url": "https://github.com/EudOnline/infinitas-skill.git",
+        "registry_base_url": null,
+        "registry_host": "github.com",
+        "registry_priority": 100,
+        "registry_trust": "private",
+        "registry_root": "/Users/lvxiaoer/Documents/codeWork/infinitas-skill/.worktrees/codex-federation-trust-rules",
+        "registry_pin_mode": "branch",
+        "registry_pin_value": "main",
+        "registry_ref": "refs/heads/main",
+        "registry_allowed_refs": [
+          "refs/heads/main"
+        ],
+        "registry_allowed_hosts": [
+          "github.com"
+        ],
+        "registry_update_mode": "local-only",
+        "registry_auth_mode": "none",
+        "registry_auth_env": null,
+        "registry_federation_mode": null,
+        "registry_allowed_publishers": [],
+        "registry_publisher_map": {},
+        "registry_require_immutable_artifacts": false,
+        "registry_commit": "893dd8f66ddab054086c0d99dc8ef5482ecc1e60",
+        "registry_tag": "skill/federation-registry-ops/v0.1.0",
+        "registry_branch": "codex/federation-trust-rules",
+        "registry_origin_url": "git@github-eudonline:EudOnline/infinitas-skill.git",
+        "registry_origin_host": "github-eudonline"
+      }
+    ]
+  },
+  "dependencies": {
+    "mode": "install",
+    "root": {
+      "name": "federation-registry-ops",
+      "publisher": "lvxiaoer",
+      "qualified_name": "lvxiaoer/federation-registry-ops",
+      "version": "0.1.0",
+      "registry": "self",
+      "stage": "active",
+      "path": "/Users/lvxiaoer/Documents/codeWork/infinitas-skill/.worktrees/codex-federation-trust-rules/skills/active/federation-registry-ops",
+      "source_type": "working-tree",
+      "distribution_manifest": null,
+      "source_snapshot_tag": null,
+      "source_snapshot_commit": null
+    },
+    "steps": [
+      {
+        "order": 1,
+        "name": "federation-registry-ops",
+        "publisher": "lvxiaoer",
+        "qualified_name": "lvxiaoer/federation-registry-ops",
+        "identity_mode": "qualified",
+        "version": "0.1.0",
+        "registry": "self",
+        "stage": "active",
+        "path": "/Users/lvxiaoer/Documents/codeWork/infinitas-skill/.worktrees/codex-federation-trust-rules/skills/active/federation-registry-ops",
+        "skill_path": "/Users/lvxiaoer/Documents/codeWork/infinitas-skill/.worktrees/codex-federation-trust-rules/skills/active/federation-registry-ops",
+        "relative_path": null,
+        "source_type": "working-tree",
+        "distribution_manifest": null,
+        "distribution_bundle": null,
+        "distribution_bundle_sha256": null,
+        "distribution_attestation": null,
+        "distribution_attestation_signature": null,
+        "action": "install",
+        "needs_apply": true,
+        "requested_by": [],
+        "depends_on": [],
+        "conflicts_with": [],
+        "root": true,
+        "source_commit": "893dd8f66ddab054086c0d99dc8ef5482ecc1e60",
+        "source_ref": "refs/heads/main",
+        "source_tag": "skill/federation-registry-ops/v0.1.0",
+        "source_snapshot_kind": null,
+        "source_snapshot_tag": null,
+        "source_snapshot_ref": null,
+        "source_snapshot_commit": null
+      }
+    ],
+    "registries_consulted": [
+      "self"
+    ]
+  },
+  "attestation_bundle": {
+    "provenance_path": "catalog/provenance/federation-registry-ops-0.1.0.json",
+    "provenance_sha256": "2755941ca1ed239cf5e68982c6d4b0301aaebea646a92dde19bb76e3fb05bbc7",
+    "signature_path": "catalog/provenance/federation-registry-ops-0.1.0.json.ssig",
+    "signature_sha256": "94b359e95a9f6ef98af6579fdb378213203a3c2da9ca800646c4ff53b4c4b11e",
+    "signer_identity": "lvxiaoer",
+    "namespace": "infinitas-skill",
+    "allowed_signers": "config/allowed_signers",
+    "required_formats": [
+      "ssh"
+    ]
+  }
+}
