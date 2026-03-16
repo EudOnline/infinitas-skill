@@ -1,13 +1,13 @@
 {
   "$schema": "../schemas/inventory-export.schema.json",
   "schema_version": 1,
-  "generated_at": "2026-03-16T03:49:17Z",
+  "generated_at": "2026-03-16T03:51:12Z",
   "default_registry": "self",
   "counts": {
     "registries": 1,
     "skills": 4,
     "installable_skills": 4,
-    "released_skills": 2
+    "released_skills": 3
   },
   "registries": [
     {
@@ -39,7 +39,7 @@
       "summary": "Guide agents through search, recommendation, inspection, pull, install, and upgrade flows for released infinitas-skill artifacts.",
       "path": "skills/active/consume-infinitas-skill",
       "installable": true,
-      "released": false,
+      "released": true,
       "source_registry": "self",
       "source_registry_url": "https://github.com/EudOnline/infinitas-skill.git",
       "source_registry_trust": "private",
@@ -51,12 +51,12 @@
       "source_pin_value": "main",
       "source_federation_mode": null,
       "resolver_candidate": true,
-      "distribution_manifest_path": null,
-      "distribution_bundle_path": null,
-      "release_attestation_path": null,
-      "release_attestation_signature_path": null,
-      "release_source_snapshot_tag": null,
-      "release_source_snapshot_commit": null
+      "distribution_manifest_path": "catalog/distributions/lvxiaoer/consume-infinitas-skill/0.1.0/manifest.json",
+      "distribution_bundle_path": "catalog/distributions/lvxiaoer/consume-infinitas-skill/0.1.0/skill.tar.gz",
+      "release_attestation_path": "catalog/provenance/consume-infinitas-skill-0.1.0.json",
+      "release_attestation_signature_path": "catalog/provenance/consume-infinitas-skill-0.1.0.json.ssig",
+      "release_source_snapshot_tag": "skill/consume-infinitas-skill/v0.1.0",
+      "release_source_snapshot_commit": "39964c2a478202aa571d32445d06c05e6dff9898"
     },
     {
       "name": "federation-registry-ops",

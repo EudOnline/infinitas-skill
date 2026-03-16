@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-16T03:49:17Z",
+  "generated_at": "2026-03-16T03:51:12Z",
   "count": 4,
   "skills": [
     {
@@ -71,6 +71,16 @@
       "source_pin_mode": "branch",
       "source_pin_value": "main",
       "expected_tag": "skill/consume-infinitas-skill/v0.1.0",
+      "verified_distribution": {
+        "manifest_path": "catalog/distributions/lvxiaoer/consume-infinitas-skill/0.1.0/manifest.json",
+        "bundle_path": "catalog/distributions/lvxiaoer/consume-infinitas-skill/0.1.0/skill.tar.gz",
+        "bundle_sha256": "70bf1b3f3eac804e010687267d6429edb9b9e1cf78c52353aec7533680e933ee",
+        "attestation_path": "catalog/provenance/consume-infinitas-skill-0.1.0.json",
+        "attestation_signature_path": "catalog/provenance/consume-infinitas-skill-0.1.0.json.ssig",
+        "source_snapshot_tag": "skill/consume-infinitas-skill/v0.1.0",
+        "source_snapshot_commit": "39964c2a478202aa571d32445d06c05e6dff9898",
+        "generated_at": "2026-03-16T03:51:11Z"
+      },
       "declared_support": [
         "openclaw",
         "claude",

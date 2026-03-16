@@ -1,7 +1,129 @@
 {
-  "generated_at": "2026-03-16T03:49:17Z",
-  "count": 2,
+  "generated_at": "2026-03-16T03:51:12Z",
+  "count": 3,
   "skills": [
+    {
+      "name": "consume-infinitas-skill",
+      "publisher": "lvxiaoer",
+      "qualified_name": "lvxiaoer/consume-infinitas-skill",
+      "identity_mode": "qualified",
+      "version": "0.1.0",
+      "status": "active",
+      "summary": "Guide agents through search, recommendation, inspection, pull, install, and upgrade flows for released infinitas-skill artifacts.",
+      "manifest_path": "catalog/distributions/lvxiaoer/consume-infinitas-skill/0.1.0/manifest.json",
+      "bundle_path": "catalog/distributions/lvxiaoer/consume-infinitas-skill/0.1.0/skill.tar.gz",
+      "bundle_sha256": "70bf1b3f3eac804e010687267d6429edb9b9e1cf78c52353aec7533680e933ee",
+      "bundle_size": 2310,
+      "bundle_file_count": 8,
+      "bundle_root_dir": "consume-infinitas-skill",
+      "attestation_path": "catalog/provenance/consume-infinitas-skill-0.1.0.json",
+      "attestation_signature_path": "catalog/provenance/consume-infinitas-skill-0.1.0.json.ssig",
+      "attestation_sha256": "a56f9af56099e887665e1a2f43ec5212636a87b5c9ebeb5ebb07f9a903102627",
+      "attestation_signature_sha256": "51d20cd8d6c932ee23dcc53505b01d1f3e9b994c060452a11c2fe46daad009f2",
+      "signer_identity": "lvxiaoer",
+      "namespace": "infinitas-skill",
+      "allowed_signers": "config/allowed_signers",
+      "source_snapshot_kind": "git-tag",
+      "source_snapshot_tag": "skill/consume-infinitas-skill/v0.1.0",
+      "source_snapshot_ref": "refs/tags/skill/consume-infinitas-skill/v0.1.0",
+      "source_snapshot_commit": "39964c2a478202aa571d32445d06c05e6dff9898",
+      "registry": {
+        "default_registry": "self",
+        "registries_consulted": [
+          "self"
+        ],
+        "resolved": [
+          {
+            "registry_name": "self",
+            "registry_kind": "git",
+            "registry_url": "https://github.com/EudOnline/infinitas-skill.git",
+            "registry_base_url": null,
+            "registry_host": "github.com",
+            "registry_priority": 100,
+            "registry_trust": "private",
+            "registry_root": "/Users/lvxiaoer/Documents/codeWork/infinitas-skill/.worktrees/codex-federation-trust-rules",
+            "registry_pin_mode": "branch",
+            "registry_pin_value": "main",
+            "registry_ref": "refs/heads/main",
+            "registry_allowed_refs": [
+              "refs/heads/main"
+            ],
+            "registry_allowed_hosts": [
+              "github.com"
+            ],
+            "registry_update_mode": "local-only",
+            "registry_auth_mode": "none",
+            "registry_auth_env": null,
+            "registry_federation_mode": null,
+            "registry_allowed_publishers": [],
+            "registry_publisher_map": {},
+            "registry_require_immutable_artifacts": false,
+            "registry_commit": "39964c2a478202aa571d32445d06c05e6dff9898",
+            "registry_tag": "skill/consume-infinitas-skill/v0.1.0",
+            "registry_branch": "codex/federation-trust-rules",
+            "registry_origin_url": "git@github-eudonline:EudOnline/infinitas-skill.git",
+            "registry_origin_host": "github-eudonline"
+          }
+        ]
+      },
+      "dependencies": {
+        "mode": "install",
+        "root": {
+          "name": "consume-infinitas-skill",
+          "publisher": "lvxiaoer",
+          "qualified_name": "lvxiaoer/consume-infinitas-skill",
+          "version": "0.1.0",
+          "registry": "self",
+          "stage": "active",
+          "path": "/Users/lvxiaoer/Documents/codeWork/infinitas-skill/.worktrees/codex-federation-trust-rules/skills/active/consume-infinitas-skill",
+          "source_type": "working-tree",
+          "distribution_manifest": null,
+          "source_snapshot_tag": null,
+          "source_snapshot_commit": null
+        },
+        "steps": [
+          {
+            "order": 1,
+            "name": "consume-infinitas-skill",
+            "publisher": "lvxiaoer",
+            "qualified_name": "lvxiaoer/consume-infinitas-skill",
+            "identity_mode": "qualified",
+            "version": "0.1.0",
+            "registry": "self",
+            "stage": "active",
+            "path": "/Users/lvxiaoer/Documents/codeWork/infinitas-skill/.worktrees/codex-federation-trust-rules/skills/active/consume-infinitas-skill",
+            "skill_path": "/Users/lvxiaoer/Documents/codeWork/infinitas-skill/.worktrees/codex-federation-trust-rules/skills/active/consume-infinitas-skill",
+            "relative_path": null,
+            "source_type": "working-tree",
+            "distribution_manifest": null,
+            "distribution_bundle": null,
+            "distribution_bundle_sha256": null,
+            "distribution_attestation": null,
+            "distribution_attestation_signature": null,
+            "action": "install",
+            "needs_apply": true,
+            "requested_by": [],
+            "depends_on": [],
+            "conflicts_with": [],
+            "root": true,
+            "source_commit": "39964c2a478202aa571d32445d06c05e6dff9898",
+            "source_ref": "refs/heads/main",
+            "source_tag": "skill/consume-infinitas-skill/v0.1.0",
+            "source_snapshot_kind": null,
+            "source_snapshot_tag": null,
+            "source_snapshot_ref": null,
+            "source_snapshot_commit": null
+          }
+        ],
+        "registries_consulted": [
+          "self"
+        ]
+      },
+      "depends_on": [],
+      "conflicts_with": [],
+      "generated_at": "2026-03-16T03:51:11Z",
+      "source_type": "distribution-manifest"
+    },
     {
       "name": "operate-infinitas-skill",
       "publisher": "lvxiaoer",

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-03-16T03:49:17Z",
+  "generated_at": "2026-03-16T03:51:12Z",
   "registry": {
     "default_registry": "self"
   },
@@ -11,6 +11,128 @@
     "require_sha256": true
   },
   "skills": [
+    {
+      "name": "consume-infinitas-skill",
+      "publisher": "lvxiaoer",
+      "qualified_name": "lvxiaoer/consume-infinitas-skill",
+      "summary": "Guide agents through search, recommendation, inspection, pull, install, and upgrade flows for released infinitas-skill artifacts.",
+      "tags": [
+        "discovery",
+        "install",
+        "upgrade",
+        "openclaw"
+      ],
+      "maturity": "stable",
+      "quality_score": 89,
+      "capabilities": [
+        "search",
+        "recommend",
+        "inspect",
+        "immutable-install",
+        "upgrade-planning"
+      ],
+      "last_verified_at": null,
+      "use_when": [
+        "Need to find the best released skill for a task",
+        "Need to inspect, pull, install, or upgrade a stable released skill"
+      ],
+      "avoid_when": [
+        "Need to create a new release from source",
+        "Need to debug registry federation or mirror policy"
+      ],
+      "runtime_assumptions": [
+        "Generated catalog indexes are present or can be rebuilt",
+        "Target runtime directories such as ~/.openclaw/skills are writable when installation is requested"
+      ],
+      "agent_compatible": [
+        "openclaw",
+        "claude",
+        "claude-code",
+        "codex"
+      ],
+      "compatibility": {
+        "declared_support": [
+          "openclaw",
+          "claude",
+          "codex"
+        ],
+        "verified_support": {
+          "openclaw": {
+            "state": "unknown"
+          },
+          "claude": {
+            "state": "unknown"
+          },
+          "codex": {
+            "state": "unknown"
+          }
+        }
+      },
+      "verified_support": {
+        "openclaw": {
+          "state": "unknown"
+        },
+        "claude": {
+          "state": "unknown"
+        },
+        "codex": {
+          "state": "unknown"
+        }
+      },
+      "trust_state": "verified",
+      "default_install_version": "0.1.0",
+      "latest_version": "0.1.0",
+      "available_versions": [
+        "0.1.0"
+      ],
+      "entrypoints": {
+        "skill_md": "SKILL.md"
+      },
+      "requires": {
+        "tools": [
+          "read",
+          "exec"
+        ],
+        "env": []
+      },
+      "interop": {
+        "openclaw": {
+          "runtime_targets": [
+            "~/.openclaw/skills",
+            "~/.openclaw/workspace/skills"
+          ],
+          "import_supported": true,
+          "export_supported": true,
+          "public_publish": {
+            "clawhub": {
+              "supported": true,
+              "default": false
+            }
+          }
+        }
+      },
+      "versions": {
+        "0.1.0": {
+          "manifest_path": "catalog/distributions/lvxiaoer/consume-infinitas-skill/0.1.0/manifest.json",
+          "distribution_manifest_path": "catalog/distributions/lvxiaoer/consume-infinitas-skill/0.1.0/manifest.json",
+          "bundle_path": "catalog/distributions/lvxiaoer/consume-infinitas-skill/0.1.0/skill.tar.gz",
+          "bundle_sha256": "70bf1b3f3eac804e010687267d6429edb9b9e1cf78c52353aec7533680e933ee",
+          "attestation_path": "catalog/provenance/consume-infinitas-skill-0.1.0.json",
+          "attestation_signature_path": "catalog/provenance/consume-infinitas-skill-0.1.0.json.ssig",
+          "published_at": "2026-03-16T03:51:11Z",
+          "stability": "stable",
+          "installable": true,
+          "attestation_formats": [
+            "ssh"
+          ],
+          "trust_state": "verified",
+          "resolution": {
+            "preferred_source": "distribution-manifest",
+            "fallback_allowed": false
+          }
+        }
+      }
+    },
     {
       "name": "operate-infinitas-skill",
       "publisher": "lvxiaoer",

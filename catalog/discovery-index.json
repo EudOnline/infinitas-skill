@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-03-16T03:49:17Z",
+  "generated_at": "2026-03-16T03:51:12Z",
   "default_registry": "self",
   "sources": [
     {
@@ -18,6 +18,74 @@
     "auto_install_mutable_sources": false
   },
   "skills": [
+    {
+      "name": "consume-infinitas-skill",
+      "qualified_name": "lvxiaoer/consume-infinitas-skill",
+      "publisher": "lvxiaoer",
+      "summary": "Guide agents through search, recommendation, inspection, pull, install, and upgrade flows for released infinitas-skill artifacts.",
+      "source_registry": "self",
+      "source_priority": 100,
+      "match_names": [
+        "consume-infinitas-skill",
+        "lvxiaoer/consume-infinitas-skill"
+      ],
+      "default_install_version": "0.1.0",
+      "latest_version": "0.1.0",
+      "available_versions": [
+        "0.1.0"
+      ],
+      "agent_compatible": [
+        "openclaw",
+        "claude",
+        "claude-code",
+        "codex"
+      ],
+      "install_requires_confirmation": false,
+      "trust_level": "private",
+      "trust_state": "verified",
+      "tags": [
+        "discovery",
+        "install",
+        "upgrade",
+        "openclaw"
+      ],
+      "maturity": "stable",
+      "quality_score": 89,
+      "last_verified_at": null,
+      "capabilities": [
+        "search",
+        "recommend",
+        "inspect",
+        "immutable-install",
+        "upgrade-planning"
+      ],
+      "verified_support": {
+        "openclaw": {
+          "state": "unknown"
+        },
+        "claude": {
+          "state": "unknown"
+        },
+        "codex": {
+          "state": "unknown"
+        }
+      },
+      "attestation_formats": [
+        "ssh"
+      ],
+      "use_when": [
+        "Need to find the best released skill for a task",
+        "Need to inspect, pull, install, or upgrade a stable released skill"
+      ],
+      "avoid_when": [
+        "Need to create a new release from source",
+        "Need to debug registry federation or mirror policy"
+      ],
+      "runtime_assumptions": [
+        "Generated catalog indexes are present or can be rebuilt",
+        "Target runtime directories such as ~/.openclaw/skills are writable when installation is requested"
+      ]
+    },
     {
       "name": "operate-infinitas-skill",
       "qualified_name": "lvxiaoer/operate-infinitas-skill",
