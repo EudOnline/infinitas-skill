@@ -83,6 +83,7 @@ def discovery_index_payload():
                 'attestation_formats': ['ssh'],
                 'use_when': ['Need private demo skill'],
                 'avoid_when': [],
+                'runtime_assumptions': [],
             },
             {
                 'name': 'external-only-skill',
@@ -108,6 +109,7 @@ def discovery_index_payload():
                 'attestation_formats': ['ssh'],
                 'use_when': ['Need external coverage'],
                 'avoid_when': [],
+                'runtime_assumptions': [],
             },
             {
                 'name': 'ambiguous-skill',
@@ -133,6 +135,7 @@ def discovery_index_payload():
                 'attestation_formats': ['ssh'],
                 'use_when': [],
                 'avoid_when': [],
+                'runtime_assumptions': [],
             },
             {
                 'name': 'ambiguous-skill',
@@ -158,6 +161,7 @@ def discovery_index_payload():
                 'attestation_formats': ['ssh'],
                 'use_when': [],
                 'avoid_when': [],
+                'runtime_assumptions': [],
             },
             {
                 'name': 'incompatible-skill',
@@ -183,6 +187,7 @@ def discovery_index_payload():
                 'attestation_formats': ['ssh'],
                 'use_when': [],
                 'avoid_when': [],
+                'runtime_assumptions': [],
             },
         ],
     }
