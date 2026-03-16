@@ -5,16 +5,16 @@
 See: `.planning/PROJECT.md` (updated 2026-03-16)
 
 **Core value:** Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
-**Current focus:** Post-v12 signer readiness closeout plus selection of the next milestone after the AI-usable skill ecosystem.
+**Current focus:** v13 registry operations planning, starting with refresh cadence and freshness policy.
 
 ## Current Position
 
-Phase: post-v12 closeout
-Plan: `docs/plans/2026-03-16-production-signer-readiness.md`
-Status: signer readiness closeout in progress on `codex/production-signer-readiness`; next milestone not yet selected
-Last activity: 2026-03-16 — Started repository-level signing readiness reporting and post-bootstrap doc/planning sync
+Phase: v13 planning
+Plan: `docs/plans/2026-03-16-registry-refresh-cadence-and-freshness.md`
+Status: v13 selected on `codex/post-v12-roadmap-planning`; first implementation plan is being prepared
+Last activity: 2026-03-16 — Merged signer readiness closeout to `main` and began v13 registry-operations planning
 
-Progress: [##--------] 20%
+Progress: [#---------] 10%
 
 ## Performance Metrics
 
@@ -30,8 +30,8 @@ Progress: [##--------] 20%
 - v12: 9 plans completed across 3 phases
 
 **Recent Trend:**
-- Last 5 plans: 12-05, 12-06, 12-07, 12-08, 12-09
-- Trend: v12 is complete on `main`; the immediate closeout is to sync tooling/docs/planning with the already-completed signer bootstrap and stable release path
+- Last 5 plans: 12-06, 12-07, 12-08, 12-09, 2026-03-16-production-signer-readiness
+- Trend: v12 and the signer-readiness closeout are merged on `main`; the next value line is registry refresh policy and offline-safe snapshot mirroring
 
 ## Accumulated Context
 
@@ -62,22 +62,23 @@ Decisions are logged in `PROJECT.md`.
 
 ### Pending Todos
 
-- Finish the signing readiness closeout plan in `docs/plans/2026-03-16-production-signer-readiness.md`.
-- Choose and plan the next post-v12 milestone; no `12-10` or later plan is defined yet in `.planning/ROADMAP.md`.
+- Finalize the v13 roadmap update and first implementation plan for registry refresh cadence / freshness policy.
+- Decide the exact state format and operator surface for registry refresh metadata before implementation begins.
+- Plan how immutable registry snapshots should integrate with resolver/install flows without weakening current mirror trust boundaries.
 - Decide whether CI-native attestations should remain additive to, or eventually become authoritative over, the repo-managed SSH path.
-- Decide whether the future registry-ops and supply-chain backlog items belong immediately after v12 or should remain deferred behind operator-readiness work.
+- Keep governance-integration and supply-chain backlog items deferred unless v13 work exposes a dependency.
 
 ### Blockers/Concerns
 
 - `config/allowed_signers` now contains a committed `lvxiaoer` trusted signer entry.
 - `operate-infinitas-skill` already has a signed pushed stable tag plus verified provenance.
-- The remaining gap is documentation and roadmap continuity, not first-time signer bootstrap.
-- The next milestone after v12 is not yet planned, so roadmap continuity now depends on choosing between operator-readiness, governance, registry-ops, or supply-chain follow-up work.
+- The signer-readiness closeout is merged to `main`, but `.planning` still needs to be advanced from closeout mode into the chosen v13 milestone.
+- Registry freshness and offline snapshot behavior do not yet exist as first-class contracts, so operators still rely on ad-hoc cache expectations.
 - The repository still installs skills by bare folder name for backward compatibility; any future multi-publisher same-slug work should stay compatibility-aware.
 - The project should stay Git-native and private-first; public marketplace features, social features, and on-chain reputation remain intentionally deferred.
 
 ## Session Continuity
 
-Last session: 2026-03-16 17:39 GMT+8
-Stopped at: signing readiness report implemented; doc/planning sync in progress
+Last session: 2026-03-16 18:30 GMT+8
+Stopped at: v13 selected as registry operations; planning and phase-1 implementation plan in progress
 Resume file: `.planning/ROADMAP.md`

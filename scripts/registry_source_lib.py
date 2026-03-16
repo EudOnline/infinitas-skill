@@ -12,6 +12,7 @@ PIN_MODES = {'branch', 'tag', 'commit'}
 UPDATE_MODES = {'local-only', 'track', 'pinned', 'remote-only'}
 AUTH_MODES = {'none', 'token'}
 FEDERATION_MODES = {'mirror', 'federated'}
+STALE_POLICIES = {'ignore', 'warn', 'fail'}
 COMMIT_RE = re.compile(r'^[0-9a-fA-F]{40}$')
 PUBLISHER_SLUG_RE = re.compile(r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
 
@@ -150,6 +151,18 @@ def normalized_federation(reg):
     }
 
 
+def normalized_refresh_policy(reg):
+    policy = reg.get('refresh_policy') if isinstance(reg.get('refresh_policy'), dict) else {}
+    interval_hours = policy.get('interval_hours')
+    max_cache_age_hours = policy.get('max_cache_age_hours')
+    stale_policy = policy.get('stale_policy')
+    return {
+        'interval_hours': interval_hours if isinstance(interval_hours, int) else interval_hours,
+        'max_cache_age_hours': max_cache_age_hours if isinstance(max_cache_age_hours, int) else max_cache_age_hours,
+        'stale_policy': stale_policy,
+    }
+
+
 def registry_is_resolution_candidate(reg, *, explicit_registry=False):
     mode = normalized_federation(reg).get('mode')
     if mode == 'mirror' and not explicit_registry:
@@ -262,6 +275,7 @@ def registry_identity(root: Path, reg):
     update_policy = normalized_update_policy(reg)
     auth = normalized_auth(reg)
     federation = normalized_federation(reg)
+    refresh_policy = normalized_refresh_policy(reg)
     reg_root = resolve_registry_root(root, reg)
     preferred_tag = short_pin_value(pin.get('mode'), pin.get('value')) if pin.get('mode') == 'tag' else None
     remote_url = registry_remote_url(reg)
@@ -293,6 +307,9 @@ def registry_identity(root: Path, reg):
         'registry_allowed_publishers': federation.get('allowed_publishers'),
         'registry_publisher_map': federation.get('publisher_map'),
         'registry_require_immutable_artifacts': federation.get('require_immutable_artifacts'),
+        'registry_refresh_interval_hours': refresh_policy.get('interval_hours'),
+        'registry_max_cache_age_hours': refresh_policy.get('max_cache_age_hours'),
+        'registry_stale_policy': refresh_policy.get('stale_policy'),
         'registry_commit': git_identity.get('commit'),
         'registry_tag': git_identity.get('tag'),
         'registry_branch': git_identity.get('branch'),
@@ -330,6 +347,8 @@ def validate_registry_config(root: Path, cfg):
         update_policy = normalized_update_policy(reg)
         federation = reg.get('federation')
         federation_cfg = normalized_federation(reg)
+        refresh_policy = reg.get('refresh_policy')
+        refresh_policy_cfg = normalized_refresh_policy(reg)
         allowed_refs = normalized_allowed_refs(reg)
         allowed_hosts = normalized_allowed_hosts(reg)
 
@@ -354,6 +373,28 @@ def validate_registry_config(root: Path, cfg):
 
         if 'notes' in reg and not isinstance(reg.get('notes'), str):
             errors.append(f'registry {name!r} notes must be a string')
+
+        if refresh_policy is not None and not isinstance(refresh_policy, dict):
+            errors.append(f'registry {name!r} refresh_policy must be an object when present')
+        if isinstance(refresh_policy, dict):
+            interval_hours = refresh_policy_cfg.get('interval_hours')
+            max_cache_age_hours = refresh_policy_cfg.get('max_cache_age_hours')
+            stale_policy = refresh_policy_cfg.get('stale_policy')
+
+            if not isinstance(interval_hours, int) or interval_hours < 1:
+                errors.append(f'registry {name!r} refresh_policy.interval_hours must be a positive integer')
+            if not isinstance(max_cache_age_hours, int) or max_cache_age_hours < 1:
+                errors.append(f'registry {name!r} refresh_policy.max_cache_age_hours must be a positive integer')
+            if (
+                isinstance(interval_hours, int)
+                and isinstance(max_cache_age_hours, int)
+                and max_cache_age_hours < interval_hours
+            ):
+                errors.append(
+                    f'registry {name!r} refresh_policy.max_cache_age_hours must be greater than or equal to refresh_policy.interval_hours'
+                )
+            if stale_policy not in STALE_POLICIES:
+                errors.append(f'registry {name!r} refresh_policy.stale_policy must be one of {sorted(STALE_POLICIES)}')
 
         if federation is not None and not isinstance(federation, dict):
             errors.append(f'registry {name!r} federation must be an object when present')

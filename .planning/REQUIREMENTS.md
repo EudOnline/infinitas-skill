@@ -109,12 +109,16 @@ Requirements committed for milestone `v12`. Phase 1 planning is in place on 2026
 - [x] **ECO-06**: Recommendation outputs expose comparative quality, confidence, freshness, and compatibility signals across multiple eligible skills.
 - [x] **ECO-07**: The repository publishes a stable usage guide for humans and agents that explains when to search, recommend, inspect, publish, pull, and verify.
 
+## v13 Requirements
+
+Requirements committed for milestone `v13`. Planning starts with registry refresh cadence and freshness policy.
+
+### Registry Operations and Snapshot Mirroring
+
+- [ ] **REG-04**: Maintainer can define automatic registry refresh cadence and cache expiry policy.
+- [ ] **REG-05**: Maintainer can mirror an external registry into an immutable local snapshot for offline resolution.
+
 ## Future Requirements
-
-### Registry Operations
-
-- **REG-04**: Maintainer can define automatic registry refresh cadence and cache expiry policy.
-- **REG-05**: Maintainer can mirror an external registry into an immutable local snapshot for offline resolution.
 
 ### Governance Integration
 
@@ -181,6 +185,8 @@ Requirements committed for milestone `v12`. Phase 1 planning is in place on 2026
 | ECO-05 | v12 Phase 2 | Complete |
 | ECO-06 | v12 Phase 3 | Complete |
 | ECO-07 | v12 Phase 3 | Complete |
+| REG-04 | v13 Phase 1 | Planned |
+| REG-05 | v13 Phase 2 | Planned |
 
 **Coverage:**
 - v9 requirements: 12 total
@@ -195,7 +201,10 @@ Requirements committed for milestone `v12`. Phase 1 planning is in place on 2026
 - v12 requirements: 7 total
 - Mapped to phases: 7
 - Unmapped: 0 ✓
+- v13 requirements: 2 total
+- Mapped to phases: 2
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-16 after selecting v12 AI-usable skill ecosystem and planning 12-01*
+*Last updated: 2026-03-16 after selecting v13 Registry Operations and Snapshot Mirroring*

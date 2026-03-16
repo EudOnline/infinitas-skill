@@ -6,11 +6,13 @@
 - ✅ **v10 Publisher Identity and Verified Distribution** - Phases 1-6 (completed 2026-03-15)
 - ✅ **v11 Policy-as-Code and Organizational Controls** - Phases 1-3 (completed 2026-03-16)
 - ✅ **v12 AI-Usable Skill Ecosystem** - Phases 1-3 (completed 2026-03-16)
+- 🚧 **v13 Registry Operations and Snapshot Mirroring** - Phase 1 planned
 
 ## Current Follow-up
 
-- `docs/plans/2026-03-16-production-signer-readiness.md` is the active closeout plan for syncing signer readiness reporting, steady-state docs, and planning to the already-completed `lvxiaoer` signer bootstrap.
-- No `v13` milestone is selected yet; choose between operator-readiness follow-up, registry operations, or deferred supply-chain work after this closeout lands.
+- The signer-readiness closeout is now merged on `main`; repository-level signer reporting and steady-state operations guidance are part of the baseline.
+- v13 will focus on registry operations: freshness-aware refresh policy first, then immutable snapshot mirrors for offline resolution.
+- Governance integration (`REV-04/REV-05`) and supply-chain transparency (`ATT-04/ATT-05`) remain deferred follow-up candidates after v13.
 
 ## Phases
 
@@ -284,6 +286,40 @@ Plans:
 - [x] 12-08: Reduce duplicated decision metadata across source, generated indexes, and docs
 - [x] 12-09: Publish the stable platform usage guide for humans and agents
 
+### 🚧 v13 Registry Operations and Snapshot Mirroring
+
+**Milestone Goal:** Make remote registry operation predictable and offline-safe by adding explicit refresh cadence policy, operator-visible freshness status, and immutable snapshot mirrors that resolution and install can trust.
+
+#### 🚧 Phase 1: Registry Refresh Cadence and Freshness Policy (Planned)
+**Goal**: Add machine-validated refresh cadence, cache expiry, and stale-cache policy so registry caches are no longer treated as indefinitely valid by convention.
+**Depends on**: v12 completed
+**Requirements**: [REG-04]
+**Success Criteria** (what must be TRUE):
+  1. Maintainers can define refresh cadence, max cache age, and stale-cache response policy for remote registries in validated configuration.
+  2. Sync and resolver surfaces record or expose freshness age, last successful refresh, and stale reasons for cached registries.
+  3. Policy can warn or fail when a registry cache is too old for the requested workflow instead of silently trusting stale data.
+**Plans**: 3 plans
+
+Plans:
+- [ ] 13-01: Define refresh cadence and stale-cache policy schema plus validation defaults
+- [ ] 13-02: Record registry freshness state and add operator-facing freshness status output
+- [ ] 13-03: Enforce stale-cache policy in sync, resolution, and documentation flows
+
+#### ⏳ Phase 2: Immutable Snapshot Mirrors and Offline Resolution (Planned)
+**Goal**: Let operators materialize immutable snapshots of remote registries and use them for offline or disaster-recovery resolution without weakening trust semantics.
+**Depends on**: Phase 1
+**Requirements**: [REG-05]
+**Success Criteria** (what must be TRUE):
+  1. Operators can create immutable local snapshots of an external registry that preserve source identity, trust policy, and refresh metadata.
+  2. Resolver, install, and sync can consume a declared snapshot source for offline or recovery workflows without falling back to mutable live state.
+  3. Snapshot mirrors remain auditable and non-authoritative by default unless explicitly selected, preserving existing federation and mirror rules.
+**Plans**: 3 plans
+
+Plans:
+- [ ] 13-04: Define immutable registry snapshot format, metadata, and catalog visibility
+- [ ] 13-05: Add snapshot mirror creation and verification tooling
+- [ ] 13-06: Teach resolver, install, and sync flows to consume offline registry snapshots
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -305,3 +341,5 @@ Plans:
 | 1. Decision Metadata and AI Result Contracts | v12 | 3/3 | Completed | 2026-03-16 |
 | 2. Real Skill Inventory and Learnability | v12 | 3/3 | Completed | 2026-03-16 |
 | 3. Comparative Ranking and Usage Guide | v12 | 3/3 | Completed | 2026-03-16 |
+| 1. Registry Refresh Cadence and Freshness Policy | v13 | 0/3 | Planned | - |
+| 2. Immutable Snapshot Mirrors and Offline Resolution | v13 | 0/3 | Planned | - |

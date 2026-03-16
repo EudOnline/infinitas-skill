@@ -85,6 +85,33 @@
         }
       }
     },
+    "refresh_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "interval_hours",
+        "max_cache_age_hours",
+        "stale_policy"
+      ],
+      "properties": {
+        "interval_hours": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_cache_age_hours": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "stale_policy": {
+          "type": "string",
+          "enum": [
+            "ignore",
+            "warn",
+            "fail"
+          ]
+        }
+      }
+    },
     "federation": {
       "type": "object",
       "additionalProperties": false,
@@ -216,6 +243,9 @@
         },
         "auth": {
           "$ref": "#/$defs/auth"
+        },
+        "refresh_policy": {
+          "$ref": "#/$defs/refresh_policy"
         },
         "federation": {
           "$ref": "#/$defs/federation"

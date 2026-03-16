@@ -8,14 +8,14 @@
 
 Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
 
-## Current Milestone: Post-v12 Signer Readiness Closeout
+## Current Milestone: v13 Registry Operations and Snapshot Mirroring
 
-**Goal:** Reflect the now-bootstrapped signer and stable-release state in repository tooling, operator docs, and planning so post-v12 roadmap work starts from the real trust baseline instead of stale bootstrap assumptions.
+**Goal:** Make external registry operation predictable, freshness-aware, and offline-safe by adding explicit refresh cadence policy, immutable snapshot mirroring, and resolver/install support for audited offline snapshots.
 
 **Target features:**
-- Repository-level signing readiness report for trusted signers, SSH key configuration, stable tags, and provenance
-- Steady-state signing operations guidance now that the first signer and first stable release already exist
-- Synced `.planning` state so the next roadmap decision no longer assumes signer bootstrap is unfinished
+- Per-registry refresh cadence, cache expiry, and stale-cache policy in validated source configuration
+- Persistent refresh-status reporting so operators can inspect freshness age, last successful sync, and stale reasons
+- Immutable external registry snapshots that can back offline resolution without weakening trust or federation rules
 
 ## Requirements
 
@@ -29,18 +29,19 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - ✓ Maintainer can generate and verify CI-native attestation payloads, and release policy can require `ssh`, `ci`, or `both`, via `.github/workflows/release-attestation.yml`, `scripts/generate-ci-attestation.py`, `scripts/verify-ci-attestation.py`, and `config/signing.json`.
 - ✓ Skill metadata, dependency refs, catalogs, release state, and attestations can now carry publisher-qualified identity plus author/reviewer/releaser/signer audit fields.
 - ✓ Maintainer can bootstrap SSH signer material, wire trusted signer identities into repository policy, diagnose release blockers, and rehearse the first stable release via `scripts/bootstrap-signing.py`, `scripts/doctor-signing.py`, and `scripts/test-signing-bootstrap.py`.
+- ✓ Maintainer can inspect repository-level signing readiness, including trusted signer enrollment, local SSH signing configuration, stable tag verification, and provenance verification, via `scripts/report-signing-readiness.py` and `scripts/test-signing-readiness-report.py`.
 - ✓ Stable releases emit immutable bundles and distribution manifests, and install or sync can materialize from those manifests instead of only the live working tree.
 - ✓ Consumers can search, inspect, explain, and recommend skills via `scripts/search-skills.sh`, `scripts/inspect-skill.sh`, `scripts/resolve-skill.sh`, `scripts/install-by-name.sh`, `scripts/check-skill-update.sh`, `scripts/upgrade-skill.sh`, and `scripts/recommend-skill.sh`.
 
 ### Active
 
-- [ ] Add and validate a repository-level signing readiness report plus regression coverage.
-- [ ] Publish steady-state signing operations guidance and remove stale first-bootstrap wording from planning/docs.
-- [ ] Decide whether the next roadmap slice should prioritize registry operations, supply-chain follow-up work, or another operator-readiness pass after this closeout.
+- [ ] Plan and implement v13 Phase 1: registry refresh cadence and freshness policy (`REG-04`).
+- [ ] Plan and implement v13 Phase 2: immutable snapshot mirrors and offline resolution (`REG-05`).
+- [ ] Keep future work beyond v13 narrowed to governance integration (`REV-04/REV-05`) and supply-chain transparency (`ATT-04/ATT-05`) unless registry-ops work exposes a stronger dependency.
 
 ### Out of Scope
 
-- Hosted registry service, database, or web UI — the repository remains intentionally Git-native and file-based.
+- Hosted registry service, database, or web UI — the repository remains intentionally Git-native and file-based for v13.
 - Rebuilding the lifecycle, templating, or catalog system from scratch — current planning extends existing workflows instead of replacing them.
 - Public marketplace/package-manager integration — not needed to deliver private-registry distribution goals.
 - Full reconstruction of v1-v8 planning history — the repository does not contain authoritative phase-by-phase planning records for those versions.
@@ -67,8 +68,10 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - `docs/platform-review-memo.md` recommends treating the current system as "M1 complete: AI-first registry core" and shifting the next milestone to "M2: AI-usable skill ecosystem".
 - v12 completed the AI-usable skill ecosystem milestone by shipping canonical decision metadata, schema-backed publish/pull contracts, real skill inventory, AI-only workflow drills, failure-path hardening, comparative recommendation signals, and a stable usage guide.
 - `catalog/ai-index.json` now exposes multiple real skills with authored selection guidance, runtime assumptions, verified compatibility evidence, and additive comparative recommendation signals.
+- The post-v12 signer readiness closeout is now merged on `main`, including repository-level readiness reporting plus steady-state signer operations guidance.
 - `config/allowed_signers` now contains a committed `lvxiaoer` trusted signer entry.
 - `operate-infinitas-skill` already has a signed pushed stable tag plus verified provenance in `catalog/provenance/operate-infinitas-skill-0.1.1.json`.
+- Future requirements now point most directly at registry operations: refresh cadence / cache expiry policy plus immutable snapshot mirroring for offline resolution.
 
 ## Constraints
 
@@ -107,4 +110,4 @@ Maintainers can publish and distribute private skills with deterministic, audita
 | Keep v12 additive and Git-native | The goal is to make the existing registry more useful to AI agents, not replace it with a new service layer | ✓ Good |
 
 ---
-*Last updated: 2026-03-16 while starting post-v12 signer readiness closeout on `codex/production-signer-readiness`*
+*Last updated: 2026-03-16 while selecting v13 Registry Operations and Snapshot Mirroring on `codex/post-v12-roadmap-planning`*
