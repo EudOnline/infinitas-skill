@@ -11,7 +11,9 @@ TRUST_TIERS = {'private', 'trusted', 'public', 'untrusted'}
 PIN_MODES = {'branch', 'tag', 'commit'}
 UPDATE_MODES = {'local-only', 'track', 'pinned', 'remote-only'}
 AUTH_MODES = {'none', 'token'}
+FEDERATION_MODES = {'mirror', 'federated'}
 COMMIT_RE = re.compile(r'^[0-9a-fA-F]{40}$')
+PUBLISHER_SLUG_RE = re.compile(r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
 
 
 def registry_sources_path(root: Path) -> Path:
@@ -54,6 +56,20 @@ def _clean_string_list(values):
         item = value.strip()
         if item and item not in result:
             result.append(item)
+    return result
+
+
+def _clean_string_mapping(values):
+    if not isinstance(values, dict):
+        return {}
+    result = {}
+    for raw_key, raw_value in values.items():
+        if not isinstance(raw_key, str) or not isinstance(raw_value, str):
+            continue
+        key = raw_key.strip()
+        value = raw_value.strip()
+        if key and value:
+            result[key] = value
     return result
 
 
@@ -109,6 +125,18 @@ def normalized_auth(reg):
     if isinstance(env, str):
         env = env.strip()
     return {'mode': mode, 'env': env or None}
+
+
+def normalized_federation(reg):
+    federation = reg.get('federation') if isinstance(reg.get('federation'), dict) else {}
+    mode = federation.get('mode')
+    require_immutable_artifacts = federation.get('require_immutable_artifacts')
+    return {
+        'mode': mode,
+        'allowed_publishers': _clean_string_list(federation.get('allowed_publishers')),
+        'publisher_map': _clean_string_mapping(federation.get('publisher_map')),
+        'require_immutable_artifacts': require_immutable_artifacts if isinstance(require_immutable_artifacts, bool) else False,
+    }
 
 
 def normalized_allowed_hosts(reg):
@@ -186,6 +214,7 @@ def registry_identity(root: Path, reg):
     pin = normalized_pin(reg)
     update_policy = normalized_update_policy(reg)
     auth = normalized_auth(reg)
+    federation = normalized_federation(reg)
     reg_root = resolve_registry_root(root, reg)
     preferred_tag = short_pin_value(pin.get('mode'), pin.get('value')) if pin.get('mode') == 'tag' else None
     remote_url = registry_remote_url(reg)
@@ -213,6 +242,10 @@ def registry_identity(root: Path, reg):
         'registry_update_mode': update_policy.get('mode'),
         'registry_auth_mode': auth.get('mode'),
         'registry_auth_env': auth.get('env'),
+        'registry_federation_mode': federation.get('mode'),
+        'registry_allowed_publishers': federation.get('allowed_publishers'),
+        'registry_publisher_map': federation.get('publisher_map'),
+        'registry_require_immutable_artifacts': federation.get('require_immutable_artifacts'),
         'registry_commit': git_identity.get('commit'),
         'registry_tag': git_identity.get('tag'),
         'registry_branch': git_identity.get('branch'),
@@ -248,6 +281,8 @@ def validate_registry_config(root: Path, cfg):
         branch = reg.get('branch')
         pin = normalized_pin(reg)
         update_policy = normalized_update_policy(reg)
+        federation = reg.get('federation')
+        federation_cfg = normalized_federation(reg)
         allowed_refs = normalized_allowed_refs(reg)
         allowed_hosts = normalized_allowed_hosts(reg)
 
@@ -272,6 +307,61 @@ def validate_registry_config(root: Path, cfg):
 
         if 'notes' in reg and not isinstance(reg.get('notes'), str):
             errors.append(f'registry {name!r} notes must be a string')
+
+        if federation is not None and not isinstance(federation, dict):
+            errors.append(f'registry {name!r} federation must be an object when present')
+            federation = None
+        if isinstance(federation, dict):
+            if federation_cfg.get('mode') not in FEDERATION_MODES:
+                errors.append(f"registry {name!r} federation.mode must be one of {sorted(FEDERATION_MODES)}")
+
+            if federation.get('allowed_publishers') is not None:
+                raw_publishers = federation.get('allowed_publishers')
+                if not isinstance(raw_publishers, list) or not all(isinstance(item, str) and item.strip() for item in raw_publishers):
+                    errors.append(f'registry {name!r} federation.allowed_publishers must be an array of non-empty strings')
+                else:
+                    invalid_publishers = [item.strip() for item in raw_publishers if not PUBLISHER_SLUG_RE.match(item.strip())]
+                    if invalid_publishers:
+                        errors.append(f'registry {name!r} federation.allowed_publishers must use valid publisher slugs')
+
+            if federation.get('publisher_map') is not None:
+                raw_map = federation.get('publisher_map')
+                if not isinstance(raw_map, dict):
+                    errors.append(f'registry {name!r} federation.publisher_map must be an object when present')
+                else:
+                    invalid_keys = []
+                    invalid_values = []
+                    for raw_key, raw_value in raw_map.items():
+                        key = raw_key.strip() if isinstance(raw_key, str) else None
+                        value = raw_value.strip() if isinstance(raw_value, str) else None
+                        if not key or not PUBLISHER_SLUG_RE.match(key):
+                            invalid_keys.append(raw_key)
+                        if not value or not PUBLISHER_SLUG_RE.match(value):
+                            invalid_values.append(raw_value)
+                    if invalid_keys:
+                        errors.append(f'registry {name!r} federation.publisher_map keys must be valid publisher slugs')
+                    if invalid_values:
+                        errors.append(f'registry {name!r} federation.publisher_map values must be valid publisher slugs')
+
+            if federation.get('require_immutable_artifacts') is not None and not isinstance(federation.get('require_immutable_artifacts'), bool):
+                errors.append(f'registry {name!r} federation.require_immutable_artifacts must be boolean when present')
+
+            reg_root = resolve_registry_root(root, reg)
+            if reg_root == root:
+                errors.append(f'registry {name!r} cannot federate the working repository root')
+
+            if federation_cfg.get('mode') == 'federated' and trust == 'untrusted':
+                errors.append(f"registry {name!r} untrusted registries cannot use federation.mode='federated'")
+
+            if federation_cfg.get('mode') == 'federated' and kind == 'git' and update_policy.get('mode') == 'track':
+                errors.append(f"registry {name!r} federated git registries cannot use update_policy.mode='track'")
+
+            allowed_publishers = federation_cfg.get('allowed_publishers')
+            publisher_map = federation_cfg.get('publisher_map')
+            if allowed_publishers and publisher_map:
+                outside = sorted(key for key in publisher_map if key not in allowed_publishers)
+                if outside:
+                    errors.append(f'registry {name!r} publisher_map keys must be listed in federation.allowed_publishers')
 
         if kind == 'git':
             url = reg.get('url')

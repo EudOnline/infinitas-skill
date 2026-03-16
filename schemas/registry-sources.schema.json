@@ -85,6 +85,43 @@
         }
       }
     },
+    "federation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "mirror",
+            "federated"
+          ]
+        },
+        "allowed_publishers": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        },
+        "publisher_map": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        },
+        "require_immutable_artifacts": {
+          "type": "boolean"
+        }
+      }
+    },
     "catalog_paths": {
       "type": "object",
       "additionalProperties": false,
@@ -179,6 +216,9 @@
         },
         "auth": {
           "$ref": "#/$defs/auth"
+        },
+        "federation": {
+          "$ref": "#/$defs/federation"
         },
         "catalog_paths": {
           "$ref": "#/$defs/catalog_paths"
