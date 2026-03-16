@@ -9,6 +9,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 QUALIFIED_NAME = 'lvxiaoer/operate-infinitas-skill'
+RELEASE_QUALIFIED_NAME = 'lvxiaoer/release-infinitas-skill'
+CONSUME_QUALIFIED_NAME = 'lvxiaoer/consume-infinitas-skill'
+FEDERATION_QUALIFIED_NAME = 'lvxiaoer/federation-registry-ops'
 
 
 def fail(message):
@@ -100,6 +103,26 @@ def scenario_recommend_returns_ranked_fields_for_real_catalog():
         fail(f"expected explanation winner {QUALIFIED_NAME!r}, got {explanation.get('winner')!r}")
     if contains_absolute_path(payload):
         fail(f'expected recommendation payload to avoid raw filesystem paths\n{json.dumps(payload, ensure_ascii=False, indent=2)}')
+
+
+def scenario_recommend_prefers_specialized_real_skills():
+    scenarios = [
+        ('publish immutable release', 'codex', RELEASE_QUALIFIED_NAME),
+        ('install released skill into openclaw runtime', 'openclaw', CONSUME_QUALIFIED_NAME),
+        ('debug federated registry mirror audit export', 'codex', FEDERATION_QUALIFIED_NAME),
+    ]
+    for task, agent, expected in scenarios:
+        payload = json.loads(run(['./scripts/recommend-skill.sh', task, '--target-agent', agent], cwd=ROOT).stdout)
+        results = payload.get('results') or []
+        if not results:
+            fail(f'expected recommendation results for {task!r}')
+        top = results[0]
+        if top.get('qualified_name') != expected:
+            fail(f"expected top recommendation {expected!r} for {task!r}, got {top.get('qualified_name')!r}")
+        if not top.get('use_when'):
+            fail(f'expected use_when for {expected!r}')
+        if not top.get('runtime_assumptions'):
+            fail(f'expected runtime_assumptions for {expected!r}')
 
 
 def discovery_index_payload():
@@ -246,6 +269,7 @@ def scenario_recommend_prefers_private_high_quality_match():
 
 def main():
     scenario_recommend_returns_ranked_fields_for_real_catalog()
+    scenario_recommend_prefers_specialized_real_skills()
     scenario_recommend_prefers_private_high_quality_match()
     print('OK: recommend-skill checks passed')
 

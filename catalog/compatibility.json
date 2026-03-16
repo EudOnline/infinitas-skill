@@ -1,32 +1,62 @@
 {
-  "generated_at": "2026-03-12T12:56:55Z",
+  "generated_at": "2026-03-16T03:15:58Z",
   "stage_counts": {
     "incubating": 0,
-    "active": 1,
+    "active": 4,
     "archived": 0
   },
   "agents": {
     "claude": [
       {
+        "name": "consume-infinitas-skill",
+        "publisher": "lvxiaoer",
+        "qualified_name": "lvxiaoer/consume-infinitas-skill",
+        "version": "0.1.0",
+        "status": "active",
+        "path": "skills/active/consume-infinitas-skill"
+      },
+      {
+        "name": "federation-registry-ops",
+        "publisher": "lvxiaoer",
+        "qualified_name": "lvxiaoer/federation-registry-ops",
+        "version": "0.1.0",
+        "status": "active",
+        "path": "skills/active/federation-registry-ops"
+      },
+      {
         "name": "operate-infinitas-skill",
         "publisher": "lvxiaoer",
         "qualified_name": "lvxiaoer/operate-infinitas-skill",
         "version": "0.1.1",
         "status": "active",
         "path": "skills/active/operate-infinitas-skill"
+      },
+      {
+        "name": "release-infinitas-skill",
+        "publisher": "lvxiaoer",
+        "qualified_name": "lvxiaoer/release-infinitas-skill",
+        "version": "0.1.0",
+        "status": "active",
+        "path": "skills/active/release-infinitas-skill"
       }
     ],
     "claude-code": [
       {
-        "name": "operate-infinitas-skill",
+        "name": "consume-infinitas-skill",
         "publisher": "lvxiaoer",
-        "qualified_name": "lvxiaoer/operate-infinitas-skill",
-        "version": "0.1.1",
+        "qualified_name": "lvxiaoer/consume-infinitas-skill",
+        "version": "0.1.0",
         "status": "active",
-        "path": "skills/active/operate-infinitas-skill"
-      }
-    ],
-    "codex": [
+        "path": "skills/active/consume-infinitas-skill"
+      },
+      {
+        "name": "federation-registry-ops",
+        "publisher": "lvxiaoer",
+        "qualified_name": "lvxiaoer/federation-registry-ops",
+        "version": "0.1.0",
+        "status": "active",
+        "path": "skills/active/federation-registry-ops"
+      },
       {
         "name": "operate-infinitas-skill",
         "publisher": "lvxiaoer",
@@ -34,9 +64,59 @@
         "version": "0.1.1",
         "status": "active",
         "path": "skills/active/operate-infinitas-skill"
+      },
+      {
+        "name": "release-infinitas-skill",
+        "publisher": "lvxiaoer",
+        "qualified_name": "lvxiaoer/release-infinitas-skill",
+        "version": "0.1.0",
+        "status": "active",
+        "path": "skills/active/release-infinitas-skill"
+      }
+    ],
+    "codex": [
+      {
+        "name": "consume-infinitas-skill",
+        "publisher": "lvxiaoer",
+        "qualified_name": "lvxiaoer/consume-infinitas-skill",
+        "version": "0.1.0",
+        "status": "active",
+        "path": "skills/active/consume-infinitas-skill"
+      },
+      {
+        "name": "federation-registry-ops",
+        "publisher": "lvxiaoer",
+        "qualified_name": "lvxiaoer/federation-registry-ops",
+        "version": "0.1.0",
+        "status": "active",
+        "path": "skills/active/federation-registry-ops"
+      },
+      {
+        "name": "operate-infinitas-skill",
+        "publisher": "lvxiaoer",
+        "qualified_name": "lvxiaoer/operate-infinitas-skill",
+        "version": "0.1.1",
+        "status": "active",
+        "path": "skills/active/operate-infinitas-skill"
+      },
+      {
+        "name": "release-infinitas-skill",
+        "publisher": "lvxiaoer",
+        "qualified_name": "lvxiaoer/release-infinitas-skill",
+        "version": "0.1.0",
+        "status": "active",
+        "path": "skills/active/release-infinitas-skill"
       }
     ],
     "openclaw": [
+      {
+        "name": "consume-infinitas-skill",
+        "publisher": "lvxiaoer",
+        "qualified_name": "lvxiaoer/consume-infinitas-skill",
+        "version": "0.1.0",
+        "status": "active",
+        "path": "skills/active/consume-infinitas-skill"
+      },
       {
         "name": "operate-infinitas-skill",
         "publisher": "lvxiaoer",
@@ -48,6 +128,50 @@
     ]
   },
   "skills": [
+    {
+      "name": "consume-infinitas-skill",
+      "publisher": "lvxiaoer",
+      "qualified_name": "lvxiaoer/consume-infinitas-skill",
+      "version": "0.1.0",
+      "status": "active",
+      "path": "skills/active/consume-infinitas-skill",
+      "declared_support": [
+        "openclaw",
+        "claude",
+        "codex"
+      ],
+      "verified_support": {
+        "openclaw": {
+          "state": "unknown"
+        },
+        "claude": {
+          "state": "unknown"
+        },
+        "codex": {
+          "state": "unknown"
+        }
+      }
+    },
+    {
+      "name": "federation-registry-ops",
+      "publisher": "lvxiaoer",
+      "qualified_name": "lvxiaoer/federation-registry-ops",
+      "version": "0.1.0",
+      "status": "active",
+      "path": "skills/active/federation-registry-ops",
+      "declared_support": [
+        "claude",
+        "codex"
+      ],
+      "verified_support": {
+        "claude": {
+          "state": "unknown"
+        },
+        "codex": {
+          "state": "unknown"
+        }
+      }
+    },
     {
       "name": "operate-infinitas-skill",
       "publisher": "lvxiaoer",
@@ -81,6 +205,26 @@
           "checker": "check-openclaw-compat.py",
           "evidence_path": "catalog/compatibility-evidence/openclaw/operate-infinitas-skill/0.1.1.json",
           "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py."
+        }
+      }
+    },
+    {
+      "name": "release-infinitas-skill",
+      "publisher": "lvxiaoer",
+      "qualified_name": "lvxiaoer/release-infinitas-skill",
+      "version": "0.1.0",
+      "status": "active",
+      "path": "skills/active/release-infinitas-skill",
+      "declared_support": [
+        "claude",
+        "codex"
+      ],
+      "verified_support": {
+        "claude": {
+          "state": "unknown"
+        },
+        "codex": {
+          "state": "unknown"
         }
       }
     }

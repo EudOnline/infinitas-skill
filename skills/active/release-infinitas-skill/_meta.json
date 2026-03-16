@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "name": "release-infinitas-skill",
+  "publisher": "lvxiaoer",
+  "qualified_name": "lvxiaoer/release-infinitas-skill",
+  "version": "0.1.0",
+  "status": "active",
+  "summary": "Guide agents through validation, review, promotion, and immutable release of infinitas-skill registry skills.",
+  "owner": "lvxiaoer",
+  "owners": [
+    "lvxiaoer"
+  ],
+  "author": "lvxiaoer",
+  "maintainers": [
+    "lvxiaoer"
+  ],
+  "tags": [
+    "release",
+    "registry",
+    "publishing",
+    "immutable"
+  ],
+  "agent_compatible": [
+    "claude",
+    "claude-code",
+    "codex"
+  ],
+  "derived_from": null,
+  "replaces": null,
+  "visibility": "private",
+  "maturity": "stable",
+  "quality_score": 88,
+  "capabilities": [
+    "skill-validation",
+    "promotion",
+    "immutable-release",
+    "verified-support-recording"
+  ],
+  "use_when": [
+    "Need to validate or publish an immutable release for a registry-managed skill",
+    "Need to refresh stable release artifacts before other agents can install a skill"
+  ],
+  "avoid_when": [
+    "Need to install a released skill into a runtime directory",
+    "Need only search or inspect existing stable releases"
+  ],
+  "runtime_assumptions": [
+    "A writable infinitas-skill repository checkout is available",
+    "Signing configuration and allowed signers are already set up"
+  ],
+  "review_state": "approved",
+  "risk_level": "low",
+  "requires": {
+    "tools": [
+      "read",
+      "exec"
+    ],
+    "bins": [
+      "git"
+    ],
+    "env": []
+  },
+  "entrypoints": {
+    "skill_md": "SKILL.md"
+  },
+  "tests": {
+    "smoke": "tests/smoke.md"
+  },
+  "distribution": {
+    "installable": true,
+    "channel": "git"
+  },
+  "depends_on": [],
+  "conflicts_with": []
+}

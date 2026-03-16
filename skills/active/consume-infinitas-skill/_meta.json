@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "name": "consume-infinitas-skill",
+  "publisher": "lvxiaoer",
+  "qualified_name": "lvxiaoer/consume-infinitas-skill",
+  "version": "0.1.0",
+  "status": "active",
+  "summary": "Guide agents through search, recommendation, inspection, pull, install, and upgrade flows for released infinitas-skill artifacts.",
+  "owner": "lvxiaoer",
+  "owners": [
+    "lvxiaoer"
+  ],
+  "author": "lvxiaoer",
+  "maintainers": [
+    "lvxiaoer"
+  ],
+  "tags": [
+    "discovery",
+    "install",
+    "upgrade",
+    "openclaw"
+  ],
+  "agent_compatible": [
+    "openclaw",
+    "claude",
+    "claude-code",
+    "codex"
+  ],
+  "derived_from": null,
+  "replaces": null,
+  "visibility": "private",
+  "maturity": "stable",
+  "quality_score": 89,
+  "capabilities": [
+    "search",
+    "recommend",
+    "inspect",
+    "immutable-install",
+    "upgrade-planning"
+  ],
+  "use_when": [
+    "Need to find the best released skill for a task",
+    "Need to inspect, pull, install, or upgrade a stable released skill"
+  ],
+  "avoid_when": [
+    "Need to create a new release from source",
+    "Need to debug registry federation or mirror policy"
+  ],
+  "runtime_assumptions": [
+    "Generated catalog indexes are present or can be rebuilt",
+    "Target runtime directories such as ~/.openclaw/skills are writable when installation is requested"
+  ],
+  "review_state": "approved",
+  "risk_level": "low",
+  "requires": {
+    "tools": [
+      "read",
+      "exec"
+    ],
+    "bins": [
+      "git"
+    ],
+    "env": []
+  },
+  "entrypoints": {
+    "skill_md": "SKILL.md"
+  },
+  "tests": {
+    "smoke": "tests/smoke.md"
+  },
+  "distribution": {
+    "installable": true,
+    "channel": "git"
+  },
+  "depends_on": [],
+  "conflicts_with": []
+}

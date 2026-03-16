@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "requests": [
+    {
+      "requested_at": "2026-03-16T03:15:28Z",
+      "note": "12-04 real skill inventory"
+    }
+  ],
+  "entries": [
+    {
+      "reviewer": "lvxiaoer",
+      "decision": "approved",
+      "note": "Approve 12-04 registry skill",
+      "at": "2026-03-16T03:15:44Z"
+    }
+  ]
+}

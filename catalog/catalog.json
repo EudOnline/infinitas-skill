@@ -1,7 +1,174 @@
 {
-  "generated_at": "2026-03-12T12:56:55Z",
-  "count": 1,
+  "generated_at": "2026-03-16T03:15:58Z",
+  "count": 4,
   "skills": [
+    {
+      "name": "consume-infinitas-skill",
+      "publisher": "lvxiaoer",
+      "qualified_name": "lvxiaoer/consume-infinitas-skill",
+      "identity_mode": "qualified",
+      "version": "0.1.0",
+      "status": "active",
+      "summary": "Guide agents through search, recommendation, inspection, pull, install, and upgrade flows for released infinitas-skill artifacts.",
+      "author": "lvxiaoer",
+      "owner": "lvxiaoer",
+      "owners": [
+        "lvxiaoer"
+      ],
+      "maintainers": [
+        "lvxiaoer"
+      ],
+      "tags": [
+        "discovery",
+        "install",
+        "upgrade",
+        "openclaw"
+      ],
+      "review_state": "approved",
+      "declared_review_state": "approved",
+      "risk_level": "low",
+      "derived_from": null,
+      "snapshot_of": null,
+      "depends_on": [],
+      "conflicts_with": [],
+      "agent_compatible": [
+        "openclaw",
+        "claude",
+        "claude-code",
+        "codex"
+      ],
+      "installable": true,
+      "approval_count": 1,
+      "rejection_count": 0,
+      "blocking_rejection_count": 0,
+      "required_approvals": 1,
+      "quorum_met": true,
+      "review_gate_pass": true,
+      "required_reviewer_groups": [
+        "maintainers"
+      ],
+      "covered_reviewer_groups": [
+        "maintainers",
+        "security"
+      ],
+      "missing_reviewer_groups": [],
+      "reviewers": [
+        {
+          "reviewer": "lvxiaoer",
+          "decision": "approved",
+          "at": "2026-03-16T03:15:44Z",
+          "note": "Approve 12-04 registry skill"
+        }
+      ],
+      "path": "skills/active/consume-infinitas-skill",
+      "source_registry": "self",
+      "source_registry_url": "https://github.com/EudOnline/infinitas-skill.git",
+      "source_registry_ref": "refs/heads/main",
+      "source_registry_commit": null,
+      "source_registry_tag": null,
+      "source_registry_trust": "private",
+      "source_update_mode": "local-only",
+      "source_pin_mode": "branch",
+      "source_pin_value": "main",
+      "expected_tag": "skill/consume-infinitas-skill/v0.1.0",
+      "declared_support": [
+        "openclaw",
+        "claude",
+        "codex"
+      ],
+      "verified_support": {
+        "openclaw": {
+          "state": "unknown"
+        },
+        "claude": {
+          "state": "unknown"
+        },
+        "codex": {
+          "state": "unknown"
+        }
+      }
+    },
+    {
+      "name": "federation-registry-ops",
+      "publisher": "lvxiaoer",
+      "qualified_name": "lvxiaoer/federation-registry-ops",
+      "identity_mode": "qualified",
+      "version": "0.1.0",
+      "status": "active",
+      "summary": "Help agents inspect registry sources, federation rules, mirror behavior, and audit or inventory exports inside infinitas-skill.",
+      "author": "lvxiaoer",
+      "owner": "lvxiaoer",
+      "owners": [
+        "lvxiaoer"
+      ],
+      "maintainers": [
+        "lvxiaoer"
+      ],
+      "tags": [
+        "federation",
+        "mirror",
+        "audit",
+        "registry"
+      ],
+      "review_state": "approved",
+      "declared_review_state": "approved",
+      "risk_level": "low",
+      "derived_from": null,
+      "snapshot_of": null,
+      "depends_on": [],
+      "conflicts_with": [],
+      "agent_compatible": [
+        "claude",
+        "claude-code",
+        "codex"
+      ],
+      "installable": true,
+      "approval_count": 1,
+      "rejection_count": 0,
+      "blocking_rejection_count": 0,
+      "required_approvals": 1,
+      "quorum_met": true,
+      "review_gate_pass": true,
+      "required_reviewer_groups": [
+        "maintainers"
+      ],
+      "covered_reviewer_groups": [
+        "maintainers",
+        "security"
+      ],
+      "missing_reviewer_groups": [],
+      "reviewers": [
+        {
+          "reviewer": "lvxiaoer",
+          "decision": "approved",
+          "at": "2026-03-16T03:15:44Z",
+          "note": "Approve 12-04 registry skill"
+        }
+      ],
+      "path": "skills/active/federation-registry-ops",
+      "source_registry": "self",
+      "source_registry_url": "https://github.com/EudOnline/infinitas-skill.git",
+      "source_registry_ref": "refs/heads/main",
+      "source_registry_commit": null,
+      "source_registry_tag": null,
+      "source_registry_trust": "private",
+      "source_update_mode": "local-only",
+      "source_pin_mode": "branch",
+      "source_pin_value": "main",
+      "expected_tag": "skill/federation-registry-ops/v0.1.0",
+      "declared_support": [
+        "claude",
+        "codex"
+      ],
+      "verified_support": {
+        "claude": {
+          "state": "unknown"
+        },
+        "codex": {
+          "state": "unknown"
+        }
+      }
+    },
     {
       "name": "operate-infinitas-skill",
       "publisher": "lvxiaoer",
@@ -108,6 +275,87 @@
           "checker": "check-openclaw-compat.py",
           "evidence_path": "catalog/compatibility-evidence/openclaw/operate-infinitas-skill/0.1.1.json",
           "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py."
+        }
+      }
+    },
+    {
+      "name": "release-infinitas-skill",
+      "publisher": "lvxiaoer",
+      "qualified_name": "lvxiaoer/release-infinitas-skill",
+      "identity_mode": "qualified",
+      "version": "0.1.0",
+      "status": "active",
+      "summary": "Guide agents through validation, review, promotion, and immutable release of infinitas-skill registry skills.",
+      "author": "lvxiaoer",
+      "owner": "lvxiaoer",
+      "owners": [
+        "lvxiaoer"
+      ],
+      "maintainers": [
+        "lvxiaoer"
+      ],
+      "tags": [
+        "release",
+        "registry",
+        "publishing",
+        "immutable"
+      ],
+      "review_state": "approved",
+      "declared_review_state": "approved",
+      "risk_level": "low",
+      "derived_from": null,
+      "snapshot_of": null,
+      "depends_on": [],
+      "conflicts_with": [],
+      "agent_compatible": [
+        "claude",
+        "claude-code",
+        "codex"
+      ],
+      "installable": true,
+      "approval_count": 1,
+      "rejection_count": 0,
+      "blocking_rejection_count": 0,
+      "required_approvals": 1,
+      "quorum_met": true,
+      "review_gate_pass": true,
+      "required_reviewer_groups": [
+        "maintainers"
+      ],
+      "covered_reviewer_groups": [
+        "maintainers",
+        "security"
+      ],
+      "missing_reviewer_groups": [],
+      "reviewers": [
+        {
+          "reviewer": "lvxiaoer",
+          "decision": "approved",
+          "at": "2026-03-16T03:15:44Z",
+          "note": "Approve 12-04 registry skill"
+        }
+      ],
+      "path": "skills/active/release-infinitas-skill",
+      "source_registry": "self",
+      "source_registry_url": "https://github.com/EudOnline/infinitas-skill.git",
+      "source_registry_ref": "refs/heads/main",
+      "source_registry_commit": null,
+      "source_registry_tag": null,
+      "source_registry_trust": "private",
+      "source_update_mode": "local-only",
+      "source_pin_mode": "branch",
+      "source_pin_value": "main",
+      "expected_tag": "skill/release-infinitas-skill/v0.1.0",
+      "declared_support": [
+        "claude",
+        "codex"
+      ],
+      "verified_support": {
+        "claude": {
+          "state": "unknown"
+        },
+        "codex": {
+          "state": "unknown"
         }
       }
     }

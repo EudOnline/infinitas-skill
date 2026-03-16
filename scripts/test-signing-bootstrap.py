@@ -117,24 +117,29 @@ def rewrite_promotion_policy(repo: Path):
     write_json(policy_path, policy)
 
 
-def stabilize_active_operate_skill_reviews(repo: Path):
-    skill_dir = repo / 'skills' / 'active' / 'operate-infinitas-skill'
-    if not skill_dir.is_dir():
+def stabilize_active_skill_reviews(repo: Path):
+    active_root = repo / 'skills' / 'active'
+    if not active_root.is_dir():
         return
-    reviews_path = skill_dir / 'reviews.json'
-    reviews = json.loads(reviews_path.read_text(encoding='utf-8')) if reviews_path.exists() else {'version': 1, 'requests': [], 'entries': []}
-    entries = reviews.get('entries') if isinstance(reviews.get('entries'), list) else []
-    if not any(item.get('reviewer') == 'alice' and item.get('decision') == 'approved' for item in entries):
-        entries.append(
-            {
-                'reviewer': 'alice',
-                'decision': 'approved',
-                'at': '2026-03-12T00:10:00Z',
-                'note': 'Fixture-compatible approval for active operate skill',
-            }
+    for skill_dir in sorted(path for path in active_root.iterdir() if path.is_dir()):
+        reviews_path = skill_dir / 'reviews.json'
+        reviews = (
+            json.loads(reviews_path.read_text(encoding='utf-8'))
+            if reviews_path.exists()
+            else {'version': 1, 'requests': [], 'entries': []}
         )
-    reviews['entries'] = entries
-    write_json(reviews_path, reviews)
+        entries = reviews.get('entries') if isinstance(reviews.get('entries'), list) else []
+        if not any(item.get('reviewer') == 'alice' and item.get('decision') == 'approved' for item in entries):
+            entries.append(
+                {
+                    'reviewer': 'alice',
+                    'decision': 'approved',
+                    'at': '2026-03-12T00:10:00Z',
+                    'note': f'Fixture-compatible approval for active skill {skill_dir.name}',
+                }
+            )
+        reviews['entries'] = entries
+        write_json(reviews_path, reviews)
 
 
 def prepare_repo():
@@ -148,7 +153,7 @@ def prepare_repo():
     )
     rewrite_promotion_policy(repo)
     (repo / 'config' / 'allowed_signers').write_text('', encoding='utf-8')
-    stabilize_active_operate_skill_reviews(repo)
+    stabilize_active_skill_reviews(repo)
     scaffold_fixture(repo)
     run(['git', 'init', '--bare', str(origin)], cwd=tmpdir)
     run(['git', 'init', '-b', 'main'], cwd=repo)

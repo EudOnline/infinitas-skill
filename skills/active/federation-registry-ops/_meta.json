@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "name": "federation-registry-ops",
+  "publisher": "lvxiaoer",
+  "qualified_name": "lvxiaoer/federation-registry-ops",
+  "version": "0.1.0",
+  "status": "active",
+  "summary": "Help agents inspect registry sources, federation rules, mirror behavior, and audit or inventory exports inside infinitas-skill.",
+  "owner": "lvxiaoer",
+  "owners": [
+    "lvxiaoer"
+  ],
+  "author": "lvxiaoer",
+  "maintainers": [
+    "lvxiaoer"
+  ],
+  "tags": [
+    "federation",
+    "mirror",
+    "audit",
+    "registry"
+  ],
+  "agent_compatible": [
+    "claude",
+    "claude-code",
+    "codex"
+  ],
+  "derived_from": null,
+  "replaces": null,
+  "visibility": "private",
+  "maturity": "beta",
+  "quality_score": 84,
+  "capabilities": [
+    "registry-source-debugging",
+    "federation-policy",
+    "inventory-export",
+    "audit-export"
+  ],
+  "use_when": [
+    "Need to debug federated registry source, mirror, or namespace behavior",
+    "Need to inspect inventory export or audit export artifacts"
+  ],
+  "avoid_when": [
+    "Need to publish a new release from source",
+    "Need to install a skill into a runtime directory"
+  ],
+  "runtime_assumptions": [
+    "config/registry-sources.json and generated catalog exports are available",
+    "The task is about registry operations inside infinitas-skill rather than a generic Git repository"
+  ],
+  "review_state": "approved",
+  "risk_level": "low",
+  "requires": {
+    "tools": [
+      "read",
+      "exec"
+    ],
+    "bins": [
+      "git"
+    ],
+    "env": []
+  },
+  "entrypoints": {
+    "skill_md": "SKILL.md"
+  },
+  "tests": {
+    "smoke": "tests/smoke.md"
+  },
+  "distribution": {
+    "installable": true,
+    "channel": "git"
+  },
+  "depends_on": [],
+  "conflicts_with": []
+}

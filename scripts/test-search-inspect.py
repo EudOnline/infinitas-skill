@@ -7,6 +7,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 QUALIFIED_NAME = 'lvxiaoer/operate-infinitas-skill'
+RELEASE_QUALIFIED_NAME = 'lvxiaoer/release-infinitas-skill'
+CONSUME_QUALIFIED_NAME = 'lvxiaoer/consume-infinitas-skill'
+FEDERATION_QUALIFIED_NAME = 'lvxiaoer/federation-registry-ops'
 
 
 def fail(message):
@@ -76,10 +79,19 @@ def scenario_search_filters_by_publisher_and_agent():
     result = run(['./scripts/search-skills.sh', '--publisher', 'lvxiaoer', '--agent', 'codex'], cwd=ROOT)
     payload = json.loads(result.stdout)
     results = payload.get('results') or []
-    if len(results) != 1:
-        fail(f'expected exactly one filtered result, got {len(results)}')
-    if results[0].get('qualified_name') != QUALIFIED_NAME:
-        fail(f"unexpected filtered result {results[0].get('qualified_name')!r}")
+    expected = {
+        QUALIFIED_NAME,
+        RELEASE_QUALIFIED_NAME,
+        CONSUME_QUALIFIED_NAME,
+        FEDERATION_QUALIFIED_NAME,
+    }
+    actual = {item.get('qualified_name') for item in results}
+    missing = expected - actual
+    if missing:
+        fail(f'expected filtered results to include {sorted(missing)!r}, got {sorted(actual)!r}')
+    for item in results:
+        if item.get('publisher') != 'lvxiaoer':
+            fail(f"unexpected publisher in filtered search result: {item.get('publisher')!r}")
 
 
 def scenario_inspect_returns_distribution_and_dependency_views():
