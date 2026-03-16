@@ -328,6 +328,7 @@ If `INFINITAS_SERVER_MIRROR_REMOTE` is configured, hosted publish jobs also atte
 For AI-driven publishing, import, export, and installation, treat the following files as the machine-facing contract:
 
 - `docs/ai/agent-operations.md` — agent-facing common operations manual
+- `docs/ai/workflow-drills.md` — search, recommend, inspect, publish, and pull drills that stay on public docs plus generated JSON surfaces
 - `docs/ai/discovery.md` — private-first discovery, install-by-name, and upgrade contract
 - `docs/ai/recommend.md` — recommendation workflow, ranking factors, and recommendation explanations
 - `docs/ai/search-and-inspect.md` — search, inspect, trust state, compatibility, provenance, and explanation-first consumer workflow
@@ -418,6 +419,7 @@ Use that document as the source of truth for:
 - **Install and sync prefer immutable release artifacts**. When a verified distribution manifest exists, resolver/install/sync materialize from that manifest instead of relying only on the live working-tree folder.
 - **Consumer discovery is search-first**. `scripts/search-skills.sh` filters the generated discovery surface by query, publisher, agent, and tag without scraping source paths.
 - **Recommendation is task-first**. `scripts/recommend-skill.sh` ranks candidate skills using trust state, compatibility, maturity, quality, and verification freshness when the user describes a job instead of an exact skill name.
+- **AI workflow drills are confirm-first**. Start with [docs/ai/workflow-drills.md](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/.worktrees/codex-federation-trust-rules/docs/ai/workflow-drills.md) when an agent needs a realistic search, recommend, inspect, publish, or pull playbook without opening implementation internals.
 - **Inspect before install**. `scripts/inspect-skill.sh` exposes trust state, compatibility summaries, dependency summaries, provenance references, and the verified distribution manifest path as a stable JSON view.
 - **Resolver and upgrade payloads explain policy**. `scripts/resolve-skill.sh`, `scripts/install-by-name.sh`, `scripts/check-skill-update.sh`, and `scripts/upgrade-skill.sh` now emit additive `explanation` fields with `selection_reason`, `policy_reasons`, and `version_reason`.
 - **Compatibility is exported**. Consumers can read a generated compatibility matrix instead of scraping every `_meta.json`.

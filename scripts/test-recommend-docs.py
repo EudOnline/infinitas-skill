@@ -28,8 +28,10 @@ def main():
     discovery = ROOT / 'docs' / 'ai' / 'discovery.md'
     search_doc = ROOT / 'docs' / 'ai' / 'search-and-inspect.md'
     recommend_doc = ROOT / 'docs' / 'ai' / 'recommend.md'
+    workflow_doc = ROOT / 'docs' / 'ai' / 'workflow-drills.md'
 
     assert_contains(readme, 'scripts/recommend-skill.sh')
+    assert_contains(readme, 'docs/ai/workflow-drills.md')
     assert_contains(discovery, 'scripts/recommend-skill.sh')
     assert_contains(search_doc, 'scripts/recommend-skill.sh')
     assert_contains(search_doc, 'search-skills.sh')
@@ -41,6 +43,9 @@ def main():
     assert_contains(recommend_doc, 'compatibility')
     assert_contains(recommend_doc, 'maturity')
     assert_contains(recommend_doc, 'verification freshness')
+    assert_contains(workflow_doc, 'scripts/recommend-skill.sh')
+    assert_contains(workflow_doc, 'scripts/inspect-skill.sh')
+    assert_contains(workflow_doc, '--mode confirm')
 
     print('OK: recommend docs checks passed')
 

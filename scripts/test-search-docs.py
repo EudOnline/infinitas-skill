@@ -29,8 +29,10 @@ def main():
     pull = ROOT / 'docs' / 'ai' / 'pull.md'
     operations = ROOT / 'docs' / 'ai' / 'agent-operations.md'
     search_doc = ROOT / 'docs' / 'ai' / 'search-and-inspect.md'
+    workflow_doc = ROOT / 'docs' / 'ai' / 'workflow-drills.md'
 
     assert_contains(readme, 'scripts/search-skills.sh')
+    assert_contains(readme, 'docs/ai/workflow-drills.md')
     assert_contains(readme, 'scripts/inspect-skill.sh')
     assert_contains(discovery, 'scripts/search-skills.sh')
     assert_contains(discovery, 'scripts/install-by-name.sh')
@@ -40,6 +42,8 @@ def main():
     assert_contains(operations, 'scripts/inspect-skill.sh')
     assert_contains(operations, 'scripts/search-skills.sh')
     assert_contains(operations, 'provenance')
+    assert_contains(operations, 'docs/ai/workflow-drills.md')
+    assert_contains(operations, 'implementation internals')
     assert_contains(search_doc, 'scripts/search-skills.sh')
     assert_contains(search_doc, 'scripts/inspect-skill.sh')
     assert_contains(search_doc, 'verified distribution manifests')
@@ -48,6 +52,10 @@ def main():
     assert_contains(search_doc, 'provenance')
     assert_contains(search_doc, 'install-by-name.sh')
     assert_contains(search_doc, 'upgrade-skill.sh')
+    assert_contains(workflow_doc, 'scripts/search-skills.sh')
+    assert_contains(workflow_doc, 'scripts/inspect-skill.sh')
+    assert_contains(workflow_doc, 'scripts/pull-skill.sh')
+    assert_contains(workflow_doc, '--mode confirm')
 
     print('OK: search docs checks passed')
 

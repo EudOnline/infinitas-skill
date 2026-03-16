@@ -6,13 +6,14 @@
 
 - `README.md`
 - `docs/ai/agent-operations.md`
+- `docs/ai/workflow-drills.md`
 - `docs/ai/discovery.md`
 - `docs/ai/openclaw.md`
 - `docs/ai/publish.md`
 - `docs/ai/pull.md`
 - `catalog/ai-index.json`
 
-如非故障排查，不应继续深入内部实现脚本。
+如非故障排查，不应继续深入 implementation internals 或内部实现脚本。
 
 ## Goal
 
@@ -24,7 +25,7 @@
 - 什么时候只能做人工步骤
 - 什么时候必须先停下来而不是继续猜测
 
-将本文件视为**决策手册**；将 `docs/ai/discovery.md`、`docs/ai/publish.md` 与 `docs/ai/pull.md` 视为**严格执行协议**。
+将本文件视为**决策手册**；将 `docs/ai/workflow-drills.md` 视为**可执行 drill 手册**；将 `docs/ai/discovery.md`、`docs/ai/publish.md` 与 `docs/ai/pull.md` 视为**严格执行协议**。
 
 ## Core Model
 
