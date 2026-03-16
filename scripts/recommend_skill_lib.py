@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
 
+from decision_metadata_lib import canonical_decision_metadata
 from discovery_resolver_lib import load_discovery_index
 
 
@@ -198,6 +199,7 @@ def recommend_skills(root: Path, task: str, target_agent: str | None = None, lim
         if not isinstance(item, dict):
             continue
         score, factors = _score_item(item, task_tokens=task_tokens, target_agent=target_agent, default_registry=default_registry)
+        decision_metadata = canonical_decision_metadata(item)
         scored.append(
             (
                 score,
@@ -213,12 +215,12 @@ def recommend_skills(root: Path, task: str, target_agent: str | None = None, lim
                     'trust_state': item.get('trust_state'),
                     'verified_support': item.get('verified_support') or {},
                     'install_requires_confirmation': item.get('install_requires_confirmation'),
-                    'use_when': item.get('use_when') or [],
-                    'avoid_when': item.get('avoid_when') or [],
-                    'capabilities': item.get('capabilities') or [],
-                    'runtime_assumptions': item.get('runtime_assumptions') or [],
-                    'maturity': item.get('maturity') or 'unknown',
-                    'quality_score': item.get('quality_score') if isinstance(item.get('quality_score'), int) else 0,
+                    'use_when': decision_metadata['use_when'],
+                    'avoid_when': decision_metadata['avoid_when'],
+                    'capabilities': decision_metadata['capabilities'],
+                    'runtime_assumptions': decision_metadata['runtime_assumptions'],
+                    'maturity': decision_metadata['maturity'],
+                    'quality_score': decision_metadata['quality_score'],
                     'score': score,
                     'recommendation_reason': _recommendation_reason(item, factors),
                     'ranking_factors': factors,

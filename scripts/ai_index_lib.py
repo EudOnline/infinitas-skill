@@ -4,6 +4,8 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
+from decision_metadata_lib import canonical_decision_metadata
+
 SEMVER_RE = re.compile(r'^(\d+)\.(\d+)\.(\d+)(?:[-+]([A-Za-z0-9_.-]+))?$')
 
 INSTALL_POLICY = {
@@ -125,29 +127,11 @@ def _trust_state_from_version_entry(version_entry):
     return 'unknown'
 
 
-def _maturity_for_entry(meta):
-    value = meta.get('maturity') if isinstance(meta, dict) else None
-    if isinstance(value, str) and value.strip():
-        return value.strip()
-    return 'unknown'
-
-
-def _quality_score_for_entry(meta):
-    value = meta.get('quality_score') if isinstance(meta, dict) else None
-    if isinstance(value, int):
-        return value
-    return 0
-
-
 def _string_list_for_entry(meta, field):
     value = meta.get(field) if isinstance(meta, dict) else None
     if isinstance(value, list):
         return [item.strip() for item in value if isinstance(item, str) and item.strip()]
     return []
-
-
-def _capabilities_for_entry(meta):
-    return _string_list_for_entry(meta, 'capabilities')
 
 
 def _last_verified_at(verified_support, meta):
@@ -188,6 +172,7 @@ def build_ai_index(*, root: Path, catalog_entries: list, distribution_entries: l
             continue
         current = catalog_lookup.get(key) or grouped[key][0]
         meta = _meta_for_entry(root, current)
+        decision_metadata = canonical_decision_metadata(meta)
         publisher = _publisher_for_entry(current, meta)
         verified_support = current.get('verified_support') or {}
         requires = meta.get('requires') if isinstance(meta.get('requires'), dict) else {}
@@ -223,13 +208,13 @@ def build_ai_index(*, root: Path, catalog_entries: list, distribution_entries: l
                 'qualified_name': current.get('qualified_name') or (f'{publisher}/{current.get("name")}' if publisher and current.get('name') else current.get('name')),
                 'summary': current.get('summary') or '',
                 'tags': meta.get('tags') or [],
-                'maturity': _maturity_for_entry(meta),
-                'quality_score': _quality_score_for_entry(meta),
-                'capabilities': _capabilities_for_entry(meta),
+                'maturity': decision_metadata['maturity'],
+                'quality_score': decision_metadata['quality_score'],
+                'capabilities': decision_metadata['capabilities'],
                 'last_verified_at': _last_verified_at(verified_support, meta),
-                'use_when': _string_list_for_entry(meta, 'use_when'),
-                'avoid_when': _string_list_for_entry(meta, 'avoid_when'),
-                'runtime_assumptions': _string_list_for_entry(meta, 'runtime_assumptions'),
+                'use_when': decision_metadata['use_when'],
+                'avoid_when': decision_metadata['avoid_when'],
+                'runtime_assumptions': decision_metadata['runtime_assumptions'],
                 'agent_compatible': current.get('agent_compatible') or [],
                 'compatibility': {
                     'declared_support': current.get('declared_support') or current.get('agent_compatible') or [],

@@ -48,6 +48,8 @@ def main():
     assert_contains(recommend_doc, 'confidence')
     assert_contains(recommend_doc, 'comparative_signals')
     assert_contains(recommend_doc, 'comparison_summary')
+    assert_contains(recommend_doc, '_meta.json')
+    assert_contains(recommend_doc, 'canonical source')
     assert_contains(workflow_doc, 'scripts/recommend-skill.sh')
     assert_contains(workflow_doc, 'scripts/inspect-skill.sh')
     assert_contains(workflow_doc, '--mode confirm')

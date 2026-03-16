@@ -2,6 +2,8 @@
 import json
 from pathlib import Path
 
+from decision_metadata_lib import canonical_decision_metadata
+
 
 def _load_json(path: Path):
     return json.loads(path.read_text(encoding='utf-8'))
@@ -69,17 +71,6 @@ def _dependency_summary(dependencies: dict) -> dict:
     }
 
 
-def _decision_metadata(entry: dict) -> dict:
-    return {
-        'use_when': list(entry.get('use_when') or []),
-        'avoid_when': list(entry.get('avoid_when') or []),
-        'capabilities': list(entry.get('capabilities') or []),
-        'runtime_assumptions': list(entry.get('runtime_assumptions') or []),
-        'maturity': entry.get('maturity') or 'unknown',
-        'quality_score': entry.get('quality_score') if isinstance(entry.get('quality_score'), int) else 0,
-    }
-
-
 def _derive_trust_state(version_entry: dict, manifest_payload: dict, provenance_payload: dict, distribution: dict) -> str:
     signature_present = bool(
         version_entry.get('attestation_signature_path')
@@ -118,27 +109,21 @@ def search_skills(root: Path, query: str | None = None, publisher: str | None = 
             continue
         if tag and tag not in (item.get('tags') or []):
             continue
-        results.append(
-            {
-                'name': item.get('name'),
-                'qualified_name': item.get('qualified_name'),
-                'publisher': item.get('publisher'),
-                'summary': item.get('summary'),
-                'latest_version': item.get('latest_version'),
-                'trust_state': item.get('trust_state'),
-                'verified_support': item.get('verified_support') or {},
-                'agent_compatible': item.get('agent_compatible') or [],
-                'tags': item.get('tags') or [],
-                'attestation_formats': item.get('attestation_formats') or [],
-                'source_registry': item.get('source_registry'),
-                'use_when': item.get('use_when') or [],
-                'avoid_when': item.get('avoid_when') or [],
-                'capabilities': item.get('capabilities') or [],
-                'runtime_assumptions': item.get('runtime_assumptions') or [],
-                'maturity': item.get('maturity') or 'unknown',
-                'quality_score': item.get('quality_score') if isinstance(item.get('quality_score'), int) else 0,
-            }
-        )
+        result = {
+            'name': item.get('name'),
+            'qualified_name': item.get('qualified_name'),
+            'publisher': item.get('publisher'),
+            'summary': item.get('summary'),
+            'latest_version': item.get('latest_version'),
+            'trust_state': item.get('trust_state'),
+            'verified_support': item.get('verified_support') or {},
+            'agent_compatible': item.get('agent_compatible') or [],
+            'tags': item.get('tags') or [],
+            'attestation_formats': item.get('attestation_formats') or [],
+            'source_registry': item.get('source_registry'),
+        }
+        result.update(canonical_decision_metadata(item))
+        results.append(result)
     return {
         'ok': True,
         'query': query,
@@ -196,7 +181,7 @@ def inspect_skill(root: Path, name: str, version: str | None = None) -> dict:
         'version': resolved_version,
         'latest_version': skill_entry.get('latest_version'),
         'trust_state': trust_state,
-        'decision_metadata': _decision_metadata(skill_entry),
+        'decision_metadata': canonical_decision_metadata(skill_entry),
         'compatibility': {
             'declared_support': ((skill_entry.get('compatibility') or {}).get('declared_support') or []),
             'verified_support': verified_support,

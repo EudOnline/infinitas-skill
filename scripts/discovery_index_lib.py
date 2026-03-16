@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from ai_index_lib import validate_ai_index_payload
+from decision_metadata_lib import canonical_decision_metadata
 from http_registry_lib import HostedRegistryError, fetch_json, registry_catalog_path
 from registry_source_lib import normalized_auth, resolve_registry_root
 
@@ -54,6 +55,7 @@ def _stable_source_root(root: Path, reg: dict, reg_root: Path | None):
 
 
 def normalize_discovery_skill(skill: dict, *, source_registry: str, source_priority: int, trust_level: str, default_registry: str) -> dict:
+    decision_metadata = canonical_decision_metadata(skill)
     qualified_name = skill.get('qualified_name') or skill.get('name')
     latest_version = skill.get('latest_version') or skill.get('default_install_version') or ''
     match_names = []
@@ -81,15 +83,15 @@ def normalize_discovery_skill(skill: dict, *, source_registry: str, source_prior
         'trust_level': trust_level,
         'trust_state': skill.get('trust_state') or 'unknown',
         'tags': list(skill.get('tags') or []),
-        'maturity': skill.get('maturity') or 'unknown',
-        'quality_score': skill.get('quality_score') if isinstance(skill.get('quality_score'), int) else 0,
+        'maturity': decision_metadata['maturity'],
+        'quality_score': decision_metadata['quality_score'],
         'last_verified_at': skill.get('last_verified_at') if isinstance(skill.get('last_verified_at'), str) and skill.get('last_verified_at').strip() else None,
-        'capabilities': list(skill.get('capabilities') or []),
+        'capabilities': decision_metadata['capabilities'],
         'verified_support': dict(skill.get('verified_support') or {}),
         'attestation_formats': list(((skill.get('versions') or {}).get(latest_version) or {}).get('attestation_formats') or ['ssh']),
-        'use_when': list(skill.get('use_when') or []),
-        'avoid_when': list(skill.get('avoid_when') or []),
-        'runtime_assumptions': list(skill.get('runtime_assumptions') or []),
+        'use_when': decision_metadata['use_when'],
+        'avoid_when': decision_metadata['avoid_when'],
+        'runtime_assumptions': decision_metadata['runtime_assumptions'],
     }
 
 

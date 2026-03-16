@@ -133,6 +133,8 @@ Use `scripts/migrate-skill-meta.py` to add `schema_version` to older skill metad
 
 These AI decision fields are optional, and empty arrays are valid, but sparse metadata makes `catalog/ai-index.json`, discovery, and recommendation results less decision-useful for agents.
 
+`_meta.json` is the canonical source for these authored decision fields. Generated outputs such as `catalog/ai-index.json`, `catalog/discovery-index.json`, and the search / recommend / inspect wrappers should mirror them rather than inventing separate authored copies.
+
 ## MVP constraints
 
 - Keep `_meta.json` machine-friendly and flat enough to parse from shell/python helpers

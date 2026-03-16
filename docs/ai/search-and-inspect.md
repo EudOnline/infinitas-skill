@@ -41,6 +41,8 @@ The output is built from `catalog/discovery-index.json` and includes:
 - `attestation_formats`
 - `source_registry`
 
+These fields are mirrored from the canonical author-owned decision metadata in each skill's `_meta.json`, then projected through generated indexes for stable consumer use.
+
 Do not scrape raw source paths from `skills/active/` or `skills/incubating/` for consumer discovery.
 
 ## Recommend
@@ -91,6 +93,8 @@ Read `decision_metadata` first when you need the author-owned selection hints:
 - `runtime_assumptions`
 - `maturity`
 - `quality_score`
+
+Treat `_meta.json` as the canonical source and search / recommend / inspect outputs as projections of that same metadata, not separate authored copies.
 
 ## Verified distribution manifests
 

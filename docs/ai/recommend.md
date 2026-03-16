@@ -63,6 +63,8 @@ Look at these keys first:
 
 At the top level, `explanation.comparison_summary` and `explanation.winner_confidence` explain why the winner outranked the closest visible alternative.
 
+`_meta.json` is the canonical source of authored decision metadata. Generated indexes and AI wrappers mirror those same fields so recommend, search, and inspect can stay in sync without inventing separate copies of `use_when`, `avoid_when`, `capabilities`, `runtime_assumptions`, `maturity`, or `quality_score`.
+
 The surfaced decision metadata is the canonical author-owned guidance from `_meta.json`. Use it to explain why a skill fits the task without reopening raw catalogs.
 
 ## Safety rules
