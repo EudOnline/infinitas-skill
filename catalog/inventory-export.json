@@ -1,0 +1,62 @@
+{
+  "$schema": "../schemas/inventory-export.schema.json",
+  "schema_version": 1,
+  "generated_at": "2026-03-16T00:54:01Z",
+  "default_registry": "self",
+  "counts": {
+    "registries": 1,
+    "skills": 1,
+    "installable_skills": 1,
+    "released_skills": 1
+  },
+  "registries": [
+    {
+      "name": "self",
+      "kind": "git",
+      "priority": 100,
+      "enabled": true,
+      "trust": "private",
+      "resolver_candidate": true,
+      "federation_mode": null,
+      "allowed_publishers": [],
+      "publisher_map": {},
+      "require_immutable_artifacts": false,
+      "resolved_root": ".",
+      "resolved_ref": "refs/heads/main",
+      "resolved_commit": null,
+      "resolved_tag": null,
+      "resolved_origin_url": "git@github-eudonline:EudOnline/infinitas-skill.git"
+    }
+  ],
+  "skills": [
+    {
+      "name": "operate-infinitas-skill",
+      "publisher": "lvxiaoer",
+      "qualified_name": "lvxiaoer/operate-infinitas-skill",
+      "identity_mode": "qualified",
+      "version": "0.1.1",
+      "status": "active",
+      "summary": "Teach OpenClaw, Codex, and Claude Code how to operate inside the infinitas-skill repository.",
+      "path": "skills/active/operate-infinitas-skill",
+      "installable": true,
+      "released": true,
+      "source_registry": "self",
+      "source_registry_url": "https://github.com/EudOnline/infinitas-skill.git",
+      "source_registry_trust": "private",
+      "source_registry_ref": "refs/heads/main",
+      "source_registry_commit": null,
+      "source_registry_tag": null,
+      "source_update_mode": "local-only",
+      "source_pin_mode": "branch",
+      "source_pin_value": "main",
+      "source_federation_mode": null,
+      "resolver_candidate": true,
+      "distribution_manifest_path": "catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.1/manifest.json",
+      "distribution_bundle_path": "catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.1/skill.tar.gz",
+      "release_attestation_path": "catalog/provenance/operate-infinitas-skill-0.1.1.json",
+      "release_attestation_signature_path": "catalog/provenance/operate-infinitas-skill-0.1.1.json.ssig",
+      "release_source_snapshot_tag": "skill/operate-infinitas-skill/v0.1.1",
+      "release_source_snapshot_commit": "50f1370101ae36cc509516cd9b75571742c2bf3b"
+    }
+  ]
+}
