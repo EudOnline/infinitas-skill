@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-03-16T02:50:35Z",
+  "generated_at": "2026-03-16T03:49:17Z",
   "registry": {
     "default_registry": "self"
   },
@@ -142,6 +142,119 @@
           "attestation_path": "catalog/provenance/operate-infinitas-skill-0.1.1.json",
           "attestation_signature_path": "catalog/provenance/operate-infinitas-skill-0.1.1.json.ssig",
           "published_at": "2026-03-12T12:56:45Z",
+          "stability": "stable",
+          "installable": true,
+          "attestation_formats": [
+            "ssh"
+          ],
+          "trust_state": "verified",
+          "resolution": {
+            "preferred_source": "distribution-manifest",
+            "fallback_allowed": false
+          }
+        }
+      }
+    },
+    {
+      "name": "release-infinitas-skill",
+      "publisher": "lvxiaoer",
+      "qualified_name": "lvxiaoer/release-infinitas-skill",
+      "summary": "Guide agents through validation, review, promotion, and immutable release of infinitas-skill registry skills.",
+      "tags": [
+        "release",
+        "registry",
+        "publishing",
+        "immutable"
+      ],
+      "maturity": "stable",
+      "quality_score": 88,
+      "capabilities": [
+        "skill-validation",
+        "promotion",
+        "immutable-release",
+        "verified-support-recording"
+      ],
+      "last_verified_at": null,
+      "use_when": [
+        "Need to validate or publish an immutable release for a registry-managed skill",
+        "Need to refresh stable release artifacts before other agents can install a skill"
+      ],
+      "avoid_when": [
+        "Need to install a released skill into a runtime directory",
+        "Need only search or inspect existing stable releases"
+      ],
+      "runtime_assumptions": [
+        "A writable infinitas-skill repository checkout is available",
+        "Signing configuration and allowed signers are already set up"
+      ],
+      "agent_compatible": [
+        "claude",
+        "claude-code",
+        "codex"
+      ],
+      "compatibility": {
+        "declared_support": [
+          "claude",
+          "codex"
+        ],
+        "verified_support": {
+          "claude": {
+            "state": "unknown"
+          },
+          "codex": {
+            "state": "unknown"
+          }
+        }
+      },
+      "verified_support": {
+        "claude": {
+          "state": "unknown"
+        },
+        "codex": {
+          "state": "unknown"
+        }
+      },
+      "trust_state": "verified",
+      "default_install_version": "0.1.0",
+      "latest_version": "0.1.0",
+      "available_versions": [
+        "0.1.0"
+      ],
+      "entrypoints": {
+        "skill_md": "SKILL.md"
+      },
+      "requires": {
+        "tools": [
+          "read",
+          "exec"
+        ],
+        "env": []
+      },
+      "interop": {
+        "openclaw": {
+          "runtime_targets": [
+            "~/.openclaw/skills",
+            "~/.openclaw/workspace/skills"
+          ],
+          "import_supported": true,
+          "export_supported": true,
+          "public_publish": {
+            "clawhub": {
+              "supported": true,
+              "default": false
+            }
+          }
+        }
+      },
+      "versions": {
+        "0.1.0": {
+          "manifest_path": "catalog/distributions/lvxiaoer/release-infinitas-skill/0.1.0/manifest.json",
+          "distribution_manifest_path": "catalog/distributions/lvxiaoer/release-infinitas-skill/0.1.0/manifest.json",
+          "bundle_path": "catalog/distributions/lvxiaoer/release-infinitas-skill/0.1.0/skill.tar.gz",
+          "bundle_sha256": "dc3a597e705fbee744968eaad9583d0efc758fa0d0297cdc544980241ae67bd0",
+          "attestation_path": "catalog/provenance/release-infinitas-skill-0.1.0.json",
+          "attestation_signature_path": "catalog/provenance/release-infinitas-skill-0.1.0.json.ssig",
+          "published_at": "2026-03-16T03:49:16Z",
           "stability": "stable",
           "installable": true,
           "attestation_formats": [

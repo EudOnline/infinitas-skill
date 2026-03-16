@@ -1,13 +1,13 @@
 {
   "$schema": "../schemas/inventory-export.schema.json",
   "schema_version": 1,
-  "generated_at": "2026-03-16T03:15:58Z",
+  "generated_at": "2026-03-16T03:49:17Z",
   "default_registry": "self",
   "counts": {
     "registries": 1,
     "skills": 4,
     "installable_skills": 4,
-    "released_skills": 1
+    "released_skills": 2
   },
   "registries": [
     {
@@ -126,7 +126,7 @@
       "summary": "Guide agents through validation, review, promotion, and immutable release of infinitas-skill registry skills.",
       "path": "skills/active/release-infinitas-skill",
       "installable": true,
-      "released": false,
+      "released": true,
       "source_registry": "self",
       "source_registry_url": "https://github.com/EudOnline/infinitas-skill.git",
       "source_registry_trust": "private",
@@ -138,12 +138,12 @@
       "source_pin_value": "main",
       "source_federation_mode": null,
       "resolver_candidate": true,
-      "distribution_manifest_path": null,
-      "distribution_bundle_path": null,
-      "release_attestation_path": null,
-      "release_attestation_signature_path": null,
-      "release_source_snapshot_tag": null,
-      "release_source_snapshot_commit": null
+      "distribution_manifest_path": "catalog/distributions/lvxiaoer/release-infinitas-skill/0.1.0/manifest.json",
+      "distribution_bundle_path": "catalog/distributions/lvxiaoer/release-infinitas-skill/0.1.0/skill.tar.gz",
+      "release_attestation_path": "catalog/provenance/release-infinitas-skill-0.1.0.json",
+      "release_attestation_signature_path": "catalog/provenance/release-infinitas-skill-0.1.0.json.ssig",
+      "release_source_snapshot_tag": "skill/release-infinitas-skill/v0.1.0",
+      "release_source_snapshot_commit": "1fc8477d2df4aa3f89a197ce0300b1a553913f8d"
     }
   ]
 }

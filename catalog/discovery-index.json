@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-03-16T02:50:35Z",
+  "generated_at": "2026-03-16T03:49:17Z",
   "default_registry": "self",
   "sources": [
     {
@@ -94,6 +94,69 @@
       "runtime_assumptions": [
         "A Git checkout of infinitas-skill is available",
         "Repository scripts can be executed from the workspace"
+      ]
+    },
+    {
+      "name": "release-infinitas-skill",
+      "qualified_name": "lvxiaoer/release-infinitas-skill",
+      "publisher": "lvxiaoer",
+      "summary": "Guide agents through validation, review, promotion, and immutable release of infinitas-skill registry skills.",
+      "source_registry": "self",
+      "source_priority": 100,
+      "match_names": [
+        "lvxiaoer/release-infinitas-skill",
+        "release-infinitas-skill"
+      ],
+      "default_install_version": "0.1.0",
+      "latest_version": "0.1.0",
+      "available_versions": [
+        "0.1.0"
+      ],
+      "agent_compatible": [
+        "claude",
+        "claude-code",
+        "codex"
+      ],
+      "install_requires_confirmation": false,
+      "trust_level": "private",
+      "trust_state": "verified",
+      "tags": [
+        "release",
+        "registry",
+        "publishing",
+        "immutable"
+      ],
+      "maturity": "stable",
+      "quality_score": 88,
+      "last_verified_at": null,
+      "capabilities": [
+        "skill-validation",
+        "promotion",
+        "immutable-release",
+        "verified-support-recording"
+      ],
+      "verified_support": {
+        "claude": {
+          "state": "unknown"
+        },
+        "codex": {
+          "state": "unknown"
+        }
+      },
+      "attestation_formats": [
+        "ssh"
+      ],
+      "use_when": [
+        "Need to validate or publish an immutable release for a registry-managed skill",
+        "Need to refresh stable release artifacts before other agents can install a skill"
+      ],
+      "avoid_when": [
+        "Need to install a released skill into a runtime directory",
+        "Need only search or inspect existing stable releases"
+      ],
+      "runtime_assumptions": [
+        "A writable infinitas-skill repository checkout is available",
+        "Signing configuration and allowed signers are already set up"
       ]
     }
   ]
