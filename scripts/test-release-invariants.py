@@ -479,6 +479,49 @@ def scenario_signed_tag_must_be_pushed():
         shutil.rmtree(tmpdir)
 
 
+def scenario_local_signed_tag_can_emit_local_provenance():
+    tmpdir, repo, _origin, _key_path, _identity = prepare_repo(include_signers=True)
+    try:
+        result = run(
+            [
+                str(repo / 'scripts' / 'release-skill.sh'),
+                FIXTURE_NAME,
+                '--create-tag',
+                '--write-provenance',
+                '--local-provenance',
+            ],
+            cwd=repo,
+            env=make_env(),
+        )
+        combined = result.stdout + result.stderr
+        assert_contains(combined, 'wrote provenance:', 'local provenance output')
+        provenance_path = repo / 'catalog' / 'provenance' / f'{FIXTURE_NAME}-{FIXTURE_VERSION}.json'
+        distribution_manifest = repo / 'catalog' / 'distributions' / '_legacy' / FIXTURE_NAME / FIXTURE_VERSION / 'manifest.json'
+        if not provenance_path.exists():
+            fail(f'missing local provenance {provenance_path}')
+        if not distribution_manifest.exists():
+            fail(f'missing local distribution manifest {distribution_manifest}')
+        provenance = json.loads(provenance_path.read_text(encoding='utf-8'))
+        release = provenance.get('release') or {}
+        if release.get('release_mode') != 'local-tag':
+            fail(f"expected release_mode 'local-tag', got {release.get('release_mode')!r}")
+        if provenance.get('source_snapshot', {}).get('pushed') is not False:
+            fail(f"expected unpushed local source snapshot, got {provenance.get('source_snapshot')!r}")
+        if provenance.get('git', {}).get('remote_tag_commit') is not None:
+            fail(f"expected no remote_tag_commit for local provenance, got {provenance.get('git')!r}")
+        remote_tag = run(['git', 'ls-remote', '--tags', 'origin', f'refs/tags/{FIXTURE_TAG}^{{}}'], cwd=repo).stdout.strip()
+        if remote_tag:
+            fail(f'expected local provenance path to avoid pushing the tag, got {remote_tag!r}')
+        run([sys.executable, str(repo / 'scripts' / 'verify-attestation.py'), str(provenance_path)], cwd=repo, env=make_env())
+        run(
+            [sys.executable, str(repo / 'scripts' / 'verify-distribution-manifest.py'), str(distribution_manifest)],
+            cwd=repo,
+            env=make_env(),
+        )
+    finally:
+        shutil.rmtree(tmpdir)
+
+
 def scenario_signed_pushed_release_succeeds():
     tmpdir, repo, _origin, _key_path, identity = prepare_repo(include_signers=True)
     try:
@@ -564,6 +607,7 @@ def main():
     scenario_ahead_of_upstream_is_rejected()
     scenario_unsigned_tag_is_rejected()
     scenario_signed_tag_must_be_pushed()
+    scenario_local_signed_tag_can_emit_local_provenance()
     scenario_signed_pushed_release_succeeds()
     scenario_existing_signed_tag_can_resume_release()
     print('OK: release invariant checks passed')

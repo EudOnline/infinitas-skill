@@ -25,6 +25,12 @@ def parse_args():
         help='Release operator identity; defaults to INFINITAS_SKILL_RELEASER or git user.name/user.email',
     )
     parser.add_argument(
+        '--release-mode',
+        choices=['stable-release', 'local-tag'],
+        default='stable-release',
+        help='Trust mode for the attested source snapshot',
+    )
+    parser.add_argument(
         '--distribution-manifest-path',
         help='Repository-relative distribution manifest path to bind into the signed attestation payload',
     )
@@ -56,7 +62,7 @@ def parse_args():
 def main():
     args = parse_args()
     try:
-        context = collect_release_context(args.skill, root=ROOT, releaser=args.releaser)
+        context = collect_release_context(args.skill, root=ROOT, releaser=args.releaser, release_mode=args.release_mode)
     except ReleaseError as exc:
         print(f'FAIL: {exc}', file=sys.stderr)
         raise SystemExit(1)

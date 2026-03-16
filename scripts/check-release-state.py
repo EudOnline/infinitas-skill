@@ -12,7 +12,7 @@ def parse_args():
     parser.add_argument('skill', help='Skill name or path')
     parser.add_argument(
         '--mode',
-        choices=['preflight', 'local-tag', 'stable-release'],
+        choices=['preflight', 'local-preflight', 'local-tag', 'stable-release'],
         default='stable-release',
         help='Which release invariant set to enforce',
     )

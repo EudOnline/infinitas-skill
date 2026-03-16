@@ -18,10 +18,10 @@ def unique(values):
     return result
 
 
-def collect_release_context(skill, root=None, releaser=None, ignore_errors=None):
+def collect_release_context(skill, root=None, releaser=None, ignore_errors=None, release_mode='stable-release'):
     root = Path(root or ROOT).resolve()
     skill_dir = resolve_skill(root, skill)
-    state = collect_release_state(skill_dir, mode='stable-release', root=root)
+    state = collect_release_state(skill_dir, mode=release_mode, root=root)
     ignore_errors = ignore_errors or []
     filtered_errors = [
         error for error in state['errors'] if not any(ignored in error for ignored in ignore_errors)
@@ -69,6 +69,7 @@ def collect_release_context(skill, root=None, releaser=None, ignore_errors=None)
     return {
         'root': root,
         'skill_dir': skill_dir,
+        'release_mode': release_mode,
         'state': state,
         'meta': meta,
         'default_registry': default_registry,
@@ -88,10 +89,13 @@ def collect_release_context(skill, root=None, releaser=None, ignore_errors=None)
 def build_common_payload(context):
     meta = context['meta']
     state = context['state']
+    release_mode = context.get('release_mode') or 'stable-release'
+    pushed = release_mode == 'stable-release'
     review_payload = dict(context.get('review') or {})
     review_payload.setdefault('reviewers', [])
     release_payload = dict(context.get('release') or {})
     release_payload['releaser_identity'] = context['releaser_identity']
+    release_payload['release_mode'] = release_mode
     return {
         '$schema': 'schemas/provenance.schema.json',
         'schema_version': 1,
@@ -122,9 +126,9 @@ def build_common_payload(context):
             'head_commit': state['git'].get('head_commit'),
             'expected_tag': context['tag_name'],
             'release_ref': f"refs/tags/{context['tag_name']}",
-            'remote': context['remote_tag'].get('name'),
-            'remote_tag_object': context['remote_tag'].get('tag_object'),
-            'remote_tag_commit': context['remote_tag'].get('target_commit'),
+            'remote': context['remote_tag'].get('name') if pushed else None,
+            'remote_tag_object': context['remote_tag'].get('tag_object') if pushed else None,
+            'remote_tag_commit': context['remote_tag'].get('target_commit') if pushed else None,
             'signed_tag_verified': True,
             'tag_signer': context['local_tag'].get('signer'),
         },
@@ -133,10 +137,10 @@ def build_common_payload(context):
             'tag': context['tag_name'],
             'ref': f"refs/tags/{context['tag_name']}",
             'commit': context['commit'],
-            'remote': context['remote_tag'].get('name'),
+            'remote': context['remote_tag'].get('name') if pushed else None,
             'upstream': state['git'].get('upstream'),
             'immutable': True,
-            'pushed': True,
+            'pushed': pushed,
         },
         'registry': {
             'default_registry': context['default_registry'],

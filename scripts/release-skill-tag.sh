@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: scripts/release-skill-tag.sh <skill-name-or-path> [--version X.Y.Z] [--create] [--push] [--force] [--unsigned]" >&2
+  echo "usage: scripts/release-skill-tag.sh <skill-name-or-path> [--version X.Y.Z] [--create] [--push] [--force] [--unsigned] [--local]" >&2
 }
 
 if [[ $# -lt 1 ]]; then
@@ -17,6 +17,7 @@ CREATE=0
 PUSH=0
 FORCE=0
 UNSIGNED=0
+LOCAL=0
 SET_VERSION=""
 
 resolve_skill() {
@@ -54,6 +55,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --unsigned)
       UNSIGNED=1
+      shift
+      ;;
+    --local)
+      LOCAL=1
       shift
       ;;
     *)
@@ -163,7 +168,15 @@ echo "status: $STATUS"
 echo "tag: $TAG"
 
 if [[ $CREATE -eq 1 || $PUSH -eq 1 ]]; then
-  python3 "$ROOT/scripts/check-release-state.py" "$DIR" --mode preflight >/dev/null
+  if [[ $LOCAL -eq 1 && $PUSH -eq 1 ]]; then
+    echo "--local creates only local tags; omit --push" >&2
+    exit 1
+  fi
+  if [[ $LOCAL -eq 1 ]]; then
+    python3 "$ROOT/scripts/check-release-state.py" "$DIR" --mode local-preflight >/dev/null
+  else
+    python3 "$ROOT/scripts/check-release-state.py" "$DIR" --mode preflight >/dev/null
+  fi
 fi
 
 if [[ $CREATE -eq 1 ]]; then

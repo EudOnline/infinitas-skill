@@ -286,6 +286,7 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
     issues = []
     warnings = []
     exception_usage = []
+    require_upstream_sync = mode in {'preflight', 'stable-release'}
     try:
         exception_policy = load_exception_policy(root)
     except ExceptionPolicyError as exc:
@@ -328,30 +329,44 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
                 rule='stable releases require a clean worktree',
             )
         )
-    if not upstream:
-        issues.append(
-            _issue(
-                'missing-upstream',
-                f'branch {branch or "HEAD"} has no upstream; set one before creating or publishing a stable release',
-                rule='stable releases require upstream synchronization',
+    if require_upstream_sync:
+        if not upstream:
+            issues.append(
+                _issue(
+                    'missing-upstream',
+                    f'branch {branch or "HEAD"} has no upstream; set one before creating or publishing a stable release',
+                    rule='stable releases require upstream synchronization',
+                )
             )
+        else:
+            if ahead:
+                issues.append(
+                    _issue(
+                        'ahead-of-upstream',
+                        f'branch is ahead of {upstream} by {ahead} commit(s); push before creating or publishing a stable release',
+                        rule='stable releases require upstream synchronization',
+                    )
+                )
+            if behind:
+                issues.append(
+                    _issue(
+                        'behind-of-upstream',
+                        f'branch is behind {upstream} by {behind} commit(s); update before creating or publishing a stable release',
+                        rule='stable releases require upstream synchronization',
+                    )
+                )
+    elif not upstream:
+        warnings.append(
+            f'branch {branch or "HEAD"} has no upstream; local tag release checks skip upstream synchronization'
         )
     else:
         if ahead:
-            issues.append(
-                _issue(
-                    'ahead-of-upstream',
-                    f'branch is ahead of {upstream} by {ahead} commit(s); push before creating or publishing a stable release',
-                    rule='stable releases require upstream synchronization',
-                )
+            warnings.append(
+                f'branch is ahead of {upstream} by {ahead} commit(s); local tag release checks allow this'
             )
         if behind:
-            issues.append(
-                _issue(
-                    'behind-of-upstream',
-                    f'branch is behind {upstream} by {behind} commit(s); update before creating or publishing a stable release',
-                    rule='stable releases require upstream synchronization',
-                )
+            warnings.append(
+                f'branch is behind {upstream} by {behind} commit(s); local tag release checks allow this'
             )
 
     if mode in {'local-tag', 'stable-release'}:
@@ -452,7 +467,15 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
         effective_sources=list(signing.get('policy_sources', [])) + list(namespace_policy_sources),
         applied_rules=[
             {'id': 'dirty-worktree', 'rule': 'stable releases require a clean worktree', 'value': not dirty},
-            {'id': 'upstream-synchronization', 'rule': 'stable releases require upstream synchronization', 'value': {'ahead': ahead, 'behind': behind}},
+            {
+                'id': 'upstream-synchronization',
+                'rule': 'stable releases require upstream synchronization',
+                'value': {
+                    'enforced': require_upstream_sync,
+                    'ahead': ahead,
+                    'behind': behind,
+                },
+            },
             {'id': 'local-tag', 'rule': 'stable releases require a signed verified local tag', 'value': expected_tag},
             {'id': 'remote-tag', 'rule': 'stable releases require remote tag verification in stable-release mode', 'value': mode == 'stable-release'},
             {'id': 'signing-tag-format', 'rule': 'release signing config defines tag_format', 'value': signing['tag_format']},

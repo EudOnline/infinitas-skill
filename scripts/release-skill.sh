@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: scripts/release-skill.sh <skill-name-or-path> [--preview] [--create-tag] [--sign-tag] [--unsigned-tag] [--push-tag] [--github-release] [--notes-out PATH] [--write-provenance] [--sign-provenance] [--ssh-sign-provenance] [--ssh-verify-provenance] [--ssh-key PATH] [--signer IDENTITY] [--releaser IDENTITY]" >&2
+  echo "usage: scripts/release-skill.sh <skill-name-or-path> [--preview] [--create-tag] [--sign-tag] [--unsigned-tag] [--push-tag] [--github-release] [--notes-out PATH] [--write-provenance] [--local-provenance] [--sign-provenance] [--ssh-sign-provenance] [--ssh-verify-provenance] [--ssh-key PATH] [--signer IDENTITY] [--releaser IDENTITY]" >&2
 }
 
 if [[ $# -lt 1 ]]; then
@@ -23,6 +23,7 @@ WRITE_PROVENANCE=0
 SIGN_PROVENANCE=0
 SSH_SIGN_PROVENANCE=0
 SSH_VERIFY_PROVENANCE=0
+LOCAL_PROVENANCE=0
 SSH_KEY=""
 SIGNER=""
 RELEASER=""
@@ -99,6 +100,10 @@ while [[ $# -gt 0 ]]; do
       WRITE_PROVENANCE=1
       shift
       ;;
+    --local-provenance)
+      LOCAL_PROVENANCE=1
+      shift
+      ;;
     --sign-provenance)
       SIGN_PROVENANCE=1
       WRITE_PROVENANCE=1
@@ -134,6 +139,16 @@ done
 
 if [[ $PREVIEW -eq 1 && ($CREATE_TAG -eq 1 || $PUSH_TAG -eq 1 || $GITHUB_RELEASE -eq 1 || $WRITE_PROVENANCE -eq 1 || $SSH_VERIFY_PROVENANCE -eq 1) ]]; then
   echo "--preview is read-only; do not combine it with tag creation, provenance, or publishing flags" >&2
+  exit 1
+fi
+
+if [[ $LOCAL_PROVENANCE -eq 1 && $WRITE_PROVENANCE -eq 0 ]]; then
+  echo "--local-provenance requires --write-provenance" >&2
+  exit 1
+fi
+
+if [[ $LOCAL_PROVENANCE -eq 1 && ($PUSH_TAG -eq 1 || $GITHUB_RELEASE -eq 1 || -n "$NOTES_OUT") ]]; then
+  echo "--local-provenance is only for branch-local provenance artifacts; do not combine it with push, GitHub release, or release notes" >&2
   exit 1
 fi
 
@@ -212,6 +227,11 @@ if [[ $WRITE_PROVENANCE -eq 1 && ($ATT_REQUIRE_RELEASE -eq 1 || $ATT_REQUIRE_DIS
   SSH_VERIFY_PROVENANCE=1
 fi
 
+RELEASE_STATE_MODE="stable-release"
+if [[ $LOCAL_PROVENANCE -eq 1 ]]; then
+  RELEASE_STATE_MODE="local-tag"
+fi
+
 print_raw_notes() {
   python3 - <<'PY' "$META_JSON"
 import json, sys
@@ -279,13 +299,14 @@ if [[ $CREATE_TAG -eq 1 || $PUSH_TAG -eq 1 ]]; then
   fi
   [[ $PUSH_TAG -eq 1 ]] && TAG_ARGS+=(--push)
   [[ $UNSIGNED_TAG -eq 1 ]] && TAG_ARGS+=(--unsigned)
+  [[ $LOCAL_PROVENANCE -eq 1 ]] && TAG_ARGS+=(--local)
   "$ROOT/scripts/release-skill-tag.sh" "${TAG_ARGS[@]}"
 fi
 
 STATE_JSON="$(mktemp)"
 if [[ $FULL_RELEASE -eq 1 ]]; then
-  if ! python3 "$ROOT/scripts/check-release-state.py" "$DIR" --json > "$STATE_JSON"; then
-    python3 "$ROOT/scripts/check-release-state.py" "$DIR" || true
+  if ! python3 "$ROOT/scripts/check-release-state.py" "$DIR" --mode "$RELEASE_STATE_MODE" --json > "$STATE_JSON"; then
+    python3 "$ROOT/scripts/check-release-state.py" "$DIR" --mode "$RELEASE_STATE_MODE" || true
     rm -f "$META_JSON" "$STATE_JSON"
     exit 1
   fi
@@ -320,9 +341,12 @@ PY
   echo "version: $VERSION"
   echo "status: $STATUS"
   echo "tag: $TAG"
+  echo "release_mode: $RELEASE_STATE_MODE"
   echo "release_ref: refs/tags/$TAG"
   echo "commit: $RELEASE_COMMIT"
-  echo "remote: $REMOTE_NAME"
+  if [[ "$RELEASE_STATE_MODE" == "stable-release" ]]; then
+    echo "remote: $REMOTE_NAME"
+  fi
   if [[ -n "$SIGNER_NAME" ]]; then
     echo "verified_signer: $SIGNER_NAME"
   fi
@@ -330,7 +354,9 @@ PY
     echo "releaser: $RELEASER_NAME"
   fi
   echo
-  write_release_notes -
+  if [[ "$RELEASE_STATE_MODE" == "stable-release" ]]; then
+    write_release_notes -
+  fi
 fi
 
 if [[ -n "$NOTES_OUT" ]]; then
@@ -401,6 +427,7 @@ PY
   if [[ -n "$EFFECTIVE_RELEASER" ]]; then
     GENERATE_ARGS+=(--releaser "$EFFECTIVE_RELEASER")
   fi
+  GENERATE_ARGS+=(--release-mode "$RELEASE_STATE_MODE")
   GENERATE_ARGS+=(
     --distribution-manifest-path "$DIST_MANIFEST_REL"
     --distribution-bundle-path "$DIST_BUNDLE_REL"

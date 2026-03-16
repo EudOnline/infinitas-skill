@@ -109,6 +109,15 @@ def validate_provenance_payload(payload):
             errors.append(f'{label} must be a non-empty string')
         return value
 
+    release = payload.get('release')
+    release_mode = 'stable-release'
+    if isinstance(release, dict):
+        if release.get('release_mode') is not None:
+            if release.get('release_mode') not in {'stable-release', 'local-tag'}:
+                errors.append("release.release_mode must be 'stable-release' or 'local-tag' when present")
+            else:
+                release_mode = release.get('release_mode')
+
     if payload.get('kind') != 'skill-release-attestation':
         errors.append('kind must be skill-release-attestation')
     if payload.get('schema_version') != 1:
@@ -145,8 +154,13 @@ def validate_provenance_payload(payload):
         require_string(source_snapshot, 'commit', 'source_snapshot.commit')
         if source_snapshot.get('immutable') is not True:
             errors.append('source_snapshot.immutable must be true')
-        if source_snapshot.get('pushed') is not True:
-            errors.append('source_snapshot.pushed must be true')
+        pushed = source_snapshot.get('pushed')
+        if not isinstance(pushed, bool):
+            errors.append('source_snapshot.pushed must be boolean')
+        elif release_mode == 'stable-release' and pushed is not True:
+            errors.append('source_snapshot.pushed must be true for stable-release attestations')
+        elif release_mode == 'local-tag' and pushed is not False:
+            errors.append('source_snapshot.pushed must be false for local-tag attestations')
 
     registry = payload.get('registry')
     if not isinstance(registry, dict):
@@ -173,7 +187,6 @@ def validate_provenance_payload(payload):
         if not isinstance(review.get('reviewers'), list):
             errors.append('review.reviewers must be an array')
 
-    release = payload.get('release')
     if not isinstance(release, dict):
         errors.append('release must be an object')
     else:

@@ -323,6 +323,7 @@
         "authorized_releasers"
       ],
       "properties": {
+        "release_mode": {"type": ["string", "null"], "enum": ["stable-release", "local-tag", null]},
         "releaser_identity": {"type": ["string", "null"]},
         "namespace_policy_path": {"type": ["string", "null"]},
         "namespace_policy_version": {"type": ["integer", "null"]},
