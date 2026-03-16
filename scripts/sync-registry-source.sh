@@ -38,6 +38,7 @@ from registry_source_lib import (  # noqa: E402
     short_pin_value,
     validate_registry_config,
 )
+from registry_refresh_state_lib import write_refresh_state  # noqa: E402
 
 
 def fail(message):
@@ -176,5 +177,14 @@ else:
 
 git('-C', str(p), 'checkout', '--detach', commit)
 git('-C', str(p), 'reset', '--hard', commit)
+write_refresh_state(
+    root,
+    registry_name=name,
+    kind=kind,
+    cache_path=p,
+    source_commit=commit,
+    source_ref=desired_ref,
+    source_tag=short_pin_value('tag', pin.get('value')) if pin.get('mode') == 'tag' else None,
+)
 print(p)
 PY
