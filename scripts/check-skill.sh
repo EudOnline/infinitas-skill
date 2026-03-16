@@ -113,6 +113,24 @@ if risk_level and risk_level not in {'low', 'medium', 'high'}:
     print(f'FAIL: invalid risk_level: {risk_level}', file=sys.stderr)
     status = 1
 
+maturity = meta.get('maturity')
+if maturity is not None and (not isinstance(maturity, str) or not maturity.strip()):
+    print('FAIL: maturity must be a non-empty string', file=sys.stderr)
+    status = 1
+
+quality_score = meta.get('quality_score')
+if quality_score is not None and (not isinstance(quality_score, int) or quality_score < 0 or quality_score > 100):
+    print('FAIL: quality_score must be an integer between 0 and 100', file=sys.stderr)
+    status = 1
+
+for list_key in ['capabilities', 'use_when', 'avoid_when', 'runtime_assumptions']:
+    value = meta.get(list_key)
+    if value is not None and (
+        not isinstance(value, list) or any(not isinstance(item, str) or not item.strip() for item in value)
+    ):
+        print(f'FAIL: {list_key} must be an array of non-empty strings', file=sys.stderr)
+        status = 1
+
 distribution = meta.get('distribution')
 if distribution is not None and not isinstance(distribution, dict):
     print('FAIL: distribution must be an object', file=sys.stderr)

@@ -30,6 +30,24 @@
   "derived_from": null,
   "replaces": null,
   "visibility": "private",
+  "maturity": "stable",
+  "quality_score": 90,
+  "capabilities": [
+    "repo-operations",
+    "release-guidance",
+    "registry-debugging"
+  ],
+  "use_when": [
+    "Need to operate inside the infinitas-skill repository",
+    "Need guidance on registry workflows, planning files, or release discipline"
+  ],
+  "avoid_when": [
+    "Need a general-purpose Git helper outside this repository"
+  ],
+  "runtime_assumptions": [
+    "A Git checkout of infinitas-skill is available",
+    "Repository scripts can be executed from the workspace"
+  ],
   "review_state": "approved",
   "risk_level": "low",
   "requires": {

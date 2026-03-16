@@ -64,6 +64,12 @@ scripts/publish-skill.sh <skill> [--version <semver>] [--mode auto|confirm]
 
 ## Output JSON
 
+Stable integration consumers should validate stdout JSON against:
+
+- `schemas/publish-result.schema.json`
+
+`confirm` 预览结果与实际发布结果共用同一份 schema，区别在于 `state` 分别为 `planned` 与 `published`。
+
 成功时至少包含：
 
 ```json
@@ -92,6 +98,28 @@ scripts/publish-skill.sh <skill> [--version <semver>] [--mode auto|confirm]
   "error_code": "review-gate-failed",
   "message": "...",
   "suggested_action": "..."
+}
+```
+
+`confirm` 模式预览至少包含：
+
+```json
+{
+  "ok": true,
+  "skill": "my-skill",
+  "qualified_name": "publisher/my-skill",
+  "version": "1.2.3",
+  "status": "active",
+  "state": "planned",
+  "manifest_path": "catalog/distributions/.../manifest.json",
+  "bundle_path": "catalog/distributions/.../bundle.tar.gz",
+  "attestation_path": "catalog/provenance/my-skill-1.2.3.json",
+  "commands": [
+    ["scripts/release-skill.sh", "my-skill", "--push-tag", "--write-provenance"],
+    ["scripts/build-catalog.sh"]
+  ],
+  "promotion_required": false,
+  "next_step": "confirm-or-run"
 }
 ```
 

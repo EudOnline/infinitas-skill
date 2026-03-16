@@ -62,6 +62,12 @@ scripts/pull-skill.sh <qualified-name> <target-dir> [--version <semver>] [--regi
 
 ## Output JSON
 
+Stable integration consumers should validate stdout JSON against:
+
+- `schemas/pull-result.schema.json`
+
+`confirm` 预览、实际安装结果、以及结构化失败结果都共用这份 schema，并通过 `state` 区分。
+
 成功时至少包含：
 
 ```json
@@ -75,6 +81,44 @@ scripts/pull-skill.sh <qualified-name> <target-dir> [--version <semver>] [--regi
   "lockfile_path": "/path/to/skills/.infinitas-skill-install-manifest.json",
   "installed_files_manifest": "/path/to/skills/.infinitas-skill-install-manifest.json",
   "next_step": "sync-or-use"
+}
+```
+
+`confirm` 模式预览至少包含：
+
+```json
+{
+  "ok": true,
+  "qualified_name": "publisher/my-skill",
+  "requested_version": null,
+  "resolved_version": "1.2.3",
+  "registry_name": "self",
+  "registry_root": "/path/to/repo",
+  "ai_index_path": "/path/to/repo/catalog/ai-index.json",
+  "target_dir": "/path/to/skills",
+  "state": "planned",
+  "manifest_path": "catalog/distributions/.../manifest.json",
+  "bundle_path": "catalog/distributions/.../bundle.tar.gz",
+  "bundle_sha256": "...",
+  "attestation_path": "catalog/provenance/my-skill-1.2.3.json",
+  "registry_kind": "local",
+  "install_name": "publisher/my-skill",
+  "install_command": [
+    "scripts/install-skill.sh",
+    "publisher/my-skill",
+    "/path/to/skills",
+    "--version",
+    "1.2.3"
+  ],
+  "next_step": "confirm-or-run",
+  "explanation": {
+    "selection_reason": "...",
+    "registry_used": "self",
+    "confirmation_required": false,
+    "version_reason": "...",
+    "policy_reasons": ["..."],
+    "next_actions": ["..."]
+  }
 }
 ```
 

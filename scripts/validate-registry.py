@@ -50,6 +50,10 @@ def _is_registry_skill_dir(skill_dir: Path) -> bool:
         return False
 
 
+def _is_non_empty_string_list(value) -> bool:
+    return isinstance(value, list) and all(isinstance(item, str) and item.strip() for item in value)
+
+
 def _parse_frontmatter(skill_md_path: Path):
     content = skill_md_path.read_text(encoding='utf-8')
     match = FRONTMATTER_RE.match(content)
@@ -191,6 +195,21 @@ def validate_meta(skill_dir: Path, namespace_policy=None) -> int:
     for list_key in ['maintainers', 'tags', 'agent_compatible']:
         if list_key in meta and not (isinstance(meta[list_key], list) and all(isinstance(x, str) for x in meta[list_key])):
             fail(f'{skill_dir}: {list_key} must be an array of strings')
+            errors += 1
+
+    if 'maturity' in meta and not (isinstance(meta.get('maturity'), str) and meta.get('maturity', '').strip()):
+        fail(f'{skill_dir}: maturity must be a non-empty string')
+        errors += 1
+
+    if 'quality_score' in meta and not (
+        isinstance(meta.get('quality_score'), int) and 0 <= meta.get('quality_score') <= 100
+    ):
+        fail(f'{skill_dir}: quality_score must be an integer between 0 and 100')
+        errors += 1
+
+    for list_key in ['capabilities', 'use_when', 'avoid_when', 'runtime_assumptions']:
+        if list_key in meta and not _is_non_empty_string_list(meta.get(list_key)):
+            fail(f'{skill_dir}: {list_key} must be an array of non-empty strings')
             errors += 1
 
     try:

@@ -7,6 +7,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from result_schema_lib import validate_publish_result
+
 ROOT = Path(__file__).resolve().parent.parent
 ACTIVE_NAME = 'release-fixture'
 INCUBATING_NAME = 'needs-review'
@@ -146,6 +148,9 @@ def main():
     try:
         preview = run([str(repo / 'scripts' / 'publish-skill.sh'), ACTIVE_NAME, '--mode', 'confirm'], cwd=repo)
         preview_payload = json.loads(preview.stdout)
+        errors = validate_publish_result(preview_payload)
+        if errors:
+            fail('publish preview result schema errors:\n' + '\n'.join(errors))
         if preview_payload.get('state') != 'planned':
             fail(f"expected planned state, got {preview_payload.get('state')!r}")
         preview_manifest = repo / preview_payload['manifest_path']
@@ -154,6 +159,9 @@ def main():
 
         result = run([str(repo / 'scripts' / 'publish-skill.sh'), ACTIVE_NAME], cwd=repo, env=make_env())
         payload = json.loads(result.stdout)
+        errors = validate_publish_result(payload)
+        if errors:
+            fail('publish success result schema errors:\n' + '\n'.join(errors))
         if payload.get('ok') is not True:
             fail(f'expected publish ok=true, got {payload!r}')
         if payload.get('state') != 'published':
@@ -165,7 +173,11 @@ def main():
         if not attestation_path.exists():
             fail(f'missing attestation {attestation_path}')
 
-        run([str(repo / 'scripts' / 'publish-skill.sh'), INCUBATING_NAME], cwd=repo, expect=1, env=make_env())
+        failed = run([str(repo / 'scripts' / 'publish-skill.sh'), INCUBATING_NAME], cwd=repo, expect=1, env=make_env())
+        failed_payload = json.loads(failed.stdout)
+        errors = validate_publish_result(failed_payload)
+        if errors:
+            fail('publish failure result schema errors:\n' + '\n'.join(errors))
     finally:
         shutil.rmtree(tmpdir)
 

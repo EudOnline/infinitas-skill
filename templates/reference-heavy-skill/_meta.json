@@ -19,6 +19,12 @@
   "derived_from": null,
   "replaces": null,
   "visibility": "private",
+  "maturity": "prototype",
+  "quality_score": 0,
+  "capabilities": [],
+  "use_when": [],
+  "avoid_when": [],
+  "runtime_assumptions": [],
   "review_state": "draft",
   "risk_level": "low",
   "requires": {

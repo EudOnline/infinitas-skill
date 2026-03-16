@@ -7,6 +7,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from result_schema_lib import validate_pull_result
+
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE_NAME = 'release-fixture'
 FIXTURE_VERSION = '1.2.3'
@@ -252,6 +254,9 @@ def main():
         target = tmpdir / 'installed'
         result = run([str(repo / 'scripts' / 'pull-skill.sh'), FIXTURE_NAME, str(target)], cwd=repo)
         payload = json.loads(result.stdout)
+        errors = validate_pull_result(payload)
+        if errors:
+            fail('pull success result schema errors:\n' + '\n'.join(errors))
         if payload.get('ok') is not True:
             fail(f'expected pull ok=true, got {payload!r}')
         if payload.get('state') != 'installed':
@@ -265,11 +270,18 @@ def main():
         if not installed_skill.is_dir():
             fail(f'missing installed skill directory {installed_skill}')
 
-        run([str(repo / 'scripts' / 'pull-skill.sh'), FIXTURE_NAME, str(target), '--version', '9.9.9'], cwd=repo, expect=1)
+        missing_version = run([str(repo / 'scripts' / 'pull-skill.sh'), FIXTURE_NAME, str(target), '--version', '9.9.9'], cwd=repo, expect=1)
+        missing_version_payload = json.loads(missing_version.stdout)
+        errors = validate_pull_result(missing_version_payload)
+        if errors:
+            fail('pull version-not-found result schema errors:\n' + '\n'.join(errors))
 
         confirm_target = tmpdir / 'confirm-target'
         result = run([str(repo / 'scripts' / 'pull-skill.sh'), FIXTURE_NAME, str(confirm_target), '--mode', 'confirm'], cwd=repo)
         confirm_payload = json.loads(result.stdout)
+        errors = validate_pull_result(confirm_payload)
+        if errors:
+            fail('pull confirm result schema errors:\n' + '\n'.join(errors))
         if confirm_payload.get('state') != 'planned':
             fail(f"expected planned state for confirm mode, got {confirm_payload.get('state')!r}")
         if confirm_target.exists():
@@ -289,6 +301,9 @@ def main():
             cwd=repo,
         )
         external_payload = json.loads(result.stdout)
+        errors = validate_pull_result(external_payload)
+        if errors:
+            fail('pull external confirm result schema errors:\n' + '\n'.join(errors))
         if external_payload.get('qualified_name') != f'partner/{EXTERNAL_SKILL_NAME}':
             fail(f"expected external qualified_name partner/{EXTERNAL_SKILL_NAME!s}, got {external_payload.get('qualified_name')!r}")
         if external_payload.get('registry_name') != EXTERNAL_REGISTRY_NAME:
@@ -312,6 +327,10 @@ def main():
             expect=1,
         )
         combined = bad_version.stdout + bad_version.stderr
+        bad_version_payload = json.loads(bad_version.stdout)
+        errors = validate_pull_result(bad_version_payload)
+        if errors:
+            fail('pull external bad-version result schema errors:\n' + '\n'.join(errors))
         if 'version-not-found' not in combined:
             fail(f'expected version-not-found in external registry failure\n{combined}')
     finally:

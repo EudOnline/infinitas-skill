@@ -59,6 +59,19 @@ Every registry-managed skill should include `_meta.json`.
   "derived_from": null,
   "replaces": null,
   "visibility": "private",
+  "maturity": "stable",
+  "quality_score": 88,
+  "capabilities": ["repo-audit", "risk-triage"],
+  "use_when": [
+    "Need a repository audit with actionable next steps"
+  ],
+  "avoid_when": [
+    "Need to modify production code directly"
+  ],
+  "runtime_assumptions": [
+    "A local git checkout is available",
+    "The agent can run repository scripts and read docs"
+  ],
   "review_state": "draft",
   "risk_level": "medium",
   "requires": {
@@ -102,6 +115,12 @@ Use `scripts/migrate-skill-meta.py` to add `schema_version` to older skill metad
 - `author`: human or bot identity that originally authored the skill metadata
 - `review_state`: `draft | under-review | approved | rejected` for compatibility and indexing; promotion tooling recomputes the authoritative value from `reviews.json` plus `policy/promotion-policy.json`
 - `risk_level`: `low | medium | high`
+- `maturity`: short author-supplied lifecycle label such as `prototype`, `stable`, or `experimental`; AI-facing surfaces use it as one ranking hint
+- `quality_score`: integer `0-100` for coarse comparative quality; keep it conservative and reviewable
+- `capabilities`: short machine-friendly phrases describing what the skill can do
+- `use_when`: short trigger guidance telling an agent when this skill is a good fit
+- `avoid_when`: short counter-guidance explaining when this skill is the wrong fit
+- `runtime_assumptions`: short statements about environment expectations such as repo checkout, available tools, or execution permissions
 - `derived_from`: lineage string such as `repo-audit@0.1.0`
 - Use the `name@version` form so lineage tools can diff against the intended ancestor
 - `tests.smoke`: path to the minimum realistic validation case
@@ -111,6 +130,8 @@ Use `scripts/migrate-skill-meta.py` to add `schema_version` to older skill metad
 - dependency objects support `name`, `version`, optional `registry`, and optional `allow_incubating`; `name` may be bare or fully qualified (`publisher/skill`)
 - version constraints support `*`, exact versions, comparator chains like `>=1.2.0 <2.0.0`, plus `^` and `~` shorthands
 - archived dependencies are only selected for exact version requests; incubating dependencies require `allow_incubating: true`
+
+These AI decision fields are optional, and empty arrays are valid, but sparse metadata makes `catalog/ai-index.json`, discovery, and recommendation results less decision-useful for agents.
 
 ## MVP constraints
 

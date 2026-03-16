@@ -12,6 +12,7 @@ TEMPLATE_PATHS = [
     Path('templates/scripted-skill/_meta.json'),
     Path('templates/reference-heavy-skill/_meta.json'),
 ]
+EXPECTED_BASELINE = 'validated 4 skill directories'
 
 
 def fail(message):
@@ -50,7 +51,7 @@ def main():
     try:
         result = run([sys.executable, str(repo / 'scripts' / 'validate-registry.py')], cwd=repo)
         combined = result.stdout + result.stderr
-        if 'validated 3 skill directories' not in combined:
+        if EXPECTED_BASELINE not in combined:
             fail(f'unexpected baseline validation output\n{combined}')
 
         meta_path = repo / 'templates' / 'basic-skill' / '_meta.json'
@@ -59,7 +60,7 @@ def main():
         write_json(meta_path, payload)
         result = run([sys.executable, str(repo / 'scripts' / 'validate-registry.py')], cwd=repo)
         combined = result.stdout + result.stderr
-        if 'validated 3 skill directories' not in combined:
+        if EXPECTED_BASELINE not in combined:
             fail(f'legacy schema-less _meta.json should still validate\n{combined}')
 
         payload = json.loads(meta_path.read_text(encoding='utf-8'))
@@ -67,7 +68,7 @@ def main():
         write_json(meta_path, payload)
         result = run([sys.executable, str(repo / 'scripts' / 'validate-registry.py')], cwd=repo)
         combined = result.stdout + result.stderr
-        if 'validated 3 skill directories' not in combined:
+        if EXPECTED_BASELINE not in combined:
             fail(f'schema_version=1 should validate\n{combined}')
 
         payload['schema_version'] = 999
@@ -79,6 +80,51 @@ def main():
 
         payload['schema_version'] = 1
         write_json(meta_path, payload)
+
+        payload.update(
+            {
+                'maturity': 'stable',
+                'quality_score': 88,
+                'capabilities': ['repo-operations', 'release-guidance'],
+                'use_when': ['Need to operate inside the infinitas-skill repository'],
+                'avoid_when': ['Need a general-purpose public publishing workflow'],
+                'runtime_assumptions': ['Git checkout is available', 'Repository scripts may be executed'],
+            }
+        )
+        write_json(meta_path, payload)
+        result = run([sys.executable, str(repo / 'scripts' / 'validate-registry.py')], cwd=repo)
+        combined = result.stdout + result.stderr
+        if EXPECTED_BASELINE not in combined:
+            fail(f'valid AI decision metadata should validate\n{combined}')
+
+        payload['use_when'] = 'Need repo operations'
+        write_json(meta_path, payload)
+        result = subprocess.run(
+            [sys.executable, str(repo / 'scripts' / 'validate-registry.py')],
+            cwd=repo,
+            text=True,
+            capture_output=True,
+        )
+        if result.returncode == 0:
+            fail('expected invalid use_when type to fail validation')
+        combined = result.stdout + result.stderr
+        if 'use_when' not in combined:
+            fail(f'expected validation failure mentioning use_when\n{combined}')
+
+        payload['use_when'] = ['Need to operate inside the infinitas-skill repository']
+        payload['quality_score'] = 101
+        write_json(meta_path, payload)
+        result = subprocess.run(
+            [sys.executable, str(repo / 'scripts' / 'validate-registry.py')],
+            cwd=repo,
+            text=True,
+            capture_output=True,
+        )
+        if result.returncode == 0:
+            fail('expected out-of-range quality_score to fail validation')
+        combined = result.stdout + result.stderr
+        if 'quality_score' not in combined:
+            fail(f'expected validation failure mentioning quality_score\n{combined}')
 
         for rel in TEMPLATE_PATHS:
             payload = json.loads((repo / rel).read_text(encoding='utf-8'))

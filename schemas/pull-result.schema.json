@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/infinitas-skill/pull-result.schema.json",
+  "title": "pull-skill result",
+  "$defs": {
+    "explanation": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "selection_reason",
+        "registry_used",
+        "confirmation_required",
+        "version_reason",
+        "policy_reasons",
+        "next_actions"
+      ],
+      "properties": {
+        "selection_reason": { "type": "string", "minLength": 1 },
+        "registry_used": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "confirmation_required": { "type": "boolean" },
+        "version_reason": { "type": "string", "minLength": 1 },
+        "policy_reasons": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "next_actions": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "type": "object",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "ok",
+        "qualified_name",
+        "requested_version",
+        "resolved_version",
+        "registry_name",
+        "registry_root",
+        "ai_index_path",
+        "target_dir",
+        "state",
+        "manifest_path",
+        "bundle_path",
+        "bundle_sha256",
+        "attestation_path",
+        "registry_kind",
+        "install_name",
+        "install_command",
+        "next_step",
+        "explanation"
+      ],
+      "properties": {
+        "ok": { "const": true },
+        "qualified_name": { "type": "string", "minLength": 1 },
+        "requested_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "resolved_version": { "type": "string", "minLength": 1 },
+        "registry_name": { "type": "string", "minLength": 1 },
+        "registry_root": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ai_index_path": { "type": "string", "minLength": 1 },
+        "target_dir": { "type": "string", "minLength": 1 },
+        "state": { "const": "planned" },
+        "manifest_path": { "type": "string", "minLength": 1 },
+        "bundle_path": { "type": "string", "minLength": 1 },
+        "bundle_sha256": { "type": "string", "minLength": 1 },
+        "attestation_path": { "type": "string", "minLength": 1 },
+        "registry_kind": { "type": "string", "minLength": 1 },
+        "install_name": { "type": "string", "minLength": 1 },
+        "install_command": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "next_step": { "type": "string", "minLength": 1 },
+        "explanation": { "$ref": "#/$defs/explanation" }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "ok",
+        "qualified_name",
+        "requested_version",
+        "resolved_version",
+        "target_dir",
+        "state",
+        "lockfile_path",
+        "installed_files_manifest",
+        "next_step",
+        "explanation"
+      ],
+      "properties": {
+        "ok": { "const": true },
+        "qualified_name": { "type": "string", "minLength": 1 },
+        "requested_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "resolved_version": { "type": "string", "minLength": 1 },
+        "target_dir": { "type": "string", "minLength": 1 },
+        "state": { "const": "installed" },
+        "lockfile_path": { "type": "string", "minLength": 1 },
+        "installed_files_manifest": { "type": "string", "minLength": 1 },
+        "next_step": { "type": "string", "minLength": 1 },
+        "explanation": { "$ref": "#/$defs/explanation" }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "ok",
+        "state",
+        "failed_at_step",
+        "error_code",
+        "message",
+        "suggested_action"
+      ],
+      "properties": {
+        "ok": { "const": false },
+        "state": { "const": "failed" },
+        "failed_at_step": { "type": "string", "minLength": 1 },
+        "error_code": { "type": "string", "minLength": 1 },
+        "message": { "type": "string", "minLength": 1 },
+        "suggested_action": { "type": "string", "minLength": 1 },
+        "qualified_name": { "type": "string", "minLength": 1 },
+        "requested_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "resolved_version": { "type": "string", "minLength": 1 },
+        "target_dir": { "type": "string", "minLength": 1 },
+        "explanation": { "$ref": "#/$defs/explanation" }
+      }
+    }
+  ]
+}

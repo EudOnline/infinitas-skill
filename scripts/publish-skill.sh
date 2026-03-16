@@ -208,9 +208,11 @@ manifest_path = root / sys.argv[3]
 bundle_path = root / sys.argv[4]
 attestation_path = root / sys.argv[5]
 published_at = None
+bundle_sha256 = None
 if manifest_path.exists():
     manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
     published_at = manifest.get('generated_at')
+    bundle_sha256 = ((manifest.get('bundle') or {}).get('sha256'))
 payload = {
     'ok': True,
     'skill': plan.get('skill'),
@@ -219,6 +221,7 @@ payload = {
     'state': 'published',
     'manifest_path': sys.argv[3],
     'bundle_path': sys.argv[4],
+    'bundle_sha256': bundle_sha256,
     'attestation_path': sys.argv[5],
     'published_at': published_at,
     'next_step': 'pull-skill',
