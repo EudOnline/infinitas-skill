@@ -57,6 +57,20 @@ If any of those invariants fail, `scripts/release-skill.sh` and `scripts/check-r
 - That same JSON now records delegated release authority via `release.delegated_teams` and mirrors applied break-glass overrides into `release.exception_usage` while preserving the existing top-level `exception_usage`.
 - Generated provenance carries the same stable audit metadata so later reviewers can reconstruct delegated approvals plus release exceptions without depending on debug-only `policy_trace` output.
 
+## Audit and inventory export artifacts
+
+11-07 turns those previously internal stable artifacts into two explicit integration surfaces:
+
+- `catalog/audit-export.json`
+- `catalog/inventory-export.json`
+
+The split is intentional:
+
+- `audit-export.json` is provenance-derived and should be treated as immutable release evidence for portal, compliance, or reporting consumers.
+- `inventory-export.json` is catalog-derived and should be treated as the current registry and skill inventory view, including federation visibility and release/installability summary.
+
+Neither export includes raw `policy_trace`. Debug traces remain operator-oriented and live on the existing CLI surfaces.
+
 ## Stable attestation policy
 
 Phase 5 adds a second enforcement layer on top of the signed-tag baseline.

@@ -71,7 +71,7 @@ Requirements committed for milestone `v10`. Phase 6 is now complete.
 
 ## v11 Requirements
 
-Requirements committed for milestone `v11`. 11-06 is complete after federation trust rule delivery on 2026-03-16; Phase 3 continues with export surfaces next.
+Requirements committed for milestone `v11`. 11-07 is complete after audit and inventory export delivery on 2026-03-16; trust-boundary documentation remains next.
 
 ### Policy Packs and Explainable Decisions
 
@@ -87,7 +87,7 @@ Requirements committed for milestone `v11`. 11-06 is complete after federation t
 ### Federation, Mirrors, and Audit Export
 
 - [x] **FED-01**: The registry can mirror or federate selected upstream sources while preserving publisher identity, trust policy, and immutable artifact verification.
-- [ ] **FED-02**: Consumers can export audit and inventory views suitable for external review or developer-portal integration.
+- [x] **FED-02**: Consumers can export audit and inventory views suitable for external review or developer-portal integration.
 
 ## Future Requirements
 
@@ -153,7 +153,7 @@ Requirements committed for milestone `v11`. 11-06 is complete after federation t
 | TEAM-02 | v11 Phase 2 | Complete |
 | TEAM-03 | v11 Phase 2 | Complete |
 | FED-01 | v11 Phase 3 | Complete |
-| FED-02 | v11 Phase 3 | Planned |
+| FED-02 | v11 Phase 3 | Complete |
 
 **Coverage:**
 - v9 requirements: 12 total
@@ -168,4 +168,4 @@ Requirements committed for milestone `v11`. 11-06 is complete after federation t
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-16 after 11-06 federation trust rules completion*
+*Last updated: 2026-03-16 after 11-07 audit inventory export completion*
