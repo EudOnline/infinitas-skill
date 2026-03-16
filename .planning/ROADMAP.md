@@ -227,7 +227,7 @@ Plans:
 Plans:
 - [x] 11-06: Define mirror/federation rules for trusted upstream registries and namespace mapping
 - [x] 11-07: Add audit/inventory export formats for portal, compliance, or reporting integrations
-- [ ] 11-08: Document federation trust boundaries, failure modes, and recovery procedures
+- [x] 11-08: Document federation trust boundaries, failure modes, and recovery procedures
 
 ## Progress
 
@@ -246,4 +246,4 @@ Plans:
 | 6. Recommendation and Decision Support | v10 | 3/3 | Completed | 2026-03-15 |
 | 1. Policy Packs and Explainable Decisions | v11 | 2/2 | Completed | 2026-03-15 |
 | 2. Multi-Team Governance and Exceptions | v11 | 3/3 | Completed | 2026-03-15 |
-| 3. Federation, Mirrors, and Audit Export | v11 | 2/3 | In Progress | 2026-03-16 (11-07 complete) |
+| 3. Federation, Mirrors, and Audit Export | v11 | 3/3 | Completed | 2026-03-16 |

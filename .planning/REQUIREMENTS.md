@@ -71,7 +71,7 @@ Requirements committed for milestone `v10`. Phase 6 is now complete.
 
 ## v11 Requirements
 
-Requirements committed for milestone `v11`. 11-07 is complete after audit and inventory export delivery on 2026-03-16; trust-boundary documentation remains next.
+Requirements committed for milestone `v11`. 11-08 completed the final Phase 3 documentation work on 2026-03-16.
 
 ### Policy Packs and Explainable Decisions
 
@@ -168,4 +168,4 @@ Requirements committed for milestone `v11`. 11-07 is complete after audit and in
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-16 after 11-07 audit inventory export completion*
+*Last updated: 2026-03-16 after 11-08 federation trust boundary documentation completion*

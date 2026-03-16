@@ -17,6 +17,7 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - Explainable policy traces for validation, promotion, release, install, and distribution decisions
 - Team ownership models, delegated approval scopes, and explicit break-glass exceptions
 - Federation or mirror trust rules, namespace mapping, and later audit or inventory export surfaces
+- Operator-facing federation trust-boundary and recovery documentation
 
 ## Requirements
 
@@ -42,7 +43,7 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - [x] Delegated audit exports plus provenance persistence are complete for 11-05.
 - [x] Federation and mirror trust rules plus namespace mapping are complete for 11-06.
 - [x] Standalone audit and inventory export surfaces are complete for 11-07.
-- [ ] Federation trust-boundary, failure-mode, and recovery documentation remains for 11-08.
+- [x] Federation trust-boundary, failure-mode, and recovery documentation is complete for 11-08.
 
 ### Out of Scope
 
@@ -69,6 +70,7 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - 11-05 extends `check-release-state --json` and release provenance with stable delegated audit metadata such as review quorum context, delegated publisher teams, and applied release exception usage, while intentionally stopping short of a separate export product.
 - 11-06 adds validated `registry_sources.federation` rules for `mirror` and `federated` upstreams, mapped publisher namespaces, additive resolver/catalog identity fields, and explicit non-authoritative mirror behavior while intentionally leaving standalone export formats to 11-07.
 - 11-07 adds `catalog/inventory-export.json` and `catalog/audit-export.json`, generated from catalog and provenance artifacts, plus repository validation so portal/compliance consumers can rely on a stable JSON contract without depending on debug traces or live release-state recomputation.
+- 11-08 adds a dedicated federation operations guide that defines authoritative surfaces, common failure modes, and operator recovery order for policy drift, stale mirrors, missing provenance, and stale export artifacts.
 - `config/allowed_signers` is still intentionally bootstrapped with guidance comments only; maintainers must commit real trusted signer entries before the first actual stable release is operationally complete.
 
 ## Constraints
@@ -101,6 +103,7 @@ Maintainers can publish and distribute private skills with deterministic, audita
 | Keep federation policy in `config/registry-sources.json` instead of env-var mirror settings | Mirror hooks are operational details, but federation trust rules must be consumer-visible, reviewable, and pack-compatible | ✓ Good |
 | Keep `mirror` registries visible but non-authoritative for default resolution | Operators need inventory visibility without letting backup surfaces silently outrank trusted federated sources | ✓ Good |
 | Derive inventory exports from generated catalog state and audit exports from committed provenance | Integrations need stable, reviewable artifacts; recomputing live release state would make export results depend on mutable workspace conditions | ✓ Good |
+| Keep boundary and recovery guidance in one dedicated operations doc | Operators need a single place to understand disagreement between policy, exports, provenance, and mirrors without piecing together multiple partial docs | ✓ Good |
 
 ---
-*Last updated: 2026-03-16 after 11-07 audit inventory export completion*
+*Last updated: 2026-03-16 after 11-08 federation trust boundary documentation completion*
