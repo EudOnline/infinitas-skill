@@ -112,6 +112,18 @@ Successful remote syncs persist refresh metadata under `.cache/registries/_state
 
 Use `python3 scripts/registry-refresh-status.py <registry> --json` to inspect the current cache age, freshness state, and configured thresholds for one registry.
 
+When immutable registry snapshots exist under `.cache/registry-snapshots/<registry>/`, catalog and registry listing surfaces now expose additive visibility fields such as `snapshot_count`, `latest_snapshot`, and `available_snapshots`. Snapshot visibility is informational at this stage; it does not change default resolver authority on its own.
+
+To consume one snapshot on purpose, pass both the registry name and a selector:
+
+```bash
+python3 scripts/resolve-skill-source.py demo --registry upstream --snapshot latest --json
+scripts/install-skill.sh demo ~/.openclaw/skills --registry upstream --snapshot latest
+scripts/sync-registry-source.sh upstream --snapshot latest
+```
+
+`latest` resolves to the newest known snapshot for that registry. You may also pass a concrete snapshot ID. Missing snapshots fail explicitly and do not fall back to the mutable cache.
+
 ### `federation`
 
 Selected upstream registries may now declare an additive `federation` block:

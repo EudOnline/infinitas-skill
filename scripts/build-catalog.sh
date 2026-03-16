@@ -16,6 +16,7 @@ root = Path(os.environ['ROOT']).resolve()
 sys.path.insert(0, str(root / 'scripts'))
 
 from registry_source_lib import load_registry_config, registry_identity, registry_is_resolution_candidate, resolve_registry_root  # noqa: E402
+from registry_snapshot_lib import snapshot_catalog_summary  # noqa: E402
 from review_lib import ReviewPolicyError, evaluate_review_state, load_reviews  # noqa: E402
 from skill_identity_lib import display_name, normalize_skill_identity  # noqa: E402
 from distribution_lib import DistributionError, manifest_index_entry  # noqa: E402
@@ -268,6 +269,7 @@ for reg in cfg.get('registries', []):
     item['resolved_publisher_map'] = identity.get('registry_publisher_map')
     item['resolved_require_immutable_artifacts'] = identity.get('registry_require_immutable_artifacts')
     item['resolver_candidate'] = registry_is_resolution_candidate(reg)
+    item.update(snapshot_catalog_summary(root, reg.get('name')))
     registries_export.append(item)
 registries_view = {
     'generated_at': catalog['generated_at'],

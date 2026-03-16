@@ -6,6 +6,7 @@ from pathlib import Path
 from distribution_lib import load_distribution_index
 from http_registry_lib import HostedRegistryError, fetch_json, registry_catalog_path
 from registry_refresh_state_lib import evaluate_refresh_status, refresh_resolution_message, refresh_status_blocks_resolution
+from registry_snapshot_lib import resolve_snapshot_selector
 from registry_source_lib import (
     apply_registry_federation,
     find_registry,
@@ -47,13 +48,25 @@ def decorate_registry_freshness(payload, status):
     return decorated
 
 
-def scan_registry(reg):
+def _resolved_output_path(value):
+    if not isinstance(value, str) or not value.strip():
+        return None
+    path = Path(value.strip())
+    if not path.is_absolute():
+        path = (ROOT / path).resolve()
+    else:
+        path = path.resolve()
+    return path
+
+
+def scan_registry(reg, *, reg_root=None, reg_info=None, default_source_type='working-tree', snapshot_fields=None):
     if reg.get('kind') == 'http':
         return scan_http_registry(reg)
-    reg_root = resolve_registry_root(ROOT, reg)
+    reg_root = Path(reg_root).resolve() if reg_root is not None else resolve_registry_root(ROOT, reg)
     if reg_root is None or not reg_root.exists():
         return []
-    reg_info = registry_identity(ROOT, reg)
+    reg_info = dict(reg_info or registry_identity(ROOT, reg))
+    snapshot_fields = dict(snapshot_fields or {})
     distribution_index = load_distribution_index(reg_root)
     distribution_by_identity = {
         (entry.get('qualified_name') or entry.get('name'), entry.get('version')): entry for entry in distribution_index
@@ -74,6 +87,7 @@ def scan_registry(reg):
             distribution = distribution_by_identity.get((identity.get('qualified_name') or meta.get('name'), meta.get('version')))
             append_registry_item(reg, items, {
                 **reg_info,
+                **snapshot_fields,
                 'stage': distribution.get('status') if distribution else stage,
                 'path': str((reg_root / distribution.get('manifest_path')).resolve()) if distribution else str(d),
                 'skill_path': str(d),
@@ -90,7 +104,7 @@ def scan_registry(reg):
                 'snapshot_label': meta.get('snapshot_label'),
                 'installable': bool(meta.get('distribution', {}).get('installable', True)),
                 'expected_tag': distribution.get('source_snapshot_tag') if distribution else expected_skill_tag(meta.get('name'), meta.get('version')),
-                'source_type': 'distribution-manifest' if distribution else 'working-tree',
+                'source_type': 'distribution-manifest' if distribution else default_source_type,
                 'distribution_manifest': distribution.get('manifest_path') if distribution else None,
                 'distribution_bundle': distribution.get('bundle_path') if distribution else None,
                 'distribution_bundle_sha256': distribution.get('bundle_sha256') if distribution else None,
@@ -113,6 +127,7 @@ def scan_registry(reg):
             continue
         append_registry_item(reg, items, {
             **reg_info,
+            **snapshot_fields,
             'stage': distribution.get('status') or 'archived',
             'path': str((reg_root / distribution.get('manifest_path')).resolve()),
             'skill_path': None,
@@ -210,11 +225,55 @@ def scan_http_registry(reg):
     return items
 
 
-def load_candidates(registry=None):
+def load_candidates(registry=None, snapshot=None):
     cfg = load_registry_config(ROOT)
     items = []
     blocked = []
     explicit_registry = bool(registry)
+
+    if snapshot:
+        if not registry:
+            raise SystemExit('--snapshot requires --registry')
+        reg = find_registry(cfg, registry)
+        if reg is None:
+            raise SystemExit(f'unknown registry: {registry}')
+        snapshot_record = resolve_snapshot_selector(ROOT, registry, snapshot)
+        if snapshot_record is None:
+            raise SystemExit(f"snapshot '{snapshot}' not found for registry '{registry}'")
+
+        summary = snapshot_record.get('summary') or {}
+        metadata = snapshot_record.get('metadata') or {}
+        source_registry = metadata.get('source_registry') if isinstance(metadata.get('source_registry'), dict) else {}
+        snapshot_root = _resolved_output_path(summary.get('snapshot_root')) or snapshot_record.get('snapshot_root')
+        if snapshot_root is None or not Path(snapshot_root).exists():
+            raise SystemExit(f"snapshot '{summary.get('snapshot_id') or snapshot}' for registry '{registry}' is missing its registry tree")
+
+        reg_info = registry_identity(ROOT, reg)
+        reg_info.update({
+            'registry_root': summary.get('snapshot_root') or reg_info.get('registry_root'),
+            'registry_commit': summary.get('source_commit') or reg_info.get('registry_commit'),
+            'registry_ref': summary.get('source_ref') or reg_info.get('registry_ref'),
+            'registry_tag': summary.get('source_tag') or reg_info.get('registry_tag'),
+            'registry_trust': source_registry.get('trust') or reg_info.get('registry_trust'),
+            'registry_update_mode': source_registry.get('update_mode') or reg_info.get('registry_update_mode'),
+            'registry_origin_url': source_registry.get('origin_url') or reg_info.get('registry_origin_url'),
+        })
+        snapshot_fields = {
+            'registry_snapshot_id': summary.get('snapshot_id'),
+            'registry_snapshot_path': summary.get('snapshot_root'),
+            'registry_snapshot_created_at': summary.get('created_at'),
+            'registry_snapshot_metadata_path': summary.get('metadata_path'),
+            'registry_snapshot_authoritative': summary.get('authoritative'),
+        }
+        reg_items = scan_registry(
+            reg,
+            reg_root=snapshot_root,
+            reg_info=reg_info,
+            default_source_type='registry-snapshot',
+            snapshot_fields=snapshot_fields,
+        )
+        return cfg, reg_items, blocked
+
     for reg in cfg.get('registries', []):
         if not reg.get('enabled', True):
             continue
@@ -261,11 +320,15 @@ def main():
     ap.add_argument('--allow-incubating', action='store_true')
     ap.add_argument('--registry')
     ap.add_argument('--json', action='store_true')
+    ap.add_argument('--snapshot')
     args = ap.parse_args()
+
+    if args.snapshot and not args.registry:
+        raise SystemExit('--snapshot requires --registry')
 
     requested_publisher, requested_name = parse_requested_skill(args.name)
     candidates = []
-    cfg, loaded_candidates, blocked = load_candidates(args.registry)
+    cfg, loaded_candidates, blocked = load_candidates(args.registry, snapshot=args.snapshot)
     for item in loaded_candidates:
         if requested_publisher:
             if item.get('qualified_name') == args.name:
@@ -321,6 +384,8 @@ def main():
             reason = 'distribution-exact-version'
         elif reason == 'archived-exact-snapshot':
             reason = 'distribution-archived-exact-version'
+    elif args.snapshot:
+        reason = f'registry-snapshot-{reason}'
     resolved['resolution_reason'] = reason
     if args.json:
         print(json.dumps(resolved, ensure_ascii=False, indent=2))

@@ -5,16 +5,15 @@
 See: `.planning/PROJECT.md` (updated 2026-03-16)
 
 **Core value:** Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
-**Current focus:** v13 registry operations planning, starting with refresh cadence and freshness policy.
+**Current focus:** v13 Phase 2 snapshot mirroring design and implementation after completing refresh cadence and freshness enforcement.
 
 ## Current Position
 
-Phase: v13 planning
-Plan: `docs/plans/2026-03-16-registry-refresh-cadence-and-freshness.md`
-Status: v13 selected on `codex/post-v12-roadmap-planning`; first implementation plan is being prepared
-Last activity: 2026-03-16 — Merged signer readiness closeout to `main` and began v13 registry-operations planning
-
-Progress: [#---------] 10%
+Phase: v13 Phase 2 implementation
+Plan: `docs/plans/2026-03-17-registry-snapshot-mirroring-and-offline-resolution.md`
+Status: v13 Phase 1 is implemented on `codex/v13-refresh-state-status`; Phase 2 planning and execution are starting on the same feature branch
+Last activity: 2026-03-17 — Completed refresh cadence / freshness policy and began immutable snapshot mirror planning
+Progress: [#####-----] 50%
 
 ## Performance Metrics
 
@@ -30,8 +29,8 @@ Progress: [#---------] 10%
 - v12: 9 plans completed across 3 phases
 
 **Recent Trend:**
-- Last 5 plans: 12-06, 12-07, 12-08, 12-09, 2026-03-16-production-signer-readiness
-- Trend: v12 and the signer-readiness closeout are merged on `main`; the next value line is registry refresh policy and offline-safe snapshot mirroring
+- Last 5 plans: 12-08, 12-09, 2026-03-16-production-signer-readiness, 2026-03-16-registry-refresh-cadence-and-freshness
+- Trend: v13 Phase 1 is now implemented on the active feature branch; the next value line is immutable snapshot mirrors and explicit offline resolution
 
 ## Accumulated Context
 
@@ -59,12 +58,14 @@ Decisions are logged in `PROJECT.md`.
 - 2026-03-16: Treat the current platform as "M1 complete: AI-first registry core" and adopt "M2: AI-usable skill ecosystem" as v12.
 - 2026-03-16: Start v12 by making AI decision metadata and `publish-skill` / `pull-skill` result schemas canonical before adding more real skills or ranking heuristics.
 - 2026-03-16: Complete all three v12 phases on `main`, including canonical decision metadata, real skill inventory, AI-only drills, failure-path hardening, comparative recommendation signals, and a stable usage guide.
+- 2026-03-17: Complete v13 Phase 1 by adding validated refresh policy, persisted refresh state, freshness status output, and stale-cache warn/fail enforcement.
+- 2026-03-17: Treat registry snapshots as additive, explicit artifacts derived from existing registries rather than introducing a new authoritative registry kind.
 
 ### Pending Todos
 
-- Finalize the v13 roadmap update and first implementation plan for registry refresh cadence / freshness policy.
-- Decide the exact state format and operator surface for registry refresh metadata before implementation begins.
-- Plan how immutable registry snapshots should integrate with resolver/install flows without weakening current mirror trust boundaries.
+- Write and execute the dedicated v13 Phase 2 plan for immutable registry snapshots and offline resolution.
+- Define the exact snapshot metadata shape, export surface, and on-disk layout under `.cache/`.
+- Decide how explicit snapshot selection should flow through resolver, install, and sync without changing current default authority rules.
 - Decide whether CI-native attestations should remain additive to, or eventually become authoritative over, the repo-managed SSH path.
 - Keep governance-integration and supply-chain backlog items deferred unless v13 work exposes a dependency.
 
@@ -72,13 +73,13 @@ Decisions are logged in `PROJECT.md`.
 
 - `config/allowed_signers` now contains a committed `lvxiaoer` trusted signer entry.
 - `operate-infinitas-skill` already has a signed pushed stable tag plus verified provenance.
-- The signer-readiness closeout is merged to `main`, but `.planning` still needs to be advanced from closeout mode into the chosen v13 milestone.
-- Registry freshness and offline snapshot behavior do not yet exist as first-class contracts, so operators still rely on ad-hoc cache expectations.
+- The feature branch contains Phase 1 implementation work that is not merged to `main` yet.
+- Offline snapshot behavior does not yet exist as a first-class contract, so operators still rely on mutable cache checkouts for recovery workflows.
 - The repository still installs skills by bare folder name for backward compatibility; any future multi-publisher same-slug work should stay compatibility-aware.
 - The project should stay Git-native and private-first; public marketplace features, social features, and on-chain reputation remain intentionally deferred.
 
 ## Session Continuity
 
-Last session: 2026-03-16 18:30 GMT+8
-Stopped at: v13 selected as registry operations; planning and phase-1 implementation plan in progress
-Resume file: `.planning/ROADMAP.md`
+Last session: 2026-03-17 00:20 GMT+8
+Stopped at: v13 Phase 1 completed on the active feature branch; Phase 2 planning and first implementation slice are next
+Resume file: `docs/plans/2026-03-17-registry-snapshot-mirroring-and-offline-resolution.md`

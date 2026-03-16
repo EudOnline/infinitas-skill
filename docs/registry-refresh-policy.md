@@ -60,6 +60,8 @@ The recorded payload includes:
 
 That state is intentionally local cache metadata. It is not part of the committed repository contract.
 
+When operators later create an immutable registry snapshot, that refresh-state payload is copied into the snapshot metadata so the snapshot still carries the source freshness context that existed at capture time.
+
 ## Inspect freshness
 
 To inspect one registry directly:
@@ -99,6 +101,8 @@ Behavior by policy:
 - `warn`: resolution continues, but the resolved payload includes an actionable `registry_freshness_warning`
 - `fail`: stale remote caches are rejected with an error that tells the operator to run `scripts/sync-registry-source.sh <registry>`
 
+Explicit snapshot resolution is the deliberate exception. If an operator resolves with `--registry <name> --snapshot <id|latest>`, the resolver reads from `.cache/registry-snapshots/<name>/...` instead of the mutable cache and does not apply live-cache freshness blocking to that request.
+
 ## Recover from stale caches
 
 Refresh the registry cache:
@@ -108,3 +112,9 @@ scripts/sync-registry-source.sh upstream
 ```
 
 A successful sync rewrites the refresh-state file with the latest timestamp and source commit. Once that happens, stale-cache `warn` or `fail` decisions clear automatically on the next resolution attempt.
+
+If you need a stable offline recovery point before refreshing again, create an immutable snapshot first:
+
+```bash
+python3 scripts/create-registry-snapshot.py upstream --json
+```

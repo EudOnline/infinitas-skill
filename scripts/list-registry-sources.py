@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
 
+from registry_snapshot_lib import snapshot_catalog_summary
 from registry_source_lib import load_registry_config, registry_identity, registry_is_resolution_candidate, resolve_registry_root, short_pin_value
 
 root = Path(__file__).resolve().parent.parent
@@ -22,11 +23,14 @@ for reg in cfg.get('registries', []):
     mapping_summary = ','.join(f'{key}->{value}' for key, value in sorted(publisher_map.items())) or '-'
     immutable = 'yes' if identity.get('registry_require_immutable_artifacts') else 'no'
     resolver_candidate = 'yes' if registry_is_resolution_candidate(reg) else 'no'
+    snapshot_summary = snapshot_catalog_summary(root, reg.get('name'))
+    latest_snapshot = (snapshot_summary.get('latest_snapshot') or {}).get('snapshot_id') or '-'
     print(
         f"- {reg.get('name')}: {reg.get('kind')} {reg.get('url')} "
         f"[{status}, priority={reg.get('priority')}, trust={reg.get('trust')}, "
         f"pin={pin_mode}:{pin_value}, update={identity.get('registry_update_mode')}, "
-        f"federation={federation_mode}, resolver={resolver_candidate}, immutable={immutable}] "
+        f"federation={federation_mode}, resolver={resolver_candidate}, immutable={immutable}, "
+        f"snapshots={snapshot_summary.get('snapshot_count')}, latest_snapshot={latest_snapshot}] "
         f"hosts={','.join(identity.get('registry_allowed_hosts') or ['-'])} "
         f"refs={','.join(identity.get('registry_allowed_refs') or ['-'])} "
         f"publishers={allowed_publishers} "
