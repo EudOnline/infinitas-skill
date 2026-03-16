@@ -51,10 +51,22 @@ The recommendation output should explain why the top result won through:
 
 - `recommendation_reason`
 - `ranking_factors`
+- `confidence`
+- `comparative_signals`
 - trust state
 - compatibility
 - maturity
 - verification freshness
+
+When multiple candidates are eligible, prefer the additive comparison fields over ad-hoc prose:
+
+- `confidence.level` and `confidence.reasons`
+- `comparative_signals.rank`
+- `comparative_signals.score_gap_from_top`
+- `comparative_signals.quality_gap_from_top`
+- `comparative_signals.verification_freshness_gap_from_top`
+- `comparative_signals.compatibility_gap_from_top`
+- `explanation.comparison_summary`
 
 Search gives a broad candidate set. Recommend gives a ranked best-fit view.
 
@@ -105,6 +117,8 @@ For recommendation flows, also read:
 
 - `recommendation_reason`
 - `ranking_factors`
+- `confidence`
+- `comparative_signals`
 
 This explanation layer is the fast way to answer:
 
@@ -112,6 +126,7 @@ This explanation layer is the fast way to answer:
 - why an external match needs confirmation
 - why a version was selected
 - why a cross-source upgrade is blocked
+- how strongly the top recommendation outranks the next-best candidate
 
 ## Recommended flow
 

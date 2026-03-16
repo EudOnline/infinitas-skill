@@ -48,6 +48,32 @@ def contains_absolute_path(value):
     return False
 
 
+def assert_confidence(payload, *, label):
+    if not isinstance(payload, dict):
+        fail(f'expected {label} confidence object, got {payload!r}')
+    if payload.get('level') not in {'high', 'medium', 'low'}:
+        fail(f"expected {label} confidence level high/medium/low, got {payload.get('level')!r}")
+    reasons = payload.get('reasons')
+    if not isinstance(reasons, list) or not reasons or any(not isinstance(item, str) or not item.strip() for item in reasons):
+        fail(f'expected {label} confidence reasons list, got {reasons!r}')
+
+
+def assert_comparative_signals(payload, *, label):
+    if not isinstance(payload, dict):
+        fail(f'expected {label} comparative_signals object, got {payload!r}')
+    if not isinstance(payload.get('rank'), int) or payload.get('rank') < 1:
+        fail(f"expected {label} comparative_signals.rank >= 1, got {payload.get('rank')!r}")
+    for key in ['score_gap_from_top', 'quality_gap_from_top', 'verification_freshness_gap_from_top']:
+        value = payload.get(key)
+        if not isinstance(value, int) or value < 0:
+            fail(f'expected {label} {key} to be a non-negative int, got {value!r}')
+    if payload.get('compatibility_gap_from_top') not in {'same', 'better', 'worse'}:
+        fail(
+            'expected '
+            f"{label} compatibility_gap_from_top to be same/better/worse, got {payload.get('compatibility_gap_from_top')!r}"
+        )
+
+
 def scenario_recommend_returns_ranked_fields_for_real_catalog():
     payload = json.loads(
         run(['./scripts/recommend-skill.sh', 'operate in this repo', '--target-agent', 'codex'], cwd=ROOT).stdout
@@ -61,6 +87,8 @@ def scenario_recommend_returns_ranked_fields_for_real_catalog():
         'score',
         'recommendation_reason',
         'ranking_factors',
+        'confidence',
+        'comparative_signals',
         'trust_state',
         'verified_support',
         'use_when',
@@ -76,6 +104,15 @@ def scenario_recommend_returns_ranked_fields_for_real_catalog():
     for key in ['match_strength', 'compatibility', 'trust', 'quality', 'verification_freshness']:
         if key not in factors:
             fail(f'missing ranking_factors field {key!r}')
+    assert_confidence(top.get('confidence'), label='top recommendation')
+    assert_comparative_signals(top.get('comparative_signals'), label='top recommendation')
+    if top.get('comparative_signals', {}).get('rank') != 1:
+        fail(f"expected top recommendation rank 1, got {top.get('comparative_signals', {}).get('rank')!r}")
+    if top.get('comparative_signals', {}).get('score_gap_from_top') != 0:
+        fail(
+            'expected top recommendation score_gap_from_top 0, '
+            f"got {top.get('comparative_signals', {}).get('score_gap_from_top')!r}"
+        )
     if top.get('qualified_name') != QUALIFIED_NAME:
         fail(f"expected top recommendation {QUALIFIED_NAME!r}, got {top.get('qualified_name')!r}")
     if top.get('use_when') != [
@@ -101,6 +138,7 @@ def scenario_recommend_returns_ranked_fields_for_real_catalog():
         fail(f"expected top-level winner_reason, got {explanation.get('winner_reason')!r}")
     if explanation.get('winner') != QUALIFIED_NAME:
         fail(f"expected explanation winner {QUALIFIED_NAME!r}, got {explanation.get('winner')!r}")
+    assert_confidence(explanation.get('winner_confidence'), label='top-level explanation')
     if contains_absolute_path(payload):
         fail(f'expected recommendation payload to avoid raw filesystem paths\n{json.dumps(payload, ensure_ascii=False, indent=2)}')
 
@@ -123,6 +161,8 @@ def scenario_recommend_prefers_specialized_real_skills():
             fail(f'expected use_when for {expected!r}')
         if not top.get('runtime_assumptions'):
             fail(f'expected runtime_assumptions for {expected!r}')
+        assert_confidence(top.get('confidence'), label=f'recommendation for {task!r}')
+        assert_comparative_signals(top.get('comparative_signals'), label=f'recommendation for {task!r}')
 
 
 def discovery_index_payload():
@@ -258,9 +298,31 @@ def scenario_recommend_prefers_private_high_quality_match():
                 'expected external runtime_assumptions to survive recommendation output, '
                 f"got {external.get('runtime_assumptions')!r}"
             )
+        assert_confidence(top.get('confidence'), label='private candidate')
+        assert_confidence(external.get('confidence'), label='external candidate')
+        assert_comparative_signals(top.get('comparative_signals'), label='private candidate')
+        assert_comparative_signals(external.get('comparative_signals'), label='external candidate')
+        if external.get('comparative_signals', {}).get('rank') != 2:
+            fail(f"expected external candidate rank 2, got {external.get('comparative_signals', {}).get('rank')!r}")
+        if external.get('comparative_signals', {}).get('score_gap_from_top', 0) <= 0:
+            fail(f'expected external candidate to trail top score, got {external.get("comparative_signals")!r}')
+        if external.get('comparative_signals', {}).get('quality_gap_from_top', 0) <= 0:
+            fail(f'expected external candidate to trail top quality, got {external.get("comparative_signals")!r}')
+        if external.get('comparative_signals', {}).get('verification_freshness_gap_from_top', 0) <= 0:
+            fail(f'expected external candidate to trail top freshness, got {external.get("comparative_signals")!r}')
+        if external.get('comparative_signals', {}).get('compatibility_gap_from_top') != 'same':
+            fail(
+                'expected external candidate compatibility gap to remain same, '
+                f"got {external.get('comparative_signals', {}).get('compatibility_gap_from_top')!r}"
+            )
         explanation = payload.get('explanation') or {}
         if explanation.get('runner_up') != 'partner/ops-external':
             fail(f"expected runner_up 'partner/ops-external', got {explanation.get('runner_up')!r}")
+        assert_confidence(explanation.get('winner_confidence'), label='private-vs-external explanation')
+        if not isinstance(explanation.get('score_gap_to_runner_up'), int) or explanation.get('score_gap_to_runner_up') <= 0:
+            fail(f"expected positive score_gap_to_runner_up, got {explanation.get('score_gap_to_runner_up')!r}")
+        if not isinstance(explanation.get('comparison_summary'), str) or not explanation.get('comparison_summary').strip():
+            fail(f"expected comparison_summary in recommendation explanation, got {explanation.get('comparison_summary')!r}")
         if contains_absolute_path(payload):
             fail(f'expected recommendation payload to avoid raw filesystem paths\n{json.dumps(payload, ensure_ascii=False, indent=2)}')
     finally:

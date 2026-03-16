@@ -67,6 +67,8 @@ scripts/inspect-skill.sh lvxiaoer/release-infinitas-skill
 - recommendation:
   - `recommendation_reason`
   - `ranking_factors`
+  - `confidence`
+  - `comparative_signals`
   - `use_when`
   - `avoid_when`
 - inspect:
@@ -77,6 +79,7 @@ scripts/inspect-skill.sh lvxiaoer/release-infinitas-skill
 ### Stop conditions
 
 - recommendation output has no `ranking_factors`
+- recommendation output has no `confidence` or `comparative_signals`
 - the recommended skill conflicts with `avoid_when`
 - inspect shows missing immutable distribution references
 

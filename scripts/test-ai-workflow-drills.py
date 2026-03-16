@@ -90,6 +90,13 @@ def scenario_search_recommend_inspect_drill():
         fail(f'missing recommendation_reason in workflow drill output {winner!r}')
     if not winner.get('ranking_factors'):
         fail(f'missing ranking_factors in workflow drill output {winner!r}')
+    if not winner.get('confidence'):
+        fail(f'missing confidence in workflow drill output {winner!r}')
+    if not winner.get('comparative_signals'):
+        fail(f'missing comparative_signals in workflow drill output {winner!r}')
+    explanation = recommend_payload.get('explanation') or {}
+    if not explanation.get('winner_confidence'):
+        fail(f'missing winner_confidence in recommendation drill explanation {recommend_payload!r}')
 
     inspect_payload = load_stdout_json(['scripts/inspect-skill.sh', 'lvxiaoer/release-infinitas-skill'])
     if inspect_payload.get('qualified_name') != 'lvxiaoer/release-infinitas-skill':

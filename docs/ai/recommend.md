@@ -35,6 +35,8 @@ Look at these keys first:
 
 - `recommendation_reason`
 - `ranking_factors`
+- `confidence`
+- `comparative_signals`
 - `trust_state`
 - `verified_support`
 - `use_when`
@@ -46,10 +48,26 @@ Look at these keys first:
 
 `ranking_factors` should make it clear how compatibility, maturity, trust state, quality, and verification freshness affected the result.
 
+`confidence` is the recommendation layer's machine-readable confidence view for that candidate. Read:
+
+- `confidence.level`
+- `confidence.reasons`
+
+`comparative_signals` is the additive cross-candidate view. Read:
+
+- `comparative_signals.rank`
+- `comparative_signals.score_gap_from_top`
+- `comparative_signals.quality_gap_from_top`
+- `comparative_signals.verification_freshness_gap_from_top`
+- `comparative_signals.compatibility_gap_from_top`
+
+At the top level, `explanation.comparison_summary` and `explanation.winner_confidence` explain why the winner outranked the closest visible alternative.
+
 The surfaced decision metadata is the canonical author-owned guidance from `_meta.json`. Use it to explain why a skill fits the task without reopening raw catalogs.
 
 ## Safety rules
 
 - recommendation does not bypass immutable install policy
 - external recommendations still require confirmation before installation
+- high recommendation confidence does not replace inspect-before-install when provenance, trust state, or compatibility matter
 - recommendation is advisory; inspect the skill before install when provenance, trust state, or compatibility matters
