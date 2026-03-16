@@ -5,14 +5,14 @@
 See: `.planning/PROJECT.md` (updated 2026-03-16)
 
 **Core value:** Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
-**Current focus:** v11 Phase 3 execution — 11-08 Federation Trust Boundaries and Recovery Docs
+**Current focus:** v11 Phase 3 planning — 11-08 Federation Trust Boundaries and Recovery Docs
 
 ## Current Position
 
 Phase: v11 Phase 3 of 3 (Federation, Mirrors, and Audit Export)
 Plan: `docs/plans/2026-03-16-audit-inventory-exports.md`
-Status: 11-07 complete; 11-08 next
-Last activity: 2026-03-16 — Completed 11-07 audit and inventory export artifacts plus repository validation
+Status: 11-07 complete; 11-08 planning underway
+Last activity: 2026-03-16 — Started 11-08 planning for federation trust boundaries and recovery procedures
 
 Progress: [██████████] 98%
 
@@ -30,7 +30,7 @@ Progress: [██████████] 98%
 
 **Recent Trend:**
 - Last 5 plans: 11-03, 11-04, 11-05, 11-06, 11-07
-- Trend: stable export artifacts are now in place; the remaining Phase 3 work is trust-boundary and recovery documentation
+- Trend: stable export artifacts are now in place; 11-08 planning is focused on operator-facing trust boundaries and recovery playbooks
 
 ## Accumulated Context
 
@@ -61,7 +61,7 @@ Decisions are logged in `PROJECT.md`.
 - Bootstrap real trusted signer entries in `config/allowed_signers` before the first actual stable release.
 - Decide whether CI-native attestations should be additive to, or eventually authoritative over, the repo-managed SSH path.
 - Decide which Phase 3 audit or inventory exports should stay release/provenance-only versus become separate catalog-facing products.
-- Write 11-08 so federation trust boundaries, mirror failure modes, and operator recovery steps are explicit for later integrations and incident response.
+- Execute 11-08 so federation trust boundaries, mirror failure modes, and operator recovery steps are explicit for later integrations and incident response.
 
 ### Blockers/Concerns
 
@@ -74,5 +74,5 @@ Decisions are logged in `PROJECT.md`.
 ## Session Continuity
 
 Last session: 2026-03-15 09:00 GMT+8
-Stopped at: 11-07 implementation complete; 11-08 not yet planned
-Resume file: `.planning/ROADMAP.md`
+Stopped at: 11-08 planning underway
+Resume file: `docs/plans/2026-03-16-federation-boundaries-recovery.md`
