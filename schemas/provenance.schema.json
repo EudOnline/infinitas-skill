@@ -496,6 +496,40 @@
             "file_count": {"type": "integer", "minimum": 1}
           },
           "additionalProperties": true
+        },
+        "file_manifest": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {"type": "string", "minLength": 1},
+              "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+              "size": {"type": "integer", "minimum": 0},
+              "mode": {"type": "string", "pattern": "^[0-7]{4}$"}
+            },
+            "additionalProperties": true
+          }
+        },
+        "build": {
+          "type": "object",
+          "properties": {
+            "archive_format": {"type": "string", "minLength": 1},
+            "gzip_mtime": {"type": ["integer", "null"]},
+            "tar_mtime": {"type": ["integer", "null"]},
+            "tar_uid": {"type": ["integer", "null"]},
+            "tar_gid": {"type": ["integer", "null"]},
+            "tar_uname": {"type": ["string", "null"]},
+            "tar_gname": {"type": ["string", "null"]},
+            "builder": {
+              "type": "object",
+              "properties": {
+                "python": {"type": ["string", "null"]},
+                "implementation": {"type": ["string", "null"]}
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
         }
       },
       "additionalProperties": true

@@ -20,6 +20,7 @@ from registry_snapshot_lib import snapshot_catalog_summary  # noqa: E402
 from review_lib import ReviewPolicyError, evaluate_review_state, review_decision_entries  # noqa: E402
 from skill_identity_lib import display_name, normalize_skill_identity  # noqa: E402
 from distribution_lib import DistributionError, manifest_index_entry  # noqa: E402
+from transparency_log_lib import TransparencyLogError, summarize_transparency_log_state  # noqa: E402
 from ai_index_lib import build_ai_index  # noqa: E402
 from discovery_index_lib import build_discovery_index  # noqa: E402
 from compatibility_evidence_lib import load_compatibility_evidence, merge_declared_and_verified_support  # noqa: E402
@@ -198,15 +199,28 @@ for stage in ['incubating', 'active', 'archived']:
         }
         dist = distribution_lookup.get(dist_identity_key(item))
         if dist:
+            transparency_summary = None
+            attestation_path = dist.get('attestation_path')
+            if attestation_path:
+                provenance_path = (root / attestation_path).resolve()
+                if provenance_path.exists():
+                    try:
+                        transparency_summary = summarize_transparency_log_state(provenance_path, root=root)
+                    except TransparencyLogError as exc:
+                        print(f'FAIL: {exc}', file=sys.stderr)
+                        raise SystemExit(1)
             item['verified_distribution'] = {
                 'manifest_path': dist.get('manifest_path'),
                 'bundle_path': dist.get('bundle_path'),
                 'bundle_sha256': dist.get('bundle_sha256'),
+                'file_manifest_count': dist.get('file_manifest_count'),
+                'build_archive_format': dist.get('build_archive_format'),
                 'attestation_path': dist.get('attestation_path'),
                 'attestation_signature_path': dist.get('attestation_signature_path'),
                 'source_snapshot_tag': dist.get('source_snapshot_tag'),
                 'source_snapshot_commit': dist.get('source_snapshot_commit'),
                 'generated_at': dist.get('generated_at'),
+                'transparency_log': transparency_summary,
             }
         item = merge_declared_and_verified_support(item, compatibility_evidence)
         entries.append(item)

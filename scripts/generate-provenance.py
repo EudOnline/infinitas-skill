@@ -5,7 +5,7 @@ import sys
 from datetime import datetime, timezone
 
 from attestation_lib import AttestationError, load_attestation_config, resolve_attestation_signer
-from provenance_payload_lib import build_common_payload, build_distribution_payload, collect_release_context
+from provenance_payload_lib import build_common_payload, build_distribution_payload, build_transparency_log_payload, collect_release_context
 from release_lib import ROOT, ReleaseError
 
 
@@ -39,6 +39,10 @@ def parse_args():
         help='Repository-relative distribution bundle path to bind into the signed attestation payload',
     )
     parser.add_argument(
+        '--distribution-bundle-source-path',
+        help='Filesystem path to the staged distribution bundle used for metadata inspection before final placement',
+    )
+    parser.add_argument(
         '--distribution-bundle-sha256',
         help='SHA-256 digest of the distribution bundle',
     )
@@ -55,6 +59,10 @@ def parse_args():
         '--distribution-bundle-file-count',
         type=int,
         help='Number of files archived in the distribution bundle',
+    )
+    parser.add_argument(
+        '--transparency-log-entry-path',
+        help='Repository-relative companion path used to persist a transparency log proof record',
     )
     return parser.parse_args()
 
@@ -91,6 +99,9 @@ def main():
     distribution = build_distribution_payload(args)
     if distribution:
         out['distribution'] = distribution
+    transparency_log = build_transparency_log_payload(args, attestation_cfg)
+    if transparency_log:
+        out['transparency_log'] = transparency_log
     print(json.dumps(out, ensure_ascii=False, indent=2))
 
 

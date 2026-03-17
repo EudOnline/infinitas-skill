@@ -5,6 +5,14 @@ from pathlib import Path
 
 from policy_pack_lib import PolicyPackError, load_effective_policy_domain
 from release_lib import ROOT, ReleaseError, signer_entries, signing_key_path
+from transparency_log_lib import (
+    TransparencyLogError,
+    build_transparency_log_request,
+    resolve_transparency_log_entry_path,
+    summarize_transparency_log_state,
+    submit_transparency_log_entry,
+    write_json as write_transparency_log_json,
+)
 
 
 class AttestationError(Exception):
@@ -24,6 +32,7 @@ def load_attestation_config(root=None):
     git_tag = config.get('git_tag') if isinstance(config.get('git_tag'), dict) else {}
     attestation = config.get('attestation') if isinstance(config.get('attestation'), dict) else {}
     ci = attestation.get('ci') if isinstance(attestation.get('ci'), dict) else {}
+    transparency_log = attestation.get('transparency_log') if isinstance(attestation.get('transparency_log'), dict) else {}
     policy = attestation.get('policy') if isinstance(attestation.get('policy'), dict) else {}
     mode = policy.get('mode', 'enforce')
     release_trust_mode = policy.get('release_trust_mode', 'ssh')
@@ -31,6 +40,17 @@ def load_attestation_config(root=None):
         raise AttestationError(
             f"attestation.policy.release_trust_mode must be one of 'ssh', 'ci', or 'both', got {release_trust_mode!r}"
         )
+    transparency_mode = transparency_log.get('mode', 'disabled')
+    if transparency_mode not in {'disabled', 'advisory', 'required'}:
+        raise AttestationError(
+            "attestation.transparency_log.mode must be one of 'disabled', 'advisory', or 'required'"
+        )
+    transparency_endpoint = transparency_log.get('endpoint')
+    if transparency_endpoint is not None and (not isinstance(transparency_endpoint, str) or not transparency_endpoint.strip()):
+        raise AttestationError('attestation.transparency_log.endpoint must be a non-empty string when present')
+    timeout_seconds = transparency_log.get('timeout_seconds', 5)
+    if not isinstance(timeout_seconds, int) or timeout_seconds < 1:
+        raise AttestationError('attestation.transparency_log.timeout_seconds must be a positive integer')
     allowed_rel = attestation.get('allowed_signers') or config.get('allowed_signers') or 'config/allowed_signers'
     namespace = attestation.get('namespace') or config.get('namespace') or 'infinitas-skill'
     signature_ext = attestation.get('signature_ext') or config.get('signature_ext') or '.ssig'
@@ -51,6 +71,11 @@ def load_attestation_config(root=None):
             'issuer': ci.get('issuer'),
             'repository': ci.get('repository'),
             'workflow': ci.get('workflow'),
+        },
+        'transparency_log': {
+            'mode': transparency_mode,
+            'endpoint': transparency_endpoint.strip() if isinstance(transparency_endpoint, str) else None,
+            'timeout_seconds': timeout_seconds,
         },
         'require_release_output': bool(
             policy.get('require_verified_attestation_for_release_output', mode == 'enforce')
@@ -98,6 +123,80 @@ def resolve_attestation_key(root=None, config=None, override=None):
             f"stable release attestations require an SSH signing key; set {cfg['signing_key_env']} or git config user.signingkey"
         )
     return value
+
+
+def publish_attestation_to_transparency_log(provenance_path, root=None):
+    root = Path(root or ROOT).resolve()
+    provenance_path = Path(provenance_path).resolve()
+    cfg = load_attestation_config(root)
+    transparency_cfg = cfg.get('transparency_log') or {}
+    mode = transparency_cfg.get('mode', 'disabled')
+    if mode == 'disabled':
+        return {
+            'mode': mode,
+            'published': False,
+            'entry': None,
+            'error': None,
+        }
+
+    endpoint = transparency_cfg.get('endpoint')
+    if not endpoint:
+        message = 'transparency log endpoint is not configured'
+        if mode == 'required':
+            raise AttestationError(message)
+        return {
+            'mode': mode,
+            'published': False,
+            'entry': None,
+            'error': message,
+        }
+
+    payload = load_json(provenance_path)
+    errors = validate_provenance_payload(payload)
+    if errors:
+        raise AttestationError('; '.join(errors))
+
+    request_payload = build_transparency_log_request(provenance_path, payload=payload)
+    try:
+        entry = submit_transparency_log_entry(
+            endpoint,
+            request_payload,
+            timeout_seconds=transparency_cfg.get('timeout_seconds', 5),
+        )
+    except TransparencyLogError as exc:
+        if mode == 'required':
+            raise AttestationError(str(exc)) from exc
+        return {
+            'mode': mode,
+            'published': False,
+            'entry': None,
+            'error': str(exc),
+        }
+
+    return {
+        'mode': mode,
+        'published': True,
+        'entry': entry,
+        'error': None,
+    }
+
+
+def record_attestation_transparency_log(provenance_path, root=None, entry_path=None):
+    root = Path(root or ROOT).resolve()
+    provenance_path = Path(provenance_path).resolve()
+    payload = load_json(provenance_path)
+    descriptor = payload.get('transparency_log') if isinstance(payload.get('transparency_log'), dict) else {}
+    target_path = Path(entry_path).resolve() if entry_path else resolve_transparency_log_entry_path(
+        provenance_path,
+        descriptor=descriptor,
+        root=root,
+    )
+
+    result = publish_attestation_to_transparency_log(provenance_path, root=root)
+    result['entry_path'] = str(target_path.relative_to(root)) if target_path.is_relative_to(root) else str(target_path)
+    if result.get('published'):
+        write_transparency_log_json(target_path, result.get('entry'))
+    return result
 
 
 def validate_provenance_payload(payload):
@@ -392,6 +491,37 @@ def _companion_ssh_path(provenance_path):
     raise AttestationError(f'cannot derive SSH companion path from {provenance_path}')
 
 
+def _distribution_summary(payload):
+    distribution = payload.get('distribution')
+    if not isinstance(distribution, dict):
+        return None
+
+    summary = {}
+    if isinstance(distribution.get('manifest_path'), str) and distribution.get('manifest_path'):
+        summary['manifest_path'] = distribution.get('manifest_path')
+
+    bundle = distribution.get('bundle')
+    if isinstance(bundle, dict):
+        if isinstance(bundle.get('path'), str) and bundle.get('path'):
+            summary['bundle_path'] = bundle.get('path')
+        if isinstance(bundle.get('sha256'), str) and bundle.get('sha256'):
+            summary['bundle_sha256'] = bundle.get('sha256')
+        if isinstance(bundle.get('size'), int):
+            summary['bundle_size'] = bundle.get('size')
+        if isinstance(bundle.get('file_count'), int):
+            summary['bundle_file_count'] = bundle.get('file_count')
+
+    file_manifest = distribution.get('file_manifest')
+    if isinstance(file_manifest, list):
+        summary['file_manifest_count'] = len(file_manifest)
+
+    build = distribution.get('build')
+    if isinstance(build, dict):
+        summary['build'] = build
+
+    return summary or None
+
+
 def verify_attestation(provenance_path, identity=None, allowed_signers=None, namespace=None, root=None):
     root = Path(root or ROOT).resolve()
     provenance_path = Path(provenance_path).resolve()
@@ -428,4 +558,15 @@ def verify_attestation(provenance_path, identity=None, allowed_signers=None, nam
 
     result['formats_verified'] = formats_verified
     result['policy_mode'] = cfg['release_trust_mode']
+    distribution = _distribution_summary(payload)
+    if distribution:
+        result['distribution'] = distribution
+    try:
+        transparency_log = summarize_transparency_log_state(provenance_path, payload=payload, root=root)
+    except TransparencyLogError as exc:
+        raise AttestationError(str(exc)) from exc
+    if transparency_log:
+        if transparency_log.get('required') and not transparency_log.get('verified'):
+            raise AttestationError('required transparency log proof is missing or unverified')
+        result['transparency_log'] = transparency_log
     return result

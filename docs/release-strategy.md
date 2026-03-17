@@ -77,10 +77,32 @@ When release evidence, inventory exports, or federation state appear to disagree
 
 Phase 5 adds a second enforcement layer on top of the signed-tag baseline.
 
-- `scripts/release-skill.sh <name> --write-provenance` now writes a release attestation payload that includes the immutable source snapshot, resolved registry context, dependency resolution plan, author, reviewer, releaser, signer identities, delegated review context, delegated release authority, and applied release exceptions.
+- `scripts/release-skill.sh <name> --write-provenance` now writes a release attestation payload that includes the immutable source snapshot, resolved registry context, dependency resolution plan, author, reviewer, releaser, signer identities, delegated review context, delegated release authority, applied release exceptions, and deterministic bundle metadata under `distribution`.
 - That payload is SSH-signed and verified against `config/allowed_signers` before the release helper accepts it as valid.
 - When the v9 attestation policy is enabled, commands that write release artifacts or distribution output must also use `--write-provenance`; otherwise the helper rejects them with an actionable error.
-- Use `scripts/verify-attestation.py <attestation.json>` to verify a generated attestation bundle directly.
+- Use `scripts/verify-attestation.py <attestation.json>` to verify a generated attestation bundle directly. `--json` now surfaces a compact `distribution` summary, including `file_manifest_count` and the signed normalized `build` metadata.
+
+The `distribution` section now carries more than just top-level bundle identity:
+
+- `bundle` still records the released archive path, digest, size, root directory, and file count
+- `file_manifest` records the per-file released inventory with relative paths plus SHA-256 digests
+- `build` records normalized archive settings and a compact builder summary so later verification can reason about reproducibility instead of only top-level bundle bytes
+
+Downstream audit surfaces now preserve the same additive reproducibility evidence:
+
+- `scripts/check-release-state.py <name> --json` includes `release.reproducibility`
+- `catalog/catalog.json` mirrors `verified_distribution.file_manifest_count` and `verified_distribution.build_archive_format`
+- `scripts/verify-distribution-manifest.py` validates both the manifest-vs-attestation contract and the actual archived bundle contents against the signed file inventory
+
+The signing policy now also carries an optional `attestation.transparency_log` contract with `disabled`, `advisory`, and `required` modes. That lets the repository stage external transparency publication as an additive second trust layer without replacing the existing offline SSH and CI verification paths.
+
+When that block is enabled, `scripts/release-skill.sh --write-provenance` will:
+
+- publish the signed attestation digest to the configured endpoint
+- persist the returned proof record in `catalog/provenance/<skill>-<version>.transparency.json`
+- expose the normalized proof summary through `verify-attestation --json`, `check-release-state --json`, and catalog exports
+
+In `required` mode the helper aborts the release and deletes staged provenance output if transparency publication fails, the endpoint is missing, or the returned proof does not match the attestation digest.
 
 ## Bootstrap the signer allowlist
 
@@ -190,12 +212,18 @@ scripts/release-skill.sh repo-audit --push-tag
 # verify the repo is fully release-ready
 scripts/check-release-state.py repo-audit
 
+# inspect local provenance output, including reproducibility summary
+scripts/check-release-state.py repo-audit --mode local-tag --json
+
 # write release notes and provenance from the pushed signed tag
 scripts/release-skill.sh repo-audit --notes-out /tmp/repo-audit-release.md --write-provenance --releaser lvxiaoer
 
 # verify the resulting attestation bundle
 scripts/verify-attestation.py catalog/provenance/repo-audit-0.3.0.json
 python3 scripts/doctor-signing.py repo-audit --provenance catalog/provenance/repo-audit-0.3.0.json
+
+# inspect transparency proof state when configured
+python3 scripts/verify-attestation.py catalog/provenance/repo-audit-0.3.0.json --json
 ```
 
 If you also pass `--github-release`, the helper will call `gh release create` with notes that include the immutable source snapshot.
@@ -203,6 +231,8 @@ If you also pass `--github-release`, the helper will call `gh release create` wi
 Under the v9 policy, `--github-release` and `--notes-out` must be paired with `--write-provenance` so the emitted artifact is backed by a verified attestation.
 
 After writing provenance, doctor may warn that the worktree is dirty until those generated release artifacts are committed or cleaned. That warning is about the next release ceremony, not the attestation you just verified.
+
+`check-release-state.py --mode local-tag` follows the same model: it still reports the dirty worktree as a warning, but it does not fail solely because repo-managed provenance artifacts were written for a local signed-tag release.
 
 If you omit `--releaser`, release tooling records `INFINITAS_SKILL_RELEASER` when set and otherwise falls back to `git config user.name` / `user.email`.
 

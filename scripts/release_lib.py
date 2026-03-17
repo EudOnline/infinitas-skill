@@ -10,6 +10,7 @@ from policy_pack_lib import PolicyPackError, load_policy_domain_resolution
 from policy_trace_lib import build_policy_trace
 from review_lib import ReviewPolicyError, evaluate_review_state, review_decision_entries
 from skill_identity_lib import NamespacePolicyError, load_namespace_policy, namespace_policy_report, normalize_skill_identity
+from transparency_log_lib import TransparencyLogError, summarize_transparency_log_state
 
 ROOT = Path(__file__).resolve().parent.parent
 SIGNER_RE = re.compile(r'Good "git" signature for (.+?) with ')
@@ -100,6 +101,138 @@ def signing_key_path(root, signing):
 def expected_skill_tag(skill_dir):
     meta = load_json(skill_dir / '_meta.json')
     return meta, f"skill/{meta['name']}/v{meta['version']}"
+
+
+def _release_artifact_paths(root, meta):
+    identity = normalize_skill_identity(meta)
+    publisher = identity.get('publisher') or '_legacy'
+    name = meta.get('name')
+    version = meta.get('version')
+    return {
+        'provenance': root / 'catalog' / 'provenance' / f'{name}-{version}.json',
+        'manifest': root / 'catalog' / 'distributions' / publisher / name / version / 'manifest.json',
+    }
+
+
+def _normalize_file_manifest(entries):
+    if not isinstance(entries, list):
+        return None
+    normalized = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            return None
+        normalized.append(
+            {
+                'path': entry.get('path'),
+                'sha256': entry.get('sha256'),
+                'size': entry.get('size'),
+                'mode': entry.get('mode'),
+            }
+        )
+    normalized.sort(key=lambda item: item.get('path') or '')
+    return normalized
+
+
+def _normalize_build(build):
+    if not isinstance(build, dict):
+        return None
+    return {
+        'archive_format': build.get('archive_format'),
+        'gzip_mtime': build.get('gzip_mtime'),
+        'tar_mtime': build.get('tar_mtime'),
+        'tar_uid': build.get('tar_uid'),
+        'tar_gid': build.get('tar_gid'),
+        'tar_uname': build.get('tar_uname'),
+        'tar_gname': build.get('tar_gname'),
+        'builder': build.get('builder'),
+    }
+
+
+def collect_reproducibility_state(root, meta):
+    paths = _release_artifact_paths(root, meta)
+    summary = {
+        'available': False,
+        'consistent': True,
+        'issues': [],
+        'provenance_path': str(paths['provenance'].relative_to(root)) if paths['provenance'].exists() else None,
+        'manifest_path': str(paths['manifest'].relative_to(root)) if paths['manifest'].exists() else None,
+        'bundle_path': None,
+        'bundle_file_count': None,
+        'file_manifest_count': 0,
+        'archive_format': None,
+    }
+
+    provenance_distribution = None
+    if paths['provenance'].exists():
+        provenance_payload = load_json(paths['provenance'])
+        provenance_distribution = provenance_payload.get('distribution') or {}
+        bundle = provenance_distribution.get('bundle') or {}
+        if isinstance(bundle, dict):
+            summary['bundle_path'] = bundle.get('path')
+            summary['bundle_file_count'] = bundle.get('file_count')
+        file_manifest = provenance_distribution.get('file_manifest')
+        if isinstance(file_manifest, list):
+            summary['file_manifest_count'] = len(file_manifest)
+            summary['available'] = True
+        build = provenance_distribution.get('build')
+        if isinstance(build, dict):
+            summary['archive_format'] = build.get('archive_format')
+            summary['available'] = True
+
+    manifest_payload = None
+    if paths['manifest'].exists():
+        manifest_payload = load_json(paths['manifest'])
+        if summary['bundle_path'] is None:
+            summary['bundle_path'] = ((manifest_payload.get('bundle') or {}).get('path'))
+        if summary['bundle_file_count'] is None:
+            summary['bundle_file_count'] = ((manifest_payload.get('bundle') or {}).get('file_count'))
+        file_manifest = manifest_payload.get('file_manifest')
+        if not summary['available'] and isinstance(file_manifest, list):
+            summary['file_manifest_count'] = len(file_manifest)
+            summary['available'] = True
+        build = manifest_payload.get('build')
+        if summary['archive_format'] is None and isinstance(build, dict):
+            summary['archive_format'] = build.get('archive_format')
+            summary['available'] = True
+
+    if provenance_distribution is not None and manifest_payload is not None:
+        normalized_signed_file_manifest = _normalize_file_manifest(provenance_distribution.get('file_manifest'))
+        normalized_manifest_file_manifest = _normalize_file_manifest(manifest_payload.get('file_manifest'))
+        if normalized_signed_file_manifest is not None or normalized_manifest_file_manifest is not None:
+            if normalized_signed_file_manifest != normalized_manifest_file_manifest:
+                summary['issues'].append('distribution file manifest does not match signed attestation')
+
+        normalized_signed_build = _normalize_build(provenance_distribution.get('build'))
+        normalized_manifest_build = _normalize_build(manifest_payload.get('build'))
+        if normalized_signed_build is not None or normalized_manifest_build is not None:
+            if normalized_signed_build != normalized_manifest_build:
+                summary['issues'].append('distribution build metadata does not match signed attestation')
+
+    summary['consistent'] = not summary['issues']
+    return summary
+
+
+def collect_transparency_log_state(root, meta):
+    provenance_path = _release_artifact_paths(root, meta)['provenance']
+    if not provenance_path.exists():
+        return None
+    payload = load_json(provenance_path)
+    try:
+        summary = summarize_transparency_log_state(provenance_path, payload=payload, root=root)
+    except TransparencyLogError as exc:
+        return {
+            'mode': ((payload.get('transparency_log') or {}).get('mode') if isinstance(payload.get('transparency_log'), dict) else 'unknown'),
+            'required': bool(((payload.get('transparency_log') or {}).get('required')) if isinstance(payload.get('transparency_log'), dict) else False),
+            'entry_path': ((payload.get('transparency_log') or {}).get('entry_path')) if isinstance(payload.get('transparency_log'), dict) else None,
+            'published': False,
+            'verified': False,
+            'entry_id': None,
+            'log_index': None,
+            'integrated_time': None,
+            'log_endpoint': None,
+            'error': str(exc),
+        }
+    return summary
 
 
 def tracked_upstream(root):
@@ -260,6 +393,8 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
     skill_dir = Path(skill_dir).resolve()
     meta, expected_tag = expected_skill_tag(skill_dir)
     identity = normalize_skill_identity(meta)
+    reproducibility = collect_reproducibility_state(root, meta)
+    transparency_log = collect_transparency_log_state(root, meta)
     signing = load_signing_config(root)
     head_commit = git(root, 'rev-parse', 'HEAD').stdout.strip()
     branch = git(root, 'branch', '--show-current', check=False).stdout.strip() or None
@@ -290,6 +425,7 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
     issues = []
     warnings = []
     exception_usage = []
+    require_clean_worktree = mode != 'local-tag'
     require_upstream_sync = mode in {'preflight', 'stable-release'}
     try:
         exception_policy = load_exception_policy(root)
@@ -320,19 +456,24 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
         warnings.append(
             f'releaser identity {releaser_identity!r} is not listed in namespace-policy authorized_releasers for {identity.get("qualified_name") or identity.get("name")}'
         )
+    if isinstance(transparency_log, dict) and transparency_log.get('error'):
+        warnings.append(f'transparency log proof could not be verified: {transparency_log.get("error")}')
     if local_tag.get('signer') and namespace_report.get('authorized_signers') and local_tag['signer'] not in namespace_report.get('authorized_signers', []):
         warnings.append(
             f'tag signer {local_tag["signer"]!r} is not listed in namespace-policy authorized_signers for {identity.get("qualified_name") or identity.get("name")}'
         )
 
     if dirty:
-        issues.append(
-            _issue(
-                'dirty-worktree',
-                'worktree is dirty; commit or stash all changes before creating or publishing a stable release',
-                rule='stable releases require a clean worktree',
+        if require_clean_worktree:
+            issues.append(
+                _issue(
+                    'dirty-worktree',
+                    'worktree is dirty; commit or stash all changes before creating or publishing a stable release',
+                    rule='stable releases require a clean worktree',
+                )
             )
-        )
+        else:
+            warnings.append('worktree is dirty; local tag release checks allow repo-managed provenance artifacts')
     if require_upstream_sync:
         if not upstream:
             issues.append(
@@ -470,7 +611,14 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
         summary='release readiness checks passed' if not errors else f'release readiness blocked by {len(errors)} issue(s)',
         effective_sources=list(signing.get('policy_sources', [])) + list(namespace_policy_sources),
         applied_rules=[
-            {'id': 'dirty-worktree', 'rule': 'stable releases require a clean worktree', 'value': not dirty},
+            {
+                'id': 'dirty-worktree',
+                'rule': 'stable releases require a clean worktree',
+                'value': {
+                    'enforced': require_clean_worktree,
+                    'dirty': dirty,
+                },
+            },
             {
                 'id': 'upstream-synchronization',
                 'rule': 'stable releases require upstream synchronization',
@@ -550,6 +698,8 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
             'authorized_signers': namespace_report.get('authorized_signers', []),
             'authorized_releasers': namespace_report.get('authorized_releasers', []),
             'exception_usage': exception_usage,
+            'reproducibility': reproducibility,
+            'transparency_log': transparency_log,
         },
         'signing': {
             'tag_format': signing['tag_format'],

@@ -71,3 +71,37 @@ python3 scripts/doctor-signing.py operate-infinitas-skill --provenance catalog/p
 ```
 
 The report confirms the high-level state, the attestation verifier checks the provenance bundle, and doctor explains any mismatch between signer policy, local git config, and release metadata.
+
+## Transparency log policy
+
+The signing policy now reserves an additive transparency-log block under `config/signing.json`:
+
+```json
+"attestation": {
+  "transparency_log": {
+    "mode": "disabled",
+    "endpoint": null,
+    "timeout_seconds": 5
+  }
+}
+```
+
+The modes mean:
+
+- `disabled`: do not attempt external transparency publication
+- `advisory`: attempt publication when a caller asks for it, but do not fail the release if the endpoint is unavailable
+- `required`: treat missing endpoint, malformed responses, or proof mismatches as release-blocking errors for callers that enforce transparency publication
+
+The returned log-entry contract is normalized into a stable JSON shape with `entry_id`, `log_index`, `integrated_time`, `attestation_sha256`, and `proof` fields so later release tooling can persist and audit the same proof record.
+
+When `scripts/release-skill.sh --write-provenance` runs with transparency publication enabled, it writes that normalized proof to:
+
+```text
+catalog/provenance/<skill>-<version>.transparency.json
+```
+
+Operationally:
+
+- `advisory` mode logs a warning and continues if the endpoint is unavailable or returns a bad proof
+- `required` mode fails the release before distribution artifacts are finalized, so no half-trusted release bundle is left behind
+- `python3 scripts/verify-attestation.py <attestation.json> --json` is the fastest way to confirm whether the stored transparency proof still matches the attestation digest

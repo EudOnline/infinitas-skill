@@ -21,6 +21,12 @@
       "repository": "lvxiaoer/infinitas-skill",
       "workflow": "release-attestation"
     },
+    "transparency_log": {
+      "mode": "disabled",
+      "endpoint": null,
+      "timeout_seconds": 5,
+      "note": "Optional external transparency publication for signed release attestations"
+    },
     "policy": {
       "mode": "enforce",
       "release_trust_mode": "ssh",

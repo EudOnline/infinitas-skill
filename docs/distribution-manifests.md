@@ -35,9 +35,27 @@ Each `manifest.json` records:
 - skill identity (`name`, `publisher`, `qualified_name`, `version`, `status`)
 - immutable source snapshot (`tag`, `ref`, `commit`, `immutable`, `pushed`)
 - bundle metadata (`path`, `sha256`, `size`, `root_dir`, `file_count`)
+- reproducibility-oriented bundle metadata (`build`)
+- a per-file released-file inventory (`file_manifest`)
 - attestation bundle (`provenance_path`, `signature_path`, signer identity, signer namespace)
 - registry context
 - dependency resolution context
+
+The signed provenance now carries the same release-bundle contract inside `distribution`, so release tooling can keep the signed attestation and the published manifest aligned on both top-level bundle identity and file-level inventory.
+
+`file_manifest` records one entry per archived file with:
+
+- relative path inside the released skill root
+- SHA-256 digest
+- file size
+- normalized archive mode
+
+`build` records the normalized archive settings and small builder summary used to create the bundle, such as:
+
+- archive format
+- gzip and tar mtimes
+- tar uid/gid and owner/group markers
+- Python version and implementation used by the release helper
 
 The attestation payload must agree with the manifest. Verification fails if:
 
@@ -45,10 +63,21 @@ The attestation payload must agree with the manifest. Verification fails if:
 - the attestation digest changed
 - the signed attestation does not match the manifest metadata
 - the source snapshot or dependency context diverges
+- the file-level release inventory or normalized build metadata diverges from the signed attestation
+- the actual archived bundle contents no longer match the signed `file_manifest`
+- the archive-normalized reproducibility fields (`archive_format`, mtimes, uid/gid, owner markers) no longer match the signed `build` metadata
 
 ## Generate and verify
 
 `release-skill.sh --write-provenance` now emits and verifies distribution data when the SSH attestation signature exists.
+
+When the signing policy enables transparency publication, the release flow also writes a provenance companion record:
+
+```text
+catalog/provenance/<skill>-<version>.transparency.json
+```
+
+That companion file is not a replacement for the signed attestation. It is an additive proof record that ties the signed attestation digest to an external transparency-log entry.
 
 Useful commands:
 
@@ -60,6 +89,18 @@ scripts/release-skill.sh my-skill --push-tag --write-provenance
 python3 scripts/verify-distribution-manifest.py \
   catalog/distributions/_legacy/my-skill/1.2.3/manifest.json
 ```
+
+Machine-readable verification now exposes the same reproducibility contract on every layer:
+
+- `python3 scripts/verify-attestation.py <attestation.json> --json` includes `distribution.file_manifest_count` plus the signed `distribution.build` summary
+- `python3 scripts/check-release-state.py <name> --mode local-tag --json` includes `release.reproducibility`, so local provenance flows can inspect the generated release metadata even though repo-managed artifacts make the worktree dirty
+- `catalog/catalog.json` mirrors a compact downstream summary under `verified_distribution.file_manifest_count` and `verified_distribution.build_archive_format`
+
+When transparency publication is enabled:
+
+- `python3 scripts/verify-attestation.py <attestation.json> --json` also includes `transparency_log`
+- `python3 scripts/check-release-state.py <name> --json` mirrors the same summary under `release.transparency_log`
+- `catalog/catalog.json` preserves a downstream-facing copy under `verified_distribution.transparency_log`
 
 ## Install / sync behavior
 
@@ -101,6 +142,8 @@ That gives downstream consumers a stable place to discover:
 
 - manifest path
 - bundle path + digest
+- file-manifest count
+- bundle archive format summary
 - attestation path + signature path
 - released source snapshot
 - generation timestamp

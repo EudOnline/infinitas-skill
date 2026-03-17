@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-16T03:52:23Z",
+  "generated_at": "2026-03-17T04:44:43Z",
   "count": 4,
   "skills": [
     {
@@ -23,6 +23,8 @@
       "signer_identity": "lvxiaoer",
       "namespace": "infinitas-skill",
       "allowed_signers": "config/allowed_signers",
+      "file_manifest_count": null,
+      "build_archive_format": null,
       "source_snapshot_kind": "git-tag",
       "source_snapshot_tag": "skill/consume-infinitas-skill/v0.1.0",
       "source_snapshot_ref": "refs/tags/skill/consume-infinitas-skill/v0.1.0",
@@ -145,6 +147,8 @@
       "signer_identity": "lvxiaoer",
       "namespace": "infinitas-skill",
       "allowed_signers": "config/allowed_signers",
+      "file_manifest_count": null,
+      "build_archive_format": null,
       "source_snapshot_kind": "git-tag",
       "source_snapshot_tag": "skill/federation-registry-ops/v0.1.0",
       "source_snapshot_ref": "refs/tags/skill/federation-registry-ops/v0.1.0",
@@ -267,6 +271,8 @@
       "signer_identity": "lvxiaoer",
       "namespace": "infinitas-skill",
       "allowed_signers": "config/allowed_signers",
+      "file_manifest_count": null,
+      "build_archive_format": null,
       "source_snapshot_kind": "git-tag",
       "source_snapshot_tag": "skill/operate-infinitas-skill/v0.1.1",
       "source_snapshot_ref": "refs/tags/skill/operate-infinitas-skill/v0.1.1",
@@ -382,6 +388,8 @@
       "signer_identity": "lvxiaoer",
       "namespace": "infinitas-skill",
       "allowed_signers": "config/allowed_signers",
+      "file_manifest_count": null,
+      "build_archive_format": null,
       "source_snapshot_kind": "git-tag",
       "source_snapshot_tag": "skill/release-infinitas-skill/v0.1.0",
       "source_snapshot_ref": "refs/tags/skill/release-infinitas-skill/v0.1.0",

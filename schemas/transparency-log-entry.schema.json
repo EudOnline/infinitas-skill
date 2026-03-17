@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openai.invalid/infinitas-skill/transparency-log-entry.schema.json",
+  "title": "infinitas-skill transparency log entry",
+  "type": "object",
+  "required": [
+    "$schema",
+    "schema_version",
+    "kind",
+    "log_endpoint",
+    "entry_id",
+    "log_index",
+    "integrated_time",
+    "attestation_sha256",
+    "proof"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "kind": {
+      "type": "string",
+      "const": "attestation-transparency-log-entry"
+    },
+    "log_endpoint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "entry_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "log_index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "integrated_time": {
+      "type": "string",
+      "minLength": 1
+    },
+    "attestation_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "proof": {
+      "type": "object",
+      "required": [
+        "hash_algorithm",
+        "body_sha256",
+        "root_hash",
+        "tree_size",
+        "inclusion_path"
+      ],
+      "properties": {
+        "hash_algorithm": {
+          "type": "string",
+          "minLength": 1
+        },
+        "body_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "root_hash": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tree_size": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "inclusion_path": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

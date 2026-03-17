@@ -114,6 +114,33 @@
           },
           "additionalProperties": true
         },
+        "transparency_log": {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "disabled",
+                "advisory",
+                "required"
+              ]
+            },
+            "endpoint": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "timeout_seconds": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "note": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
         "policy": {
           "type": "object",
           "required": [

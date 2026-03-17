@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 from dependency_lib import plan_from_skill_dir
+from distribution_lib import inspect_distribution_bundle
 from registry_source_lib import find_registry, load_registry_config, registry_identity
 from release_lib import ROOT, ReleaseError, collect_release_state, resolve_skill
 
@@ -156,6 +157,11 @@ def build_common_payload(context):
 def build_distribution_payload(args):
     if not args.distribution_bundle_path:
         return None
+    bundle_source_path = getattr(args, 'distribution_bundle_source_path', None)
+    bundle_path = Path(bundle_source_path or args.distribution_bundle_path)
+    if not bundle_path.is_absolute():
+        bundle_path = bundle_path.resolve()
+    bundle_metadata = inspect_distribution_bundle(bundle_path, expected_root=args.distribution_bundle_root_dir)
     return {
         'manifest_path': args.distribution_manifest_path,
         'bundle': {
@@ -166,4 +172,19 @@ def build_distribution_payload(args):
             'root_dir': args.distribution_bundle_root_dir,
             'file_count': args.distribution_bundle_file_count,
         },
+        'file_manifest': bundle_metadata.get('file_manifest', []),
+        'build': bundle_metadata.get('build'),
+    }
+
+
+def build_transparency_log_payload(args, attestation_config):
+    transparency_cfg = (attestation_config or {}).get('transparency_log') or {}
+    mode = transparency_cfg.get('mode', 'disabled')
+    entry_path = getattr(args, 'transparency_log_entry_path', None)
+    if mode == 'disabled' or not entry_path:
+        return None
+    return {
+        'mode': mode,
+        'required': mode == 'required',
+        'entry_path': entry_path,
     }

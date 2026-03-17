@@ -367,7 +367,10 @@ fi
 if [[ $WRITE_PROVENANCE -eq 1 ]]; then
   mkdir -p "$ROOT/catalog/provenance"
   PROV="$ROOT/catalog/provenance/$NAME-$VERSION.json"
-  TMP_PROV="$(mktemp)"
+  TRANSPARENCY_ENTRY="$ROOT/catalog/provenance/$NAME-$VERSION.transparency.json"
+  TRANSPARENCY_ENTRY_REL="catalog/provenance/$NAME-$VERSION.transparency.json"
+  TMP_PROV="$PROV.tmp"
+  rm -f "$TMP_PROV" "$TMP_PROV$ATT_SIGNATURE_EXT" "$TRANSPARENCY_ENTRY"
   DIST_PATHS=()
   while IFS= read -r line; do
     DIST_PATHS+=("$line")
@@ -392,7 +395,8 @@ PY
   DIST_BUNDLE="${DIST_PATHS[3]}"
   DIST_BUNDLE_REL="${DIST_PATHS[4]}"
   mkdir -p "$DIST_DIR"
-  TMP_BUNDLE="$(mktemp)"
+  TMP_BUNDLE="$DIST_BUNDLE.tmp"
+  rm -f "$TMP_BUNDLE"
   EFFECTIVE_SIGNER="$SIGNER"
   [[ -n "$EFFECTIVE_SIGNER" ]] || EFFECTIVE_SIGNER="$SIGNER_NAME"
   EFFECTIVE_RELEASER="$RELEASER"
@@ -431,10 +435,12 @@ PY
   GENERATE_ARGS+=(
     --distribution-manifest-path "$DIST_MANIFEST_REL"
     --distribution-bundle-path "$DIST_BUNDLE_REL"
+    --distribution-bundle-source-path "$TMP_BUNDLE"
     --distribution-bundle-sha256 "$BUNDLE_SHA256"
     --distribution-bundle-size "$BUNDLE_SIZE"
     --distribution-bundle-root-dir "$BUNDLE_ROOT_DIR"
     --distribution-bundle-file-count "$BUNDLE_FILE_COUNT"
+    --transparency-log-entry-path "$TRANSPARENCY_ENTRY_REL"
   )
   "${GENERATE_ARGS[@]}" > "$TMP_PROV"
   TMP_SSH_SIG="$TMP_PROV$ATT_SIGNATURE_EXT"
@@ -444,11 +450,54 @@ PY
     [[ -n "$EFFECTIVE_SSH_KEY" ]] || { echo "missing SSH attestation signing key; pass --ssh-key or configure the repo signing key before writing provenance" >&2; rm -f "$TMP_PROV"; exit 1; }
     "$ROOT/scripts/sign-provenance-ssh.sh" "$TMP_PROV" --key "$EFFECTIVE_SSH_KEY" >/dev/null
   fi
-  mv "$TMP_PROV" "$PROV"
-  mv "$TMP_BUNDLE" "$DIST_BUNDLE"
+  HAS_SSH_SIG=0
   if [[ -f "$TMP_SSH_SIG" ]]; then
+    HAS_SSH_SIG=1
+  fi
+  mv "$TMP_PROV" "$PROV"
+  if [[ $HAS_SSH_SIG -eq 1 ]]; then
     mv "$TMP_SSH_SIG" "$PROV_SSH_SIG"
   fi
+  if [[ $HAS_SSH_SIG -eq 1 ]]; then
+    if ! python3 - "$ROOT" "$PROV" "$TRANSPARENCY_ENTRY" <<'PY'
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1]).resolve()
+provenance_path = Path(sys.argv[2]).resolve()
+entry_path = Path(sys.argv[3]).resolve()
+sys.path.insert(0, str(root / 'scripts'))
+
+from attestation_lib import AttestationError, record_attestation_transparency_log  # noqa: E402
+
+try:
+    result = record_attestation_transparency_log(provenance_path, root=root, entry_path=entry_path)
+except AttestationError as exc:
+    print(f'FAIL: {exc}', file=sys.stderr)
+    raise SystemExit(1)
+
+mode = result.get('mode')
+entry = result.get('entry') or {}
+if result.get('published'):
+    print(f"published transparency log entry: {result.get('entry_path')}")
+    print(f"transparency entry id: {entry.get('entry_id')}")
+elif mode != 'disabled' and result.get('error'):
+    print(f"WARN: transparency log publication skipped: {result.get('error')}", file=sys.stderr)
+PY
+    then
+      rm -f "$PROV" "$PROV_SSH_SIG" "$TMP_BUNDLE" "$TRANSPARENCY_ENTRY"
+      rmdir "$DIST_DIR" 2>/dev/null || true
+      rm -f "$META_JSON" "$STATE_JSON"
+      exit 1
+    fi
+  fi
+  if [[ $SSH_VERIFY_PROVENANCE -eq 1 ]]; then
+    VERIFY_ARGS=("$ROOT/scripts/verify-provenance-ssh.sh" "$PROV")
+    [[ -n "$EFFECTIVE_SIGNER" ]] && VERIFY_ARGS+=(--identity "$EFFECTIVE_SIGNER")
+    "${VERIFY_ARGS[@]}" >/dev/null
+  fi
+
+  mv "$TMP_BUNDLE" "$DIST_BUNDLE"
   echo "wrote provenance: $PROV"
   echo "wrote distribution bundle: $DIST_BUNDLE"
   if [[ $SIGN_PROVENANCE -eq 1 ]]; then
@@ -460,16 +509,13 @@ PY
     echo "ssh-signed provenance: $PROV_SSH_SIG"
   fi
   if [[ $SSH_VERIFY_PROVENANCE -eq 1 ]]; then
-    VERIFY_ARGS=("$ROOT/scripts/verify-provenance-ssh.sh" "$PROV")
-    [[ -n "$EFFECTIVE_SIGNER" ]] && VERIFY_ARGS+=(--identity "$EFFECTIVE_SIGNER")
-    "${VERIFY_ARGS[@]}" >/dev/null
     if [[ $AUTO_VERIFY_ATTESTATION -eq 1 ]]; then
       echo "verified attestation: $PROV_SSH_SIG"
     else
       echo "ssh-verified provenance: $PROV_SSH_SIG"
     fi
   fi
-  if [[ -f "$PROV_SSH_SIG" ]]; then
+  if [[ $HAS_SSH_SIG -eq 1 ]]; then
     python3 "$ROOT/scripts/generate-distribution-manifest.py" --provenance "$PROV" --bundle "$DIST_BUNDLE" --output "$DIST_MANIFEST"
     echo "wrote distribution manifest: $DIST_MANIFEST"
     python3 "$ROOT/scripts/verify-distribution-manifest.py" "$DIST_MANIFEST" >/dev/null

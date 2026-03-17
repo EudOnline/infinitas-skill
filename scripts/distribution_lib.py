@@ -2,6 +2,7 @@
 import hashlib
 import io
 import json
+import platform
 import tarfile
 import tempfile
 from datetime import datetime, timezone
@@ -23,6 +24,140 @@ def sha256_file(path):
         for chunk in iter(lambda: handle.read(1024 * 1024), b''):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _sha256_bytes(data):
+    digest = hashlib.sha256()
+    digest.update(data)
+    return digest.hexdigest()
+
+
+def _gzip_mtime(path):
+    header = Path(path).read_bytes()[:8]
+    if len(header) < 8 or header[:2] != b'\x1f\x8b':
+        raise DistributionError(f'invalid gzip header: {path}')
+    return int.from_bytes(header[4:8], 'little')
+
+
+def inspect_distribution_bundle(bundle_path, *, expected_root=None):
+    bundle_path = Path(bundle_path).resolve()
+    file_manifest = []
+    tar_mtimes = set()
+    tar_uids = set()
+    tar_gids = set()
+    tar_unames = set()
+    tar_gnames = set()
+
+    with tarfile.open(bundle_path, mode='r:gz') as archive:
+        for member in archive.getmembers():
+            if not member.isfile():
+                continue
+            member_path = Path(member.name)
+            if expected_root:
+                if not member_path.parts or member_path.parts[0] != expected_root:
+                    raise DistributionError(f'bundle member {member.name!r} is outside expected root {expected_root!r}')
+                rel_path = str(Path(*member_path.parts[1:]))
+            else:
+                rel_path = member.name
+            if not rel_path:
+                raise DistributionError(f'bundle member {member.name!r} resolved to an empty relative path')
+            handle = archive.extractfile(member)
+            if handle is None:
+                raise DistributionError(f'could not read bundle member: {member.name}')
+            data = handle.read()
+            file_manifest.append(
+                {
+                    'path': rel_path,
+                    'sha256': _sha256_bytes(data),
+                    'size': member.size,
+                    'mode': f'{member.mode & 0o777:04o}',
+                }
+            )
+            tar_mtimes.add(member.mtime)
+            tar_uids.add(member.uid)
+            tar_gids.add(member.gid)
+            tar_unames.add(member.uname or '')
+            tar_gnames.add(member.gname or '')
+
+    file_manifest.sort(key=lambda item: item['path'])
+    return {
+        'file_manifest': file_manifest,
+        'build': {
+            'archive_format': 'tar.gz',
+            'gzip_mtime': _gzip_mtime(bundle_path),
+            'tar_mtime': min(tar_mtimes) if tar_mtimes else 0,
+            'tar_uid': min(tar_uids) if tar_uids else 0,
+            'tar_gid': min(tar_gids) if tar_gids else 0,
+            'tar_uname': next(iter(tar_unames)) if len(tar_unames) == 1 else None,
+            'tar_gname': next(iter(tar_gnames)) if len(tar_gnames) == 1 else None,
+            'builder': {
+                'python': platform.python_version(),
+                'implementation': platform.python_implementation(),
+            },
+        },
+    }
+
+
+def _normalize_file_manifest(entries):
+    if not isinstance(entries, list):
+        return None
+    normalized = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            return None
+        normalized.append(
+            {
+                'path': entry.get('path'),
+                'sha256': entry.get('sha256'),
+                'size': entry.get('size'),
+                'mode': entry.get('mode'),
+            }
+        )
+    normalized.sort(key=lambda item: item.get('path') or '')
+    return normalized
+
+
+def _normalize_build(build, *, include_builder=True):
+    if not isinstance(build, dict):
+        return None
+    normalized = {
+        'archive_format': build.get('archive_format'),
+        'gzip_mtime': build.get('gzip_mtime'),
+        'tar_mtime': build.get('tar_mtime'),
+        'tar_uid': build.get('tar_uid'),
+        'tar_gid': build.get('tar_gid'),
+        'tar_uname': build.get('tar_uname'),
+        'tar_gname': build.get('tar_gname'),
+    }
+    if include_builder:
+        normalized['builder'] = build.get('builder')
+    return normalized
+
+
+def reproducibility_summary(payload):
+    if not isinstance(payload, dict):
+        return {}
+
+    summary = {}
+    file_manifest = payload.get('file_manifest')
+    if isinstance(file_manifest, list):
+        summary['file_manifest_count'] = len(file_manifest)
+
+    build = payload.get('build')
+    if isinstance(build, dict):
+        summary['build'] = build
+        summary['build_archive_format'] = build.get('archive_format')
+
+    bundle = payload.get('bundle')
+    if isinstance(bundle, dict):
+        if isinstance(bundle.get('path'), str) and bundle.get('path'):
+            summary['bundle_path'] = bundle.get('path')
+        if isinstance(bundle.get('sha256'), str) and bundle.get('sha256'):
+            summary['bundle_sha256'] = bundle.get('sha256')
+        if isinstance(bundle.get('file_count'), int):
+            summary['bundle_file_count'] = bundle.get('file_count')
+
+    return summary
 
 
 def _normalized_publisher(value):
@@ -247,6 +382,15 @@ def verify_distribution_manifest(manifest_path, root=None, attestation_root=None
     signed_bundle = signed_distribution.get('bundle') or {}
     if not signed_bundle:
         raise DistributionError('attestation is missing distribution.bundle metadata')
+    payload_file_manifest = payload.get('file_manifest')
+    signed_file_manifest = signed_distribution.get('file_manifest')
+    payload_build = payload.get('build')
+    signed_build = signed_distribution.get('build')
+
+    actual_bundle_metadata = None
+    if payload_file_manifest is not None or signed_file_manifest is not None or payload_build is not None or signed_build is not None:
+        actual_bundle_metadata = inspect_distribution_bundle(bundle_path, expected_root=signed_bundle.get('root_dir'))
+
     comparisons = [
         ('skill.name', payload['skill'].get('name'), provenance.get('skill', {}).get('name')),
         ('skill.version', payload['skill'].get('version'), provenance.get('skill', {}).get('version')),
@@ -260,6 +404,30 @@ def verify_distribution_manifest(manifest_path, root=None, attestation_root=None
     for label, left, right in comparisons:
         if left != right:
             raise DistributionError(f'{label} does not match signed attestation payload')
+
+    if payload_file_manifest is not None or signed_file_manifest is not None:
+        normalized_payload_file_manifest = _normalize_file_manifest(payload_file_manifest)
+        normalized_signed_file_manifest = _normalize_file_manifest(signed_file_manifest)
+        if normalized_payload_file_manifest is None or normalized_signed_file_manifest is None:
+            raise DistributionError('file manifest metadata is incomplete between distribution manifest and signed attestation')
+        if normalized_payload_file_manifest != normalized_signed_file_manifest:
+            raise DistributionError('file manifest does not match signed attestation payload')
+
+        normalized_actual_file_manifest = _normalize_file_manifest((actual_bundle_metadata or {}).get('file_manifest'))
+        if normalized_actual_file_manifest != normalized_signed_file_manifest:
+            raise DistributionError('file manifest does not match distribution bundle contents')
+
+    if payload_build is not None or signed_build is not None:
+        normalized_payload_build = _normalize_build(payload_build)
+        normalized_signed_build = _normalize_build(signed_build)
+        if normalized_payload_build is None or normalized_signed_build is None:
+            raise DistributionError('build metadata is incomplete between distribution manifest and signed attestation')
+        if normalized_payload_build != normalized_signed_build:
+            raise DistributionError('build metadata does not match signed attestation payload')
+
+        normalized_actual_build = _normalize_build((actual_bundle_metadata or {}).get('build'), include_builder=False)
+        if normalized_actual_build != _normalize_build(signed_build, include_builder=False):
+            raise DistributionError('build metadata does not match distribution bundle contents')
 
     if payload.get('registry') != provenance.get('registry'):
         raise DistributionError('registry context does not match signed attestation payload')
@@ -440,6 +608,7 @@ def manifest_index_entry(manifest_path, root):
     skill = payload.get('skill') or {}
     bundle = payload.get('bundle') or {}
     attestation_bundle = payload.get('attestation_bundle') or {}
+    reproducibility = reproducibility_summary(payload)
     return {
         'name': skill.get('name'),
         'publisher': skill.get('publisher'),
@@ -461,6 +630,8 @@ def manifest_index_entry(manifest_path, root):
         'signer_identity': attestation_bundle.get('signer_identity'),
         'namespace': attestation_bundle.get('namespace'),
         'allowed_signers': attestation_bundle.get('allowed_signers'),
+        'file_manifest_count': reproducibility.get('file_manifest_count'),
+        'build_archive_format': reproducibility.get('build_archive_format'),
         'source_snapshot_kind': (payload.get('source_snapshot') or {}).get('kind'),
         'source_snapshot_tag': (payload.get('source_snapshot') or {}).get('tag'),
         'source_snapshot_ref': (payload.get('source_snapshot') or {}).get('ref'),
@@ -493,6 +664,7 @@ def build_distribution_manifest_payload(provenance_path, bundle_path, root=None)
     signed_bundle = distribution.get('bundle') or {}
     if not signed_bundle:
         raise DistributionError('attestation payload is missing distribution.bundle metadata')
+    bundle_metadata = inspect_distribution_bundle(bundle_path, expected_root=signed_bundle.get('root_dir'))
 
     signature_path = provenance_path.with_suffix(provenance_path.suffix + (provenance.get('attestation') or {}).get('signature_ext', '.ssig'))
     if not signature_path.exists():
@@ -532,6 +704,8 @@ def build_distribution_manifest_payload(provenance_path, bundle_path, root=None)
             'root_dir': signed_bundle.get('root_dir'),
             'file_count': signed_bundle.get('file_count'),
         },
+        'file_manifest': distribution.get('file_manifest') or bundle_metadata.get('file_manifest', []),
+        'build': distribution.get('build') or bundle_metadata.get('build'),
         'registry': provenance.get('registry'),
         'dependencies': provenance.get('dependencies'),
         'attestation_bundle': {

@@ -181,7 +181,15 @@
    - `catalog/distributions/.../manifest.json`
    - `catalog/distributions/.../skill.tar.gz`
    - `catalog/provenance/<skill>-<version>.json`
+   - 若 transparency policy 启用，还应确认 `catalog/provenance/<skill>-<version>.transparency.json`
    - 更新后的 `catalog/ai-index.json`
+
+   如需面向机器进一步确认 trust state，优先读取：
+
+   ```bash
+   python3 scripts/verify-attestation.py catalog/provenance/<skill>-<version>.json --json
+   python3 scripts/check-release-state.py <skill> --mode local-tag --json
+   ```
 
 5. 提交并推送仓库变更；确保相关 release tag 已被推送。
 
