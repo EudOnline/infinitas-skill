@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
+import json
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
+from reviewer_rotation_lib import recommend_reviewers, render_reviewer_recommendations
 from review_lib import ReviewPolicyError, evaluate_review_state, resolve_skill
 
 
@@ -13,11 +15,13 @@ def print_csv_list(name, values):
 
 def main():
     if len(sys.argv) < 2:
-        print('usage: scripts/review-status.py <skill-name-or-path> [--require-pass] [--as-active] [--stage STAGE]', file=sys.stderr)
+        print('usage: scripts/review-status.py <skill-name-or-path> [--require-pass] [--as-active] [--stage STAGE] [--json] [--show-recommendations]', file=sys.stderr)
         return 1
     args = sys.argv[2:]
     require_pass = False
     as_active = False
+    as_json = False
+    show_recommendations = False
     stage = None
     index = 0
     while index < len(args):
@@ -28,6 +32,14 @@ def main():
             continue
         if arg == '--as-active':
             as_active = True
+            index += 1
+            continue
+        if arg == '--json':
+            as_json = True
+            index += 1
+            continue
+        if arg == '--show-recommendations':
+            show_recommendations = True
             index += 1
             continue
         if arg == '--stage':
@@ -47,10 +59,20 @@ def main():
     skill_dir = resolve_skill(ROOT, sys.argv[1])
     try:
         evaluation = evaluate_review_state(skill_dir, root=ROOT, stage=stage, as_active=as_active)
+        recommendations = recommend_reviewers(skill_dir, root=ROOT, stage=stage, as_active=as_active) if show_recommendations else None
     except ReviewPolicyError as exc:
         for error in exc.errors:
             print(f'FAIL: {error}', file=sys.stderr)
         return 1
+
+    if as_json:
+        payload = dict(evaluation)
+        if recommendations is not None:
+            payload['recommendations'] = recommendations
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        if require_pass and not evaluation['review_gate_pass']:
+            return 1
+        return 0
 
     print(f"skill: {evaluation['skill']}@{evaluation['version']}")
     print(f"actual_stage: {evaluation['actual_stage']}")
@@ -77,6 +99,8 @@ def main():
             groups = ','.join(item['groups']) if item['groups'] else '-'
             counted = 'yes' if item['counted'] else 'no'
             print(f"- {item['reviewer']}: {item['decision']} counted={counted} groups={groups} at={item['at']}{reasons}")
+    if recommendations is not None:
+        print(render_reviewer_recommendations(recommendations))
     if require_pass and not evaluation['review_gate_pass']:
         return 1
     return 0

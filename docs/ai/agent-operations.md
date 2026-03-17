@@ -57,6 +57,8 @@
 - **“检查这个 skill 是否合规”** → `scripts/check-skill.sh`
 - **“准备评审 / 请求评审”** → `scripts/request-review.sh`
 - **“记录 reviewer 决策”** → `scripts/approve-skill.sh`
+- **“导入 GitHub / 平台原生 review 证据”** → `python3 scripts/import-platform-review-evidence.py <skill> --input <path> --json`
+- **“下一位 reviewer 应该找谁”** → `python3 scripts/recommend-reviewers.py <skill> --as-active --json`
 - **“确认能否升到 active”** → `scripts/review-status.py --as-active --require-pass`
 - **“发布稳定版本供其他 agent 安装”** → `scripts/publish-skill.sh`
 - **“给本地 agent 安装稳定版本”** → `scripts/pull-skill.sh`
@@ -93,10 +95,20 @@
 4. 请求并记录评审：
 
    ```bash
-   scripts/request-review.sh my-skill --note "Ready for active"
+   python3 scripts/recommend-reviewers.py my-skill --as-active --json
+   scripts/request-review.sh my-skill --note "Ready for active" --show-recommendations
    scripts/approve-skill.sh my-skill --reviewer reviewer-id --decision approved --note "Looks good"
+   python3 scripts/review-status.py my-skill --as-active --json --show-recommendations
    python3 scripts/review-status.py my-skill --as-active --require-pass
    ```
+
+   如果审批发生在其他平台，但仍需要计入仓库内的 promotion quorum，则先导入标准化证据：
+
+   ```bash
+   python3 scripts/import-platform-review-evidence.py my-skill --input /tmp/review-evidence.json --json
+   ```
+
+   `review-evidence.json` 是和 `reviews.json` 并列的补充证据文件；它不会替代本地 review 记录，但会被 promotion、release-state 和 catalog 一起读取。
 
 5. 发布稳定版本：
 

@@ -40,6 +40,33 @@ If policy packs are enabled, the effective promotion policy is:
 
 The effective review result always comes from the latest distinct reviewer decisions after those rules are applied.
 
+Review decisions can come from two additive sources:
+
+- `reviews.json` for repo-local requests and approvals
+- `review-evidence.json` for normalized imported platform-native review evidence
+
+Imported evidence must stay file-backed and auditable. Each entry carries `source`, `source_kind`, `source_ref`, `reviewer`, `decision`, `at`, and optional `url` or `note`, and those fields remain visible in JSON outputs instead of collapsing into anonymous approval counts.
+
+That merged evidence set is what powers:
+
+- `scripts/review-status.py --json`
+- `scripts/check-promotion-policy.py --json`
+- `scripts/check-release-state.py --json`
+- `scripts/build-catalog.sh`
+
+If imported evidence is malformed, or if the same reviewer is duplicated inside `review-evidence.json`, validation fails explicitly.
+
+## Reviewer guidance
+
+Promotion policy still defines the rules; reviewer recommendation tooling only reads them.
+
+- `python3 scripts/recommend-reviewers.py <skill> --as-active --json` evaluates the effective quorum rule for the target stage
+- recommendations are grouped by required reviewer group, with missing groups prioritized first
+- exclusions include policy-driven reasons such as owner conflicts or reviewers whose current latest decision is already counted
+- when no eligible reviewer exists for a required group, the tooling emits escalation guidance instead of silently guessing
+
+This keeps reviewer rotation deterministic and advisory without adding a scheduler or external state.
+
 Additional checks for `high` risk active skills:
 
 - minimum maintainer count

@@ -8,7 +8,7 @@ from pathlib import Path
 from exception_policy_lib import ExceptionPolicyError, load_exception_policy, match_active_exceptions
 from policy_pack_lib import PolicyPackError, load_policy_domain_resolution
 from policy_trace_lib import build_policy_trace
-from review_lib import ReviewPolicyError, evaluate_review_state, load_reviews
+from review_lib import ReviewPolicyError, evaluate_review_state, review_decision_entries
 from skill_identity_lib import NamespacePolicyError, load_namespace_policy, namespace_policy_report, normalize_skill_identity
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -139,9 +139,9 @@ def resolve_releaser_identity(root):
 
 
 def review_audit_entries(skill_dir):
-    reviews = load_reviews(Path(skill_dir))
+    _reviews, review_entries = review_decision_entries(Path(skill_dir))
     entries = []
-    for item in reviews.get('entries', []):
+    for item in review_entries:
         reviewer = item.get('reviewer')
         decision = item.get('decision')
         if not reviewer or not decision:
@@ -151,6 +151,10 @@ def review_audit_entries(skill_dir):
             'decision': decision,
             'at': item.get('at'),
             'note': item.get('note'),
+            'source': item.get('source'),
+            'source_kind': item.get('source_kind'),
+            'source_ref': item.get('source_ref'),
+            'url': item.get('url'),
         })
     return entries
 

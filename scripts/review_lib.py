@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from policy_pack_lib import PolicyPackError, load_effective_policy_domain
+from review_evidence_lib import ReviewEvidenceError, load_review_evidence
 from team_policy_lib import TeamPolicyError, expand_team_refs, load_team_policy
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -416,12 +417,37 @@ def latest_distinct_entries(entries):
     return {reviewer: entry for reviewer, (_, entry) in sorted(latest.items())}
 
 
+def review_decision_entries(skill_dir: Path):
+    reviews = load_reviews(skill_dir)
+    entries = []
+    for raw_entry in reviews.get('entries', []):
+        if not isinstance(raw_entry, dict):
+            continue
+        entry = dict(raw_entry)
+        entry.setdefault('source', 'reviews.json')
+        entry.setdefault('source_kind', 'repo-review')
+        entry.setdefault('source_ref', 'reviews.json')
+        entry.setdefault('url', None)
+        entries.append(entry)
+
+    evidence = load_review_evidence(skill_dir)
+    for raw_entry in evidence.get('entries', []):
+        entry = dict(raw_entry)
+        entry.setdefault('note', None)
+        entries.append(entry)
+
+    return reviews, entries
+
+
 def evaluate_review_state(skill_dir: Path, root: Path = ROOT, stage: Optional[str] = None, as_active: bool = False, policy=None):
     skill_dir = Path(skill_dir).resolve()
     policy = policy or load_promotion_policy(root)
     meta = load_meta(skill_dir)
-    reviews = load_reviews(skill_dir)
-    latest = latest_distinct_entries(reviews.get('entries', []))
+    try:
+        reviews, decision_entries = review_decision_entries(skill_dir)
+    except ReviewEvidenceError as exc:
+        raise ReviewPolicyError([str(exc)]) from exc
+    latest = latest_distinct_entries(decision_entries)
     groups, reviewers = configured_reviewers(policy, root=root)
     reviews_cfg = policy.get('reviews', {})
     actual_stage = meta.get('status') or skill_dir.parent.name
@@ -463,6 +489,10 @@ def evaluate_review_state(skill_dir: Path, root: Path = ROOT, stage: Optional[st
             'at': entry.get('at'),
             'note': entry.get('note'),
             'groups': reviewer_groups,
+            'source': entry.get('source'),
+            'source_kind': entry.get('source_kind'),
+            'source_ref': entry.get('source_ref'),
+            'url': entry.get('url'),
             'counted': counted,
             'reasons': reasons,
         }
@@ -484,7 +514,7 @@ def evaluate_review_state(skill_dir: Path, root: Path = ROOT, stage: Optional[st
     missing_groups = [group_name for group_name in required_groups if group_name not in covered_group_set]
     quorum_met = len(approvals) >= quorum_rule.get('min_approvals', 0) and not missing_groups
     reviews_file_present = (skill_dir / 'reviews.json').is_file()
-    has_activity = bool(reviews.get('requests') or reviews.get('entries'))
+    has_activity = bool(reviews.get('requests') or decision_entries)
     blocking_rejection_count = len(rejections) if reviews_cfg.get('block_on_rejection', False) else 0
     review_gate_pass = (not reviews_cfg.get('require_reviews_file') or reviews_file_present) and quorum_met and blocking_rejection_count == 0
 

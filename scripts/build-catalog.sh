@@ -17,7 +17,7 @@ sys.path.insert(0, str(root / 'scripts'))
 
 from registry_source_lib import load_registry_config, registry_identity, registry_is_resolution_candidate, resolve_registry_root  # noqa: E402
 from registry_snapshot_lib import snapshot_catalog_summary  # noqa: E402
-from review_lib import ReviewPolicyError, evaluate_review_state, load_reviews  # noqa: E402
+from review_lib import ReviewPolicyError, evaluate_review_state, review_decision_entries  # noqa: E402
 from skill_identity_lib import display_name, normalize_skill_identity  # noqa: E402
 from distribution_lib import DistributionError, manifest_index_entry  # noqa: E402
 from ai_index_lib import build_ai_index  # noqa: E402
@@ -32,9 +32,9 @@ def expected_skill_tag(name, version):
 
 
 def review_audit_entries(skill_dir):
-    reviews = load_reviews(skill_dir)
+    _reviews, review_entries = review_decision_entries(skill_dir)
     entries = []
-    for item in reviews.get('entries', []):
+    for item in review_entries:
         reviewer = item.get('reviewer')
         decision = item.get('decision')
         if not reviewer or not decision:
@@ -44,6 +44,10 @@ def review_audit_entries(skill_dir):
             'decision': decision,
             'at': item.get('at'),
             'note': item.get('note'),
+            'source': item.get('source'),
+            'source_kind': item.get('source_kind'),
+            'source_ref': item.get('source_ref'),
+            'url': item.get('url'),
         })
     return entries
 

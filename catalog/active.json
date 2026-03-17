@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-16T03:53:17Z",
+  "generated_at": "2026-03-17T01:38:47Z",
   "count": 4,
   "skills": [
     {
@@ -57,7 +57,11 @@
           "reviewer": "lvxiaoer",
           "decision": "approved",
           "at": "2026-03-16T03:15:44Z",
-          "note": "Approve 12-04 registry skill"
+          "note": "Approve 12-04 registry skill",
+          "source": "reviews.json",
+          "source_kind": "repo-review",
+          "source_ref": "reviews.json",
+          "url": null
         }
       ],
       "path": "skills/active/consume-infinitas-skill",
@@ -164,7 +168,11 @@
           "reviewer": "lvxiaoer",
           "decision": "approved",
           "at": "2026-03-16T03:15:44Z",
-          "note": "Approve 12-04 registry skill"
+          "note": "Approve 12-04 registry skill",
+          "source": "reviews.json",
+          "source_kind": "repo-review",
+          "source_ref": "reviews.json",
+          "url": null
         }
       ],
       "path": "skills/active/federation-registry-ops",
@@ -265,7 +273,11 @@
           "reviewer": "lvxiaoer",
           "decision": "approved",
           "at": "2026-03-12T12:14:51Z",
-          "note": "Solo-maintainer fallback approval for first stable release"
+          "note": "Solo-maintainer fallback approval for first stable release",
+          "source": "reviews.json",
+          "source_kind": "repo-review",
+          "source_ref": "reviews.json",
+          "url": null
         }
       ],
       "path": "skills/active/operate-infinitas-skill",
@@ -372,7 +384,11 @@
           "reviewer": "lvxiaoer",
           "decision": "approved",
           "at": "2026-03-16T03:15:44Z",
-          "note": "Approve 12-04 registry skill"
+          "note": "Approve 12-04 registry skill",
+          "source": "reviews.json",
+          "source_kind": "repo-review",
+          "source_ref": "reviews.json",
+          "url": null
         }
       ],
       "path": "skills/active/release-infinitas-skill",
