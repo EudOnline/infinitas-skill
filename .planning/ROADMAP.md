@@ -7,14 +7,15 @@
 - ✅ **v11 Policy-as-Code and Organizational Controls** - Phases 1-3 (completed 2026-03-16)
 - ✅ **v12 AI-Usable Skill Ecosystem** - Phases 1-3 (completed 2026-03-16)
 - ✅ **v13 Registry Operations and Snapshot Mirroring** - Phases 1-2 (completed 2026-03-17)
-- 🚧 **v14 Governance Integration and Reviewer Operations** - Planning started
+- ✅ **v14 Governance Integration and Reviewer Operations** - Phases 1-2 (completed 2026-03-17)
+- 🚧 **v15 Supply-Chain Transparency and Reproducible Release Metadata** - Planning started
 
 ## Current Follow-up
 
 - The signer-readiness closeout is now merged on `main`; repository-level signer reporting and steady-state operations guidance are part of the baseline.
 - v13 registry-operations work is now merged on `main`, including freshness-aware refresh policy plus immutable snapshot mirrors for offline resolution.
-- v14 will focus on governance integration: first additive platform-native approval evidence, then reviewer rotation or escalation suggestions.
-- Supply-chain transparency (`ATT-04/ATT-05`) remains the next deferred follow-up after v14 unless governance work exposes a dependency.
+- v14 governance integration is now merged on `main`, including additive platform-native review evidence and reviewer recommendation plus escalation flows.
+- v15 now becomes the next active value line: first reproducible release metadata and full file manifests, then transparency log publication and proof verification.
 
 ## Phases
 
@@ -322,11 +323,11 @@ Plans:
 - [x] 13-05: Add snapshot mirror creation and verification tooling
 - [x] 13-06: Teach resolver, install, and sync flows to consume offline registry snapshots
 
-### 🚧 v14 Governance Integration and Reviewer Operations (Planned)
+### ✅ v14 Governance Integration and Reviewer Operations (Completed)
 
 **Milestone Goal:** Extend review governance beyond repo-local approvals by ingesting normalized platform-native approval evidence and guiding operators toward the right reviewers when quorum is incomplete.
 
-#### 🚧 Phase 1: Platform-Native Approval Evidence (Planned)
+#### ✅ Phase 1: Platform-Native Approval Evidence (Completed 2026-03-17)
 **Goal**: Let maintainers import or mirror normalized approval evidence from external platforms and count it as additive quorum input without weakening Git-native determinism.
 **Depends on**: v13 completed
 **Requirements**: [REV-04]
@@ -337,10 +338,10 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 14-01: Define normalized platform approval evidence format, loader, and policy-safe merge rules
-- [ ] 14-02: Count imported approval evidence in review quorum plus release/catalog outputs
+- [x] 14-01: Define normalized platform approval evidence format, loader, and policy-safe merge rules
+- [x] 14-02: Count imported approval evidence in review quorum plus release/catalog outputs
 
-#### 🚧 Phase 2: Reviewer Rotation and Escalation Suggestions (Planned)
+#### ✅ Phase 2: Reviewer Rotation and Escalation Suggestions (Completed 2026-03-17)
 **Goal**: Help operators close review gaps faster by generating deterministic reviewer recommendations and escalation guidance from existing groups, teams, and recent review history.
 **Depends on**: Phase 1
 **Requirements**: [REV-05]
@@ -351,8 +352,40 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 14-03: Define reviewer recommendation and escalation output contract
-- [ ] 14-04: Surface reviewer guidance in review CLI flows and docs
+- [x] 14-03: Define reviewer recommendation and escalation output contract
+- [x] 14-04: Surface reviewer guidance in review CLI flows and docs
+
+### 🚧 v15 Supply-Chain Transparency and Reproducible Release Metadata (Planned)
+
+**Milestone Goal:** Make released artifacts independently auditable by extending signed release metadata with full file inventories and reproducibility context, then anchoring those attestations in an external transparency log without weakening local verification.
+
+#### 🚧 Phase 1: Reproducible Release Metadata and Full File Manifests (Planned)
+**Goal**: Make signed release artifacts commit to exactly which files were released and under what normalized build context so bundle verification becomes stronger than bundle-digest-only checks.
+**Depends on**: v14 completed
+**Requirements**: [ATT-05]
+**Success Criteria** (what must be TRUE):
+  1. Stable provenance and distribution manifests include a deterministic per-file manifest with relative paths, digests, and archived metadata for the released bundle.
+  2. Release outputs record normalized build metadata such as tool versions, archive parameters, and reproducibility-relevant environment fields without depending on ephemeral local noise.
+  3. Verification fails when the signed file inventory, archived bundle contents, or declared reproducibility metadata diverge.
+**Plans**: 2 plans
+
+Plans:
+- [ ] 15-01: Define signed file-manifest and reproducible-build metadata contract
+- [ ] 15-02: Thread reproducible release metadata through release, verification, and distribution surfaces
+
+#### 🚧 Phase 2: Transparency Log Publication and Verification (Planned)
+**Goal**: Publish release attestations to an external transparency log and retain enough proof metadata in repo-managed artifacts for later verification and policy decisions.
+**Depends on**: Phase 1
+**Requirements**: [ATT-04]
+**Success Criteria** (what must be TRUE):
+  1. Maintainers can submit one signed release attestation to a configured transparency log endpoint and capture a stable entry identifier plus inclusion proof reference.
+  2. Provenance, release-state, and distribution surfaces preserve transparency publication status and proof metadata without making local verification depend on network access.
+  3. Policy can treat transparency publication as advisory or required, with clear operator-facing errors when submission or proof verification fails.
+**Plans**: 2 plans
+
+Plans:
+- [ ] 15-03: Define transparency-log policy and proof-record contract
+- [ ] 15-04: Add transparency publication, verification, and operator docs
 
 ## Progress
 
@@ -377,5 +410,7 @@ Plans:
 | 3. Comparative Ranking and Usage Guide | v12 | 3/3 | Completed | 2026-03-16 |
 | 1. Registry Refresh Cadence and Freshness Policy | v13 | 3/3 | Completed | 2026-03-17 |
 | 2. Immutable Snapshot Mirrors and Offline Resolution | v13 | 3/3 | Completed | 2026-03-17 |
-| 1. Platform-Native Approval Evidence | v14 | 0/2 | Planned | - |
-| 2. Reviewer Rotation and Escalation Suggestions | v14 | 0/2 | Planned | - |
+| 1. Platform-Native Approval Evidence | v14 | 2/2 | Completed | 2026-03-17 |
+| 2. Reviewer Rotation and Escalation Suggestions | v14 | 2/2 | Completed | 2026-03-17 |
+| 1. Reproducible Release Metadata and Full File Manifests | v15 | 0/2 | Planned | - |
+| 2. Transparency Log Publication and Verification | v15 | 0/2 | Planned | - |

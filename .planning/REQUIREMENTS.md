@@ -111,24 +111,28 @@ Requirements committed for milestone `v12`. Phase 1 planning is in place on 2026
 
 ## v13 Requirements
 
-Requirements committed for milestone `v13`. Phase 1 is complete on the active feature branch, and planning now continues with immutable snapshot mirroring for offline resolution.
+Requirements committed for milestone `v13`. Both phases are complete on `main`.
 
 ### Registry Operations and Snapshot Mirroring
 
 - [x] **REG-04**: Maintainer can define automatic registry refresh cadence and cache expiry policy.
 - [x] **REG-05**: Maintainer can mirror an external registry into an immutable local snapshot for offline resolution.
 
+## v14 Requirements
+
+Requirements committed for milestone `v14`. Both phases are complete on `main`.
+
 ### Governance Integration and Reviewer Operations
 
-- [ ] **REV-04**: Repository can ingest platform-native approvals (for example branch protection or review APIs) as additional quorum evidence.
-- [ ] **REV-05**: Repository can generate reviewer rotation or escalation suggestions from configured review groups.
+- [x] **REV-04**: Repository can ingest platform-native approvals (for example branch protection or review APIs) as additional quorum evidence.
+- [x] **REV-05**: Repository can generate reviewer rotation or escalation suggestions from configured review groups.
 
-## Future Requirements
+## v15 Requirements
 
 ### Supply Chain
 
-- **ATT-04**: Repository can publish attestations to an external transparency log.
-- **ATT-05**: Release bundles can include full file manifests and reproducible build metadata.
+- [ ] **ATT-04**: Repository can publish attestations to an external transparency log.
+- [ ] **ATT-05**: Release bundles can include full file manifests and reproducible build metadata.
 
 ## Out of Scope
 
@@ -187,8 +191,10 @@ Requirements committed for milestone `v13`. Phase 1 is complete on the active fe
 | ECO-07 | v12 Phase 3 | Complete |
 | REG-04 | v13 Phase 1 | Complete |
 | REG-05 | v13 Phase 2 | Complete |
-| REV-04 | v14 Phase 1 | Planned |
-| REV-05 | v14 Phase 2 | Planned |
+| REV-04 | v14 Phase 1 | Complete |
+| REV-05 | v14 Phase 2 | Complete |
+| ATT-04 | v15 Phase 2 | Planned |
+| ATT-05 | v15 Phase 1 | Planned |
 
 **Coverage:**
 - v9 requirements: 12 total
@@ -209,7 +215,10 @@ Requirements committed for milestone `v13`. Phase 1 is complete on the active fe
 - v14 requirements: 2 total
 - Mapped to phases: 2
 - Unmapped: 0 ✓
+- v15 requirements: 2 total
+- Mapped to phases: 2
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-17 after completing v13 and planning v14 governance integration*
+*Last updated: 2026-03-17 after completing v14 and planning v15 supply-chain transparency*

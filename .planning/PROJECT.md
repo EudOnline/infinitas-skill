@@ -8,14 +8,14 @@
 
 Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
 
-## Current Milestone: v14 Governance Integration and Reviewer Operations
+## Current Milestone: v15 Supply-Chain Transparency and Reproducible Release Metadata
 
-**Goal:** Make review governance easier to integrate and operate by ingesting platform-native approval evidence as additive quorum input and generating deterministic reviewer rotation or escalation suggestions from existing policy groups.
+**Goal:** Make stable releases more independently auditable by extending signed release artifacts with full file manifests and reproducible build metadata, then anchoring those attestations in an external transparency log without weakening local verification.
 
 **Target features:**
-- Normalized platform approval evidence that can be committed or mirrored into the repo and counted alongside `reviews.json`
-- Review, promotion, release, and catalog surfaces that preserve whether approvals came from repo-native or imported platform evidence
-- Deterministic reviewer recommendation and escalation output based on configured groups, team scopes, owners, and recent review history
+- Signed provenance and distribution manifests that include a full released-file inventory plus normalized build metadata
+- Verification surfaces that can prove the archived bundle, signed attestation, and declared file manifest all agree
+- Policy-driven transparency log publication and proof capture that stays additive to existing SSH and CI verification paths
 
 ## Requirements
 
@@ -37,13 +37,14 @@ Maintainers can publish and distribute private skills with deterministic, audita
 
 - [x] Plan and implement v13 Phase 1: registry refresh cadence and freshness policy (`REG-04`).
 - [x] Plan and implement v13 Phase 2: immutable snapshot mirrors and offline resolution (`REG-05`).
-- [ ] Plan and implement v14 Phase 1: platform-native approval evidence ingestion (`REV-04`).
-- [ ] Plan and implement v14 Phase 2: reviewer rotation and escalation suggestions (`REV-05`).
-- [ ] Keep future work beyond v14 narrowed to supply-chain transparency (`ATT-04/ATT-05`) unless governance-integration work exposes a stronger dependency.
+- [x] Plan and implement v14 Phase 1: platform-native approval evidence ingestion (`REV-04`).
+- [x] Plan and implement v14 Phase 2: reviewer rotation and escalation suggestions (`REV-05`).
+- [ ] Plan and implement v15 Phase 1: reproducible release metadata and full file manifests (`ATT-05`).
+- [ ] Plan and implement v15 Phase 2: external transparency log publication and verification (`ATT-04`).
 
 ### Out of Scope
 
-- Hosted registry service, database, or web UI — the repository remains intentionally Git-native and file-based for v14.
+- Hosted registry service, database, or web UI — the repository remains intentionally Git-native and file-based for v15.
 - Rebuilding the lifecycle, templating, or catalog system from scratch — current planning extends existing workflows instead of replacing them.
 - Public marketplace/package-manager integration — not needed to deliver private-registry distribution goals.
 - Full reconstruction of v1-v8 planning history — the repository does not contain authoritative phase-by-phase planning records for those versions.
@@ -74,7 +75,8 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - `config/allowed_signers` now contains a committed `lvxiaoer` trusted signer entry.
 - `operate-infinitas-skill` already has a signed pushed stable tag plus verified provenance in `catalog/provenance/operate-infinitas-skill-0.1.1.json`.
 - v13 Phase 1 and Phase 2 are now merged on `main`, adding validated refresh cadence policy, persisted refresh state, stale-cache enforcement, immutable registry snapshots, and explicit snapshot-backed resolve/install/sync flows.
-- Future requirements now point most directly at governance integration through imported platform review evidence and reviewer guidance.
+- v14 is now merged on `main`, adding normalized `review-evidence.json` support, provenance-aware quorum evaluation, and deterministic reviewer recommendation plus escalation output in review CLI flows.
+- Future requirements now point most directly at supply-chain transparency through richer release metadata and transparency-log-backed attestations.
 
 ## Constraints
 
@@ -111,9 +113,11 @@ Maintainers can publish and distribute private skills with deterministic, audita
 | Treat immutable registry snapshots as additive artifacts derived from an existing registry, not as a new authoritative registry kind | Offline recovery should be explicit and auditable without changing the existing trust and federation surface by default | ✓ Good |
 | Keep platform-native approvals additive, normalized, and file-backed rather than live-API-dependent | Review quorum should remain deterministic, testable, and Git-native even when outside systems supply approval evidence | ✓ Good |
 | Derive reviewer rotation and escalation suggestions from existing policy groups plus recent review history instead of introducing a scheduler | Operators need actionable reviewer guidance without adding a new stateful service or ownership model | ✓ Good |
+| Sequence v15 as reproducible release metadata before external transparency publication | Transparency entries are more trustworthy if the signed artifact already commits to a full file inventory and normalized build context | ✓ Good |
+| Keep transparency log publication additive and policy-driven | Local SSH and CI verification must remain usable offline even when transparency submission is unavailable or advisory | ✓ Good |
 | Adopt `M2: AI-usable skill ecosystem` as v12 instead of another release-engineering milestone | The platform review shows the core registry mechanics are strong enough; the main remaining gap is decision-useful content and metadata | ✓ Good |
 | Start v12 with canonical decision metadata and wrapper result schemas | The current AI index already carries trust and compatibility, but still hardcodes empty selection guidance and lacks dedicated publish/pull schemas | ✓ Good |
 | Keep v12 additive and Git-native | The goal is to make the existing registry more useful to AI agents, not replace it with a new service layer | ✓ Good |
 
 ---
-*Last updated: 2026-03-17 after completing v13 on `main` and starting v14 governance-integration planning*
+*Last updated: 2026-03-17 after completing v14 on `main` and starting v15 supply-chain planning*

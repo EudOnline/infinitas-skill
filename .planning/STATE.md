@@ -5,15 +5,15 @@
 See: `.planning/PROJECT.md` (updated 2026-03-17)
 
 **Core value:** Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
-**Current focus:** v14 governance-integration planning after completing and merging v13 refresh policy plus snapshot mirroring.
+**Current focus:** v15 supply-chain planning after completing and merging v14 governance integration on `main`.
 
 ## Current Position
 
-Phase: v14 Phase 1 planning
-Plan: `docs/plans/2026-03-17-platform-native-review-evidence-and-reviewer-rotation.md`
-Status: v13 is completed and merged on `main`; v14 planning is starting on `main`
-Last activity: 2026-03-17 — Merged v13 snapshot work to `main`, verified the merged result, and began planning governance integration
-Progress: [#---------] 10%
+Phase: v15 Phase 1 planning
+Plan: `docs/plans/2026-03-17-supply-chain-transparency-and-reproducible-release-metadata.md`
+Status: v14 is completed and merged on `main`; v15 planning is starting on `main`
+Last activity: 2026-03-17 — Merged v14 governance integration to `main`, verified the merged result, and opened the next supply-chain planning slice
+Progress: [##--------] 20%
 
 ## Performance Metrics
 
@@ -29,8 +29,8 @@ Progress: [#---------] 10%
 - v12: 9 plans completed across 3 phases
 
 **Recent Trend:**
-- Last 5 plans: 12-09, 2026-03-16-production-signer-readiness, 2026-03-16-registry-refresh-cadence-and-freshness, 2026-03-17-registry-snapshot-mirroring-and-offline-resolution
-- Trend: v13 is now complete on `main`; the next value line is additive governance integration and reviewer operations
+- Last 5 plans: 2026-03-16-production-signer-readiness, 2026-03-16-registry-refresh-cadence-and-freshness, 2026-03-17-registry-snapshot-mirroring-and-offline-resolution, 2026-03-17-platform-native-review-evidence-and-reviewer-rotation
+- Trend: v14 is now complete on `main`; the next value line is stronger supply-chain transparency around released artifacts
 
 ## Accumulated Context
 
@@ -62,26 +62,29 @@ Decisions are logged in `PROJECT.md`.
 - 2026-03-17: Treat registry snapshots as additive, explicit artifacts derived from existing registries rather than introducing a new authoritative registry kind.
 - 2026-03-17: Keep platform-native approval ingestion additive and file-backed so review quorum remains deterministic and testable offline.
 - 2026-03-17: Base reviewer rotation and escalation suggestions on existing configured review groups and recent decision history, not a new scheduling system.
+- 2026-03-17: Complete v14 on `main` by merging platform-native review evidence ingestion plus reviewer recommendation and escalation guidance.
+- 2026-03-17: Start v15 with reproducible release metadata before transparency publication so any external log entry anchors a richer signed artifact.
+- 2026-03-17: Keep transparency publication additive to the current SSH and CI verification model rather than replacing offline verification with a network dependency.
 
 ### Pending Todos
 
-- Write and execute the dedicated v14 Phase 1/2 plan for imported platform approval evidence and reviewer guidance.
-- Define the normalized on-disk approval evidence contract and how it merges with `reviews.json` in quorum evaluation.
-- Decide which operator surfaces should expose reviewer rotation versus escalation recommendations by default.
-- Decide whether CI-native attestations should remain additive to, or eventually become authoritative over, the repo-managed SSH path.
-- Keep supply-chain backlog items deferred unless v14 governance work exposes a dependency.
+- Write and execute the dedicated v15 Phase 1/2 plan for reproducible release metadata and transparency publication.
+- Define the signed file-manifest and reproducible-build metadata contract shared by provenance and distribution manifests.
+- Decide how transparency-log proofs should be stored in provenance, release-state, and catalog surfaces without weakening offline verification.
+- Decide whether SSH attestations, CI attestations, or both should be publishable to the transparency log under policy.
+- Keep future work beyond v15 constrained unless supply-chain implementation exposes a stronger dependency.
 
 ### Blockers/Concerns
 
 - `config/allowed_signers` now contains a committed `lvxiaoer` trusted signer entry.
 - `operate-infinitas-skill` already has a signed pushed stable tag plus verified provenance.
-- No normalized approval-evidence contract exists yet, so review quorum currently depends only on `reviews.json`.
-- Reviewer-group policy is strong, but operators still lack built-in guidance on who should review next or when to escalate.
+- No external transparency-log integration exists yet, so release trust currently stops at repo-local SSH and CI verification.
+- Current provenance and distribution manifests do not yet commit to a full released-file inventory or normalized build reproducibility metadata.
 - The repository still installs skills by bare folder name for backward compatibility; any future multi-publisher same-slug work should stay compatibility-aware.
 - The project should stay Git-native and private-first; public marketplace features, social features, and on-chain reputation remain intentionally deferred.
 
 ## Session Continuity
 
-Last session: 2026-03-17 08:20 GMT+8
-Stopped at: v13 merged to `main`; next is v14 planning for imported approval evidence and reviewer guidance
-Resume file: `docs/plans/2026-03-17-platform-native-review-evidence-and-reviewer-rotation.md`
+Last session: 2026-03-17 10:35 GMT+8
+Stopped at: v14 merged to `main`; next is v15 planning for reproducible release metadata and transparency publication
+Resume file: `docs/plans/2026-03-17-supply-chain-transparency-and-reproducible-release-metadata.md`
