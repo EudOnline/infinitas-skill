@@ -111,11 +111,11 @@ Requirements committed for milestone `v12`. Phase 1 planning is in place on 2026
 
 ## v13 Requirements
 
-Requirements committed for milestone `v13`. Planning starts with registry refresh cadence and freshness policy.
+Requirements committed for milestone `v13`. Phase 1 is complete on the active feature branch, and planning now continues with immutable snapshot mirroring for offline resolution.
 
 ### Registry Operations and Snapshot Mirroring
 
-- [ ] **REG-04**: Maintainer can define automatic registry refresh cadence and cache expiry policy.
+- [x] **REG-04**: Maintainer can define automatic registry refresh cadence and cache expiry policy.
 - [ ] **REG-05**: Maintainer can mirror an external registry into an immutable local snapshot for offline resolution.
 
 ## Future Requirements
@@ -185,7 +185,7 @@ Requirements committed for milestone `v13`. Planning starts with registry refres
 | ECO-05 | v12 Phase 2 | Complete |
 | ECO-06 | v12 Phase 3 | Complete |
 | ECO-07 | v12 Phase 3 | Complete |
-| REG-04 | v13 Phase 1 | Planned |
+| REG-04 | v13 Phase 1 | Complete |
 | REG-05 | v13 Phase 2 | Planned |
 
 **Coverage:**
@@ -207,4 +207,4 @@ Requirements committed for milestone `v13`. Planning starts with registry refres
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-16 after selecting v13 Registry Operations and Snapshot Mirroring*
+*Last updated: 2026-03-17 after completing v13 Phase 1 and starting v13 Phase 2 planning*

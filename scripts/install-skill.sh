@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: scripts/install-skill.sh <skill-name> [target-dir] [--force] [--version X.Y.Z] [--registry NAME] [--no-deps]" >&2
+  echo "usage: scripts/install-skill.sh <skill-name> [target-dir] [--force] [--version X.Y.Z] [--registry NAME] [--snapshot ID|latest] [--no-deps]" >&2
 }
 
 if [[ $# -lt 1 ]]; then
@@ -16,6 +16,7 @@ TARGET_DIR="$HOME/.openclaw/skills"
 FORCE=0
 LOCK_VERSION=""
 REGISTRY=""
+SNAPSHOT=""
 AUTO_DEPS=1
 POSITIONAL=()
 
@@ -33,6 +34,11 @@ while [[ $# -gt 0 ]]; do
     --registry)
       REGISTRY="${2:-}"
       [[ -n "$REGISTRY" ]] || { echo "missing value for --registry" >&2; exit 1; }
+      shift 2
+      ;;
+    --snapshot)
+      SNAPSHOT="${2:-}"
+      [[ -n "$SNAPSHOT" ]] || { echo "missing value for --snapshot" >&2; exit 1; }
       shift 2
       ;;
     --no-deps)
@@ -87,6 +93,9 @@ fi
 if [[ -n "$REGISTRY" ]]; then
   ARGS+=(--registry "$REGISTRY")
 fi
+if [[ -n "$SNAPSHOT" ]]; then
+  ARGS+=(--snapshot "$SNAPSHOT")
+fi
 INFO_JSON="$(python3 "$ROOT/scripts/resolve-skill-source.py" "${ARGS[@]}")"
 MATERIALIZED_JSON="$(materialize_source "$INFO_JSON")"
 SRC="$(python3 - <<'PY' "$MATERIALIZED_JSON"
@@ -108,6 +117,11 @@ PY
 RESOLVED_REGISTRY="$(python3 - <<'PY' "$INFO_JSON"
 import json, sys
 print(json.loads(sys.argv[1]).get('registry_name') or 'self')
+PY
+)"
+RESOLVED_SNAPSHOT_ID="$(python3 - <<'PY' "$INFO_JSON"
+import json, sys
+print(json.loads(sys.argv[1]).get('registry_snapshot_id') or '')
 PY
 )"
 RESOLVED_NAME="$(python3 - <<'PY' "$INFO_JSON"
@@ -213,6 +227,9 @@ while IFS=$'\t' read -r STEP_ORDER STEP_NAME STEP_VERSION STEP_REGISTRY STEP_STA
   RESOLVE_ARGS=("$RESOLVE_NAME" --version "$STEP_VERSION" --registry "$STEP_REGISTRY" --json)
   if [[ "$STEP_STAGE" == "incubating" ]]; then
     RESOLVE_ARGS+=(--allow-incubating)
+  fi
+  if [[ -n "$RESOLVED_SNAPSHOT_ID" && "$STEP_REGISTRY" == "$RESOLVED_REGISTRY" ]]; then
+    RESOLVE_ARGS+=(--snapshot "$RESOLVED_SNAPSHOT_ID")
   fi
   STEP_INFO_JSON="$(python3 "$ROOT/scripts/resolve-skill-source.py" "${RESOLVE_ARGS[@]}")"
   STEP_SOURCE_JSON="$(materialize_source "$STEP_INFO_JSON")"

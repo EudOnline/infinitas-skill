@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then
-  echo "usage: scripts/sync-registry-source.sh <registry-name> [--force]" >&2
+  echo "usage: scripts/sync-registry-source.sh <registry-name> [--force] [--snapshot ID|latest]" >&2
   exit 1
 fi
 
@@ -10,11 +10,26 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 NAME="$1"
 shift || true
 FORCE=0
-for arg in "$@"; do
-  [[ "$arg" == "--force" ]] && FORCE=1
+SNAPSHOT=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --force)
+      FORCE=1
+      shift
+      ;;
+    --snapshot)
+      SNAPSHOT="${2:-}"
+      [[ -n "$SNAPSHOT" ]] || { echo "missing value for --snapshot" >&2; exit 1; }
+      shift 2
+      ;;
+    *)
+      echo "unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
 done
 
-python3 - "$ROOT" "$NAME" "$FORCE" <<'PY'
+python3 - "$ROOT" "$NAME" "$FORCE" "$SNAPSHOT" <<'PY'
 import shutil
 import subprocess
 import sys
@@ -23,8 +38,10 @@ from pathlib import Path
 root = Path(sys.argv[1])
 name = sys.argv[2]
 force = sys.argv[3] == '1'
+snapshot_selector = sys.argv[4].strip() if len(sys.argv) > 4 else ''
 sys.path.insert(0, str(root / 'scripts'))
 
+from registry_snapshot_lib import resolve_snapshot_selector  # noqa: E402
 from registry_source_lib import (  # noqa: E402
     canonical_pin_ref,
     extract_git_host,
@@ -38,6 +55,7 @@ from registry_source_lib import (  # noqa: E402
     short_pin_value,
     validate_registry_config,
 )
+from registry_refresh_state_lib import write_refresh_state  # noqa: E402
 
 
 def fail(message):
@@ -71,6 +89,24 @@ if not reg:
     fail(f'unknown registry: {name}')
 if not reg.get('enabled', True):
     fail(f'registry is disabled: {name}')
+
+if snapshot_selector:
+    snapshot_record = resolve_snapshot_selector(root, name, snapshot_selector)
+    if snapshot_record is None:
+        fail(f"snapshot '{snapshot_selector}' not found for registry '{name}'")
+    summary = snapshot_record.get('summary') or {}
+    snapshot_root = summary.get('snapshot_root')
+    if not isinstance(snapshot_root, str) or not snapshot_root.strip():
+        fail(f"snapshot '{summary.get('snapshot_id') or snapshot_selector}' for registry '{name}' is missing snapshot_root metadata")
+    resolved_snapshot_root = Path(snapshot_root)
+    if not resolved_snapshot_root.is_absolute():
+        resolved_snapshot_root = (root / resolved_snapshot_root).resolve()
+    else:
+        resolved_snapshot_root = resolved_snapshot_root.resolve()
+    if not resolved_snapshot_root.exists():
+        fail(f"snapshot '{summary.get('snapshot_id') or snapshot_selector}' for registry '{name}' is missing its registry tree")
+    print(resolved_snapshot_root)
+    raise SystemExit(0)
 
 kind = reg.get('kind')
 p = resolve_registry_root(root, reg)
@@ -176,5 +212,14 @@ else:
 
 git('-C', str(p), 'checkout', '--detach', commit)
 git('-C', str(p), 'reset', '--hard', commit)
+write_refresh_state(
+    root,
+    registry_name=name,
+    kind=kind,
+    cache_path=p,
+    source_commit=commit,
+    source_ref=desired_ref,
+    source_tag=short_pin_value('tag', pin.get('value')) if pin.get('mode') == 'tag' else None,
+)
 print(p)
 PY

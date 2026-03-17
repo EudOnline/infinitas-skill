@@ -6,6 +6,7 @@ cd "$ROOT"
 
 python3 scripts/check-registry-sources.py
 python3 scripts/test-registry-refresh-policy.py
+python3 scripts/test-registry-snapshot-mirror.py
 python3 scripts/test-hosted-registry-source.py
 python3 scripts/check-policy-packs.py
 python3 scripts/test-policy-pack-loading.py

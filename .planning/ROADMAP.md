@@ -6,7 +6,7 @@
 - ✅ **v10 Publisher Identity and Verified Distribution** - Phases 1-6 (completed 2026-03-15)
 - ✅ **v11 Policy-as-Code and Organizational Controls** - Phases 1-3 (completed 2026-03-16)
 - ✅ **v12 AI-Usable Skill Ecosystem** - Phases 1-3 (completed 2026-03-16)
-- 🚧 **v13 Registry Operations and Snapshot Mirroring** - Phase 1 planned
+- 🚧 **v13 Registry Operations and Snapshot Mirroring** - Phase 1 complete, Phase 2 active
 
 ## Current Follow-up
 
@@ -290,7 +290,7 @@ Plans:
 
 **Milestone Goal:** Make remote registry operation predictable and offline-safe by adding explicit refresh cadence policy, operator-visible freshness status, and immutable snapshot mirrors that resolution and install can trust.
 
-#### 🚧 Phase 1: Registry Refresh Cadence and Freshness Policy (Planned)
+#### ✅ Phase 1: Registry Refresh Cadence and Freshness Policy (Completed 2026-03-17)
 **Goal**: Add machine-validated refresh cadence, cache expiry, and stale-cache policy so registry caches are no longer treated as indefinitely valid by convention.
 **Depends on**: v12 completed
 **Requirements**: [REG-04]
@@ -301,11 +301,11 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 13-01: Define refresh cadence and stale-cache policy schema plus validation defaults
-- [ ] 13-02: Record registry freshness state and add operator-facing freshness status output
-- [ ] 13-03: Enforce stale-cache policy in sync, resolution, and documentation flows
+- [x] 13-01: Define refresh cadence and stale-cache policy schema plus validation defaults
+- [x] 13-02: Record registry freshness state and add operator-facing freshness status output
+- [x] 13-03: Enforce stale-cache policy in sync, resolution, and documentation flows
 
-#### ⏳ Phase 2: Immutable Snapshot Mirrors and Offline Resolution (Planned)
+#### 🚧 Phase 2: Immutable Snapshot Mirrors and Offline Resolution (Active)
 **Goal**: Let operators materialize immutable snapshots of remote registries and use them for offline or disaster-recovery resolution without weakening trust semantics.
 **Depends on**: Phase 1
 **Requirements**: [REG-05]

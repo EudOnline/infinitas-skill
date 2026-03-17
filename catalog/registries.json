@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-16T00:33:00Z",
+  "generated_at": "2026-03-16T23:44:00Z",
   "default_registry": "self",
   "registries": [
     {
@@ -34,7 +34,10 @@
       "resolved_allowed_publishers": [],
       "resolved_publisher_map": {},
       "resolved_require_immutable_artifacts": false,
-      "resolver_candidate": true
+      "resolver_candidate": true,
+      "snapshot_count": 0,
+      "latest_snapshot": null,
+      "available_snapshots": []
     }
   ]
 }

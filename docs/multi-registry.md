@@ -11,6 +11,7 @@ A registry source now has to answer three operational questions explicitly:
 1. **How much do we trust it?**
 2. **What exact ref family or immutable object may it resolve from?**
 3. **May sync move with a branch, stay pinned, or refuse to mutate local state?**
+4. **How old may a cached remote checkout become before tooling warns or refuses to rely on it?**
 
 That lets install, sync, and catalog outputs report an exact source identity instead of only a best-effort path.
 
@@ -84,6 +85,45 @@ Branch- and tag-based registries must declare the exact refs that are allowed to
 - `track` — fetch the configured branch and materialize the current branch head into a detached cache checkout.
 - `pinned` — fetch and materialize an exact tag or commit into a detached cache checkout.
 
+### `refresh_policy`
+
+Remote cached Git registries may also declare a freshness contract:
+
+```json
+{
+  "refresh_policy": {
+    "interval_hours": 24,
+    "max_cache_age_hours": 72,
+    "stale_policy": "warn"
+  }
+}
+```
+
+The fields mean:
+
+- `interval_hours` — when operators should consider the cache due for refresh
+- `max_cache_age_hours` — the maximum allowed age before the cache is considered stale
+- `stale_policy` — what resolution should do once the cache is stale:
+  - `ignore` — keep resolving without extra enforcement
+  - `warn` — keep resolving, but surface an actionable freshness warning
+  - `fail` — refuse to resolve from that stale cache until it is refreshed
+
+Successful remote syncs persist refresh metadata under `.cache/registries/_state/<registry>.json`.
+
+Use `python3 scripts/registry-refresh-status.py <registry> --json` to inspect the current cache age, freshness state, and configured thresholds for one registry.
+
+When immutable registry snapshots exist under `.cache/registry-snapshots/<registry>/`, catalog and registry listing surfaces now expose additive visibility fields such as `snapshot_count`, `latest_snapshot`, and `available_snapshots`. Snapshot visibility is informational at this stage; it does not change default resolver authority on its own.
+
+To consume one snapshot on purpose, pass both the registry name and a selector:
+
+```bash
+python3 scripts/resolve-skill-source.py demo --registry upstream --snapshot latest --json
+scripts/install-skill.sh demo ~/.openclaw/skills --registry upstream --snapshot latest
+scripts/sync-registry-source.sh upstream --snapshot latest
+```
+
+`latest` resolves to the newest known snapshot for that registry. You may also pass a concrete snapshot ID. Missing snapshots fail explicitly and do not fall back to the mutable cache.
+
 ### `federation`
 
 Selected upstream registries may now declare an additive `federation` block:
@@ -131,7 +171,8 @@ For tracked or pinned remote registries, sync now:
 2. checks the remote host against `allowed_hosts`,
 3. refuses refs outside `allowed_refs`,
 4. resolves an exact commit, and
-5. checks out that commit in detached state.
+5. checks out that commit in detached state, and
+6. records refresh metadata for later freshness checks.
 
 ## Hosted HTTP registries
 
@@ -191,11 +232,18 @@ Auth currently supports:
 - `registry_update_mode`
 - `registry_pin_mode`
 - `registry_pin_value`
+- `registry_freshness_state`
+- `registry_freshness_warning`
+- `registry_refresh_age_hours`
 - `expected_tag`
 
 Use `publisher/skill` when you need to disambiguate two publishers that share the same bare skill slug. Legacy unqualified names still resolve for backward compatibility.
 
 For federated registries, the resolved `publisher` / `qualified_name` may be the mapped local namespace, while `upstream_publisher` / `upstream_qualified_name` preserve the original upstream identity for auditability.
+
+When `refresh_policy.stale_policy = "warn"`, resolver output stays additive: the candidate remains eligible, but `registry_freshness_warning` explains that the cache is stale and points operators at `scripts/sync-registry-source.sh <registry>`.
+
+When `refresh_policy.stale_policy = "fail"`, stale cached registries are removed from resolution and the resolver exits with an actionable refresh error instead of silently relying on an outdated checkout.
 
 Install and sync manifests persist the same identity so `scripts/list-installed.sh` can show where a skill came from with its publisher namespace plus exact registry commit/tag.
 

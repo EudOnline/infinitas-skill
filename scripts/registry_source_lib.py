@@ -163,6 +163,17 @@ def normalized_refresh_policy(reg):
     }
 
 
+def registry_uses_refresh_cache(reg):
+    if not isinstance(reg, dict):
+        return False
+    if reg.get('kind') != 'git':
+        return False
+    if normalized_update_policy(reg).get('mode') == 'local-only':
+        return False
+    policy = normalized_refresh_policy(reg)
+    return any(policy.get(key) is not None for key in ['interval_hours', 'max_cache_age_hours', 'stale_policy'])
+
+
 def registry_is_resolution_candidate(reg, *, explicit_registry=False):
     mode = normalized_federation(reg).get('mode')
     if mode == 'mirror' and not explicit_registry:

@@ -35,7 +35,7 @@ Maintainers can publish and distribute private skills with deterministic, audita
 
 ### Active
 
-- [ ] Plan and implement v13 Phase 1: registry refresh cadence and freshness policy (`REG-04`).
+- [x] Plan and implement v13 Phase 1: registry refresh cadence and freshness policy (`REG-04`).
 - [ ] Plan and implement v13 Phase 2: immutable snapshot mirrors and offline resolution (`REG-05`).
 - [ ] Keep future work beyond v13 narrowed to governance integration (`REV-04/REV-05`) and supply-chain transparency (`ATT-04/ATT-05`) unless registry-ops work exposes a stronger dependency.
 
@@ -71,7 +71,8 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - The post-v12 signer readiness closeout is now merged on `main`, including repository-level readiness reporting plus steady-state signer operations guidance.
 - `config/allowed_signers` now contains a committed `lvxiaoer` trusted signer entry.
 - `operate-infinitas-skill` already has a signed pushed stable tag plus verified provenance in `catalog/provenance/operate-infinitas-skill-0.1.1.json`.
-- Future requirements now point most directly at registry operations: refresh cadence / cache expiry policy plus immutable snapshot mirroring for offline resolution.
+- v13 Phase 1 now exists on the active feature branch, adding validated refresh cadence policy, persisted refresh state, freshness status output, and stale-cache warn/fail enforcement.
+- Future requirements now point most directly at immutable snapshot mirroring and explicit offline resolution.
 
 ## Constraints
 
@@ -105,9 +106,10 @@ Maintainers can publish and distribute private skills with deterministic, audita
 | Keep `mirror` registries visible but non-authoritative for default resolution | Operators need inventory visibility without letting backup surfaces silently outrank trusted federated sources | ✓ Good |
 | Derive inventory exports from generated catalog state and audit exports from committed provenance | Integrations need stable, reviewable artifacts; recomputing live release state would make export results depend on mutable workspace conditions | ✓ Good |
 | Keep boundary and recovery guidance in one dedicated operations doc | Operators need a single place to understand disagreement between policy, exports, provenance, and mirrors without piecing together multiple partial docs | ✓ Good |
+| Treat immutable registry snapshots as additive artifacts derived from an existing registry, not as a new authoritative registry kind | Offline recovery should be explicit and auditable without changing the existing trust and federation surface by default | ✓ Good |
 | Adopt `M2: AI-usable skill ecosystem` as v12 instead of another release-engineering milestone | The platform review shows the core registry mechanics are strong enough; the main remaining gap is decision-useful content and metadata | ✓ Good |
 | Start v12 with canonical decision metadata and wrapper result schemas | The current AI index already carries trust and compatibility, but still hardcodes empty selection guidance and lacks dedicated publish/pull schemas | ✓ Good |
 | Keep v12 additive and Git-native | The goal is to make the existing registry more useful to AI agents, not replace it with a new service layer | ✓ Good |
 
 ---
-*Last updated: 2026-03-16 while selecting v13 Registry Operations and Snapshot Mirroring on `codex/post-v12-roadmap-planning`*
+*Last updated: 2026-03-17 after completing v13 Phase 1 and starting Phase 2 planning on `codex/v13-refresh-state-status`*
