@@ -8,14 +8,14 @@
 
 Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
 
-## Current Milestone: v13 Registry Operations and Snapshot Mirroring
+## Current Milestone: v14 Governance Integration and Reviewer Operations
 
-**Goal:** Make external registry operation predictable, freshness-aware, and offline-safe by adding explicit refresh cadence policy, immutable snapshot mirroring, and resolver/install support for audited offline snapshots.
+**Goal:** Make review governance easier to integrate and operate by ingesting platform-native approval evidence as additive quorum input and generating deterministic reviewer rotation or escalation suggestions from existing policy groups.
 
 **Target features:**
-- Per-registry refresh cadence, cache expiry, and stale-cache policy in validated source configuration
-- Persistent refresh-status reporting so operators can inspect freshness age, last successful sync, and stale reasons
-- Immutable external registry snapshots that can back offline resolution without weakening trust or federation rules
+- Normalized platform approval evidence that can be committed or mirrored into the repo and counted alongside `reviews.json`
+- Review, promotion, release, and catalog surfaces that preserve whether approvals came from repo-native or imported platform evidence
+- Deterministic reviewer recommendation and escalation output based on configured groups, team scopes, owners, and recent review history
 
 ## Requirements
 
@@ -36,12 +36,14 @@ Maintainers can publish and distribute private skills with deterministic, audita
 ### Active
 
 - [x] Plan and implement v13 Phase 1: registry refresh cadence and freshness policy (`REG-04`).
-- [ ] Plan and implement v13 Phase 2: immutable snapshot mirrors and offline resolution (`REG-05`).
-- [ ] Keep future work beyond v13 narrowed to governance integration (`REV-04/REV-05`) and supply-chain transparency (`ATT-04/ATT-05`) unless registry-ops work exposes a stronger dependency.
+- [x] Plan and implement v13 Phase 2: immutable snapshot mirrors and offline resolution (`REG-05`).
+- [ ] Plan and implement v14 Phase 1: platform-native approval evidence ingestion (`REV-04`).
+- [ ] Plan and implement v14 Phase 2: reviewer rotation and escalation suggestions (`REV-05`).
+- [ ] Keep future work beyond v14 narrowed to supply-chain transparency (`ATT-04/ATT-05`) unless governance-integration work exposes a stronger dependency.
 
 ### Out of Scope
 
-- Hosted registry service, database, or web UI — the repository remains intentionally Git-native and file-based for v13.
+- Hosted registry service, database, or web UI — the repository remains intentionally Git-native and file-based for v14.
 - Rebuilding the lifecycle, templating, or catalog system from scratch — current planning extends existing workflows instead of replacing them.
 - Public marketplace/package-manager integration — not needed to deliver private-registry distribution goals.
 - Full reconstruction of v1-v8 planning history — the repository does not contain authoritative phase-by-phase planning records for those versions.
@@ -71,8 +73,8 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - The post-v12 signer readiness closeout is now merged on `main`, including repository-level readiness reporting plus steady-state signer operations guidance.
 - `config/allowed_signers` now contains a committed `lvxiaoer` trusted signer entry.
 - `operate-infinitas-skill` already has a signed pushed stable tag plus verified provenance in `catalog/provenance/operate-infinitas-skill-0.1.1.json`.
-- v13 Phase 1 now exists on the active feature branch, adding validated refresh cadence policy, persisted refresh state, freshness status output, and stale-cache warn/fail enforcement.
-- Future requirements now point most directly at immutable snapshot mirroring and explicit offline resolution.
+- v13 Phase 1 and Phase 2 are now merged on `main`, adding validated refresh cadence policy, persisted refresh state, stale-cache enforcement, immutable registry snapshots, and explicit snapshot-backed resolve/install/sync flows.
+- Future requirements now point most directly at governance integration through imported platform review evidence and reviewer guidance.
 
 ## Constraints
 
@@ -107,9 +109,11 @@ Maintainers can publish and distribute private skills with deterministic, audita
 | Derive inventory exports from generated catalog state and audit exports from committed provenance | Integrations need stable, reviewable artifacts; recomputing live release state would make export results depend on mutable workspace conditions | ✓ Good |
 | Keep boundary and recovery guidance in one dedicated operations doc | Operators need a single place to understand disagreement between policy, exports, provenance, and mirrors without piecing together multiple partial docs | ✓ Good |
 | Treat immutable registry snapshots as additive artifacts derived from an existing registry, not as a new authoritative registry kind | Offline recovery should be explicit and auditable without changing the existing trust and federation surface by default | ✓ Good |
+| Keep platform-native approvals additive, normalized, and file-backed rather than live-API-dependent | Review quorum should remain deterministic, testable, and Git-native even when outside systems supply approval evidence | ✓ Good |
+| Derive reviewer rotation and escalation suggestions from existing policy groups plus recent review history instead of introducing a scheduler | Operators need actionable reviewer guidance without adding a new stateful service or ownership model | ✓ Good |
 | Adopt `M2: AI-usable skill ecosystem` as v12 instead of another release-engineering milestone | The platform review shows the core registry mechanics are strong enough; the main remaining gap is decision-useful content and metadata | ✓ Good |
 | Start v12 with canonical decision metadata and wrapper result schemas | The current AI index already carries trust and compatibility, but still hardcodes empty selection guidance and lacks dedicated publish/pull schemas | ✓ Good |
 | Keep v12 additive and Git-native | The goal is to make the existing registry more useful to AI agents, not replace it with a new service layer | ✓ Good |
 
 ---
-*Last updated: 2026-03-17 after completing v13 Phase 1 and starting Phase 2 planning on `codex/v13-refresh-state-status`*
+*Last updated: 2026-03-17 after completing v13 on `main` and starting v14 governance-integration planning*

@@ -6,13 +6,15 @@
 - ✅ **v10 Publisher Identity and Verified Distribution** - Phases 1-6 (completed 2026-03-15)
 - ✅ **v11 Policy-as-Code and Organizational Controls** - Phases 1-3 (completed 2026-03-16)
 - ✅ **v12 AI-Usable Skill Ecosystem** - Phases 1-3 (completed 2026-03-16)
-- 🚧 **v13 Registry Operations and Snapshot Mirroring** - Phase 1 complete, Phase 2 active
+- ✅ **v13 Registry Operations and Snapshot Mirroring** - Phases 1-2 (completed 2026-03-17)
+- 🚧 **v14 Governance Integration and Reviewer Operations** - Planning started
 
 ## Current Follow-up
 
 - The signer-readiness closeout is now merged on `main`; repository-level signer reporting and steady-state operations guidance are part of the baseline.
-- v13 will focus on registry operations: freshness-aware refresh policy first, then immutable snapshot mirrors for offline resolution.
-- Governance integration (`REV-04/REV-05`) and supply-chain transparency (`ATT-04/ATT-05`) remain deferred follow-up candidates after v13.
+- v13 registry-operations work is now merged on `main`, including freshness-aware refresh policy plus immutable snapshot mirrors for offline resolution.
+- v14 will focus on governance integration: first additive platform-native approval evidence, then reviewer rotation or escalation suggestions.
+- Supply-chain transparency (`ATT-04/ATT-05`) remains the next deferred follow-up after v14 unless governance work exposes a dependency.
 
 ## Phases
 
@@ -305,7 +307,7 @@ Plans:
 - [x] 13-02: Record registry freshness state and add operator-facing freshness status output
 - [x] 13-03: Enforce stale-cache policy in sync, resolution, and documentation flows
 
-#### 🚧 Phase 2: Immutable Snapshot Mirrors and Offline Resolution (Active)
+#### ✅ Phase 2: Immutable Snapshot Mirrors and Offline Resolution (Completed 2026-03-17)
 **Goal**: Let operators materialize immutable snapshots of remote registries and use them for offline or disaster-recovery resolution without weakening trust semantics.
 **Depends on**: Phase 1
 **Requirements**: [REG-05]
@@ -316,9 +318,41 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 13-04: Define immutable registry snapshot format, metadata, and catalog visibility
-- [ ] 13-05: Add snapshot mirror creation and verification tooling
-- [ ] 13-06: Teach resolver, install, and sync flows to consume offline registry snapshots
+- [x] 13-04: Define immutable registry snapshot format, metadata, and catalog visibility
+- [x] 13-05: Add snapshot mirror creation and verification tooling
+- [x] 13-06: Teach resolver, install, and sync flows to consume offline registry snapshots
+
+### 🚧 v14 Governance Integration and Reviewer Operations (Planned)
+
+**Milestone Goal:** Extend review governance beyond repo-local approvals by ingesting normalized platform-native approval evidence and guiding operators toward the right reviewers when quorum is incomplete.
+
+#### 🚧 Phase 1: Platform-Native Approval Evidence (Planned)
+**Goal**: Let maintainers import or mirror normalized approval evidence from external platforms and count it as additive quorum input without weakening Git-native determinism.
+**Depends on**: v13 completed
+**Requirements**: [REV-04]
+**Success Criteria** (what must be TRUE):
+  1. Maintainers can define and validate a normalized review-evidence contract for one skill that records reviewer identity, source platform, decision, timestamp, and stable source reference.
+  2. Review, promotion, release, and catalog surfaces can count approved imported evidence alongside `reviews.json` while preserving provenance about where each decision came from.
+  3. Imported evidence remains additive and auditable: missing or stale platform evidence never silently rewrites repo-local decisions, and unsupported sources fail clearly.
+**Plans**: 2 plans
+
+Plans:
+- [ ] 14-01: Define normalized platform approval evidence format, loader, and policy-safe merge rules
+- [ ] 14-02: Count imported approval evidence in review quorum plus release/catalog outputs
+
+#### 🚧 Phase 2: Reviewer Rotation and Escalation Suggestions (Planned)
+**Goal**: Help operators close review gaps faster by generating deterministic reviewer recommendations and escalation guidance from existing groups, teams, and recent review history.
+**Depends on**: Phase 1
+**Requirements**: [REV-05]
+**Success Criteria** (what must be TRUE):
+  1. Operators can ask for reviewer suggestions for one skill and get deterministic results scoped to the missing quorum groups, owner constraints, and configured teams.
+  2. Suggestions include escalation guidance when no eligible reviewer is currently available for a required group.
+  3. Review-request and review-status workflows can surface or reference those suggestions without introducing a new stateful scheduling service.
+**Plans**: 2 plans
+
+Plans:
+- [ ] 14-03: Define reviewer recommendation and escalation output contract
+- [ ] 14-04: Surface reviewer guidance in review CLI flows and docs
 
 ## Progress
 
@@ -341,5 +375,7 @@ Plans:
 | 1. Decision Metadata and AI Result Contracts | v12 | 3/3 | Completed | 2026-03-16 |
 | 2. Real Skill Inventory and Learnability | v12 | 3/3 | Completed | 2026-03-16 |
 | 3. Comparative Ranking and Usage Guide | v12 | 3/3 | Completed | 2026-03-16 |
-| 1. Registry Refresh Cadence and Freshness Policy | v13 | 0/3 | Planned | - |
-| 2. Immutable Snapshot Mirrors and Offline Resolution | v13 | 0/3 | Planned | - |
+| 1. Registry Refresh Cadence and Freshness Policy | v13 | 3/3 | Completed | 2026-03-17 |
+| 2. Immutable Snapshot Mirrors and Offline Resolution | v13 | 3/3 | Completed | 2026-03-17 |
+| 1. Platform-Native Approval Evidence | v14 | 0/2 | Planned | - |
+| 2. Reviewer Rotation and Escalation Suggestions | v14 | 0/2 | Planned | - |

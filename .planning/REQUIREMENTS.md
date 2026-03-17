@@ -116,14 +116,14 @@ Requirements committed for milestone `v13`. Phase 1 is complete on the active fe
 ### Registry Operations and Snapshot Mirroring
 
 - [x] **REG-04**: Maintainer can define automatic registry refresh cadence and cache expiry policy.
-- [ ] **REG-05**: Maintainer can mirror an external registry into an immutable local snapshot for offline resolution.
+- [x] **REG-05**: Maintainer can mirror an external registry into an immutable local snapshot for offline resolution.
+
+### Governance Integration and Reviewer Operations
+
+- [ ] **REV-04**: Repository can ingest platform-native approvals (for example branch protection or review APIs) as additional quorum evidence.
+- [ ] **REV-05**: Repository can generate reviewer rotation or escalation suggestions from configured review groups.
 
 ## Future Requirements
-
-### Governance Integration
-
-- **REV-04**: Repository can ingest platform-native approvals (for example branch protection or review APIs) as additional quorum evidence.
-- **REV-05**: Repository can generate reviewer rotation or escalation suggestions from configured review groups.
 
 ### Supply Chain
 
@@ -186,7 +186,9 @@ Requirements committed for milestone `v13`. Phase 1 is complete on the active fe
 | ECO-06 | v12 Phase 3 | Complete |
 | ECO-07 | v12 Phase 3 | Complete |
 | REG-04 | v13 Phase 1 | Complete |
-| REG-05 | v13 Phase 2 | Planned |
+| REG-05 | v13 Phase 2 | Complete |
+| REV-04 | v14 Phase 1 | Planned |
+| REV-05 | v14 Phase 2 | Planned |
 
 **Coverage:**
 - v9 requirements: 12 total
@@ -204,7 +206,10 @@ Requirements committed for milestone `v13`. Phase 1 is complete on the active fe
 - v13 requirements: 2 total
 - Mapped to phases: 2
 - Unmapped: 0 ✓
+- v14 requirements: 2 total
+- Mapped to phases: 2
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-17 after completing v13 Phase 1 and starting v13 Phase 2 planning*
+*Last updated: 2026-03-17 after completing v13 and planning v14 governance integration*

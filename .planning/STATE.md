@@ -2,18 +2,18 @@
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-03-16)
+See: `.planning/PROJECT.md` (updated 2026-03-17)
 
 **Core value:** Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
-**Current focus:** v13 Phase 2 snapshot mirroring design and implementation after completing refresh cadence and freshness enforcement.
+**Current focus:** v14 governance-integration planning after completing and merging v13 refresh policy plus snapshot mirroring.
 
 ## Current Position
 
-Phase: v13 Phase 2 implementation
-Plan: `docs/plans/2026-03-17-registry-snapshot-mirroring-and-offline-resolution.md`
-Status: v13 Phase 1 is implemented on `codex/v13-refresh-state-status`; Phase 2 planning and execution are starting on the same feature branch
-Last activity: 2026-03-17 — Completed refresh cadence / freshness policy and began immutable snapshot mirror planning
-Progress: [#####-----] 50%
+Phase: v14 Phase 1 planning
+Plan: `docs/plans/2026-03-17-platform-native-review-evidence-and-reviewer-rotation.md`
+Status: v13 is completed and merged on `main`; v14 planning is starting on `main`
+Last activity: 2026-03-17 — Merged v13 snapshot work to `main`, verified the merged result, and began planning governance integration
+Progress: [#---------] 10%
 
 ## Performance Metrics
 
@@ -29,8 +29,8 @@ Progress: [#####-----] 50%
 - v12: 9 plans completed across 3 phases
 
 **Recent Trend:**
-- Last 5 plans: 12-08, 12-09, 2026-03-16-production-signer-readiness, 2026-03-16-registry-refresh-cadence-and-freshness
-- Trend: v13 Phase 1 is now implemented on the active feature branch; the next value line is immutable snapshot mirrors and explicit offline resolution
+- Last 5 plans: 12-09, 2026-03-16-production-signer-readiness, 2026-03-16-registry-refresh-cadence-and-freshness, 2026-03-17-registry-snapshot-mirroring-and-offline-resolution
+- Trend: v13 is now complete on `main`; the next value line is additive governance integration and reviewer operations
 
 ## Accumulated Context
 
@@ -60,26 +60,28 @@ Decisions are logged in `PROJECT.md`.
 - 2026-03-16: Complete all three v12 phases on `main`, including canonical decision metadata, real skill inventory, AI-only drills, failure-path hardening, comparative recommendation signals, and a stable usage guide.
 - 2026-03-17: Complete v13 Phase 1 by adding validated refresh policy, persisted refresh state, freshness status output, and stale-cache warn/fail enforcement.
 - 2026-03-17: Treat registry snapshots as additive, explicit artifacts derived from existing registries rather than introducing a new authoritative registry kind.
+- 2026-03-17: Keep platform-native approval ingestion additive and file-backed so review quorum remains deterministic and testable offline.
+- 2026-03-17: Base reviewer rotation and escalation suggestions on existing configured review groups and recent decision history, not a new scheduling system.
 
 ### Pending Todos
 
-- Write and execute the dedicated v13 Phase 2 plan for immutable registry snapshots and offline resolution.
-- Define the exact snapshot metadata shape, export surface, and on-disk layout under `.cache/`.
-- Decide how explicit snapshot selection should flow through resolver, install, and sync without changing current default authority rules.
+- Write and execute the dedicated v14 Phase 1/2 plan for imported platform approval evidence and reviewer guidance.
+- Define the normalized on-disk approval evidence contract and how it merges with `reviews.json` in quorum evaluation.
+- Decide which operator surfaces should expose reviewer rotation versus escalation recommendations by default.
 - Decide whether CI-native attestations should remain additive to, or eventually become authoritative over, the repo-managed SSH path.
-- Keep governance-integration and supply-chain backlog items deferred unless v13 work exposes a dependency.
+- Keep supply-chain backlog items deferred unless v14 governance work exposes a dependency.
 
 ### Blockers/Concerns
 
 - `config/allowed_signers` now contains a committed `lvxiaoer` trusted signer entry.
 - `operate-infinitas-skill` already has a signed pushed stable tag plus verified provenance.
-- The feature branch contains Phase 1 implementation work that is not merged to `main` yet.
-- Offline snapshot behavior does not yet exist as a first-class contract, so operators still rely on mutable cache checkouts for recovery workflows.
+- No normalized approval-evidence contract exists yet, so review quorum currently depends only on `reviews.json`.
+- Reviewer-group policy is strong, but operators still lack built-in guidance on who should review next or when to escalate.
 - The repository still installs skills by bare folder name for backward compatibility; any future multi-publisher same-slug work should stay compatibility-aware.
 - The project should stay Git-native and private-first; public marketplace features, social features, and on-chain reputation remain intentionally deferred.
 
 ## Session Continuity
 
-Last session: 2026-03-17 00:20 GMT+8
-Stopped at: v13 Phase 1 completed on the active feature branch; Phase 2 planning and first implementation slice are next
-Resume file: `docs/plans/2026-03-17-registry-snapshot-mirroring-and-offline-resolution.md`
+Last session: 2026-03-17 08:20 GMT+8
+Stopped at: v13 merged to `main`; next is v14 planning for imported approval evidence and reviewer guidance
+Resume file: `docs/plans/2026-03-17-platform-native-review-evidence-and-reviewer-rotation.md`
