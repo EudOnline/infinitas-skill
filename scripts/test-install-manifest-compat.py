@@ -93,6 +93,8 @@ def main():
         combined = result.stdout + result.stderr
         if '- demo-skill: 1.2.3' not in combined:
             fail(f'legacy manifest should be accepted by list-installed\n{combined}')
+        if 'integrity=unknown' not in combined:
+            fail(f'legacy manifest list output should surface integrity=unknown\n{combined}')
 
         result = run(
             [
@@ -128,6 +130,12 @@ def main():
         payload = json.loads(manifest_path.read_text(encoding='utf-8'))
         if payload.get('schema_version') != 1:
             fail(f"expected rewritten manifest to declare schema_version=1, got {payload.get('schema_version')!r}")
+        current = ((payload.get('skills') or {}).get('demo-skill') or {})
+        integrity = current.get('integrity')
+        if not isinstance(integrity, dict):
+            fail(f'expected rewritten manifest integrity block, got {integrity!r}')
+        if integrity.get('state') != 'unknown':
+            fail(f"expected rewritten manifest integrity state 'unknown', got {integrity.get('state')!r}")
     finally:
         shutil.rmtree(tmpdir)
 

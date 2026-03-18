@@ -24,6 +24,41 @@ done
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CLEANUP_DIRS=()
 
+guard_drifted_install() {
+  local skill_name="$1"
+  local target_dir="$2"
+  local output status
+  if [[ $FORCE -eq 1 ]]; then
+    return 0
+  fi
+  if output="$(python3 - <<'PY' "$ROOT" "$target_dir" "$skill_name"
+import json
+import sys
+
+sys.path.insert(0, sys.argv[1] + '/scripts')
+from installed_integrity_lib import InstalledIntegrityError, verify_installed_skill  # noqa: E402
+
+try:
+    payload = verify_installed_skill(sys.argv[2], sys.argv[3], root=sys.argv[1])
+except InstalledIntegrityError:
+    raise SystemExit(0)
+
+if payload.get('state') == 'drifted':
+    print(json.dumps(payload, ensure_ascii=False))
+    raise SystemExit(2)
+PY
+  )"; then
+    return 0
+  else
+    status=$?
+  fi
+  if [[ $status -eq 2 ]]; then
+    echo "installed skill drift detected for $skill_name; run python3 scripts/verify-installed-skill.py $skill_name $target_dir --json or scripts/repair-installed-skill.sh $skill_name $target_dir before overwriting local files" >&2
+    return 1
+  fi
+  return $status
+}
+
 cleanup_materialized() {
   local dir
   for dir in "${CLEANUP_DIRS[@]}"; do
@@ -92,6 +127,7 @@ DISPLAY_NAME="${INFO[6]}"
 DEST="$TARGET_DIR/$INSTALLED_NAME"
 
 [[ -d "$DEST" ]] || { echo "skill is not installed yet: $DEST" >&2; exit 1; }
+guard_drifted_install "$NAME" "$TARGET_DIR"
 
 RESOLVE_NAME="$SOURCE_QUALIFIED_NAME"
 [[ -n "$RESOLVE_NAME" ]] || RESOLVE_NAME="$NAME"

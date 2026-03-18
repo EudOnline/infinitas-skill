@@ -193,6 +193,51 @@ def main():
             fail(f"expected update_available true, got {payload.get('update_available')!r}")
         if payload.get('source_registry') != 'self':
             fail(f"expected source_registry self, got {payload.get('source_registry')!r}")
+        integrity = payload.get('integrity')
+        if not isinstance(integrity, dict):
+            fail(f'expected integrity object in check-skill-update payload, got {integrity!r}')
+        if integrity.get('state') != 'verified':
+            fail(f"expected integrity.state 'verified', got {integrity.get('state')!r}")
+        if not integrity.get('last_verified_at'):
+            fail('expected integrity.last_verified_at to be populated')
+
+        installed_dir = target_dir / FIXTURE_NAME
+        with (installed_dir / 'SKILL.md').open('a', encoding='utf-8') as handle:
+            handle.write('\nLocal drift before update check.\n')
+
+        payload = json.loads(run([str(repo / 'scripts' / 'check-skill-update.sh'), FIXTURE_NAME, str(target_dir)], cwd=repo).stdout)
+        if payload.get('update_available') is not True:
+            fail(f"expected update_available true for drifted install, got {payload.get('update_available')!r}")
+        integrity = payload.get('integrity')
+        if not isinstance(integrity, dict):
+            fail(f'expected integrity object after drift, got {integrity!r}')
+        if integrity.get('state') != 'drifted':
+            fail(f"expected integrity.state 'drifted', got {integrity.get('state')!r}")
+        if 'SKILL.md' not in (integrity.get('modified_files') or []):
+            fail(f"expected integrity.modified_files to include 'SKILL.md', got {integrity.get('modified_files')!r}")
+
+        result = run(
+            [str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_dir)],
+            cwd=repo,
+            env=make_env(),
+            expect=1,
+        )
+        combined = result.stdout + result.stderr
+        if 'repair-installed-skill.sh' not in combined or 'verify-installed-skill.py' not in combined:
+            fail(f'expected drifted upgrade failure to recommend verify and repair commands\n{combined}')
+
+        repair_result = run(
+            [str(repo / 'scripts' / 'repair-installed-skill.sh'), FIXTURE_NAME, str(target_dir)],
+            cwd=repo,
+            env=make_env(),
+        )
+        repair_output = repair_result.stdout + repair_result.stderr
+        if 'repaired:' not in repair_output:
+            fail(f'expected repair-installed-skill.sh to report repaired output\n{repair_output}')
+        manifest = read_install_manifest(target_dir)
+        current = ((manifest.get('skills') or {}).get(FIXTURE_NAME) or {})
+        if current.get('installed_version') != V1:
+            fail(f"expected repair to restore recorded version {V1!r}, got {current.get('installed_version')!r}")
 
         payload = json.loads(run([str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_dir)], cwd=repo).stdout)
         if payload.get('from_version') != V1:
@@ -206,6 +251,26 @@ def main():
         history = (manifest.get('history') or {}).get(FIXTURE_NAME) or []
         if len(history) < 1:
             fail('expected upgrade to preserve at least one history entry')
+
+        installed_dir = target_dir / FIXTURE_NAME
+        with (installed_dir / 'SKILL.md').open('a', encoding='utf-8') as handle:
+            handle.write('\nLocal drift before rollback.\n')
+
+        result = run(
+            [str(repo / 'scripts' / 'rollback-installed-skill.sh'), FIXTURE_NAME, str(target_dir)],
+            cwd=repo,
+            env=make_env(),
+            expect=1,
+        )
+        combined = result.stdout + result.stderr
+        if 'repair-installed-skill.sh' not in combined or 'verify-installed-skill.py' not in combined:
+            fail(f'expected drifted rollback failure to recommend verify and repair commands\n{combined}')
+
+        run(
+            [str(repo / 'scripts' / 'repair-installed-skill.sh'), FIXTURE_NAME, str(target_dir)],
+            cwd=repo,
+            env=make_env(),
+        )
 
         result = run(
             [str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_dir), '--registry', 'other-registry'],

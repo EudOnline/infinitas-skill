@@ -47,6 +47,43 @@ MANIFEST="$TARGET_DIR/.infinitas-skill-install-manifest.json"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 [[ -f "$MANIFEST" ]] || { echo "missing manifest: $MANIFEST" >&2; exit 1; }
 
+guard_drifted_install() {
+  local skill_name="$1"
+  local target_dir="$2"
+  local output status
+  if [[ $FORCE -eq 1 ]]; then
+    return 0
+  fi
+  if output="$(python3 - <<'PY' "$ROOT" "$target_dir" "$skill_name"
+import json
+import sys
+
+sys.path.insert(0, sys.argv[1] + '/scripts')
+from installed_integrity_lib import InstalledIntegrityError, verify_installed_skill  # noqa: E402
+
+try:
+    payload = verify_installed_skill(sys.argv[2], sys.argv[3], root=sys.argv[1])
+except InstalledIntegrityError:
+    raise SystemExit(0)
+
+if payload.get('state') == 'drifted':
+    print(json.dumps(payload, ensure_ascii=False))
+    raise SystemExit(2)
+PY
+  )"; then
+    return 0
+  else
+    status=$?
+  fi
+  if [[ $status -eq 2 ]]; then
+    echo "installed skill drift detected for $skill_name; run python3 scripts/verify-installed-skill.py $skill_name $target_dir --json or scripts/repair-installed-skill.sh $skill_name $target_dir before overwriting local files" >&2
+    return 1
+  fi
+  return $status
+}
+
+guard_drifted_install "$NAME" "$TARGET_DIR"
+
 ROLLBACK_INFO=()
 while IFS= read -r line; do
   ROLLBACK_INFO+=("$line")

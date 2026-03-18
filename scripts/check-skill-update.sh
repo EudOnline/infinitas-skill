@@ -31,6 +31,7 @@ payload = {
     'qualified_name': item.get('source_qualified_name') or item.get('qualified_name') or item.get('name'),
     'source_registry': item.get('source_registry') or 'self',
     'installed_version': item.get('installed_version') or item.get('version'),
+    'integrity': item.get('integrity'),
 }
 print(json.dumps(payload, ensure_ascii=False))
 PY
@@ -62,12 +63,25 @@ PULL_JSON="$(./scripts/pull-skill.sh "$QUALIFIED_NAME" "$TARGET_DIR" --registry 
   exit $status
 }
 
-python3 - <<'PY' "$ROOT" "$INFO_JSON" "$PULL_JSON"
+INTEGRITY_JSON=""
+if INTEGRITY_JSON="$(python3 "$ROOT/scripts/verify-installed-skill.py" "$NAME" "$TARGET_DIR" --json)"; then
+  :
+else
+  integrity_status=$?
+  if [[ -z "$INTEGRITY_JSON" ]]; then
+    INTEGRITY_JSON='{}'
+  fi
+fi
+
+python3 - <<'PY' "$ROOT" "$INFO_JSON" "$PULL_JSON" "$INTEGRITY_JSON"
 import json, sys
 sys.path.insert(0, sys.argv[1] + '/scripts')
 from explain_install_lib import build_update_explanation  # noqa: E402
 info = json.loads(sys.argv[2])
 pull = json.loads(sys.argv[3])
+integrity = json.loads(sys.argv[4]) if sys.argv[4] else {}
+if not isinstance(integrity, dict) or integrity.get('state') == 'failed':
+    integrity = info.get('integrity') or {'state': 'unknown'}
 latest = pull.get('resolved_version')
 installed = info.get('installed_version')
 payload = {
@@ -79,6 +93,7 @@ payload = {
     'update_available': bool(latest and latest != installed),
     'state': 'update-available' if latest and latest != installed else 'up-to-date',
     'next_step': 'run upgrade-skill' if latest and latest != installed else 'use-installed-skill',
+    'integrity': integrity,
 }
 payload['explanation'] = build_update_explanation(info, payload)
 print(json.dumps(payload, ensure_ascii=False))

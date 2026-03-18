@@ -90,6 +90,20 @@ python3 scripts/verify-distribution-manifest.py \
   catalog/distributions/_legacy/my-skill/1.2.3/manifest.json
 ```
 
+You can now extend that immutable verification path into one installed runtime copy:
+
+```bash
+python3 scripts/verify-installed-skill.py my-skill ~/.openclaw/skills --json
+```
+
+That verifier loads the install-manifest entry for `my-skill`, re-verifies the recorded distribution manifest and attestation, then compares the installed local files against the signed `file_manifest`.
+
+If the local runtime copy has drifted, repair it back to the same recorded immutable release instead of guessing a newer version:
+
+```bash
+scripts/repair-installed-skill.sh my-skill ~/.openclaw/skills
+```
+
 Machine-readable verification now exposes the same reproducibility contract on every layer:
 
 - `python3 scripts/verify-attestation.py <attestation.json> --json` includes `distribution.file_manifest_count` plus the signed `distribution.build` summary
@@ -124,6 +138,13 @@ When a distribution manifest is selected, the toolchain:
 5. installs/syncs from that verified materialized tree
 
 This preserves backward compatibility while making verified immutable artifacts the preferred stable path.
+
+Installed runtime trust now follows the same model:
+
+1. verify the recorded immutable source
+2. compare installed local files against the signed released-file inventory
+3. stop mutation commands on drift unless the caller explicitly forces replacement
+4. prefer `repair-installed-skill.sh` over silent overwrite when the goal is to restore trust
 
 ## Historical rollback
 

@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 
+from installed_integrity_lib import normalize_integrity_record
 from schema_version_lib import SUPPORTED_SCHEMA_VERSION, validate_schema_version
 
 
@@ -47,11 +48,29 @@ def normalize_install_manifest(payload, *, repo=None):
         normalized['skills'] = {}
     elif not isinstance(skills, dict):
         raise InstallManifestError('install manifest skills must be an object')
+    else:
+        normalized['skills'] = {
+            key: _normalize_install_entry(value)
+            for key, value in skills.items()
+        }
     history = normalized.get('history')
     if history is None:
         normalized['history'] = {}
     elif not isinstance(history, dict):
         raise InstallManifestError('install manifest history must be an object')
+    else:
+        normalized['history'] = {
+            key: [_normalize_install_entry(item) for item in value] if isinstance(value, list) else value
+            for key, value in history.items()
+        }
+    return normalized
+
+
+def _normalize_install_entry(value):
+    if not isinstance(value, dict):
+        return value
+    normalized = dict(value)
+    normalized['integrity'] = normalize_integrity_record(value.get('integrity'))
     return normalized
 
 

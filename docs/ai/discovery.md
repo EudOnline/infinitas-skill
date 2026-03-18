@@ -34,6 +34,7 @@ scripts/upgrade-skill.sh <installed-name> <target-dir> [--to-version <semver>] [
 - `install-by-name.sh --mode confirm` may plan an external install, but must not mutate the target directory
 - `check-skill-update.sh` is non-mutating
 - `upgrade-skill.sh` must stay on the recorded source registry unless the caller explicitly decides to reinstall from a different source
+- when an installed copy is `drifted`, prefer `scripts/repair-installed-skill.sh` before retrying upgrade or rollback
 
 ## Output JSON
 
@@ -90,10 +91,22 @@ When `install-by-name.sh` fails before materialization, it normalizes resolver s
   "installed_version": "1.2.3",
   "latest_available_version": "1.2.4",
   "update_available": true,
+  "integrity": {
+    "state": "verified",
+    "last_verified_at": "2026-03-18T08:00:00Z"
+  },
   "state": "update-available",
   "next_step": "run upgrade-skill"
 }
 ```
+
+`integrity.state` is additive and may be:
+
+- `verified`
+- `drifted`
+- `unknown`
+
+When `integrity.state = drifted`, agents should inspect the drift and prefer `scripts/repair-installed-skill.sh` over silently overwriting local files.
 
 ## Failure states
 

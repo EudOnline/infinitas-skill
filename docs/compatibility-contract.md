@@ -35,7 +35,7 @@ Current rule set:
 | --- | --- | --- |
 | `_meta.json` core required fields | stable contract | scripts and catalogs depend on these fields today |
 | `_meta.json` optional extension fields | soft contract | additive changes are preferred |
-| install manifest `skills`, `history`, `locked_version`, `source_*` | stable contract | install, sync, rollback, and dependency planning read these keys |
+| install manifest `skills`, `history`, `locked_version`, `source_*`, `integrity` | stable contract | install, sync, rollback, dependency planning, and installed-integrity status surfaces read these keys |
 | archived snapshot exact-version resolution | stable contract | historical installs and lineage depend on this |
 | `catalog/compatibility.json` structure | soft contract | generated view, useful to consumers, but not the only source of truth |
 | internal helper implementation details in `scripts/*.py` | internal detail | refactor freely if behavior stays compatible |
@@ -79,6 +79,7 @@ The standard repository verification path should run `scripts/test-compat-regres
 
 - legacy `_meta.json` without `schema_version` still validates
 - legacy install manifest without `schema_version` still loads
+- legacy install manifest without `integrity` still loads and defaults to `integrity.state = unknown`
 - `locked_version` still prevents unsafe upgrade plans
 - archived exact-version snapshots still resolve for historical installs
 - legacy bare skill names still resolve unless a strict mode explicitly disables them

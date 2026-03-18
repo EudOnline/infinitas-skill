@@ -97,6 +97,22 @@ If older local installs are still missing manifest schema metadata, use `scripts
 
 With V10 Phase 3, those stored states can now re-resolve immutable release artifacts through verified distribution manifests instead of depending only on a still-present working-tree copy under `skills/active/` or `skills/archived/`.
 
+With v16 planning underway, the same persisted source references also become the anchor for installed-runtime integrity checks:
+
+```bash
+python3 scripts/verify-installed-skill.py repo-audit ~/.openclaw/skills --json
+```
+
+That command verifies the recorded immutable source first, then compares the installed local copy against the signed released-file inventory rather than trusting the runtime directory blindly.
+
+If the installed copy has drifted, repair it back to the same recorded version before attempting another sync, rollback, or upgrade:
+
+```bash
+scripts/repair-installed-skill.sh repo-audit ~/.openclaw/skills
+```
+
+This keeps historical rollback and local repair aligned on the same manifest-driven source identity instead of letting a local edit silently change what version history means.
+
 ## Regression coverage
 
 Compatibility-sensitive snapshot and rollback behavior should stay covered by `scripts/test-compat-regression.py` together with install-flow tests such as `scripts/test-distribution-install.py`.

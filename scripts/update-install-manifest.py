@@ -5,6 +5,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from installed_integrity_lib import build_install_integrity_record
 from install_manifest_lib import load_install_manifest, write_install_manifest
 from skill_identity_lib import normalize_skill_identity
 
@@ -117,6 +118,12 @@ manifest_entry = {
 }
 if resolution_plan is not None:
     manifest_entry['resolution_plan'] = resolution_plan
+manifest_entry['integrity'] = build_install_integrity_record(
+    dest_dir,
+    source_info,
+    root=repo_root,
+    verified_at=manifest['updated_at'],
+)
 manifest['skills'][name] = manifest_entry
 manifest_path = write_install_manifest(target_dir, manifest, repo=repo_url)
 print(f'updated manifest: {manifest_path}')

@@ -289,9 +289,68 @@ def scenario_manifest_required_ci_blocks_verification_without_ci_sidecar():
         shutil.rmtree(tmpdir)
 
 
+def scenario_installed_distribution_can_be_repaired_after_drift():
+    tmpdir, repo = prepare_repo()
+    try:
+        release_current(repo, V1)
+        target_dir = tmpdir / 'installed'
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        run(
+            [str(repo / 'scripts' / 'install-skill.sh'), FIXTURE_NAME, str(target_dir), '--version', V1],
+            cwd=repo,
+            env=make_env(),
+        )
+        verify_payload = json.loads(
+            run(
+                [sys.executable, str(repo / 'scripts' / 'verify-installed-skill.py'), FIXTURE_NAME, str(target_dir), '--json'],
+                cwd=repo,
+                env=make_env(),
+            ).stdout
+        )
+        if verify_payload.get('state') != 'verified':
+            fail(f"expected installed distribution to verify cleanly, got {verify_payload.get('state')!r}")
+
+        installed_dir = target_dir / FIXTURE_NAME
+        with (installed_dir / 'SKILL.md').open('a', encoding='utf-8') as handle:
+            handle.write('\nLocal drift from distribution install.\n')
+
+        drift_payload = json.loads(
+            run(
+                [sys.executable, str(repo / 'scripts' / 'verify-installed-skill.py'), FIXTURE_NAME, str(target_dir), '--json'],
+                cwd=repo,
+                env=make_env(),
+                expect=1,
+            ).stdout
+        )
+        if drift_payload.get('state') != 'drifted':
+            fail(f"expected drifted state after local edit, got {drift_payload.get('state')!r}")
+
+        repair_output = run(
+            [str(repo / 'scripts' / 'repair-installed-skill.sh'), FIXTURE_NAME, str(target_dir)],
+            cwd=repo,
+            env=make_env(),
+        ).stdout
+        if 'repaired:' not in repair_output:
+            fail(f'expected repair output to include repaired:\n{repair_output}')
+
+        verify_payload = json.loads(
+            run(
+                [sys.executable, str(repo / 'scripts' / 'verify-installed-skill.py'), FIXTURE_NAME, str(target_dir), '--json'],
+                cwd=repo,
+                env=make_env(),
+            ).stdout
+        )
+        if verify_payload.get('state') != 'verified':
+            fail(f"expected repaired distribution install to verify cleanly, got {verify_payload.get('state')!r}")
+    finally:
+        shutil.rmtree(tmpdir)
+
+
 def main():
     scenario_install_switch_and_rollback_use_distribution_manifests()
     scenario_manifest_required_ci_blocks_verification_without_ci_sidecar()
+    scenario_installed_distribution_can_be_repaired_after_drift()
     print('OK: distribution install checks passed')
 
 

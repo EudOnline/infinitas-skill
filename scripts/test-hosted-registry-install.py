@@ -191,6 +191,30 @@ def assert_install_success(repo: Path, target_dir: Path):
         fail(f"expected hosted source_repo URL, got {entry.get('source_repo')!r}")
     if entry.get('source_distribution_manifest') != f'catalog/distributions/{PUBLISHER}/{SKILL_NAME}/{VERSION}/manifest.json':
         fail(f"unexpected source_distribution_manifest {entry.get('source_distribution_manifest')!r}")
+    integrity = entry.get('integrity')
+    if not isinstance(integrity, dict):
+        fail(f'expected install manifest integrity block, got {integrity!r}')
+    if integrity.get('state') != 'unknown':
+        fail(f"expected hosted install integrity state 'unknown', got {integrity.get('state')!r}")
+    if integrity.get('last_verified_at') is not None:
+        fail(f"expected hosted install integrity last_verified_at to stay null, got {integrity.get('last_verified_at')!r}")
+    verify = run(
+        [
+            sys.executable,
+            str(repo / 'scripts' / 'verify-installed-skill.py'),
+            SKILL_NAME,
+            str(target_dir),
+            '--json',
+        ],
+        cwd=repo,
+        expect=1,
+    )
+    verify_payload = json.loads(verify.stdout)
+    if verify_payload.get('state') != 'failed':
+        fail(f"expected hosted explicit verification failure, got {verify_payload.get('state')!r}")
+    error = verify_payload.get('error') or ''
+    if 'missing signed file_manifest' not in error:
+        fail(f'expected explicit verification to report missing signed file_manifest\n{verify.stdout}\n{verify.stderr}')
 
 
 def assert_install_failure(repo: Path, target_dir: Path, needle: str):

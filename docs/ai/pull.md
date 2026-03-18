@@ -171,9 +171,26 @@ When `error_code` is `missing-distribution-fields` or `missing-distribution-file
 - 不得在 attestation 校验失败时继续安装
 - 不得在 `confirm` 模式下修改目标目录
 - 不得静默覆盖已有安装
+- 若已安装副本被后续 workflow 判定为 `drifted`，优先调用 `scripts/repair-installed-skill.sh`，不要把 upgrade / rollback 当作隐式修复
 
 ## Mode Rules
 
 - 默认模式是 `auto`
 - `auto` 模式必须从不可变发布物完成完整安装
 - `confirm` 模式必须只输出执行计划，不得修改目标目录
+
+## Installed Integrity Follow-up
+
+安装完成后，如需确认本地 runtime copy 仍与已验证发布物一致：
+
+```bash
+python3 scripts/verify-installed-skill.py <name> <target-dir> --json
+```
+
+若状态为 `drifted`，优先执行：
+
+```bash
+scripts/repair-installed-skill.sh <name> <target-dir>
+```
+
+而不是把 upgrade、rollback、或手工复制当作默认修复路径。
