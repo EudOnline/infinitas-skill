@@ -213,6 +213,10 @@ def scenario_verify_clean_and_drifted_install():
         listed = run([str(repo / 'scripts' / 'list-installed.sh'), str(target_dir)], cwd=repo).stdout
         if 'integrity=verified' not in listed:
             fail(f'expected list-installed output to surface integrity=verified\n{listed}')
+        if 'capability=supported' not in listed:
+            fail(f'expected list-installed output to surface capability=supported\n{listed}')
+        if 'events=' not in listed:
+            fail(f'expected list-installed output to surface event-count hint\n{listed}')
 
         payload = verify_installed_skill(repo, target_dir)
         if payload.get('state') != 'verified':
@@ -317,6 +321,21 @@ def scenario_installed_integrity_docs_exist():
     for required in ['integrity_capability', 'integrity_reason', 'integrity_events']:
         if required not in compatibility_docs:
             fail(f'expected docs/compatibility-contract.md to mention {required!r}')
+
+    discovery_docs = (ROOT / 'docs' / 'ai' / 'discovery.md').read_text(encoding='utf-8')
+    for required in ['report-installed-integrity.py', 'catalog/audit-export.json', 'target-local']:
+        if required not in discovery_docs:
+            fail(f'expected docs/ai/discovery.md to mention {required!r}')
+
+    pull_docs = (ROOT / 'docs' / 'ai' / 'pull.md').read_text(encoding='utf-8')
+    for required in ['report-installed-integrity.py', 'catalog/audit-export.json', 'target-local']:
+        if required not in pull_docs:
+            fail(f'expected docs/ai/pull.md to mention {required!r}')
+
+    federation_docs = (ROOT / 'docs' / 'federation-operations.md').read_text(encoding='utf-8')
+    for required in ['report-installed-integrity.py', 'catalog/audit-export.json', 'target-local']:
+        if required not in federation_docs:
+            fail(f'expected docs/federation-operations.md to mention {required!r}')
 
 
 def main():

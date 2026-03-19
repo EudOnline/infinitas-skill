@@ -160,6 +160,8 @@ When `error_code` is `missing-distribution-fields` or `missing-distribution-file
 - 对 federated registry，pull 输出应同时暴露 mapped publisher identity 与 upstream publisher identity，避免把 namespace 映射误解成来源变更
 - 即使指定了 `--registry`，也只允许读取该 registry 已发布的 immutable 索引与产物
 - 面向 portal / compliance 的聚合读取应优先消费 `catalog/inventory-export.json` 与 `catalog/audit-export.json`，而不是把 `pull-skill` 的安装输出当作长期稳定集成契约
+- `catalog/audit-export.json` 仍然只回答 repo-scoped immutable release evidence；它不是某个 target-local 安装副本的当前信任状态
+- 若需要 target-local runtime trust state，优先运行 `python3 scripts/report-installed-integrity.py <target-dir> --json`，而不是把 repo export 当成安装后实时状态
 - 若 pull 结果与 inventory / audit exports 或 registry policy 看起来冲突，先参考 [docs/federation-operations.md](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/.worktrees/codex-federation-trust-rules/docs/federation-operations.md) 中的恢复顺序，再决定是否调整 registry policy
 - 若 AI 看到的是 OpenClaw 本地原型目录，应先走 `scripts/import-openclaw-skill.sh`，而不是直接安装
 - 如果需要先看 trust state、compatibility、dependency summary 或 provenance，优先运行 `scripts/inspect-skill.sh`
@@ -185,6 +187,13 @@ When `error_code` is `missing-distribution-fields` or `missing-distribution-file
 
 ```bash
 python3 scripts/verify-installed-skill.py <name> <target-dir> --json
+```
+
+如需查看或刷新整个 target-local 安装目录的当前 trust state：
+
+```bash
+python3 scripts/report-installed-integrity.py <target-dir> --json
+python3 scripts/report-installed-integrity.py <target-dir> --refresh --json
 ```
 
 若状态为 `drifted`，优先执行：

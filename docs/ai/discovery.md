@@ -81,6 +81,21 @@ Release-indexed install trust is also surfaced additively for immutable artifact
 
 These fields describe immutable release-artifact capability only. They are not local runtime integrity state for one installed target directory.
 
+When the question is "can this release support installed-integrity verification at all?", use those repository-scoped immutable exports and catalog fields.
+
+When the question is "what is the trust state of this specific target directory right now?", use the target-local report surface instead:
+
+```bash
+python3 scripts/report-installed-integrity.py <target-dir> --json
+python3 scripts/report-installed-integrity.py <target-dir> --refresh --json
+```
+
+Do not collapse these concerns:
+
+- `catalog/audit-export.json` is repo-scoped immutable release evidence
+- `report-installed-integrity.py` is target-local runtime trust state
+- `verify-installed-skill.py` is the explicit read-only verifier for one installed skill
+
 When `install-by-name.sh` fails before materialization, it normalizes resolver states into wrapper-level failure payloads with:
 
 - `ok: false`
