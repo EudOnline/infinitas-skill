@@ -16,6 +16,10 @@ SKILL_NAME = 'operate-infinitas-skill'
 PUBLISHER = 'lvxiaoer'
 QUALIFIED_NAME = f'{PUBLISHER}/{SKILL_NAME}'
 VERSION = '0.1.1'
+TRUST_CONFIG_REFS = [
+    Path('config/signing.json'),
+    Path('config/allowed_signers'),
+]
 
 
 def fail(message):
@@ -57,7 +61,7 @@ def prepare_served_registry(
     provenance_rel = Path(skill['versions'][VERSION]['attestation_path'])
     signature_rel = Path(skill['versions'][VERSION]['attestation_signature_path'])
 
-    for rel in [manifest_rel, bundle_rel, provenance_rel, signature_rel]:
+    for rel in [manifest_rel, bundle_rel, provenance_rel, signature_rel, *TRUST_CONFIG_REFS]:
         source = ROOT / rel
         target = root_dir / rel
         target.parent.mkdir(parents=True, exist_ok=True)

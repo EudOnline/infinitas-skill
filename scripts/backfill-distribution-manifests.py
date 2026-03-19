@@ -110,12 +110,12 @@ def _inspect_manifest(manifest_path, *, write):
 
     manifest_root = infer_distribution_root(manifest_path)
     try:
-        verified = verify_distribution_manifest(manifest_path, root=manifest_root, attestation_root=ROOT)
+        verified = verify_distribution_manifest(manifest_path, root=manifest_root, attestation_root=manifest_root)
         canonical_payload = build_distribution_manifest_payload(
             verified['provenance_path'],
             verified['bundle_path'],
             root=manifest_root,
-            attestation_root=ROOT,
+            attestation_root=manifest_root,
         )
     except DistributionError as exc:
         status = _incomplete_status(manifest_path, str(exc), current_payload)

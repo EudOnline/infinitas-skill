@@ -8,6 +8,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 LEGACY_MANIFEST_REL = Path('catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.1/manifest.json')
+TRUST_CONFIG_REFS = [
+    Path('config/signing.json'),
+    Path('config/allowed_signers'),
+]
 
 sys.path.insert(0, str(ROOT / 'scripts'))
 from distribution_lib import manifest_index_entry  # noqa: E402
@@ -44,6 +48,7 @@ def copy_legacy_fixture(tmp_root: Path):
         Path((original.get('attestation_bundle') or {}).get('provenance_path') or ''),
         Path((original.get('attestation_bundle') or {}).get('signature_path') or ''),
     ]
+    refs.extend(TRUST_CONFIG_REFS)
     if any(not str(ref) for ref in refs):
         fail(f'legacy fixture manifest is missing immutable refs: {original!r}')
     for rel in refs:
@@ -249,6 +254,38 @@ def scenario_scan_mode_reports_machine_readable_status_per_manifest():
         shutil.rmtree(tmpdir)
 
 
+def scenario_scan_mode_uses_scanned_repo_trust_config():
+    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-legacy-backfill-trust-root-test-'))
+    try:
+        manifest_path, _ = copy_legacy_fixture(tmpdir)
+        broken_manifest_path = tmpdir / 'catalog/distributions/lvxiaoer/operate-infinitas-skill-broken/0.1.1/manifest.json'
+        broken_manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        broken_payload = load_json(manifest_path)
+        broken_payload['bundle'] = {**(broken_payload.get('bundle') or {}), 'path': 'catalog/distributions/missing/skill.tar.gz'}
+        broken_manifest_path.write_text(json.dumps(broken_payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        (tmpdir / 'config' / 'allowed_signers').write_text('', encoding='utf-8')
+
+        scan_payload = run_backfill_scan(tmpdir, write=False)
+        if scan_payload.get('state') != 'scan':
+            fail(f"expected scan payload state 'scan', got {scan_payload.get('state')!r}")
+
+        by_manifest = _status_by_manifest(scan_payload)
+        canonical_status = by_manifest.get(str(manifest_path.resolve()))
+        if canonical_status is None:
+            fail(f'expected canonical manifest to be reported, got {by_manifest!r}')
+        if canonical_status.get('state') != 'incomplete-evidence':
+            fail(
+                "expected canonical scan state 'incomplete-evidence' when scanned repo has no trusted signers, "
+                f'got {canonical_status!r}'
+            )
+        if 'has no signer entries' not in (canonical_status.get('error') or ''):
+            fail(f"expected canonical scan error to mention missing trusted signers, got {canonical_status!r}")
+        if canonical_status.get('root') != str(tmpdir.resolve()):
+            fail(f"expected canonical scan root {tmpdir.resolve()!s}, got {canonical_status.get('root')!r}")
+    finally:
+        shutil.rmtree(tmpdir)
+
+
 def scenario_placeholder_metadata_is_backfillable_and_dry_run_is_non_mutating():
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-legacy-backfill-placeholder-test-'))
     try:
@@ -283,6 +320,7 @@ def scenario_placeholder_metadata_is_backfillable_and_dry_run_is_non_mutating():
 def main():
     scenario_legacy_manifest_backfill_is_additive_and_idempotent()
     scenario_scan_mode_reports_machine_readable_status_per_manifest()
+    scenario_scan_mode_uses_scanned_repo_trust_config()
     scenario_placeholder_metadata_is_backfillable_and_dry_run_is_non_mutating()
     print('OK: legacy distribution manifest backfill checks passed')
 
