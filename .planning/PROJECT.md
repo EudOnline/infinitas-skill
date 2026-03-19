@@ -8,14 +8,14 @@
 
 Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
 
-## Current Milestone: v16 Installed Skill Integrity and Repairable Consumption (Completed 2026-03-18)
+## Current Milestone: v17 Installed Integrity Reporting and Legacy Distribution Backfill
 
-**Goal:** Extend verified release trust into installed agent skill directories by auditing local files against signed release inventories, preserving local integrity state, and repairing drift back to the recorded immutable source without adding a hosted control plane.
+**Goal:** Reduce avoidable `integrity.state = unknown` outcomes by backfilling legacy immutable release manifests when signed evidence already exists, then add a stable local reporting surface for installed-skill trust and repair history without introducing a hosted control plane.
 
 **Target features:**
-- One install-facing verifier that compares local installed files against the signed released-file inventory referenced by the install manifest
-- Install-manifest and consumer status surfaces that preserve compact integrity and drift summaries
-- Repair, sync, rollback, and upgrade flows that use recorded immutable source metadata to recover or explicitly override drift
+- A deterministic backfill flow that regenerates legacy distribution manifests with signed `file_manifest` and build metadata from committed immutable artifacts
+- Catalog or discovery summaries that tell operators whether one released version fully supports installed-integrity verification or will remain compatibility-only
+- A stable local installed-integrity report surface that summarizes current trust, verification capability, and recent repair or verification events per install target
 
 ## Requirements
 
@@ -43,10 +43,12 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - [x] Plan and implement v15 Phase 2: external transparency log publication and verification (`ATT-04`).
 - [x] Plan and implement v16 Phase 1: installed skill integrity and drift detection (`INST-01`).
 - [x] Plan and implement v16 Phase 2: exact-source repair and update guardrails (`INST-02`).
+- [ ] Plan and implement v17 Phase 1: legacy distribution backfill and integrity capability reporting (`INST-03`).
+- [ ] Plan and implement v17 Phase 2: installed integrity audit history and local reports (`INST-04`).
 
 ### Out of Scope
 
-- Hosted registry service, database, or web UI — the repository remains intentionally Git-native and file-based for v16.
+- Hosted registry service, database, or web UI — the repository remains intentionally Git-native and file-based for v17.
 - Rebuilding the lifecycle, templating, or catalog system from scratch — current planning extends existing workflows instead of replacing them.
 - Public marketplace/package-manager integration — not needed to deliver private-registry distribution goals.
 - Full reconstruction of v1-v8 planning history — the repository does not contain authoritative phase-by-phase planning records for those versions.
@@ -80,16 +82,17 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - v14 is now merged on `main`, adding normalized `review-evidence.json` support, provenance-aware quorum evaluation, and deterministic reviewer recommendation plus escalation output in review CLI flows.
 - v15 is now merged on `main`, adding signed released-file inventories, reproducibility metadata, transparency-log proof capture, and additive audit summaries across attestation, release-state, and catalog surfaces.
 - v16 is now merged on `main`, adding `verify-installed-skill.py`, persisted install-manifest integrity summaries, `repair-installed-skill.sh`, drift-aware sync or upgrade guardrails, and compatibility fallback to `integrity.state = unknown` when older hosted manifests lack signed `file_manifest` entries.
-- No post-v16 milestone is committed yet; future planning should stay close to manifest-driven consumer trust and compatibility instead of expanding into a hosted control plane.
+- The biggest remaining installed-runtime trust gaps are now concentrated in two places: older immutable artifacts that still cannot support full installed verification, and the lack of one stable local report surface for trust state plus repair history.
+- v17 therefore stays tightly scoped to manifest-driven consumer trust: backfill legacy immutable evidence where possible, and add local installed-integrity reporting rather than inventing a separate service or control plane.
 
 ## Constraints
 
-- **Tech stack**: Keep v16 changes native to Bash, Python, JSON, and Markdown — the repository is already built around lightweight CLI tooling.
+- **Tech stack**: Keep v17 changes native to Bash, Python, JSON, and Markdown — the repository is already built around lightweight CLI tooling.
 - **Architecture discipline**: Improve author metadata, generated indexes, tests, and docs before adding more registry services or background automation.
 - **Compatibility**: Preserve the existing local-filesystem plus Git workflow so current install/sync/promotion commands remain usable.
 - **Security**: Shared-secret-only signing is insufficient for release authenticity; asymmetric verification remains the trusted path.
 - **Governance**: Publisher ownership, reviewer evidence, and release actor identity must be repository-configurable so policy changes are versioned and reviewable.
-- **Private-first**: Keep the repository Git-native and private-registry-first; do not turn v16 into public marketplace or hosted-service scope creep.
+- **Private-first**: Keep the repository Git-native and private-registry-first; do not turn v17 into public marketplace or hosted-service scope creep.
 - **History**: GSD planning begins at v9; earlier release history may be referenced, but not reconstructed as authoritative planning data.
 
 ## Key Decisions
@@ -121,9 +124,11 @@ Maintainers can publish and distribute private skills with deterministic, audita
 | Keep transparency log publication additive and policy-driven | Local SSH and CI verification must remain usable offline even when transparency submission is unavailable or advisory | ✓ Good |
 | Reuse v15's signed `file_manifest` as the installed-runtime integrity contract | The next trust gap is no longer release creation, but whether local installed copies still match the immutable artifact that was verified at install time | ✓ Good |
 | Keep drift repair manifest-driven and exact-source | Repair should restore the recorded immutable version from the install manifest, not silently resolve whatever version happens to be latest today | ✓ Good |
+| Regenerate legacy distribution manifests from committed provenance plus bundle evidence instead of accepting permanent compatibility-only gaps | When immutable artifacts already exist, backfill can restore full installed-integrity verification without changing the release trust model or adding a mutable exception path | ✓ Good |
+| Keep installed-integrity reports local and manifest-driven instead of pushing runtime trust state into repo-scoped catalog exports | Installed runtime trust belongs to one target directory, so its durable audit surface should stay local, additive, and offline-usable | ✓ Good |
 | Adopt `M2: AI-usable skill ecosystem` as v12 instead of another release-engineering milestone | The platform review shows the core registry mechanics are strong enough; the main remaining gap is decision-useful content and metadata | ✓ Good |
 | Start v12 with canonical decision metadata and wrapper result schemas | The current AI index already carries trust and compatibility, but still hardcodes empty selection guidance and lacks dedicated publish/pull schemas | ✓ Good |
 | Keep v12 additive and Git-native | The goal is to make the existing registry more useful to AI agents, not replace it with a new service layer | ✓ Good |
 
 ---
-*Last updated: 2026-03-19 after completing and merging v16 installed integrity and repair on `main`*
+*Last updated: 2026-03-19 after closing v16 and starting v17 planning for installed-integrity reporting and legacy backfill*

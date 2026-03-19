@@ -145,6 +145,15 @@ Requirements committed for milestone `v16`. Both phases are complete on `main`.
 - [x] **INST-01**: Repository can verify an installed skill directory against the signed released-file inventory and immutable source metadata recorded in the local install manifest.
 - [x] **INST-02**: Repository can repair a drifted installed skill or gate sync, switch, rollback, and upgrade operations using the recorded immutable source metadata.
 
+## v17 Requirements
+
+Requirements committed for milestone `v17`. Planning starts with legacy immutable artifact backfill and installed-integrity local reporting.
+
+### Installed Integrity Auditability
+
+- [ ] **INST-03**: Repository can regenerate or backfill legacy immutable distribution manifests with signed released-file inventory and reproducibility metadata when the corresponding signed provenance and bundle artifacts already exist.
+- [ ] **INST-04**: Repository can persist and report installed-skill integrity capability, latest verification outcome, and additive local audit history through a stable local reporting surface without relying on a hosted control plane.
+
 ## Out of Scope
 
 | Feature | Reason |
@@ -208,6 +217,8 @@ Requirements committed for milestone `v16`. Both phases are complete on `main`.
 | ATT-05 | v15 Phase 1 | Complete |
 | INST-01 | v16 Phase 1 | Complete |
 | INST-02 | v16 Phase 2 | Complete |
+| INST-03 | v17 Phase 1 | Planned |
+| INST-04 | v17 Phase 2 | Planned |
 
 **Coverage:**
 - v9 requirements: 12 total
@@ -234,7 +245,10 @@ Requirements committed for milestone `v16`. Both phases are complete on `main`.
 - v16 requirements: 2 total
 - Mapped to phases: 2
 - Unmapped: 0 ✓
+- v17 requirements: 2 total
+- Mapped to phases: 2
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-19 after completing and merging v16 installed integrity and repair on `main`*
+*Last updated: 2026-03-19 after starting v17 planning for installed-integrity reporting and legacy backfill*

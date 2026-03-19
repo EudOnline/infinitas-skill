@@ -5,15 +5,15 @@
 See: `.planning/PROJECT.md` (updated 2026-03-19)
 
 **Core value:** Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
-**Current focus:** close out v16 planning state after merging installed integrity and repair on `main`; the next milestone is not committed yet.
+**Current focus:** v17 planning after closing out v16 on `main`, with scope kept tight around installed-integrity reporting and legacy immutable-artifact backfill.
 
 ## Current Position
 
-Phase: v16 complete / post-milestone closeout
-Plan: `docs/plans/2026-03-18-installed-skill-integrity-and-repair.md`
-Status: v16 is completed and merged on `main`; post-v16 milestone planning has not started yet
-Last activity: 2026-03-19 — Re-verified the merged v16 result on `main`, deleted the feature worktree/branch, and restored the local planning drafts for closeout
-Progress: [##########] 100%
+Phase: v17 Phase 1 planning
+Plan: `docs/plans/2026-03-19-installed-integrity-reporting-and-legacy-backfill.md`
+Status: v16 is completed and merged on `main`; v17 planning is starting on `main`
+Last activity: 2026-03-19 — Closed the v16 planning docs on `main` and started the next installed-integrity planning slice around legacy backfill plus local reporting
+Progress: [##--------] 20%
 
 ## Performance Metrics
 
@@ -33,8 +33,8 @@ Progress: [##########] 100%
 - v16: 4 plans completed across 2 phases
 
 **Recent Trend:**
-- Last 5 plans: 2026-03-16-registry-refresh-cadence-and-freshness, 2026-03-17-registry-snapshot-mirroring-and-offline-resolution, 2026-03-17-platform-native-review-evidence-and-reviewer-rotation, 2026-03-17-supply-chain-transparency-and-reproducible-release-metadata, 2026-03-18-installed-skill-integrity-and-repair
-- Trend: v16 is now complete on `main`; the next planning slice should stay adjacent to installed-runtime trust, compatibility, and auditability rather than expanding scope dramatically
+- Last 5 plans: 2026-03-17-registry-snapshot-mirroring-and-offline-resolution, 2026-03-17-platform-native-review-evidence-and-reviewer-rotation, 2026-03-17-supply-chain-transparency-and-reproducible-release-metadata, 2026-03-18-installed-skill-integrity-and-repair, 2026-03-19-installed-integrity-reporting-and-legacy-backfill
+- Trend: v16 is now complete on `main`; the next value line stays close to installed-runtime trust by reducing legacy `unknown` outcomes and adding a stable local report surface
 
 ## Accumulated Context
 
@@ -74,26 +74,28 @@ Decisions are logged in `PROJECT.md`.
 - 2026-03-18: Keep repair exact-source and manifest-driven so drift recovery restores the recorded immutable release instead of silently selecting a newer candidate.
 - 2026-03-18: Complete v16 on `main` by merging installed-skill verification, persisted integrity summaries, exact-source repair, and drift-aware sync or upgrade guardrails.
 - 2026-03-18: Keep install-time compatibility additive for older hosted manifests by degrading missing signed `file_manifest` metadata to `integrity.state = unknown` while preserving strict explicit verification.
+- 2026-03-19: Start v17 by targeting the two remaining post-v16 gaps that most affect installed-runtime trust: legacy immutable artifacts that cannot yet verify fully, and the absence of one stable local installed-integrity report surface.
+- 2026-03-19: Prefer deterministic backfill from committed provenance plus bundle artifacts over introducing special-case trust exceptions for older immutable releases.
 
 ### Pending Todos
 
-- Choose the next post-v16 milestone and keep it close to manifest-driven consumer trust, compatibility, or auditability.
-- Decide whether repair operations should emit a dedicated audit-history surface beyond the current install-manifest state update.
-- Decide whether legacy hosted releases should be backfilled with signed `file_manifest` metadata so `integrity.state = unknown` becomes exceptional.
-- Decide whether explicit installed-skill verification results should be exported through a stable audit/report surface.
-- Keep future work beyond v16 constrained unless installed-runtime verification exposes a stronger dependency.
+- Execute the dedicated v17 Phase 1/2 plan for legacy immutable-artifact backfill and installed-integrity local reporting.
+- Decide whether local installed-integrity audit history should live entirely inside the install manifest or spill into a sibling report artifact when event volume grows.
+- Decide whether repository-generated discovery surfaces should expose integrity capability only as a boolean or with a richer reason field.
+- Keep future work beyond v17 constrained unless the installed-integrity reporting surface exposes a stronger dependency.
 
 ### Blockers/Concerns
 
 - `config/allowed_signers` now contains a committed `lvxiaoer` trusted signer entry.
 - `operate-infinitas-skill` already has a signed pushed stable tag plus verified provenance.
 - Some older hosted distribution manifests still lack signed `file_manifest` metadata, so compatible installs may persist `integrity.state = unknown` until those immutable artifacts are regenerated or backfilled.
+- There is still no dedicated local report command that summarizes installed-skill integrity state, capability, and recent repair or verification history without scraping raw manifest JSON.
 - Full hosted-registry e2e remains environment-sensitive and is still skipped when `fastapi`, `httpx`, `jinja2`, or `sqlalchemy` are unavailable in the current Python environment.
 - The repository still installs skills by bare folder name for backward compatibility; any future multi-publisher same-slug work should stay compatibility-aware.
 - The project should stay Git-native and private-first; public marketplace features, social features, and on-chain reputation remain intentionally deferred.
 
 ## Session Continuity
 
-Last session: 2026-03-19 17:49 GMT+8
-Stopped at: v16 closed out on `main`; next is post-v16 milestone definition
-Resume file: `docs/plans/2026-03-18-installed-skill-integrity-and-repair.md`
+Last session: 2026-03-19 18:05 GMT+8
+Stopped at: v16 fully closed out and the next milestone shape selected
+Resume file: `docs/plans/2026-03-19-installed-integrity-reporting-and-legacy-backfill.md`

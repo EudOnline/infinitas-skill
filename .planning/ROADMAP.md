@@ -10,6 +10,7 @@
 - ✅ **v14 Governance Integration and Reviewer Operations** - Phases 1-2 (completed 2026-03-17)
 - ✅ **v15 Supply-Chain Transparency and Reproducible Release Metadata** - Phases 1-2 (completed 2026-03-17)
 - ✅ **v16 Installed Skill Integrity and Repairable Consumption** - Phases 1-2 (completed 2026-03-18)
+- 🚧 **v17 Installed Integrity Reporting and Legacy Distribution Backfill** - Planning started
 
 ## Current Follow-up
 
@@ -19,7 +20,7 @@
 - v15 supply-chain work is now merged on `main`, including signed released-file inventories, reproducibility metadata, transparency-log publication, and additive audit surfaces.
 - v16 is now merged on `main`, including installed-runtime verification against signed release-file inventories, additive integrity summaries in install manifests, exact-source repair, and drift-aware mutation guardrails.
 - Older hosted distribution manifests can still lack signed `file_manifest` metadata; install-time integrity now degrades to `unknown` for compatibility, while explicit verification remains strict.
-- No post-v16 milestone is committed yet; the next planning slice should stay adjacent to installed-runtime trust and compatibility instead of broadening into hosted-service scope.
+- v17 now becomes the next active value line: restore full installed-integrity verification for older immutable artifacts where possible, then add one stable local report surface for trust state and repair history.
 
 ## Phases
 
@@ -423,6 +424,38 @@ Plans:
 - [x] 16-03: Add exact-source repair flow for drifted installs
 - [x] 16-04: Thread drift-aware guardrails into sync, rollback, switch, and upgrade commands
 
+### 🚧 v17 Installed Integrity Reporting and Legacy Distribution Backfill (Planned)
+
+**Milestone Goal:** Close the remaining post-v16 installed-runtime trust gaps by backfilling legacy immutable manifests when signed evidence already exists, then exposing a stable local report surface for installed-skill trust and repair history.
+
+#### 🚧 Phase 1: Legacy Distribution Backfill and Integrity Capability Reporting (Planned)
+**Goal**: Turn older immutable artifacts from compatibility-only installs into fully verifiable installs wherever the signed provenance and release bundle already contain enough evidence to regenerate the missing distribution metadata.
+**Depends on**: v16 completed
+**Requirements**: [INST-03]
+**Success Criteria** (what must be TRUE):
+  1. Operators can run one deterministic backfill command against a legacy distribution manifest and regenerate the signed `file_manifest` and reproducibility metadata from the committed immutable bundle plus signed provenance.
+  2. Repository release and discovery surfaces can report whether one released version fully supports installed-integrity verification or will still fall back to compatibility-only `unknown`.
+  3. Hosted or local install flows remain backward-compatible while newly backfilled immutable artifacts can verify as `supported` without weakening attestation checks.
+**Plans**: 2 plans
+
+Plans:
+- [ ] 17-01: Define legacy distribution backfill contract and integrity capability summary
+- [ ] 17-02: Add backfill tooling, refresh legacy immutable artifacts, and thread capability reporting through release or discovery surfaces
+
+#### 🚧 Phase 2: Installed Integrity Audit History and Local Reports (Planned)
+**Goal**: Give operators and agents one stable local surface for installed-skill trust that summarizes current integrity state, verification capability, and recent repair or verification activity without scraping raw install manifests.
+**Depends on**: Phase 1
+**Requirements**: [INST-04]
+**Success Criteria** (what must be TRUE):
+  1. Operators can run one local report command against an install target and get stable human-readable or JSON output for every installed skill, including integrity state, capability, latest verification timestamp, and recommended next action.
+  2. Install, repair, and explicit report-refresh workflows preserve additive local audit history without breaking older install manifests.
+  3. Docs and AI guidance explain when to use the local installed-integrity report versus repository-scoped release audit exports.
+**Plans**: 2 plans
+
+Plans:
+- [ ] 17-03: Define installed-integrity local report and audit-history contract
+- [ ] 17-04: Implement local report surface, additive audit events, and documentation updates
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -452,3 +485,5 @@ Plans:
 | 2. Transparency Log Publication and Verification | v15 | 2/2 | Completed | 2026-03-17 |
 | 1. Installed Skill Integrity and Drift Detection | v16 | 2/2 | Completed | 2026-03-18 |
 | 2. Exact-Source Repair and Update Guardrails | v16 | 2/2 | Completed | 2026-03-18 |
+| 1. Legacy Distribution Backfill and Integrity Capability Reporting | v17 | 0/2 | Planned | - |
+| 2. Installed Integrity Audit History and Local Reports | v17 | 0/2 | Planned | - |
