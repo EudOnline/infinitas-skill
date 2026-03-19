@@ -104,7 +104,7 @@ The backfill flow is additive and deterministic:
 - it re-verifies signed provenance plus bundle artifacts first
 - it regenerates canonical `file_manifest` and normalized `build` from immutable artifacts
 - it preserves immutable identity fields (`bundle`, `attestation_bundle`, `source_snapshot`) unchanged
-- it reports `state = "backfilled"` on first write and `state = "unchanged"` on repeat runs
+- it reports `state = "would-backfill"` for dry runs, `state = "backfilled"` when `--write` applies changes, and `state = "unchanged"` on repeat runs
 
 If immutable evidence is incomplete, the command reports a compatibility state instead of guessing release metadata.
 

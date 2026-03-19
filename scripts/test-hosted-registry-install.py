@@ -160,23 +160,6 @@ def prepare_repo(tmpdir: Path, base_url: str):
     return repo
 
 
-def backfill_manifest(path: Path):
-    result = run(
-        [
-            sys.executable,
-            str(ROOT / 'scripts' / 'backfill-distribution-manifests.py'),
-            '--manifest',
-            str(path),
-            '--write',
-            '--json',
-        ],
-        cwd=ROOT,
-    )
-    payload = json.loads(result.stdout)
-    if payload.get('state') not in {'backfilled', 'unchanged'}:
-        fail(f'expected backfill state backfilled/unchanged, got {payload!r}')
-
-
 class QuietTCPServer(socketserver.TCPServer):
     allow_reuse_address = True
 
@@ -226,6 +209,21 @@ def assert_install_success(repo: Path, target_dir: Path, *, expected_integrity_s
         fail(f"expected hosted source_repo URL, got {entry.get('source_repo')!r}")
     if entry.get('source_distribution_manifest') != f'catalog/distributions/{PUBLISHER}/{SKILL_NAME}/{VERSION}/manifest.json':
         fail(f"unexpected source_distribution_manifest {entry.get('source_distribution_manifest')!r}")
+    if expected_integrity_state == 'verified':
+        source_distribution_root = Path(entry.get('source_distribution_root') or '')
+        if not source_distribution_root.is_dir():
+            fail(f"expected hosted install to persist source_distribution_root, got {entry.get('source_distribution_root')!r}")
+        required_cached_refs = [
+            entry.get('source_distribution_manifest'),
+            entry.get('source_distribution_bundle'),
+            entry.get('source_attestation_path'),
+            entry.get('source_attestation_signature_path'),
+        ]
+        for rel in required_cached_refs:
+            if not isinstance(rel, str) or not rel:
+                fail(f'expected cached hosted install references to be populated, got {required_cached_refs!r}')
+            if not (source_distribution_root / rel).exists():
+                fail(f'expected cached hosted install artifact to exist: {(source_distribution_root / rel)}')
     integrity = entry.get('integrity')
     if not isinstance(integrity, dict):
         fail(f'expected install manifest integrity block, got {integrity!r}')
@@ -282,11 +280,6 @@ def main():
         prepare_served_registry(backfilled_root, backfill_manifest=True)
         with HostedRegistryServer(backfilled_root) as server:
             repo = prepare_repo(tmpdir / 'backfilled-success-case', server.base_url)
-            skill, _dist = load_current_skill_payload()
-            manifest_rel = Path(skill['versions'][VERSION]['manifest_path'])
-            # verify-installed-skill.py reuses source_distribution_manifest from the install record.
-            # Keep the local fixture manifest aligned with the hosted backfilled artifact.
-            backfill_manifest(repo / manifest_rel)
             assert_install_success(repo, tmpdir / 'installed-backfilled-success', expected_integrity_state='verified')
 
         bad_sha_root = tmpdir / 'served-bad-sha'

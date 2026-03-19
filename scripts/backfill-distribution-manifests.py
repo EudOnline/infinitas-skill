@@ -40,6 +40,8 @@ def _emit(payload, as_json):
         manifest = payload.get('manifest')
         if state == 'backfilled':
             print(f'OK: backfilled {manifest}')
+        elif state == 'would-backfill':
+            print(f'OK: would-backfill {manifest}')
         elif state == 'unchanged':
             print(f'OK: unchanged {manifest}')
         else:
@@ -76,9 +78,11 @@ def main():
             rewritten[key] = canonical_payload.get(key)
             changed_fields.append(key)
 
-    state = 'backfilled' if changed_fields else 'unchanged'
+    state = 'unchanged'
+    if changed_fields:
+        state = 'backfilled' if args.write else 'would-backfill'
     wrote = False
-    if state == 'backfilled' and args.write:
+    if state == 'backfilled':
         manifest_path.write_text(json.dumps(rewritten, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
         wrote = True
 

@@ -336,7 +336,12 @@ def _resolve_manifest_ref(path, ref, root=None):
 def verify_distribution_manifest(manifest_path, root=None, attestation_root=None):
     root = Path(root or ROOT).resolve()
     attestation_root = Path(attestation_root or root).resolve()
-    manifest_path = Path(manifest_path).resolve()
+    manifest_ref = Path(manifest_path)
+    if manifest_ref.is_absolute():
+        manifest_path = manifest_ref.resolve()
+    else:
+        root_candidate = (root / manifest_ref).resolve()
+        manifest_path = root_candidate if root_candidate.exists() else manifest_ref.resolve()
     try:
         payload = load_json(manifest_path)
     except Exception as exc:
@@ -393,8 +398,12 @@ def verify_distribution_manifest(manifest_path, root=None, attestation_root=None
     if not signed_bundle:
         raise DistributionError('attestation is missing distribution.bundle metadata')
     payload_file_manifest = payload.get('file_manifest')
+    if isinstance(payload_file_manifest, list) and not payload_file_manifest:
+        payload_file_manifest = None
     signed_file_manifest = signed_distribution.get('file_manifest')
     payload_build = payload.get('build')
+    if isinstance(payload_build, dict) and not payload_build:
+        payload_build = None
     signed_build = signed_distribution.get('build')
 
     actual_bundle_metadata = None

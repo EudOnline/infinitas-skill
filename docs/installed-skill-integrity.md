@@ -91,4 +91,6 @@ The workflow remains offline-verifiable and manifest-driven:
 - it does not trust mutable working-tree folders as the verification source
 - it relies on the immutable distribution manifest and signed attestation already recorded in the local install manifest
 
+For hosted installs, the toolchain now persists the fetched immutable distribution artifacts under a target-local cache root and records that root in the install manifest. Later explicit verification reuses that cached immutable set rather than resolving back through a mutable repo checkout copy.
+
 If the install lacks those immutable references, the integrity state remains `unknown` until the skill is reinstalled, repaired from a verified immutable source, or the referenced legacy distribution manifest is backfilled.

@@ -51,16 +51,18 @@ def copy_legacy_fixture(tmp_root: Path):
     return tmp_root / LEGACY_MANIFEST_REL, original
 
 
-def run_backfill(manifest_path: Path):
+def run_backfill(manifest_path: Path, *, write=True):
+    command = [
+        sys.executable,
+        str(ROOT / 'scripts' / 'backfill-distribution-manifests.py'),
+        '--manifest',
+        str(manifest_path),
+    ]
+    if write:
+        command.append('--write')
+    command.append('--json')
     result = run(
-        [
-            sys.executable,
-            str(ROOT / 'scripts' / 'backfill-distribution-manifests.py'),
-            '--manifest',
-            str(manifest_path),
-            '--write',
-            '--json',
-        ],
+        command,
         cwd=ROOT,
     )
     try:
@@ -128,8 +130,40 @@ def scenario_legacy_manifest_backfill_is_additive_and_idempotent():
         shutil.rmtree(tmpdir)
 
 
+def scenario_placeholder_metadata_is_backfillable_and_dry_run_is_non_mutating():
+    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-legacy-backfill-placeholder-test-'))
+    try:
+        manifest_path, _original = copy_legacy_fixture(tmpdir)
+        payload = load_json(manifest_path)
+        payload['file_manifest'] = []
+        payload['build'] = {}
+        manifest_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        before_text = manifest_path.read_text(encoding='utf-8')
+
+        dry_run = run_backfill(manifest_path, write=False)
+        if dry_run.get('state') != 'would-backfill':
+            fail(f"expected dry-run state 'would-backfill', got {dry_run.get('state')!r}")
+        if dry_run.get('wrote') is not False:
+            fail(f"expected dry-run wrote=false, got {dry_run.get('wrote')!r}")
+        if manifest_path.read_text(encoding='utf-8') != before_text:
+            fail('expected dry-run backfill not to mutate manifest bytes')
+
+        applied = run_backfill(manifest_path, write=True)
+        if applied.get('state') != 'backfilled':
+            fail(f"expected write pass state 'backfilled', got {applied.get('state')!r}")
+        rewritten = load_json(manifest_path)
+        if not isinstance(rewritten.get('file_manifest'), list) or not rewritten.get('file_manifest'):
+            fail(f"expected file_manifest list to be backfilled from placeholders, got {rewritten.get('file_manifest')!r}")
+        build = rewritten.get('build')
+        if not isinstance(build, dict) or build.get('archive_format') != 'tar.gz':
+            fail(f"expected build object to be backfilled from placeholders, got {build!r}")
+    finally:
+        shutil.rmtree(tmpdir)
+
+
 def main():
     scenario_legacy_manifest_backfill_is_additive_and_idempotent()
+    scenario_placeholder_metadata_is_backfillable_and_dry_run_is_non_mutating()
     print('OK: legacy distribution manifest backfill checks passed')
 
 

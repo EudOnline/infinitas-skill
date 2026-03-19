@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -8,6 +9,45 @@ from pathlib import Path
 from installed_integrity_lib import build_install_integrity_record
 from install_manifest_lib import load_install_manifest, write_install_manifest
 from skill_identity_lib import normalize_skill_identity
+
+
+def _persist_distribution_cache(target_dir: Path, source_info):
+    source_info = source_info or {}
+    if source_info.get('source_type') != 'distribution-manifest' or source_info.get('registry_kind') != 'http':
+        return None
+    temp_root = source_info.get('cleanup_dir')
+    if not isinstance(temp_root, str) or not temp_root:
+        return None
+
+    refs = {
+        'manifest': source_info.get('distribution_manifest'),
+        'bundle': source_info.get('distribution_bundle'),
+        'attestation': source_info.get('distribution_attestation'),
+        'signature': source_info.get('distribution_attestation_signature'),
+    }
+    for label, rel in refs.items():
+        if not isinstance(rel, str) or not rel:
+            raise SystemExit(f'FAIL: hosted source is missing distribution {label} reference for cache persistence')
+
+    source_root = Path(temp_root).resolve()
+    skill_id = source_info.get('qualified_name') or source_info.get('name') or 'unknown-skill'
+    version = source_info.get('version') or 'unknown-version'
+    digest = source_info.get('distribution_bundle_sha256') or 'unknown-digest'
+    cache_root = (target_dir / '.infinitas-skill-distributions' / skill_id / version / digest[:16]).resolve()
+
+    for rel in refs.values():
+        ref = Path(rel)
+        if ref.is_absolute():
+            raise SystemExit(f'FAIL: hosted distribution cache reference must be relative, got: {rel}')
+        src = (source_root / ref).resolve()
+        if not src.is_relative_to(source_root):
+            raise SystemExit(f'FAIL: hosted distribution cache reference is unsafe: {rel}')
+        if not src.exists():
+            raise SystemExit(f'FAIL: hosted distribution cache source is missing: {src}')
+        dst = (cache_root / ref).resolve()
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+    return str(cache_root)
 
 if len(sys.argv) not in {7, 8}:
     print('usage: scripts/update-install-manifest.py <target-dir> <source-dir> <dest-dir> <action> <locked-version> <resolved-source-json> [resolution-plan-json]', file=sys.stderr)
@@ -47,6 +87,7 @@ manifest['updated_at'] = datetime.now(timezone.utc).replace(microsecond=0).isofo
 manifest.setdefault('skills', {})
 manifest.setdefault('history', {})
 name = meta['name']
+distribution_cache_root = _persist_distribution_cache(target_dir, source_info)
 previous = manifest['skills'].get(name)
 if previous:
     hist = manifest['history'].setdefault(name, [])
@@ -96,6 +137,7 @@ manifest_entry = {
     'source_snapshot_ref': source_info.get('source_snapshot_ref'),
     'source_snapshot_commit': source_info.get('source_snapshot_commit'),
     'source_distribution_manifest': source_info.get('distribution_manifest'),
+    'source_distribution_root': distribution_cache_root,
     'source_distribution_bundle': source_info.get('distribution_bundle'),
     'source_distribution_bundle_sha256': source_info.get('distribution_bundle_sha256'),
     'source_distribution_bundle_size': source_info.get('distribution_bundle_size'),
@@ -118,9 +160,12 @@ manifest_entry = {
 }
 if resolution_plan is not None:
     manifest_entry['resolution_plan'] = resolution_plan
+integrity_source_info = dict(source_info or {})
+if distribution_cache_root:
+    integrity_source_info['distribution_root'] = distribution_cache_root
 manifest_entry['integrity'] = build_install_integrity_record(
     dest_dir,
-    source_info,
+    integrity_source_info,
     root=repo_root,
     verified_at=manifest['updated_at'],
 )

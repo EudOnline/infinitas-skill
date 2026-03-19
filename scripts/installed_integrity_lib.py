@@ -91,9 +91,10 @@ def _expected_file_manifest(entries):
     return manifest
 
 
-def _verify_installed_dir(installed_dir: Path, manifest_ref: str, *, root: Path, item=None):
+def _verify_installed_dir(installed_dir: Path, manifest_ref: str, *, root: Path, distribution_root: Path | None = None, item=None):
+    distribution_root = Path(distribution_root or root).resolve()
     try:
-        verified_distribution = verify_distribution_manifest(manifest_ref, root=root)
+        verified_distribution = verify_distribution_manifest(manifest_ref, root=distribution_root, attestation_root=root)
     except DistributionError as exc:
         raise InstalledIntegrityError(str(exc)) from exc
 
@@ -139,12 +140,13 @@ def build_install_integrity_record(installed_dir, source_info, *, root=None, ver
     installed_dir = Path(installed_dir).resolve()
     source_info = source_info or {}
     manifest_ref = source_info.get('distribution_manifest') or source_info.get('source_distribution_manifest')
+    distribution_root = source_info.get('distribution_root') or source_info.get('source_distribution_root')
     attestation_ref = source_info.get('distribution_attestation') or source_info.get('source_attestation_path')
     if not isinstance(manifest_ref, str) or not manifest_ref or not isinstance(attestation_ref, str) or not attestation_ref:
         return normalize_integrity_record({'state': 'unknown'})
 
     try:
-        payload = _verify_installed_dir(installed_dir, manifest_ref, root=root)
+        payload = _verify_installed_dir(installed_dir, manifest_ref, root=root, distribution_root=distribution_root)
     except MissingSignedFileManifestError:
         return normalize_integrity_record({'state': 'unknown'})
     payload['last_verified_at'] = verified_at
@@ -168,11 +170,18 @@ def verify_installed_skill(target_dir, requested_name, *, root=None):
         raise InstalledIntegrityError(f'installed skill directory is missing: {installed_dir}')
 
     manifest_ref = item.get('source_distribution_manifest')
+    distribution_root = item.get('source_distribution_root')
     attestation_ref = item.get('source_attestation_path')
     if not isinstance(manifest_ref, str) or not manifest_ref:
         raise InstalledIntegrityError('installed skill is missing source_distribution_manifest')
     if not isinstance(attestation_ref, str) or not attestation_ref:
         raise InstalledIntegrityError('installed skill is missing source_attestation_path')
-    payload = _verify_installed_dir(installed_dir, manifest_ref, root=root, item=item)
+    payload = _verify_installed_dir(
+        installed_dir,
+        manifest_ref,
+        root=root,
+        distribution_root=distribution_root,
+        item=item,
+    )
     payload['installed_name'] = installed_name
     return payload
