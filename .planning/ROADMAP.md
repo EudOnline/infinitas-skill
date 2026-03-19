@@ -8,14 +8,18 @@
 - ✅ **v12 AI-Usable Skill Ecosystem** - Phases 1-3 (completed 2026-03-16)
 - ✅ **v13 Registry Operations and Snapshot Mirroring** - Phases 1-2 (completed 2026-03-17)
 - ✅ **v14 Governance Integration and Reviewer Operations** - Phases 1-2 (completed 2026-03-17)
-- 🚧 **v15 Supply-Chain Transparency and Reproducible Release Metadata** - Planning started
+- ✅ **v15 Supply-Chain Transparency and Reproducible Release Metadata** - Phases 1-2 (completed 2026-03-17)
+- ✅ **v16 Installed Skill Integrity and Repairable Consumption** - Phases 1-2 (completed 2026-03-18)
 
 ## Current Follow-up
 
 - The signer-readiness closeout is now merged on `main`; repository-level signer reporting and steady-state operations guidance are part of the baseline.
 - v13 registry-operations work is now merged on `main`, including freshness-aware refresh policy plus immutable snapshot mirrors for offline resolution.
 - v14 governance integration is now merged on `main`, including additive platform-native review evidence and reviewer recommendation plus escalation flows.
-- v15 now becomes the next active value line: first reproducible release metadata and full file manifests, then transparency log publication and proof verification.
+- v15 supply-chain work is now merged on `main`, including signed released-file inventories, reproducibility metadata, transparency-log publication, and additive audit surfaces.
+- v16 is now merged on `main`, including installed-runtime verification against signed release-file inventories, additive integrity summaries in install manifests, exact-source repair, and drift-aware mutation guardrails.
+- Older hosted distribution manifests can still lack signed `file_manifest` metadata; install-time integrity now degrades to `unknown` for compatibility, while explicit verification remains strict.
+- No post-v16 milestone is committed yet; the next planning slice should stay adjacent to installed-runtime trust and compatibility instead of broadening into hosted-service scope.
 
 ## Phases
 
@@ -355,11 +359,11 @@ Plans:
 - [x] 14-03: Define reviewer recommendation and escalation output contract
 - [x] 14-04: Surface reviewer guidance in review CLI flows and docs
 
-### 🚧 v15 Supply-Chain Transparency and Reproducible Release Metadata (Planned)
+### ✅ v15 Supply-Chain Transparency and Reproducible Release Metadata (Completed 2026-03-17)
 
 **Milestone Goal:** Make released artifacts independently auditable by extending signed release metadata with full file inventories and reproducibility context, then anchoring those attestations in an external transparency log without weakening local verification.
 
-#### 🚧 Phase 1: Reproducible Release Metadata and Full File Manifests (Planned)
+#### ✅ Phase 1: Reproducible Release Metadata and Full File Manifests (Completed 2026-03-17)
 **Goal**: Make signed release artifacts commit to exactly which files were released and under what normalized build context so bundle verification becomes stronger than bundle-digest-only checks.
 **Depends on**: v14 completed
 **Requirements**: [ATT-05]
@@ -370,10 +374,10 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 15-01: Define signed file-manifest and reproducible-build metadata contract
-- [ ] 15-02: Thread reproducible release metadata through release, verification, and distribution surfaces
+- [x] 15-01: Define signed file-manifest and reproducible-build metadata contract
+- [x] 15-02: Thread reproducible release metadata through release, verification, and distribution surfaces
 
-#### 🚧 Phase 2: Transparency Log Publication and Verification (Planned)
+#### ✅ Phase 2: Transparency Log Publication and Verification (Completed 2026-03-17)
 **Goal**: Publish release attestations to an external transparency log and retain enough proof metadata in repo-managed artifacts for later verification and policy decisions.
 **Depends on**: Phase 1
 **Requirements**: [ATT-04]
@@ -384,8 +388,40 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 15-03: Define transparency-log policy and proof-record contract
-- [ ] 15-04: Add transparency publication, verification, and operator docs
+- [x] 15-03: Define transparency-log policy and proof-record contract
+- [x] 15-04: Add transparency publication, verification, and operator docs
+
+### ✅ v16 Installed Skill Integrity and Repairable Consumption (Completed 2026-03-18)
+
+**Milestone Goal:** Extend the verified-distribution trust model into installed agent runtime directories by comparing local files against signed released-file inventories, then enabling exact-source repair and drift-aware mutation guardrails without weakening offline workflows.
+
+#### ✅ Phase 1: Installed Skill Integrity and Drift Detection (Completed 2026-03-18)
+**Goal**: Let operators and agents verify that an installed skill directory still matches the exact immutable artifact that was previously resolved and verified during install.
+**Depends on**: v15 completed
+**Requirements**: [INST-01]
+**Success Criteria** (what must be TRUE):
+  1. Operators can run one command against an installed skill and compare local files to the signed `file_manifest` recorded by the immutable distribution source.
+  2. Machine-readable output reports clean vs drifted state, including missing, modified, and unexpected relative paths, without depending on network access.
+  3. Install-manifest entries and read-only status surfaces preserve additive integrity summaries without breaking compatibility for older manifests.
+**Plans**: 2 plans
+
+Plans:
+- [x] 16-01: Define installed-skill integrity verification contract and drift report
+- [x] 16-02: Persist integrity state in install manifests and consumer status surfaces
+
+#### ✅ Phase 2: Exact-Source Repair and Update Guardrails (Completed 2026-03-18)
+**Goal**: Repair drifted installs back to their recorded immutable source and make sync, switch, rollback, and upgrade flows explicitly aware of local trust drift.
+**Depends on**: Phase 1
+**Requirements**: [INST-02]
+**Success Criteria** (what must be TRUE):
+  1. Operators can repair a drifted install back to the exact recorded version and source registry using the local install manifest.
+  2. Sync, switch, rollback, and upgrade flows warn or fail clearly before overwriting drifted local files unless the caller explicitly forces replacement.
+  3. Operator and AI docs explain how to verify, repair, and intentionally override drift while keeping immutable-release semantics intact.
+**Plans**: 2 plans
+
+Plans:
+- [x] 16-03: Add exact-source repair flow for drifted installs
+- [x] 16-04: Thread drift-aware guardrails into sync, rollback, switch, and upgrade commands
 
 ## Progress
 
@@ -412,5 +448,7 @@ Plans:
 | 2. Immutable Snapshot Mirrors and Offline Resolution | v13 | 3/3 | Completed | 2026-03-17 |
 | 1. Platform-Native Approval Evidence | v14 | 2/2 | Completed | 2026-03-17 |
 | 2. Reviewer Rotation and Escalation Suggestions | v14 | 2/2 | Completed | 2026-03-17 |
-| 1. Reproducible Release Metadata and Full File Manifests | v15 | 0/2 | Planned | - |
-| 2. Transparency Log Publication and Verification | v15 | 0/2 | Planned | - |
+| 1. Reproducible Release Metadata and Full File Manifests | v15 | 2/2 | Completed | 2026-03-17 |
+| 2. Transparency Log Publication and Verification | v15 | 2/2 | Completed | 2026-03-17 |
+| 1. Installed Skill Integrity and Drift Detection | v16 | 2/2 | Completed | 2026-03-18 |
+| 2. Exact-Source Repair and Update Guardrails | v16 | 2/2 | Completed | 2026-03-18 |

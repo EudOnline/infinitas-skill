@@ -8,14 +8,14 @@
 
 Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
 
-## Current Milestone: v15 Supply-Chain Transparency and Reproducible Release Metadata
+## Current Milestone: v16 Installed Skill Integrity and Repairable Consumption (Completed 2026-03-18)
 
-**Goal:** Make stable releases more independently auditable by extending signed release artifacts with full file manifests and reproducible build metadata, then anchoring those attestations in an external transparency log without weakening local verification.
+**Goal:** Extend verified release trust into installed agent skill directories by auditing local files against signed release inventories, preserving local integrity state, and repairing drift back to the recorded immutable source without adding a hosted control plane.
 
 **Target features:**
-- Signed provenance and distribution manifests that include a full released-file inventory plus normalized build metadata
-- Verification surfaces that can prove the archived bundle, signed attestation, and declared file manifest all agree
-- Policy-driven transparency log publication and proof capture that stays additive to existing SSH and CI verification paths
+- One install-facing verifier that compares local installed files against the signed released-file inventory referenced by the install manifest
+- Install-manifest and consumer status surfaces that preserve compact integrity and drift summaries
+- Repair, sync, rollback, and upgrade flows that use recorded immutable source metadata to recover or explicitly override drift
 
 ## Requirements
 
@@ -39,12 +39,14 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - [x] Plan and implement v13 Phase 2: immutable snapshot mirrors and offline resolution (`REG-05`).
 - [x] Plan and implement v14 Phase 1: platform-native approval evidence ingestion (`REV-04`).
 - [x] Plan and implement v14 Phase 2: reviewer rotation and escalation suggestions (`REV-05`).
-- [ ] Plan and implement v15 Phase 1: reproducible release metadata and full file manifests (`ATT-05`).
-- [ ] Plan and implement v15 Phase 2: external transparency log publication and verification (`ATT-04`).
+- [x] Plan and implement v15 Phase 1: reproducible release metadata and full file manifests (`ATT-05`).
+- [x] Plan and implement v15 Phase 2: external transparency log publication and verification (`ATT-04`).
+- [x] Plan and implement v16 Phase 1: installed skill integrity and drift detection (`INST-01`).
+- [x] Plan and implement v16 Phase 2: exact-source repair and update guardrails (`INST-02`).
 
 ### Out of Scope
 
-- Hosted registry service, database, or web UI — the repository remains intentionally Git-native and file-based for v15.
+- Hosted registry service, database, or web UI — the repository remains intentionally Git-native and file-based for v16.
 - Rebuilding the lifecycle, templating, or catalog system from scratch — current planning extends existing workflows instead of replacing them.
 - Public marketplace/package-manager integration — not needed to deliver private-registry distribution goals.
 - Full reconstruction of v1-v8 planning history — the repository does not contain authoritative phase-by-phase planning records for those versions.
@@ -76,16 +78,18 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - `operate-infinitas-skill` already has a signed pushed stable tag plus verified provenance in `catalog/provenance/operate-infinitas-skill-0.1.1.json`.
 - v13 Phase 1 and Phase 2 are now merged on `main`, adding validated refresh cadence policy, persisted refresh state, stale-cache enforcement, immutable registry snapshots, and explicit snapshot-backed resolve/install/sync flows.
 - v14 is now merged on `main`, adding normalized `review-evidence.json` support, provenance-aware quorum evaluation, and deterministic reviewer recommendation plus escalation output in review CLI flows.
-- Future requirements now point most directly at supply-chain transparency through richer release metadata and transparency-log-backed attestations.
+- v15 is now merged on `main`, adding signed released-file inventories, reproducibility metadata, transparency-log proof capture, and additive audit summaries across attestation, release-state, and catalog surfaces.
+- v16 is now merged on `main`, adding `verify-installed-skill.py`, persisted install-manifest integrity summaries, `repair-installed-skill.sh`, drift-aware sync or upgrade guardrails, and compatibility fallback to `integrity.state = unknown` when older hosted manifests lack signed `file_manifest` entries.
+- No post-v16 milestone is committed yet; future planning should stay close to manifest-driven consumer trust and compatibility instead of expanding into a hosted control plane.
 
 ## Constraints
 
-- **Tech stack**: Keep v12 changes native to Bash, Python, JSON, and Markdown — the repository is already built around lightweight CLI tooling.
+- **Tech stack**: Keep v16 changes native to Bash, Python, JSON, and Markdown — the repository is already built around lightweight CLI tooling.
 - **Architecture discipline**: Improve author metadata, generated indexes, tests, and docs before adding more registry services or background automation.
 - **Compatibility**: Preserve the existing local-filesystem plus Git workflow so current install/sync/promotion commands remain usable.
 - **Security**: Shared-secret-only signing is insufficient for release authenticity; asymmetric verification remains the trusted path.
 - **Governance**: Publisher ownership, reviewer evidence, and release actor identity must be repository-configurable so policy changes are versioned and reviewable.
-- **Private-first**: Keep the repository Git-native and private-registry-first; do not turn v12 into public marketplace or hosted-service scope creep.
+- **Private-first**: Keep the repository Git-native and private-registry-first; do not turn v16 into public marketplace or hosted-service scope creep.
 - **History**: GSD planning begins at v9; earlier release history may be referenced, but not reconstructed as authoritative planning data.
 
 ## Key Decisions
@@ -115,9 +119,11 @@ Maintainers can publish and distribute private skills with deterministic, audita
 | Derive reviewer rotation and escalation suggestions from existing policy groups plus recent review history instead of introducing a scheduler | Operators need actionable reviewer guidance without adding a new stateful service or ownership model | ✓ Good |
 | Sequence v15 as reproducible release metadata before external transparency publication | Transparency entries are more trustworthy if the signed artifact already commits to a full file inventory and normalized build context | ✓ Good |
 | Keep transparency log publication additive and policy-driven | Local SSH and CI verification must remain usable offline even when transparency submission is unavailable or advisory | ✓ Good |
+| Reuse v15's signed `file_manifest` as the installed-runtime integrity contract | The next trust gap is no longer release creation, but whether local installed copies still match the immutable artifact that was verified at install time | ✓ Good |
+| Keep drift repair manifest-driven and exact-source | Repair should restore the recorded immutable version from the install manifest, not silently resolve whatever version happens to be latest today | ✓ Good |
 | Adopt `M2: AI-usable skill ecosystem` as v12 instead of another release-engineering milestone | The platform review shows the core registry mechanics are strong enough; the main remaining gap is decision-useful content and metadata | ✓ Good |
 | Start v12 with canonical decision metadata and wrapper result schemas | The current AI index already carries trust and compatibility, but still hardcodes empty selection guidance and lacks dedicated publish/pull schemas | ✓ Good |
 | Keep v12 additive and Git-native | The goal is to make the existing registry more useful to AI agents, not replace it with a new service layer | ✓ Good |
 
 ---
-*Last updated: 2026-03-17 after completing v14 on `main` and starting v15 supply-chain planning*
+*Last updated: 2026-03-19 after completing and merging v16 installed integrity and repair on `main`*

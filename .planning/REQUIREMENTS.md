@@ -129,10 +129,21 @@ Requirements committed for milestone `v14`. Both phases are complete on `main`.
 
 ## v15 Requirements
 
+Requirements committed for milestone `v15`. Both phases are complete on `main`.
+
 ### Supply Chain
 
-- [ ] **ATT-04**: Repository can publish attestations to an external transparency log.
-- [ ] **ATT-05**: Release bundles can include full file manifests and reproducible build metadata.
+- [x] **ATT-04**: Repository can publish attestations to an external transparency log.
+- [x] **ATT-05**: Release bundles can include full file manifests and reproducible build metadata.
+
+## v16 Requirements
+
+Requirements committed for milestone `v16`. Both phases are complete on `main`.
+
+### Installed Consumption Integrity
+
+- [x] **INST-01**: Repository can verify an installed skill directory against the signed released-file inventory and immutable source metadata recorded in the local install manifest.
+- [x] **INST-02**: Repository can repair a drifted installed skill or gate sync, switch, rollback, and upgrade operations using the recorded immutable source metadata.
 
 ## Out of Scope
 
@@ -193,8 +204,10 @@ Requirements committed for milestone `v14`. Both phases are complete on `main`.
 | REG-05 | v13 Phase 2 | Complete |
 | REV-04 | v14 Phase 1 | Complete |
 | REV-05 | v14 Phase 2 | Complete |
-| ATT-04 | v15 Phase 2 | Planned |
-| ATT-05 | v15 Phase 1 | Planned |
+| ATT-04 | v15 Phase 2 | Complete |
+| ATT-05 | v15 Phase 1 | Complete |
+| INST-01 | v16 Phase 1 | Complete |
+| INST-02 | v16 Phase 2 | Complete |
 
 **Coverage:**
 - v9 requirements: 12 total
@@ -218,7 +231,10 @@ Requirements committed for milestone `v14`. Both phases are complete on `main`.
 - v15 requirements: 2 total
 - Mapped to phases: 2
 - Unmapped: 0 ✓
+- v16 requirements: 2 total
+- Mapped to phases: 2
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-17 after completing v14 and planning v15 supply-chain transparency*
+*Last updated: 2026-03-19 after completing and merging v16 installed integrity and repair on `main`*
