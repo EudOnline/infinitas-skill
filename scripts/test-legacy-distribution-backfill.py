@@ -9,6 +9,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 LEGACY_MANIFEST_REL = Path('catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.1/manifest.json')
 
+sys.path.insert(0, str(ROOT / 'scripts'))
+from distribution_lib import manifest_index_entry  # noqa: E402
+
 
 def fail(message):
     print(f'FAIL: {message}', file=sys.stderr)
@@ -71,6 +74,37 @@ def run_backfill(manifest_path: Path, *, write=True):
         fail(f'backfill command did not emit JSON:\n{result.stdout}\n{result.stderr}\n{exc}')
 
 
+def run_backfill_scan(root: Path, *, write=False):
+    command = [
+        sys.executable,
+        str(ROOT / 'scripts' / 'backfill-distribution-manifests.py'),
+        '--root',
+        str(root),
+    ]
+    if write:
+        command.append('--write')
+    command.append('--json')
+    result = run(command, cwd=ROOT)
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        fail(f'backfill scan command did not emit JSON:\n{result.stdout}\n{result.stderr}\n{exc}')
+
+
+def _status_by_manifest(payload):
+    records = payload.get('results')
+    if not isinstance(records, list):
+        fail(f'expected backfill scan payload to include list results, got {payload!r}')
+    status_by_manifest = {}
+    for item in records:
+        if not isinstance(item, dict):
+            continue
+        manifest = item.get('manifest')
+        if isinstance(manifest, str):
+            status_by_manifest[manifest] = item
+    return status_by_manifest
+
+
 def scenario_legacy_manifest_backfill_is_additive_and_idempotent():
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-legacy-backfill-test-'))
     try:
@@ -78,6 +112,18 @@ def scenario_legacy_manifest_backfill_is_additive_and_idempotent():
         before = load_json(manifest_path)
         if before.get('file_manifest') is not None or before.get('build') is not None:
             fail('expected legacy fixture to start without file_manifest/build fields')
+
+        legacy_index = manifest_index_entry(manifest_path, tmpdir)
+        if legacy_index.get('installed_integrity_capability') != 'unknown':
+            fail(
+                "expected legacy manifest index to report installed_integrity_capability 'unknown', "
+                f"got {legacy_index.get('installed_integrity_capability')!r}"
+            )
+        if legacy_index.get('installed_integrity_reason') != 'missing-signed-file-manifest':
+            fail(
+                "expected legacy manifest index to report installed_integrity_reason 'missing-signed-file-manifest', "
+                f"got {legacy_index.get('installed_integrity_reason')!r}"
+            )
 
         first = run_backfill(manifest_path)
         if first.get('state') != 'backfilled':
@@ -90,6 +136,22 @@ def scenario_legacy_manifest_backfill_is_additive_and_idempotent():
         build = rewritten.get('build')
         if not isinstance(build, dict) or build.get('archive_format') != 'tar.gz':
             fail(f'expected rewritten manifest to include normalized build metadata, got {build!r}')
+
+        rewritten_index = manifest_index_entry(manifest_path, tmpdir)
+        if rewritten_index.get('installed_integrity_capability') != 'supported':
+            fail(
+                "expected rewritten manifest index to report installed_integrity_capability 'supported', "
+                f"got {rewritten_index.get('installed_integrity_capability')!r}"
+            )
+        if rewritten_index.get('installed_integrity_reason') is not None:
+            fail(
+                'expected rewritten manifest index not to include installed_integrity_reason, '
+                f"got {rewritten_index.get('installed_integrity_reason')!r}"
+            )
+        if rewritten_index.get('file_manifest_count') != len(file_manifest):
+            fail(
+                f"expected file_manifest_count {len(file_manifest)!r}, got {rewritten_index.get('file_manifest_count')!r}"
+            )
 
         immutable_checks = [
             ('bundle.path', (rewritten.get('bundle') or {}).get('path'), (original.get('bundle') or {}).get('path')),
@@ -130,6 +192,63 @@ def scenario_legacy_manifest_backfill_is_additive_and_idempotent():
         shutil.rmtree(tmpdir)
 
 
+def scenario_scan_mode_reports_machine_readable_status_per_manifest():
+    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-legacy-backfill-scan-test-'))
+    try:
+        manifest_path, _ = copy_legacy_fixture(tmpdir)
+        broken_manifest_path = tmpdir / 'catalog/distributions/lvxiaoer/operate-infinitas-skill-broken/0.1.1/manifest.json'
+        broken_manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        broken_payload = load_json(manifest_path)
+        broken_payload['bundle'] = {**(broken_payload.get('bundle') or {}), 'path': 'catalog/distributions/missing/skill.tar.gz'}
+        broken_manifest_path.write_text(json.dumps(broken_payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+        scan_payload = run_backfill_scan(tmpdir, write=False)
+        if scan_payload.get('state') != 'scan':
+            fail(f"expected scan payload state 'scan', got {scan_payload.get('state')!r}")
+        if scan_payload.get('inspected_count') != 2:
+            fail(f"expected inspected_count=2, got {scan_payload.get('inspected_count')!r}")
+
+        by_manifest = _status_by_manifest(scan_payload)
+        canonical_manifest = str(manifest_path.resolve())
+        broken_manifest = str(broken_manifest_path.resolve())
+        if canonical_manifest not in by_manifest:
+            fail(f'expected scan results to include canonical fixture manifest, got {by_manifest!r}')
+        if broken_manifest not in by_manifest:
+            fail(f'expected scan results to include broken fixture manifest, got {by_manifest!r}')
+
+        canonical_status = by_manifest[canonical_manifest]
+        if canonical_status.get('state') != 'would-backfill':
+            fail(f"expected canonical scan state 'would-backfill', got {canonical_status!r}")
+        if canonical_status.get('installed_integrity_capability') != 'unknown':
+            fail(f"expected canonical installed_integrity_capability 'unknown', got {canonical_status!r}")
+        if canonical_status.get('installed_integrity_reason') != 'missing-signed-file-manifest':
+            fail(f"expected canonical installed_integrity_reason 'missing-signed-file-manifest', got {canonical_status!r}")
+
+        broken_status = by_manifest[broken_manifest]
+        if broken_status.get('state') != 'incomplete-evidence':
+            fail(f"expected broken scan state 'incomplete-evidence', got {broken_status!r}")
+        if broken_status.get('installed_integrity_capability') != 'unknown':
+            fail(f"expected broken installed_integrity_capability 'unknown', got {broken_status!r}")
+        if broken_status.get('installed_integrity_reason') != 'missing-signed-file-manifest':
+            fail(f"expected broken installed_integrity_reason 'missing-signed-file-manifest', got {broken_status!r}")
+
+        write_payload = run_backfill_scan(tmpdir, write=True)
+        by_manifest_write = _status_by_manifest(write_payload)
+        canonical_write = by_manifest_write.get(canonical_manifest)
+        if canonical_write is None or canonical_write.get('state') != 'backfilled':
+            fail(f"expected canonical manifest write state 'backfilled', got {canonical_write!r}")
+        if canonical_write.get('installed_integrity_capability') != 'supported':
+            fail(f"expected canonical write capability 'supported', got {canonical_write!r}")
+        if canonical_write.get('file_manifest_count', 0) < 1:
+            fail(f"expected canonical write file_manifest_count to be positive, got {canonical_write!r}")
+
+        broken_write = by_manifest_write.get(broken_manifest)
+        if broken_write is None or broken_write.get('state') != 'incomplete-evidence':
+            fail(f"expected broken write state 'incomplete-evidence', got {broken_write!r}")
+    finally:
+        shutil.rmtree(tmpdir)
+
+
 def scenario_placeholder_metadata_is_backfillable_and_dry_run_is_non_mutating():
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-legacy-backfill-placeholder-test-'))
     try:
@@ -163,6 +282,7 @@ def scenario_placeholder_metadata_is_backfillable_and_dry_run_is_non_mutating():
 
 def main():
     scenario_legacy_manifest_backfill_is_additive_and_idempotent()
+    scenario_scan_mode_reports_machine_readable_status_per_manifest()
     scenario_placeholder_metadata_is_backfillable_and_dry_run_is_non_mutating()
     print('OK: legacy distribution manifest backfill checks passed')
 

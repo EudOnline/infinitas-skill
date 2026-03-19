@@ -19,7 +19,7 @@ def parse_args():
 def main():
     args = parse_args()
     try:
-        payload = build_distribution_manifest_payload(args.provenance, args.bundle, root=ROOT)
+        payload = build_distribution_manifest_payload(args.provenance, args.bundle, root=ROOT, attestation_root=ROOT)
     except DistributionError as exc:
         print(f'FAIL: {exc}', file=sys.stderr)
         return 1

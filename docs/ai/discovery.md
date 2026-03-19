@@ -73,6 +73,14 @@ All resolver, install, update, and upgrade payloads may now include an additive 
 
 Use this explanation section to understand why a private match won, why an external source requires confirmation, and which version or source registry was chosen.
 
+Release-indexed install trust is also surfaced additively for immutable artifacts:
+
+- `catalog/distributions.json` carries per-version `installed_integrity_capability` plus optional `installed_integrity_reason`
+- `catalog/catalog.json` mirrors the same release summary under `verified_distribution.installed_integrity_capability`
+- `catalog/inventory-export.json` mirrors that release capability as `release_installed_integrity_capability`
+
+These fields describe immutable release-artifact capability only. They are not local runtime integrity state for one installed target directory.
+
 When `install-by-name.sh` fails before materialization, it normalizes resolver states into wrapper-level failure payloads with:
 
 - `ok: false`

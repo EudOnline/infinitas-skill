@@ -108,6 +108,22 @@ The backfill flow is additive and deterministic:
 
 If immutable evidence is incomplete, the command reports a compatibility state instead of guessing release metadata.
 
+The helper now supports both focused and repo-scan workflows:
+
+```bash
+# scan one explicit manifest
+python3 scripts/backfill-distribution-manifests.py --manifest <path> --json
+
+# scan every catalog/distributions/**/manifest.json under a root
+python3 scripts/backfill-distribution-manifests.py --root . --json
+```
+
+Machine-readable output includes one status object per inspected manifest, including additive release capability hints:
+
+- `installed_integrity_capability` (`supported` or `unknown`)
+- `installed_integrity_reason` (for example `missing-signed-file-manifest` when capability is `unknown`)
+- immutable reproducibility hints such as `file_manifest_count` and `build_archive_format`
+
 You can now extend that immutable verification path into one installed runtime copy:
 
 ```bash
@@ -176,6 +192,7 @@ So historical install / switch / rollback flows no longer depend on whatever hap
 
 - `catalog/distributions.json`
 - `verified_distribution` metadata in catalog entries when a manifest is available
+- additive installed-integrity capability summary (`installed_integrity_capability`, optional `installed_integrity_reason`) in both of those surfaces
 
 That gives downstream consumers a stable place to discover:
 
@@ -183,6 +200,7 @@ That gives downstream consumers a stable place to discover:
 - bundle path + digest
 - file-manifest count
 - bundle archive format summary
+- installed-integrity verification capability for the released artifact
 - attestation path + signature path
 - released source snapshot
 - generation timestamp

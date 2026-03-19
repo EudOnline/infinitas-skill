@@ -215,6 +215,8 @@ for stage in ['incubating', 'active', 'archived']:
                 'bundle_sha256': dist.get('bundle_sha256'),
                 'file_manifest_count': dist.get('file_manifest_count'),
                 'build_archive_format': dist.get('build_archive_format'),
+                'installed_integrity_capability': dist.get('installed_integrity_capability'),
+                'installed_integrity_reason': dist.get('installed_integrity_reason'),
                 'attestation_path': dist.get('attestation_path'),
                 'attestation_signature_path': dist.get('attestation_signature_path'),
                 'source_snapshot_tag': dist.get('source_snapshot_tag'),
@@ -339,6 +341,10 @@ for entry in entries:
             'release_attestation_signature_path': verified_distribution.get('attestation_signature_path'),
             'release_source_snapshot_tag': verified_distribution.get('source_snapshot_tag'),
             'release_source_snapshot_commit': verified_distribution.get('source_snapshot_commit'),
+            'release_file_manifest_count': verified_distribution.get('file_manifest_count'),
+            'release_build_archive_format': verified_distribution.get('build_archive_format'),
+            'release_installed_integrity_capability': verified_distribution.get('installed_integrity_capability'),
+            'release_installed_integrity_reason': verified_distribution.get('installed_integrity_reason'),
         }
     )
 

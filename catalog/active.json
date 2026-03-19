@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-17T04:44:43Z",
+  "generated_at": "2026-03-19T03:58:07Z",
   "count": 4,
   "skills": [
     {
@@ -81,6 +81,8 @@
         "bundle_sha256": "70bf1b3f3eac804e010687267d6429edb9b9e1cf78c52353aec7533680e933ee",
         "file_manifest_count": null,
         "build_archive_format": null,
+        "installed_integrity_capability": "unknown",
+        "installed_integrity_reason": "missing-signed-file-manifest",
         "attestation_path": "catalog/provenance/consume-infinitas-skill-0.1.0.json",
         "attestation_signature_path": "catalog/provenance/consume-infinitas-skill-0.1.0.json.ssig",
         "source_snapshot_tag": "skill/consume-infinitas-skill/v0.1.0",
@@ -195,6 +197,8 @@
         "bundle_sha256": "2784d72ed2354558859f98fb695d62d33b6574d8a92aff73327c4fa52c7ab29d",
         "file_manifest_count": null,
         "build_archive_format": null,
+        "installed_integrity_capability": "unknown",
+        "installed_integrity_reason": "missing-signed-file-manifest",
         "attestation_path": "catalog/provenance/federation-registry-ops-0.1.0.json",
         "attestation_signature_path": "catalog/provenance/federation-registry-ops-0.1.0.json.ssig",
         "source_snapshot_tag": "skill/federation-registry-ops/v0.1.0",
@@ -303,6 +307,8 @@
         "bundle_sha256": "ee193440e2376d498f88a2b0ed9ea99dce3a0183eec7125fefefa8abaf07f500",
         "file_manifest_count": null,
         "build_archive_format": null,
+        "installed_integrity_capability": "unknown",
+        "installed_integrity_reason": "missing-signed-file-manifest",
         "attestation_path": "catalog/provenance/operate-infinitas-skill-0.1.1.json",
         "attestation_signature_path": "catalog/provenance/operate-infinitas-skill-0.1.1.json.ssig",
         "source_snapshot_tag": "skill/operate-infinitas-skill/v0.1.1",
@@ -417,6 +423,8 @@
         "bundle_sha256": "dc3a597e705fbee744968eaad9583d0efc758fa0d0297cdc544980241ae67bd0",
         "file_manifest_count": null,
         "build_archive_format": null,
+        "installed_integrity_capability": "unknown",
+        "installed_integrity_reason": "missing-signed-file-manifest",
         "attestation_path": "catalog/provenance/release-infinitas-skill-0.1.0.json",
         "attestation_signature_path": "catalog/provenance/release-infinitas-skill-0.1.0.json.ssig",
         "source_snapshot_tag": "skill/release-infinitas-skill/v0.1.0",

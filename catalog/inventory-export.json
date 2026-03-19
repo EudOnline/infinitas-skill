@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/inventory-export.schema.json",
   "schema_version": 1,
-  "generated_at": "2026-03-16T03:52:23Z",
+  "generated_at": "2026-03-19T03:58:07Z",
   "default_registry": "self",
   "counts": {
     "registries": 1,
@@ -56,7 +56,11 @@
       "release_attestation_path": "catalog/provenance/consume-infinitas-skill-0.1.0.json",
       "release_attestation_signature_path": "catalog/provenance/consume-infinitas-skill-0.1.0.json.ssig",
       "release_source_snapshot_tag": "skill/consume-infinitas-skill/v0.1.0",
-      "release_source_snapshot_commit": "39964c2a478202aa571d32445d06c05e6dff9898"
+      "release_source_snapshot_commit": "39964c2a478202aa571d32445d06c05e6dff9898",
+      "release_file_manifest_count": null,
+      "release_build_archive_format": null,
+      "release_installed_integrity_capability": "unknown",
+      "release_installed_integrity_reason": "missing-signed-file-manifest"
     },
     {
       "name": "federation-registry-ops",
@@ -85,7 +89,11 @@
       "release_attestation_path": "catalog/provenance/federation-registry-ops-0.1.0.json",
       "release_attestation_signature_path": "catalog/provenance/federation-registry-ops-0.1.0.json.ssig",
       "release_source_snapshot_tag": "skill/federation-registry-ops/v0.1.0",
-      "release_source_snapshot_commit": "893dd8f66ddab054086c0d99dc8ef5482ecc1e60"
+      "release_source_snapshot_commit": "893dd8f66ddab054086c0d99dc8ef5482ecc1e60",
+      "release_file_manifest_count": null,
+      "release_build_archive_format": null,
+      "release_installed_integrity_capability": "unknown",
+      "release_installed_integrity_reason": "missing-signed-file-manifest"
     },
     {
       "name": "operate-infinitas-skill",
@@ -114,7 +122,11 @@
       "release_attestation_path": "catalog/provenance/operate-infinitas-skill-0.1.1.json",
       "release_attestation_signature_path": "catalog/provenance/operate-infinitas-skill-0.1.1.json.ssig",
       "release_source_snapshot_tag": "skill/operate-infinitas-skill/v0.1.1",
-      "release_source_snapshot_commit": "50f1370101ae36cc509516cd9b75571742c2bf3b"
+      "release_source_snapshot_commit": "50f1370101ae36cc509516cd9b75571742c2bf3b",
+      "release_file_manifest_count": null,
+      "release_build_archive_format": null,
+      "release_installed_integrity_capability": "unknown",
+      "release_installed_integrity_reason": "missing-signed-file-manifest"
     },
     {
       "name": "release-infinitas-skill",
@@ -143,7 +155,11 @@
       "release_attestation_path": "catalog/provenance/release-infinitas-skill-0.1.0.json",
       "release_attestation_signature_path": "catalog/provenance/release-infinitas-skill-0.1.0.json.ssig",
       "release_source_snapshot_tag": "skill/release-infinitas-skill/v0.1.0",
-      "release_source_snapshot_commit": "1fc8477d2df4aa3f89a197ce0300b1a553913f8d"
+      "release_source_snapshot_commit": "1fc8477d2df4aa3f89a197ce0300b1a553913f8d",
+      "release_file_manifest_count": null,
+      "release_build_archive_format": null,
+      "release_installed_integrity_capability": "unknown",
+      "release_installed_integrity_reason": "missing-signed-file-manifest"
     }
   ]
 }

@@ -8,6 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PROVENANCE_REL = Path('catalog/provenance/operate-infinitas-skill-0.1.1.json')
+OPERATE_MANIFEST_REL = Path('catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.1/manifest.json')
 
 
 def fail(message):
@@ -33,6 +34,27 @@ def load_json(path: Path):
 def write_json(path: Path, payload):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+
+def run_backfill(repo: Path, manifest_rel: Path):
+    manifest_path = repo / manifest_rel
+    if not manifest_path.exists():
+        fail(f'missing manifest fixture for backfill: {manifest_path}')
+    command = [
+        sys.executable,
+        str(repo / 'scripts' / 'backfill-distribution-manifests.py'),
+        '--manifest',
+        str(manifest_path),
+        '--write',
+        '--json',
+    ]
+    result = run(command, cwd=repo)
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        fail(f'backfill command did not emit JSON:\n{result.stdout}\n{result.stderr}\n{exc}')
+    if payload.get('state') != 'backfilled':
+        fail(f"expected backfill to report state 'backfilled', got {payload!r}")
 
 
 def inject_delegated_audit_fixture(repo: Path):
@@ -119,6 +141,66 @@ def assert_inventory_export(repo: Path):
         fail(f'expected released skill export, got {skill!r}')
     if skill.get('release_attestation_path') != str(PROVENANCE_REL):
         fail(f"expected release_attestation_path {str(PROVENANCE_REL)!r}, got {skill!r}")
+    if skill.get('release_installed_integrity_capability') != 'supported':
+        fail(
+            "expected inventory export release_installed_integrity_capability 'supported', "
+            f'got {skill!r}'
+        )
+    if skill.get('release_installed_integrity_reason') is not None:
+        fail(f'expected inventory export release_installed_integrity_reason to be omitted, got {skill!r}')
+
+
+def _distribution_by_key(entries, *, qualified_name: str, version: str):
+    for item in entries or []:
+        if not isinstance(item, dict):
+            continue
+        if item.get('qualified_name') == qualified_name and item.get('version') == version:
+            return item
+    return None
+
+
+def assert_integrity_capability_surfaces(repo: Path):
+    distributions_path = repo / 'catalog' / 'distributions.json'
+    if not distributions_path.exists():
+        fail(f'missing distributions index: {distributions_path}')
+    distributions = load_json(distributions_path)
+    dist_entries = distributions.get('skills') or []
+
+    operate = _distribution_by_key(dist_entries, qualified_name='lvxiaoer/operate-infinitas-skill', version='0.1.1')
+    if operate is None:
+        fail(f'missing operate distribution entry in distributions.json, got {dist_entries!r}')
+    if operate.get('installed_integrity_capability') != 'supported':
+        fail(f"expected operate installed_integrity_capability 'supported', got {operate!r}")
+    if operate.get('installed_integrity_reason') is not None:
+        fail(f'expected operate installed_integrity_reason to be omitted, got {operate!r}')
+    if not isinstance(operate.get('file_manifest_count'), int) or operate.get('file_manifest_count') < 1:
+        fail(f'expected operate file_manifest_count to be a positive integer, got {operate!r}')
+
+    legacy = _distribution_by_key(dist_entries, qualified_name='lvxiaoer/federation-registry-ops', version='0.1.0')
+    if legacy is None:
+        fail(f'missing legacy distribution entry in distributions.json, got {dist_entries!r}')
+    if legacy.get('installed_integrity_capability') != 'unknown':
+        fail(f"expected legacy installed_integrity_capability 'unknown', got {legacy!r}")
+    if legacy.get('installed_integrity_reason') != 'missing-signed-file-manifest':
+        fail(f"expected legacy installed_integrity_reason 'missing-signed-file-manifest', got {legacy!r}")
+
+    catalog_path = repo / 'catalog' / 'catalog.json'
+    if not catalog_path.exists():
+        fail(f'missing catalog export: {catalog_path}')
+    catalog = load_json(catalog_path)
+    skills = catalog.get('skills') or []
+    operate_skill = next((item for item in skills if item.get('qualified_name') == 'lvxiaoer/operate-infinitas-skill'), None)
+    if operate_skill is None:
+        fail(f'missing operate skill entry in catalog.json, got {skills!r}')
+    verified_distribution = operate_skill.get('verified_distribution') or {}
+    if verified_distribution.get('installed_integrity_capability') != 'supported':
+        fail(f"expected catalog verified_distribution installed_integrity_capability 'supported', got {operate_skill!r}")
+    if verified_distribution.get('installed_integrity_reason') is not None:
+        fail(f'expected catalog verified_distribution installed_integrity_reason to be omitted, got {operate_skill!r}')
+
+    discovery_guidance = (repo / 'docs' / 'ai' / 'discovery.md').read_text(encoding='utf-8')
+    if 'installed_integrity_capability' not in discovery_guidance:
+        fail("expected docs/ai/discovery.md to mention 'installed_integrity_capability'")
 
 
 def assert_audit_export(repo: Path):
@@ -158,6 +240,10 @@ def assert_audit_export(repo: Path):
     if not exception_usage or exception_usage[0].get('id') != 'fixture-release-waiver':
         fail(f'expected fixture exception usage in audit export, got {release_info!r}')
 
+    for forbidden in ['integrity', 'installed_integrity', 'installed_state', 'installed_runtime']:
+        if forbidden in release:
+            fail(f'expected audit-export release entry not to include {forbidden!r}, got {release!r}')
+
 
 def prepare_repo():
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-audit-inventory-export-test-'))
@@ -167,6 +253,9 @@ def prepare_repo():
         repo,
         ignore=shutil.ignore_patterns('.git', '.planning', '__pycache__', '.cache', 'scripts/__pycache__', '.worktrees'),
     )
+    # Ensure at least one distribution manifest carries the released-file inventory so
+    # release surfaces can report installed-integrity capability as "supported".
+    run_backfill(repo, OPERATE_MANIFEST_REL)
     inject_delegated_audit_fixture(repo)
     return tmpdir, repo
 
@@ -176,6 +265,7 @@ def main():
     try:
         run(['bash', 'scripts/build-catalog.sh'], cwd=repo)
         assert_inventory_export(repo)
+        assert_integrity_capability_surfaces(repo)
         assert_audit_export(repo)
     finally:
         shutil.rmtree(tmpdir)

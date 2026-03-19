@@ -160,6 +160,29 @@ def reproducibility_summary(payload):
     return summary
 
 
+def installed_integrity_capability_summary(payload):
+    """Summarize whether a released distribution supports installed-integrity verification.
+
+    This is an additive, compatibility-only hint for catalog and index surfaces.
+    """
+    if not isinstance(payload, dict):
+        return {
+            'installed_integrity_capability': 'unknown',
+            'installed_integrity_reason': 'missing-signed-file-manifest',
+        }
+
+    file_manifest = payload.get('file_manifest')
+    if isinstance(file_manifest, list) and file_manifest:
+        return {
+            'installed_integrity_capability': 'supported',
+        }
+
+    return {
+        'installed_integrity_capability': 'unknown',
+        'installed_integrity_reason': 'missing-signed-file-manifest',
+    }
+
+
 def _normalized_publisher(value):
     if isinstance(value, str) and value.strip():
         return value.strip()
@@ -634,6 +657,7 @@ def manifest_index_entry(manifest_path, root):
     bundle = payload.get('bundle') or {}
     attestation_bundle = payload.get('attestation_bundle') or {}
     reproducibility = reproducibility_summary(payload)
+    installed_integrity = installed_integrity_capability_summary(payload)
     return {
         'name': skill.get('name'),
         'publisher': skill.get('publisher'),
@@ -657,6 +681,8 @@ def manifest_index_entry(manifest_path, root):
         'allowed_signers': attestation_bundle.get('allowed_signers'),
         'file_manifest_count': reproducibility.get('file_manifest_count'),
         'build_archive_format': reproducibility.get('build_archive_format'),
+        'installed_integrity_capability': installed_integrity.get('installed_integrity_capability'),
+        'installed_integrity_reason': installed_integrity.get('installed_integrity_reason'),
         'source_snapshot_kind': (payload.get('source_snapshot') or {}).get('kind'),
         'source_snapshot_tag': (payload.get('source_snapshot') or {}).get('tag'),
         'source_snapshot_ref': (payload.get('source_snapshot') or {}).get('ref'),

@@ -69,6 +69,14 @@ The split is intentional:
 - `audit-export.json` is provenance-derived and should be treated as immutable release evidence for portal, compliance, or reporting consumers.
 - `inventory-export.json` is catalog-derived and should be treated as the current registry and skill inventory view, including federation visibility and release/installability summary.
 
+Installed-integrity capability is additive on the immutable release surfaces:
+
+- `catalog/distributions.json` includes `installed_integrity_capability` and optional `installed_integrity_reason` per released version
+- `catalog/catalog.json` mirrors the same signal in `verified_distribution.installed_integrity_capability`
+- `catalog/inventory-export.json` mirrors that immutable release capability as `release_installed_integrity_capability`
+
+`audit-export.json` remains release-scoped provenance evidence. It must not absorb local installed-runtime state from one machine or target directory.
+
 Neither export includes raw `policy_trace`. Debug traces remain operator-oriented and live on the existing CLI surfaces.
 
 When release evidence, inventory exports, or federation state appear to disagree, use [docs/federation-operations.md](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/.worktrees/codex-federation-trust-rules/docs/federation-operations.md) as the recovery guide. The short version is: validate policy first, then rebuild catalog artifacts, then verify provenance and distribution manifests before trusting a released artifact again.
