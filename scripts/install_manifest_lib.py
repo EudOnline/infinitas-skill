@@ -2,7 +2,11 @@
 import json
 from pathlib import Path
 
-from installed_integrity_lib import normalize_integrity_record
+from installed_integrity_lib import (
+    normalize_integrity_capability_fields,
+    normalize_integrity_events,
+    normalize_integrity_record,
+)
 from schema_version_lib import SUPPORTED_SCHEMA_VERSION, validate_schema_version
 
 
@@ -71,6 +75,13 @@ def _normalize_install_entry(value):
         return value
     normalized = dict(value)
     normalized['integrity'] = normalize_integrity_record(value.get('integrity'))
+    capability_fields = normalize_integrity_capability_fields(
+        value.get('integrity_capability'),
+        value.get('integrity_reason'),
+    )
+    normalized['integrity_capability'] = capability_fields.get('integrity_capability')
+    normalized['integrity_reason'] = capability_fields.get('integrity_reason')
+    normalized['integrity_events'] = normalize_integrity_events(value.get('integrity_events'))
     return normalized
 
 

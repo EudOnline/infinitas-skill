@@ -29,6 +29,20 @@ def write_json(path: Path, payload):
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
 
+def run_report(repo: Path, target: Path, *, expect=0):
+    result = run(
+        [sys.executable, str(repo / 'scripts' / 'report-installed-integrity.py'), str(target), '--json'],
+        cwd=repo,
+        expect=expect,
+    )
+    if not result.stdout.strip():
+        fail('report-installed-integrity.py did not print JSON output')
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        fail(f'report-installed-integrity.py did not emit JSON:\n{result.stdout}\n{result.stderr}\n{exc}')
+
+
 def prepare_repo():
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-install-manifest-compat-'))
     repo = tmpdir / 'repo'
@@ -112,6 +126,25 @@ def main():
         if not isinstance(plan.get('steps'), list):
             fail(f'expected dependency planner to accept legacy manifest\n{result.stdout}\n{result.stderr}')
 
+        report = run_report(repo, target)
+        skills = report.get('skills')
+        if not isinstance(skills, list) or len(skills) != 1:
+            fail(f'expected one reported legacy skill, got {report!r}')
+        item = skills[0]
+        if item.get('qualified_name') != 'demo-skill':
+            fail(f"expected report qualified_name 'demo-skill', got {item!r}")
+        integrity = item.get('integrity')
+        if not isinstance(integrity, dict) or integrity.get('state') != 'unknown':
+            fail(f"expected report integrity.state 'unknown' for legacy manifest, got {item!r}")
+        if item.get('integrity_capability') != 'unknown':
+            fail(f"expected report integrity_capability 'unknown' for legacy manifest, got {item!r}")
+        if item.get('integrity_reason') is not None:
+            fail(f'expected report integrity_reason to default to null, got {item!r}')
+        if item.get('integrity_events') != []:
+            fail(f'expected report integrity_events to default to [], got {item!r}')
+        if not isinstance(item.get('recommended_action'), str) or not item.get('recommended_action'):
+            fail(f'expected legacy report recommended_action to be non-empty, got {item!r}')
+
         manifest_path = target / '.infinitas-skill-install-manifest.json'
         payload = json.loads(manifest_path.read_text(encoding='utf-8'))
         payload['schema_version'] = 999
@@ -136,6 +169,20 @@ def main():
             fail(f'expected rewritten manifest integrity block, got {integrity!r}')
         if integrity.get('state') != 'unknown':
             fail(f"expected rewritten manifest integrity state 'unknown', got {integrity.get('state')!r}")
+        if current.get('integrity_capability') != 'unknown':
+            fail(f"expected rewritten manifest integrity_capability 'unknown', got {current.get('integrity_capability')!r}")
+        if current.get('integrity_reason') is not None:
+            fail(f"expected rewritten manifest integrity_reason null, got {current.get('integrity_reason')!r}")
+        events = current.get('integrity_events')
+        if not isinstance(events, list):
+            fail(f'expected rewritten manifest integrity_events list, got {current!r}')
+        for event in events:
+            if not isinstance(event, dict):
+                fail(f'expected integrity_events entries to be objects, got {current!r}')
+            if not isinstance(event.get('event'), str) or not event.get('event'):
+                fail(f'expected integrity event to include non-empty event, got {current!r}')
+            if not isinstance(event.get('source'), str) or not event.get('source'):
+                fail(f'expected integrity event to include non-empty source, got {current!r}')
     finally:
         shutil.rmtree(tmpdir)
 

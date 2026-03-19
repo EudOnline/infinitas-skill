@@ -6,7 +6,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from installed_integrity_lib import build_install_integrity_record
+from installed_integrity_lib import append_integrity_event, build_install_integrity_snapshot, normalize_integrity_events
 from install_manifest_lib import load_install_manifest, write_install_manifest
 from skill_identity_lib import normalize_skill_identity
 
@@ -89,6 +89,7 @@ manifest.setdefault('history', {})
 name = meta['name']
 distribution_cache_root = _persist_distribution_cache(target_dir, source_info)
 previous = manifest['skills'].get(name)
+previous_events = normalize_integrity_events(previous.get('integrity_events')) if isinstance(previous, dict) else []
 if previous:
     hist = manifest['history'].setdefault(name, [])
     hist.append(previous)
@@ -163,11 +164,21 @@ if resolution_plan is not None:
 integrity_source_info = dict(source_info or {})
 if distribution_cache_root:
     integrity_source_info['distribution_root'] = distribution_cache_root
-manifest_entry['integrity'] = build_install_integrity_record(
+integrity_snapshot = build_install_integrity_snapshot(
     dest_dir,
     integrity_source_info,
     root=repo_root,
     verified_at=manifest['updated_at'],
+)
+manifest_entry['integrity'] = integrity_snapshot['integrity']
+manifest_entry['integrity_capability'] = integrity_snapshot['integrity_capability']
+manifest_entry['integrity_reason'] = integrity_snapshot['integrity_reason']
+manifest_entry['integrity_events'] = append_integrity_event(
+    previous_events,
+    at=manifest['updated_at'],
+    event=manifest_entry['integrity'].get('state') or 'unknown',
+    source=action,
+    reason=manifest_entry.get('integrity_reason'),
 )
 manifest['skills'][name] = manifest_entry
 manifest_path = write_install_manifest(target_dir, manifest, repo=repo_url)

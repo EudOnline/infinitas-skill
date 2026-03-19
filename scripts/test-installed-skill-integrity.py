@@ -190,6 +190,16 @@ def scenario_verify_clean_and_drifted_install():
             fail(f'expected install manifest integrity block, got {integrity!r}')
         if integrity.get('state') != 'verified':
             fail(f"expected install integrity state 'verified', got {integrity.get('state')!r}")
+        if current.get('integrity_capability') != 'supported':
+            fail(f"expected install integrity_capability 'supported', got {current.get('integrity_capability')!r}")
+        if current.get('integrity_reason') is not None:
+            fail(f"expected install integrity_reason to stay null, got {current.get('integrity_reason')!r}")
+        integrity_events = current.get('integrity_events')
+        if not isinstance(integrity_events, list) or not integrity_events:
+            fail(f'expected install manifest integrity_events to include baseline history, got {current!r}')
+        first_event = integrity_events[0]
+        if not isinstance(first_event, dict) or first_event.get('event') != 'verified':
+            fail(f"expected first integrity event to be 'verified', got {current!r}")
         if not integrity.get('last_verified_at'):
             fail('expected install integrity last_verified_at to be populated')
         if integrity.get('checked_file_count') != integrity.get('release_file_manifest_count'):
@@ -271,6 +281,11 @@ def scenario_verify_clean_and_drifted_install():
             fail(f"expected repaired install to verify cleanly, got {repaired_payload.get('state')!r}")
         if repaired_payload.get('installed_version') != VERSION:
             fail(f"expected repair to restore version {VERSION!r}, got {repaired_payload.get('installed_version')!r}")
+        repaired_manifest = read_install_manifest(target_dir)
+        repaired_current = ((repaired_manifest.get('skills') or {}).get(FIXTURE_NAME) or {})
+        repaired_events = repaired_current.get('integrity_events')
+        if not isinstance(repaired_events, list) or len(repaired_events) < 2:
+            fail(f'expected repair flow to append integrity event history, got {repaired_current!r}')
     finally:
         shutil.rmtree(tmpdir)
 
@@ -282,6 +297,10 @@ def scenario_installed_integrity_docs_exist():
     content = guide.read_text(encoding='utf-8')
     for required in [
         'verify-installed-skill.py',
+        'report-installed-integrity.py',
+        '--refresh',
+        'integrity_events',
+        'recommended_action',
         'repair-installed-skill.sh',
         'verified',
         'drifted',
@@ -293,6 +312,11 @@ def scenario_installed_integrity_docs_exist():
     distribution_docs = (ROOT / 'docs' / 'distribution-manifests.md').read_text(encoding='utf-8')
     if 'repair-installed-skill.sh' not in distribution_docs:
         fail("expected docs/distribution-manifests.md to mention 'repair-installed-skill.sh'")
+
+    compatibility_docs = (ROOT / 'docs' / 'compatibility-contract.md').read_text(encoding='utf-8')
+    for required in ['integrity_capability', 'integrity_reason', 'integrity_events']:
+        if required not in compatibility_docs:
+            fail(f'expected docs/compatibility-contract.md to mention {required!r}')
 
 
 def main():

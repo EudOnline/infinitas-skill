@@ -39,11 +39,15 @@ for name, meta in sorted(data.get('skills', {}).items()):
     checked_at = meta.get('last_checked_at')
     integrity = meta.get('integrity') or {}
     integrity_state = integrity.get('state') or 'unknown'
+    integrity_capability = meta.get('integrity_capability') or 'unknown'
+    integrity_events = meta.get('integrity_events') or []
     lock_note = f", locked={locked}" if locked else ""
     hist_note = f", history={history_len}" if history_len else ""
     plan_note = f", plan_steps={resolution_steps}" if resolution_steps else ""
     checked_note = f", checked={checked_at}" if checked_at else ""
     integrity_note = f", integrity={integrity_state}"
+    capability_note = f", capability={integrity_capability}"
+    events_note = f", events={len(integrity_events)}"
     source_note = f"{registry}/{src_type}"
     if commit:
         source_note += f"@{commit[:12]}"
@@ -51,5 +55,5 @@ for name, meta in sorted(data.get('skills', {}).items()):
         source_note += f" tag={tag}"
     elif ref:
         source_note += f" ref={ref}"
-    print(f"- {display}: {version}{lock_note} [{stage}] ({meta.get('action')}) -> {meta.get('target_path')} from {source_note}:{src}{hist_note}{plan_note}{checked_note}{integrity_note}")
+    print(f"- {display}: {version}{lock_note} [{stage}] ({meta.get('action')}) -> {meta.get('target_path')} from {source_note}:{src}{hist_note}{plan_note}{checked_note}{integrity_note}{capability_note}{events_note}")
 PY

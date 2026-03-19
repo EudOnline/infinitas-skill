@@ -35,7 +35,7 @@ Current rule set:
 | --- | --- | --- |
 | `_meta.json` core required fields | stable contract | scripts and catalogs depend on these fields today |
 | `_meta.json` optional extension fields | soft contract | additive changes are preferred |
-| install manifest `skills`, `history`, `locked_version`, `source_*`, `integrity` | stable contract | install, sync, rollback, dependency planning, and installed-integrity status surfaces read these keys |
+| install manifest `skills`, `history`, `locked_version`, `source_*`, `integrity`, `integrity_capability`, `integrity_reason`, `integrity_events` | stable contract | install, sync, rollback, dependency planning, `report-installed-integrity.py`, and installed-integrity status surfaces read these keys |
 | archived snapshot exact-version resolution | stable contract | historical installs and lineage depend on this |
 | `catalog/compatibility.json` structure | soft contract | generated view, useful to consumers, but not the only source of truth |
 | internal helper implementation details in `scripts/*.py` | internal detail | refactor freely if behavior stays compatible |
@@ -80,9 +80,24 @@ The standard repository verification path should run `scripts/test-compat-regres
 - legacy `_meta.json` without `schema_version` still validates
 - legacy install manifest without `schema_version` still loads
 - legacy install manifest without `integrity` still loads and defaults to `integrity.state = unknown`
+- legacy install manifest without `integrity_capability`, `integrity_reason`, or `integrity_events` still loads and normalizes additively
 - `locked_version` still prevents unsafe upgrade plans
 - archived exact-version snapshots still resolve for historical installs
 - legacy bare skill names still resolve unless a strict mode explicitly disables them
+
+## Installed-Integrity Additive Fields
+
+The install manifest's installed-integrity surface now has two layers:
+
+- nested `integrity` summary for current status counters and file drift details
+- additive top-level `integrity_capability`, `integrity_reason`, and `integrity_events` for compatibility-safe trust and audit metadata
+
+Compatibility rule:
+
+- older manifests may omit `integrity_capability`, `integrity_reason`, and `integrity_events`
+- readers must normalize those omissions to `unknown`, `null`, and `[]`
+- current writers should emit the canonical expanded shape
+- `report-installed-integrity.py` may append new `integrity_events`, but it must not break manifests that predate those fields
 
 ## Notes on runtime vs format compatibility
 

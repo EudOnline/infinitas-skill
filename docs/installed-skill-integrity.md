@@ -17,6 +17,18 @@ Verify one installed skill:
 python3 scripts/verify-installed-skill.py my-skill ~/.openclaw/skills --json
 ```
 
+Report the currently recorded integrity summary for all installed skills:
+
+```bash
+python3 scripts/report-installed-integrity.py ~/.openclaw/skills --json
+```
+
+Refresh the target-local summary and append additive audit history:
+
+```bash
+python3 scripts/report-installed-integrity.py ~/.openclaw/skills --refresh --json
+```
+
 Repair one drifted install back to its recorded immutable source:
 
 ```bash
@@ -37,6 +49,8 @@ python3 scripts/backfill-distribution-manifests.py --manifest <distribution-mani
 python3 scripts/verify-installed-skill.py <name> <target-dir> --json
 ```
 
+`verify-installed-skill.py` stays read-only. `report-installed-integrity.py --refresh` is the command that re-runs verification and writes refreshed summary fields back into `.infinitas-skill-install-manifest.json`.
+
 ## Drift Report
 
 `verify-installed-skill.py --json` reports additive arrays for:
@@ -54,6 +68,21 @@ It also reports compact summary counters such as:
 - `unexpected_count`
 
 This keeps both humans and wrappers on the same contract without scraping stdout text.
+
+`report-installed-integrity.py --json` adds a stable per-skill summary layer:
+
+- `integrity_capability`
+- `integrity_reason`
+- `integrity_events`
+- `recommended_action`
+- top-level `last_verified_at`
+
+`recommended_action` is intentionally compact:
+
+- `none` when the installed copy is still `verified`
+- `repair` when the installed copy is `drifted`
+- `backfill-distribution-manifest` when the recorded immutable release is legacy and still missing a signed `file_manifest`
+- `reinstall` when the install lacks enough immutable source metadata to refresh trust locally
 
 ## Repair Workflow
 
@@ -94,3 +123,28 @@ The workflow remains offline-verifiable and manifest-driven:
 For hosted installs, the toolchain now persists the fetched immutable distribution artifacts under a target-local cache root and records that root in the install manifest. Later explicit verification reuses that cached immutable set rather than resolving back through a mutable repo checkout copy.
 
 If the install lacks those immutable references, the integrity state remains `unknown` until the skill is reinstalled, repaired from a verified immutable source, or the referenced legacy distribution manifest is backfilled.
+
+## Audit History
+
+Install-manifest entries now preserve additive trust metadata alongside the nested `integrity` record:
+
+```json
+{
+  "integrity_capability": "supported",
+  "integrity_reason": null,
+  "integrity_events": [
+    {
+      "at": "2026-03-19T10:00:00Z",
+      "event": "verified",
+      "source": "install"
+    },
+    {
+      "at": "2026-03-19T10:05:00Z",
+      "event": "drifted",
+      "source": "refresh"
+    }
+  ]
+}
+```
+
+These fields are additive. Older manifests without `integrity_capability`, `integrity_reason`, or `integrity_events` still load, while current writers emit the canonical expanded shape.
