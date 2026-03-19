@@ -47,7 +47,9 @@ def load_current_skill_payload():
     return skill, dist
 
 
-def prepare_served_registry(root_dir: Path, *, bundle_sha256=None, installable=True, missing_provenance=False):
+def prepare_served_registry(
+    root_dir: Path, *, bundle_sha256=None, installable=True, missing_provenance=False, backfill_manifest=False
+):
     skill, dist = load_current_skill_payload()
 
     manifest_rel = Path(skill['versions'][VERSION]['manifest_path'])
@@ -63,6 +65,22 @@ def prepare_served_registry(root_dir: Path, *, bundle_sha256=None, installable=T
 
     if missing_provenance:
         (root_dir / provenance_rel).unlink()
+
+    if backfill_manifest:
+        backfill_result = run(
+            [
+                sys.executable,
+                str(ROOT / 'scripts' / 'backfill-distribution-manifests.py'),
+                '--manifest',
+                str(root_dir / manifest_rel),
+                '--write',
+                '--json',
+            ],
+            cwd=ROOT,
+        )
+        payload = json.loads(backfill_result.stdout)
+        if payload.get('state') not in {'backfilled', 'unchanged'}:
+            fail(f'expected hosted backfill state backfilled/unchanged, got {payload!r}')
 
     ai_skill = json.loads(json.dumps(skill))
     ai_skill['default_install_version'] = VERSION
@@ -142,6 +160,23 @@ def prepare_repo(tmpdir: Path, base_url: str):
     return repo
 
 
+def backfill_manifest(path: Path):
+    result = run(
+        [
+            sys.executable,
+            str(ROOT / 'scripts' / 'backfill-distribution-manifests.py'),
+            '--manifest',
+            str(path),
+            '--write',
+            '--json',
+        ],
+        cwd=ROOT,
+    )
+    payload = json.loads(result.stdout)
+    if payload.get('state') not in {'backfilled', 'unchanged'}:
+        fail(f'expected backfill state backfilled/unchanged, got {payload!r}')
+
+
 class QuietTCPServer(socketserver.TCPServer):
     allow_reuse_address = True
 
@@ -170,7 +205,7 @@ class HostedRegistryServer:
             self.thread.join(timeout=5)
 
 
-def assert_install_success(repo: Path, target_dir: Path):
+def assert_install_success(repo: Path, target_dir: Path, *, expected_integrity_state: str):
     result = run([str(repo / 'scripts' / 'install-by-name.sh'), SKILL_NAME, str(target_dir)], cwd=repo)
     payload = json.loads(result.stdout)
     if payload.get('state') != 'installed':
@@ -194,10 +229,16 @@ def assert_install_success(repo: Path, target_dir: Path):
     integrity = entry.get('integrity')
     if not isinstance(integrity, dict):
         fail(f'expected install manifest integrity block, got {integrity!r}')
-    if integrity.get('state') != 'unknown':
-        fail(f"expected hosted install integrity state 'unknown', got {integrity.get('state')!r}")
-    if integrity.get('last_verified_at') is not None:
+    if integrity.get('state') != expected_integrity_state:
+        fail(
+            f"expected hosted install integrity state {expected_integrity_state!r}, got {integrity.get('state')!r}"
+        )
+    if expected_integrity_state == 'unknown' and integrity.get('last_verified_at') is not None:
         fail(f"expected hosted install integrity last_verified_at to stay null, got {integrity.get('last_verified_at')!r}")
+    if expected_integrity_state == 'verified' and not integrity.get('last_verified_at'):
+        fail(f"expected hosted install integrity last_verified_at to be populated, got {integrity.get('last_verified_at')!r}")
+
+    verify_expect = 0 if expected_integrity_state == 'verified' else 1
     verify = run(
         [
             sys.executable,
@@ -207,14 +248,18 @@ def assert_install_success(repo: Path, target_dir: Path):
             '--json',
         ],
         cwd=repo,
-        expect=1,
+        expect=verify_expect,
     )
     verify_payload = json.loads(verify.stdout)
-    if verify_payload.get('state') != 'failed':
-        fail(f"expected hosted explicit verification failure, got {verify_payload.get('state')!r}")
-    error = verify_payload.get('error') or ''
-    if 'missing signed file_manifest' not in error:
-        fail(f'expected explicit verification to report missing signed file_manifest\n{verify.stdout}\n{verify.stderr}')
+    if expected_integrity_state == 'unknown':
+        if verify_payload.get('state') != 'failed':
+            fail(f"expected hosted explicit verification failure, got {verify_payload.get('state')!r}")
+        error = verify_payload.get('error') or ''
+        if 'missing signed file_manifest' not in error:
+            fail(f'expected explicit verification to report missing signed file_manifest\n{verify.stdout}\n{verify.stderr}')
+    else:
+        if verify_payload.get('state') != 'verified':
+            fail(f"expected hosted explicit verification success, got {verify_payload.get('state')!r}")
 
 
 def assert_install_failure(repo: Path, target_dir: Path, needle: str):
@@ -231,7 +276,18 @@ def main():
         prepare_served_registry(success_root)
         with HostedRegistryServer(success_root) as server:
             repo = prepare_repo(tmpdir / 'success-case', server.base_url)
-            assert_install_success(repo, tmpdir / 'installed-success')
+            assert_install_success(repo, tmpdir / 'installed-success', expected_integrity_state='unknown')
+
+        backfilled_root = tmpdir / 'served-backfilled-success'
+        prepare_served_registry(backfilled_root, backfill_manifest=True)
+        with HostedRegistryServer(backfilled_root) as server:
+            repo = prepare_repo(tmpdir / 'backfilled-success-case', server.base_url)
+            skill, _dist = load_current_skill_payload()
+            manifest_rel = Path(skill['versions'][VERSION]['manifest_path'])
+            # verify-installed-skill.py reuses source_distribution_manifest from the install record.
+            # Keep the local fixture manifest aligned with the hosted backfilled artifact.
+            backfill_manifest(repo / manifest_rel)
+            assert_install_success(repo, tmpdir / 'installed-backfilled-success', expected_integrity_state='verified')
 
         bad_sha_root = tmpdir / 'served-bad-sha'
         prepare_served_registry(bad_sha_root, bundle_sha256='0' * 64)

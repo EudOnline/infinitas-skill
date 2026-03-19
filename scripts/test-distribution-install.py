@@ -347,10 +347,72 @@ def scenario_installed_distribution_can_be_repaired_after_drift():
         shutil.rmtree(tmpdir)
 
 
+def scenario_installed_distribution_verifies_after_legacy_manifest_backfill():
+    tmpdir, repo = prepare_repo()
+    try:
+        manifest_path = release_current(repo, V1)
+        legacy_manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+        legacy_manifest.pop('file_manifest', None)
+        legacy_manifest.pop('build', None)
+        manifest_path.write_text(json.dumps(legacy_manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+        target_dir = tmpdir / 'installed-backfilled'
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        run(
+            [str(repo / 'scripts' / 'install-skill.sh'), FIXTURE_NAME, str(target_dir), '--version', V1],
+            cwd=repo,
+            env=make_env(),
+        )
+
+        failed_verify = json.loads(
+            run(
+                [sys.executable, str(repo / 'scripts' / 'verify-installed-skill.py'), FIXTURE_NAME, str(target_dir), '--json'],
+                cwd=repo,
+                env=make_env(),
+                expect=1,
+            ).stdout
+        )
+        if failed_verify.get('state') != 'failed':
+            fail(f"expected explicit verification to fail before backfill, got {failed_verify.get('state')!r}")
+        if 'missing signed file_manifest' not in (failed_verify.get('error') or ''):
+            fail(f'expected explicit verification to fail on missing signed file_manifest, got {failed_verify!r}')
+
+        backfill_payload = json.loads(
+            run(
+                [
+                    sys.executable,
+                    str(repo / 'scripts' / 'backfill-distribution-manifests.py'),
+                    '--manifest',
+                    str(manifest_path),
+                    '--write',
+                    '--json',
+                ],
+                cwd=repo,
+                env=make_env(),
+            ).stdout
+        )
+        if backfill_payload.get('state') not in {'backfilled', 'unchanged'}:
+            fail(f"expected backfill state 'backfilled' or 'unchanged', got {backfill_payload.get('state')!r}")
+
+        verified_payload = json.loads(
+            run(
+                [sys.executable, str(repo / 'scripts' / 'verify-installed-skill.py'), FIXTURE_NAME, str(target_dir), '--json'],
+                cwd=repo,
+                env=make_env(),
+            ).stdout
+        )
+        if verified_payload.get('state') != 'verified':
+            fail(f"expected explicit verification success after backfill, got {verified_payload.get('state')!r}")
+    finally:
+        shutil.rmtree(tmpdir)
+
+
 def main():
     scenario_install_switch_and_rollback_use_distribution_manifests()
     scenario_manifest_required_ci_blocks_verification_without_ci_sidecar()
     scenario_installed_distribution_can_be_repaired_after_drift()
+    scenario_installed_distribution_verifies_after_legacy_manifest_backfill()
     print('OK: distribution install checks passed')
 
 

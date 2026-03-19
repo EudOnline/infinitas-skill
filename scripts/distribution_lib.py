@@ -312,6 +312,16 @@ def _relative_from_root(root, path):
     return str(path.relative_to(root)) if path.is_relative_to(root) else str(path)
 
 
+def infer_distribution_root(manifest_path):
+    manifest_path = Path(manifest_path).resolve()
+    parts = manifest_path.parts
+    if 'catalog' in parts:
+        index = parts.index('catalog')
+        if index > 0:
+            return Path(*parts[:index]).resolve()
+    return manifest_path.parent.resolve()
+
+
 def _resolve_manifest_ref(path, ref, root=None):
     ref_path = Path(ref)
     if ref_path.is_absolute():
@@ -405,29 +415,35 @@ def verify_distribution_manifest(manifest_path, root=None, attestation_root=None
         if left != right:
             raise DistributionError(f'{label} does not match signed attestation payload')
 
-    if payload_file_manifest is not None or signed_file_manifest is not None:
+    normalized_signed_file_manifest = _normalize_file_manifest(signed_file_manifest)
+    if payload_file_manifest is not None:
         normalized_payload_file_manifest = _normalize_file_manifest(payload_file_manifest)
-        normalized_signed_file_manifest = _normalize_file_manifest(signed_file_manifest)
-        if normalized_payload_file_manifest is None or normalized_signed_file_manifest is None:
-            raise DistributionError('file manifest metadata is incomplete between distribution manifest and signed attestation')
-        if normalized_payload_file_manifest != normalized_signed_file_manifest:
+        if normalized_payload_file_manifest is None:
+            raise DistributionError('distribution manifest file_manifest metadata is invalid')
+        if normalized_signed_file_manifest is not None and normalized_payload_file_manifest != normalized_signed_file_manifest:
             raise DistributionError('file manifest does not match signed attestation payload')
-
+        normalized_actual_file_manifest = _normalize_file_manifest((actual_bundle_metadata or {}).get('file_manifest'))
+        if normalized_actual_file_manifest != normalized_payload_file_manifest:
+            raise DistributionError('file manifest does not match distribution bundle contents')
+    elif normalized_signed_file_manifest is not None:
         normalized_actual_file_manifest = _normalize_file_manifest((actual_bundle_metadata or {}).get('file_manifest'))
         if normalized_actual_file_manifest != normalized_signed_file_manifest:
-            raise DistributionError('file manifest does not match distribution bundle contents')
+            raise DistributionError('file manifest does not match signed attestation payload')
 
-    if payload_build is not None or signed_build is not None:
+    normalized_signed_build = _normalize_build(signed_build)
+    if payload_build is not None:
         normalized_payload_build = _normalize_build(payload_build)
-        normalized_signed_build = _normalize_build(signed_build)
-        if normalized_payload_build is None or normalized_signed_build is None:
-            raise DistributionError('build metadata is incomplete between distribution manifest and signed attestation')
-        if normalized_payload_build != normalized_signed_build:
+        if normalized_payload_build is None:
+            raise DistributionError('distribution manifest build metadata is invalid')
+        if normalized_signed_build is not None and normalized_payload_build != normalized_signed_build:
             raise DistributionError('build metadata does not match signed attestation payload')
-
+        normalized_actual_build = _normalize_build((actual_bundle_metadata or {}).get('build'), include_builder=False)
+        if normalized_actual_build != _normalize_build(payload_build, include_builder=False):
+            raise DistributionError('build metadata does not match distribution bundle contents')
+    elif normalized_signed_build is not None:
         normalized_actual_build = _normalize_build((actual_bundle_metadata or {}).get('build'), include_builder=False)
         if normalized_actual_build != _normalize_build(signed_build, include_builder=False):
-            raise DistributionError('build metadata does not match distribution bundle contents')
+            raise DistributionError('build metadata does not match signed attestation payload')
 
     if payload.get('registry') != provenance.get('registry'):
         raise DistributionError('registry context does not match signed attestation payload')
@@ -655,8 +671,9 @@ def load_distribution_index(root):
     return skills if isinstance(skills, list) else []
 
 
-def build_distribution_manifest_payload(provenance_path, bundle_path, root=None):
+def build_distribution_manifest_payload(provenance_path, bundle_path, root=None, attestation_root=None):
     root = Path(root or ROOT).resolve()
+    attestation_root = Path(attestation_root or root).resolve()
     provenance_path = Path(provenance_path).resolve()
     bundle_path = Path(bundle_path).resolve()
     provenance = load_json(provenance_path)
@@ -669,7 +686,7 @@ def build_distribution_manifest_payload(provenance_path, bundle_path, root=None)
     signature_path = provenance_path.with_suffix(provenance_path.suffix + (provenance.get('attestation') or {}).get('signature_ext', '.ssig'))
     if not signature_path.exists():
         raise DistributionError(f'missing attestation signature: {signature_path}')
-    attestation_cfg = load_attestation_config(root)
+    attestation_cfg = load_attestation_config(attestation_root)
     required_formats = ['ssh']
     ci_path = provenance_path.with_name(f'{provenance_path.stem}.ci.json')
     if attestation_cfg.get('requires_ci_attestation'):

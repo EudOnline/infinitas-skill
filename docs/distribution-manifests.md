@@ -90,6 +90,24 @@ python3 scripts/verify-distribution-manifest.py \
   catalog/distributions/_legacy/my-skill/1.2.3/manifest.json
 ```
 
+Legacy manifests created before reproducibility metadata was added can be upgraded in place:
+
+```bash
+python3 scripts/backfill-distribution-manifests.py \
+  --manifest catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.1/manifest.json \
+  --write \
+  --json
+```
+
+The backfill flow is additive and deterministic:
+
+- it re-verifies signed provenance plus bundle artifacts first
+- it regenerates canonical `file_manifest` and normalized `build` from immutable artifacts
+- it preserves immutable identity fields (`bundle`, `attestation_bundle`, `source_snapshot`) unchanged
+- it reports `state = "backfilled"` on first write and `state = "unchanged"` on repeat runs
+
+If immutable evidence is incomplete, the command reports a compatibility state instead of guessing release metadata.
+
 You can now extend that immutable verification path into one installed runtime copy:
 
 ```bash

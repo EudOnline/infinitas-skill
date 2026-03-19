@@ -30,6 +30,13 @@ scripts/repair-installed-skill.sh my-skill ~/.openclaw/skills
 - `repaired`: not a persisted steady-state value; it describes the action where `repair-installed-skill.sh` restores the install and the follow-up verification returns `verified`
 - `unknown`: the install manifest does not yet carry enough immutable source metadata to compare local files against a signed released-file inventory
 
+For legacy immutable releases, `unknown` is often a manifest-shape problem instead of an install problem. After backfilling the referenced distribution manifest in place, the same installed runtime copy can move to `verified` without reinstalling:
+
+```bash
+python3 scripts/backfill-distribution-manifests.py --manifest <distribution-manifest> --write --json
+python3 scripts/verify-installed-skill.py <name> <target-dir> --json
+```
+
 ## Drift Report
 
 `verify-installed-skill.py --json` reports additive arrays for:
@@ -84,4 +91,4 @@ The workflow remains offline-verifiable and manifest-driven:
 - it does not trust mutable working-tree folders as the verification source
 - it relies on the immutable distribution manifest and signed attestation already recorded in the local install manifest
 
-If the install lacks those immutable references, the integrity state remains `unknown` until the skill is reinstalled or repaired from a verified immutable source.
+If the install lacks those immutable references, the integrity state remains `unknown` until the skill is reinstalled, repaired from a verified immutable source, or the referenced legacy distribution manifest is backfilled.
