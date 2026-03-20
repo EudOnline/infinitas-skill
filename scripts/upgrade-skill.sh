@@ -48,6 +48,40 @@ done
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+freshness_gate_json() {
+  python3 - <<'PY' "$ROOT" "$TARGET_DIR" "$NAME"
+import json
+import sys
+
+sys.path.insert(0, sys.argv[1] + '/scripts')
+from install_integrity_policy_lib import load_install_integrity_policy  # noqa: E402
+from installed_integrity_lib import evaluate_installed_mutation_readiness  # noqa: E402
+from installed_skill_lib import InstalledSkillError, load_installed_skill  # noqa: E402
+
+try:
+    _manifest, item = load_installed_skill(sys.argv[2], sys.argv[3])
+except InstalledSkillError:
+    print(
+        json.dumps(
+            {
+                'freshness_state': 'never-verified',
+                'blocking': False,
+                'mutation_readiness': 'ready',
+                'mutation_policy': None,
+                'mutation_reason_code': None,
+                'recovery_action': 'reinstall',
+            },
+            ensure_ascii=False,
+        )
+    )
+    raise SystemExit(0)
+
+policy = load_install_integrity_policy(sys.argv[1])
+payload = evaluate_installed_mutation_readiness(item, policy=policy)
+print(json.dumps(payload, ensure_ascii=False))
+PY
+}
+
 guard_drifted_install() {
   local skill_name="$1"
   local target_dir="$2"
@@ -166,31 +200,83 @@ print(json.loads(sys.argv[1]).get('resolved_version') or '')
 PY
 )"
 
-if [[ "$MODE" == "confirm" ]]; then
-  python3 - <<'PY' "$ROOT" "$INFO_JSON" "$PLAN_JSON" "$TARGET_DIR"
+FRESHNESS_GATE_JSON="$(freshness_gate_json)"
+FRESHNESS_STATE="$(python3 - <<'PY' "$FRESHNESS_GATE_JSON"
+import json, sys
+print(json.loads(sys.argv[1]).get('freshness_state') or '')
+PY
+)"
+FRESHNESS_POLICY="$(python3 - <<'PY' "$FRESHNESS_GATE_JSON"
+import json, sys
+print(json.loads(sys.argv[1]).get('freshness_policy') or '')
+PY
+)"
+FRESHNESS_WARNING="$(python3 - <<'PY' "$FRESHNESS_GATE_JSON"
+import json, sys
+print(json.loads(sys.argv[1]).get('warning') or '')
+PY
+)"
+FRESHNESS_BLOCKING="$(python3 - <<'PY' "$FRESHNESS_GATE_JSON"
+import json, sys
+print('1' if json.loads(sys.argv[1]).get('blocking') else '0')
+PY
+)"
+MUTATION_READINESS="$(python3 - <<'PY' "$FRESHNESS_GATE_JSON"
+import json, sys
+print(json.loads(sys.argv[1]).get('mutation_readiness') or '')
+PY
+)"
+MUTATION_REASON_CODE="$(python3 - <<'PY' "$FRESHNESS_GATE_JSON"
+import json, sys
+print(json.loads(sys.argv[1]).get('mutation_reason_code') or '')
+PY
+)"
+RECOVERY_ACTION="$(python3 - <<'PY' "$FRESHNESS_GATE_JSON"
+import json, sys
+print(json.loads(sys.argv[1]).get('recovery_action') or '')
+PY
+)"
+
+if [[ $FORCE -eq 1 ]]; then
+  FRESHNESS_STATE=""
+  FRESHNESS_POLICY=""
+  FRESHNESS_WARNING=""
+  FRESHNESS_BLOCKING="0"
+  MUTATION_READINESS=""
+  MUTATION_REASON_CODE=""
+  RECOVERY_ACTION=""
+fi
+
+if [[ -z "$TARGET_VERSION" || "$TARGET_VERSION" == "$INSTALLED_VERSION" ]]; then
+  if [[ "$MODE" == "confirm" ]]; then
+    python3 - <<'PY' "$ROOT" "$INFO_JSON" "$TARGET_DIR" "$FRESHNESS_STATE" "$FRESHNESS_POLICY" "$FRESHNESS_WARNING" "$MUTATION_READINESS" "$MUTATION_REASON_CODE" "$RECOVERY_ACTION"
 import json, sys
 sys.path.insert(0, sys.argv[1] + '/scripts')
 from explain_install_lib import build_upgrade_explanation  # noqa: E402
 info = json.loads(sys.argv[2])
-plan = json.loads(sys.argv[3])
 payload = {
     'ok': True,
     'qualified_name': info.get('qualified_name'),
     'source_registry': info.get('source_registry'),
     'from_version': info.get('installed_version'),
-    'to_version': plan.get('resolved_version'),
-    'target_dir': sys.argv[4],
-    'state': 'planned',
-    'manifest_path': plan.get('manifest_path'),
-    'next_step': 'run upgrade-skill',
+    'to_version': info.get('installed_version'),
+    'target_dir': sys.argv[3],
+    'state': 'up-to-date',
+    'manifest_path': None,
+    'next_step': 'use-installed-skill',
+    'freshness_state': sys.argv[4] or None,
+    'freshness_policy': sys.argv[5] or None,
+    'freshness_warning': sys.argv[6] or None,
+    'mutation_readiness': sys.argv[7] or 'ready',
+    'mutation_policy': sys.argv[5] or None,
+    'mutation_reason_code': sys.argv[8] or None,
+    'recovery_action': sys.argv[9] or 'none',
 }
 payload['explanation'] = build_upgrade_explanation(info, payload)
 print(json.dumps(payload, ensure_ascii=False))
 PY
-  exit 0
-fi
-
-if [[ -z "$TARGET_VERSION" || "$TARGET_VERSION" == "$INSTALLED_VERSION" ]]; then
+    exit 0
+  fi
   python3 - <<'PY' "$ROOT" "$INFO_JSON" "$TARGET_DIR"
 import json, sys
 sys.path.insert(0, sys.argv[1] + '/scripts')
@@ -211,6 +297,150 @@ payload['explanation'] = build_upgrade_explanation(info, payload)
 print(json.dumps(payload, ensure_ascii=False))
 PY
   exit 0
+fi
+
+if [[ "$MODE" == "confirm" ]]; then
+  if [[ "$FRESHNESS_BLOCKING" == "1" ]]; then
+    python3 - <<'PY' "$ROOT" "$INFO_JSON" "$TARGET_DIR" "$FRESHNESS_WARNING" "$FRESHNESS_STATE" "$FRESHNESS_POLICY" "$MUTATION_REASON_CODE" "$RECOVERY_ACTION"
+import json, sys
+sys.path.insert(0, sys.argv[1] + '/scripts')
+from explain_install_lib import build_upgrade_explanation  # noqa: E402
+info = json.loads(sys.argv[2])
+recovery_action = sys.argv[8] or None
+next_step = {
+    'refresh': 'refresh-installed-integrity',
+    'reinstall': 'reinstall-installed-skill',
+    'backfill-distribution-manifest': 'backfill-distribution-manifest',
+}.get(recovery_action, 'refresh-installed-integrity')
+payload = {
+    'ok': False,
+    'qualified_name': info.get('qualified_name'),
+    'source_registry': info.get('source_registry'),
+    'from_version': info.get('installed_version'),
+    'to_version': info.get('installed_version'),
+    'target_dir': sys.argv[3],
+    'state': 'failed',
+    'error_code': sys.argv[7] or 'stale-installed-integrity',
+    'message': sys.argv[4],
+    'next_step': next_step,
+    'freshness_state': sys.argv[5] or None,
+    'freshness_policy': sys.argv[6] or None,
+    'freshness_warning': sys.argv[4],
+    'mutation_readiness': 'blocked',
+    'mutation_policy': sys.argv[6] or None,
+    'mutation_reason_code': sys.argv[7] or None,
+    'recovery_action': recovery_action,
+}
+payload['explanation'] = build_upgrade_explanation(info, payload)
+print(json.dumps(payload, ensure_ascii=False))
+PY
+    exit 1
+  fi
+  if [[ "$MUTATION_READINESS" == "warning" ]]; then
+    python3 - <<'PY' "$ROOT" "$INFO_JSON" "$PLAN_JSON" "$TARGET_DIR" "$FRESHNESS_POLICY" "$FRESHNESS_WARNING" "$FRESHNESS_STATE" "$MUTATION_REASON_CODE" "$RECOVERY_ACTION"
+import json, sys
+sys.path.insert(0, sys.argv[1] + '/scripts')
+from explain_install_lib import build_upgrade_explanation  # noqa: E402
+info = json.loads(sys.argv[2])
+plan = json.loads(sys.argv[3])
+recovery_action = sys.argv[9] or None
+next_step = {
+    'refresh': 'refresh-installed-integrity',
+    'reinstall': 'reinstall-installed-skill',
+    'backfill-distribution-manifest': 'backfill-distribution-manifest',
+}.get(recovery_action, 'run upgrade-skill')
+payload = {
+    'ok': True,
+    'qualified_name': info.get('qualified_name'),
+    'source_registry': info.get('source_registry'),
+    'from_version': info.get('installed_version'),
+    'to_version': plan.get('resolved_version'),
+    'target_dir': sys.argv[4],
+    'state': 'planned',
+    'manifest_path': plan.get('manifest_path'),
+    'next_step': next_step,
+    'freshness_state': sys.argv[7] or None,
+    'freshness_policy': sys.argv[5] or None,
+    'freshness_warning': sys.argv[6] or None,
+    'mutation_readiness': 'warning',
+    'mutation_policy': sys.argv[5] or None,
+    'mutation_reason_code': sys.argv[8] or None,
+    'recovery_action': recovery_action,
+}
+payload['explanation'] = build_upgrade_explanation(info, payload)
+print(json.dumps(payload, ensure_ascii=False))
+PY
+    exit 0
+  fi
+  python3 - <<'PY' "$ROOT" "$INFO_JSON" "$PLAN_JSON" "$TARGET_DIR" "$FRESHNESS_STATE" "$FRESHNESS_POLICY" "$FRESHNESS_WARNING" "$MUTATION_READINESS" "$MUTATION_REASON_CODE" "$RECOVERY_ACTION"
+import json, sys
+sys.path.insert(0, sys.argv[1] + '/scripts')
+from explain_install_lib import build_upgrade_explanation  # noqa: E402
+info = json.loads(sys.argv[2])
+plan = json.loads(sys.argv[3])
+payload = {
+    'ok': True,
+    'qualified_name': info.get('qualified_name'),
+    'source_registry': info.get('source_registry'),
+    'from_version': info.get('installed_version'),
+    'to_version': plan.get('resolved_version'),
+    'target_dir': sys.argv[4],
+    'state': 'planned',
+    'manifest_path': plan.get('manifest_path'),
+    'next_step': 'run upgrade-skill',
+    'freshness_state': sys.argv[5] or None,
+    'freshness_policy': sys.argv[6] or None,
+    'freshness_warning': sys.argv[7] or None,
+    'mutation_readiness': sys.argv[8] or 'ready',
+    'mutation_policy': sys.argv[6] or None,
+    'mutation_reason_code': sys.argv[9] or None,
+    'recovery_action': sys.argv[10] or 'none',
+}
+payload['explanation'] = build_upgrade_explanation(info, payload)
+print(json.dumps(payload, ensure_ascii=False))
+PY
+  exit 0
+fi
+
+if [[ "$MUTATION_READINESS" == "warning" && -n "$FRESHNESS_WARNING" ]]; then
+  echo "$FRESHNESS_WARNING" >&2
+fi
+
+if [[ "$FRESHNESS_BLOCKING" == "1" ]]; then
+  python3 - <<'PY' "$ROOT" "$INFO_JSON" "$TARGET_DIR" "$FRESHNESS_WARNING" "$FRESHNESS_STATE" "$FRESHNESS_POLICY" "$MUTATION_REASON_CODE" "$RECOVERY_ACTION"
+import json, sys
+sys.path.insert(0, sys.argv[1] + '/scripts')
+from explain_install_lib import build_upgrade_explanation  # noqa: E402
+info = json.loads(sys.argv[2])
+recovery_action = sys.argv[8] or None
+next_step = {
+    'refresh': 'refresh-installed-integrity',
+    'reinstall': 'reinstall-installed-skill',
+    'backfill-distribution-manifest': 'backfill-distribution-manifest',
+}.get(recovery_action, 'refresh-installed-integrity')
+payload = {
+    'ok': False,
+    'qualified_name': info.get('qualified_name'),
+    'source_registry': info.get('source_registry'),
+    'from_version': info.get('installed_version'),
+    'to_version': info.get('installed_version'),
+    'target_dir': sys.argv[3],
+    'state': 'failed',
+    'error_code': sys.argv[7] or 'stale-installed-integrity',
+    'message': sys.argv[4],
+    'next_step': next_step,
+    'freshness_state': sys.argv[5] or None,
+    'freshness_policy': sys.argv[6] or None,
+    'freshness_warning': sys.argv[4],
+    'mutation_readiness': 'blocked',
+    'mutation_policy': sys.argv[6] or None,
+    'mutation_reason_code': sys.argv[7] or None,
+    'recovery_action': recovery_action,
+}
+payload['explanation'] = build_upgrade_explanation(info, payload)
+print(json.dumps(payload, ensure_ascii=False))
+PY
+  exit 1
 fi
 
 SWITCH_OUTPUT="$(./scripts/switch-installed-skill.sh "$NAME" "$TARGET_DIR" --to-version "$TARGET_VERSION" --registry "$SOURCE_REGISTRY" --qualified-name "$QUALIFIED_NAME" --force)" || {

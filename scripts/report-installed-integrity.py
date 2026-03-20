@@ -4,12 +4,15 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from install_integrity_policy_lib import load_install_integrity_policy
 from install_manifest_lib import load_install_manifest, write_install_manifest
 from installed_integrity_lib import (
+    apply_integrity_history_retention,
     append_integrity_event,
     build_install_integrity_snapshot,
     build_installed_integrity_report_item,
     normalize_integrity_events,
+    write_installed_integrity_snapshot,
 )
 from release_lib import ROOT
 
@@ -47,12 +50,12 @@ def _refresh_manifest_entry(target_dir: Path, name: str, item, *, refreshed_at: 
     return updated
 
 
-def _report_payload(target_dir: Path, manifest, *, refreshed: bool):
+def _report_payload(target_dir: Path, manifest, *, refreshed: bool, policy):
     skills = []
     for name, item in sorted((manifest.get('skills') or {}).items()):
         if not isinstance(item, dict):
             continue
-        skills.append(build_installed_integrity_report_item(name, item))
+        skills.append(build_installed_integrity_report_item(name, item, policy=policy))
     return {
         'target_dir': str(target_dir),
         'refreshed': refreshed,
@@ -65,6 +68,7 @@ def main():
     args = parse_args()
     target_dir = Path(args.target_dir).resolve()
     manifest = load_install_manifest(target_dir)
+    policy = load_install_integrity_policy(ROOT)
 
     if args.refresh:
         refreshed_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
@@ -75,10 +79,22 @@ def main():
             updated_skills[name] = _refresh_manifest_entry(target_dir, name, item, refreshed_at=refreshed_at)
         updated_manifest['skills'] = updated_skills
         updated_manifest['updated_at'] = refreshed_at
+        updated_manifest, archived_by_name = apply_integrity_history_retention(
+            updated_manifest,
+            target_dir=target_dir,
+            policy=policy,
+        )
         write_install_manifest(target_dir, updated_manifest, repo=updated_manifest.get('repo'))
+        write_installed_integrity_snapshot(
+            target_dir,
+            updated_manifest,
+            policy=policy,
+            archived_by_name=archived_by_name,
+            generated_at=refreshed_at,
+        )
         manifest = load_install_manifest(target_dir)
 
-    payload = _report_payload(target_dir, manifest, refreshed=args.refresh)
+    payload = _report_payload(target_dir, manifest, refreshed=args.refresh, policy=policy)
     if args.json:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
     else:

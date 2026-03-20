@@ -10,7 +10,10 @@
 - ✅ **v14 Governance Integration and Reviewer Operations** - Phases 1-2 (completed 2026-03-17)
 - ✅ **v15 Supply-Chain Transparency and Reproducible Release Metadata** - Phases 1-2 (completed 2026-03-17)
 - ✅ **v16 Installed Skill Integrity and Repairable Consumption** - Phases 1-2 (completed 2026-03-18)
-- 🚧 **v17 Installed Integrity Reporting and Legacy Distribution Backfill** - Planning started
+- ✅ **v17 Installed Integrity Reporting and Legacy Distribution Backfill** - Phases 1-2 (completed 2026-03-19 on `codex/v17-installed-reporting`)
+- ✅ **v18 Installed Integrity Freshness and History Retention** - Phases 1-2 (completed 2026-03-19 on `codex/v17-installed-reporting`)
+- ✅ **v19 Installed Integrity Stale Verification Guardrails** - Phases 1-2 (completed 2026-03-19 on `codex/v17-installed-reporting`)
+- ✅ **v20 Never-Verified Policy and Project Closeout** - Phases 1-3 (completed 2026-03-19 on `codex/v17-installed-reporting`)
 
 ## Current Follow-up
 
@@ -19,8 +22,11 @@
 - v14 governance integration is now merged on `main`, including additive platform-native review evidence and reviewer recommendation plus escalation flows.
 - v15 supply-chain work is now merged on `main`, including signed released-file inventories, reproducibility metadata, transparency-log publication, and additive audit surfaces.
 - v16 is now merged on `main`, including installed-runtime verification against signed release-file inventories, additive integrity summaries in install manifests, exact-source repair, and drift-aware mutation guardrails.
-- Older hosted distribution manifests can still lack signed `file_manifest` metadata; install-time integrity now degrades to `unknown` for compatibility, while explicit verification remains strict.
-- v17 now becomes the next active value line: restore full installed-integrity verification for older immutable artifacts where possible, then add one stable local report surface for trust state and repair history.
+- v17 installed-integrity work is complete and verified on `codex/v17-installed-reporting`, adding deterministic legacy manifest backfill, release-surface installed-integrity capability summaries, and a target-local installed-integrity report with additive event history.
+- v18 is complete and verified on `codex/v17-installed-reporting`, adding freshness-aware installed-integrity reporting plus bounded local history retention and sidecar snapshots.
+- v19 is complete and verified on `codex/v17-installed-reporting`, making stale installed verification policy-governed in update and overwrite-style mutation flows without adding background refresh or hosted runtime state.
+- v20 is complete and verified on `codex/v17-installed-reporting`, adding `never_verified_policy`, shared mutation readiness, never-verified overwrite guardrails, deterministic CI hosted e2e enforcement, and `docs/project-closeout.md` as the final merge-gate checklist.
+- The next operational step is to merge `codex/v17-installed-reporting` back to `main`; no v21 milestone is committed yet.
 
 ## Phases
 
@@ -424,11 +430,11 @@ Plans:
 - [x] 16-03: Add exact-source repair flow for drifted installs
 - [x] 16-04: Thread drift-aware guardrails into sync, rollback, switch, and upgrade commands
 
-### 🚧 v17 Installed Integrity Reporting and Legacy Distribution Backfill (Planned)
+### ✅ v17 Installed Integrity Reporting and Legacy Distribution Backfill (Completed on `codex/v17-installed-reporting`)
 
 **Milestone Goal:** Close the remaining post-v16 installed-runtime trust gaps by backfilling legacy immutable manifests when signed evidence already exists, then exposing a stable local report surface for installed-skill trust and repair history.
 
-#### 🚧 Phase 1: Legacy Distribution Backfill and Integrity Capability Reporting (Planned)
+#### ✅ Phase 1: Legacy Distribution Backfill and Integrity Capability Reporting (Completed 2026-03-19)
 **Goal**: Turn older immutable artifacts from compatibility-only installs into fully verifiable installs wherever the signed provenance and release bundle already contain enough evidence to regenerate the missing distribution metadata.
 **Depends on**: v16 completed
 **Requirements**: [INST-03]
@@ -439,10 +445,10 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 17-01: Define legacy distribution backfill contract and integrity capability summary
-- [ ] 17-02: Add backfill tooling, refresh legacy immutable artifacts, and thread capability reporting through release or discovery surfaces
+- [x] 17-01: Define legacy distribution backfill contract and integrity capability summary
+- [x] 17-02: Add backfill tooling, refresh legacy immutable artifacts, and thread capability reporting through release or discovery surfaces
 
-#### 🚧 Phase 2: Installed Integrity Audit History and Local Reports (Planned)
+#### ✅ Phase 2: Installed Integrity Audit History and Local Reports (Completed 2026-03-19)
 **Goal**: Give operators and agents one stable local surface for installed-skill trust that summarizes current integrity state, verification capability, and recent repair or verification activity without scraping raw install manifests.
 **Depends on**: Phase 1
 **Requirements**: [INST-04]
@@ -453,8 +459,118 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 17-03: Define installed-integrity local report and audit-history contract
-- [ ] 17-04: Implement local report surface, additive audit events, and documentation updates
+- [x] 17-03: Define installed-integrity local report and audit-history contract
+- [x] 17-04: Implement local report surface, additive audit events, and documentation updates
+
+### ✅ v18 Installed Integrity Freshness and History Retention (Completed on `codex/v17-installed-reporting`)
+
+**Milestone Goal:** Keep target-local installed trust actionable over time by making verification freshness explicit and bounding local audit-history growth without turning runtime state into a hosted service.
+
+#### ✅ Phase 1: Freshness Policy and Stale Verification Reporting (Completed 2026-03-19)
+**Goal**: Add a validated freshness policy so operators can distinguish fresh local verification from stale or never-verified state before over-trusting past results.
+**Depends on**: v17 completed
+**Requirements**: [INST-05]
+**Success Criteria** (what must be TRUE):
+  1. Maintainers can define validated freshness thresholds for target-local installed-integrity results in repository config with safe defaults.
+  2. `report-installed-integrity.py` and `list-installed.sh` surface `fresh`, `stale`, or `never-verified` classification plus additive age or reason fields without weakening immutable verification.
+  3. Compatibility holds for older install manifests that lack freshness metadata, and repo-scoped release exports remain distinct from target-local freshness state.
+**Plans**: 2 plans
+
+Plans:
+- [x] 18-01: Define installed-integrity freshness policy schema and stale-report contract
+- [x] 18-02: Implement freshness classification in report/list flows and docs
+
+#### ✅ Phase 2: History Retention and Target-Local Snapshot Artifact (Completed 2026-03-19)
+**Goal**: Keep long-lived targets auditable without letting additive local integrity history grow the install manifest without bound.
+**Depends on**: Phase 1
+**Requirements**: [INST-06]
+**Success Criteria** (what must be TRUE):
+  1. Install-manifest writers keep current state plus only bounded recent integrity events inline, while older events remain available in a deterministic target-local sidecar artifact.
+  2. Operators can write or refresh a stable target-local installed-integrity snapshot/history artifact that avoids stdout scraping and stays offline-usable.
+  3. Older targets without the sidecar artifact still load correctly, and docs explain the boundary between inline current state and sidecar history.
+**Plans**: 2 plans
+
+Plans:
+- [x] 18-03: Define inline-retention and sidecar snapshot contract for installed-integrity history
+- [x] 18-04: Implement history compaction, target-local snapshot export, and documentation updates
+
+### ✅ v19 Installed Integrity Stale Verification Guardrails (Completed on `codex/v17-installed-reporting`)
+
+**Milestone Goal:** Keep overwrite-style installed-skill mutation trustworthy by turning stale local verification from a report-only hint into a policy-governed warning or block, while keeping refresh explicit and target-local.
+
+#### ✅ Phase 1: Stale-Policy Advisory Surfaces and Shared Freshness Gate (Completed 2026-03-19)
+**Goal**: Add a validated stale-policy contract and shared freshness-gate helper so read-only update surfaces can explain when a stale installed copy should be refreshed before mutation.
+**Depends on**: v18 completed
+**Requirements**: [INST-07]
+**Success Criteria** (what must be TRUE):
+  1. Maintainers can define a validated `freshness.stale_policy` such as `ignore`, `warn`, or `fail` in install-integrity policy with safe defaults.
+  2. `check-skill-update.sh` and `upgrade-skill.sh --mode confirm` surface additive freshness policy guidance and actionable refresh instructions for stale-but-clean installs.
+  3. Existing report/list freshness meaning stays intact, and immutable release trust remains separate from target-local freshness enforcement.
+**Plans**: 2 plans
+
+Plans:
+- [x] 19-01: Define stale-policy schema and freshness-gate advisory contract
+- [x] 19-02: Implement shared freshness gate and read-only update guidance
+
+#### ✅ Phase 2: Stale Verification Guardrails for Mutation Flows (Completed 2026-03-19)
+**Goal**: Make overwrite-style installed-skill mutation commands respect the configured stale-policy before mutating local files.
+**Depends on**: Phase 1
+**Requirements**: [INST-08]
+**Success Criteria** (what must be TRUE):
+  1. `sync-skill.sh`, `switch-installed-skill.sh`, `rollback-installed-skill.sh`, and `upgrade-skill.sh` can warn or fail on stale-but-clean installs according to policy.
+  2. `report-installed-integrity.py --refresh` clears stale-policy blocks explicitly, and `--force` remains the deliberate override.
+  3. Existing drift guardrails still take precedence, and docs explain the difference between drift repair and stale refresh.
+**Plans**: 2 plans
+
+Plans:
+- [x] 19-03: Add stale-policy mutation guardrail coverage
+- [x] 19-04: Enforce stale verification guardrails in overwrite flows and docs
+
+### ✅ v20 Never-Verified Policy and Project Closeout (Completed 2026-03-19 on `codex/v17-installed-reporting`)
+
+**Milestone Goal:** Close the remaining project-completion gaps by making `never-verified` an explicit policy-governed readiness state, removing routine hosted-registry e2e skips from CI, and defining final closeout gates.
+
+#### ✅ Phase 1: Never-Verified Advisory Contract and Shared Mutation Readiness (Completed 2026-03-19)
+**Goal**: Add a validated `never_verified_policy` plus one shared readiness evaluator that normalizes drift, stale, and never-verified behavior for read-only surfaces.
+**Depends on**: v19 completed
+**Requirements**: [INST-09]
+**Success Criteria** (what must be TRUE):
+  1. Maintainers can define a validated `freshness.never_verified_policy` such as `ignore`, `warn`, or `fail` with compatibility-safe defaults.
+  2. `report-installed-integrity.py`, `check-skill-update.sh`, and `upgrade-skill.sh --mode confirm` can expose one normalized mutation-readiness contract for `never-verified` installs.
+  3. Legacy install manifests remain additive and backward-compatible instead of being silently reclassified as stale or drifted.
+**Plans**: 2 plans
+
+Plans:
+- [x] 20-01: Define never-verified policy schema and readiness contract
+- [x] 20-02: Implement shared mutation readiness helper and advisory surfaces
+
+#### ✅ Phase 2: Never-Verified Mutation Guardrails and Recovery Paths (Completed 2026-03-19)
+**Goal**: Make overwrite-style mutation commands honor `never_verified_policy` without weakening existing drift or stale safety behavior.
+**Depends on**: Phase 1
+**Requirements**: [INST-10]
+**Success Criteria** (what must be TRUE):
+  1. `sync-skill.sh`, `switch-installed-skill.sh`, `rollback-installed-skill.sh`, and `upgrade-skill.sh` can warn or fail on `never-verified` installs according to policy.
+  2. Recovery guidance stays explicit and target-local, preferring refresh when possible and repair, reinstall, or backfill when immutable evidence is incomplete.
+  3. Existing precedence remains intact: drift first, stale second, never-verified third, and `--force` remains the deliberate override.
+**Plans**: 2 plans
+
+Plans:
+- [x] 20-03: Add never-verified mutation guardrail coverage
+- [x] 20-04: Enforce never-verified mutation guardrails and recovery guidance
+
+#### ✅ Phase 3: Deterministic Hosted E2E Verification and Final Closeout (Completed 2026-03-19)
+**Goal**: Make the full supported verification matrix deterministic in CI and define the final operator closeout gates for the project.
+**Depends on**: Phase 2
+**Requirements**: [OPS-03, OPS-04]
+**Success Criteria** (what must be TRUE):
+  1. GitHub validation installs the hosted-registry e2e dependency set and no longer routinely skips those checks in CI.
+  2. Operators have one documented local bootstrap path for the hosted-registry e2e dependency set.
+  3. One closeout doc defines the final verification matrix, merge gate, and “project complete” checklist.
+**Plans**: 2 plans
+
+Plans:
+- [x] 20-05: Make hosted-registry e2e deterministic in CI and bootstrap docs
+- [x] 20-06: Add final project closeout checklist and completion gates
 
 ## Progress
 
@@ -485,5 +601,12 @@ Plans:
 | 2. Transparency Log Publication and Verification | v15 | 2/2 | Completed | 2026-03-17 |
 | 1. Installed Skill Integrity and Drift Detection | v16 | 2/2 | Completed | 2026-03-18 |
 | 2. Exact-Source Repair and Update Guardrails | v16 | 2/2 | Completed | 2026-03-18 |
-| 1. Legacy Distribution Backfill and Integrity Capability Reporting | v17 | 0/2 | Planned | - |
-| 2. Installed Integrity Audit History and Local Reports | v17 | 0/2 | Planned | - |
+| 1. Legacy Distribution Backfill and Integrity Capability Reporting | v17 | 2/2 | Completed | 2026-03-19 |
+| 2. Installed Integrity Audit History and Local Reports | v17 | 2/2 | Completed | 2026-03-19 |
+| 1. Freshness Policy and Stale Verification Reporting | v18 | 2/2 | Completed | 2026-03-19 |
+| 2. History Retention and Target-Local Snapshot Artifact | v18 | 2/2 | Completed | 2026-03-19 |
+| 1. Stale-Policy Advisory Surfaces and Shared Freshness Gate | v19 | 2/2 | Completed | 2026-03-19 |
+| 2. Stale Verification Guardrails for Mutation Flows | v19 | 2/2 | Completed | 2026-03-19 |
+| 1. Never-Verified Advisory Contract and Shared Mutation Readiness | v20 | 2/2 | Completed | 2026-03-19 |
+| 2. Never-Verified Mutation Guardrails and Recovery Paths | v20 | 2/2 | Completed | 2026-03-19 |
+| 3. Deterministic Hosted E2E Verification and Final Closeout | v20 | 2/2 | Completed | 2026-03-19 |

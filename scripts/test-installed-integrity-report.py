@@ -10,6 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE_NAME = 'release-fixture'
 VERSION = '1.2.3'
+SNAPSHOT_FILENAME = '.infinitas-skill-installed-integrity.json'
 
 
 def fail(message):
@@ -40,6 +41,7 @@ def make_env(extra=None):
     env['INFINITAS_SKIP_BOOTSTRAP_TESTS'] = '1'
     env['INFINITAS_SKIP_AI_WRAPPER_TESTS'] = '1'
     env['INFINITAS_SKIP_COMPAT_PIPELINE_TESTS'] = '1'
+    env['INFINITAS_SKIP_INSTALLED_INTEGRITY_TESTS'] = '1'
     if extra:
         env.update(extra)
     return env
@@ -194,6 +196,13 @@ def expect_single_skill_report(payload):
         'integrity_capability',
         'recommended_action',
         'integrity_events',
+        'freshness_state',
+        'checked_age_seconds',
+        'last_checked_at',
+        'mutation_readiness',
+        'mutation_policy',
+        'mutation_reason_code',
+        'recovery_action',
     ]:
         if key not in item:
             fail(f'expected reported skill to include {key!r}, got {item!r}')
@@ -229,8 +238,22 @@ def scenario_report_refresh_captures_drift_and_repair_history():
             fail(f"expected initial integrity_capability 'supported', got {initial_item!r}")
         if not initial_item.get('last_verified_at'):
             fail(f'expected initial report to surface last_verified_at, got {initial_item!r}')
+        if initial_item.get('freshness_state') != 'fresh':
+            fail(f"expected initial freshness_state 'fresh', got {initial_item!r}")
+        if not isinstance(initial_item.get('checked_age_seconds'), int) or initial_item.get('checked_age_seconds') < 0:
+            fail(f'expected initial checked_age_seconds integer, got {initial_item!r}')
+        if not isinstance(initial_item.get('last_checked_at'), str) or not initial_item.get('last_checked_at'):
+            fail(f'expected initial report to surface last_checked_at, got {initial_item!r}')
         if initial_item.get('recommended_action') != 'none':
             fail(f"expected initial recommended_action 'none', got {initial_item!r}")
+        if initial_item.get('mutation_readiness') != 'ready':
+            fail(f"expected initial mutation_readiness 'ready', got {initial_item!r}")
+        if initial_item.get('mutation_policy') is not None:
+            fail(f'expected initial mutation_policy null, got {initial_item!r}')
+        if initial_item.get('mutation_reason_code') is not None:
+            fail(f'expected initial mutation_reason_code null, got {initial_item!r}')
+        if initial_item.get('recovery_action') != 'none':
+            fail(f"expected initial recovery_action 'none', got {initial_item!r}")
         initial_events = initial_item.get('integrity_events') or []
         if not initial_events:
             fail(f'expected install report to surface at least one integrity event, got {initial_item!r}')
@@ -245,8 +268,21 @@ def scenario_report_refresh_captures_drift_and_repair_history():
         drift_item = expect_single_skill_report(drift_report)
         if (drift_item.get('integrity') or {}).get('state') != 'drifted':
             fail(f"expected refresh report integrity.state 'drifted', got {drift_item!r}")
+        if drift_item.get('freshness_state') != 'fresh':
+            fail(f"expected drift refresh freshness_state 'fresh', got {drift_item!r}")
         if drift_item.get('recommended_action') != 'repair':
             fail(f"expected drifted recommended_action 'repair', got {drift_item!r}")
+        if drift_item.get('mutation_readiness') != 'blocked':
+            fail(f"expected drifted mutation_readiness 'blocked', got {drift_item!r}")
+        if drift_item.get('mutation_policy') is not None:
+            fail(f'expected drifted mutation_policy null, got {drift_item!r}')
+        if drift_item.get('mutation_reason_code') != 'drifted-installed-skill':
+            fail(f"expected drifted mutation_reason_code 'drifted-installed-skill', got {drift_item!r}")
+        if drift_item.get('recovery_action') != 'repair':
+            fail(f"expected drifted recovery_action 'repair', got {drift_item!r}")
+        snapshot_path = target_dir / SNAPSHOT_FILENAME
+        if not snapshot_path.exists():
+            fail(f'expected refresh report to write installed integrity snapshot {snapshot_path}')
         drift_events = drift_item.get('integrity_events') or []
         if len(drift_events) <= len(initial_events):
             fail(f'expected refresh to append integrity event history, got {drift_item!r}')
@@ -274,8 +310,18 @@ def scenario_report_refresh_captures_drift_and_repair_history():
         repaired_item = expect_single_skill_report(repaired_report)
         if (repaired_item.get('integrity') or {}).get('state') != 'verified':
             fail(f"expected repaired report integrity.state 'verified', got {repaired_item!r}")
+        if repaired_item.get('freshness_state') != 'fresh':
+            fail(f"expected repaired freshness_state 'fresh', got {repaired_item!r}")
         if repaired_item.get('recommended_action') != 'none':
             fail(f"expected repaired recommended_action 'none', got {repaired_item!r}")
+        if repaired_item.get('mutation_readiness') != 'ready':
+            fail(f"expected repaired mutation_readiness 'ready', got {repaired_item!r}")
+        if repaired_item.get('mutation_policy') is not None:
+            fail(f'expected repaired mutation_policy null, got {repaired_item!r}')
+        if repaired_item.get('mutation_reason_code') is not None:
+            fail(f'expected repaired mutation_reason_code null, got {repaired_item!r}')
+        if repaired_item.get('recovery_action') != 'none':
+            fail(f"expected repaired recovery_action 'none', got {repaired_item!r}")
         repaired_events = repaired_item.get('integrity_events') or []
         if len(repaired_events) <= len(drift_events):
             fail(f'expected repaired refresh to append a later integrity event, got {repaired_item!r}')

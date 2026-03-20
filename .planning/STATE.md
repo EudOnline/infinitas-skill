@@ -5,20 +5,20 @@
 See: `.planning/PROJECT.md` (updated 2026-03-19)
 
 **Core value:** Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
-**Current focus:** v17 planning after closing out v16 on `main`, with scope kept tight around installed-integrity reporting and legacy immutable-artifact backfill.
+**Current focus:** v20 is implemented on `codex/v17-installed-reporting`; the remaining operational step is fresh verification evidence plus merge-back to `main`, not another new milestone.
 
 ## Current Position
 
-Phase: v17 Phase 1 planning
-Plan: `docs/plans/2026-03-19-installed-integrity-reporting-and-legacy-backfill.md`
-Status: v16 is completed and merged on `main`; v17 planning is starting on `main`
-Last activity: 2026-03-19 — Closed the v16 planning docs on `main` and started the next installed-integrity planning slice around legacy backfill plus local reporting
-Progress: [##--------] 20%
+Phase: v20 closeout complete, merge prep
+Plan: `docs/plans/2026-03-19-never-verified-policy-and-project-closeout.md`
+Status: v20 closeout work is implemented on `codex/v17-installed-reporting`, including `never_verified_policy`, shared mutation readiness, mutation guardrails, deterministic CI hosted e2e enforcement, and the final project closeout checklist
+Last activity: 2026-03-19 — Completed the v20 closeout implementation and synchronized planning plus operator docs on `codex/v17-installed-reporting`
+Progress: [##########] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 67
+- Total plans completed: 85
 - Average duration: n/a
 - Total execution time: n/a
 
@@ -31,10 +31,14 @@ Progress: [##--------] 20%
 - v14: 4 plans completed across 2 phases
 - v15: 4 plans completed across 2 phases
 - v16: 4 plans completed across 2 phases
+- v17: 4 plans completed across 2 phases
+- v18: 4 plans completed across 2 phases
+- v19: 4 plans completed across 2 phases
+- v20: 6 plans completed across 3 phases
 
 **Recent Trend:**
-- Last 5 plans: 2026-03-17-registry-snapshot-mirroring-and-offline-resolution, 2026-03-17-platform-native-review-evidence-and-reviewer-rotation, 2026-03-17-supply-chain-transparency-and-reproducible-release-metadata, 2026-03-18-installed-skill-integrity-and-repair, 2026-03-19-installed-integrity-reporting-and-legacy-backfill
-- Trend: v16 is now complete on `main`; the next value line stays close to installed-runtime trust by reducing legacy `unknown` outcomes and adding a stable local report surface
+- Last 5 plans: 2026-03-18-installed-skill-integrity-and-repair, 2026-03-19-installed-integrity-reporting-and-legacy-backfill, 2026-03-19-installed-integrity-freshness-and-history-retention, 2026-03-19-installed-integrity-stale-verification-guardrails, 2026-03-19-never-verified-policy-and-project-closeout
+- Trend: the closeout milestone is now implemented; remaining work shifts from feature delivery to verification evidence, branch integration, and deciding whether a post-closeout roadmap is needed
 
 ## Accumulated Context
 
@@ -76,26 +80,34 @@ Decisions are logged in `PROJECT.md`.
 - 2026-03-18: Keep install-time compatibility additive for older hosted manifests by degrading missing signed `file_manifest` metadata to `integrity.state = unknown` while preserving strict explicit verification.
 - 2026-03-19: Start v17 by targeting the two remaining post-v16 gaps that most affect installed-runtime trust: legacy immutable artifacts that cannot yet verify fully, and the absence of one stable local installed-integrity report surface.
 - 2026-03-19: Prefer deterministic backfill from committed provenance plus bundle artifacts over introducing special-case trust exceptions for older immutable releases.
+- 2026-03-19: Complete v17 on `codex/v17-installed-reporting` with deterministic legacy manifest backfill, release-surface integrity capability summaries, and target-local installed-integrity reporting plus additive event history.
+- 2026-03-19: Keep the next milestone local and maintenance-focused by adding explicit freshness classification before considering any broader fleet or hosted runtime service.
+- 2026-03-19: Keep current trust summary inline in the install manifest, but plan for sidecar spillover when integrity event volume grows.
+- 2026-03-19: Complete v18 on `codex/v17-installed-reporting` with repo-managed freshness policy, freshness-aware report/list surfaces, bounded inline integrity history, and target-local sidecar snapshot export.
+- 2026-03-19: Draft v19 on `codex/v17-installed-reporting` so stale-but-clean installed copies can participate in policy-governed overwrite guardrails without introducing auto-refresh or hosted runtime state.
+- 2026-03-19: Complete v19 on `codex/v17-installed-reporting` with shared stale-policy evaluation, read-only advisory surfaces, mutation guardrails, docs, and full verification.
+- 2026-03-19: Propose v20 as a closeout milestone focused on `never-verified` policy, deterministic hosted-registry e2e coverage, and final project completion gates.
+- 2026-03-19: Complete v20 on `codex/v17-installed-reporting` with `freshness.never_verified_policy`, shared mutation-readiness reporting, never-verified mutation guardrails, deterministic CI hosted e2e enforcement, and `docs/project-closeout.md`.
+- 2026-03-19: Keep hosted-registry e2e compatibility explicit: CI installs `python3 -m pip install .` and requires the hosted dependency set, while minimal local environments may still skip until those dependencies are installed explicitly.
 
 ### Pending Todos
 
-- Execute the dedicated v17 Phase 1/2 plan for legacy immutable-artifact backfill and installed-integrity local reporting.
-- Decide whether local installed-integrity audit history should live entirely inside the install manifest or spill into a sibling report artifact when event volume grows.
-- Decide whether repository-generated discovery surfaces should expose integrity capability only as a boolean or with a richer reason field.
-- Keep future work beyond v17 constrained unless the installed-integrity reporting surface exposes a stronger dependency.
+- Merge `codex/v17-installed-reporting` back to `main` with fresh v20 verification evidence.
+- Decide whether to accept the documented residual compatibility quirks as-is or schedule a follow-up cleanup milestone after merge.
+- Choose the post-closeout roadmap direction, if any, only after the merge lands cleanly on `main`.
 
 ### Blockers/Concerns
 
 - `config/allowed_signers` now contains a committed `lvxiaoer` trusted signer entry.
 - `operate-infinitas-skill` already has a signed pushed stable tag plus verified provenance.
-- Some older hosted distribution manifests still lack signed `file_manifest` metadata, so compatible installs may persist `integrity.state = unknown` until those immutable artifacts are regenerated or backfilled.
-- There is still no dedicated local report command that summarizes installed-skill integrity state, capability, and recent repair or verification history without scraping raw manifest JSON.
-- Full hosted-registry e2e remains environment-sensitive and is still skipped when `fastapi`, `httpx`, `jinja2`, or `sqlalchemy` are unavailable in the current Python environment.
+- Some older hosted distribution manifests may still remain compatibility-only `unknown` when immutable evidence is incomplete; v17 backfill improves but cannot invent missing provenance.
+- Full hosted-registry e2e remains environment-sensitive in minimal local Python environments and still skips unless `fastapi`, `httpx`, `jinja2`, `sqlalchemy`, and `uvicorn` are installed; CI now installs them deterministically via `python3 -m pip install .` and requires the check.
+- Legacy installed-integrity reports may classify freshness from `integrity.last_verified_at` while leaving top-level `last_checked_at = null` until an explicit refresh rewrites the canonical field; this remains compatibility-safe but should stay documented.
 - The repository still installs skills by bare folder name for backward compatibility; any future multi-publisher same-slug work should stay compatibility-aware.
 - The project should stay Git-native and private-first; public marketplace features, social features, and on-chain reputation remain intentionally deferred.
 
 ## Session Continuity
 
-Last session: 2026-03-19 18:05 GMT+8
-Stopped at: v16 fully closed out and the next milestone shape selected
-Resume file: `docs/plans/2026-03-19-installed-integrity-reporting-and-legacy-backfill.md`
+Last session: 2026-03-19 16:05 GMT+8
+Stopped at: v20 closeout implementation complete on `codex/v17-installed-reporting`; next step is fresh verification and merge-back to `main`
+Resume file: `docs/project-closeout.md`

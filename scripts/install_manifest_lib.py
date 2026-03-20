@@ -82,6 +82,8 @@ def _normalize_install_entry(value):
     normalized['integrity_capability'] = capability_fields.get('integrity_capability')
     normalized['integrity_reason'] = capability_fields.get('integrity_reason')
     normalized['integrity_events'] = normalize_integrity_events(value.get('integrity_events'))
+    last_checked_at = value.get('last_checked_at')
+    normalized['last_checked_at'] = last_checked_at if isinstance(last_checked_at, str) and last_checked_at else None
     return normalized
 
 

@@ -147,12 +147,44 @@ Requirements committed for milestone `v16`. Both phases are complete on `main`.
 
 ## v17 Requirements
 
-Requirements committed for milestone `v17`. Planning starts with legacy immutable artifact backfill and installed-integrity local reporting.
+Requirements committed for milestone `v17`. Both phases are complete on `codex/v17-installed-reporting`.
 
 ### Installed Integrity Auditability
 
-- [ ] **INST-03**: Repository can regenerate or backfill legacy immutable distribution manifests with signed released-file inventory and reproducibility metadata when the corresponding signed provenance and bundle artifacts already exist.
-- [ ] **INST-04**: Repository can persist and report installed-skill integrity capability, latest verification outcome, and additive local audit history through a stable local reporting surface without relying on a hosted control plane.
+- [x] **INST-03**: Repository can regenerate or backfill legacy immutable distribution manifests with signed released-file inventory and reproducibility metadata when the corresponding signed provenance and bundle artifacts already exist.
+- [x] **INST-04**: Repository can persist and report installed-skill integrity capability, latest verification outcome, and additive local audit history through a stable local reporting surface without relying on a hosted control plane.
+
+## v18 Requirements
+
+Requirements committed for milestone `v18`. Both phases are complete on `codex/v17-installed-reporting`.
+
+### Installed Integrity Lifecycle Hygiene
+
+- [x] **INST-05**: Repository can classify target-local installed-integrity results as `fresh`, `stale`, or `never-verified` according to a validated freshness policy and surface that classification through local report or list flows without changing immutable release trust rules.
+- [x] **INST-06**: Repository can retain bounded inline integrity history in `.infinitas-skill-install-manifest.json` while writing a stable target-local sidecar snapshot/history artifact when event volume grows, without breaking compatibility for older targets.
+
+## v19 Requirements
+
+Requirements committed for milestone `v19`. Planning starts with stale verification guardrails for overwrite-style installed-skill mutation flows.
+
+### Installed Integrity Mutation Safety
+
+- [x] **INST-07**: Repository can define a validated stale-policy contract for stale-but-clean installed-integrity results and surface that policy through read-only update or explain flows without changing immutable release trust rules or background-refresh behavior.
+- [x] **INST-08**: Overwrite-style installed-skill mutation commands can honor the configured stale-policy for stale-but-clean installs, while preserving current drift blocks, explicit `--force` override behavior, and target-local explicit refresh as the recovery path.
+
+## v20 Requirements
+
+Requirements committed for milestone `v20`. All closeout requirements are complete on `codex/v17-installed-reporting`; the remaining operational step is merging the verified branch back to `main`.
+
+### Installed Integrity Completion
+
+- [x] **INST-09**: Repository can define a validated `never_verified_policy` for `never-verified` installed-integrity results and surface one normalized mutation-readiness contract through local report, update, and explain flows without changing immutable release trust rules or background-refresh behavior.
+- [x] **INST-10**: Overwrite-style installed-skill mutation commands can honor the configured `never_verified_policy` for `never-verified` installs, while preserving existing drift-first and stale-second precedence, explicit `--force` override behavior, and target-local explicit recovery paths.
+
+### Final Verification and Closeout
+
+- [x] **OPS-03**: Repository CI can run the full supported hosted-registry verification path deterministically instead of routinely skipping hosted-registry e2e due to missing optional dependencies.
+- [x] **OPS-04**: Maintainers can follow one stable closeout checklist that defines the final verification matrix, merge gates, and criteria for declaring the project complete.
 
 ## Out of Scope
 
@@ -217,8 +249,16 @@ Requirements committed for milestone `v17`. Planning starts with legacy immutabl
 | ATT-05 | v15 Phase 1 | Complete |
 | INST-01 | v16 Phase 1 | Complete |
 | INST-02 | v16 Phase 2 | Complete |
-| INST-03 | v17 Phase 1 | Planned |
-| INST-04 | v17 Phase 2 | Planned |
+| INST-03 | v17 Phase 1 | Complete |
+| INST-04 | v17 Phase 2 | Complete |
+| INST-05 | v18 Phase 1 | Complete |
+| INST-06 | v18 Phase 2 | Complete |
+| INST-07 | v19 Phase 1 | Complete |
+| INST-08 | v19 Phase 2 | Complete |
+| INST-09 | v20 Phase 1 | Complete |
+| INST-10 | v20 Phase 2 | Complete |
+| OPS-03 | v20 Phase 3 | Complete |
+| OPS-04 | v20 Phase 3 | Complete |
 
 **Coverage:**
 - v9 requirements: 12 total
@@ -248,7 +288,16 @@ Requirements committed for milestone `v17`. Planning starts with legacy immutabl
 - v17 requirements: 2 total
 - Mapped to phases: 2
 - Unmapped: 0 ✓
+- v18 requirements: 2 total
+- Mapped to phases: 2
+- Unmapped: 0 ✓
+- v19 requirements: 2 total
+- Mapped to phases: 2
+- Unmapped: 0 ✓
+- v20 requirements: 4 total
+- Mapped to phases: 4
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-19 after starting v17 planning for installed-integrity reporting and legacy backfill*
+*Last updated: 2026-03-19 after completing the v20 closeout milestone on `codex/v17-installed-reporting`*

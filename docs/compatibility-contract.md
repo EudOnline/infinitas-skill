@@ -35,7 +35,9 @@ Current rule set:
 | --- | --- | --- |
 | `_meta.json` core required fields | stable contract | scripts and catalogs depend on these fields today |
 | `_meta.json` optional extension fields | soft contract | additive changes are preferred |
-| install manifest `skills`, `history`, `locked_version`, `source_*`, `integrity`, `integrity_capability`, `integrity_reason`, `integrity_events` | stable contract | install, sync, rollback, dependency planning, `report-installed-integrity.py`, and installed-integrity status surfaces read these keys |
+| install manifest `skills`, `history`, `locked_version`, `source_*`, `integrity`, `integrity_capability`, `integrity_reason`, `integrity_events`, `last_checked_at` | stable contract | install, sync, rollback, dependency planning, `report-installed-integrity.py`, and installed-integrity status surfaces read these keys |
+| `config/install-integrity-policy.json` freshness controls such as `freshness.stale_after_hours`, `freshness.stale_policy`, and `freshness.never_verified_policy` | soft contract | repo-managed command behavior for target-local freshness guardrails; additive modes should prefer compatibility-safe defaults |
+| target-local `.infinitas-skill-installed-integrity.json` snapshot/history artifact | soft contract | additive snapshot layer for current report state plus `archived_integrity_events`; missing file must be tolerated |
 | archived snapshot exact-version resolution | stable contract | historical installs and lineage depend on this |
 | `catalog/compatibility.json` structure | soft contract | generated view, useful to consumers, but not the only source of truth |
 | internal helper implementation details in `scripts/*.py` | internal detail | refactor freely if behavior stays compatible |
@@ -81,6 +83,7 @@ The standard repository verification path should run `scripts/test-compat-regres
 - legacy install manifest without `schema_version` still loads
 - legacy install manifest without `integrity` still loads and defaults to `integrity.state = unknown`
 - legacy install manifest without `integrity_capability`, `integrity_reason`, or `integrity_events` still loads and normalizes additively
+- missing `.infinitas-skill-installed-integrity.json` sidecar still allows current report surfaces to load from inline manifest state
 - `locked_version` still prevents unsafe upgrade plans
 - archived exact-version snapshots still resolve for historical installs
 - legacy bare skill names still resolve unless a strict mode explicitly disables them
@@ -90,14 +93,22 @@ The standard repository verification path should run `scripts/test-compat-regres
 The install manifest's installed-integrity surface now has two layers:
 
 - nested `integrity` summary for current status counters and file drift details
-- additive top-level `integrity_capability`, `integrity_reason`, and `integrity_events` for compatibility-safe trust and audit metadata
+- additive top-level `integrity_capability`, `integrity_reason`, `integrity_events`, and `last_checked_at` for compatibility-safe trust and audit metadata
+- optional target-local `.infinitas-skill-installed-integrity.json` snapshot/history artifact for current report state plus `archived_integrity_events`
 
 Compatibility rule:
 
-- older manifests may omit `integrity_capability`, `integrity_reason`, and `integrity_events`
-- readers must normalize those omissions to `unknown`, `null`, and `[]`
+- older manifests may omit `integrity_capability`, `integrity_reason`, `integrity_events`, and `last_checked_at`
+- readers must normalize those omissions to `unknown`, `null`, `[]`, and `null`
 - current writers should emit the canonical expanded shape
 - `report-installed-integrity.py` may append new `integrity_events`, but it must not break manifests that predate those fields
+- missing target-local `.infinitas-skill-installed-integrity.json` must not break report or list surfaces
+- freshness guardrails remain config-and-behavior only; `freshness.stale_policy` and `freshness.never_verified_policy` must not imply new required install-manifest fields
+- read-only report/update surfaces may add derived fields such as `mutation_readiness`, `mutation_policy`, `mutation_reason_code`, and `recovery_action`, but readers must tolerate them being absent on older payloads
+- legacy manifests may still derive `freshness_state` and `checked_age_seconds` from `integrity.last_verified_at` while leaving top-level `last_checked_at = null` until an explicit refresh rewrites the canonical field
+- wrappers should treat the derived readiness fields as authoritative for overwrite-policy decisions on older manifests instead of assuming `last_checked_at` will always be populated
+
+Operational closeout guidance, merge gates, and the final verification matrix live in `docs/project-closeout.md`; they are workflow guidance, not a separate persisted file-format contract.
 
 ## Notes on runtime vs format compatibility
 

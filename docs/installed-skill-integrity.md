@@ -74,15 +74,45 @@ This keeps both humans and wrappers on the same contract without scraping stdout
 - `integrity_capability`
 - `integrity_reason`
 - `integrity_events`
+- `freshness_state`
+- `checked_age_seconds`
+- `last_checked_at`
 - `recommended_action`
 - top-level `last_verified_at`
+
+`freshness_state` is additive target-local interpretation, not a replacement for immutable verification:
+
+- `fresh`: the most recent local check is still within the configured freshness window
+- `stale`: the installed copy may still be clean, but the last local check is older than the configured freshness window
+- `never-verified`: the manifest does not carry enough local timing information to classify freshness yet
 
 `recommended_action` is intentionally compact:
 
 - `none` when the installed copy is still `verified`
 - `repair` when the installed copy is `drifted`
+- `refresh` when the local integrity summary is still clean but older than the configured freshness window
 - `backfill-distribution-manifest` when the recorded immutable release is legacy and still missing a signed `file_manifest`
 - `reinstall` when the install lacks enough immutable source metadata to refresh trust locally
+
+Freshness policy is repo-managed configuration, not a new persisted install-manifest requirement:
+
+```json
+{
+  "freshness": {
+    "stale_after_hours": 168,
+    "stale_policy": "warn",
+    "never_verified_policy": "warn"
+  }
+}
+```
+
+- `freshness.stale_policy`: controls stale-but-clean installs
+- `freshness.never_verified_policy`: controls installs that lack any usable local verification timestamp
+- `ignore`: keep the state additive only
+- `warn`: print the recommended recovery path before overwrite-style mutation
+- `fail`: refuse overwrite-style mutation until the recommended recovery path has re-established trust
+
+`stale_policy` applies only to stale-but-clean installs. `never_verified_policy` applies to `never-verified` installs, including legacy manifests that do not yet carry enough timing data. Refreshable installs recommend `report-installed-integrity.py <target-dir> --refresh`; compatibility-only installs without enough immutable source metadata recommend reinstall or manifest backfill instead.
 
 ## Repair Workflow
 
@@ -106,11 +136,35 @@ Mutation commands such as:
 
 - `scripts/sync-skill.sh`
 - `scripts/upgrade-skill.sh`
+- `scripts/switch-installed-skill.sh`
 - `scripts/rollback-installed-skill.sh`
 
-now stop on detected drift and point operators to `verify-installed-skill.py` or `repair-installed-skill.sh`.
+now follow one guard order before overwriting local files:
+
+1. detected `drifted` state still blocks first and points operators to `verify-installed-skill.py` or `repair-installed-skill.sh`
+2. stale-but-clean installs then consult `freshness.stale_policy`
+3. `never-verified` installs then consult `freshness.never_verified_policy`
+4. `warn` emits the matching recovery guidance and continues
+5. `fail` stops and tells the operator to refresh, repair, reinstall, or backfill first
+6. `--force` is an explicit bypass for these local overwrite guardrails
+
+This keeps immutable release verification separate from target-local freshness. A skill can still be `integrity.state = verified` while `freshness_state = stale`.
 
 Use `--force` only when you intentionally want to overwrite the local runtime copy despite detected drift.
+
+## Decision Matrix
+
+Use this matrix when you need to predict what overwrite-style mutation will do:
+
+| Local condition | Policy consulted | Default readiness | Recommended recovery |
+| --- | --- | --- | --- |
+| `integrity.state = drifted` | none, drift always wins first | `blocked` | `repair` |
+| `freshness_state = stale` and install is otherwise clean | `freshness.stale_policy` | `warning` under the default `warn` policy | `refresh` |
+| `freshness_state = never-verified` and immutable source metadata supports refresh | `freshness.never_verified_policy` | `warning` under the default `warn` policy | `refresh` |
+| `freshness_state = never-verified` and immutable source metadata is compatibility-only | `freshness.never_verified_policy` | `warning` under the default `warn` policy | `backfill-distribution-manifest` or `reinstall` |
+| explicit `--force` | bypasses local readiness guardrails | forced overwrite | use only when intentionally bypassing the target-local safety checks |
+
+`upgrade-skill.sh --mode confirm`, `check-skill-update.sh`, `report-installed-integrity.py`, and the overwrite-style mutation commands all consume the same derived readiness fields so wrappers do not need separate per-command policy logic.
 
 ## Trust Boundary
 
@@ -124,12 +178,21 @@ For hosted installs, the toolchain now persists the fetched immutable distributi
 
 If the install lacks those immutable references, the integrity state remains `unknown` until the skill is reinstalled, repaired from a verified immutable source, or the referenced legacy distribution manifest is backfilled.
 
+## Closeout Verification
+
+Repository closeout and merge readiness are documented in `docs/project-closeout.md`.
+
+- CI installs the hosted-registry dependency set with `python3 -m pip install .` and runs `scripts/check-all.sh` with `INFINITAS_REQUIRE_HOSTED_E2E_TESTS=1`.
+- Minimal local environments may still skip `scripts/test-hosted-registry-e2e.py` until that same dependency set is installed explicitly.
+- The final operator merge gate is not "all warnings disappeared"; it is that the documented verification matrix passed and the remaining compatibility quirks are understood and accepted.
+
 ## Audit History
 
 Install-manifest entries now preserve additive trust metadata alongside the nested `integrity` record:
 
 ```json
 {
+  "last_checked_at": "2026-03-19T10:05:00Z",
   "integrity_capability": "supported",
   "integrity_reason": null,
   "integrity_events": [
@@ -147,4 +210,40 @@ Install-manifest entries now preserve additive trust metadata alongside the nest
 }
 ```
 
-These fields are additive. Older manifests without `integrity_capability`, `integrity_reason`, or `integrity_events` still load, while current writers emit the canonical expanded shape.
+Current writers also keep only bounded recent `integrity_events` inline. `report-installed-integrity.py --refresh` writes or refreshes one target-local snapshot/history artifact at:
+
+```text
+.infinitas-skill-installed-integrity.json
+```
+
+That sidecar keeps the current report snapshot plus older overflow history under `archived_integrity_events`:
+
+```json
+{
+  "schema_version": 1,
+  "generated_at": "2026-03-19T10:05:00Z",
+  "target_dir": "/Users/example/.openclaw/skills",
+  "skills": [
+    {
+      "name": "demo-skill",
+      "freshness_state": "fresh",
+      "integrity_events": [
+        {
+          "at": "2026-03-19T10:04:00Z",
+          "event": "verified",
+          "source": "refresh"
+        }
+      ],
+      "archived_integrity_events": [
+        {
+          "at": "2026-03-18T10:00:00Z",
+          "event": "verified",
+          "source": "install"
+        }
+      ]
+    }
+  ]
+}
+```
+
+These fields are additive. Older manifests without `integrity_capability`, `integrity_reason`, `integrity_events`, or `last_checked_at` still load, while current writers emit the canonical expanded shape. Missing `.infinitas-skill-installed-integrity.json` is tolerated; readers fall back to inline current state only.

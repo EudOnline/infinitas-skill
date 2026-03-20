@@ -180,6 +180,23 @@ Installed runtime trust now follows the same model:
 3. stop mutation commands on drift unless the caller explicitly forces replacement
 4. prefer `repair-installed-skill.sh` over silent overwrite when the goal is to restore trust
 
+When the installed copy is still clean but the recorded local verification is stale, overwrite-style commands now consult the repo-managed installed-integrity freshness policy:
+
+- `warn` prints `python3 scripts/report-installed-integrity.py <target-dir> --refresh` guidance before continuing
+- `fail` stops until that explicit refresh is run
+- `--force` remains the deliberate bypass for local overwrite guardrails
+
+`never-verified` installs use the same target-local policy layer through `freshness.never_verified_policy`:
+
+- refreshable installs recommend `python3 scripts/report-installed-integrity.py <target-dir> --refresh`
+- legacy compatibility-only installs without enough immutable source metadata recommend reinstall or distribution-manifest backfill first
+- `warn` surfaces that recovery path before continuing
+- `fail` blocks overwrite-style mutation until the recovery path re-establishes trust
+
+Drift still blocks first, before stale or never-verified freshness rules are consulted.
+
+This freshness policy is target-local behavior. It does not change the immutable distribution-manifest contract or require new persisted install-manifest fields.
+
 ## Historical rollback
 
 Rollback history now keeps enough source metadata to re-resolve a previously installed version from the matching distribution manifest.

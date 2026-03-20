@@ -142,6 +142,23 @@ def main():
             fail(f'expected report integrity_reason to default to null, got {item!r}')
         if item.get('integrity_events') != []:
             fail(f'expected report integrity_events to default to [], got {item!r}')
+        if item.get('freshness_state') != 'never-verified':
+            fail(f"expected report freshness_state 'never-verified' for legacy manifest, got {item!r}")
+        if item.get('checked_age_seconds') is not None:
+            fail(f'expected report checked_age_seconds null for legacy manifest, got {item!r}')
+        if item.get('last_checked_at') is not None:
+            fail(f'expected report last_checked_at null for legacy manifest, got {item!r}')
+        for key in ['mutation_readiness', 'mutation_policy', 'mutation_reason_code', 'recovery_action']:
+            if key not in item:
+                fail(f'expected legacy report to include {key!r}, got {item!r}')
+        if item.get('mutation_readiness') != 'warning':
+            fail(f"expected legacy report mutation_readiness 'warning', got {item!r}")
+        if item.get('mutation_policy') != 'warn':
+            fail(f"expected legacy report mutation_policy 'warn', got {item!r}")
+        if item.get('mutation_reason_code') != 'never-verified-installed-integrity':
+            fail(f"expected legacy report mutation_reason_code 'never-verified-installed-integrity', got {item!r}")
+        if item.get('recovery_action') != 'reinstall':
+            fail(f"expected legacy report recovery_action 'reinstall', got {item!r}")
         if not isinstance(item.get('recommended_action'), str) or not item.get('recommended_action'):
             fail(f'expected legacy report recommended_action to be non-empty, got {item!r}')
 
@@ -173,6 +190,8 @@ def main():
             fail(f"expected rewritten manifest integrity_capability 'unknown', got {current.get('integrity_capability')!r}")
         if current.get('integrity_reason') is not None:
             fail(f"expected rewritten manifest integrity_reason null, got {current.get('integrity_reason')!r}")
+        if not isinstance(current.get('last_checked_at'), str) or not current.get('last_checked_at'):
+            fail(f'expected rewritten manifest last_checked_at string, got {current!r}')
         events = current.get('integrity_events')
         if not isinstance(events, list):
             fail(f'expected rewritten manifest integrity_events list, got {current!r}')

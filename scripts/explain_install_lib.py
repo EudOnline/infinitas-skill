@@ -249,7 +249,21 @@ def build_update_explanation(info, payload):
         selection_reason = 'the installed version already matches the newest released version'
     version_reason = f'installed version {installed}; latest available version {latest or installed or "unknown"}'
     reasons = ['update checks stay pinned to the installed source registry']
+    if payload.get('mutation_reason_code') == 'drifted-installed-skill':
+        reasons.append('local installed files have drifted from the recorded immutable release, so repair is required before overwrite-style mutation')
+    elif payload.get('freshness_state') == 'stale':
+        reasons.append('local installed-integrity freshness is stale, so refresh is recommended before overwrite-style mutation')
+    elif payload.get('mutation_reason_code') == 'never-verified-installed-integrity':
+        recovery_action = payload.get('recovery_action')
+        if recovery_action == 'refresh':
+            reasons.append('local installed-integrity is never-verified for this copy, so refresh is recommended before overwrite-style mutation')
+        elif recovery_action == 'backfill-distribution-manifest':
+            reasons.append('local installed-integrity is never-verified and the release is missing a signed distribution manifest, so backfill is required before overwrite-style mutation')
+        else:
+            reasons.append('local installed-integrity is never-verified for this copy, so reinstall is recommended before overwrite-style mutation')
     next_actions = _dedupe_strings([payload.get('next_step')])
+    if isinstance(payload.get('freshness_warning'), str) and payload.get('freshness_warning').strip():
+        next_actions.append(payload.get('freshness_warning'))
     return {
         'selection_reason': selection_reason,
         'registry_used': _coalesce_string(payload.get('source_registry'), info.get('source_registry')),
@@ -267,21 +281,53 @@ def build_upgrade_explanation(info, payload):
     from_version = _coalesce_string(payload.get('from_version'), info.get('installed_version'))
     to_version = _coalesce_string(payload.get('to_version'), from_version)
     reasons = ['cross-source upgrades are blocked to preserve source provenance']
+    recovery_action = payload.get('recovery_action')
 
     if payload.get('error_code') == 'cross-source-upgrade-not-allowed':
         selection_reason = 'blocked the requested registry override for the installed skill'
+    elif payload.get('error_code') == 'stale-installed-integrity':
+        selection_reason = 'blocked the requested upgrade because the recorded local verification is stale'
+        reasons.append('refresh local installed-integrity before planning or applying an overwrite-style upgrade')
+    elif payload.get('error_code') == 'never-verified-installed-integrity':
+        selection_reason = 'blocked the requested upgrade because the installed copy is still never-verified'
+        if recovery_action == 'refresh':
+            reasons.append('refresh local installed-integrity before planning or applying an overwrite-style upgrade because the installed copy is never-verified')
+        elif recovery_action == 'backfill-distribution-manifest':
+            reasons.append('backfill the signed distribution manifest before planning or applying an overwrite-style upgrade because the installed copy is never-verified')
+        else:
+            reasons.append('reinstall the skill from a trusted immutable source before planning or applying an overwrite-style upgrade because the installed copy is never-verified')
     elif state == 'planned':
         selection_reason = 'prepared a same-registry upgrade plan without materializing files'
         reasons.append('confirm mode previews the upgrade path before switching installed files')
+        if payload.get('freshness_state') == 'stale':
+            reasons.append('the installed copy is stale, so refresh is recommended before applying the upgrade')
+        elif payload.get('mutation_reason_code') == 'never-verified-installed-integrity':
+            if recovery_action == 'refresh':
+                reasons.append('the installed copy is never-verified, so refresh is recommended before applying the upgrade')
+            elif recovery_action == 'backfill-distribution-manifest':
+                reasons.append('the installed copy is never-verified and still needs signed distribution manifest support before applying the upgrade')
+            else:
+                reasons.append('the installed copy is never-verified, so reinstall is recommended before applying the upgrade')
     elif state == 'installed':
         selection_reason = 'upgraded the installed skill in place from the same registry'
     elif state == 'up-to-date':
         selection_reason = 'no upgrade was needed because the installed version is already current'
+        if payload.get('mutation_reason_code') == 'stale-installed-integrity':
+            reasons.append('no files would be overwritten for this request, but the recorded local verification is stale')
+        elif payload.get('mutation_reason_code') == 'never-verified-installed-integrity':
+            if recovery_action == 'refresh':
+                reasons.append('no files would be overwritten for this request, but refresh is still recommended because the installed copy is never-verified')
+            elif recovery_action == 'backfill-distribution-manifest':
+                reasons.append('no files would be overwritten for this request, but backfill is still recommended because the installed copy is never-verified')
+            else:
+                reasons.append('no files would be overwritten for this request, but reinstall is still recommended because the installed copy is never-verified')
     else:
         selection_reason = 'evaluated the upgrade request against the installed registry source'
 
     version_reason = f'upgrade path is {from_version or "unknown"} -> {to_version or "unknown"}'
     next_actions = _dedupe_strings([payload.get('next_step')])
+    if isinstance(payload.get('freshness_warning'), str) and payload.get('freshness_warning').strip():
+        next_actions.append(payload.get('freshness_warning'))
     return {
         'selection_reason': selection_reason,
         'registry_used': _coalesce_string(payload.get('source_registry'), info.get('source_registry')),

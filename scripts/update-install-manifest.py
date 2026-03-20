@@ -6,7 +6,9 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from install_integrity_policy_lib import load_install_integrity_policy
 from installed_integrity_lib import append_integrity_event, build_install_integrity_snapshot, normalize_integrity_events
+from installed_integrity_lib import apply_integrity_history_retention, installed_integrity_snapshot_path, write_installed_integrity_snapshot
 from install_manifest_lib import load_install_manifest, write_install_manifest
 from skill_identity_lib import normalize_skill_identity
 
@@ -181,5 +183,20 @@ manifest_entry['integrity_events'] = append_integrity_event(
     reason=manifest_entry.get('integrity_reason'),
 )
 manifest['skills'][name] = manifest_entry
+policy = load_install_integrity_policy(repo_root)
+manifest, archived_by_name = apply_integrity_history_retention(
+    manifest,
+    target_dir=target_dir,
+    policy=policy,
+)
 manifest_path = write_install_manifest(target_dir, manifest, repo=repo_url)
+snapshot_path = installed_integrity_snapshot_path(target_dir)
+if snapshot_path.exists() or any(archived_by_name.get(skill_name) for skill_name in archived_by_name):
+    write_installed_integrity_snapshot(
+        target_dir,
+        manifest,
+        policy=policy,
+        archived_by_name=archived_by_name,
+        generated_at=manifest['updated_at'],
+    )
 print(f'updated manifest: {manifest_path}')

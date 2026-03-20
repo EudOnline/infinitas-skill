@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://infinitas-skill.local/schemas/installed-integrity-snapshot.schema.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at",
+    "target_dir",
+    "policy",
+    "skill_count",
+    "skills"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "target_dir": {
+      "type": "string"
+    },
+    "policy": {
+      "type": "object"
+    },
+    "skill_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "qualified_name",
+          "installed_version",
+          "integrity",
+          "integrity_capability",
+          "integrity_reason",
+          "last_verified_at",
+          "freshness_state",
+          "checked_age_seconds",
+          "last_checked_at",
+          "recommended_action",
+          "integrity_events",
+          "archived_integrity_events"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "archived_integrity_events": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  }
+}

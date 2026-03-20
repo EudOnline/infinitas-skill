@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -37,6 +38,10 @@ def write_json(path: Path, payload):
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
 
+def iso_hours_ago(hours: int):
+    return (datetime.now(timezone.utc) - timedelta(hours=hours)).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
+
+
 def make_env(extra=None):
     env = os.environ.copy()
     env['INFINITAS_SKIP_RELEASE_TESTS'] = '1'
@@ -45,6 +50,7 @@ def make_env(extra=None):
     env['INFINITAS_SKIP_BOOTSTRAP_TESTS'] = '1'
     env['INFINITAS_SKIP_AI_WRAPPER_TESTS'] = '1'
     env['INFINITAS_SKIP_COMPAT_PIPELINE_TESTS'] = '1'
+    env['INFINITAS_SKIP_INSTALLED_INTEGRITY_TESTS'] = '1'
     if extra:
         env.update(extra)
     return env
@@ -261,6 +267,69 @@ def release_current(repo: Path):
     )
 
 
+def read_install_manifest(target_dir: Path):
+    manifest = target_dir / '.infinitas-skill-install-manifest.json'
+    if not manifest.exists():
+        fail(f'missing install manifest {manifest}')
+    return json.loads(manifest.read_text(encoding='utf-8'))
+
+
+def write_install_manifest(target_dir: Path, payload):
+    write_json(target_dir / '.infinitas-skill-install-manifest.json', payload)
+
+
+def write_install_integrity_policy(
+    repo: Path,
+    *,
+    stale_policy: str,
+    never_verified_policy: str | None = None,
+    stale_after_hours: int = 24,
+    max_inline_events: int = 20,
+):
+    freshness = {
+        'stale_after_hours': stale_after_hours,
+        'stale_policy': stale_policy,
+    }
+    if never_verified_policy is not None:
+        freshness['never_verified_policy'] = never_verified_policy
+    write_json(
+        repo / 'config' / 'install-integrity-policy.json',
+        {
+            '$schema': '../schemas/install-integrity-policy.schema.json',
+            'schema_version': 1,
+            'freshness': freshness,
+            'history': {
+                'max_inline_events': max_inline_events,
+            },
+        },
+    )
+
+
+def mark_install_stale(target_dir: Path, name: str, *, hours_ago: int = 72):
+    payload = read_install_manifest(target_dir)
+    current = ((payload.get('skills') or {}).get(name) or {})
+    stale_at = iso_hours_ago(hours_ago)
+    current['last_checked_at'] = stale_at
+    integrity = dict(current.get('integrity') or {})
+    integrity['state'] = 'verified'
+    integrity['last_verified_at'] = stale_at
+    current['integrity'] = integrity
+    payload['skills'][name] = current
+    write_install_manifest(target_dir, payload)
+
+
+def mark_install_never_verified(target_dir: Path, name: str):
+    payload = read_install_manifest(target_dir)
+    current = ((payload.get('skills') or {}).get(name) or {})
+    current.pop('last_checked_at', None)
+    integrity = dict(current.get('integrity') or {})
+    integrity['state'] = 'verified'
+    integrity.pop('last_verified_at', None)
+    current['integrity'] = integrity
+    payload['skills'][name] = current
+    write_install_manifest(target_dir, payload)
+
+
 def assert_explanation(payload, *, registry_name, requires_confirmation, expected_version):
     explanation = payload.get('explanation')
     if not isinstance(explanation, dict):
@@ -280,6 +349,17 @@ def assert_explanation(payload, *, registry_name, requires_confirmation, expecte
         fail(f"expected next_actions list, got {explanation.get('next_actions')!r}")
 
 
+def assert_mutation_fields(payload, *, readiness, policy, reason_code, recovery_action):
+    if payload.get('mutation_readiness') != readiness:
+        fail(f"expected mutation_readiness {readiness!r}, got {payload!r}")
+    if payload.get('mutation_policy') != policy:
+        fail(f"expected mutation_policy {policy!r}, got {payload!r}")
+    if payload.get('mutation_reason_code') != reason_code:
+        fail(f"expected mutation_reason_code {reason_code!r}, got {payload!r}")
+    if payload.get('recovery_action') != recovery_action:
+        fail(f"expected recovery_action {recovery_action!r}, got {payload!r}")
+
+
 def main():
     tmpdir, repo = prepare_repo()
     try:
@@ -288,6 +368,17 @@ def main():
 
         target_dir = tmpdir / 'installed'
         run([str(repo / 'scripts' / 'install-by-name.sh'), FIXTURE_NAME, str(target_dir), '--version', V1], cwd=repo)
+
+        no_upgrade_plan_payload = json.loads(
+            run([str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_dir), '--mode', 'confirm'], cwd=repo).stdout
+        )
+        if no_upgrade_plan_payload.get('state') != 'up-to-date':
+            fail(f"expected confirm no-op state 'up-to-date', got {no_upgrade_plan_payload!r}")
+        if no_upgrade_plan_payload.get('to_version') != V1:
+            fail(f"expected confirm no-op to_version {V1!r}, got {no_upgrade_plan_payload!r}")
+        if no_upgrade_plan_payload.get('next_step') != 'use-installed-skill':
+            fail(f"expected confirm no-op next_step 'use-installed-skill', got {no_upgrade_plan_payload!r}")
+        assert_mutation_fields(no_upgrade_plan_payload, readiness='ready', policy=None, reason_code=None, recovery_action='none')
 
         commit_fixture_version(repo, V2)
         release_current(repo)
@@ -302,9 +393,148 @@ def main():
             run([str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_dir), '--mode', 'confirm'], cwd=repo).stdout
         )
         assert_explanation(plan_payload, registry_name='self', requires_confirmation=False, expected_version=V2)
+        assert_mutation_fields(plan_payload, readiness='ready', policy=None, reason_code=None, recovery_action='none')
         plan_policy_reasons = ((plan_payload.get('explanation') or {}).get('policy_reasons') or [])
         if not plan_policy_reasons:
             fail('expected policy_reasons in confirm upgrade plan')
+
+        write_install_integrity_policy(repo, stale_policy='fail')
+        mark_install_stale(target_dir, FIXTURE_NAME)
+        stale_no_upgrade_payload = json.loads(
+            run(
+                [
+                    str(repo / 'scripts' / 'upgrade-skill.sh'),
+                    FIXTURE_NAME,
+                    str(target_dir),
+                    '--mode',
+                    'confirm',
+                    '--to-version',
+                    V1,
+                ],
+                cwd=repo,
+            ).stdout
+        )
+        if stale_no_upgrade_payload.get('state') != 'up-to-date':
+            fail(f"expected stale confirm no-op state 'up-to-date', got {stale_no_upgrade_payload!r}")
+        if stale_no_upgrade_payload.get('freshness_state') != 'stale':
+            fail(f"expected stale confirm no-op freshness_state 'stale', got {stale_no_upgrade_payload!r}")
+        assert_mutation_fields(
+            stale_no_upgrade_payload,
+            readiness='blocked',
+            policy='fail',
+            reason_code='stale-installed-integrity',
+            recovery_action='refresh',
+        )
+
+        write_install_integrity_policy(repo, stale_policy='warn', never_verified_policy='fail')
+        mark_install_never_verified(target_dir, FIXTURE_NAME)
+        never_verified_no_upgrade_payload = json.loads(
+            run(
+                [
+                    str(repo / 'scripts' / 'upgrade-skill.sh'),
+                    FIXTURE_NAME,
+                    str(target_dir),
+                    '--mode',
+                    'confirm',
+                    '--to-version',
+                    V1,
+                ],
+                cwd=repo,
+            ).stdout
+        )
+        if never_verified_no_upgrade_payload.get('state') != 'up-to-date':
+            fail(
+                "expected never-verified confirm no-op state 'up-to-date', "
+                f"got {never_verified_no_upgrade_payload!r}"
+            )
+        if never_verified_no_upgrade_payload.get('freshness_state') != 'never-verified':
+            fail(
+                "expected never-verified confirm no-op freshness_state 'never-verified', "
+                f"got {never_verified_no_upgrade_payload!r}"
+            )
+        assert_mutation_fields(
+            never_verified_no_upgrade_payload,
+            readiness='blocked',
+            policy='fail',
+            reason_code='never-verified-installed-integrity',
+            recovery_action='refresh',
+        )
+
+        write_install_integrity_policy(repo, stale_policy='warn', never_verified_policy='warn')
+        mark_install_never_verified(target_dir, FIXTURE_NAME)
+        never_verified_update_payload = json.loads(
+            run([str(repo / 'scripts' / 'check-skill-update.sh'), FIXTURE_NAME, str(target_dir)], cwd=repo).stdout
+        )
+        assert_explanation(never_verified_update_payload, registry_name='self', requires_confirmation=False, expected_version=V2)
+        never_verified_update_reasons = ((never_verified_update_payload.get('explanation') or {}).get('policy_reasons') or [])
+        if not any('never-verified' in reason.lower() for reason in never_verified_update_reasons):
+            fail(f'expected never-verified policy reason in update explanation, got {never_verified_update_reasons!r}')
+        never_verified_update_actions = ((never_verified_update_payload.get('explanation') or {}).get('next_actions') or [])
+        if not any('report-installed-integrity.py' in action and '--refresh' in action for action in never_verified_update_actions):
+            fail(
+                'expected never-verified update next_actions to recommend refresh, '
+                f'got {never_verified_update_actions!r}'
+            )
+
+        never_verified_plan_payload = json.loads(
+            run([str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_dir), '--mode', 'confirm'], cwd=repo).stdout
+        )
+        assert_explanation(never_verified_plan_payload, registry_name='self', requires_confirmation=False, expected_version=V2)
+        assert_mutation_fields(
+            never_verified_plan_payload,
+            readiness='warning',
+            policy='warn',
+            reason_code='never-verified-installed-integrity',
+            recovery_action='refresh',
+        )
+        never_verified_plan_reasons = ((never_verified_plan_payload.get('explanation') or {}).get('policy_reasons') or [])
+        if not any('never-verified' in reason.lower() for reason in never_verified_plan_reasons):
+            fail(f'expected never-verified policy reason in confirm explanation, got {never_verified_plan_reasons!r}')
+        never_verified_plan_actions = ((never_verified_plan_payload.get('explanation') or {}).get('next_actions') or [])
+        if not any('report-installed-integrity.py' in action and '--refresh' in action for action in never_verified_plan_actions):
+            fail(
+                'expected never-verified confirm next_actions to recommend refresh, '
+                f'got {never_verified_plan_actions!r}'
+            )
+
+        write_install_integrity_policy(repo, stale_policy='warn')
+        mark_install_stale(target_dir, FIXTURE_NAME)
+        stale_warn_payload = json.loads(
+            run([str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_dir), '--mode', 'confirm'], cwd=repo).stdout
+        )
+        assert_mutation_fields(
+            stale_warn_payload,
+            readiness='warning',
+            policy='warn',
+            reason_code='stale-installed-integrity',
+            recovery_action='refresh',
+        )
+        stale_warn_reasons = ((stale_warn_payload.get('explanation') or {}).get('policy_reasons') or [])
+        if not any('stale' in reason.lower() for reason in stale_warn_reasons):
+            fail(f'expected stale warning policy reason, got {stale_warn_reasons!r}')
+        stale_warn_actions = ((stale_warn_payload.get('explanation') or {}).get('next_actions') or [])
+        if not any('report-installed-integrity.py' in action for action in stale_warn_actions):
+            fail(f'expected stale warning next_actions to recommend refresh, got {stale_warn_actions!r}')
+
+        write_install_integrity_policy(repo, stale_policy='fail')
+        blocked = run(
+            [str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_dir), '--mode', 'confirm'],
+            cwd=repo,
+            expect=1,
+        )
+        blocked_payload = json.loads(blocked.stdout)
+        if blocked_payload.get('error_code') != 'stale-installed-integrity':
+            fail(f"expected stale-installed-integrity error_code, got {blocked_payload!r}")
+        assert_mutation_fields(
+            blocked_payload,
+            readiness='blocked',
+            policy='fail',
+            reason_code='stale-installed-integrity',
+            recovery_action='refresh',
+        )
+        blocked_actions = ((blocked_payload.get('explanation') or {}).get('next_actions') or [])
+        if not any('report-installed-integrity.py' in action for action in blocked_actions):
+            fail(f'expected stale block next_actions to recommend refresh, got {blocked_actions!r}')
 
         configure_external_registry(repo, tmpdir)
         external_payload = json.loads(run([str(repo / 'scripts' / 'resolve-skill.sh'), EXTERNAL_SKILL_NAME], cwd=repo).stdout)

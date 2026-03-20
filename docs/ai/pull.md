@@ -196,6 +196,14 @@ python3 scripts/report-installed-integrity.py <target-dir> --json
 python3 scripts/report-installed-integrity.py <target-dir> --refresh --json
 ```
 
+如需查看 bounded inline history 之外的 target-local 审计轨迹，可读取同目录下由 refresh 维护的：
+
+```text
+.infinitas-skill-installed-integrity.json
+```
+
+其中会保留当前快照与 `archived_integrity_events`，但它仍然只是 target-local runtime state，不是 repo-scoped release evidence。
+
 若状态为 `drifted`，优先执行：
 
 ```bash

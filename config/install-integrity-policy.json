@@ -1,0 +1,12 @@
+{
+  "$schema": "../schemas/install-integrity-policy.schema.json",
+  "schema_version": 1,
+  "freshness": {
+    "stale_after_hours": 168,
+    "stale_policy": "warn",
+    "never_verified_policy": "warn"
+  },
+  "history": {
+    "max_inline_events": 20
+  }
+}

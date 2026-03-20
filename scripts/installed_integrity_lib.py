@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 from distribution_lib import (
@@ -8,6 +10,7 @@ from distribution_lib import (
     sha256_file,
     verify_distribution_manifest,
 )
+from install_integrity_policy_lib import default_install_integrity_policy
 from release_lib import ROOT
 
 
@@ -17,6 +20,9 @@ class InstalledIntegrityError(Exception):
 
 class MissingSignedFileManifestError(InstalledIntegrityError):
     pass
+
+
+INSTALLED_INTEGRITY_SNAPSHOT_FILENAME = '.infinitas-skill-installed-integrity.json'
 
 
 def default_integrity_record():
@@ -43,6 +49,14 @@ def default_integrity_capability_fields():
 
 def default_integrity_events():
     return []
+
+
+def default_integrity_freshness():
+    return {
+        'freshness_state': 'never-verified',
+        'checked_age_seconds': None,
+        'last_checked_at': None,
+    }
 
 
 def normalize_integrity_record(record):
@@ -128,6 +142,58 @@ def append_integrity_event(events, *, at, event, source, reason=None):
         raise InstalledIntegrityError('integrity event payload is invalid')
     normalized.append(normalized_event)
     return normalized
+
+
+def _normalize_timestamp_string(value):
+    return value if isinstance(value, str) and value else None
+
+
+def _parse_timestamp(value):
+    value = _normalize_timestamp_string(value)
+    if value is None:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace('Z', '+00:00')).astimezone(timezone.utc)
+    except ValueError:
+        return None
+
+
+def installed_integrity_snapshot_path(target_dir):
+    return (Path(target_dir).resolve() / INSTALLED_INTEGRITY_SNAPSHOT_FILENAME).resolve()
+
+
+def _load_snapshot_archived_events(target_dir):
+    path = installed_integrity_snapshot_path(target_dir)
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding='utf-8'))
+    except Exception:
+        return {}
+    skills = payload.get('skills')
+    if not isinstance(skills, list):
+        return {}
+
+    archived = {}
+    for item in skills:
+        if not isinstance(item, dict):
+            continue
+        name = item.get('name') or item.get('qualified_name')
+        if not isinstance(name, str) or not name:
+            continue
+        archived[name] = normalize_integrity_events(item.get('archived_integrity_events'))
+    return archived
+
+
+def compact_integrity_history(events, *, max_inline_events, archived_events=None):
+    normalized = normalize_integrity_events(events)
+    retained_archived = normalize_integrity_events(archived_events)
+    if len(normalized) <= max_inline_events:
+        return normalized, retained_archived
+
+    overflow = normalized[:-max_inline_events]
+    inline = normalized[-max_inline_events:]
+    return inline, retained_archived + overflow
 
 
 def _relative_path(path: Path, root: Path):
@@ -280,19 +346,161 @@ def build_install_integrity_record(installed_dir, source_info, *, root=None, ver
     return snapshot['integrity']
 
 
-def recommended_action_for_integrity(integrity_record, *, capability='unknown', reason=None):
+def build_integrity_freshness(item, *, policy=None, now=None):
+    item = item or {}
+    policy = policy or default_install_integrity_policy()
+    normalized = default_integrity_freshness()
+    integrity = normalize_integrity_record(item.get('integrity'))
+    last_checked_at = _normalize_timestamp_string(item.get('last_checked_at'))
+    checked_at = last_checked_at or integrity.get('last_verified_at')
+    checked_at_dt = _parse_timestamp(checked_at)
+    if checked_at_dt is None:
+        return normalized
+
+    if now is None:
+        now_dt = datetime.now(timezone.utc)
+    elif isinstance(now, datetime):
+        now_dt = now.astimezone(timezone.utc) if now.tzinfo else now.replace(tzinfo=timezone.utc)
+    else:
+        now_dt = _parse_timestamp(now)
+        if now_dt is None:
+            now_dt = datetime.now(timezone.utc)
+
+    stale_after_hours = ((policy.get('freshness') or {}).get('stale_after_hours')) or default_install_integrity_policy()['freshness']['stale_after_hours']
+    age_seconds = max(0, int((now_dt - checked_at_dt).total_seconds()))
+    normalized['freshness_state'] = 'stale' if age_seconds > (stale_after_hours * 3600) else 'fresh'
+    normalized['checked_age_seconds'] = age_seconds
+    normalized['last_checked_at'] = last_checked_at
+    return normalized
+
+
+def _policy_choice(policy, key):
+    freshness_policy = (policy.get('freshness') or {}) if isinstance(policy, dict) else {}
+    default_freshness = default_install_integrity_policy()['freshness']
+    return freshness_policy.get(key) or default_freshness[key]
+
+
+def _warning_for_recovery_action(recovery_action):
+    if recovery_action == 'refresh':
+        return 'run python3 scripts/report-installed-integrity.py <target-dir> --refresh before overwriting local files'
+    if recovery_action == 'repair':
+        return (
+            'run python3 scripts/verify-installed-skill.py <skill> <target-dir> --json '
+            'or scripts/repair-installed-skill.sh <skill> <target-dir> before overwriting local files'
+        )
+    if recovery_action == 'backfill-distribution-manifest':
+        return 'backfill the signed distribution manifest or reinstall the skill from a trusted immutable source before overwriting local files'
+    if recovery_action == 'reinstall':
+        return 'reinstall the skill from a trusted immutable source before overwriting local files'
+    return None
+
+
+def recovery_action_for_integrity(integrity_record, *, capability='unknown', reason=None, freshness_state='never-verified'):
     integrity = normalize_integrity_record(integrity_record)
     state = integrity.get('state')
-    if state == 'verified':
-        return 'none'
     if state == 'drifted':
         return 'repair'
+    if freshness_state == 'stale':
+        return 'refresh'
+    if freshness_state == 'never-verified':
+        if capability == 'supported':
+            return 'refresh'
+        if capability == 'unknown' and reason == 'missing-signed-file-manifest':
+            return 'backfill-distribution-manifest'
+        return 'reinstall'
     if capability == 'unknown' and reason == 'missing-signed-file-manifest':
         return 'backfill-distribution-manifest'
+    if state == 'verified':
+        return 'none'
     return 'reinstall'
 
 
-def build_installed_integrity_report_item(name, item):
+def evaluate_installed_mutation_readiness(item, *, policy=None, now=None):
+    item = item or {}
+    policy = policy or default_install_integrity_policy()
+    integrity = normalize_integrity_record(item.get('integrity'))
+    capability_fields = normalize_integrity_capability_fields(
+        item.get('integrity_capability'),
+        item.get('integrity_reason'),
+    )
+    freshness = build_integrity_freshness(item, policy=policy, now=now)
+    freshness_state = freshness.get('freshness_state')
+    recovery_action = recovery_action_for_integrity(
+        integrity,
+        capability=capability_fields.get('integrity_capability'),
+        reason=capability_fields.get('integrity_reason'),
+        freshness_state=freshness_state,
+    )
+
+    mutation_readiness = 'ready'
+    mutation_policy = None
+    mutation_reason_code = None
+    if integrity.get('state') == 'drifted':
+        mutation_readiness = 'blocked'
+        mutation_reason_code = 'drifted-installed-skill'
+        recovery_action = 'repair'
+    elif freshness_state == 'stale':
+        mutation_policy = _policy_choice(policy, 'stale_policy')
+        mutation_readiness = {
+            'ignore': 'ready',
+            'warn': 'warning',
+            'fail': 'blocked',
+        }[mutation_policy]
+        if mutation_readiness != 'ready':
+            mutation_reason_code = 'stale-installed-integrity'
+    elif freshness_state == 'never-verified':
+        mutation_policy = _policy_choice(policy, 'never_verified_policy')
+        mutation_readiness = {
+            'ignore': 'ready',
+            'warn': 'warning',
+            'fail': 'blocked',
+        }[mutation_policy]
+        if mutation_readiness != 'ready':
+            mutation_reason_code = 'never-verified-installed-integrity'
+
+    warning = None
+    if mutation_readiness != 'ready':
+        warning = _warning_for_recovery_action(recovery_action)
+
+    return {
+        'freshness_state': freshness_state,
+        'checked_age_seconds': freshness.get('checked_age_seconds'),
+        'last_checked_at': freshness.get('last_checked_at'),
+        'freshness_policy': mutation_policy if freshness_state in {'stale', 'never-verified'} else None,
+        'stale': freshness_state == 'stale',
+        'blocking': mutation_readiness == 'blocked',
+        'warning': warning,
+        'mutation_readiness': mutation_readiness,
+        'mutation_policy': mutation_policy,
+        'mutation_reason_code': mutation_reason_code,
+        'recovery_action': recovery_action,
+    }
+
+
+def evaluate_installed_freshness_gate(item, *, policy=None, now=None):
+    readiness = evaluate_installed_mutation_readiness(item, policy=policy, now=now)
+    return {
+        'freshness_state': readiness.get('freshness_state'),
+        'checked_age_seconds': readiness.get('checked_age_seconds'),
+        'last_checked_at': readiness.get('last_checked_at'),
+        'freshness_policy': readiness.get('freshness_policy'),
+        'stale': readiness.get('stale'),
+        'blocking': readiness.get('blocking'),
+        'reason_code': readiness.get('mutation_reason_code'),
+        'warning': readiness.get('warning'),
+    }
+
+
+def recommended_action_for_integrity(integrity_record, *, capability='unknown', reason=None, freshness_state='never-verified'):
+    return recovery_action_for_integrity(
+        integrity_record,
+        capability=capability,
+        reason=reason,
+        freshness_state=freshness_state,
+    )
+
+
+def build_installed_integrity_report_item(name, item, *, policy=None, now=None):
     item = item or {}
     integrity = normalize_integrity_record(item.get('integrity'))
     capability_fields = normalize_integrity_capability_fields(
@@ -300,6 +508,7 @@ def build_installed_integrity_report_item(name, item):
         item.get('integrity_reason'),
     )
     events = normalize_integrity_events(item.get('integrity_events'))
+    readiness = evaluate_installed_mutation_readiness(item, policy=policy, now=now)
     return {
         'name': item.get('name') or name,
         'qualified_name': item.get('source_qualified_name') or item.get('qualified_name') or item.get('name') or name,
@@ -308,13 +517,85 @@ def build_installed_integrity_report_item(name, item):
         'integrity_capability': capability_fields.get('integrity_capability'),
         'integrity_reason': capability_fields.get('integrity_reason'),
         'last_verified_at': integrity.get('last_verified_at'),
+        'freshness_state': readiness.get('freshness_state'),
+        'checked_age_seconds': readiness.get('checked_age_seconds'),
+        'last_checked_at': readiness.get('last_checked_at'),
+        'freshness_policy': readiness.get('freshness_policy'),
+        'freshness_warning': readiness.get('warning'),
+        'mutation_readiness': readiness.get('mutation_readiness'),
+        'mutation_policy': readiness.get('mutation_policy'),
+        'mutation_reason_code': readiness.get('mutation_reason_code'),
+        'recovery_action': readiness.get('recovery_action'),
         'recommended_action': recommended_action_for_integrity(
             integrity,
             capability=capability_fields.get('integrity_capability'),
             reason=capability_fields.get('integrity_reason'),
+            freshness_state=readiness.get('freshness_state'),
         ),
         'integrity_events': events,
     }
+
+
+def apply_integrity_history_retention(manifest, *, target_dir, policy):
+    manifest = dict(manifest or {})
+    skills = manifest.get('skills') or {}
+    retained_skills = {}
+    archived_by_name = _load_snapshot_archived_events(target_dir)
+    max_inline_events = ((policy.get('history') or {}).get('max_inline_events')) or default_install_integrity_policy()['history']['max_inline_events']
+
+    for name, item in skills.items():
+        if not isinstance(item, dict):
+            retained_skills[name] = item
+            continue
+        current = dict(item)
+        inline_events, archived_events = compact_integrity_history(
+            current.get('integrity_events'),
+            max_inline_events=max_inline_events,
+            archived_events=archived_by_name.get(name),
+        )
+        current['integrity_events'] = inline_events
+        retained_skills[name] = current
+        archived_by_name[name] = archived_events
+
+    manifest['skills'] = retained_skills
+    return manifest, archived_by_name
+
+
+def build_installed_integrity_snapshot_payload(target_dir, manifest, *, policy, archived_by_name=None, generated_at=None):
+    target_dir = Path(target_dir).resolve()
+    archived_by_name = archived_by_name or {}
+    generated_at = generated_at or datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
+
+    skills = []
+    for name, item in sorted((manifest.get('skills') or {}).items()):
+        if not isinstance(item, dict):
+            continue
+        report_item = build_installed_integrity_report_item(name, item, policy=policy, now=generated_at)
+        report_item['archived_integrity_events'] = normalize_integrity_events(archived_by_name.get(name))
+        skills.append(report_item)
+
+    return {
+        '$schema': 'https://infinitas-skill.local/schemas/installed-integrity-snapshot.schema.json',
+        'schema_version': 1,
+        'generated_at': generated_at,
+        'target_dir': str(target_dir),
+        'policy': policy,
+        'skill_count': len(skills),
+        'skills': skills,
+    }
+
+
+def write_installed_integrity_snapshot(target_dir, manifest, *, policy, archived_by_name=None, generated_at=None):
+    payload = build_installed_integrity_snapshot_payload(
+        target_dir,
+        manifest,
+        policy=policy,
+        archived_by_name=archived_by_name,
+        generated_at=generated_at,
+    )
+    path = installed_integrity_snapshot_path(target_dir)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    return path
 
 
 def verify_installed_skill(target_dir, requested_name, *, root=None):

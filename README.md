@@ -374,6 +374,18 @@ scripts/build-catalog.sh
 
 and commit the updated `catalog/*.json`.
 
+CI now installs the `pyproject.toml` dependencies and requires hosted end-to-end coverage to pass.
+
+For the same local bootstrap path, run:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install --upgrade pip
+python3 -m pip install .
+python3 scripts/test-hosted-registry-e2e.py
+```
+
 If you want hosted control plane coverage in a minimal environment, install the `pyproject.toml` dependencies first or run with a prepared tool like `uv`. To force failure instead of skipping when those dependencies are missing, set `INFINITAS_REQUIRE_HOSTED_E2E_TESTS=1`.
 
 ## Compatibility Contract

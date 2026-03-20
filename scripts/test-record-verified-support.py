@@ -35,6 +35,7 @@ def write_json(path: Path, payload):
 def make_env(extra=None):
     env = os.environ.copy()
     env['INFINITAS_SKIP_COMPAT_PIPELINE_TESTS'] = '1'
+    env['INFINITAS_SKIP_INSTALLED_INTEGRITY_TESTS'] = '1'
     env['INFINITAS_SKIP_RELEASE_TESTS'] = '1'
     env['INFINITAS_SKIP_ATTESTATION_TESTS'] = '1'
     env['INFINITAS_SKIP_DISTRIBUTION_TESTS'] = '1'

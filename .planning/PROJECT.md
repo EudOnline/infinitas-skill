@@ -8,14 +8,16 @@
 
 Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
 
-## Current Milestone: v17 Installed Integrity Reporting and Legacy Distribution Backfill
+## Current Milestone: v20 Never-Verified Policy and Project Closeout
 
-**Goal:** Reduce avoidable `integrity.state = unknown` outcomes by backfilling legacy immutable release manifests when signed evidence already exists, then add a stable local reporting surface for installed-skill trust and repair history without introducing a hosted control plane.
+**Goal:** Close the last remaining trust and completion gaps by turning `never-verified` into an explicit policy-governed readiness state, making hosted-registry verification deterministic in CI, and defining the final project closeout gates.
+
+**Status:** v20 is now complete on `codex/v17-installed-reporting`, including `never_verified_policy`, shared mutation readiness, never-verified mutation guardrails, deterministic CI hosted e2e enforcement, and the final closeout checklist; the remaining operational step is to merge the branch back to `main`.
 
 **Target features:**
-- A deterministic backfill flow that regenerates legacy distribution manifests with signed `file_manifest` and build metadata from committed immutable artifacts
-- Catalog or discovery summaries that tell operators whether one released version fully supports installed-integrity verification or will remain compatibility-only
-- A stable local installed-integrity report surface that summarizes current trust, verification capability, and recent repair or verification events per install target
+- A validated `never_verified_policy` that lets maintainers ignore, warn, or block overwrite-style mutation for legacy `never-verified` installs
+- One shared mutation-readiness contract that unifies drift, stale, and never-verified guidance for read-only and mutation flows
+- Deterministic hosted-registry end-to-end verification in CI plus one final closeout checklist that defines when the project is ready to merge and declare complete
 
 ## Requirements
 
@@ -43,12 +45,19 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - [x] Plan and implement v15 Phase 2: external transparency log publication and verification (`ATT-04`).
 - [x] Plan and implement v16 Phase 1: installed skill integrity and drift detection (`INST-01`).
 - [x] Plan and implement v16 Phase 2: exact-source repair and update guardrails (`INST-02`).
-- [ ] Plan and implement v17 Phase 1: legacy distribution backfill and integrity capability reporting (`INST-03`).
-- [ ] Plan and implement v17 Phase 2: installed integrity audit history and local reports (`INST-04`).
+- [x] Plan and implement v17 Phase 1: legacy distribution backfill and integrity capability reporting (`INST-03`).
+- [x] Plan and implement v17 Phase 2: installed integrity audit history and local reports (`INST-04`).
+- [x] Plan and implement v18 Phase 1: freshness policy and stale verification reporting (`INST-05`).
+- [x] Plan and implement v18 Phase 2: history retention and target-local snapshot artifact (`INST-06`).
+- [x] Plan and implement v19 Phase 1: stale-policy advisory surfaces and shared freshness-gate helpers (`INST-07`).
+- [x] Plan and implement v19 Phase 2: stale verification guardrails for overwrite-style mutation flows (`INST-08`).
+- [x] Plan and implement v20 Phase 1: never-verified policy and shared mutation readiness (`INST-09`).
+- [x] Plan and implement v20 Phase 2: never-verified mutation guardrails and recovery paths (`INST-10`).
+- [x] Plan and implement v20 Phase 3: deterministic hosted e2e verification and project closeout (`OPS-03`, `OPS-04`).
 
 ### Out of Scope
 
-- Hosted registry service, database, or web UI — the repository remains intentionally Git-native and file-based for v17.
+- Hosted registry service, database, web UI, or background daemon — the repository remains intentionally Git-native and file-based for v20.
 - Rebuilding the lifecycle, templating, or catalog system from scratch — current planning extends existing workflows instead of replacing them.
 - Public marketplace/package-manager integration — not needed to deliver private-registry distribution goals.
 - Full reconstruction of v1-v8 planning history — the repository does not contain authoritative phase-by-phase planning records for those versions.
@@ -82,17 +91,22 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - v14 is now merged on `main`, adding normalized `review-evidence.json` support, provenance-aware quorum evaluation, and deterministic reviewer recommendation plus escalation output in review CLI flows.
 - v15 is now merged on `main`, adding signed released-file inventories, reproducibility metadata, transparency-log proof capture, and additive audit summaries across attestation, release-state, and catalog surfaces.
 - v16 is now merged on `main`, adding `verify-installed-skill.py`, persisted install-manifest integrity summaries, `repair-installed-skill.sh`, drift-aware sync or upgrade guardrails, and compatibility fallback to `integrity.state = unknown` when older hosted manifests lack signed `file_manifest` entries.
-- The biggest remaining installed-runtime trust gaps are now concentrated in two places: older immutable artifacts that still cannot support full installed verification, and the lack of one stable local report surface for trust state plus repair history.
-- v17 therefore stays tightly scoped to manifest-driven consumer trust: backfill legacy immutable evidence where possible, and add local installed-integrity reporting rather than inventing a separate service or control plane.
+- v17 is complete on `codex/v17-installed-reporting`, adding deterministic legacy distribution-manifest backfill, installed-integrity capability summaries in release indexes, `scripts/report-installed-integrity.py`, and additive `integrity_events` in local install manifests.
+- v18 is complete on `codex/v17-installed-reporting`, adding repo-managed freshness policy, freshness-aware report/list output, bounded inline `integrity_events`, and deterministic target-local sidecar snapshot export for older retained history.
+- The installed-runtime local trust surface is now materially more complete: immutable release verification stays separate, while target-local freshness and history lifecycle are explicit and bounded.
+- v19 is complete on `codex/v17-installed-reporting`, adding `stale_policy`, shared freshness-gate evaluation, read-only update guidance, stale mutation guardrails, and explicit refresh-first operator messaging.
+- v20 is now complete on `codex/v17-installed-reporting`, adding `freshness.never_verified_policy`, one shared mutation-readiness contract, never-verified overwrite guardrails, and `docs/project-closeout.md` as the final operator merge-gate checklist.
+- GitHub validation now installs repository package dependencies with `python3 -m pip install .` before running `scripts/check-all.sh`, and sets `INFINITAS_REQUIRE_HOSTED_E2E_TESTS=1` so hosted-registry e2e is deterministic in CI.
+- Minimal local Python environments may still skip hosted-registry e2e until the same dependency set is installed explicitly; this is now a documented local workflow boundary rather than an implicit CI gap.
 
 ## Constraints
 
-- **Tech stack**: Keep v17 changes native to Bash, Python, JSON, and Markdown — the repository is already built around lightweight CLI tooling.
+- **Tech stack**: Keep v20 changes native to Bash, Python, JSON, Markdown, and the existing GitHub Actions workflow — the repository is already built around lightweight CLI tooling.
 - **Architecture discipline**: Improve author metadata, generated indexes, tests, and docs before adding more registry services or background automation.
 - **Compatibility**: Preserve the existing local-filesystem plus Git workflow so current install/sync/promotion commands remain usable.
 - **Security**: Shared-secret-only signing is insufficient for release authenticity; asymmetric verification remains the trusted path.
 - **Governance**: Publisher ownership, reviewer evidence, and release actor identity must be repository-configurable so policy changes are versioned and reviewable.
-- **Private-first**: Keep the repository Git-native and private-registry-first; do not turn v17 into public marketplace or hosted-service scope creep.
+- **Private-first**: Keep the repository Git-native and private-registry-first; do not turn v20 into public marketplace or hosted-service scope creep.
 - **History**: GSD planning begins at v9; earlier release history may be referenced, but not reconstructed as authoritative planning data.
 
 ## Key Decisions
@@ -126,9 +140,15 @@ Maintainers can publish and distribute private skills with deterministic, audita
 | Keep drift repair manifest-driven and exact-source | Repair should restore the recorded immutable version from the install manifest, not silently resolve whatever version happens to be latest today | ✓ Good |
 | Regenerate legacy distribution manifests from committed provenance plus bundle evidence instead of accepting permanent compatibility-only gaps | When immutable artifacts already exist, backfill can restore full installed-integrity verification without changing the release trust model or adding a mutable exception path | ✓ Good |
 | Keep installed-integrity reports local and manifest-driven instead of pushing runtime trust state into repo-scoped catalog exports | Installed runtime trust belongs to one target directory, so its durable audit surface should stay local, additive, and offline-usable | ✓ Good |
+| Treat freshness as explicit policy-governed state, not an implicit interpretation of timestamps | Operators and agents should not have to guess whether a previously `verified` local result is still recent enough to trust | ✓ Good |
+| Keep current trust summary inline but spill older integrity events into a target-local sidecar artifact when history grows | Long-lived installs need bounded manifest size without losing offline auditability or inventing repo-scoped runtime state | ✓ Good |
+| Treat stale installed verification like a policy-governed mutation guardrail instead of a report-only hint | Once freshness is explicit, overwrite-style commands should be able to respect that signal without inventing any new runtime source of truth | ✓ Good |
+| Keep `never-verified` as a distinct policy-governed state instead of silently collapsing it into stale or drifted behavior | Legacy installs and incomplete immutable evidence need explicit operator guidance without rewriting immutable trust semantics | ✓ Good |
+| Make hosted-registry e2e deterministic in CI before declaring the project complete | A closeout milestone should remove routine verification skips from supported CI paths, even if local minimal environments may still opt into the dependency set explicitly | ✓ Good |
+| Treat the next milestone as closeout work, not more platform expansion | The remaining gaps are behavioral clarity, deterministic verification, and completion gates rather than new registry capabilities | ✓ Good |
 | Adopt `M2: AI-usable skill ecosystem` as v12 instead of another release-engineering milestone | The platform review shows the core registry mechanics are strong enough; the main remaining gap is decision-useful content and metadata | ✓ Good |
 | Start v12 with canonical decision metadata and wrapper result schemas | The current AI index already carries trust and compatibility, but still hardcodes empty selection guidance and lacks dedicated publish/pull schemas | ✓ Good |
 | Keep v12 additive and Git-native | The goal is to make the existing registry more useful to AI agents, not replace it with a new service layer | ✓ Good |
 
 ---
-*Last updated: 2026-03-19 after closing v16 and starting v17 planning for installed-integrity reporting and legacy backfill*
+*Last updated: 2026-03-19 after completing the v20 closeout milestone on `codex/v17-installed-reporting`*

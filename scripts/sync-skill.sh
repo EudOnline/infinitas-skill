@@ -24,6 +24,51 @@ done
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CLEANUP_DIRS=()
 
+freshness_gate_json() {
+  python3 - <<'PY' "$ROOT" "$TARGET_DIR" "$NAME"
+import json
+import sys
+
+sys.path.insert(0, sys.argv[1] + '/scripts')
+from install_integrity_policy_lib import load_install_integrity_policy  # noqa: E402
+from installed_integrity_lib import evaluate_installed_mutation_readiness  # noqa: E402
+from installed_skill_lib import InstalledSkillError, load_installed_skill  # noqa: E402
+
+try:
+    _manifest, item = load_installed_skill(sys.argv[2], sys.argv[3])
+except InstalledSkillError:
+    print(
+        json.dumps(
+            {
+                'freshness_state': 'never-verified',
+                'blocking': False,
+                'mutation_readiness': 'ready',
+                'mutation_policy': None,
+                'mutation_reason_code': None,
+                'recovery_action': 'reinstall',
+            },
+            ensure_ascii=False,
+        )
+    )
+    raise SystemExit(0)
+
+policy = load_install_integrity_policy(sys.argv[1])
+payload = evaluate_installed_mutation_readiness(item, policy=policy)
+print(json.dumps(payload, ensure_ascii=False))
+PY
+}
+
+format_freshness_warning() {
+  local warning="$1"
+  local formatted
+  if [[ -z "$warning" ]]; then
+    return 0
+  fi
+  formatted="${warning//<target-dir>/$TARGET_DIR}"
+  formatted="${formatted//<skill>/$NAME}"
+  printf '%s\n' "$formatted"
+}
+
 guard_drifted_install() {
   local skill_name="$1"
   local target_dir="$2"
@@ -57,6 +102,35 @@ PY
     return 1
   fi
   return $status
+}
+
+guard_mutation_readiness() {
+  local freshness_json mutation_readiness blocking warning
+  if [[ $FORCE -eq 1 ]]; then
+    return 0
+  fi
+  freshness_json="$(freshness_gate_json)"
+  mutation_readiness="$(python3 - <<'PY' "$freshness_json"
+import json, sys
+print(json.loads(sys.argv[1]).get('mutation_readiness') or 'ready')
+PY
+)"
+  [[ "$mutation_readiness" == "ready" ]] && return 0
+  blocking="$(python3 - <<'PY' "$freshness_json"
+import json, sys
+print('1' if json.loads(sys.argv[1]).get('blocking') else '0')
+PY
+)"
+  warning="$(python3 - <<'PY' "$freshness_json"
+import json, sys
+print(json.loads(sys.argv[1]).get('warning') or '')
+PY
+)"
+  warning="$(format_freshness_warning "$warning")"
+  if [[ -n "$warning" ]]; then
+    echo "$warning" >&2
+  fi
+  [[ "$blocking" != "1" ]]
 }
 
 cleanup_materialized() {
@@ -128,6 +202,7 @@ DEST="$TARGET_DIR/$INSTALLED_NAME"
 
 [[ -d "$DEST" ]] || { echo "skill is not installed yet: $DEST" >&2; exit 1; }
 guard_drifted_install "$NAME" "$TARGET_DIR"
+guard_mutation_readiness
 
 RESOLVE_NAME="$SOURCE_QUALIFIED_NAME"
 [[ -n "$RESOLVE_NAME" ]] || RESOLVE_NAME="$NAME"

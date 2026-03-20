@@ -20,5 +20,12 @@ jobs:
       - name: Check CI attestation workflow contract
         run: python3 scripts/test-ci-attestation-workflow.py
 
+      - name: Install hosted registry test dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install .
+
       - name: Run registry checks
+        env:
+          INFINITAS_REQUIRE_HOSTED_E2E_TESTS: 1
         run: scripts/check-all.sh

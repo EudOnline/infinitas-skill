@@ -21,6 +21,15 @@ python3 scripts/check-registry-integrity.py
 python3 scripts/check-promotion-policy.py
 python3 scripts/test-review-governance.py
 python3 scripts/test-compat-regression.py
+python3 scripts/test-hosted-e2e-ci-contract.py
+if [[ "${INFINITAS_SKIP_INSTALLED_INTEGRITY_TESTS:-0}" != "1" ]]; then
+  python3 scripts/test-installed-skill-integrity.py
+  python3 scripts/test-installed-integrity-report.py
+  python3 scripts/test-installed-integrity-freshness.py
+  python3 scripts/test-installed-integrity-history-retention.py
+  python3 scripts/test-installed-integrity-stale-guardrails.py
+  python3 scripts/test-install-manifest-compat.py
+fi
 if [[ "${INFINITAS_SKIP_COMPAT_PIPELINE_TESTS:-0}" != "1" ]]; then
   python3 scripts/test-canonical-contracts.py
   python3 scripts/test-canonical-skill.py
@@ -71,14 +80,15 @@ import fastapi  # noqa: F401
 import httpx  # noqa: F401
 import jinja2  # noqa: F401
 import sqlalchemy  # noqa: F401
+import uvicorn  # noqa: F401
 PY
   then
     python3 scripts/test-hosted-registry-e2e.py
   elif [[ "${INFINITAS_REQUIRE_HOSTED_E2E_TESTS:-0}" == "1" ]]; then
-    echo "FAIL: hosted registry e2e checks require fastapi/httpx/jinja2/sqlalchemy in the current python environment" >&2
+    echo "FAIL: hosted registry e2e checks require fastapi/httpx/jinja2/sqlalchemy/uvicorn in the current python environment" >&2
     exit 1
   else
-    echo "SKIP: hosted registry e2e checks (missing fastapi/httpx/jinja2/sqlalchemy in current python environment)"
+    echo "SKIP: hosted registry e2e checks (missing fastapi/httpx/jinja2/sqlalchemy/uvicorn in current python environment)"
   fi
 fi
 

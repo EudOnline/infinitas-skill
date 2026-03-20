@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://infinitas-skill.local/schemas/install-integrity-policy.schema.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "freshness",
+    "history"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "freshness": {
+      "type": "object",
+      "required": [
+        "stale_after_hours"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "stale_after_hours": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "stale_policy": {
+          "type": "string",
+          "enum": [
+            "ignore",
+            "warn",
+            "fail"
+          ],
+          "default": "warn"
+        },
+        "never_verified_policy": {
+          "type": "string",
+          "enum": [
+            "ignore",
+            "warn",
+            "fail"
+          ],
+          "default": "warn"
+        }
+      }
+    },
+    "history": {
+      "type": "object",
+      "required": [
+        "max_inline_events"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "max_inline_events": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}
