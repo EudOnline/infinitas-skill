@@ -22,6 +22,7 @@ python3 scripts/check-promotion-policy.py
 python3 scripts/test-review-governance.py
 python3 scripts/test-compat-regression.py
 python3 scripts/test-hosted-e2e-ci-contract.py
+python3 scripts/test-project-complete-state.py
 if [[ "${INFINITAS_SKIP_INSTALLED_INTEGRITY_TESTS:-0}" != "1" ]]; then
   python3 scripts/test-installed-skill-integrity.py
   python3 scripts/test-installed-integrity-report.py
