@@ -12,6 +12,8 @@ The current release/install model supports both:
 Policy composition now also supports ordered repository policy packs via `policy/policy-packs.json`, with repository-local policy files remaining the final override layer for compatibility. Shared team scopes can now be declared in `policy/team-policy.json` and referenced from namespace or review policy without duplicating membership lists.
 Policy-aware validation, promotion, and release checks now also expose additive `policy_trace` diagnostics in JSON mode, with registry validation returning structured `validation_errors`, and optional `--debug-policy` text rendering for operator troubleshooting.
 
+Project status: `infinitas-skill` is complete on `main` and currently operates in steady-state. See `docs/project-closeout.md` for the maintained verification matrix and accepted maintenance notes.
+
 ## Recommended workflow
 
 1. Scaffold a new skill from a template

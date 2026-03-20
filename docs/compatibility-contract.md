@@ -108,7 +108,7 @@ Compatibility rule:
 - legacy manifests may still derive `freshness_state` and `checked_age_seconds` from `integrity.last_verified_at` while leaving top-level `last_checked_at = null` until an explicit refresh rewrites the canonical field
 - wrappers should treat the derived readiness fields as authoritative for overwrite-policy decisions on older manifests instead of assuming `last_checked_at` will always be populated
 
-Operational closeout guidance, merge gates, and the final verification matrix live in `docs/project-closeout.md`; they are workflow guidance, not a separate persisted file-format contract.
+Operational steady-state guidance, accepted maintenance notes, and the final verification matrix live in `docs/project-closeout.md`; they are workflow guidance, not a separate persisted file-format contract.
 
 ## Notes on runtime vs format compatibility
 

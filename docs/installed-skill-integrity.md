@@ -178,13 +178,14 @@ For hosted installs, the toolchain now persists the fetched immutable distributi
 
 If the install lacks those immutable references, the integrity state remains `unknown` until the skill is reinstalled, repaired from a verified immutable source, or the referenced legacy distribution manifest is backfilled.
 
-## Closeout Verification
+## Steady-State Verification
 
-Repository closeout and merge readiness are documented in `docs/project-closeout.md`.
+Repository steady-state verification guidance is documented in `docs/project-closeout.md`.
 
 - CI installs the hosted-registry dependency set with `python3 -m pip install .` and runs `scripts/check-all.sh` with `INFINITAS_REQUIRE_HOSTED_E2E_TESTS=1`.
 - Minimal local environments may still skip `scripts/test-hosted-registry-e2e.py` until that same dependency set is installed explicitly.
-- The final operator merge gate is not "all warnings disappeared"; it is that the documented verification matrix passed and the remaining compatibility quirks are understood and accepted.
+- The project is already complete on `main`; these notes describe the supported maintenance baseline, not an unfinished merge gate.
+- The remaining compatibility quirks are accepted non-blocking maintenance notes unless a concrete user-facing defect appears.
 
 ## Audit History
 
