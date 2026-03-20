@@ -57,6 +57,7 @@ Hosted-registry end-to-end expectations:
 - CI then runs `scripts/check-all.sh` with `INFINITAS_REQUIRE_HOSTED_E2E_TESTS=1`, so hosted e2e cannot silently skip there.
 - Local minimal environments may still skip `scripts/test-hosted-registry-e2e.py` unless the same dependency set is installed explicitly.
 - When local full hosted e2e coverage is desired, run `python3 -m pip install .` first, then run `python3 scripts/test-hosted-registry-e2e.py`.
+- Fresh local verification was rerun on 2026-03-20 for the maintained regression matrix; hosted-registry e2e remained CI-authoritative because the full optional dependency set was not installed in the local environment.
 
 ## Steady-State Guidance
 

@@ -12,7 +12,7 @@ See: `.planning/PROJECT.md` (updated 2026-03-20)
 Phase: steady-state
 Plan: `docs/plans/2026-03-20-project-completion-and-steady-state.md`
 Status: v20 complete on `main`; the repository is in steady-state until a new milestone is intentionally opened
-Last activity: 2026-03-20 — Added completion-state regression coverage and synchronized planning plus closeout docs to the merged `main` truth
+Last activity: 2026-03-20 — Re-ran the completion regression, installed-integrity regression matrix, distribution/install regressions, and `scripts/check-all.sh` from the steady-state branch
 Progress: [##########] 100%
 
 ## Performance Metrics
