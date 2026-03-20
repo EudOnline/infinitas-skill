@@ -174,7 +174,7 @@ Requirements committed for milestone `v19`. Planning starts with stale verificat
 
 ## v20 Requirements
 
-Requirements committed for milestone `v20`. All closeout requirements are complete on `codex/v17-installed-reporting`; the remaining operational step is merging the verified branch back to `main`.
+Requirements committed for milestone `v20`. All v20 requirements are complete on `main`. Future work should be opened as a new milestone or maintenance slice.
 
 ### Installed Integrity Completion
 
@@ -300,4 +300,4 @@ Requirements committed for milestone `v20`. All closeout requirements are comple
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-19 after completing the v20 closeout milestone on `codex/v17-installed-reporting`*
+*Last updated: 2026-03-20 after marking v20 complete on `main`*

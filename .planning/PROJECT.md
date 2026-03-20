@@ -8,13 +8,13 @@
 
 Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
 
-## Current Milestone: v20 Never-Verified Policy and Project Closeout
+## Current Milestone: Project Complete on Main
 
-**Goal:** Close the last remaining trust and completion gaps by turning `never-verified` into an explicit policy-governed readiness state, making hosted-registry verification deterministic in CI, and defining the final project closeout gates.
+**Goal:** Record the v20 closeout milestone as complete on `main`, keep steady-state expectations explicit, and avoid reopening closeout scope without a new milestone.
 
-**Status:** v20 is now complete on `codex/v17-installed-reporting`, including `never_verified_policy`, shared mutation readiness, never-verified mutation guardrails, deterministic CI hosted e2e enforcement, and the final closeout checklist; the remaining operational step is to merge the branch back to `main`.
+**Status:** v20 is complete on `main`. The project is now in steady-state unless a new milestone is intentionally started. The merged baseline includes `never_verified_policy`, shared mutation readiness, never-verified mutation guardrails, deterministic CI hosted e2e enforcement, and the final closeout checklist.
 
-**Target features:**
+**Completed feature set:**
 - A validated `never_verified_policy` that lets maintainers ignore, warn, or block overwrite-style mutation for legacy `never-verified` installs
 - One shared mutation-readiness contract that unifies drift, stale, and never-verified guidance for read-only and mutation flows
 - Deterministic hosted-registry end-to-end verification in CI plus one final closeout checklist that defines when the project is ready to merge and declare complete
@@ -91,11 +91,11 @@ Maintainers can publish and distribute private skills with deterministic, audita
 - v14 is now merged on `main`, adding normalized `review-evidence.json` support, provenance-aware quorum evaluation, and deterministic reviewer recommendation plus escalation output in review CLI flows.
 - v15 is now merged on `main`, adding signed released-file inventories, reproducibility metadata, transparency-log proof capture, and additive audit summaries across attestation, release-state, and catalog surfaces.
 - v16 is now merged on `main`, adding `verify-installed-skill.py`, persisted install-manifest integrity summaries, `repair-installed-skill.sh`, drift-aware sync or upgrade guardrails, and compatibility fallback to `integrity.state = unknown` when older hosted manifests lack signed `file_manifest` entries.
-- v17 is complete on `codex/v17-installed-reporting`, adding deterministic legacy distribution-manifest backfill, installed-integrity capability summaries in release indexes, `scripts/report-installed-integrity.py`, and additive `integrity_events` in local install manifests.
-- v18 is complete on `codex/v17-installed-reporting`, adding repo-managed freshness policy, freshness-aware report/list output, bounded inline `integrity_events`, and deterministic target-local sidecar snapshot export for older retained history.
+- v17 is complete on `main`, adding deterministic legacy distribution-manifest backfill, installed-integrity capability summaries in release indexes, `scripts/report-installed-integrity.py`, and additive `integrity_events` in local install manifests.
+- v18 is complete on `main`, adding repo-managed freshness policy, freshness-aware report/list output, bounded inline `integrity_events`, and deterministic target-local sidecar snapshot export for older retained history.
 - The installed-runtime local trust surface is now materially more complete: immutable release verification stays separate, while target-local freshness and history lifecycle are explicit and bounded.
-- v19 is complete on `codex/v17-installed-reporting`, adding `stale_policy`, shared freshness-gate evaluation, read-only update guidance, stale mutation guardrails, and explicit refresh-first operator messaging.
-- v20 is now complete on `codex/v17-installed-reporting`, adding `freshness.never_verified_policy`, one shared mutation-readiness contract, never-verified overwrite guardrails, and `docs/project-closeout.md` as the final operator merge-gate checklist.
+- v19 is complete on `main`, adding `stale_policy`, shared freshness-gate evaluation, read-only update guidance, stale mutation guardrails, and explicit refresh-first operator messaging.
+- v20 is now complete on `main`, adding `freshness.never_verified_policy`, one shared mutation-readiness contract, never-verified overwrite guardrails, and `docs/project-closeout.md` as the final operator steady-state checklist.
 - GitHub validation now installs repository package dependencies with `python3 -m pip install .` before running `scripts/check-all.sh`, and sets `INFINITAS_REQUIRE_HOSTED_E2E_TESTS=1` so hosted-registry e2e is deterministic in CI.
 - Minimal local Python environments may still skip hosted-registry e2e until the same dependency set is installed explicitly; this is now a documented local workflow boundary rather than an implicit CI gap.
 
@@ -151,4 +151,4 @@ Maintainers can publish and distribute private skills with deterministic, audita
 | Keep v12 additive and Git-native | The goal is to make the existing registry more useful to AI agents, not replace it with a new service layer | ✓ Good |
 
 ---
-*Last updated: 2026-03-19 after completing the v20 closeout milestone on `codex/v17-installed-reporting`*
+*Last updated: 2026-03-20 after confirming the project complete state on `main`*

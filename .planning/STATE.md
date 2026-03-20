@@ -2,17 +2,17 @@
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-03-19)
+See: `.planning/PROJECT.md` (updated 2026-03-20)
 
 **Core value:** Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
-**Current focus:** v20 is implemented on `codex/v17-installed-reporting`; the remaining operational step is fresh verification evidence plus merge-back to `main`, not another new milestone.
+**Current focus:** project complete on `main`, no active milestone.
 
 ## Current Position
 
-Phase: v20 closeout complete, merge prep
-Plan: `docs/plans/2026-03-19-never-verified-policy-and-project-closeout.md`
-Status: v20 closeout work is implemented on `codex/v17-installed-reporting`, including `never_verified_policy`, shared mutation readiness, mutation guardrails, deterministic CI hosted e2e enforcement, and the final project closeout checklist
-Last activity: 2026-03-19 — Completed the v20 closeout implementation and synchronized planning plus operator docs on `codex/v17-installed-reporting`
+Phase: steady-state
+Plan: `docs/plans/2026-03-20-project-completion-and-steady-state.md`
+Status: v20 complete on `main`; the repository is in steady-state until a new milestone is intentionally opened
+Last activity: 2026-03-20 — Added completion-state regression coverage and synchronized planning plus closeout docs to the merged `main` truth
 Progress: [##########] 100%
 
 ## Performance Metrics
@@ -38,7 +38,7 @@ Progress: [##########] 100%
 
 **Recent Trend:**
 - Last 5 plans: 2026-03-18-installed-skill-integrity-and-repair, 2026-03-19-installed-integrity-reporting-and-legacy-backfill, 2026-03-19-installed-integrity-freshness-and-history-retention, 2026-03-19-installed-integrity-stale-verification-guardrails, 2026-03-19-never-verified-policy-and-project-closeout
-- Trend: the closeout milestone is now implemented; remaining work shifts from feature delivery to verification evidence, branch integration, and deciding whether a post-closeout roadmap is needed
+- Trend: project delivery is complete on `main`; future work should be framed as maintenance or a new deliberate milestone
 
 ## Accumulated Context
 
@@ -89,12 +89,13 @@ Decisions are logged in `PROJECT.md`.
 - 2026-03-19: Propose v20 as a closeout milestone focused on `never-verified` policy, deterministic hosted-registry e2e coverage, and final project completion gates.
 - 2026-03-19: Complete v20 on `codex/v17-installed-reporting` with `freshness.never_verified_policy`, shared mutation-readiness reporting, never-verified mutation guardrails, deterministic CI hosted e2e enforcement, and `docs/project-closeout.md`.
 - 2026-03-19: Keep hosted-registry e2e compatibility explicit: CI installs `python3 -m pip install .` and requires the hosted dependency set, while minimal local environments may still skip until those dependencies are installed explicitly.
+- 2026-03-20: Treat v20 as complete on `main` and keep the remaining compatibility notes as accepted steady-state maintenance notes unless a concrete defect appears.
 
-### Pending Todos
+### No Active Milestone
 
-- Merge `codex/v17-installed-reporting` back to `main` with fresh v20 verification evidence.
-- Decide whether to accept the documented residual compatibility quirks as-is or schedule a follow-up cleanup milestone after merge.
-- Choose the post-closeout roadmap direction, if any, only after the merge lands cleanly on `main`.
+- The repository is complete on `main`; open a new plan before starting another milestone.
+- Treat the documented compatibility quirks as accepted maintenance notes unless a concrete user-facing defect appears.
+- Re-run the closeout verification matrix when future maintenance touches installed-integrity or hosted-registry behavior.
 
 ### Blockers/Concerns
 
@@ -108,6 +109,6 @@ Decisions are logged in `PROJECT.md`.
 
 ## Session Continuity
 
-Last session: 2026-03-19 16:05 GMT+8
-Stopped at: v20 closeout implementation complete on `codex/v17-installed-reporting`; next step is fresh verification and merge-back to `main`
+Last session: 2026-03-20 GMT+8
+Stopped at: Project complete on `main`; future work should start from a new milestone or maintenance plan
 Resume file: `docs/project-closeout.md`

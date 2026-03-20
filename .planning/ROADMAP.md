@@ -10,10 +10,10 @@
 - ✅ **v14 Governance Integration and Reviewer Operations** - Phases 1-2 (completed 2026-03-17)
 - ✅ **v15 Supply-Chain Transparency and Reproducible Release Metadata** - Phases 1-2 (completed 2026-03-17)
 - ✅ **v16 Installed Skill Integrity and Repairable Consumption** - Phases 1-2 (completed 2026-03-18)
-- ✅ **v17 Installed Integrity Reporting and Legacy Distribution Backfill** - Phases 1-2 (completed 2026-03-19 on `codex/v17-installed-reporting`)
-- ✅ **v18 Installed Integrity Freshness and History Retention** - Phases 1-2 (completed 2026-03-19 on `codex/v17-installed-reporting`)
-- ✅ **v19 Installed Integrity Stale Verification Guardrails** - Phases 1-2 (completed 2026-03-19 on `codex/v17-installed-reporting`)
-- ✅ **v20 Never-Verified Policy and Project Closeout** - Phases 1-3 (completed 2026-03-19 on `codex/v17-installed-reporting`)
+- ✅ **v17 Installed Integrity Reporting and Legacy Distribution Backfill** - Phases 1-2 (completed 2026-03-19; merged on `main` 2026-03-20)
+- ✅ **v18 Installed Integrity Freshness and History Retention** - Phases 1-2 (completed 2026-03-19; merged on `main` 2026-03-20)
+- ✅ **v19 Installed Integrity Stale Verification Guardrails** - Phases 1-2 (completed 2026-03-19; merged on `main` 2026-03-20)
+- ✅ **v20 Never-Verified Policy and Project Closeout** - Phases 1-3 (completed 2026-03-19; merged on `main` 2026-03-20)
 
 ## Current Follow-up
 
@@ -22,11 +22,12 @@
 - v14 governance integration is now merged on `main`, including additive platform-native review evidence and reviewer recommendation plus escalation flows.
 - v15 supply-chain work is now merged on `main`, including signed released-file inventories, reproducibility metadata, transparency-log publication, and additive audit surfaces.
 - v16 is now merged on `main`, including installed-runtime verification against signed release-file inventories, additive integrity summaries in install manifests, exact-source repair, and drift-aware mutation guardrails.
-- v17 installed-integrity work is complete and verified on `codex/v17-installed-reporting`, adding deterministic legacy manifest backfill, release-surface installed-integrity capability summaries, and a target-local installed-integrity report with additive event history.
-- v18 is complete and verified on `codex/v17-installed-reporting`, adding freshness-aware installed-integrity reporting plus bounded local history retention and sidecar snapshots.
-- v19 is complete and verified on `codex/v17-installed-reporting`, making stale installed verification policy-governed in update and overwrite-style mutation flows without adding background refresh or hosted runtime state.
-- v20 is complete and verified on `codex/v17-installed-reporting`, adding `never_verified_policy`, shared mutation readiness, never-verified overwrite guardrails, deterministic CI hosted e2e enforcement, and `docs/project-closeout.md` as the final merge-gate checklist.
-- The next operational step is to merge `codex/v17-installed-reporting` back to `main`; no v21 milestone is committed yet.
+- v17 installed-integrity work is complete on `main`, adding deterministic legacy manifest backfill, release-surface installed-integrity capability summaries, and a target-local installed-integrity report with additive event history.
+- v18 is complete on `main`, adding freshness-aware installed-integrity reporting plus bounded local history retention and sidecar snapshots.
+- v19 is complete on `main`, making stale installed verification policy-governed in update and overwrite-style mutation flows without adding background refresh or hosted runtime state.
+- v20 is complete on `main`, adding `never_verified_policy`, shared mutation readiness, never-verified overwrite guardrails, deterministic CI hosted e2e enforcement, and `docs/project-closeout.md` as the final steady-state checklist.
+- The project is complete on `main` and now operates in steady-state.
+- Any future work should start as a new milestone or maintenance slice only when a concrete need appears.
 
 ## Phases
 
