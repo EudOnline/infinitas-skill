@@ -63,6 +63,18 @@ def scenario_health_login_and_me():
         for href in ['/submissions', '/reviews', '/jobs']:
             if href not in response.text:
                 fail(f'index page missing operator link {href!r}')
+        for needle in [
+            '目标交给 Agent',
+            '我是 Human',
+            '我是 Agent',
+            'scripts/recommend-skill.sh',
+            '/registry/ai-index.json',
+            '给 Agent 的交接提示',
+            'Human 只需给出',
+            '先给目标，再给约束',
+        ]:
+            if needle not in response.text:
+                fail(f'index page missing agent-first homepage content {needle!r}')
 
         response = client.get(
             '/api/v1/me',

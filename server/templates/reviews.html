@@ -1,34 +1,52 @@
 {% extends "layout.html" %}
 {% block body %}
-<p class="muted">Showing the latest {{ items|length }} reviews (limit {{ limit }}).</p>
-{% if items %}
-<table>
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Submission</th>
-      <th>Status</th>
-      <th>Requested By</th>
-      <th>Reviewed By</th>
-      <th>Note</th>
-      <th>Updated</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for item in items %}
-    <tr>
-      <td>{{ item.id }}</td>
-      <td>#{{ item.submission_id }}</td>
-      <td>{{ item.status }}</td>
-      <td>{{ item.requested_by or "-" }}</td>
-      <td>{{ item.reviewed_by or "-" }}</td>
-      <td>{{ item.note or "-" }}</td>
-      <td>{{ item.updated_at }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p>No reviews found.</p>
+{% if insight_cards %}
+<section class="insight-grid" data-reveal style="--reveal-index: 1">
+  {% for card in insight_cards %}
+  <article class="insight-card">
+    <div class="section-kicker">Maintainer note / 维护说明</div>
+    <h3>{{ card.title }}</h3>
+    <p>{{ card.body }}</p>
+    <div class="command-chip">
+      <code>{{ card.command }}</code>
+    </div>
+  </article>
+  {% endfor %}
+</section>
 {% endif %}
+<section class="console-table-shell" data-reveal style="--reveal-index: 1">
+  <div class="section-kicker">Decision ledger</div>
+  <div class="table-scroll">
+    {% if items %}
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Submission</th>
+          <th>Status</th>
+          <th>Requested By</th>
+          <th>Reviewed By</th>
+          <th>Note</th>
+          <th>Updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td><span class="table-id">{{ item.id }}</span></td>
+          <td><span class="table-id">{{ item.submission_id }}</span></td>
+          <td><span class="status-badge" data-status="{{ (item.status or '')|lower }}">{{ item.status }}</span></td>
+          <td>{{ item.requested_by or "-" }}</td>
+          <td>{{ item.reviewed_by or "-" }}</td>
+          <td><span class="table-note">{{ item.note or "-" }}</span></td>
+          <td>{{ item.updated_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty-copy">No reviews found.</p>
+    {% endif %}
+  </div>
+</section>
 {% endblock %}

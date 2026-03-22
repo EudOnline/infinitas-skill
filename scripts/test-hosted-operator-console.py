@@ -330,6 +330,21 @@ def scenario_operator_lists_and_cli():
                 fail(f'expected {route} with maintainer token to return 200, got {response.status_code}: {response.text}')
             if heading not in response.text or needle not in response.text:
                 fail(f'expected {route} page to contain {heading!r} and {needle!r}, got:\n{response.text}')
+            for shared_needle in ['Maintainer-only console', 'registryctl.py']:
+                if shared_needle not in response.text:
+                    fail(f'expected {route} page to contain {shared_needle!r}, got:\n{response.text}')
+        for route, needle in [
+            ('/reviews', 'Decision hints'),
+            ('/reviews', 'Approve quickly'),
+            ('/jobs', 'Queue health'),
+            ('/jobs', 'Worker rhythm'),
+        ]:
+            response = client.get(
+                route,
+                headers={'Authorization': 'Bearer fixture-maintainer-token'},
+            )
+            if needle not in response.text:
+                fail(f'expected {route} page to contain {needle!r}, got:\n{response.text}')
 
         with HostedAppServer(ROOT, os.environ.copy()) as server:
             payload = run_cli(server.base_url, 'fixture-maintainer-token', 'submissions', 'list')
