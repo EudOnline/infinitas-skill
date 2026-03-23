@@ -360,6 +360,7 @@ For the full compose runbook, backup/prune/mirror commands, and credential layou
 
 For AI-driven publishing, import, export, and installation, treat the following files as the machine-facing contract:
 
+- `docs/ai/agent-self-serve.md` — agent 自助部署、hosted 运维、registry 使用手册
 - `docs/ai/agent-operations.md` — agent-facing common operations manual
 - `docs/ai/usage-guide.md` — stable high-level guide for when to search, recommend, inspect, publish, pull, and verify
 - `docs/ai/workflow-drills.md` — search, recommend, inspect, publish, and pull drills that stay on public docs plus generated JSON surfaces

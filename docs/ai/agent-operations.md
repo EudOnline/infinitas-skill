@@ -5,6 +5,7 @@
 当 agent 需要在本仓库执行常见技能操作时，优先按以下顺序读取：
 
 - `README.md`
+- `docs/ai/agent-self-serve.md`
 - `docs/ai/usage-guide.md`
 - `docs/ai/agent-operations.md`
 - `docs/ai/workflow-drills.md`
@@ -27,6 +28,7 @@
 - 什么时候必须先停下来而不是继续猜测
 
 将 `docs/ai/usage-guide.md` 视为**稳定入口指南**；将本文件视为**扩展操作手册**；将 `docs/ai/workflow-drills.md` 视为**可执行 drill 手册**；将 `docs/ai/discovery.md`、`docs/ai/publish.md` 与 `docs/ai/pull.md` 视为**严格执行协议**。
+当任务是“把项目部署起来并开始使用 hosted control plane”时，优先先读 `docs/ai/agent-self-serve.md`，再按需落到 hosted 协议或 server API 文档。
 
 ## Core Model
 

@@ -9,6 +9,7 @@ Use it to decide when to use the public AI-facing commands without opening imple
 ## Read Order
 
 - `README.md`
+- `docs/ai/agent-self-serve.md`
 - `docs/ai/usage-guide.md`
 - `docs/ai/agent-operations.md`
 - `docs/ai/workflow-drills.md`
