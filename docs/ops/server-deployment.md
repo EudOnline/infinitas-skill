@@ -48,6 +48,82 @@ The built-in hosted app now serves immutable distribution artifacts directly fro
 If `INFINITAS_REGISTRY_READ_TOKENS` is unset or empty, `/registry/*` stays public for local/dev compatibility.
 If it is set to a JSON array of bearer tokens, hosted installers must send one of those tokens when reading `/registry/*`.
 
+## Container image
+
+The repository now includes a container image path for the hosted registry:
+
+- `Dockerfile` packages the hosted API, worker entrypoints, ops scripts, and templates
+- `.github/workflows/container-image.yml` builds `linux/amd64` and `linux/arm64` images
+- pull requests build the image without pushing
+- pushes to `main`, version tags matching `v*`, and manual workflow runs publish to GHCR as `ghcr.io/<owner>/infinitas-skill`
+
+The workflow emits branch, semver, `sha-*`, and default-branch `latest` tags. The image is only the runtime shell around the hosted control plane. The writable git checkout that worker jobs mutate still lives outside the image and must be mounted into the running container.
+
+## Docker Compose deployment
+
+For a single-node container deployment, use the checked-in `docker-compose.yml` plus `.env.compose.example`.
+
+The compose stack assumes:
+
+- the app image is pulled from GHCR or built separately from the same repository
+- `INFINITAS_SERVER_REPO_PATH` is a writable bind-mounted git checkout
+- SQLite, hosted artifacts, backups, and git home state live on durable host paths
+- git credentials for push or optional mirror jobs live under the mounted compose home directory
+
+Recommended bootstrap flow:
+
+```bash
+cp .env.compose.example .env.compose
+mkdir -p .deploy/{repo,data,artifacts,backups,home}
+git clone <your-private-registry-remote> .deploy/repo
+
+# If git push uses SSH, place credentials under .deploy/home/.ssh and ensure permissions are strict.
+# Optionally copy or create .deploy/home/.gitconfig for user.name / user.email / signing policy.
+
+docker compose --env-file .env.compose config
+docker compose --env-file .env.compose pull
+docker compose --env-file .env.compose up -d app worker
+```
+
+Important runtime detail:
+
+- the image code lives at `/app`
+- the writable source-of-truth checkout is the bind-mounted `INFINITAS_SERVER_REPO_PATH` such as `/srv/infinitas/repo`
+- the shared container entrypoint validates that checkout, creates SQLite/lock/artifact parent directories when needed, and syncs `catalog/` into `INFINITAS_SERVER_ARTIFACT_PATH` before the API or worker starts
+
+The default compose environment uses these host mounts:
+
+- `INFINITAS_HOST_REPO_PATH` → mounted writable repo checkout
+- `INFINITAS_HOST_DATA_PATH` → SQLite DB and repo lock
+- `INFINITAS_HOST_ARTIFACT_PATH` → hosted `/registry/*` artifact root
+- `INFINITAS_HOST_BACKUP_PATH` → backup snapshots and optional inspect fallback files
+- `INFINITAS_HOST_HOME_PATH` → `.ssh`, `.gitconfig`, and related git client state for push/mirror operations
+
+After the stack is up, validate with:
+
+```bash
+docker compose --env-file .env.compose ps
+docker compose --env-file .env.compose logs --tail=100 app worker
+docker compose --env-file .env.compose --profile ops run --rm inspect
+python scripts/server-healthcheck.py \
+  --api-url http://127.0.0.1:8000 \
+  --repo-path .deploy/repo \
+  --artifact-path .deploy/artifacts \
+  --database-url sqlite:///$PWD/.deploy/data/server.db \
+  --json
+```
+
+The compose file also exposes one-shot ops helpers behind the `ops` profile:
+
+```bash
+docker compose --env-file .env.compose --profile ops run --rm backup
+docker compose --env-file .env.compose --profile ops run --rm prune
+docker compose --env-file .env.compose --profile ops run --rm inspect
+docker compose --env-file .env.compose --profile ops run --rm mirror
+```
+
+These services intentionally run on demand. If you want scheduled backups, prune, inspect, or mirror jobs in a compose-based deployment, attach host cron, `systemd` timers, or your existing CI scheduler around the matching one-shot compose commands.
+
 ## Health checks
 
 Use the hosted ops health check to verify the minimum single-node deployment contract:

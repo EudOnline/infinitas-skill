@@ -300,6 +300,8 @@ Phase 1 hosted ops automation now includes:
 - `scripts/inspect-hosted-state.py` can also write the latest alert summary to a stable fallback file when webhook delivery is unavailable
 - `scripts/render-hosted-systemd.py` to generate a `systemd` deployment bundle for the API, worker, scheduled backup/prune/inspect timers, plus an optional one-way mirror timer when `--mirror-remote` is provided
 - `scripts/run-hosted-worker.py` to provide a stable long-running worker entrypoint for the generated worker service
+- `Dockerfile`, `docker-compose.yml`, and `.env.compose.example` to run the hosted control plane in containers with a writable repo checkout bind mount
+- `.github/workflows/container-image.yml` to build multi-arch container images and publish them to GHCR on `main` and version tags
 
 The hosted app now also serves immutable install artifacts directly from `/registry/*`, including:
 
@@ -324,6 +326,34 @@ python scripts/registryctl.py --base-url http://127.0.0.1:8000 --token dev-maint
 
 These ops helpers are intentionally SQLite-first for the current single-node deployment model. PostgreSQL and object-storage automation remain future extensions.
 If `INFINITAS_SERVER_MIRROR_REMOTE` is configured, hosted publish jobs also attempt an immediate best-effort one-way mirror push after syncing artifacts and pushing the primary repo.
+
+## Container deployment
+
+The repository now ships a production-oriented container image path for the hosted registry:
+
+- `Dockerfile` packages the FastAPI app, worker entrypoints, ops scripts, and hosted templates
+- `docker-compose.yml` runs the API and worker against a bind-mounted writable repo checkout plus persistent data, artifacts, backups, and git home directories
+- `.env.compose.example` seeds the required compose/runtime environment
+- `.github/workflows/container-image.yml` builds `linux/amd64` and `linux/arm64` images, publishes them to `ghcr.io/<owner>/infinitas-skill`, and keeps PR builds pushless
+
+The key deployment boundary is unchanged: the container image runs the control plane, but the mounted `INFINITAS_SERVER_REPO_PATH` remains the writable source-of-truth git checkout that publish jobs validate, mutate, and push.
+
+Typical compose flow:
+
+```bash
+cp .env.compose.example .env.compose
+mkdir -p .deploy/{repo,data,artifacts,backups,home}
+git clone <your-private-registry-remote> .deploy/repo
+
+# Optional: place .gitconfig / .ssh under .deploy/home for git push + mirror auth
+
+docker compose --env-file .env.compose pull
+docker compose --env-file .env.compose up -d app worker
+docker compose --env-file .env.compose --profile ops run --rm inspect
+```
+
+The shared entrypoint now syncs `catalog/` from the mounted repo checkout into `INFINITAS_SERVER_ARTIFACT_PATH` before the API or worker starts, so `/registry/*` has an initial artifact surface on first boot.
+For the full compose runbook, backup/prune/mirror commands, and credential layout guidance, see `docs/ops/server-deployment.md`.
 
 ## AI Protocol
 
@@ -358,6 +388,7 @@ GitHub Actions runs `scripts/check-all.sh` on pushes and pull requests. That val
 - secret scan
 - deterministic catalog generation
 - compatibility catalog generation
+- hosted registry container image builds on pull requests, `main`, and `v*` tags through `.github/workflows/container-image.yml`
 - compatibility regression coverage for legacy metadata, install-manifest, lock, snapshot, and bare-name resolution behavior
 - discovery-index, name-resolution, install-by-name, and source-aware upgrade regression coverage
 - signing config and allowed-signer validation

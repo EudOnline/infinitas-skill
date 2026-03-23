@@ -6,6 +6,7 @@ Thumbs.db
 *.swo
 .env
 .env.*
+!.env.compose.example
 node_modules/
 __pycache__/
 *.py[cod]
@@ -22,6 +23,7 @@ credentials/
 .cache/
 .state/
 .worktrees/
+.deploy/
 
 # Browser automation / UI review artifacts
 .playwright-cli/

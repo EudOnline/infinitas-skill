@@ -1,0 +1,140 @@
+name: infinitas-hosted-registry
+
+x-infinitas-common: &infinitas-common
+  image: ${INFINITAS_IMAGE}
+  env_file:
+    - .env.compose
+  entrypoint:
+    - /app/docker/entrypoint-hosted.sh
+  environment:
+    HOME: ${INFINITAS_RUNTIME_HOME}
+  init: true
+  user: "${INFINITAS_UID}:${INFINITAS_GID}"
+  working_dir: /app
+  volumes:
+    - ${INFINITAS_HOST_REPO_PATH}:${INFINITAS_SERVER_REPO_PATH}
+    - ${INFINITAS_HOST_DATA_PATH}:/srv/infinitas/data
+    - ${INFINITAS_HOST_ARTIFACT_PATH}:${INFINITAS_SERVER_ARTIFACT_PATH}
+    - ${INFINITAS_HOST_BACKUP_PATH}:${INFINITAS_BACKUP_OUTPUT_DIR}
+    - ${INFINITAS_HOST_HOME_PATH}:${INFINITAS_RUNTIME_HOME}
+
+services:
+  app:
+    <<: *infinitas-common
+    command:
+      - python3
+      - -m
+      - uvicorn
+      - server.app:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+    ports:
+      - "${INFINITAS_PUBLISH_HOST}:${INFINITAS_PUBLISH_PORT}:8000"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          python3 /app/scripts/server-healthcheck.py
+          --api-url http://127.0.0.1:8000
+          --repo-path "$$INFINITAS_SERVER_REPO_PATH"
+          --artifact-path "$$INFINITAS_SERVER_ARTIFACT_PATH"
+          --database-url "$$INFINITAS_SERVER_DATABASE_URL"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  worker:
+    <<: *infinitas-common
+    command:
+      - /bin/bash
+      - -lc
+      - >-
+          exec python3 /app/scripts/run-hosted-worker.py
+          --poll-interval "$$INFINITAS_WORKER_POLL_INTERVAL"
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+
+  backup:
+    <<: *infinitas-common
+    profiles: ["ops"]
+    command:
+      - /bin/bash
+      - -lc
+      - >-
+          exec python3 /app/scripts/backup-hosted-registry.py
+          --repo-path "$$INFINITAS_SERVER_REPO_PATH"
+          --database-url "$$INFINITAS_SERVER_DATABASE_URL"
+          --artifact-path "$$INFINITAS_SERVER_ARTIFACT_PATH"
+          --output-dir "$$INFINITAS_BACKUP_OUTPUT_DIR"
+          --label "$$INFINITAS_BACKUP_LABEL"
+    restart: "no"
+
+  prune:
+    <<: *infinitas-common
+    profiles: ["ops"]
+    command:
+      - /bin/bash
+      - -lc
+      - >-
+          exec python3 /app/scripts/prune-hosted-backups.py
+          --backup-root "$$INFINITAS_BACKUP_OUTPUT_DIR"
+          --keep-last "$$INFINITAS_PRUNE_KEEP_LAST"
+          --json
+    restart: "no"
+
+  inspect:
+    <<: *infinitas-common
+    profiles: ["ops"]
+    command:
+      - /bin/bash
+      - -lc
+      - |
+          args=(
+            --database-url "$$INFINITAS_SERVER_DATABASE_URL"
+            --limit "$$INFINITAS_INSPECT_LIMIT"
+            --json
+          )
+          if [[ -n "$${INFINITAS_INSPECT_MAX_QUEUED_JOBS:-}" ]]; then
+            args+=(--max-queued-jobs "$$INFINITAS_INSPECT_MAX_QUEUED_JOBS")
+          fi
+          if [[ -n "$${INFINITAS_INSPECT_MAX_RUNNING_JOBS:-}" ]]; then
+            args+=(--max-running-jobs "$$INFINITAS_INSPECT_MAX_RUNNING_JOBS")
+          fi
+          if [[ -n "$${INFINITAS_INSPECT_MAX_FAILED_JOBS:-}" ]]; then
+            args+=(--max-failed-jobs "$$INFINITAS_INSPECT_MAX_FAILED_JOBS")
+          fi
+          if [[ -n "$${INFINITAS_INSPECT_MAX_WARNING_JOBS:-}" ]]; then
+            args+=(--max-warning-jobs "$$INFINITAS_INSPECT_MAX_WARNING_JOBS")
+          fi
+          if [[ -n "$${INFINITAS_INSPECT_ALERT_WEBHOOK_URL:-}" ]]; then
+            args+=(--alert-webhook-url "$$INFINITAS_INSPECT_ALERT_WEBHOOK_URL")
+          fi
+          if [[ -n "$${INFINITAS_INSPECT_ALERT_FALLBACK_FILE:-}" ]]; then
+            args+=(--alert-fallback-file "$$INFINITAS_INSPECT_ALERT_FALLBACK_FILE")
+          fi
+          exec python3 /app/scripts/inspect-hosted-state.py "$${args[@]}"
+    restart: "no"
+
+  mirror:
+    <<: *infinitas-common
+    profiles: ["ops"]
+    command:
+      - /bin/bash
+      - -lc
+      - |
+          if [[ -z "$${INFINITAS_SERVER_MIRROR_REMOTE:-}" ]]; then
+            echo "INFINITAS_SERVER_MIRROR_REMOTE is required for the mirror service" >&2
+            exit 1
+          fi
+          args=(--remote "$$INFINITAS_SERVER_MIRROR_REMOTE")
+          if [[ -n "$${INFINITAS_SERVER_MIRROR_BRANCH:-}" ]]; then
+            args+=(--branch "$$INFINITAS_SERVER_MIRROR_BRANCH")
+          fi
+          exec bash "$$INFINITAS_SERVER_REPO_PATH/scripts/mirror-registry.sh" "$${args[@]}"
+    restart: "no"
