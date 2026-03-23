@@ -4,13 +4,11 @@ x-infinitas-common: &infinitas-common
   image: ${INFINITAS_IMAGE}
   env_file:
     - .env.compose
-  entrypoint:
-    - /app/docker/entrypoint-hosted.sh
   environment:
     HOME: ${INFINITAS_RUNTIME_HOME}
   init: true
   user: "${INFINITAS_UID}:${INFINITAS_GID}"
-  working_dir: /app
+  working_dir: ${INFINITAS_SERVER_REPO_PATH}
   volumes:
     - ${INFINITAS_HOST_REPO_PATH}:${INFINITAS_SERVER_REPO_PATH}
     - ${INFINITAS_HOST_DATA_PATH}:/srv/infinitas/data
@@ -19,8 +17,20 @@ x-infinitas-common: &infinitas-common
     - ${INFINITAS_HOST_HOME_PATH}:${INFINITAS_RUNTIME_HOME}
 
 services:
+  init-repo:
+    <<: *infinitas-common
+    command:
+      - python3
+      - /opt/infinitas/bundle/docker/bootstrap-runtime-repo.py
+    restart: "no"
+
   app:
     <<: *infinitas-common
+    entrypoint:
+      - /opt/infinitas/bundle/docker/entrypoint-hosted.sh
+    depends_on:
+      init-repo:
+        condition: service_completed_successfully
     command:
       - python3
       - -m
@@ -37,7 +47,7 @@ services:
       test:
         - CMD-SHELL
         - >-
-          python3 /app/scripts/server-healthcheck.py
+          python3 "$$INFINITAS_SERVER_REPO_PATH/scripts/server-healthcheck.py"
           --api-url http://127.0.0.1:8000
           --repo-path "$$INFINITAS_SERVER_REPO_PATH"
           --artifact-path "$$INFINITAS_SERVER_ARTIFACT_PATH"
@@ -49,47 +59,63 @@ services:
 
   worker:
     <<: *infinitas-common
+    entrypoint:
+      - /opt/infinitas/bundle/docker/entrypoint-hosted.sh
     command:
       - /bin/bash
       - -lc
       - >-
-          exec python3 /app/scripts/run-hosted-worker.py
+          exec python3 "$$INFINITAS_SERVER_REPO_PATH/scripts/run-hosted-worker.py"
           --poll-interval "$$INFINITAS_WORKER_POLL_INTERVAL"
     depends_on:
+      init-repo:
+        condition: service_completed_successfully
       app:
         condition: service_healthy
     restart: unless-stopped
 
   backup:
     <<: *infinitas-common
+    entrypoint:
+      - /opt/infinitas/bundle/docker/entrypoint-hosted.sh
     profiles: ["ops"]
     command:
       - /bin/bash
       - -lc
       - >-
-          exec python3 /app/scripts/backup-hosted-registry.py
+          exec python3 "$$INFINITAS_SERVER_REPO_PATH/scripts/backup-hosted-registry.py"
           --repo-path "$$INFINITAS_SERVER_REPO_PATH"
           --database-url "$$INFINITAS_SERVER_DATABASE_URL"
           --artifact-path "$$INFINITAS_SERVER_ARTIFACT_PATH"
           --output-dir "$$INFINITAS_BACKUP_OUTPUT_DIR"
           --label "$$INFINITAS_BACKUP_LABEL"
+    depends_on:
+      init-repo:
+        condition: service_completed_successfully
     restart: "no"
 
   prune:
     <<: *infinitas-common
+    entrypoint:
+      - /opt/infinitas/bundle/docker/entrypoint-hosted.sh
     profiles: ["ops"]
     command:
       - /bin/bash
       - -lc
       - >-
-          exec python3 /app/scripts/prune-hosted-backups.py
+          exec python3 "$$INFINITAS_SERVER_REPO_PATH/scripts/prune-hosted-backups.py"
           --backup-root "$$INFINITAS_BACKUP_OUTPUT_DIR"
           --keep-last "$$INFINITAS_PRUNE_KEEP_LAST"
           --json
+    depends_on:
+      init-repo:
+        condition: service_completed_successfully
     restart: "no"
 
   inspect:
     <<: *infinitas-common
+    entrypoint:
+      - /opt/infinitas/bundle/docker/entrypoint-hosted.sh
     profiles: ["ops"]
     command:
       - /bin/bash
@@ -118,11 +144,16 @@ services:
           if [[ -n "$${INFINITAS_INSPECT_ALERT_FALLBACK_FILE:-}" ]]; then
             args+=(--alert-fallback-file "$$INFINITAS_INSPECT_ALERT_FALLBACK_FILE")
           fi
-          exec python3 /app/scripts/inspect-hosted-state.py "$${args[@]}"
+          exec python3 "$$INFINITAS_SERVER_REPO_PATH/scripts/inspect-hosted-state.py" "$${args[@]}"
+    depends_on:
+      init-repo:
+        condition: service_completed_successfully
     restart: "no"
 
   mirror:
     <<: *infinitas-common
+    entrypoint:
+      - /opt/infinitas/bundle/docker/entrypoint-hosted.sh
     profiles: ["ops"]
     command:
       - /bin/bash
@@ -137,4 +168,7 @@ services:
             args+=(--branch "$$INFINITAS_SERVER_MIRROR_BRANCH")
           fi
           exec bash "$$INFINITAS_SERVER_REPO_PATH/scripts/mirror-registry.sh" "$${args[@]}"
+    depends_on:
+      init-repo:
+        condition: service_completed_successfully
     restart: "no"

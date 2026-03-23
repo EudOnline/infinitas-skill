@@ -57,7 +57,7 @@ The repository now includes a container image path for the hosted registry:
 - pull requests build the image without pushing
 - pushes to `main`, version tags matching `v*`, and manual workflow runs publish to GHCR as `ghcr.io/<owner>/infinitas-skill`
 
-The workflow emits branch, semver, `sha-*`, and default-branch `latest` tags. The image is only the runtime shell around the hosted control plane. The writable git checkout that worker jobs mutate still lives outside the image and must be mounted into the running container.
+The workflow emits branch, semver, `sha-*`, and default-branch `latest` tags. The image contains a full runtime snapshot of the repository contents needed by the hosted control plane, and compose seeds that snapshot into a writable runtime repo on first boot.
 
 ## Docker Compose deployment
 
@@ -66,7 +66,7 @@ For a single-node container deployment, use the checked-in `docker-compose.yml` 
 The compose stack assumes:
 
 - the app image is pulled from GHCR or built separately from the same repository
-- `INFINITAS_SERVER_REPO_PATH` is a writable bind-mounted git checkout
+- `INFINITAS_SERVER_REPO_PATH` points at a writable host directory such as `.deploy/repo`
 - SQLite, hosted artifacts, backups, and git home state live on durable host paths
 - git credentials for push or optional mirror jobs live under the mounted compose home directory
 
@@ -75,29 +75,37 @@ Recommended bootstrap flow:
 ```bash
 cp .env.compose.example .env.compose
 mkdir -p .deploy/{repo,data,artifacts,backups,home}
-git clone <your-private-registry-remote> .deploy/repo
 
 # If git push uses SSH, place credentials under .deploy/home/.ssh and ensure permissions are strict.
 # Optionally copy or create .deploy/home/.gitconfig for user.name / user.email / signing policy.
+# If the runtime repo should push to a remote, set INFINITAS_SERVER_GIT_ORIGIN_URL in .env.compose.
 
 docker compose --env-file .env.compose config
 docker compose --env-file .env.compose pull
+docker compose --env-file .env.compose run --rm init-repo
 docker compose --env-file .env.compose up -d app worker
 ```
 
 Important runtime detail:
 
-- the image code lives at `/app`
-- the writable source-of-truth checkout is the bind-mounted `INFINITAS_SERVER_REPO_PATH` such as `/srv/infinitas/repo`
-- the shared container entrypoint validates that checkout, creates SQLite/lock/artifact parent directories when needed, and syncs `catalog/` into `INFINITAS_SERVER_ARTIFACT_PATH` before the API or worker starts
+- the bundled repository snapshot lives at `/opt/infinitas/bundle`
+- the writable source-of-truth checkout is still `INFINITAS_SERVER_REPO_PATH` such as `/srv/infinitas/repo`
+- `init-repo` and the shared container entrypoint bootstrap that runtime repo from the bundled snapshot when the host directory is empty, create a local git history, optionally configure `origin`, and sync `catalog/` into `INFINITAS_SERVER_ARTIFACT_PATH`
+- if `.deploy/repo` already contains a valid git worktree, compose reuses it as-is
 
 The default compose environment uses these host mounts:
 
-- `INFINITAS_HOST_REPO_PATH` → mounted writable repo checkout
+- `INFINITAS_HOST_REPO_PATH` → mounted writable runtime repo initialized from the image snapshot
 - `INFINITAS_HOST_DATA_PATH` → SQLite DB and repo lock
 - `INFINITAS_HOST_ARTIFACT_PATH` → hosted `/registry/*` artifact root
 - `INFINITAS_HOST_BACKUP_PATH` → backup snapshots and optional inspect fallback files
 - `INFINITAS_HOST_HOME_PATH` → `.ssh`, `.gitconfig`, and related git client state for push/mirror operations
+
+Important caveat:
+
+- image-only bootstrap creates a fresh local git history from the bundled snapshot
+- if you need the runtime repo to preserve an existing upstream history exactly, restore a backup into `.deploy/repo` or pre-seed that directory yourself before starting compose
+- if you only need image-driven deployment plus future worker pushes, setting `INFINITAS_SERVER_GIT_ORIGIN_URL` is usually enough
 
 After the stack is up, validate with:
 

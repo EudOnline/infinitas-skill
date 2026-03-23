@@ -1,5 +1,4 @@
 .git
-.github
 .DS_Store
 Thumbs.db
 *.log
@@ -8,6 +7,7 @@ Thumbs.db
 *.swo
 .env
 .env.*
+!.env.compose.example
 .venv
 node_modules
 __pycache__
