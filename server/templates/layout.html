@@ -2,28 +2,29 @@
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>{{ title or "infinitas hosted registry" }}</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%233b5b70'/%3E%3Cpath d='M16 32c5-7 9-11 16-11 7 0 11 4 16 11 5 7 9 11 16 11' stroke='%23f7f2ea' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3Cpath d='M48 32c-5 7-9 11-16 11-7 0-11-4-16-11-5-7-9-11-16-11' stroke='%23f7f2ea' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E" />
     <style>
       :root {
         color-scheme: light;
-        --paper: oklch(97.2% 0.012 82);
-        --paper-strong: oklch(94.8% 0.02 84);
-        --paper-muted: oklch(96% 0.016 86);
-        --surface: oklch(98.8% 0.008 88);
-        --surface-strong: oklch(95.4% 0.018 240);
-        --ink: oklch(22% 0.026 252);
-        --ink-soft: oklch(39% 0.022 245);
-        --line: oklch(83% 0.018 240);
-        --line-strong: oklch(70% 0.028 246);
-        --accent: oklch(58% 0.17 248);
-        --accent-deep: oklch(52% 0.16 248);
-        --accent-soft: oklch(91% 0.048 246);
-        --accent-warm: oklch(74% 0.11 72);
+        --paper: oklch(97.2% 0.006 85);
+        --paper-strong: oklch(95.2% 0.01 84);
+        --paper-muted: oklch(96.3% 0.008 86);
+        --surface: oklch(98.7% 0.004 88);
+        --surface-strong: oklch(95.8% 0.012 228);
+        --ink: oklch(24% 0.018 248);
+        --ink-soft: oklch(41% 0.014 244);
+        --line: oklch(85% 0.01 240);
+        --line-strong: oklch(73% 0.016 240);
+        --accent: oklch(45% 0.062 228);
+        --accent-deep: oklch(37% 0.05 228);
+        --accent-soft: oklch(92% 0.022 230);
+        --accent-warm: oklch(76% 0.072 74);
         --success: oklch(71% 0.12 150);
         --danger: oklch(66% 0.16 28);
-        --shadow: 0 12px 34px color-mix(in oklch, var(--accent) 7%, transparent);
-        --shadow-soft: 0 6px 18px color-mix(in oklch, var(--accent) 5%, transparent);
+        --shadow: 0 10px 24px color-mix(in oklch, var(--ink) 4%, transparent);
+        --shadow-soft: 0 5px 14px color-mix(in oklch, var(--ink) 3%, transparent);
         --radius: 1.3rem;
         --radius-tight: 1rem;
         --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
@@ -41,9 +42,9 @@
       body {
         margin: 0;
         background:
-          linear-gradient(135deg, color-mix(in oklch, white 88%, var(--paper)) 0%, transparent 35%),
-          radial-gradient(circle at top left, color-mix(in oklch, var(--accent) 7%, transparent), transparent 26%),
-          radial-gradient(circle at 84% 20%, color-mix(in oklch, var(--accent-warm) 12%, transparent), transparent 22%),
+          linear-gradient(135deg, color-mix(in oklch, white 92%, var(--paper)) 0%, transparent 38%),
+          radial-gradient(circle at top left, color-mix(in oklch, var(--accent) 4%, transparent), transparent 24%),
+          radial-gradient(circle at 84% 20%, color-mix(in oklch, var(--accent-warm) 8%, transparent), transparent 18%),
           linear-gradient(180deg, color-mix(in oklch, var(--paper-strong) 88%, white) 0%, var(--paper) 100%);
         color: var(--ink);
         font-family: "Avenir Next", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
@@ -89,7 +90,7 @@
       .site-shell {
         width: var(--site-width);
         margin: 0 auto;
-        padding: 1.1rem 0 4rem;
+        padding: 0.95rem 0 4rem;
       }
 
       .topbar {
@@ -100,14 +101,14 @@
         margin: 0 auto;
         display: grid;
         grid-template-columns: auto 1fr auto;
-        gap: 1rem;
+        gap: 0.9rem;
         align-items: center;
-        padding: 0.85rem 1rem;
+        padding: 0.72rem 0.9rem;
         border: 1px solid color-mix(in oklch, var(--line-strong) 34%, white);
-        background: color-mix(in oklch, var(--surface) 94%, white);
-        border-radius: 1.25rem;
-        backdrop-filter: blur(8px);
-        box-shadow: 0 8px 22px color-mix(in oklch, var(--accent) 5%, transparent);
+        background: color-mix(in oklch, var(--surface) 97%, white);
+        border-radius: 1.15rem;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 8px 18px color-mix(in oklch, var(--ink) 3%, transparent);
       }
 
       .brand {
@@ -118,9 +119,9 @@
       }
 
       .brand-mark {
-        width: 2.35rem;
-        height: 2.35rem;
-        border-radius: 0.8rem;
+        width: 2.05rem;
+        height: 2.05rem;
+        border-radius: 0.72rem;
         display: grid;
         place-items: center;
         background:
@@ -137,15 +138,15 @@
       }
 
       .brand-title {
-        font-family: "Iowan Old Style", "Palatino Linotype", "Noto Serif SC", "Source Han Serif SC", serif;
-        font-size: 1.1rem;
+        font-family: "Baskerville", "Iowan Old Style", "Palatino Linotype", "Noto Serif SC", "Source Han Serif SC", serif;
+        font-size: 1.02rem;
         font-weight: 700;
         letter-spacing: -0.02em;
       }
 
       .brand-subtitle {
         color: var(--ink-soft);
-        font-size: 0.78rem;
+        font-size: 0.74rem;
       }
 
       .nav {
@@ -156,7 +157,7 @@
       }
 
       .nav a {
-        padding: 0.55rem 0.95rem;
+        padding: 0.48rem 0.88rem;
         border-radius: 999px;
         color: var(--ink-soft);
         transition:
@@ -189,12 +190,12 @@
         align-items: center;
         gap: 0.5rem;
         justify-self: end;
-        padding: 0.5rem 0.9rem;
+        padding: 0.42rem 0.8rem;
         border-radius: 999px;
         border: 1px solid color-mix(in oklch, var(--line) 80%, white);
         background: color-mix(in oklch, white 88%, var(--paper));
         color: var(--ink-soft);
-        font-size: 0.84rem;
+        font-size: 0.8rem;
       }
 
       .status-pill::before {
@@ -248,7 +249,7 @@
       .page-head,
       .section-shell,
       .console-table-shell {
-        padding: clamp(1.25rem, 2.2vw, 2rem);
+        padding: clamp(1.1rem, 1.9vw, 1.7rem);
       }
 
       .eyebrow {
@@ -272,9 +273,9 @@
       .hero-title,
       .section-title {
         margin: 0;
-        font-family: "Iowan Old Style", "Palatino Linotype", "Noto Serif SC", "Source Han Serif SC", serif;
+        font-family: "Baskerville", "Iowan Old Style", "Palatino Linotype", "Songti SC", "Noto Serif SC", "Source Han Serif SC", serif;
         letter-spacing: -0.035em;
-        line-height: 0.98;
+        line-height: 1;
       }
 
       .page-title {
@@ -301,12 +302,13 @@
       }
 
       .section-title {
-        font-size: clamp(2rem, 4vw, 3.4rem);
-        max-width: 12ch;
+        font-size: clamp(1.72rem, 3.4vw, 2.75rem);
+        max-width: 13ch;
       }
 
       .page-copy,
       .hero-body,
+      .hero-support,
       .section-copy,
       .muted {
         color: var(--ink-soft);
@@ -314,6 +316,7 @@
 
       .page-copy,
       .hero-body,
+      .hero-support,
       .section-copy {
         max-width: 58ch;
         margin: 1rem 0 0;
@@ -339,6 +342,7 @@
 
       .page-stats,
       .facts,
+      .ops-list,
       .mini-tiles,
       .console-links {
         display: grid;
@@ -359,9 +363,10 @@
 
       .stat-value {
         display: block;
-        font-family: "Iowan Old Style", "Palatino Linotype", "Noto Serif SC", serif;
+        font-family: "Baskerville", "Iowan Old Style", "Palatino Linotype", "Noto Serif SC", serif;
         font-size: clamp(1.35rem, 2vw, 2rem);
         line-height: 1;
+        font-variant-numeric: tabular-nums;
       }
 
       .stat-label {
@@ -409,10 +414,11 @@
         border: 1px solid color-mix(in oklch, var(--line-strong) 30%, white);
         background: color-mix(in oklch, white 76%, var(--paper));
         color: var(--ink);
-        padding: 0.85rem 1.1rem;
+        padding: 0.72rem 1rem;
         border-radius: 999px;
         cursor: pointer;
         font-weight: 600;
+        font-size: 0.92rem;
         box-shadow: inset 0 1px 0 color-mix(in oklch, white 84%, transparent);
         transition:
           background-color 150ms var(--ease-out-quart),
@@ -438,14 +444,14 @@
         background: linear-gradient(180deg, color-mix(in oklch, var(--accent) 82%, white), var(--accent-deep));
         color: white;
         border-color: color-mix(in oklch, var(--accent) 55%, black);
-        box-shadow: 0 8px 20px color-mix(in oklch, var(--accent) 16%, transparent);
+        box-shadow: 0 7px 16px color-mix(in oklch, var(--accent) 14%, transparent);
       }
 
       .button-row {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.85rem;
-        margin-top: 1.5rem;
+        gap: 0.7rem;
+        margin-top: 1.2rem;
       }
 
       .hero-badges {
@@ -477,43 +483,31 @@
 
       .home-stack {
         display: grid;
-        gap: clamp(1.6rem, 2.6vw, 2.5rem);
-        margin-top: 1.4rem;
+        gap: clamp(1.2rem, 2vw, 2rem);
+        margin-top: 1.1rem;
       }
 
       .hero-grid {
-        grid-template-columns: minmax(0, 1.06fr) minmax(19rem, 0.94fr);
-        align-items: start;
-        column-gap: clamp(1.8rem, 3vw, 3rem);
-        row-gap: clamp(1.1rem, 1.7vw, 1.65rem);
-        grid-template-areas:
-          "lead note"
-          "tail note";
+        grid-template-columns: minmax(0, 0.84fr) minmax(20rem, 1.16fr);
+        align-items: stretch;
+        column-gap: clamp(1.35rem, 2.2vw, 2.2rem);
+        row-gap: 1rem;
       }
 
       .hero-copy-block {
         display: grid;
         align-content: start;
-        padding: clamp(0.8rem, 1.6vw, 1.2rem) clamp(0.2rem, 1vw, 0.4rem) 0;
+        padding: clamp(0.35rem, 1vw, 0.7rem) 0 0;
       }
 
       .page-home .hero-copy-lead {
-        grid-area: lead;
-      }
-
-      .page-home .hero-copy-tail {
-        grid-area: tail;
-        padding-top: 0;
-      }
-
-      .page-home .hero-note {
-        grid-area: note;
+        gap: 0.1rem;
       }
 
       .hero-title {
-        font-size: clamp(2.75rem, 7.2vw, 5.8rem);
-        max-width: 8.2ch;
-        line-height: 0.94;
+        font-size: clamp(1.92rem, 4vw, 3.15rem);
+        max-width: 7.2ch;
+        line-height: 1;
       }
 
       .hero-title .accent {
@@ -521,9 +515,14 @@
         display: block;
       }
 
+      .hero-support {
+        margin-top: 0.5rem;
+        font-size: 0.93rem;
+      }
+
       .hero-guideline {
         margin: 0.9rem 0 0;
-        max-width: 34rem;
+        max-width: 33rem;
         color: var(--ink-soft);
         font-size: 0.95rem;
       }
@@ -534,11 +533,23 @@
       }
 
       .hero-note {
-        padding: 1.15rem;
+        padding: 1rem 1.05rem;
         border-radius: 1rem;
-        background: linear-gradient(180deg, color-mix(in oklch, white 88%, var(--paper-muted)), color-mix(in oklch, white 76%, var(--paper)));
+        background: linear-gradient(180deg, color-mix(in oklch, white 92%, var(--paper-muted)), color-mix(in oklch, white 82%, var(--paper)));
         border: 1px solid color-mix(in oklch, var(--line) 84%, white);
         box-shadow: inset 0 1px 0 color-mix(in oklch, white 84%, transparent);
+      }
+
+      .hero-note-intro {
+        display: grid;
+        gap: 0.22rem;
+        margin-bottom: 0.7rem;
+      }
+
+      .hero-note-copy {
+        margin: 0;
+        color: var(--ink-soft);
+        font-size: 0.93rem;
       }
 
       .hero-note-grid,
@@ -562,9 +573,11 @@
       .audience-switch {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.75rem;
-        margin-bottom: 1rem;
-        padding-bottom: 0.95rem;
+        gap: 0.55rem;
+        margin-bottom: 0.8rem;
+        padding: 0.68rem 0;
+        margin-top: 0.2rem;
+        border-top: 1px solid color-mix(in oklch, var(--line) 82%, white);
         border-bottom: 1px solid color-mix(in oklch, var(--line) 82%, white);
       }
 
@@ -574,12 +587,12 @@
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
-        padding: 0.72rem 0.9rem;
+        padding: 0.66rem 0.9rem;
         border-radius: 999px;
         border: 1px solid color-mix(in oklch, var(--line) 84%, white);
         background: color-mix(in oklch, white 90%, var(--surface));
         color: var(--ink-soft);
-        font-size: 0.88rem;
+        font-size: 0.85rem;
         font-weight: 600;
         cursor: pointer;
         transition:
@@ -589,7 +602,7 @@
       }
 
       .audience-pill.active {
-        background: color-mix(in oklch, var(--accent-soft) 58%, white);
+        background: color-mix(in oklch, var(--accent-soft) 62%, white);
         color: var(--ink);
         border-color: color-mix(in oklch, var(--accent) 24%, var(--line));
       }
@@ -613,7 +626,6 @@
       .command-sheet,
       .skill-row,
       .registry-row,
-      .console-link,
       .insight-card {
         position: relative;
         overflow: hidden;
@@ -633,13 +645,13 @@
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 0.35rem 0.8rem;
-        margin-top: 1.15rem;
+        gap: 0.28rem 0.7rem;
+        margin-top: 0.95rem;
       }
 
       .human-brief-label {
         color: var(--ink);
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         font-weight: 600;
       }
 
@@ -647,23 +659,21 @@
         display: inline-flex;
         align-items: center;
         gap: 0.38rem;
-        padding: 0.12rem 0.55rem 0.12rem 0.18rem;
-        border-radius: 0.9rem;
-        border: none;
-        background: transparent;
+        padding: 0.28rem 0.62rem;
+        border-radius: 999px;
+        border: 1px solid color-mix(in oklch, var(--line) 82%, white);
+        background: color-mix(in oklch, white 88%, var(--surface));
         color: var(--ink);
-        font-size: 0.86rem;
-        font-weight: 650;
+        font-size: 0.8rem;
+        font-weight: 600;
       }
 
       .human-brief-item::before {
-        content: "✓";
-        width: auto;
-        height: auto;
-        border-radius: 0;
-        background: none;
-        color: color-mix(in oklch, var(--accent) 82%, var(--ink));
-        font-size: 0.88rem;
+        content: "";
+        width: 0.34rem;
+        height: 0.34rem;
+        border-radius: 999px;
+        background: color-mix(in oklch, var(--accent) 78%, white);
         line-height: 1;
       }
 
@@ -759,12 +769,116 @@
         font-size: 0.86rem;
       }
 
+      .preset-shell,
+      .preset-panels {
+        display: grid;
+        gap: 0.72rem;
+      }
+
+      .preset-switch {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.42rem;
+      }
+
+      .preset-pill {
+        appearance: none;
+        border: 1px solid color-mix(in oklch, var(--line) 84%, white);
+        background: color-mix(in oklch, white 90%, var(--surface));
+        color: var(--ink-soft);
+        padding: 0.4rem 0.74rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          border-color 140ms var(--ease-out-quart),
+          background-color 140ms var(--ease-out-quart),
+          color 140ms var(--ease-out-quart);
+      }
+
+      .preset-pill.active {
+        border-color: color-mix(in oklch, var(--accent) 24%, var(--line));
+        background: color-mix(in oklch, var(--accent-soft) 64%, white);
+        color: var(--ink);
+      }
+
+      .preset-panel {
+        display: none;
+        gap: 0.72rem;
+        padding: 0.78rem 0 0;
+        border-top: 1px solid color-mix(in oklch, var(--line) 82%, white);
+      }
+
+      .preset-panel.active {
+        display: grid;
+      }
+
+      .preset-title {
+        margin: 0;
+        font-size: 1rem;
+        line-height: 1.25;
+      }
+
+      .preset-copy {
+        margin: 0;
+        color: var(--ink-soft);
+        font-size: 0.92rem;
+      }
+
+      .status-strip-shell {
+        margin-top: -0.2rem;
+      }
+
+      .status-strip {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0;
+        border: 1px solid color-mix(in oklch, var(--line) 82%, white);
+        border-radius: 1rem;
+        overflow: hidden;
+        background: color-mix(in oklch, white 94%, var(--surface));
+        box-shadow: none;
+      }
+
+      .status-tile {
+        display: grid;
+        gap: 0.28rem;
+        padding: 0.82rem 0.95rem;
+        border-right: 1px solid color-mix(in oklch, var(--line) 82%, white);
+        background: transparent;
+      }
+
+      .status-tile:last-child {
+        border-right: none;
+      }
+
+      .status-tile-label {
+        color: var(--ink-soft);
+        font-size: 0.78rem;
+        letter-spacing: 0.05em;
+      }
+
+      .status-tile-value {
+        font-family: "Baskerville", "Iowan Old Style", "Palatino Linotype", "Noto Serif SC", serif;
+        font-size: clamp(1rem, 1.8vw, 1.25rem);
+        line-height: 1.1;
+        color: var(--ink);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .status-tile-detail {
+        margin: 0;
+        color: var(--ink-soft);
+        font-size: 0.84rem;
+      }
+
       .facts {
         grid-template-columns: repeat(3, minmax(0, 1fr));
       }
 
       .workflow-list {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
 
       .workflow-step {
@@ -851,27 +965,53 @@
 
       .console-links {
         grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0;
+        margin-top: 0.8rem;
+        border: 1px solid color-mix(in oklch, var(--line) 82%, white);
+        border-radius: 1rem;
+        overflow: hidden;
+        background: color-mix(in oklch, white 94%, var(--surface));
       }
 
       .console-link {
+        display: grid;
         align-content: start;
-        gap: 0.6rem;
+        gap: 0.38rem;
+        padding: 0.95rem 1rem;
+        border-right: 1px solid color-mix(in oklch, var(--line) 82%, white);
+        background: transparent;
+        box-shadow: none;
+        border-radius: 0;
       }
 
-      .console-link-value {
-        font-family: "Iowan Old Style", "Palatino Linotype", "Noto Serif SC", serif;
-        font-size: clamp(2rem, 4vw, 2.7rem);
-        line-height: 1;
-        letter-spacing: -0.05em;
-        color: var(--accent-deep);
+      .console-link:last-child {
+        border-right: none;
       }
 
-      .console-link-footer {
+      .console-link-count {
         display: inline-flex;
         align-items: center;
-        gap: 0.55rem;
-        color: var(--accent);
-        font-size: 0.92rem;
+        justify-content: center;
+        min-width: 1.8rem;
+        padding: 0.18rem 0.5rem;
+        border-radius: 999px;
+        background: color-mix(in oklch, var(--accent-soft) 74%, white);
+        color: var(--accent-deep);
+        font-size: 0.78rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .console-summary {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 1rem;
+        align-items: start;
+      }
+
+      .console-summary .section-title {
+        font-size: clamp(1.55rem, 3vw, 2.3rem);
+        max-width: 11ch;
       }
 
       .console-table-shell {
@@ -1045,7 +1185,7 @@
       }
 
       .hero-shell {
-        background: linear-gradient(180deg, color-mix(in oklch, white 88%, var(--paper)) 0%, color-mix(in oklch, white 80%, var(--surface)) 100%);
+        background: linear-gradient(180deg, color-mix(in oklch, white 92%, var(--paper)) 0%, color-mix(in oklch, white 86%, var(--surface)) 100%);
       }
 
       .hero-shell::after,
@@ -1054,25 +1194,54 @@
         opacity: 0.24;
       }
 
-      .facts-shell {
-        padding: 0.15rem 0;
-        border: none;
-        border-radius: 0;
-        background: transparent;
-        box-shadow: none;
+      .ops-shell {
+        background: linear-gradient(180deg, color-mix(in oklch, white 94%, var(--surface)) 0%, color-mix(in oklch, white 88%, var(--paper)) 100%);
       }
 
-      .facts-shell::before,
-      .facts-shell::after {
-        display: none;
+      .ops-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.72fr);
+        gap: 1rem;
+        align-items: end;
       }
 
-      .facts-shell .facts {
-        gap: 1.4rem;
+      .ops-list {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        margin-top: 1.35rem;
       }
 
-      .facts-shell .stat {
-        padding-top: 1rem;
+      .ops-card {
+        display: grid;
+        gap: 0.4rem;
+        padding: 1rem;
+        border-radius: 1rem;
+        border: 1px solid color-mix(in oklch, var(--line) 82%, white);
+        background: linear-gradient(180deg, color-mix(in oklch, white 94%, var(--surface)), color-mix(in oklch, white 86%, var(--paper-muted)));
+      }
+
+      .ops-label {
+        color: var(--ink-soft);
+        font-size: 0.8rem;
+        letter-spacing: 0.04em;
+      }
+
+      .ops-value {
+        font-family: "Baskerville", "Iowan Old Style", "Palatino Linotype", "Noto Serif SC", serif;
+        font-size: clamp(1.18rem, 2vw, 1.55rem);
+        line-height: 1.1;
+        color: var(--ink);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .ops-detail,
+      .ops-footnote {
+        margin: 0;
+        color: var(--ink-soft);
+        font-size: 0.92rem;
+      }
+
+      .ops-footnote {
+        margin-top: 1rem;
       }
 
       .registry-shell {
@@ -1110,6 +1279,10 @@
           background: color-mix(in oklch, white 92%, var(--paper-muted));
           box-shadow: var(--shadow-soft);
         }
+
+        .console-links .console-link:hover {
+          box-shadow: none;
+        }
       }
 
       [data-reveal] {
@@ -1136,35 +1309,43 @@
       }
 
       @media (max-width: 980px) {
-        .topbar,
         .page-head-grid,
         .page-stats,
         .hero-grid,
         .section-split,
         .workflow-list,
         .facts,
+        .ops-list,
+        .status-strip,
         .console-links,
         .insight-grid {
           grid-template-columns: 1fr;
         }
 
         .topbar {
+          grid-template-columns: minmax(0, 1fr) auto;
+          grid-template-areas:
+            "brand status"
+            "nav nav";
           border-radius: 1.1rem;
         }
 
+        .brand {
+          grid-area: brand;
+        }
+
         .nav {
+          grid-area: nav;
           justify-content: start;
         }
 
         .status-pill {
-          justify-self: start;
+          grid-area: status;
+          justify-self: end;
         }
 
         .page-home .hero-grid {
-          grid-template-areas:
-            "lead"
-            "note"
-            "tail";
+          grid-template-columns: 1fr;
         }
 
         .skill-row {
@@ -1173,6 +1354,16 @@
 
         .skill-row .muted {
           text-align: left;
+        }
+
+        .ops-head {
+          grid-template-columns: 1fr;
+          align-items: start;
+        }
+
+        .console-summary {
+          grid-template-columns: 1fr;
+          align-items: start;
         }
 
         .registry-shell > .section-shell:last-child {
@@ -1193,7 +1384,7 @@
         .topbar {
           width: min(100vw - 1rem, 100%);
           margin-top: 0.45rem;
-          padding: 0.9rem;
+          padding: 0.72rem 0.78rem;
           position: static;
         }
 
@@ -1213,7 +1404,7 @@
         .nav a {
           white-space: nowrap;
           scroll-snap-align: start;
-          padding: 0.5rem 0.85rem;
+          padding: 0.42rem 0.78rem;
         }
 
         .page-head,
@@ -1233,19 +1424,44 @@
         }
 
         .audience-switch,
-        .hero-note-grid {
+        .hero-note-grid,
+        .status-strip {
           grid-template-columns: 1fr;
         }
 
         .page-home .hero-title {
-          font-size: clamp(1.95rem, 10vw, 3.1rem);
-          max-width: none;
-          line-height: 1.02;
+          font-size: clamp(1.34rem, 6vw, 1.84rem);
+          max-width: 7ch;
+          line-height: 1.06;
         }
 
         .page-home .hero-body,
-        .page-home .hero-guideline {
+        .hero-support,
+        .page-home .hero-guideline,
+        .hero-note-copy,
+        .ops-detail,
+        .ops-footnote,
+        .status-tile-detail,
+        .preset-copy {
           font-size: 0.95rem;
+        }
+
+        .status-tile {
+          border-right: none;
+          border-bottom: 1px solid color-mix(in oklch, var(--line) 82%, white);
+        }
+
+        .status-tile:last-child {
+          border-bottom: none;
+        }
+
+        .console-link {
+          border-right: none;
+          border-bottom: 1px solid color-mix(in oklch, var(--line) 82%, white);
+        }
+
+        .console-link:last-child {
+          border-bottom: none;
         }
 
         table {
@@ -1269,27 +1485,27 @@
     </style>
   </head>
   <body class="page-{{ page_mode or 'default' }}">
-	    <header class="topbar">
-	      <a class="brand" href="/">
-	        <div class="brand-mark">∞</div>
-	        <div class="brand-copy">
-	          <div class="brand-title">infinitas-skill</div>
-	          <div class="brand-subtitle">面向 Agent 的私有技能仓库</div>
-	        </div>
-	      </a>
-	      <nav class="nav" aria-label="Primary">
-	        {% set current_path = request.url.path %}
-	        {% for link in nav_links or [] %}
-	        {% set href = link.href %}
-	        {% set is_current = href == current_path %}
-	        {% if not is_current and current_path == "/" and href == "#start" %}
-	        {% set is_current = true %}
-	        {% endif %}
-	        <a href="{{ href }}"{% if is_current %} aria-current="page"{% endif %}>{{ link.label }}</a>
-	        {% endfor %}
-	      </nav>
-	      <div class="status-pill">{{ page_kicker or page_eyebrow or "steady-state" }}</div>
-	    </header>
+    <header class="topbar">
+      <a class="brand" href="/">
+        <div class="brand-mark">∞</div>
+        <div class="brand-copy">
+          <div class="brand-title">infinitas-skill</div>
+          <div class="brand-subtitle">私有技能仓库</div>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Primary">
+        {% set current_path = request.url.path %}
+        {% for link in nav_links or [] %}
+        {% set href = link.href %}
+        {% set is_current = href == current_path %}
+        {% if not is_current and current_path == "/" and href == "#start" %}
+        {% set is_current = true %}
+        {% endif %}
+        <a href="{{ href }}"{% if is_current %} aria-current="page"{% endif %}>{{ link.label }}</a>
+        {% endfor %}
+      </nav>
+      <div class="status-pill">{{ page_kicker or page_eyebrow or "steady-state" }}</div>
+    </header>
 
     <main class="site-shell">
       {% if page_mode != "home" %}
@@ -1356,6 +1572,22 @@
         }
       };
 
+      const applyPreset = (presetButton) => {
+        const presetId = presetButton?.dataset?.presetId;
+        const root = presetButton?.closest?.("[data-preset-root]");
+        if (!presetId || !root) return;
+
+        root.querySelectorAll("[data-preset-button]").forEach((button) => {
+          const active = button === presetButton;
+          button.classList.toggle("active", active);
+          button.setAttribute("aria-pressed", active ? "true" : "false");
+        });
+
+        root.querySelectorAll("[data-preset-panel]").forEach((panel) => {
+          panel.classList.toggle("active", panel.dataset.presetId === presetId);
+        });
+      };
+
       document.addEventListener("keydown", (event) => {
         const focused = event.target?.closest?.(".audience-switch [data-audience]");
         if (!focused) return;
@@ -1396,6 +1628,12 @@
         const audienceButton = event.target.closest(".audience-switch [data-audience]");
         if (audienceButton) {
           applyAudience(audienceButton);
+          return;
+        }
+
+        const presetButton = event.target.closest("[data-preset-button]");
+        if (presetButton) {
+          applyPreset(presetButton);
           return;
         }
 

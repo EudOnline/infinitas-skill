@@ -1,169 +1,137 @@
 {% extends "layout.html" %}
 {% block body %}
 <section class="home-stack">
-	  <section class="section-shell hero-shell" id="start" data-reveal style="--reveal-index: 0">
-	    <div class="hero-grid">
-	      <div class="hero-copy-block hero-copy-lead">
-	        <p class="eyebrow">{{ page_eyebrow }}</p>
-	        <h1 class="hero-title">
-	          {{ hero_title }}
-	          <span class="accent">{{ hero_emphasis }}</span>
-	        </h1>
-	        <p class="hero-body">{{ hero_body }}</p>
-	      </div>
+  <section class="section-shell hero-shell" id="start" data-reveal style="--reveal-index: 0">
+    <div class="hero-grid">
+      <div class="hero-copy-block hero-copy-lead">
+        <p class="eyebrow">{{ page_eyebrow }}</p>
+        <h1 class="hero-title">
+          {{ hero_title }}
+          {% if hero_emphasis %}
+          <span class="accent">{{ hero_emphasis }}</span>
+          {% endif %}
+        </h1>
+        <p class="hero-body">{{ hero_body }}</p>
+        <p class="hero-support">{{ hero_support }}</p>
+        <div class="human-brief-strip" aria-label="Human briefing checklist">
+          <span class="human-brief-label">告诉它</span>
+          {% for field in human_input_fields %}
+          <span class="human-brief-item">{{ field }}</span>
+          {% endfor %}
+        </div>
+        <div class="button-row">
+          <button class="button-link primary" type="button" data-copy="{{ hero_primary_copy }}">{{ hero_primary_link.label }}</button>
+          <a class="button-link" href="{{ hero_secondary_link.href }}">{{ hero_secondary_link.label }}</a>
+        </div>
+      </div>
 
-	      <aside class="hero-note">
-	        <div class="audience-switch" role="radiogroup" aria-label="Audience">
-	          <button class="audience-pill active" type="button" data-audience="human" role="radio" aria-checked="true" tabindex="0">我是 Human</button>
-          <button class="audience-pill" type="button" data-audience="agent" role="radio" aria-checked="false" tabindex="-1">我是 Agent</button>
+      <aside class="hero-note" id="handoff">
+        <div class="hero-note-intro">
+          <div class="section-kicker">交接台</div>
+          <p class="hero-note-copy">复制一条即可。</p>
+        </div>
+        <div class="audience-switch" role="radiogroup" aria-label="Audience">
+          <button class="audience-pill active" type="button" data-audience="human" role="radio" aria-checked="true" tabindex="0">交任务</button>
+          <button class="audience-pill" type="button" data-audience="agent" role="radio" aria-checked="false" tabindex="-1">执行命令</button>
         </div>
         <div class="hero-note-grid" data-audience="human">
-	          <div class="command-sheet" id="human-to-agent" data-audience-panel="human">
-	            <div class="section-kicker">给 Agent 的交接提示</div>
-	            <p class="section-copy" style="margin-top:0;">人类只要说明目标、目标运行时和风险偏好。剩下的 search、inspect、install 交给 agent。</p>
-	            <div class="sheet-list" role="list" aria-label="Human prompts">
-	            {% for prompt in human_prompts %}
-	            <div class="brief-sheet sheet-item" role="listitem">
-	              <div class="brief-label">示例 {{ "%02d"|format(loop.index) }}</div>
-	              <h2 class="brief-title">{{ prompt.title }}</h2>
-	              <p class="brief-prompt">{{ prompt.prompt }}</p>
-	              <div>
-	                <button class="copy-button" type="button" data-copy="{{ prompt.prompt }}">复制提示</button>
-	              </div>
-	            </div>
-	            {% endfor %}
-	            </div>
-	          </div>
+          <div class="command-sheet" id="human-to-agent" data-audience-panel="human">
+            <div class="section-kicker">推荐提示</div>
+            <p class="section-copy" style="margin-top:0;">先说清目标，再让 Agent 去查和做。</p>
+            <div class="preset-shell" data-preset-root>
+              <div class="preset-switch" role="group" aria-label="Human prompt presets">
+                {% for prompt in human_prompts %}
+                <button
+                  class="preset-pill{% if loop.first %} active{% endif %}"
+                  type="button"
+                  data-preset-button
+                  data-preset-id="human-{{ loop.index0 }}"
+                  aria-pressed="{{ 'true' if loop.first else 'false' }}"
+                >
+                  {{ prompt.short_label or prompt.title }}
+                </button>
+                {% endfor %}
+              </div>
+              <div class="preset-panels">
+              {% for prompt in human_prompts %}
+              <div class="preset-panel{% if loop.first %} active{% endif %}" data-preset-panel data-preset-id="human-{{ loop.index0 }}">
+                <h2 class="preset-title">{{ prompt.title }}</h2>
+                <p class="preset-copy">{{ prompt.prompt }}</p>
+                <div>
+                  <button class="copy-button" type="button" data-copy="{{ prompt.prompt }}">复制提示</button>
+                </div>
+              </div>
+              {% endfor %}
+              </div>
+            </div>
+          </div>
 
-	          <div class="command-sheet" id="agent-to-registry" data-audience-panel="agent">
-	            <div class="section-kicker">Agent 到 Registry 的动作</div>
-	            <p class="section-copy" style="margin-top:0;">当 Agent 理解任务后，下一步应该是机械且可审计的。这些就是它在本仓库里真正该调用的入口。</p>
-	            <div class="sheet-list" role="list" aria-label="Agent commands">
-	            {% for example in command_examples %}
-	            <div class="brief-sheet sheet-item" role="listitem">
-	              <div class="brief-label">命令 {{ "%02d"|format(loop.index) }}</div>
-	              <div class="command-chip">
-	                <code>{{ example.command }}</code>
-	              </div>
-	              <div>
-	                <button class="copy-button" type="button" data-copy="{{ example.command }}">复制命令</button>
-	              </div>
-	            </div>
-	            {% endfor %}
-	            </div>
-	          </div>
-	        </div>
-	      </aside>
-
-	      <div class="hero-copy-block hero-copy-tail">
-	        <div class="human-brief-strip" aria-label="Human briefing checklist">
-	          <span class="human-brief-label">Human 只需给出</span>
-	          {% for field in human_input_fields %}
-	          <span class="human-brief-item">{{ field }}</span>
-	          {% endfor %}
-	        </div>
-	        <p class="hero-guideline"><strong>先给目标，再给约束。</strong> 不要先猜 skill 名，让 agent 先完成 discovery、inspection 和 trust 判断。</p>
-	        <div class="button-row">
-	          <a class="button-link primary" href="{{ hero_primary_link.href }}">{{ hero_primary_link.label }}</a>
-	          <a class="button-link" href="{{ hero_secondary_link.href }}">{{ hero_secondary_link.label }}</a>
-	        </div>
-	        <div class="hero-badges">
-	          {% for badge in hero_badges %}
-	          <span class="hero-badge">{{ badge }}</span>
-	          {% endfor %}
-	        </div>
-	      </div>
-	    </div>
-	  </section>
-
-  <section class="facts-shell" data-reveal style="--reveal-index: 1">
-    <div class="facts">
-      {% for fact in facts %}
-      <div class="stat">
-        <span class="stat-value">{{ fact.value }}</span>
-        <span class="stat-label">{{ fact.label }}</span>
-        <div class="stat-detail">{{ fact.detail }}</div>
-      </div>
-      {% endfor %}
+          <div class="command-sheet" id="agent-to-registry" data-audience-panel="agent">
+            <div class="section-kicker">常用命令</div>
+            <p class="section-copy" style="margin-top:0;">首页只保留最常用的两条命令。</p>
+            <div class="preset-shell" data-preset-root>
+              <div class="preset-switch" role="group" aria-label="Agent command presets">
+                {% for example in command_examples %}
+                <button
+                  class="preset-pill{% if loop.first %} active{% endif %}"
+                  type="button"
+                  data-preset-button
+                  data-preset-id="agent-{{ loop.index0 }}"
+                  aria-pressed="{{ 'true' if loop.first else 'false' }}"
+                >
+                  {{ example.short_label or example.title or example.label }}
+                </button>
+                {% endfor %}
+              </div>
+              <div class="preset-panels">
+              {% for example in command_examples %}
+              <div class="preset-panel{% if loop.first %} active{% endif %}" data-preset-panel data-preset-id="agent-{{ loop.index0 }}">
+                <h2 class="preset-title">{{ example.title or example.label }}</h2>
+                <div class="command-chip">
+                  <code>{{ example.command }}</code>
+                </div>
+                <div>
+                  <button class="copy-button" type="button" data-copy="{{ example.command }}">复制命令</button>
+                </div>
+              </div>
+              {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
     </div>
   </section>
 
-  <section class="section-shell editorial-shell" id="flow" data-reveal style="--reveal-index: 2">
-    <div class="section-kicker">流程</div>
-    <h2 class="section-title">一个更适合 agent 工作的入口页。</h2>
-    <p class="section-copy">参考 SkillHub 的做法，这里保留了“入口清楚、可复制、先看推荐再看全量”的节奏，但把内容换成这个项目真实支持的 trust、inspection 和 hosted control plane。</p>
-    <div class="workflow-list">
-      {% for step in workflow_steps %}
-      <article class="workflow-step">
-        <span class="workflow-number">{{ step.step }}</span>
-        <h3 class="workflow-title">{{ step.title }}</h3>
-        <p class="workflow-body">{{ step.body }}</p>
-        <div class="command-chip">
-          <code>{{ step.command }}</code>
-        </div>
+  <section class="status-strip-shell" data-reveal style="--reveal-index: 1">
+    <div class="status-strip" aria-label="Current status">
+      {% for state in operating_states %}
+      <article class="status-tile">
+        <div class="status-tile-label">{{ state.label }}</div>
+        <div class="status-tile-value">{{ state.value }}</div>
+        <p class="status-tile-detail">{{ state.detail }}</p>
       </article>
       {% endfor %}
     </div>
   </section>
 
-  <section class="section-split registry-shell" id="registry" data-reveal style="--reveal-index: 3">
-    <div class="section-shell" style="border:none;box-shadow:none;background:transparent;padding:0;">
-      <div class="section-kicker">精选 skill</div>
-      <h2 class="section-title">把 registry 当成路由面，而不是文件夹堆。</h2>
-      <p class="section-copy">这些条目直接来自生成后的 discovery index，所以首页展示和 agent 实际消费的 catalog 保持一致。</p>
-      <div class="skills-list">
-        {% for skill in featured_skills %}
-        <article class="skill-row">
-          <div class="skill-rank">{{ loop.index }}</div>
-          <div>
-            <div class="skill-meta">
-              <span class="tag">{{ skill.publisher }}</span>
-              <span class="tag">v{{ skill.latest_version or skill.default_install_version }}</span>
-              <span class="tag">{{ skill.trust_state or "unknown" }}</span>
-            </div>
-            <h3 class="skill-title" style="margin-top:0.55rem;">{{ skill.qualified_name or skill.name }}</h3>
-            <p class="skill-summary">{{ skill.summary }}</p>
-            <div class="skill-tags">
-              {% for tag in (skill.tags or [])[:4] %}
-              <span class="tag">{{ tag }}</span>
-              {% endfor %}
-            </div>
-          </div>
-          <div class="muted">{{ (skill.agent_compatible or []) | join(", ") }}</div>
-        </article>
-        {% endfor %}
+  <section class="section-shell console-shell" id="console" data-reveal style="--reveal-index: 2">
+    <div class="console-summary">
+      <div>
+        <div class="section-kicker">维护视图</div>
+        <h2 class="section-title">有事再进维护台。</h2>
+        <p class="section-copy">{{ maintainer_body }}</p>
+      </div>
+      <div class="button-row">
+        <a class="button-link primary" href="{{ maintainer_primary_link.href }}">{{ maintainer_primary_link.label }}</a>
       </div>
     </div>
-
-    <div class="section-shell" style="border:none;box-shadow:none;background:transparent;padding:0;">
-      <div class="section-kicker">能力面</div>
-      <h2 class="section-title">人和 Agent 到底该指向哪里。</h2>
-      <p class="section-copy">首页应该快速教会三件事：人类怎样表达需求、Agent 会调用哪些命令、以及 hosted registry 下有哪些 machine-facing surface。</p>
-      <div class="registry-list">
-        {% for surface in registry_surfaces %}
-        <article class="registry-row">
-          <div class="registry-path">
-            <code>{{ surface.path }}</code>
-          </div>
-          <p class="registry-detail">{{ surface.detail }}</p>
-        </article>
-        {% endfor %}
-      </div>
-      <p class="section-copy">{{ status_line }}</p>
-    </div>
-  </section>
-
-  <section class="section-shell console-shell" id="console" data-reveal style="--reveal-index: 4">
-    <div class="section-kicker">维护视图</div>
-    <h2 class="section-title">给人看的队列视图，但不脱离 CLI。</h2>
-    <p class="section-copy">这依然是 agent-first。人类 UI 的职责是看清当前状态、复制正确提示，并理解 agent 或 worker 下一步应该做什么。</p>
     <div class="console-links">
       {% for link in console_links %}
       <a class="console-link" href="{{ link.href }}">
-        <div class="console-link-value">{{ link.value }}</div>
+        <div class="console-link-count">{{ link.value }}</div>
         <h3 class="console-link-title">{{ link.title }}</h3>
         <p class="console-link-detail">{{ link.detail }}</p>
-        <span class="console-link-footer">打开 {{ link.title }}</span>
       </a>
       {% endfor %}
     </div>

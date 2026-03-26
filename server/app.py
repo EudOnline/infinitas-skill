@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request
@@ -49,12 +50,24 @@ def _catalog_payload(settings, name: str) -> dict:
     return {}
 
 
+def _short_stamp(value: str | None) -> str:
+    if not value:
+        return 'No snapshot'
+    try:
+        return datetime.fromisoformat(value.replace('Z', '+00:00')).strftime('%Y-%m-%d')
+    except ValueError:
+        return value
+
+
 def _site_nav(home: bool) -> list[dict[str, str]]:
-    prefix = '' if home else '/'
+    if home:
+        return [
+            {'href': '#start', 'label': '开始'},
+            {'href': '#handoff', 'label': '交接'},
+            {'href': '#console', 'label': '维护台'},
+        ]
     return [
-        {'href': f'{prefix}#start', 'label': '开始'},
-        {'href': f'{prefix}#flow', 'label': '流程'},
-        {'href': f'{prefix}#registry', 'label': '能力面'},
+        {'href': '/', 'label': '首页'},
         {'href': '/submissions', 'label': '提交'},
         {'href': '/reviews', 'label': '评审'},
         {'href': '/jobs', 'label': '任务'},
@@ -63,126 +76,100 @@ def _site_nav(home: bool) -> list[dict[str, str]]:
 
 def _build_home_context(settings, db: Session) -> dict:
     discovery_payload = _catalog_payload(settings, 'discovery-index.json')
-    skills = discovery_payload.get('skills') or []
-    featured_skills = sorted(
-        skills,
-        key=lambda skill: (-int(skill.get('quality_score') or 0), skill.get('qualified_name') or skill.get('name') or ''),
-    )[:3]
-    supported_agents = sorted({agent for skill in skills for agent in skill.get('agent_compatible') or []})
-    verified_skills = sum(1 for skill in skills if skill.get('trust_state') == 'verified')
+    pending_reviews = int(db.scalar(select(func.count()).select_from(Review).where(Review.status == 'pending')) or 0)
+    queued_jobs = int(db.scalar(select(func.count()).select_from(Job).where(Job.status == 'queued')) or 0)
+    running_jobs = int(db.scalar(select(func.count()).select_from(Job).where(Job.status == 'running')) or 0)
+    access_mode = '私有' if settings.registry_read_tokens else '开放'
+    operating_states = [
+        {
+            'label': '模式',
+            'value': access_mode,
+            'detail': '需 token 读取' if settings.registry_read_tokens else '允许匿名读取',
+        },
+        {
+            'label': '同步',
+            'value': _short_stamp(discovery_payload.get('generated_at')),
+            'detail': 'catalog 快照',
+        },
+        {
+            'label': '队列',
+            'value': f'{pending_reviews} 待评审 / {queued_jobs} 排队',
+            'detail': f'{running_jobs} 运行中',
+        },
+    ]
     command_examples = [
         {
-            'label': '我是 Agent',
+            'label': '执行命令',
+            'title': '搜索候选',
+            'short_label': '搜索',
             'command': 'scripts/recommend-skill.sh "Need a codex skill for repository operations"',
         },
         {
-            'label': '我是 Agent',
+            'label': '执行命令',
+            'title': '检查细节',
+            'short_label': '检查',
             'command': 'scripts/inspect-skill.sh lvxiaoer/operate-infinitas-skill',
-        },
-        {
-            'label': '我是 Agent',
-            'command': 'scripts/install-by-name.sh operate-infinitas-skill ~/.openclaw/skills',
         },
     ]
     human_prompts = [
         {
-            'label': '我是 Human',
-            'title': '给 Agent 的交接提示',
+            'label': '交任务',
+            'title': '找 skill，再给步骤',
+            'short_label': '找 skill',
             'prompt': (
-                '先在私有 registry 中搜索，帮我为 Codex 找到最适合做 registry 运维的 skill。'
-                '说明为什么匹配，检查 trust、compatibility 和 provenance，再告诉我最安全的安装步骤。'
+                '帮我在私有技能仓库里找适合做 registry 运维的 skill，先说明风险，再给安装步骤。'
             ),
         },
         {
-            'label': '我是 Human',
-            'title': '先解释，再安装',
+            'label': '交任务',
+            'title': '先检查，再安装',
+            'short_label': '先检查',
             'prompt': (
-                '我需要一个做 immutable install 和 upgrade planning 的 skill。先 search，再 inspect '
-                'trust state、compatibility、provenance，最后再安装到 ~/.openclaw/skills。'
+                '我需要做 immutable install。先检查来源和版本，再告诉我应该安装哪一个。'
             ),
         },
     ]
-    human_input_fields = ['目标', '运行时', '安装位置', '风险偏好']
-    workflow_steps = [
-        {
-            'step': '01',
-            'title': '人类先描述目标，不先猜 skill 名',
-            'body': '告诉 Agent 任务目标、目标运行时、安装路径和风险偏好，让它去做 discovery，而不是你先猜文件名。',
-            'command': 'scripts/recommend-skill.sh "<task-description>"',
-        },
-        {
-            'step': '02',
-            'title': 'Registry 决定候选范围，而不是拍脑袋',
-            'body': 'Search 和 recommendation 走 private-first、index-driven、immutable-artifact-aware 路线，不从可变源码目录里猜结果。',
-            'command': 'scripts/search-skills.sh operate --agent codex',
-        },
-        {
-            'step': '03',
-            'title': '安装前先检查 trust',
-            'body': 'Compatibility、provenance、review state 和 install integrity 都应该先被解释出来，而不是藏在脚本实现细节里。',
-            'command': 'scripts/inspect-skill.sh lvxiaoer/consume-infinitas-skill',
-        },
-        {
-            'step': '04',
-            'title': '维护者只负责看清队列和做决策',
-            'body': 'Submission、review、job 队列在 hosted console 和 CLI 中保持一致，方便人类做确认和放行。',
-            'command': 'python scripts/registryctl.py --base-url https://skills.example.com --token <maintainer-token> jobs list',
-        },
-    ]
-    registry_surfaces = [
-        {'path': '/registry/ai-index.json', 'detail': '给 agent 的 discovery index'},
-        {'path': '/registry/distributions.json', 'detail': 'immutable bundle catalog'},
-        {'path': '/api/v1/submissions', 'detail': '提交与审批的 control plane'},
-        {'path': 'scripts/registryctl.py', 'detail': '面向维护者的 CLI 控制面'},
-    ]
+    human_input_fields = ['目标', '安装位置', '风险偏好']
     console_links = [
         {
             'href': '/submissions',
-            'title': '提交台',
+            'title': '提交',
             'value': str(db.scalar(select(func.count()).select_from(Submission)) or 0),
-            'detail': '新的 skill 提案与当前状态',
+            'detail': '新提案',
         },
         {
             'href': '/reviews',
-            'title': '评审台',
+            'title': '评审',
             'value': str(db.scalar(select(func.count()).select_from(Review)) or 0),
-            'detail': '审批决策与 reviewer 备注',
+            'detail': '审批备注',
         },
         {
             'href': '/jobs',
-            'title': '任务台',
+            'title': '任务',
             'value': str(db.scalar(select(func.count()).select_from(Job)) or 0),
-            'detail': '校验、promote、publish 队列',
+            'detail': '队列状态',
         },
     ]
     return {
         'title': 'infinitas hosted registry',
-        'page_eyebrow': '给 Agent 的私有技能路由 / Agent-first private skill routing',
-        'page_kicker': '给 Agent 的私有 registry',
+        'page_eyebrow': 'Private agent workspace / 私人技能工作台',
+        'page_kicker': access_mode,
         'page_mode': 'home',
         'nav_links': _site_nav(home=True),
-        'hero_title': '目标交给 Agent。',
-        'hero_emphasis': '仓库证明 Skill。',
-        'hero_body': (
-            '这是一个更轻、更清楚的入口页：人类给任务目标和约束，Agent 负责 search、inspect、install，'
-            '而 registry 负责把 trust、兼容性和可安装性讲明白。'
-        ),
-        'hero_primary_link': {'href': '#human-to-agent', 'label': '查看交接提示'},
-        'hero_secondary_link': {'href': '#console', 'label': '查看维护台'},
-        'hero_badges': ['先描述任务', '再看 trust', '确认兼容性', '最后安装'],
-        'facts': [
-            {'value': str(len(skills)), 'label': '已发布 skill', 'detail': '已进入 discovery index'},
-            {'value': str(verified_skills), 'label': '可验证条目', 'detail': 'trust state 明确可见'},
-            {'value': ', '.join(agent.title() for agent in supported_agents) or 'Codex, Claude, OpenClaw', 'label': '支持 agent', 'detail': '当前兼容目标'},
-        ],
+        'hero_title': '交给 Agent',
+        'hero_emphasis': '',
+        'hero_body': '搜索、检查和执行都交给它。',
+        'hero_support': '你只要说明目标、位置和风险。',
+        'hero_primary_link': {'href': '#handoff', 'label': '复制提示'},
+        'hero_secondary_link': {'href': '#console', 'label': '维护台'},
+        'hero_primary_copy': human_prompts[0]['prompt'] if human_prompts else '',
+        'operating_states': operating_states,
         'human_input_fields': human_input_fields,
         'human_prompts': human_prompts,
         'command_examples': command_examples,
-        'workflow_steps': workflow_steps,
-        'featured_skills': featured_skills,
         'console_links': console_links,
-        'registry_surfaces': registry_surfaces,
-        'status_line': '项目已在 main 上进入 steady-state。未来工作应作为新的 maintenance slice 或 milestone 打开。',
+        'maintainer_primary_link': {'href': '/submissions', 'label': '进入维护台'},
+        'maintainer_body': '首页只负责交接；审批、队列和放行都在维护台。',
     }
 
 

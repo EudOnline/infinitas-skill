@@ -64,14 +64,16 @@ def scenario_health_login_and_me():
             if href not in response.text:
                 fail(f'index page missing operator link {href!r}')
         for needle in [
-            '目标交给 Agent',
-            '我是 Human',
-            '我是 Agent',
+            '交给 Agent',
+            '搜索、检查和执行都交给它。',
+            '交任务',
+            '执行命令',
+            '复制一条即可。',
+            '推荐提示',
             'scripts/recommend-skill.sh',
-            '/registry/ai-index.json',
-            '给 Agent 的交接提示',
-            'Human 只需给出',
-            '先给目标，再给约束',
+            '复制提示',
+            '同步',
+            '进入维护台',
         ]:
             if needle not in response.text:
                 fail(f'index page missing agent-first homepage content {needle!r}')
