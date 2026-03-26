@@ -8,16 +8,16 @@
 
 Maintainers can publish and distribute private skills with deterministic, auditable trust and upgrade behavior.
 
-## Current Milestone: Project Complete on Main
+## Current Status: Project Complete on Main
 
-**Goal:** Record the v20 closeout milestone as complete on `main`, keep steady-state expectations explicit, and avoid reopening closeout scope without a new milestone.
+**Focus:** Record the v20 closeout milestone as complete on `main`, keep steady-state expectations explicit, and avoid reopening closeout scope without a new milestone.
 
 **Status:** v20 is complete on `main`. The project is now in steady-state unless a new milestone is intentionally started. The merged baseline includes `never_verified_policy`, shared mutation readiness, never-verified mutation guardrails, deterministic CI hosted e2e enforcement, and the final closeout checklist.
 
 **Completed feature set:**
 - A validated `never_verified_policy` that lets maintainers ignore, warn, or block overwrite-style mutation for legacy `never-verified` installs
 - One shared mutation-readiness contract that unifies drift, stale, and never-verified guidance for read-only and mutation flows
-- Deterministic hosted-registry end-to-end verification in CI plus one final closeout checklist that defines when the project is ready to merge and declare complete
+- Deterministic hosted-registry end-to-end verification in CI plus one final closeout checklist that defines the maintained verification baseline and steady-state completion criteria
 
 ## Requirements
 

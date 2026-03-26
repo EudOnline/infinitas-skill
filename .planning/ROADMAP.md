@@ -301,7 +301,7 @@ Plans:
 - [x] 12-08: Reduce duplicated decision metadata across source, generated indexes, and docs
 - [x] 12-09: Publish the stable platform usage guide for humans and agents
 
-### 🚧 v13 Registry Operations and Snapshot Mirroring
+### ✅ v13 Registry Operations and Snapshot Mirroring (Completed)
 
 **Milestone Goal:** Make remote registry operation predictable and offline-safe by adding explicit refresh cadence policy, operator-visible freshness status, and immutable snapshot mirrors that resolution and install can trust.
 
@@ -431,7 +431,7 @@ Plans:
 - [x] 16-03: Add exact-source repair flow for drifted installs
 - [x] 16-04: Thread drift-aware guardrails into sync, rollback, switch, and upgrade commands
 
-### ✅ v17 Installed Integrity Reporting and Legacy Distribution Backfill (Completed on `codex/v17-installed-reporting`)
+### ✅ v17 Installed Integrity Reporting and Legacy Distribution Backfill (Completed; merged on `main` 2026-03-20)
 
 **Milestone Goal:** Close the remaining post-v16 installed-runtime trust gaps by backfilling legacy immutable manifests when signed evidence already exists, then exposing a stable local report surface for installed-skill trust and repair history.
 
@@ -463,7 +463,7 @@ Plans:
 - [x] 17-03: Define installed-integrity local report and audit-history contract
 - [x] 17-04: Implement local report surface, additive audit events, and documentation updates
 
-### ✅ v18 Installed Integrity Freshness and History Retention (Completed on `codex/v17-installed-reporting`)
+### ✅ v18 Installed Integrity Freshness and History Retention (Completed; merged on `main` 2026-03-20)
 
 **Milestone Goal:** Keep target-local installed trust actionable over time by making verification freshness explicit and bounding local audit-history growth without turning runtime state into a hosted service.
 
@@ -495,7 +495,7 @@ Plans:
 - [x] 18-03: Define inline-retention and sidecar snapshot contract for installed-integrity history
 - [x] 18-04: Implement history compaction, target-local snapshot export, and documentation updates
 
-### ✅ v19 Installed Integrity Stale Verification Guardrails (Completed on `codex/v17-installed-reporting`)
+### ✅ v19 Installed Integrity Stale Verification Guardrails (Completed; merged on `main` 2026-03-20)
 
 **Milestone Goal:** Keep overwrite-style installed-skill mutation trustworthy by turning stale local verification from a report-only hint into a policy-governed warning or block, while keeping refresh explicit and target-local.
 
@@ -527,7 +527,7 @@ Plans:
 - [x] 19-03: Add stale-policy mutation guardrail coverage
 - [x] 19-04: Enforce stale verification guardrails in overwrite flows and docs
 
-### ✅ v20 Never-Verified Policy and Project Closeout (Completed 2026-03-19 on `codex/v17-installed-reporting`)
+### ✅ v20 Never-Verified Policy and Project Closeout (Completed; merged on `main` 2026-03-20)
 
 **Milestone Goal:** Close the remaining project-completion gaps by making `never-verified` an explicit policy-governed readiness state, removing routine hosted-registry e2e skips from CI, and defining final closeout gates.
 
@@ -566,7 +566,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. GitHub validation installs the hosted-registry e2e dependency set and no longer routinely skips those checks in CI.
   2. Operators have one documented local bootstrap path for the hosted-registry e2e dependency set.
-  3. One closeout doc defines the final verification matrix, merge gate, and “project complete” checklist.
+  3. One closeout doc defines the final verification matrix, steady-state checklist, and “project complete” criteria.
 **Plans**: 2 plans
 
 Plans:

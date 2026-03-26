@@ -147,7 +147,7 @@ Requirements committed for milestone `v16`. Both phases are complete on `main`.
 
 ## v17 Requirements
 
-Requirements committed for milestone `v17`. Both phases are complete on `codex/v17-installed-reporting`.
+Requirements committed for milestone `v17`. Both phases are complete on `main`.
 
 ### Installed Integrity Auditability
 
@@ -156,7 +156,7 @@ Requirements committed for milestone `v17`. Both phases are complete on `codex/v
 
 ## v18 Requirements
 
-Requirements committed for milestone `v18`. Both phases are complete on `codex/v17-installed-reporting`.
+Requirements committed for milestone `v18`. Both phases are complete on `main`.
 
 ### Installed Integrity Lifecycle Hygiene
 
@@ -165,7 +165,7 @@ Requirements committed for milestone `v18`. Both phases are complete on `codex/v
 
 ## v19 Requirements
 
-Requirements committed for milestone `v19`. Planning starts with stale verification guardrails for overwrite-style installed-skill mutation flows.
+Requirements committed for milestone `v19`. Both phases are complete on `main`.
 
 ### Installed Integrity Mutation Safety
 
@@ -184,7 +184,7 @@ Requirements committed for milestone `v20`. All v20 requirements are complete on
 ### Final Verification and Closeout
 
 - [x] **OPS-03**: Repository CI can run the full supported hosted-registry verification path deterministically instead of routinely skipping hosted-registry e2e due to missing optional dependencies.
-- [x] **OPS-04**: Maintainers can follow one stable closeout checklist that defines the final verification matrix, merge gates, and criteria for declaring the project complete.
+- [x] **OPS-04**: Maintainers can follow one stable closeout checklist that defines the final verification matrix, steady-state guardrails, and criteria for maintaining the project complete state.
 
 ## Out of Scope
 

@@ -12,7 +12,7 @@ See: `.planning/PROJECT.md` (updated 2026-03-20)
 Phase: steady-state
 Plan: `docs/plans/2026-03-20-project-completion-and-steady-state.md`
 Status: v20 complete on `main`; the repository is in steady-state until a new milestone is intentionally opened
-Last activity: 2026-03-20 — Re-ran the completion regression, installed-integrity regression matrix, distribution/install regressions, and `scripts/check-all.sh` from the steady-state branch
+Last activity: 2026-03-20 — Re-ran the completion regression, installed-integrity regression matrix, distribution/install regressions, and `scripts/check-all.sh` on `main`
 Progress: [##########] 100%
 
 ## Performance Metrics
@@ -80,14 +80,14 @@ Decisions are logged in `PROJECT.md`.
 - 2026-03-18: Keep install-time compatibility additive for older hosted manifests by degrading missing signed `file_manifest` metadata to `integrity.state = unknown` while preserving strict explicit verification.
 - 2026-03-19: Start v17 by targeting the two remaining post-v16 gaps that most affect installed-runtime trust: legacy immutable artifacts that cannot yet verify fully, and the absence of one stable local installed-integrity report surface.
 - 2026-03-19: Prefer deterministic backfill from committed provenance plus bundle artifacts over introducing special-case trust exceptions for older immutable releases.
-- 2026-03-19: Complete v17 on `codex/v17-installed-reporting` with deterministic legacy manifest backfill, release-surface integrity capability summaries, and target-local installed-integrity reporting plus additive event history.
+- 2026-03-19: Complete v17 on the implementation branch `codex/v17-installed-reporting`, then merge it onto `main` on 2026-03-20 with deterministic legacy manifest backfill, release-surface integrity capability summaries, and target-local installed-integrity reporting plus additive event history.
 - 2026-03-19: Keep the next milestone local and maintenance-focused by adding explicit freshness classification before considering any broader fleet or hosted runtime service.
 - 2026-03-19: Keep current trust summary inline in the install manifest, but plan for sidecar spillover when integrity event volume grows.
-- 2026-03-19: Complete v18 on `codex/v17-installed-reporting` with repo-managed freshness policy, freshness-aware report/list surfaces, bounded inline integrity history, and target-local sidecar snapshot export.
-- 2026-03-19: Draft v19 on `codex/v17-installed-reporting` so stale-but-clean installed copies can participate in policy-governed overwrite guardrails without introducing auto-refresh or hosted runtime state.
-- 2026-03-19: Complete v19 on `codex/v17-installed-reporting` with shared stale-policy evaluation, read-only advisory surfaces, mutation guardrails, docs, and full verification.
+- 2026-03-19: Complete v18 on the implementation branch `codex/v17-installed-reporting`, then merge it onto `main` on 2026-03-20 with repo-managed freshness policy, freshness-aware report/list surfaces, bounded inline integrity history, and target-local sidecar snapshot export.
+- 2026-03-19: Draft v19 on the implementation branch `codex/v17-installed-reporting` so stale-but-clean installed copies can participate in policy-governed overwrite guardrails without introducing auto-refresh or hosted runtime state.
+- 2026-03-19: Complete v19 on the implementation branch `codex/v17-installed-reporting`, then merge it onto `main` on 2026-03-20 with shared stale-policy evaluation, read-only advisory surfaces, mutation guardrails, docs, and full verification.
 - 2026-03-19: Propose v20 as a closeout milestone focused on `never-verified` policy, deterministic hosted-registry e2e coverage, and final project completion gates.
-- 2026-03-19: Complete v20 on `codex/v17-installed-reporting` with `freshness.never_verified_policy`, shared mutation-readiness reporting, never-verified mutation guardrails, deterministic CI hosted e2e enforcement, and `docs/project-closeout.md`.
+- 2026-03-19: Complete v20 on the implementation branch `codex/v17-installed-reporting`, then merge it onto `main` on 2026-03-20 with `freshness.never_verified_policy`, shared mutation-readiness reporting, never-verified mutation guardrails, deterministic CI hosted e2e enforcement, and `docs/project-closeout.md`.
 - 2026-03-19: Keep hosted-registry e2e compatibility explicit: CI installs `python3 -m pip install .` and requires the hosted dependency set, while minimal local environments may still skip until those dependencies are installed explicitly.
 - 2026-03-20: Treat v20 as complete on `main` and keep the remaining compatibility notes as accepted steady-state maintenance notes unless a concrete defect appears.
 
