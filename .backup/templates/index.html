@@ -1,0 +1,140 @@
+{% extends "layout.html" %}
+{% block body %}
+<section class="home-stack">
+  <section class="section-shell hero-shell" id="start" data-reveal style="--reveal-index: 0">
+    <div class="hero-grid">
+      <div class="hero-copy-block hero-copy-lead">
+        <p class="eyebrow">{{ page_eyebrow }}</p>
+        <h1 class="hero-title">
+          {{ hero_title }}
+          {% if hero_emphasis %}
+          <span class="accent">{{ hero_emphasis }}</span>
+          {% endif %}
+        </h1>
+        <p class="hero-body">{{ hero_body }}</p>
+        <p class="hero-support">{{ hero_support }}</p>
+        <div class="human-brief-strip" aria-label="Human briefing checklist">
+          <span class="human-brief-label">告诉它</span>
+          {% for field in human_input_fields %}
+          <span class="human-brief-item">{{ field }}</span>
+          {% endfor %}
+        </div>
+        <div class="button-row">
+          <button class="button-link primary" type="button" data-copy="{{ hero_primary_copy }}">{{ hero_primary_link.label }}</button>
+          <a class="button-link" href="{{ hero_secondary_link.href }}">{{ hero_secondary_link.label }}</a>
+        </div>
+      </div>
+
+      <aside class="hero-note" id="handoff">
+        <div class="hero-note-intro">
+          <div class="section-kicker">交接台</div>
+          <p class="hero-note-copy">复制一条即可。</p>
+        </div>
+        <div class="audience-switch" role="radiogroup" aria-label="Audience">
+          <button class="audience-pill active" type="button" data-audience="human" role="radio" aria-checked="true" tabindex="0">交任务</button>
+          <button class="audience-pill" type="button" data-audience="agent" role="radio" aria-checked="false" tabindex="-1">执行命令</button>
+        </div>
+        <div class="hero-note-grid" data-audience="human">
+          <div class="command-sheet" id="human-to-agent" data-audience-panel="human">
+            <div class="section-kicker">推荐提示</div>
+            <p class="section-copy" style="margin-top:0;">先说清目标，再让 Agent 去查和做。</p>
+            <div class="preset-shell" data-preset-root>
+              <div class="preset-switch" role="group" aria-label="Human prompt presets">
+                {% for prompt in human_prompts %}
+                <button
+                  class="preset-pill{% if loop.first %} active{% endif %}"
+                  type="button"
+                  data-preset-button
+                  data-preset-id="human-{{ loop.index0 }}"
+                  aria-pressed="{{ 'true' if loop.first else 'false' }}"
+                >
+                  {{ prompt.short_label or prompt.title }}
+                </button>
+                {% endfor %}
+              </div>
+              <div class="preset-panels">
+              {% for prompt in human_prompts %}
+              <div class="preset-panel{% if loop.first %} active{% endif %}" data-preset-panel data-preset-id="human-{{ loop.index0 }}">
+                <h2 class="preset-title">{{ prompt.title }}</h2>
+                <p class="preset-copy">{{ prompt.prompt }}</p>
+                <div>
+                  <button class="copy-button" type="button" data-copy="{{ prompt.prompt }}">复制提示</button>
+                </div>
+              </div>
+              {% endfor %}
+              </div>
+            </div>
+          </div>
+
+          <div class="command-sheet" id="agent-to-registry" data-audience-panel="agent">
+            <div class="section-kicker">常用命令</div>
+            <p class="section-copy" style="margin-top:0;">首页只保留最常用的两条命令。</p>
+            <div class="preset-shell" data-preset-root>
+              <div class="preset-switch" role="group" aria-label="Agent command presets">
+                {% for example in command_examples %}
+                <button
+                  class="preset-pill{% if loop.first %} active{% endif %}"
+                  type="button"
+                  data-preset-button
+                  data-preset-id="agent-{{ loop.index0 }}"
+                  aria-pressed="{{ 'true' if loop.first else 'false' }}"
+                >
+                  {{ example.short_label or example.title or example.label }}
+                </button>
+                {% endfor %}
+              </div>
+              <div class="preset-panels">
+              {% for example in command_examples %}
+              <div class="preset-panel{% if loop.first %} active{% endif %}" data-preset-panel data-preset-id="agent-{{ loop.index0 }}">
+                <h2 class="preset-title">{{ example.title or example.label }}</h2>
+                <div class="command-chip">
+                  <code>{{ example.command }}</code>
+                </div>
+                <div>
+                  <button class="copy-button" type="button" data-copy="{{ example.command }}">复制命令</button>
+                </div>
+              </div>
+              {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="status-strip-shell" data-reveal style="--reveal-index: 1">
+    <div class="status-strip" aria-label="Current status">
+      {% for state in operating_states %}
+      <article class="status-tile">
+        <div class="status-tile-label">{{ state.label }}</div>
+        <div class="status-tile-value">{{ state.value }}</div>
+        <p class="status-tile-detail">{{ state.detail }}</p>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="section-shell console-shell" id="console" data-reveal style="--reveal-index: 2">
+    <div class="console-summary">
+      <div>
+        <div class="section-kicker">维护视图</div>
+        <h2 class="section-title">有事再进维护台。</h2>
+        <p class="section-copy">{{ maintainer_body }}</p>
+      </div>
+      <div class="button-row">
+        <a class="button-link primary" href="{{ maintainer_primary_link.href }}">{{ maintainer_primary_link.label }}</a>
+      </div>
+    </div>
+    <div class="console-links">
+      {% for link in console_links %}
+      <a class="console-link" href="{{ link.href }}">
+        <div class="console-link-count">{{ link.value }}</div>
+        <h3 class="console-link-title">{{ link.title }}</h3>
+        <p class="console-link-detail">{{ link.detail }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+</section>
+{% endblock %}

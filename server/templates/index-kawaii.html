@@ -10,11 +10,7 @@
     <div class="hero-grid">
       <!-- 左侧：主文案 -->
       <div class="hero-content">
-        <div class="hero-eyebrow">
-          <span class="sparkle">✨</span>
-          <span>{{ page_eyebrow }}</span>
-          <span class="sparkle">✨</span>
-        </div>
+        <div class="hero-kicker">✨ {{ page_eyebrow }}</div>
         
         <h1 class="hero-title">
           {{ hero_title }}
@@ -23,80 +19,35 @@
           {% endif %}
         </h1>
         
-        <p class="hero-desc">
-          {{ hero_body }}<br>
-          {{ hero_support }}
-        </p>
+        <p class="hero-desc">{{ hero_body }} {{ hero_support }}</p>
         
-        <div class="hero-tags">
-          {% for field in human_input_fields %}
-          <span class="kawaii-tag {{ loop.cycle('kawaii-tag--pink', 'kawaii-tag--blue', 'kawaii-tag--green') }}">
-            {% if loop.index0 == 0 %}🎯{% elif loop.index0 == 1 %}📍{% else %}⚡{% endif %} {{ field }}
-          </span>
+        <button class="hero-cta kawaii-button kawaii-button--primary" type="button" data-copy="{{ hero_primary_copy }}">
+          <span>📋</span>
+          <span>{{ hero_primary_link.label }}</span>
+        </button>
+      </div>
+      
+      <!-- 右侧：快速开始 -->
+      <div class="quick-start" id="handoff">
+        <div class="quick-start-header">
+          <span class="quick-start-icon">🚀</span>
+          <span class="quick-start-title">快速开始</span>
+        </div>
+        
+        <div class="quick-pills">
+          {% for prompt in human_prompts[:3] %}
+          <button class="quick-pill {{ 'quick-pill--primary' if loop.first }}" type="button" data-copy="{{ prompt.prompt }}">
+            {{ '🔍' if loop.first else '✨' if loop.index == 2 else '🎯' }} {{ prompt.title }}
+          </button>
+          {% endfor %}
+          {% for cmd in command_examples[:2] %}
+          <button class="quick-pill quick-pill--code" type="button" data-copy="{{ cmd.command }}">
+            ⌨️ {{ cmd.title }}
+          </button>
           {% endfor %}
         </div>
         
-        <div class="hero-actions">
-          <button class="kawaii-button kawaii-button--primary" type="button" data-copy="{{ hero_primary_copy }}">
-            <span>📋</span>
-            <span>{{ hero_primary_link.label }}</span>
-          </button>
-          <a class="kawaii-button kawaii-button--ghost" href="{{ hero_secondary_link.href }}">
-            <span>🎮</span>
-            <span>{{ hero_secondary_link.label }}</span>
-          </a>
-        </div>
-      </div>
-      
-      <!-- 右侧：交接台 -->
-      <div class="hero-handoff" id="handoff">
-        <div class="handoff-header">
-          <span class="handoff-icon">🎀</span>
-          <span class="handoff-title">{{ ui.handoff_title }}</span>
-        </div>
-        
-        <!-- 切换标签 -->
-        <div class="handoff-tabs">
-          <button class="handoff-tab active" data-tab="human">
-            <span>💬</span> {{ ui.handoff_human_tab }}
-          </button>
-          <button class="handoff-tab" data-tab="agent">
-            <span>⌨️</span> {{ ui.handoff_agent_tab }}
-          </button>
-        </div>
-        
-        <!-- 内容面板 -->
-        <div class="handoff-panels">
-          <!-- 人类视角 -->
-          <div class="handoff-panel active" data-panel="human">
-            <div class="preset-list">
-              {% for prompt in human_prompts %}
-              <div class="preset-item">
-                <div class="preset-header">
-                  <span class="preset-emoji">{{ '🔍' if loop.first else '✅' }}</span>
-                  <span class="preset-name">{{ prompt.title }}</span>
-                </div>
-                <p class="preset-desc">{{ prompt.prompt }}</p>
-                <button class="kawaii-button kawaii-button--secondary action-button--compact" type="button" data-copy="{{ prompt.prompt }}">
-                  📋 {{ ui.copy_prompt_action }}
-                </button>
-              </div>
-              {% endfor %}
-            </div>
-          </div>
-          
-          <!-- Agent视角 -->
-          <div class="handoff-panel" data-panel="agent">
-            <div class="command-list">
-              {% for example in command_examples %}
-              <div class="command-item">
-                <code class="command-code">{{ example.command }}</code>
-                <button class="command-copy" type="button" title="{{ ui.copy_icon_title }}" aria-label="{{ ui.copy_icon_title }}" data-copy="{{ example.command }}">📋</button>
-              </div>
-              {% endfor %}
-            </div>
-          </div>
-        </div>
+        <p class="quick-hint">💡 点击复制，粘贴到 Agent 对话框使用</p>
       </div>
     </div>
   </div>
@@ -104,14 +55,9 @@
 
 <!-- 📊 状态条 -->
 <section class="status-section animate-in stagger-1">
-  <div class="status-grid">
+  <div class="status-chips">
     {% for state in operating_states %}
-    <div class="status-item">
-      <div class="status-icon">{{ state.icon }}</div>
-      <div class="status-label">{{ state.label }}</div>
-      <div class="status-value">{{ state.value }}</div>
-      <div class="status-detail">{{ state.detail }}</div>
-    </div>
+    <span class="status-chip">{{ state.icon }} {{ state.label }}</span>
     {% endfor %}
   </div>
 </section>
@@ -137,14 +83,13 @@
   
   <div class="console-grid">
     {% for link in console_links %}
-    <a href="{{ link.href }}" class="console-card kawaii-tooltip" data-tooltip="{{ link.title }}">
+    <a href="{{ link.href }}" class="console-card">
       <div class="console-card-header">
         <span class="console-emoji">{{ link.icon }}</span>
         <span class="console-count">{{ link.value }}</span>
       </div>
       <h3 class="console-name">{{ link.title }}</h3>
       <p class="console-desc">{{ link.detail }}</p>
-      <div class="console-arrow">→</div>
     </a>
     {% endfor %}
   </div>
@@ -169,20 +114,15 @@
         <div class="skill-meta">
           <span class="kawaii-tag {{ loop.cycle('kawaii-tag--pink', 'kawaii-tag--blue', 'kawaii-tag--green') }}">{{ skill.version }}</span>
           <span class="skill-stars">
-            {% if skill.rating %}⭐ {{ skill.rating }}{% elif skill.publisher %}@{{ skill.publisher }}{% else %}{{ ui.featured_skill_fallback }}{% endif %}
+            {% if skill.rating %}⭐ {{ skill.rating }}{% elif skill.publisher %}@{{ skill.publisher }}{% else %}✨{% endif %}
           </span>
         </div>
       </div>
       <h3 class="skill-name">{{ skill.name }}</h3>
       <p class="skill-desc">{{ skill.summary }}</p>
-      <div class="skill-actions">
-        <button class="kawaii-button kawaii-button--primary action-button--compact" type="button" data-copy="{{ skill.inspect_command }}">
-          {{ ui.copy_inspect_action }}
-        </button>
-        <a class="kawaii-button kawaii-button--ghost action-button--compact" href="#handoff">
-          {{ ui.go_handoff_action }}
-        </a>
-      </div>
+      <button class="skill-copy" type="button" data-copy="{{ skill.inspect_command }}" title="{{ ui.copy_icon_title }}">
+        📋 复制检查命令
+      </button>
     </div>
     {% endfor %}
   </div>
@@ -192,330 +132,172 @@
 <style>
   /* Hero Section */
   .hero-section {
-    margin-bottom: 1.25rem;
+    margin-bottom: 1rem;
   }
   
   .hero-card {
-    padding: 2.35rem;
+    padding: 2rem;
     position: relative;
   }
   
   .hero-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 2.25rem;
-    align-items: center;
+    gap: 2rem;
+    align-items: start;
   }
 
   .hero-grid > * {
     min-width: 0;
   }
   
-  .hero-eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: rgba(255, 182, 193, 0.15);
+  .hero-kicker {
+    display: inline-block;
+    padding: 0.4rem 0.9rem;
+    background: rgba(255, 182, 193, 0.2);
     border-radius: var(--radius-full);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     font-weight: 700;
     color: var(--kawaii-ink-soft);
-    margin-bottom: 0.9rem;
-    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
   }
   
   .hero-title {
     font-family: var(--font-display);
-    font-size: clamp(2rem, 5vw, 3rem);
+    font-size: clamp(1.75rem, 4.5vw, 2.5rem);
     font-weight: 800;
-    line-height: 1.1;
+    line-height: 1.15;
     color: var(--kawaii-ink);
-    margin-bottom: 0.85rem;
+    margin-bottom: 0.6rem;
   }
   
   .hero-title-highlight {
     display: block;
     color: var(--kawaii-primary-deep);
+    margin-top: 0.1rem;
   }
   
   .hero-desc {
-    font-size: 1.1rem;
+    font-size: 1rem;
     color: var(--kawaii-ink-soft);
-    margin-bottom: 1.1rem;
-    line-height: 1.7;
-    max-width: 30rem;
-  }
-  
-  .hero-desc strong {
-    color: var(--kawaii-primary-deep);
-  }
-  
-  .hero-tags {
-    display: flex;
-    gap: 0.5rem;
     margin-bottom: 1.25rem;
-    flex-wrap: wrap;
+    line-height: 1.6;
+    max-width: 26rem;
   }
   
-  .hero-actions {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-  }
-
-  .action-button--compact {
-    min-height: 2.5rem;
-    padding: 0.55rem 1rem;
-    font-size: 0.82rem;
+  .hero-cta {
+    min-height: 2.75rem;
+    padding: 0.6rem 1.25rem;
   }
   
-  /* Handoff Panel */
-  .hero-handoff {
+  /* Quick Start Panel */
+  .quick-start {
     background: var(--kawaii-panel-muted);
     border-radius: var(--radius-lg);
-    padding: 1.5rem;
+    padding: 1.25rem;
     border: 1px solid var(--kawaii-line);
   }
   
-  .handoff-header {
+  .quick-start-header {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.85rem;
-    padding-bottom: 0.65rem;
-    border-bottom: 2px solid var(--kawaii-line-soft);
+    gap: 0.4rem;
+    margin-bottom: 0.75rem;
   }
   
-  .handoff-icon {
-    font-size: 1.25rem;
+  .quick-start-icon {
+    font-size: 1.1rem;
   }
   
-  .handoff-title {
+  .quick-start-title {
     font-family: var(--font-display);
     font-weight: 700;
-    font-size: 1.1rem;
+    font-size: 1rem;
     color: var(--kawaii-ink);
   }
   
-  .handoff-tabs {
+  .quick-pills {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
-    margin-bottom: 0.85rem;
+    margin-bottom: 0.75rem;
   }
   
-  .handoff-tab {
-    flex: 1;
-    padding: 0.625rem 1rem;
-    border: 1px solid var(--kawaii-line);
-    background: var(--kawaii-panel-muted);
+  .quick-pill {
+    padding: 0.5rem 0.9rem;
     border-radius: var(--radius-full);
+    border: 1px solid var(--kawaii-line);
+    background: var(--kawaii-panel-soft);
     font-family: var(--font-body);
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     font-weight: 600;
-    color: var(--kawaii-ink-soft);
+    color: var(--kawaii-ink);
     cursor: pointer;
-    transition:
-      border-color 180ms var(--ease-out-quiet),
-      background-color 180ms var(--ease-out-quiet),
-      transform 180ms var(--ease-out-quiet),
-      color 180ms var(--ease-out-quiet);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
+    transition: all 180ms var(--ease-out-quiet);
+    white-space: nowrap;
   }
   
-  .handoff-tab:hover {
-    border-color: rgba(203, 164, 182, 0.9);
+  .quick-pill:hover {
+    border-color: var(--kawaii-primary);
     transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(255, 105, 180, 0.15);
   }
   
-  .handoff-tab.active {
+  .quick-pill--primary {
     background: var(--gradient-button-primary);
     border-color: transparent;
     color: white;
   }
   
-  .handoff-panels {
-    position: relative;
+  .quick-pill--primary:hover {
+    box-shadow: 0 4px 12px rgba(255, 20, 147, 0.3);
   }
   
-  .handoff-panel {
-    display: none;
-    animation: panelIn 260ms var(--ease-out-gentle);
-  }
-  
-  .handoff-panel.active {
-    display: block;
-  }
-  
-  @keyframes panelIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  
-  .preset-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.65rem;
-  }
-  
-  .preset-item {
-    padding: 0.95rem 1rem;
-    background: var(--kawaii-panel-soft);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--kawaii-line);
-    transition:
-      border-color 180ms var(--ease-out-quiet),
-      background-color 180ms var(--ease-out-quiet),
-      transform 180ms var(--ease-out-quiet);
-  }
-  
-  .preset-item:hover {
-    border-color: rgba(167, 184, 205, 0.96);
-    transform: translateX(2px);
-  }
-  
-  .preset-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.45rem;
-  }
-  
-  .preset-emoji {
-    font-size: 1.25rem;
-  }
-  
-  .preset-name {
-    font-weight: 700;
-    font-size: 0.95rem;
-    color: var(--kawaii-ink);
-    overflow-wrap: anywhere;
-  }
-  
-  .preset-desc {
-    font-size: 0.88rem;
-    color: var(--kawaii-ink-soft);
-    margin-bottom: 0.65rem;
-    line-height: 1.5;
-    overflow-wrap: anywhere;
-  }
-  
-  .command-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.65rem;
-  }
-  
-  .command-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.875rem 1rem;
-    background: var(--kawaii-code-surface);
-    border-radius: var(--radius-md);
+  .quick-pill--code {
     font-family: var(--font-mono);
-    font-size: 0.8rem;
-    transition:
-      background-color 180ms var(--ease-out-quiet),
-      transform 180ms var(--ease-out-quiet);
-    min-width: 0;
+    font-size: 0.78rem;
+    background: var(--kawaii-code-surface);
   }
   
-  .command-item:hover {
-    background: var(--kawaii-code-surface-hover);
-    transform: translateX(2px);
-  }
-  
-  .command-code {
-    flex: 1;
-    min-width: 0;
-    white-space: normal;
-    overflow-wrap: anywhere;
-    color: var(--kawaii-ink);
-    line-height: 1.45;
-  }
-  
-  .command-copy {
-    background: none;
-    border: none;
-    font-size: 1.1rem;
-    cursor: pointer;
-    padding: 0.25rem;
-    border-radius: var(--radius-sm);
-    transition: transform 180ms var(--ease-out-quiet);
-  }
-  
-  .command-copy:hover {
-    transform: scale(1.06);
-  }
-  
-  /* Status Section */
-  .status-section {
-    margin-bottom: 1.25rem;
-  }
-  
-  .status-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0;
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-    border: 1px solid var(--kawaii-line);
-    background: var(--kawaii-panel-soft);
-    box-shadow: var(--shadow-soft);
-  }
-  
-  .status-item {
-    text-align: left;
-    padding: 1.1rem 1.25rem;
-    position: relative;
-    min-width: 0;
-  }
-
-  .status-item:not(:last-child) {
-    border-right: 1px solid var(--kawaii-line-soft);
-  }
-  
-  .status-icon {
-    font-size: 1rem;
-    margin-bottom: 0.65rem;
-  }
-  
-  .status-label {
+  .quick-hint {
     font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
     color: var(--kawaii-ink-muted);
-    margin-bottom: 0.25rem;
+    margin: 0;
   }
   
-  .status-value {
-    font-family: var(--font-display);
-    font-size: 1.35rem;
-    font-weight: 700;
-    color: var(--kawaii-ink);
-    margin-bottom: 0.25rem;
+  /* Status Section - Simplified Chips */
+  .status-section {
+    margin-bottom: 1rem;
   }
   
-  .status-detail {
-    font-size: 0.88rem;
+  .status-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.85rem;
+    background: var(--kawaii-panel-soft);
+    border: 1px solid var(--kawaii-line);
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
+    font-weight: 600;
     color: var(--kawaii-ink-soft);
-    overflow-wrap: anywhere;
   }
   
   /* Console Section */
   .console-section {
-    margin-bottom: 1.25rem;
+    margin-bottom: 1rem;
   }
   
   .section-header {
     display: flex;
     align-items: center;
-    gap: 0.65rem;
+    gap: 0.5rem;
   }
 
   .section-header > div:last-child {
@@ -526,8 +308,8 @@
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 0.9rem;
-    margin-bottom: 0.85rem;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
   }
 
   .section-action {
@@ -535,45 +317,40 @@
   }
   
   .section-icon {
-    font-size: 1.15rem;
+    font-size: 1.1rem;
   }
   
   .section-title {
     font-family: var(--font-display);
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: 700;
     color: var(--kawaii-ink);
-    margin-bottom: 0.2rem;
+    margin-bottom: 0.15rem;
   }
   
   .section-subtitle {
-    font-size: 0.96rem;
+    font-size: 0.9rem;
     color: var(--kawaii-ink-soft);
-    line-height: 1.55;
-    max-width: 34rem;
-    overflow-wrap: anywhere;
+    line-height: 1.5;
   }
   
   .console-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 0.95rem;
+    gap: 0.75rem;
   }
   
   .console-card {
     text-decoration: none;
     color: inherit;
-    padding: 1.15rem;
+    padding: 1rem;
     position: relative;
     overflow: hidden;
     border-radius: var(--radius-lg);
     border: 1px solid var(--kawaii-line);
     background: var(--kawaii-panel-soft);
     box-shadow: var(--shadow-soft);
-    transition:
-      transform 200ms var(--ease-out-quiet),
-      box-shadow 200ms var(--ease-out-quiet),
-      border-color 200ms var(--ease-out-quiet);
+    transition: all 200ms var(--ease-out-quiet);
     min-width: 0;
   }
   
@@ -583,78 +360,61 @@
     box-shadow: var(--shadow-elevated);
   }
   
-  .console-card:hover .console-arrow {
-    transform: translateX(2px);
-  }
-  
   .console-card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.6rem;
   }
   
   .console-emoji {
-    font-size: 2rem;
+    font-size: 1.5rem;
   }
   
   .console-count {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 1.8rem;
-    height: 1.8rem;
+    min-width: 1.6rem;
+    height: 1.6rem;
     background: var(--kawaii-accent-soft);
     color: var(--kawaii-ink);
     font-weight: 700;
-    font-size: 0.82rem;
+    font-size: 0.75rem;
     border-radius: var(--radius-full);
   }
   
   .console-name {
     font-family: var(--font-display);
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 700;
     color: var(--kawaii-ink);
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.15rem;
   }
   
   .console-desc {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: var(--kawaii-ink-soft);
     overflow-wrap: anywhere;
   }
   
-  .console-arrow {
-    position: absolute;
-    bottom: 1rem;
-    right: 1rem;
-    font-size: 1rem;
-    color: var(--kawaii-primary);
-    transition: transform 180ms var(--ease-out-quiet);
-  }
-  
   /* Skills Section */
   .skills-section {
-    margin-bottom: 1.25rem;
+    margin-bottom: 1rem;
   }
   
   .skills-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 0.95rem;
+    gap: 0.75rem;
   }
   
   .skill-card {
-    padding: 1.15rem;
+    padding: 1rem;
     border-radius: var(--radius-lg);
     border: 1px solid var(--kawaii-line);
     background: var(--kawaii-panel-soft);
-    box-shadow: none;
-    transition:
-      transform 200ms var(--ease-out-quiet),
-      border-color 200ms var(--ease-out-quiet),
-      background-color 200ms var(--ease-out-quiet);
+    transition: all 200ms var(--ease-out-quiet);
     min-width: 0;
   }
   
@@ -668,47 +428,62 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 0.65rem;
-    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+    gap: 0.5rem;
     min-width: 0;
   }
   
   .skill-emoji {
-    font-size: 1.35rem;
+    font-size: 1.25rem;
   }
   
   .skill-meta {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 0.25rem;
+    gap: 0.2rem;
   }
   
   .skill-stars {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--kawaii-warning);
     font-weight: 700;
   }
   
   .skill-name {
     font-family: var(--font-display);
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 700;
     color: var(--kawaii-ink);
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.2rem;
     overflow-wrap: anywhere;
   }
   
   .skill-desc {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: var(--kawaii-ink-soft);
-    margin-bottom: 0.85rem;
+    margin-bottom: 0.75rem;
     overflow-wrap: anywhere;
+    line-height: 1.5;
   }
   
-  .skill-actions {
-    display: flex;
-    gap: 0.45rem;
+  .skill-copy {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px dashed var(--kawaii-line);
+    border-radius: var(--radius-md);
+    background: var(--kawaii-panel-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--kawaii-ink-soft);
+    cursor: pointer;
+    transition: all 180ms var(--ease-out-quiet);
+  }
+  
+  .skill-copy:hover {
+    border-color: var(--kawaii-primary);
+    color: var(--kawaii-primary);
+    background: rgba(255, 105, 180, 0.08);
   }
   
   /* Responsive */
@@ -722,19 +497,9 @@
       flex-direction: column;
     }
 
-    .status-grid,
     .console-grid,
     .skills-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .status-grid {
-      gap: 0;
-    }
-
-    .status-item:not(:last-child) {
-      border-right: none;
-      border-bottom: 1px solid var(--kawaii-line-soft);
+      grid-template-columns: repeat(2, 1fr);
     }
   }
   
@@ -743,7 +508,7 @@
     .status-section,
     .console-section,
     .skills-section {
-      margin-bottom: 1rem;
+      margin-bottom: 0.875rem;
     }
 
     .hero-card {
@@ -755,39 +520,33 @@
     }
     
     .hero-title {
-      font-size: 1.75rem;
+      font-size: 1.6rem;
     }
 
     .hero-desc {
-      font-size: 1rem;
+      font-size: 0.95rem;
     }
 
-    .hero-actions {
-      flex-direction: column;
-      align-items: stretch;
-    }
-
-    .hero-actions .kawaii-button {
+    .hero-cta {
       width: 100%;
     }
 
-    .hero-handoff {
+    .quick-start {
       padding: 1rem;
     }
     
-    .handoff-tabs {
-      flex-direction: column;
+    .quick-pills {
+      justify-content: center;
     }
 
-    .preset-item,
-    .command-item,
+    .console-grid,
+    .skills-grid {
+      grid-template-columns: 1fr;
+    }
+
     .console-card,
     .skill-card {
-      padding: 0.95rem;
-    }
-
-    .command-item {
-      align-items: flex-start;
+      padding: 0.875rem;
     }
 
     .section-action {
@@ -801,32 +560,7 @@
     .skill-meta {
       align-items: flex-start;
     }
-
-    .skill-actions {
-      flex-direction: column;
-    }
-
-    .skill-actions .kawaii-button {
-      width: 100%;
-    }
   }
 </style>
-
-<script>
-  // Tab switching
-  document.querySelectorAll('.handoff-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      const target = tab.dataset.tab;
-      
-      // Update tabs
-      document.querySelectorAll('.handoff-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      
-      // Update panels
-      document.querySelectorAll('.handoff-panel').forEach(p => p.classList.remove('active'));
-      document.querySelector(`[data-panel="${target}"]`).classList.add('active');
-    });
-  });
-</script>
 
 {% endblock %}

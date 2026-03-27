@@ -1,0 +1,842 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="kawaii">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{{ title or "infinitas skill registry ✨" }}</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='20' fill='%23ffb6c1'/%3E%3Cpath d='M20 32c4-6 8-10 14-10 6 0 10 4 14 10 4 6 8 10 14 10' stroke='%23fff' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M44 32c-4 6-8 10-14 10-6 0-10-4-14-10-4-6-8-10-14-10' stroke='%23fff' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='48' cy='16' r='6' fill='%23ffd700'/%3E%3C/svg%3E" />
+    
+    <!-- Google Fonts: 可爱圆润字体 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Quicksand:wght@400;500;600;700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+    
+    <style>
+      /* ========================================
+         🎨 Kawaii Theme Design System
+         Modern + Advanced + Cute Anime Style
+         ======================================== */
+      
+      :root {
+        color-scheme: light;
+        
+        /* 🌸 主色调：樱花粉 x 天空蓝渐变系 */
+        --kawaii-primary: #ffb6c1;           /* 樱花粉 */
+        --kawaii-primary-soft: #ffd1dc;      /* 浅粉 */
+        --kawaii-primary-deep: #ff91a4;      /* 深粉 */
+        
+        --kawaii-secondary: #87ceeb;         /* 天空蓝 */
+        --kawaii-secondary-soft: #b0e0e6;    /* 粉蓝 */
+        --kawaii-secondary-deep: #5eb3d9;    /* 深蓝 */
+        
+        /* 🍬 辅助色：糖果色系 */
+        --kawaii-mint: #98fb98;              /* 薄荷绿 */
+        --kawaii-lavender: #e6e6fa;          /* 淡紫 */
+        --kawaii-lemon: #fffacd;             /* 柠檬黄 */
+        --kawaii-coral: #ffa07a;             /* 珊瑚橙 */
+        --kawaii-rose: #ffe4e1;              /* 玫瑰雾 */
+        
+        /* ✨ 功能色 */
+        --kawaii-success: #90ee90;
+        --kawaii-warning: #ffd700;
+        --kawaii-danger: #ff6b6b;
+        --kawaii-info: #87cefa;
+        
+        /* 📝 文字色 */
+        --kawaii-ink: #4a4a6a;
+        --kawaii-ink-soft: #7a7a9a;
+        --kawaii-ink-muted: #a0a0b8;
+        
+        /* 🎨 背景色 */
+        --kawaii-paper: #fff9fb;
+        --kawaii-paper-soft: #fff0f5;
+        --kawaii-surface: rgba(255, 255, 255, 0.85);
+        --kawaii-surface-elevated: rgba(255, 255, 255, 0.95);
+        
+        /* 🌈 渐变定义 */
+        --gradient-hero: linear-gradient(135deg, 
+          var(--kawaii-primary-soft) 0%, 
+          var(--kawaii-secondary-soft) 50%,
+          var(--kawaii-lavender) 100%);
+        --gradient-card: linear-gradient(145deg, 
+          rgba(255,255,255,0.95) 0%, 
+          rgba(255,240,245,0.9) 100%);
+        --gradient-button-primary: linear-gradient(135deg, 
+          var(--kawaii-primary) 0%, 
+          var(--kawaii-primary-deep) 100%);
+        --gradient-button-secondary: linear-gradient(135deg, 
+          var(--kawaii-secondary) 0%, 
+          var(--kawaii-secondary-deep) 100%);
+        
+        /* 💫 效果 */
+        --shadow-soft: 
+          0 4px 20px rgba(255, 182, 193, 0.25),
+          0 2px 8px rgba(135, 206, 235, 0.15);
+        --shadow-elevated: 
+          0 8px 32px rgba(255, 182, 193, 0.35),
+          0 4px 12px rgba(135, 206, 235, 0.2);
+        --shadow-glow: 
+          0 0 20px rgba(255, 182, 193, 0.4),
+          0 0 40px rgba(135, 206, 235, 0.2);
+        
+        /* 📐 尺寸 */
+        --radius-sm: 12px;
+        --radius-md: 20px;
+        --radius-lg: 28px;
+        --radius-xl: 36px;
+        --radius-full: 9999px;
+        
+        /* ⏱️ 动画 */
+        --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+        --ease-elastic: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        
+        /* 🔤 字体 */
+        --font-display: 'Quicksand', 'ZCOOL KuaiLe', sans-serif;
+        --font-body: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+        --font-mono: 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
+      }
+
+      /* 🌙 深色模式（夜樱主题） */
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: dark;
+          --kawaii-paper: #1a1a2e;
+          --kawaii-paper-soft: #16213e;
+          --kawaii-surface: rgba(30, 30, 50, 0.85);
+          --kawaii-surface-elevated: rgba(40, 40, 60, 0.95);
+          --kawaii-ink: #f0f0f5;
+          --kawaii-ink-soft: #c0c0d0;
+          --kawaii-ink-muted: #808090;
+          --kawaii-primary: #ff85a2;
+          --kawaii-primary-soft: #ffb6c1;
+          --kawaii-secondary: #5eb3d9;
+          --shadow-soft: 
+            0 4px 20px rgba(255, 133, 162, 0.2),
+            0 2px 8px rgba(94, 179, 217, 0.15);
+        }
+      }
+
+      /* ========================================
+         🎯 基础重置
+         ======================================== */
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        font-family: var(--font-body);
+        font-size: 15px;
+        line-height: 1.6;
+        color: var(--kawaii-ink);
+        background: var(--kawaii-paper);
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      /* 🎨 动态背景 */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: -1;
+        background: 
+          /* 浮动气泡 */
+          radial-gradient(circle at 10% 20%, rgba(255,182,193,0.15) 0%, transparent 25%),
+          radial-gradient(circle at 90% 80%, rgba(135,206,235,0.15) 0%, transparent 25%),
+          radial-gradient(circle at 50% 50%, rgba(230,230,250,0.1) 0%, transparent 35%),
+          /* 网格纹理 */
+          linear-gradient(90deg, rgba(255,182,193,0.03) 1px, transparent 1px),
+          linear-gradient(rgba(135,206,235,0.03) 1px, transparent 1px);
+        background-size: 100% 100%, 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+        animation: bgFloat 20s ease-in-out infinite;
+      }
+
+      @keyframes bgFloat {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        50% { transform: translateY(-10px) rotate(1deg); }
+      }
+
+      /* ========================================
+         🎀 顶部导航栏
+         ======================================== */
+      .topbar {
+        position: sticky;
+        top: 12px;
+        z-index: 100;
+        width: min(1200px, calc(100vw - 2rem));
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 1rem;
+        align-items: center;
+        padding: 0.75rem 1.25rem;
+        background: var(--kawaii-surface);
+        border: 2px solid rgba(255, 182, 193, 0.3);
+        border-radius: var(--radius-xl);
+        backdrop-filter: blur(20px) saturate(180%);
+        box-shadow: var(--shadow-soft);
+        transition: all 300ms var(--ease-smooth);
+      }
+
+      .topbar:hover {
+        box-shadow: var(--shadow-elevated);
+        border-color: rgba(255, 182, 193, 0.5);
+      }
+
+      /* 🏠 品牌区域 */
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        text-decoration: none;
+        color: inherit;
+        transition: transform 200ms var(--ease-bounce);
+      }
+
+      .brand:hover {
+        transform: scale(1.02);
+      }
+
+      .brand-mark {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: var(--radius-md);
+        background: var(--gradient-hero);
+        display: grid;
+        place-items: center;
+        font-size: 1.25rem;
+        box-shadow: 
+          inset 0 2px 4px rgba(255,255,255,0.4),
+          0 4px 12px rgba(255, 182, 193, 0.3);
+        animation: brandPulse 3s ease-in-out infinite;
+      }
+
+      @keyframes brandPulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+      }
+
+      .brand-copy {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .brand-title {
+        font-family: var(--font-display);
+        font-size: 1.1rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        background: linear-gradient(135deg, var(--kawaii-primary-deep), var(--kawaii-secondary-deep));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .brand-subtitle {
+        font-size: 0.7rem;
+        color: var(--kawaii-ink-soft);
+        font-weight: 600;
+      }
+
+      /* 🧭 导航 */
+      .nav {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+      }
+
+      .nav a {
+        padding: 0.5rem 1rem;
+        border-radius: var(--radius-full);
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--kawaii-ink-soft);
+        text-decoration: none;
+        transition: all 200ms var(--ease-bounce);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .nav a::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: var(--gradient-hero);
+        opacity: 0;
+        transition: opacity 200ms;
+        border-radius: inherit;
+        z-index: -1;
+      }
+
+      .nav a:hover {
+        color: var(--kawaii-ink);
+        transform: translateY(-2px);
+      }
+
+      .nav a:hover::before {
+        opacity: 0.3;
+      }
+
+      .nav a[aria-current="page"] {
+        color: white;
+        background: var(--gradient-button-primary);
+        box-shadow: 0 4px 12px rgba(255, 182, 193, 0.4);
+      }
+
+      .nav a[aria-current="page"]:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(255, 182, 193, 0.5);
+      }
+
+      /* 💫 状态指示器 */
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: rgba(255, 255, 255, 0.6);
+        border: 2px solid rgba(144, 238, 144, 0.4);
+        border-radius: var(--radius-full);
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--kawaii-ink-soft);
+      }
+
+      .status-pill::before {
+        content: "●";
+        color: var(--kawaii-success);
+        animation: pulse 2s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+
+      /* ========================================
+         📦 主容器
+         ======================================== */
+      .site-shell {
+        width: min(1200px, calc(100vw - 2rem));
+        margin: 0 auto;
+        padding: 1.5rem 0 4rem;
+      }
+
+      /* ========================================
+         🎴 卡片组件
+         ======================================== */
+      .kawaii-card {
+        background: var(--gradient-card);
+        border: 2px solid rgba(255, 182, 193, 0.2);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        box-shadow: var(--shadow-soft);
+        transition: all 300ms var(--ease-bounce);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .kawaii-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, 
+          var(--kawaii-primary), 
+          var(--kawaii-secondary),
+          var(--kawaii-mint));
+        opacity: 0.6;
+      }
+
+      .kawaii-card::after {
+        content: "";
+        position: absolute;
+        bottom: -50%;
+        right: -50%;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle, 
+          rgba(255,182,193,0.15) 0%, 
+          transparent 70%);
+        pointer-events: none;
+      }
+
+      .kawaii-card:hover {
+        transform: translateY(-4px) scale(1.005);
+        box-shadow: var(--shadow-elevated);
+        border-color: rgba(255, 182, 193, 0.4);
+      }
+
+      /* ========================================
+         🎀 按钮组件
+         ======================================== */
+      .kawaii-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        font-family: var(--font-body);
+        font-size: 0.9rem;
+        font-weight: 700;
+        border: none;
+        border-radius: var(--radius-full);
+        cursor: pointer;
+        transition: all 200ms var(--ease-bounce);
+        text-decoration: none;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .kawaii-button--primary {
+        background: var(--gradient-button-primary);
+        color: white;
+        box-shadow: 
+          0 4px 12px rgba(255, 182, 193, 0.4),
+          inset 0 1px 2px rgba(255,255,255,0.3);
+      }
+
+      .kawaii-button--primary:hover {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 
+          0 6px 20px rgba(255, 182, 193, 0.5),
+          inset 0 1px 2px rgba(255,255,255,0.3);
+      }
+
+      .kawaii-button--secondary {
+        background: var(--gradient-button-secondary);
+        color: white;
+        box-shadow: 
+          0 4px 12px rgba(135, 206, 235, 0.4),
+          inset 0 1px 2px rgba(255,255,255,0.3);
+      }
+
+      .kawaii-button--ghost {
+        background: rgba(255, 255, 255, 0.5);
+        color: var(--kawaii-ink);
+        border: 2px solid rgba(255, 182, 193, 0.3);
+      }
+
+      .kawaii-button--ghost:hover {
+        background: rgba(255, 182, 193, 0.1);
+        border-color: rgba(255, 182, 193, 0.5);
+      }
+
+      .kawaii-button:active {
+        transform: translateY(0) scale(0.98);
+      }
+
+      /* 按钮闪烁效果 */
+      .kawaii-button::after {
+        content: "";
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(
+          45deg,
+          transparent 40%,
+          rgba(255,255,255,0.3) 50%,
+          transparent 60%
+        );
+        transform: translateX(-100%) rotate(45deg);
+        transition: transform 0.6s;
+      }
+
+      .kawaii-button:hover::after {
+        transform: translateX(100%) rotate(45deg);
+      }
+
+      /* ========================================
+         🏷️ 标签组件
+         ======================================== */
+      .kawaii-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.35rem 0.75rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        border-radius: var(--radius-full);
+        transition: all 200ms var(--ease-bounce);
+      }
+
+      .kawaii-tag--pink {
+        background: rgba(255, 182, 193, 0.2);
+        color: var(--kawaii-primary-deep);
+        border: 1.5px solid rgba(255, 182, 193, 0.3);
+      }
+
+      .kawaii-tag--blue {
+        background: rgba(135, 206, 235, 0.2);
+        color: var(--kawaii-secondary-deep);
+        border: 1.5px solid rgba(135, 206, 235, 0.3);
+      }
+
+      .kawaii-tag--green {
+        background: rgba(152, 251, 152, 0.25);
+        color: #2e8b57;
+        border: 1.5px solid rgba(152, 251, 152, 0.4);
+      }
+
+      .kawaii-tag:hover {
+        transform: scale(1.05);
+      }
+
+      /* ========================================
+         📊 状态徽章
+         ======================================== */
+      .kawaii-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+        border-radius: var(--radius-full);
+        border: 2px solid;
+        transition: all 200ms var(--ease-bounce);
+      }
+
+      .kawaii-badge--success {
+        background: rgba(144, 238, 144, 0.2);
+        border-color: rgba(144, 238, 144, 0.4);
+        color: #228b22;
+      }
+
+      .kawaii-badge--pending {
+        background: rgba(255, 215, 0, 0.2);
+        border-color: rgba(255, 215, 0, 0.4);
+        color: #b8860b;
+      }
+
+      .kawaii-badge--running {
+        background: rgba(135, 206, 250, 0.2);
+        border-color: rgba(135, 206, 250, 0.4);
+        color: var(--kawaii-secondary-deep);
+      }
+
+      .kawaii-badge--error {
+        background: rgba(255, 107, 107, 0.15);
+        border-color: rgba(255, 107, 107, 0.3);
+        color: var(--kawaii-danger);
+      }
+
+      /* ========================================
+         🎮 输入框组件
+         ======================================== */
+      .kawaii-input {
+        width: 100%;
+        padding: 0.875rem 1.25rem;
+        font-family: var(--font-body);
+        font-size: 0.95rem;
+        color: var(--kawaii-ink);
+        background: rgba(255, 255, 255, 0.7);
+        border: 2px solid rgba(255, 182, 193, 0.2);
+        border-radius: var(--radius-full);
+        transition: all 200ms var(--ease-smooth);
+        outline: none;
+      }
+
+      .kawaii-input:focus {
+        border-color: var(--kawaii-primary);
+        box-shadow: 0 0 0 4px rgba(255, 182, 193, 0.15);
+        background: white;
+      }
+
+      .kawaii-input::placeholder {
+        color: var(--kawaii-ink-muted);
+      }
+
+      /* ========================================
+         📋 表格样式
+         ======================================== */
+      .kawaii-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 0.5rem;
+      }
+
+      .kawaii-table th {
+        padding: 0.75rem 1rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--kawaii-ink-soft);
+        text-align: left;
+      }
+
+      .kawaii-table td {
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.5);
+        border: none;
+        transition: all 200ms var(--ease-smooth);
+      }
+
+      .kawaii-table tr {
+        transition: transform 200ms var(--ease-bounce);
+      }
+
+      .kawaii-table tr:hover td {
+        background: rgba(255, 182, 193, 0.08);
+        transform: scale(1.005);
+      }
+
+      .kawaii-table tr td:first-child {
+        border-radius: var(--radius-md) 0 0 var(--radius-md);
+      }
+
+      .kawaii-table tr td:last-child {
+        border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      }
+
+      /* ========================================
+         🎨 装饰元素
+         ======================================== */
+      .sparkle {
+        display: inline-block;
+        animation: sparkle 2s ease-in-out infinite;
+      }
+
+      @keyframes sparkle {
+        0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        50% { transform: scale(1.2) rotate(10deg); opacity: 0.8; }
+      }
+
+      .float {
+        animation: float 3s ease-in-out infinite;
+      }
+
+      @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-6px); }
+      }
+
+      /* 角落装饰 */
+      .corner-decoration {
+        position: absolute;
+        width: 60px;
+        height: 60px;
+        pointer-events: none;
+        opacity: 0.4;
+      }
+
+      .corner-decoration--tl {
+        top: -10px;
+        left: -10px;
+        background: radial-gradient(circle, var(--kawaii-primary-soft), transparent 70%);
+        border-radius: 50%;
+      }
+
+      .corner-decoration--br {
+        bottom: -10px;
+        right: -10px;
+        background: radial-gradient(circle, var(--kawaii-secondary-soft), transparent 70%);
+        border-radius: 50%;
+      }
+
+      /* ========================================
+         🎯 工具提示
+         ======================================== */
+      .kawaii-tooltip {
+        position: relative;
+      }
+
+      .kawaii-tooltip::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%) translateY(-8px) scale(0.9);
+        padding: 0.5rem 1rem;
+        background: var(--kawaii-ink);
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border-radius: var(--radius-md);
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 200ms var(--ease-bounce);
+        pointer-events: none;
+      }
+
+      .kawaii-tooltip:hover::after {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(-50%) translateY(-8px) scale(1);
+      }
+
+      /* ========================================
+         📱 响应式
+         ======================================== */
+      @media (max-width: 980px) {
+        .topbar {
+          grid-template-columns: auto 1fr;
+          grid-template-areas: 
+            "brand status"
+            "nav nav";
+        }
+        
+        .brand { grid-area: brand; }
+        .nav { 
+          grid-area: nav;
+          overflow-x: auto;
+          gap: 0.25rem;
+          padding-bottom: 0.25rem;
+        }
+        .status-pill { grid-area: status; }
+        
+        .nav::-webkit-scrollbar {
+          display: none;
+        }
+      }
+
+      @media (max-width: 720px) {
+        :root {
+          --radius-lg: 20px;
+          --radius-xl: 24px;
+        }
+        
+        .topbar {
+          position: static;
+          margin-top: 0.5rem;
+        }
+        
+        .kawaii-card {
+          padding: 1rem;
+        }
+      }
+
+      /* ========================================
+         🎭 动画工具类
+         ======================================== */
+      .animate-in {
+        animation: animateIn 600ms var(--ease-elastic) both;
+      }
+
+      @keyframes animateIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px) scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      .stagger-1 { animation-delay: 100ms; }
+      .stagger-2 { animation-delay: 200ms; }
+      .stagger-3 { animation-delay: 300ms; }
+      .stagger-4 { animation-delay: 400ms; }
+      .stagger-5 { animation-delay: 500ms; }
+
+      /* ========================================
+         ♿ 无障碍
+         ======================================== */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+
+      :focus-visible {
+        outline: 3px solid var(--kawaii-primary);
+        outline-offset: 3px;
+        border-radius: var(--radius-sm);
+      }
+    </style>
+  </head>
+  
+  <body>
+    <!-- 🎀 顶部导航 -->
+    <header class="topbar animate-in">
+      <a class="brand" href="/">
+        <div class="brand-mark">✨</div>
+        <div class="brand-copy">
+          <div class="brand-title">infinitas</div>
+          <div class="brand-subtitle">skill registry</div>
+        </div>
+      </a>
+      
+      <nav class="nav" aria-label="Primary">
+        <a href="/" aria-current="page">首页</a>
+        <a href="/skills">技能</a>
+        <a href="/submissions">提交</a>
+        <a href="/reviews">评审</a>
+        <a href="/jobs">任务</a>
+      </nav>
+      
+      <div class="status-pill">运行中</div>
+    </header>
+
+    <!-- 📦 主内容区 -->
+    <main class="site-shell">
+      {% block body %}{% endblock %}
+    </main>
+
+    <!-- 🎊 装饰元素 -->
+    <script>
+      // 鼠标跟随的轻微视差效果
+      document.addEventListener('mousemove', (e) => {
+        const cards = document.querySelectorAll('.kawaii-card');
+        const mouseX = e.clientX / window.innerWidth - 0.5;
+        const mouseY = e.clientY / window.innerHeight - 0.5;
+        
+        cards.forEach((card, index) => {
+          const speed = (index % 3 + 1) * 0.5;
+          const x = mouseX * speed;
+          const y = mouseY * speed;
+          card.style.transform = `translate(${x}px, ${y}px)`;
+        });
+      });
+
+      // 点击产生星星效果
+      document.addEventListener('click', (e) => {
+        createSparkle(e.clientX, e.clientY);
+      });
+
+      function createSparkle(x, y) {
+        const sparkle = document.createElement('div');
+        sparkle.innerHTML = ['✨', '⭐', '🌟', '💫'][Math.floor(Math.random() * 4)];
+        sparkle.style.cssText = `
+          position: fixed;
+          left: ${x}px;
+          top: ${y}px;
+          font-size: 1.5rem;
+          pointer-events: none;
+          z-index: 9999;
+          animation: sparklePop 600ms ease-out forwards;
+        `;
+        document.body.appendChild(sparkle);
+        setTimeout(() => sparkle.remove(), 600);
+      }
+
+      // 添加星星动画样式
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes sparklePop {
+          0% { transform: scale(0) rotate(0deg); opacity: 1; }
+          50% { transform: scale(1.2) rotate(180deg); }
+          100% { transform: scale(0) rotate(360deg) translateY(-20px); opacity: 0; }
+        }
+      `;
+      document.head.appendChild(style);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,61 @@
+{% extends "layout.html" %}
+{% block body %}
+{% if insight_cards %}
+<section class="insight-grid" data-reveal style="--reveal-index: 1">
+  {% for card in insight_cards %}
+  <article class="insight-card">
+    <div class="section-kicker">Maintainer note / 维护说明</div>
+    <h3>{{ card.title }}</h3>
+    <p>{{ card.body }}</p>
+    <div class="command-chip">
+      <code>{{ card.command }}</code>
+    </div>
+  </article>
+  {% endfor %}
+</section>
+{% endif %}
+<section class="console-table-shell" data-reveal style="--reveal-index: 1">
+  <div class="section-kicker">Submission queue / 提交队列</div>
+  <div class="table-scroll">
+    {% if items %}
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Skill</th>
+          <th>Status</th>
+          <th>Created By</th>
+          <th>Review</th>
+          <th>Updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td><span class="table-id">{{ item.id }}</span></td>
+          <td>
+            <strong class="skill-name">{{ item.publisher }}/{{ item.skill_name }}</strong>
+          </td>
+          <td><span class="status-badge" data-status="{{ (item.status or '')|lower }}">{{ item.status }}</span></td>
+          <td>{{ item.created_by or "-" }}</td>
+          <td>
+            {% if item.review %}
+            <div class="status-stack">
+              <span class="table-id">{{ item.review.id }}</span>
+              <span class="status-badge" data-status="{{ (item.review.status or '')|lower }}">{{ item.review.status }}</span>
+            </div>
+            {% else %}
+            -
+            {% endif %}
+          </td>
+          <td>{{ item.updated_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty-copy">No submissions found.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

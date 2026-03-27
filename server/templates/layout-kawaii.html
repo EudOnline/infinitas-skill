@@ -148,56 +148,127 @@
         --font-mono: 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
       }
 
-      /* 🌙 深色模式（夜樱主题） */
+      /* 🌙 深色模式 - Neon Night 霓虹夜之城 */
       html[data-color-scheme="dark"] {
         color-scheme: dark;
-        --kawaii-paper: #1a1a2e;
-        --kawaii-paper-soft: #16213e;
-        --kawaii-surface: rgba(30, 30, 50, 0.85);
-        --kawaii-surface-elevated: rgba(40, 40, 60, 0.95);
-        --kawaii-panel: rgba(38, 40, 66, 0.9);
-        --kawaii-panel-soft: rgba(34, 36, 58, 0.84);
-        --kawaii-panel-muted: rgba(32, 34, 56, 0.76);
-        --kawaii-line: rgba(126, 132, 176, 0.34);
-        --kawaii-line-soft: rgba(126, 132, 176, 0.22);
-        --kawaii-accent-soft: rgba(255, 133, 162, 0.32);
-        --kawaii-toggle-surface: rgba(255, 255, 255, 0.08);
-        --kawaii-toggle-inset: rgba(255, 255, 255, 0.06);
-        --kawaii-code-surface: rgba(255, 255, 255, 0.06);
-        --kawaii-code-surface-hover: rgba(255, 255, 255, 0.1);
-        --kawaii-ink: #f0f0f5;
-        --kawaii-ink-soft: #d3d0de;
-        --kawaii-ink-muted: #a5a1b6;
-        --kawaii-primary: #ff85a2;
-        --kawaii-primary-soft: #ffb6c1;
-        --kawaii-secondary: #5eb3d9;
+        
+        /* 🌌 深空背景系 */
+        --kawaii-paper: #0a0a14;              /* 深空黑 */
+        --kawaii-paper-soft: #121220;         /* 午夜蓝 */
+        --kawaii-surface: rgba(20, 20, 40, 0.9);
+        --kawaii-surface-elevated: rgba(30, 30, 55, 0.95);
+        --kawaii-panel: rgba(35, 35, 60, 0.92);
+        --kawaii-panel-soft: rgba(30, 30, 52, 0.88);
+        --kawaii-panel-muted: rgba(28, 28, 48, 0.8);
+        --kawaii-line: rgba(147, 112, 219, 0.3);
+        --kawaii-line-soft: rgba(147, 112, 219, 0.18);
+        --kawaii-accent-soft: rgba(255, 0, 255, 0.25);
+        --kawaii-toggle-surface: rgba(255, 0, 255, 0.1);
+        --kawaii-toggle-inset: rgba(255, 255, 255, 0.05);
+        --kawaii-code-surface: rgba(0, 255, 255, 0.08);
+        --kawaii-code-surface-hover: rgba(0, 255, 255, 0.12);
+        
+        /* ✨ 荧光文字系 */
+        --kawaii-ink: #ffffff;                /* 纯白 */
+        --kawaii-ink-soft: #e8e8ff;           /* 淡紫白 */
+        --kawaii-ink-muted: #a0a0c8;          /* 星尘灰 */
+        
+        /* 💗 霓虹主色 - 荧光粉 */
+        --kawaii-primary: #ff00ff;            /* 荧光粉 */
+        --kawaii-primary-soft: #ff69b4;       /* 热粉红 */
+        --kawaii-primary-deep: #ff1493;       /* 深粉 */
+        --kawaii-primary-glow: rgba(255, 0, 255, 0.6);
+        
+        /* 💠 霓虹辅色 - 青色 */
+        --kawaii-secondary: #00ffff;          /* 青色 */
+        --kawaii-secondary-soft: #00d4ff;     /* 电光蓝 */
+        --kawaii-secondary-deep: #0099cc;     /* 深蓝 */
+        --kawaii-secondary-glow: rgba(0, 255, 255, 0.5);
+        
+        /* 🌈 霓虹彩虹 */
+        --kawaii-mint: #39ff14;               /* 荧光绿 */
+        --kawaii-lavender: #bf00ff;           /* 紫色 */
+        --kawaii-lemon: #ffff00;              /* 荧光黄 */
+        --kawaii-coral: #ff3366;              /* 霓虹红 */
+        --kawaii-rose: #ff1493;               /* 玫瑰 */
+        --kawaii-peach: #ff9966;              /* 蜜桃 */
+        --kawaii-sky: #00ccff;                /* 天空 */
+        
+        /* ✨ 功能色 - 霓虹版 */
+        --kawaii-success: #39ff14;            /* 荧光绿 */
+        --kawaii-warning: #ffff00;            /* 荧光黄 */
+        --kawaii-danger: #ff3366;             /* 霓虹红 */
+        --kawaii-info: #00ffff;               /* 青色 */
+        
+        /* 💫 霓虹阴影 */
         --shadow-soft:
-          0 12px 28px rgba(27, 29, 54, 0.2),
-          0 2px 6px rgba(27, 29, 54, 0.1);
+          0 12px 28px rgba(255, 0, 255, 0.15),
+          0 2px 6px rgba(0, 255, 255, 0.1);
         --shadow-elevated:
-          0 16px 36px rgba(27, 29, 54, 0.28),
-          0 4px 12px rgba(27, 29, 54, 0.16);
+          0 16px 36px rgba(255, 0, 255, 0.22),
+          0 4px 12px rgba(0, 255, 255, 0.15);
+        --shadow-glow:
+          0 0 20px var(--kawaii-primary-glow),
+          0 0 40px var(--kawaii-primary-soft);
+        
+        /* 🎀 3D糖果效果 - 霓虹版 */
+        --candy-3d:
+          0 6px 0 #cc00cc,
+          0 8px 10px rgba(255, 0, 255, 0.4),
+          inset 0 2px 5px rgba(255, 255, 255, 0.3);
+        --candy-3d-active:
+          0 0 0 #cc00cc,
+          inset 0 2px 5px rgba(0, 0, 0, 0.2);
+        
+        /* 🌈 霓虹渐变 */
+        --gradient-hero: linear-gradient(135deg, 
+          #1a0a2e 0%,     /* 深紫 */
+          #16213e 25%,    /* 深蓝 */
+          #0f3460 50%,    /* 海蓝 */
+          #1a0a2e 75%,    /* 深紫 */
+          #2d1b4e 100%    /* 紫罗兰 */
+        );
+        --gradient-card: linear-gradient(145deg, 
+          rgba(255, 255, 255, 0.08) 0%, 
+          rgba(255, 255, 255, 0.04) 100%
+        );
+        --gradient-button-primary: linear-gradient(135deg, 
+          #ff00ff 0%, 
+          #ff1493 50%,
+          #ff69b4 100%
+        );
+        --gradient-button-secondary: linear-gradient(135deg, 
+          #00ffff 0%, 
+          #00d4ff 50%,
+          #0099cc 100%
+        );
       }
 
       @media (prefers-color-scheme: dark) {
         html:not([data-color-scheme]) {
           color-scheme: dark;
-          --kawaii-paper: #1a1a2e;
-          --kawaii-paper-soft: #16213e;
-          --kawaii-surface: rgba(30, 30, 50, 0.85);
-          --kawaii-surface-elevated: rgba(40, 40, 60, 0.95);
-          --kawaii-ink: #f0f0f5;
-          --kawaii-ink-soft: #d3d0de;
-          --kawaii-ink-muted: #a5a1b6;
-          --kawaii-primary: #ff85a2;
-          --kawaii-primary-soft: #ffb6c1;
-          --kawaii-secondary: #5eb3d9;
+          --kawaii-paper: #0a0a14;
+          --kawaii-paper-soft: #121220;
+          --kawaii-surface: rgba(20, 20, 40, 0.9);
+          --kawaii-surface-elevated: rgba(30, 30, 55, 0.95);
+          --kawaii-ink: #ffffff;
+          --kawaii-ink-soft: #e8e8ff;
+          --kawaii-ink-muted: #a0a0c8;
+          --kawaii-primary: #ff00ff;
+          --kawaii-primary-soft: #ff69b4;
+          --kawaii-primary-deep: #ff1493;
+          --kawaii-secondary: #00ffff;
+          --kawaii-secondary-soft: #00d4ff;
+          --kawaii-success: #39ff14;
+          --kawaii-warning: #ffff00;
+          --kawaii-danger: #ff3366;
+          --kawaii-info: #00ffff;
           --shadow-soft:
-            0 12px 28px rgba(27, 29, 54, 0.2),
-            0 2px 6px rgba(27, 29, 54, 0.1);
+            0 12px 28px rgba(255, 0, 255, 0.15),
+            0 2px 6px rgba(0, 255, 255, 0.1);
           --shadow-elevated:
-            0 16px 36px rgba(27, 29, 54, 0.28),
-            0 4px 12px rgba(27, 29, 54, 0.16);
+            0 16px 36px rgba(255, 0, 255, 0.22),
+            0 4px 12px rgba(0, 255, 255, 0.15);
         }
       }
 
@@ -208,6 +279,11 @@
         box-sizing: border-box;
         margin: 0;
         padding: 0;
+      }
+      
+      /* 修复 [hidden] 属性 */
+      [hidden] {
+        display: none !important;
       }
 
       html {
@@ -237,13 +313,68 @@
           radial-gradient(circle at 90% 80%, rgba(0, 191, 255, 0.2) 0%, transparent 30%),
           radial-gradient(circle at 50% 50%, rgba(218, 112, 214, 0.15) 0%, transparent 40%),
           radial-gradient(circle at 80% 30%, rgba(255, 215, 0, 0.1) 0%, transparent 25%),
-          /* 渐变背景 */
+          /* 渐变背景 - 魔法少女午后 */
           linear-gradient(135deg, 
             rgba(255, 240, 245, 0.8) 0%, 
             rgba(255, 228, 235, 0.6) 50%,
             rgba(255, 248, 250, 0.8) 100%);
         background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
         animation: background-float 15s ease-in-out infinite;
+      }
+      
+      /* 🌙 深色模式背景 - 霓虹星空 */
+      html[data-color-scheme="dark"] body::before {
+        background: 
+          /* 发光星云 - 荧光粉 */
+          radial-gradient(circle at 15% 25%, rgba(255, 0, 255, 0.25) 0%, transparent 35%),
+          radial-gradient(circle at 85% 75%, rgba(0, 255, 255, 0.2) 0%, transparent 30%),
+          radial-gradient(circle at 50% 50%, rgba(191, 0, 255, 0.15) 0%, transparent 45%),
+          radial-gradient(circle at 75% 20%, rgba(57, 255, 20, 0.1) 0%, transparent 20%),
+          /* 星星点点 */
+          radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.8) 0%, transparent 1%),
+          radial-gradient(circle at 40% 30%, rgba(255, 255, 255, 0.6) 0%, transparent 1%),
+          radial-gradient(circle at 60% 70%, rgba(255, 255, 255, 0.7) 0%, transparent 1%),
+          radial-gradient(circle at 80% 40%, rgba(255, 255, 255, 0.5) 0%, transparent 1%),
+          radial-gradient(circle at 90% 90%, rgba(255, 255, 255, 0.6) 0%, transparent 1%),
+          /* 极光渐变 */
+          linear-gradient(135deg, 
+            rgba(26, 10, 46, 0.9) 0%, 
+            rgba(15, 15, 35, 0.95) 50%,
+            rgba(10, 10, 25, 0.9) 100%);
+        animation: nebula-float 20s ease-in-out infinite;
+      }
+      
+      @keyframes nebula-float {
+        0%, 100% { 
+          background-position: 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%;
+        }
+        33% { 
+          background-position: 3% 2%, -2% 3%, 2% -3%, -3% 2%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%;
+        }
+        66% { 
+          background-position: -2% 3%, 3% -2%, -3% 2%, 2% -3%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%;
+        }
+      }
+      
+      /* 深色模式系统偏好 */
+      @media (prefers-color-scheme: dark) {
+        html:not([data-color-scheme]) body::before {
+          background: 
+            radial-gradient(circle at 15% 25%, rgba(255, 0, 255, 0.25) 0%, transparent 35%),
+            radial-gradient(circle at 85% 75%, rgba(0, 255, 255, 0.2) 0%, transparent 30%),
+            radial-gradient(circle at 50% 50%, rgba(191, 0, 255, 0.15) 0%, transparent 45%),
+            radial-gradient(circle at 75% 20%, rgba(57, 255, 20, 0.1) 0%, transparent 20%),
+            radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.8) 0%, transparent 1%),
+            radial-gradient(circle at 40% 30%, rgba(255, 255, 255, 0.6) 0%, transparent 1%),
+            radial-gradient(circle at 60% 70%, rgba(255, 255, 255, 0.7) 0%, transparent 1%),
+            radial-gradient(circle at 80% 40%, rgba(255, 255, 255, 0.5) 0%, transparent 1%),
+            radial-gradient(circle at 90% 90%, rgba(255, 255, 255, 0.6) 0%, transparent 1%),
+            linear-gradient(135deg, 
+              rgba(26, 10, 46, 0.9) 0%, 
+              rgba(15, 15, 35, 0.95) 50%,
+              rgba(10, 10, 25, 0.9) 100%);
+          animation: nebula-float 20s ease-in-out infinite;
+        }
       }
       
       @keyframes background-float {
@@ -393,6 +524,373 @@
         height: 0.5rem;
         border-radius: 999px;
         background: color-mix(in srgb, var(--kawaii-success) 76%, white);
+      }
+
+      /* 🔍 搜索栏 - 可爱风格 */
+      .search-bar-wrapper {
+        position: relative;
+        flex: 1;
+        max-width: 280px;
+        min-width: 180px;
+      }
+      
+      .search-input {
+        width: 100%;
+        height: 2.75rem;
+        padding: 0 2.8rem 0 2.6rem;
+        border: 2px solid var(--kawaii-line);
+        border-radius: var(--radius-full);
+        background: var(--kawaii-panel-soft);
+        font-family: var(--font-body);
+        font-size: 0.9rem;
+        color: var(--kawaii-ink);
+        transition: all 200ms var(--ease-out-quiet);
+        outline: none;
+      }
+      
+      .search-input::placeholder {
+        color: var(--kawaii-ink-muted);
+        font-weight: 500;
+      }
+      
+      .search-input:hover {
+        border-color: var(--kawaii-primary-soft);
+        background: var(--kawaii-panel);
+      }
+      
+      .search-input:focus {
+        border-color: var(--kawaii-primary);
+        background: var(--kawaii-surface-elevated);
+        box-shadow: 
+          0 0 0 4px rgba(255, 105, 180, 0.15),
+          0 4px 12px rgba(255, 105, 180, 0.1);
+      }
+      
+      .search-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 1.1rem;
+        color: var(--kawaii-ink-muted);
+        pointer-events: none;
+        transition: all 200ms var(--ease-out-quiet);
+      }
+      
+      .search-input:focus + .search-icon,
+      .search-bar-wrapper:focus-within .search-icon {
+        color: var(--kawaii-primary);
+        transform: translateY(-50%) scale(1.1);
+      }
+      
+      .search-shortcut {
+        position: absolute;
+        right: 0.6rem;
+        top: 50%;
+        transform: translateY(-50%);
+        padding: 0.25rem 0.5rem;
+        background: var(--kawaii-panel-muted);
+        border: 1px solid var(--kawaii-line-soft);
+        border-radius: var(--radius-sm);
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--kawaii-ink-muted);
+        font-family: var(--font-mono);
+        letter-spacing: 0.05em;
+        transition: all 200ms var(--ease-out-quiet);
+        pointer-events: none;
+      }
+      
+      .search-input:focus ~ .search-shortcut,
+      .search-bar-wrapper:focus-within .search-shortcut {
+        opacity: 0;
+        transform: translateY(-50%) scale(0.9);
+      }
+      
+      /* 搜索结果下拉 */
+      .search-dropdown {
+        position: absolute;
+        top: calc(100% + 0.5rem);
+        left: 0;
+        right: 0;
+        background: var(--kawaii-surface-elevated);
+        border: 2px solid var(--kawaii-line);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-elevated);
+        max-height: 400px;
+        overflow-y: auto;
+        z-index: 101;
+        padding: 0.5rem;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+      
+      /* 修复移动端搜索下拉框宽度 */
+      @media (max-width: 720px) {
+        .search-dropdown {
+          position: fixed;
+          top: auto;
+          left: 0.5rem;
+          right: 0.5rem;
+          margin-top: 0.5rem;
+          max-height: 60vh;
+        }
+      }
+      
+      .search-dropdown__section {
+        margin-bottom: 0.5rem;
+      }
+      
+      .search-dropdown__section:last-child {
+        margin-bottom: 0;
+      }
+      
+      .search-dropdown__section h4 {
+        margin: 0 0 0.35rem 0;
+        padding: 0.35rem 0.75rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--kawaii-ink-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      
+      .search-results {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      
+      .search-result {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.6rem 0.75rem;
+        border-radius: var(--radius-md);
+        text-decoration: none;
+        color: inherit;
+        cursor: pointer;
+        transition: all 150ms var(--ease-out-quiet);
+      }
+      
+      .search-result:hover,
+      .search-result--selected {
+        background: var(--kawaii-accent-soft);
+      }
+      
+      .search-result__icon {
+        font-size: 1.25rem;
+        flex-shrink: 0;
+      }
+      
+      .search-result__info {
+        flex: 1;
+        min-width: 0;
+      }
+      
+      .search-result__name {
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: var(--kawaii-ink);
+        margin-bottom: 0.1rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      
+      .search-result__desc {
+        font-size: 0.8rem;
+        color: var(--kawaii-ink-soft);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      
+      .search-result__code {
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        color: var(--kawaii-ink-muted);
+        background: var(--kawaii-code-surface);
+        padding: 0.1rem 0.35rem;
+        border-radius: var(--radius-sm);
+      }
+      
+      .search-result__badge {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--kawaii-primary);
+        background: rgba(255, 105, 180, 0.1);
+        padding: 0.15rem 0.5rem;
+        border-radius: var(--radius-full);
+      }
+      
+      .search-empty {
+        text-align: center;
+        padding: 1.5rem 1rem;
+      }
+      
+      .search-empty__icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+      }
+      
+      .search-empty p {
+        color: var(--kawaii-ink-soft);
+        font-size: 0.9rem;
+        margin: 0 0 0.75rem 0;
+      }
+      
+      /* 🔔 Toast 通知 */
+      .toast-container {
+        position: fixed;
+        top: 1.25rem;
+        right: 1.25rem;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      
+      .toast {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        background: var(--kawaii-surface-elevated);
+        border: 1px solid var(--kawaii-line);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-elevated);
+        font-size: 0.9rem;
+        color: var(--kawaii-ink);
+        animation: toast-in 300ms ease;
+      }
+      
+      @keyframes toast-in {
+        from {
+          opacity: 0;
+          transform: translateX(100%);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+      
+      @keyframes toast-out {
+        from {
+          opacity: 1;
+          transform: translateX(0);
+        }
+        to {
+          opacity: 0;
+          transform: translateX(100%);
+        }
+      }
+      
+      .toast__icon {
+        font-size: 1.25rem;
+      }
+      
+      .toast__content {
+        flex: 1;
+      }
+      
+      .toast__close {
+        background: none;
+        border: none;
+        font-size: 1.25rem;
+        color: var(--kawaii-ink-muted);
+        cursor: pointer;
+        padding: 0.25rem;
+        border-radius: var(--radius-sm);
+        transition: color 150ms ease;
+      }
+      
+      .toast__close:hover {
+        color: var(--kawaii-ink);
+      }
+      
+      .toast--success {
+        border-color: rgba(76, 175, 80, 0.4);
+        background: rgba(76, 175, 80, 0.1);
+      }
+      
+      .toast--error {
+        border-color: rgba(244, 67, 54, 0.4);
+        background: rgba(244, 67, 54, 0.1);
+      }
+      
+      .toast--warning {
+        border-color: rgba(255, 193, 7, 0.4);
+        background: rgba(255, 193, 7, 0.1);
+      }
+      
+      .toast--info {
+        border-color: rgba(33, 150, 243, 0.4);
+        background: rgba(33, 150, 243, 0.1);
+      }
+      
+      /* 🌙 深色模式 - Toast 霓虹版 */
+      html[data-color-scheme="dark"] .toast {
+        background: rgba(30, 30, 50, 0.95);
+        border-color: rgba(147, 112, 219, 0.4);
+        color: #fff;
+      }
+      
+      html[data-color-scheme="dark"] .toast--success {
+        border-color: rgba(57, 255, 20, 0.5);
+        background: rgba(57, 255, 20, 0.15);
+        box-shadow: 0 0 20px rgba(57, 255, 20, 0.2);
+      }
+      
+      html[data-color-scheme="dark"] .toast--error {
+        border-color: rgba(255, 51, 102, 0.5);
+        background: rgba(255, 51, 102, 0.15);
+        box-shadow: 0 0 20px rgba(255, 51, 102, 0.2);
+      }
+      
+      html[data-color-scheme="dark"] .toast--warning {
+        border-color: rgba(255, 255, 0, 0.5);
+        background: rgba(255, 255, 0, 0.15);
+        box-shadow: 0 0 20px rgba(255, 255, 0, 0.2);
+      }
+      
+      html[data-color-scheme="dark"] .toast--info {
+        border-color: rgba(0, 255, 255, 0.5);
+        background: rgba(0, 255, 255, 0.15);
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+      }
+      
+      @media (prefers-color-scheme: dark) {
+        html:not([data-color-scheme]) .toast {
+          background: rgba(30, 30, 50, 0.95);
+          border-color: rgba(147, 112, 219, 0.4);
+          color: #fff;
+        }
+        
+        html:not([data-color-scheme]) .toast--success {
+          border-color: rgba(57, 255, 20, 0.5);
+          background: rgba(57, 255, 20, 0.15);
+          box-shadow: 0 0 20px rgba(57, 255, 20, 0.2);
+        }
+        
+        html:not([data-color-scheme]) .toast--error {
+          border-color: rgba(255, 51, 102, 0.5);
+          background: rgba(255, 51, 102, 0.15);
+          box-shadow: 0 0 20px rgba(255, 51, 102, 0.2);
+        }
+        
+        html:not([data-color-scheme]) .toast--warning {
+          border-color: rgba(255, 255, 0, 0.5);
+          background: rgba(255, 255, 0, 0.15);
+          box-shadow: 0 0 20px rgba(255, 255, 0, 0.2);
+        }
+        
+        html:not([data-color-scheme]) .toast--info {
+          border-color: rgba(0, 255, 255, 0.5);
+          background: rgba(0, 255, 255, 0.15);
+          box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+        }
       }
 
       .topbar-side {
@@ -656,6 +1154,410 @@
           0 4px 8px rgba(255, 182, 193, 0.15);
       }
 
+      /* 🌙 深色模式 - 霓虹发光效果 */
+      html[data-color-scheme="dark"] .kawaii-button--primary {
+        box-shadow:
+          0 6px 0 #cc00cc,
+          0 0 20px rgba(255, 0, 255, 0.5),
+          0 8px 16px rgba(255, 0, 255, 0.3),
+          inset 0 2px 4px rgba(255, 255, 255, 0.3);
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+      }
+      
+      html[data-color-scheme="dark"] .kawaii-button--primary:hover {
+        box-shadow:
+          0 8px 0 #cc00cc,
+          0 0 30px rgba(255, 0, 255, 0.7),
+          0 12px 20px rgba(255, 0, 255, 0.4),
+          inset 0 2px 4px rgba(255, 255, 255, 0.4);
+        filter: brightness(1.15);
+      }
+      
+      html[data-color-scheme="dark"] .kawaii-button--secondary {
+        box-shadow:
+          0 6px 0 #0099aa,
+          0 0 20px rgba(0, 255, 255, 0.4),
+          0 8px 16px rgba(0, 255, 255, 0.25),
+          inset 0 2px 4px rgba(255, 255, 255, 0.3);
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+      }
+      
+      html[data-color-scheme="dark"] .kawaii-button--secondary:hover {
+        box-shadow:
+          0 8px 0 #0099aa,
+          0 0 30px rgba(0, 255, 255, 0.6),
+          0 12px 20px rgba(0, 255, 255, 0.35),
+          inset 0 2px 4px rgba(255, 255, 255, 0.4);
+      }
+      
+      html[data-color-scheme="dark"] .kawaii-button--ghost {
+        background: linear-gradient(145deg, 
+          rgba(255, 255, 255, 0.1), 
+          rgba(255, 255, 255, 0.05));
+        border-color: #ff00ff;
+        box-shadow: 
+          0 4px 0 rgba(255, 0, 255, 0.5),
+          0 0 15px rgba(255, 0, 255, 0.3);
+        color: #fff;
+      }
+      
+      html[data-color-scheme="dark"] .kawaii-button--ghost:hover {
+        box-shadow: 
+          0 6px 0 rgba(255, 0, 255, 0.6),
+          0 0 25px rgba(255, 0, 255, 0.5);
+        background: linear-gradient(145deg, 
+          rgba(255, 255, 255, 0.15), 
+          rgba(255, 255, 255, 0.08));
+      }
+      
+      /* 🌙 深色模式 - 卡片霓虹边框 */
+      html[data-color-scheme="dark"] .kawaii-card {
+        background: linear-gradient(145deg, 
+          rgba(40, 40, 70, 0.95) 0%, 
+          rgba(30, 30, 55, 0.9) 50%,
+          rgba(25, 25, 45, 0.85) 100%);
+        border-color: rgba(147, 112, 219, 0.4);
+        box-shadow: 
+          0 8px 32px rgba(0, 0, 0, 0.4),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      }
+      
+      html[data-color-scheme="dark"] .kawaii-card:hover {
+        border-color: rgba(255, 0, 255, 0.6);
+        box-shadow: 
+          0 12px 40px rgba(255, 0, 255, 0.2),
+          inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      }
+      
+      /* 🌙 深色模式 - 搜索栏 */
+      html[data-color-scheme="dark"] .search-input {
+        background: rgba(30, 30, 50, 0.8);
+        border-color: rgba(147, 112, 219, 0.4);
+        color: #fff;
+      }
+      
+      html[data-color-scheme="dark"] .search-input::placeholder {
+        color: #a0a0c8;
+      }
+      
+      html[data-color-scheme="dark"] .search-input:hover {
+        border-color: rgba(255, 0, 255, 0.5);
+        background: rgba(35, 35, 60, 0.9);
+      }
+      
+      html[data-color-scheme="dark"] .search-input:focus {
+        border-color: #ff00ff;
+        background: rgba(40, 40, 70, 0.95);
+        box-shadow: 
+          0 0 0 4px rgba(255, 0, 255, 0.2),
+          0 0 25px rgba(255, 0, 255, 0.4);
+      }
+      
+      html[data-color-scheme="dark"] .search-icon {
+        color: #8888a0;
+      }
+      
+      html[data-color-scheme="dark"] .search-input:focus + .search-icon,
+      html[data-color-scheme="dark"] .search-bar-wrapper:focus-within .search-icon {
+        color: #ff00ff;
+        filter: drop-shadow(0 0 8px rgba(255, 0, 255, 0.8));
+      }
+      
+      html[data-color-scheme="dark"] .search-shortcut {
+        background: rgba(255, 0, 255, 0.15);
+        border-color: rgba(255, 0, 255, 0.3);
+        color: #ff69b4;
+      }
+      
+      html[data-color-scheme="dark"] .search-dropdown {
+        background: rgba(30, 30, 50, 0.98);
+        border-color: rgba(147, 112, 219, 0.4);
+        box-shadow: 
+          0 16px 40px rgba(0, 0, 0, 0.5),
+          0 0 30px rgba(255, 0, 255, 0.15);
+      }
+      
+      /* 🌙 深色模式 - 标签霓虹 */
+      html[data-color-scheme="dark"] .kawaii-tag--pink {
+        background: rgba(255, 0, 255, 0.2);
+        color: #ff69b4;
+        box-shadow: 0 0 10px rgba(255, 0, 255, 0.2);
+      }
+      
+      html[data-color-scheme="dark"] .kawaii-tag--blue {
+        background: rgba(0, 255, 255, 0.15);
+        color: #00ffff;
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.15);
+      }
+      
+      html[data-color-scheme="dark"] .kawaii-tag--green {
+        background: rgba(57, 255, 20, 0.15);
+        color: #39ff14;
+        box-shadow: 0 0 10px rgba(57, 255, 20, 0.15);
+      }
+      
+      /* 🌙 深色模式 - 导航栏 */
+      html[data-color-scheme="dark"] .topbar {
+        border-color: rgba(147, 112, 219, 0.35);
+        box-shadow: 
+          0 8px 32px rgba(0, 0, 0, 0.4),
+          inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      }
+      
+      html[data-color-scheme="dark"] .nav a:hover {
+        color: #ff00ff;
+        text-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+      }
+      
+      html[data-color-scheme="dark"] .nav a[aria-current="page"] {
+        background: rgba(255, 0, 255, 0.2);
+        box-shadow: 
+          inset 0 0 0 1px rgba(255, 0, 255, 0.4),
+          0 0 15px rgba(255, 0, 255, 0.2);
+      }
+      
+      /* 🌙 深色模式 - index-kawaii.html 元素覆盖 */
+      
+      /* Hero 区域 */
+      html[data-color-scheme="dark"] .hero-kicker {
+        background: rgba(255, 0, 255, 0.15);
+        color: #ff85a2;
+        border: 1px solid rgba(255, 0, 255, 0.3);
+      }
+      
+      html[data-color-scheme="dark"] .hero-title-highlight {
+        color: #ff00ff;
+        text-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
+      }
+      
+      /* Quick Start */
+      html[data-color-scheme="dark"] .quick-start {
+        background: rgba(30, 30, 50, 0.8);
+        border-color: rgba(147, 112, 219, 0.4);
+      }
+      
+      html[data-color-scheme="dark"] .quick-pill {
+        background: rgba(40, 40, 65, 0.9);
+        border-color: rgba(147, 112, 219, 0.35);
+        color: #e8e8ff;
+      }
+      
+      html[data-color-scheme="dark"] .quick-pill:hover {
+        border-color: #ff00ff;
+        box-shadow: 0 0 15px rgba(255, 0, 255, 0.3);
+      }
+      
+      html[data-color-scheme="dark"] .quick-pill--primary {
+        background: linear-gradient(135deg, #ff00ff, #ff1493);
+        border-color: transparent;
+        box-shadow: 0 0 20px rgba(255, 0, 255, 0.4);
+      }
+      
+      html[data-color-scheme="dark"] .quick-pill--primary:hover {
+        box-shadow: 0 0 30px rgba(255, 0, 255, 0.6);
+      }
+      
+      html[data-color-scheme="dark"] .quick-pill--code {
+        background: rgba(0, 255, 255, 0.1);
+        border-color: rgba(0, 255, 255, 0.3);
+        color: #00ffff;
+      }
+      
+      html[data-color-scheme="dark"] .quick-hint {
+        color: #8888a0;
+      }
+      
+      /* Status Chips */
+      html[data-color-scheme="dark"] .status-chip {
+        background: rgba(40, 40, 65, 0.8);
+        border-color: rgba(147, 112, 219, 0.35);
+        color: #c5c5e0;
+      }
+      
+      /* Console Cards */
+      html[data-color-scheme="dark"] .console-card {
+        background: rgba(35, 35, 60, 0.8);
+        border-color: rgba(147, 112, 219, 0.35);
+      }
+      
+      html[data-color-scheme="dark"] .console-card:hover {
+        border-color: rgba(255, 0, 255, 0.6);
+        box-shadow: 0 8px 24px rgba(255, 0, 255, 0.2);
+      }
+      
+      html[data-color-scheme="dark"] .console-count {
+        background: rgba(255, 0, 255, 0.2);
+        color: #fff;
+        box-shadow: 0 0 10px rgba(255, 0, 255, 0.2);
+      }
+      
+      /* Skill Cards */
+      html[data-color-scheme="dark"] .skill-card {
+        background: rgba(35, 35, 60, 0.8);
+        border-color: rgba(147, 112, 219, 0.35);
+      }
+      
+      html[data-color-scheme="dark"] .skill-card:hover {
+        border-color: rgba(255, 0, 255, 0.6);
+        background: rgba(45, 45, 75, 0.9);
+        box-shadow: 0 8px 24px rgba(255, 0, 255, 0.15);
+      }
+      
+      html[data-color-scheme="dark"] .skill-copy {
+        background: rgba(40, 40, 65, 0.8);
+        border-color: rgba(147, 112, 219, 0.35);
+        color: #a0a0c8;
+      }
+      
+      html[data-color-scheme="dark"] .skill-copy:hover {
+        border-color: #ff00ff;
+        color: #ff00ff;
+        background: rgba(255, 0, 255, 0.1);
+        box-shadow: 0 0 15px rgba(255, 0, 255, 0.2);
+      }
+      
+      html[data-color-scheme="dark"] .skill-stars {
+        color: #ffd700;
+        text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+      }
+      
+      /* 修复 index-kawaii.html 中的硬编码阴影和背景 - 合并到上面的规则中 */
+      html[data-color-scheme="dark"] .section-topline .kawaii-button--primary {
+        box-shadow: 
+          0 6px 0 #cc00cc,
+          0 0 20px rgba(255, 0, 255, 0.5),
+          0 8px 16px rgba(255, 0, 255, 0.3);
+      }
+      
+      @media (prefers-color-scheme: dark) {
+        html:not([data-color-scheme]) .kawaii-button--primary {
+          box-shadow:
+            0 6px 0 #cc00cc,
+            0 0 20px rgba(255, 0, 255, 0.5),
+            0 8px 16px rgba(255, 0, 255, 0.3);
+          text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
+        html:not([data-color-scheme]) .kawaii-button--primary:hover {
+          box-shadow:
+            0 8px 0 #cc00cc,
+            0 0 30px rgba(255, 0, 255, 0.7),
+            0 12px 20px rgba(255, 0, 255, 0.4);
+        }
+        
+        html:not([data-color-scheme]) .kawaii-card {
+          background: linear-gradient(145deg, 
+            rgba(40, 40, 70, 0.95) 0%, 
+            rgba(30, 30, 55, 0.9) 50%,
+            rgba(25, 25, 45, 0.85) 100%);
+          border-color: rgba(147, 112, 219, 0.4);
+        }
+        
+        html:not([data-color-scheme]) .kawaii-card:hover {
+          border-color: rgba(255, 0, 255, 0.6);
+        }
+        
+        /* 系统偏好深色模式 - index-kawaii.html 元素 */
+        html:not([data-color-scheme]) .hero-kicker {
+          background: rgba(255, 0, 255, 0.15);
+          color: #ff85a2;
+          border: 1px solid rgba(255, 0, 255, 0.3);
+        }
+        
+        html:not([data-color-scheme]) .quick-start {
+          background: rgba(30, 30, 50, 0.8);
+          border-color: rgba(147, 112, 219, 0.4);
+        }
+        
+        html:not([data-color-scheme]) .status-chip {
+          background: rgba(40, 40, 65, 0.8);
+          border-color: rgba(147, 112, 219, 0.35);
+          color: #c5c5e0;
+        }
+        
+        html:not([data-color-scheme]) .console-card {
+          background: rgba(35, 35, 60, 0.8);
+          border-color: rgba(147, 112, 219, 0.35);
+        }
+        
+        html:not([data-color-scheme]) .console-card:hover {
+          border-color: rgba(255, 0, 255, 0.6);
+          box-shadow: 0 8px 24px rgba(255, 0, 255, 0.2);
+        }
+        
+        html:not([data-color-scheme]) .skill-card {
+          background: rgba(35, 35, 60, 0.8);
+          border-color: rgba(147, 112, 219, 0.35);
+        }
+        
+        html:not([data-color-scheme]) .skill-card:hover {
+          border-color: rgba(255, 0, 255, 0.6);
+          background: rgba(45, 45, 75, 0.9);
+          box-shadow: 0 8px 24px rgba(255, 0, 255, 0.15);
+        }
+        
+        /* 补充遗漏的系统偏好深色模式覆盖 */
+        html:not([data-color-scheme]) .hero-title-highlight {
+          color: #ff00ff;
+          text-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
+        }
+        
+        html:not([data-color-scheme]) .quick-pill {
+          background: rgba(40, 40, 65, 0.9);
+          border-color: rgba(147, 112, 219, 0.35);
+          color: #e8e8ff;
+        }
+        
+        html:not([data-color-scheme]) .quick-pill:hover {
+          border-color: #ff00ff;
+          box-shadow: 0 0 15px rgba(255, 0, 255, 0.3);
+        }
+        
+        html:not([data-color-scheme]) .quick-pill--primary {
+          background: linear-gradient(135deg, #ff00ff, #ff1493);
+          border-color: transparent;
+          box-shadow: 0 0 20px rgba(255, 0, 255, 0.4);
+        }
+        
+        html:not([data-color-scheme]) .quick-pill--primary:hover {
+          box-shadow: 0 0 30px rgba(255, 0, 255, 0.6);
+        }
+        
+        html:not([data-color-scheme]) .quick-pill--code {
+          background: rgba(0, 255, 255, 0.1);
+          border-color: rgba(0, 255, 255, 0.3);
+          color: #00ffff;
+        }
+        
+        html:not([data-color-scheme]) .quick-hint {
+          color: #8888a0;
+        }
+        
+        html:not([data-color-scheme]) .console-count {
+          background: rgba(255, 0, 255, 0.2);
+          color: #fff;
+          box-shadow: 0 0 10px rgba(255, 0, 255, 0.2);
+        }
+        
+        html:not([data-color-scheme]) .skill-copy {
+          background: rgba(40, 40, 65, 0.8);
+          border-color: rgba(147, 112, 219, 0.35);
+          color: #a0a0c8;
+        }
+        
+        html:not([data-color-scheme]) .skill-copy:hover {
+          border-color: #ff00ff;
+          color: #ff00ff;
+          background: rgba(255, 0, 255, 0.1);
+          box-shadow: 0 0 15px rgba(255, 0, 255, 0.2);
+        }
+        
+        html:not([data-color-scheme]) .skill-stars {
+          color: #ffd700;
+          text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+        }
+      }
+
       /* ========================================
          🏷️ 标签组件
          ======================================== */
@@ -885,6 +1787,43 @@
       .copy-button:hover {
         background: var(--kawaii-panel-soft);
       }
+      
+      /* 🌙 深色模式 - Console Command */
+      html[data-color-scheme="dark"] .console-command {
+        background: rgba(35, 35, 60, 0.8);
+        border-color: rgba(147, 112, 219, 0.4);
+      }
+      
+      html[data-color-scheme="dark"] .copy-button {
+        background: rgba(40, 40, 65, 0.8);
+        border-color: rgba(147, 112, 219, 0.35);
+        color: #e8e8ff;
+      }
+      
+      html[data-color-scheme="dark"] .copy-button:hover {
+        background: rgba(255, 0, 255, 0.15);
+        border-color: #ff00ff;
+        box-shadow: 0 0 15px rgba(255, 0, 255, 0.2);
+      }
+      
+      @media (prefers-color-scheme: dark) {
+        html:not([data-color-scheme]) .console-command {
+          background: rgba(35, 35, 60, 0.8);
+          border-color: rgba(147, 112, 219, 0.4);
+        }
+        
+        html:not([data-color-scheme]) .copy-button {
+          background: rgba(40, 40, 65, 0.8);
+          border-color: rgba(147, 112, 219, 0.35);
+          color: #e8e8ff;
+        }
+        
+        html:not([data-color-scheme]) .copy-button:hover {
+          background: rgba(255, 0, 255, 0.15);
+          border-color: #ff00ff;
+          box-shadow: 0 0 15px rgba(255, 0, 255, 0.2);
+        }
+      }
 
       .page-stats {
         margin-top: 0.95rem;
@@ -921,6 +1860,19 @@
         margin-top: 0.2rem;
         font-size: 0.84rem;
         color: var(--kawaii-ink-soft);
+      }
+      
+      /* 🌙 深色模式 - Stats */
+      html[data-color-scheme="dark"] .stat {
+        background: rgba(35, 35, 60, 0.8);
+        border-color: rgba(147, 112, 219, 0.35);
+      }
+      
+      @media (prefers-color-scheme: dark) {
+        html:not([data-color-scheme]) .stat {
+          background: rgba(35, 35, 60, 0.8);
+          border-color: rgba(147, 112, 219, 0.35);
+        }
       }
 
       .insight-grid {
@@ -970,6 +1922,39 @@
         color: var(--kawaii-ink);
         overflow-wrap: anywhere;
       }
+      
+      /* 🌙 深色模式 - Insight Card & Command Chip */
+      html[data-color-scheme="dark"] .insight-card {
+        background: rgba(35, 35, 60, 0.8);
+        border-color: rgba(147, 112, 219, 0.35);
+      }
+      
+      html[data-color-scheme="dark"] .command-chip {
+        background: rgba(0, 255, 255, 0.08);
+        border-color: rgba(0, 255, 255, 0.25);
+      }
+      
+      html[data-color-scheme="dark"] .console-table-shell {
+        background: rgba(30, 30, 50, 0.8);
+        border-color: rgba(147, 112, 219, 0.4);
+      }
+      
+      @media (prefers-color-scheme: dark) {
+        html:not([data-color-scheme]) .insight-card {
+          background: rgba(35, 35, 60, 0.8);
+          border-color: rgba(147, 112, 219, 0.35);
+        }
+        
+        html:not([data-color-scheme]) .command-chip {
+          background: rgba(0, 255, 255, 0.08);
+          border-color: rgba(0, 255, 255, 0.25);
+        }
+        
+        html:not([data-color-scheme]) .console-table-shell {
+          background: rgba(30, 30, 50, 0.8);
+          border-color: rgba(147, 112, 219, 0.4);
+        }
+      }
 
       .console-table-shell {
         border: 1px solid var(--kawaii-line);
@@ -1015,10 +2000,6 @@
         font-size: 0.82rem;
       }
 
-      .skill-name {
-        overflow-wrap: anywhere;
-      }
-
       .table-note {
         color: var(--kawaii-ink-soft);
       }
@@ -1026,6 +2007,29 @@
       .status-stack {
         display: grid;
         gap: 0.2rem;
+      }
+      
+      /* 🌙 深色模式 - 表格 */
+      html[data-color-scheme="dark"] .table-scroll th {
+        border-color: rgba(147, 112, 219, 0.3);
+        color: #8888a0;
+      }
+      
+      html[data-color-scheme="dark"] .table-scroll td {
+        border-color: rgba(147, 112, 219, 0.2);
+        color: #e8e8ff;
+      }
+      
+      @media (prefers-color-scheme: dark) {
+        html:not([data-color-scheme]) .table-scroll th {
+          border-color: rgba(147, 112, 219, 0.3);
+          color: #8888a0;
+        }
+        
+        html:not([data-color-scheme]) .table-scroll td {
+          border-color: rgba(147, 112, 219, 0.2);
+          color: #e8e8ff;
+        }
       }
 
       .status-badge {
@@ -1067,6 +2071,73 @@
         border-color: rgba(244, 67, 54, 0.45);
         background: rgba(244, 67, 54, 0.15);
       }
+      
+      /* 🌙 深色模式 - 状态徽章霓虹版 */
+      html[data-color-scheme="dark"] .status-badge[data-status*="approved"],
+      html[data-color-scheme="dark"] .status-badge[data-status*="completed"] {
+        color: #39ff14;
+        border-color: rgba(57, 255, 20, 0.5);
+        background: rgba(57, 255, 20, 0.15);
+        box-shadow: 0 0 10px rgba(57, 255, 20, 0.2);
+      }
+
+      html[data-color-scheme="dark"] .status-badge[data-status*="pending"],
+      html[data-color-scheme="dark"] .status-badge[data-status*="queued"],
+      html[data-color-scheme="dark"] .status-badge[data-status*="review_requested"] {
+        color: #ffff00;
+        border-color: rgba(255, 255, 0, 0.5);
+        background: rgba(255, 255, 0, 0.15);
+        box-shadow: 0 0 10px rgba(255, 255, 0, 0.2);
+      }
+
+      html[data-color-scheme="dark"] .status-badge[data-status*="running"] {
+        color: #00ffff;
+        border-color: rgba(0, 255, 255, 0.5);
+        background: rgba(0, 255, 255, 0.15);
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+      }
+
+      html[data-color-scheme="dark"] .status-badge[data-status*="rejected"],
+      html[data-color-scheme="dark"] .status-badge[data-status*="failed"] {
+        color: #ff3366;
+        border-color: rgba(255, 51, 102, 0.5);
+        background: rgba(255, 51, 102, 0.15);
+        box-shadow: 0 0 10px rgba(255, 51, 102, 0.2);
+      }
+      
+      @media (prefers-color-scheme: dark) {
+        html:not([data-color-scheme]) .status-badge[data-status*="approved"],
+        html:not([data-color-scheme]) .status-badge[data-status*="completed"] {
+          color: #39ff14;
+          border-color: rgba(57, 255, 20, 0.5);
+          background: rgba(57, 255, 20, 0.15);
+          box-shadow: 0 0 10px rgba(57, 255, 20, 0.2);
+        }
+
+        html:not([data-color-scheme]) .status-badge[data-status*="pending"],
+        html:not([data-color-scheme]) .status-badge[data-status*="queued"],
+        html:not([data-color-scheme]) .status-badge[data-status*="review_requested"] {
+          color: #ffff00;
+          border-color: rgba(255, 255, 0, 0.5);
+          background: rgba(255, 255, 0, 0.15);
+          box-shadow: 0 0 10px rgba(255, 255, 0, 0.2);
+        }
+
+        html:not([data-color-scheme]) .status-badge[data-status*="running"] {
+          color: #00ffff;
+          border-color: rgba(0, 255, 255, 0.5);
+          background: rgba(0, 255, 255, 0.15);
+          box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+        }
+
+        html:not([data-color-scheme]) .status-badge[data-status*="rejected"],
+        html:not([data-color-scheme]) .status-badge[data-status*="failed"] {
+          color: #ff3366;
+          border-color: rgba(255, 51, 102, 0.5);
+          background: rgba(255, 51, 102, 0.15);
+          box-shadow: 0 0 10px rgba(255, 51, 102, 0.2);
+        }
+      }
 
       .empty-copy {
         color: var(--kawaii-ink-soft);
@@ -1088,22 +2159,23 @@
       /* 角落装饰 */
       .corner-decoration {
         position: absolute;
-        width: 52px;
-        height: 52px;
+        width: 40px;
+        height: 40px;
         pointer-events: none;
-        opacity: 0.22;
+        opacity: 0.18;
+        z-index: 1;
       }
 
       .corner-decoration--tl {
-        top: -10px;
-        left: -10px;
+        top: 8px;
+        left: 8px;
         background: radial-gradient(circle, var(--kawaii-primary-soft), transparent 70%);
         border-radius: 50%;
       }
 
       .corner-decoration--br {
-        bottom: -10px;
-        right: -10px;
+        bottom: 8px;
+        right: 8px;
         background: radial-gradient(circle, var(--kawaii-secondary-soft), transparent 70%);
         border-radius: 50%;
       }
@@ -1148,13 +2220,18 @@
          ======================================== */
       @media (max-width: 980px) {
         .topbar {
-          grid-template-columns: auto 1fr;
+          grid-template-columns: auto 1fr auto;
           grid-template-areas: 
-            "brand side"
-            "nav nav";
+            "brand search side"
+            "nav nav nav";
         }
         
         .brand { grid-area: brand; }
+        .search-bar-wrapper { 
+          grid-area: search;
+          max-width: 200px;
+          min-width: 150px;
+        }
         .nav { 
           grid-area: nav;
           overflow-x: auto;
@@ -1183,10 +2260,21 @@
           grid-template-columns: 1fr;
           grid-template-areas:
             "brand"
+            "search"
             "side"
             "nav";
           gap: 0.75rem;
           padding: 0.9rem 1rem;
+        }
+        
+        .search-bar-wrapper {
+          grid-area: search;
+          max-width: none;
+          min-width: auto;
+        }
+        
+        .search-shortcut {
+          display: none;
         }
 
         .brand {
@@ -1407,6 +2495,19 @@
         <a href="{{ href }}"{% if is_current %} aria-current="page"{% endif %}>{{ link.label }}</a>
         {% endfor %}
       </nav>
+      
+      <div class="search-bar-wrapper">
+        <span class="search-icon">🔍</span>
+        <input 
+          type="search" 
+          id="global-search" 
+          class="search-input" 
+          placeholder="{{ ui.search_placeholder if ui else '搜索技能...' }}"
+          autocomplete="off"
+        />
+        <kbd class="search-shortcut">⌘K</kbd>
+        <div id="search-dropdown" class="search-dropdown" hidden></div>
+      </div>
       
       <div class="topbar-side">
         <div class="topbar-controls">
@@ -1681,5 +2782,6 @@
         }
       });
     </script>
+    <script src="/static/js/app.js"></script>
   </body>
 </html>

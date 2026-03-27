@@ -318,7 +318,7 @@ class SearchManager {
         <div class="search-empty">
           <div class="search-empty__icon" aria-hidden="true">🔍</div>
           <p>未找到匹配结果</p>
-          <a href="/skills/new" class="btn btn--primary btn--sm">创建新技能</a>
+          <a href="/console/new-skill" class="kawaii-button kawaii-button--primary" style="font-size: 0.85rem; padding: 0.5rem 1rem;">创建新技能</a>
         </div>
       `;
     }
