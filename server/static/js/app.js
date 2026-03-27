@@ -58,70 +58,80 @@ window.toast = new ToastManager();
 // ============================================
 class ThemeManager {
   constructor() {
-    this.current = localStorage.getItem('theme') || 'default';
+    const storageKey = 'kawaii-color-scheme';
+    this.storageKey = storageKey;
     this.systemPreference = window.matchMedia('(prefers-color-scheme: dark)');
-    
+    this.current = this.resolveInitialScheme();
     this.init();
   }
 
-  init() {
-    // Apply saved theme
-    this.apply(this.current, false);
-    
-    // Listen for system theme changes
-    this.systemPreference.addEventListener('change', (e) => {
-      if (this.current === 'default') {
-        this.apply('default', false);
+  resolveInitialScheme() {
+    const html = document.documentElement;
+    const fromDom = html.dataset.colorScheme;
+    if (fromDom === 'light' || fromDom === 'dark') {
+      return fromDom;
+    }
+
+    try {
+      const stored = window.localStorage.getItem(this.storageKey);
+      if (stored === 'light' || stored === 'dark') {
+        return stored;
       }
+    } catch (_err) {
+      // Ignore storage access failures and fall back to system preference.
+    }
+
+    return this.systemPreference.matches ? 'dark' : 'light';
+  }
+
+  updateButtons(scheme) {
+    document.querySelectorAll('[data-theme-choice]').forEach((button) => {
+      const active = button.dataset.themeChoice === scheme;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
     });
   }
 
-  apply(theme, save = true) {
+  init() {
+    this.apply(this.current, false);
+  }
+
+  apply(scheme, save = true) {
     const html = document.documentElement;
-    
-    // Remove old theme
-    html.removeAttribute('data-theme');
-    
-    // Apply new theme
-    if (theme !== 'default') {
-      html.setAttribute('data-theme', theme);
-    }
-    
-    // Update color-scheme
-    if (theme === 'dark' || (theme === 'default' && this.systemPreference.matches)) {
-      html.style.colorScheme = 'dark';
-    } else {
-      html.style.colorScheme = 'light';
-    }
-    
-    this.current = theme;
-    
+    scheme = scheme === 'dark' ? 'dark' : 'light';
+    html.dataset.colorScheme = scheme;
+    html.style.colorScheme = scheme;
+    this.updateButtons(scheme);
+    this.current = scheme;
+
     if (save) {
-      localStorage.setItem('theme', theme);
+      try {
+        window.localStorage.setItem(this.storageKey, scheme);
+      } catch (_err) {
+        // Ignore storage failures so the toggle still works for the session.
+      }
     }
   }
 
   toggle() {
-    const themes = ['default', 'dark', 'kawaii'];
-    const currentIndex = themes.indexOf(this.current);
-    const next = themes[(currentIndex + 1) % themes.length];
+    const currentScheme = document.documentElement.dataset.colorScheme === 'dark' ? 'dark' : 'light';
+    const next = currentScheme === 'dark' ? 'light' : 'dark';
     this.apply(next);
     toast.success(`已切换到 ${this.getThemeName(next)}`);
   }
 
-  set(theme) {
-    if (['default', 'dark', 'kawaii'].includes(theme)) {
-      this.apply(theme);
+  set(scheme) {
+    if (scheme === 'light' || scheme === 'dark') {
+      this.apply(scheme);
     }
   }
 
-  getThemeName(theme) {
+  getThemeName(scheme) {
     const names = {
-      default: '默认主题',
+      light: '浅色主题',
       dark: '深色主题',
-      kawaii: '二次元主题'
     };
-    return names[theme] || theme;
+    return names[scheme] || scheme;
   }
 }
 
@@ -470,19 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
   } catch (err) {
     console.error('Failed to initialize search:', err);
   }
-  
-  // Add click handlers for copy buttons
-  document.querySelectorAll('[data-copy]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      try {
-        copyToClipboard(btn.dataset.copy);
-      } catch (err) {
-        console.error('Copy failed:', err);
-        toast.error('复制失败');
-      }
-    });
-  });
-  
+
   // Animate elements on scroll (throttled)
   let ticking = false;
   const animateOnScroll = () => {

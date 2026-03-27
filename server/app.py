@@ -6,6 +6,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -368,6 +369,7 @@ def create_app() -> FastAPI:
     templates = Jinja2Templates(directory=str(settings.template_dir))
     ensure_database_ready()
     app = FastAPI(title='infinitas hosted registry')
+    app.mount('/static', StaticFiles(directory=str(settings.template_dir.parent / 'static')), name='static')
     registry_router = APIRouter(
         prefix='/registry',
         tags=['hosted-registry'],

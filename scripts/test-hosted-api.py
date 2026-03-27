@@ -66,8 +66,8 @@ def scenario_health_login_and_me():
         for needle in [
             '交给 Agent',
             '搜索、检查和执行都交给它。',
-            '交任务',
-            '执行命令',
+            '复制任务提示',
+            '快速开始',
             '同步',
             '有事再进维护台',
         ]:

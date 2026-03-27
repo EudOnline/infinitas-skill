@@ -44,10 +44,6 @@ def scenario_home_uses_kawaii_theme_with_live_context():
         from fastapi.testclient import TestClient
         from server.app import create_app
 
-        discovery_index = json.loads((tmpdir / 'artifacts' / 'discovery-index.json').read_text(encoding='utf-8'))
-        generated_at = discovery_index.get('generated_at', '')
-        expected_sync_stamp = generated_at[:10] if generated_at else 'No snapshot'
-
         client = TestClient(create_app())
         response = client.get('/')
         if response.status_code != 200:
@@ -64,8 +60,9 @@ def scenario_home_uses_kawaii_theme_with_live_context():
             ('home anchor nav handoff', 'href="#handoff"' in html),
             ('home anchor nav console', 'href="#console"' in html),
             ('no broken skills nav on home', 'href="/skills"' not in html),
-            ('live sync stamp', expected_sync_stamp in html),
-            ('live empty queue state', '0 待评审 / 0 排队' in html),
+            ('status chip mode present', '🔒 模式' in html),
+            ('status chip sync present', '📅 同步' in html),
+            ('status chip queue present', '⚡ 队列' in html),
         ]
         if '/v2' in html:
             fail('home page should not reference /v2 after kawaii cutover')
@@ -132,10 +129,10 @@ def scenario_home_supports_readable_copy_and_mobile_adaptation():
             fail(f'home page is missing readability hardening markers: {", ".join(missing_snippets)}')
 
         mobile_patterns = {
-            'hero actions stack on mobile': r'@media \(max-width: 720px\).*?\.hero-actions\s*\{\s*flex-direction:\s*column;',
-            'hero buttons fill mobile width': r'@media \(max-width: 720px\).*?\.hero-actions\s+\.kawaii-button\s*\{\s*width:\s*100%;',
+            'hero CTA fills mobile width': r'@media \(max-width: 720px\).*?\.hero-cta\s*\{\s*width:\s*100%;',
             'section CTA fills mobile width': r'@media \(max-width: 720px\).*?\.section-action\s*\{\s*width:\s*100%;',
-            'skill actions stack on mobile': r'@media \(max-width: 720px\).*?\.skill-actions\s*\{\s*flex-direction:\s*column;',
+            'section button fills mobile width': r'@media \(max-width: 720px\).*?\.section-action\s+\.kawaii-button\s*\{\s*width:\s*100%;',
+            'console and skill grids collapse to one column': r'@media \(max-width: 720px\).*?\.console-grid,\s*\.skills-grid\s*\{\s*grid-template-columns:\s*1fr;',
         }
         missing_patterns = [label for label, pattern in mobile_patterns.items() if not re.search(pattern, html, re.S)]
         if missing_patterns:
@@ -160,10 +157,10 @@ def scenario_home_polish_tightens_rhythm_and_clarifies_ctas():
 
         html = response.text
         spacing_patterns = {
-            'desktop hero spacing tightened': r'\.hero-section\s*\{\s*margin-bottom:\s*1\.25rem;',
-            'desktop status spacing tightened': r'\.status-section\s*\{\s*margin-bottom:\s*1\.25rem;',
-            'desktop console spacing tightened': r'\.console-section\s*\{\s*margin-bottom:\s*1\.25rem;',
-            'section topline spacing tightened': r'\.section-topline\s*\{.*?margin-bottom:\s*0\.85rem;',
+            'desktop hero spacing set': r'\.hero-section\s*\{\s*margin-bottom:\s*1rem;',
+            'desktop status spacing set': r'\.status-section\s*\{\s*margin-bottom:\s*1rem;',
+            'desktop console spacing set': r'\.console-section\s*\{\s*margin-bottom:\s*1rem;',
+            'section topline spacing set': r'\.section-topline\s*\{.*?margin-bottom:\s*0\.75rem;',
         }
         missing_spacing = [label for label, pattern in spacing_patterns.items() if not re.search(pattern, html, re.S)]
         if missing_spacing:
@@ -171,11 +168,10 @@ def scenario_home_polish_tightens_rhythm_and_clarifies_ctas():
 
         required_copy = [
             '复制任务提示',
-            '查看维护台',
             '打开维护台',
-            '复制这条提示',
             '复制检查命令',
-            '去交接台',
+            '快速开始',
+            '常用技能',
         ]
         missing_copy = [label for label in required_copy if label not in html]
         if missing_copy:
@@ -259,7 +255,7 @@ def scenario_home_dark_mode_uses_dark_aware_surface_tokens():
             '--kawaii-panel: rgba(255, 255, 255, 0.84);',
             '--kawaii-panel-soft: rgba(255, 255, 255, 0.74);',
             '--kawaii-line: rgba(220, 196, 210, 0.72);',
-            '--kawaii-panel: rgba(38, 40, 66, 0.9);',
+            '--kawaii-panel: rgba(35, 35, 60, 0.92);',
             'background: var(--kawaii-panel);',
             'background: var(--kawaii-panel-soft);',
             'border: 1px solid var(--kawaii-line);',
@@ -271,6 +267,75 @@ def scenario_home_dark_mode_uses_dark_aware_surface_tokens():
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
+def scenario_home_dark_mode_softens_card_highlights():
+    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-home-kawaii-card-highlight-'))
+    try:
+        configure_env(tmpdir)
+        sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
+
+        from fastapi.testclient import TestClient
+        from server.app import create_app
+
+        client = TestClient(create_app())
+        response = client.get('/')
+        if response.status_code != 200:
+            fail(f'expected GET / to return 200, got {response.status_code}: {response.text}')
+
+        html = response.text
+        required_patterns = {
+            'explicit dark card highlight override': (
+                r'html\[data-color-scheme="dark"\]\s+\.kawaii-card::after\s*\{'
+                r'.*?rgba\(255,\s*255,\s*255,\s*0\.08\)'
+            ),
+            'system dark fallback card highlight override': (
+                r'@media\s*\(prefers-color-scheme:\s*dark\)\s*\{'
+                r'.*?html:not\(\[data-color-scheme\]\)\s+\.kawaii-card::after\s*\{'
+                r'.*?rgba\(255,\s*255,\s*255,\s*0\.08\)'
+            ),
+        }
+        missing = [label for label, pattern in required_patterns.items() if not re.search(pattern, html, re.S)]
+        if missing:
+            fail(f'home page is missing dark card highlight overrides: {", ".join(missing)}')
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def scenario_static_app_js_is_served_without_legacy_theme_conflicts():
+    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-home-kawaii-static-js-'))
+    try:
+        configure_env(tmpdir)
+        sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
+
+        from fastapi.testclient import TestClient
+        from server.app import create_app
+
+        client = TestClient(create_app())
+        response = client.get('/static/js/app.js')
+        if response.status_code != 200:
+            fail(f'expected GET /static/js/app.js to return 200, got {response.status_code}: {response.text}')
+
+        js = response.text
+        required_snippets = [
+            "const storageKey = 'kawaii-color-scheme';",
+            'html.dataset.colorScheme = scheme;',
+            "window.themeManager = new ThemeManager();",
+        ]
+        missing = [snippet for snippet in required_snippets if snippet not in js]
+        if missing:
+            fail(f'static app.js is missing kawaii theme integration markers: {", ".join(missing)}')
+
+        banned_snippets = [
+            "localStorage.getItem('theme')",
+            "html.removeAttribute('data-theme')",
+            "html.setAttribute('data-theme', theme)",
+        ]
+        present = [snippet for snippet in banned_snippets if snippet in js]
+        if present:
+            fail(f'static app.js still contains legacy theme mutations: {", ".join(present)}')
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 def main():
     scenario_home_uses_kawaii_theme_with_live_context()
     scenario_home_uses_refined_kawaii_presentation()
@@ -278,6 +343,8 @@ def main():
     scenario_home_polish_tightens_rhythm_and_clarifies_ctas()
     scenario_home_supports_manual_theme_and_language_switches()
     scenario_home_dark_mode_uses_dark_aware_surface_tokens()
+    scenario_home_dark_mode_softens_card_highlights()
+    scenario_static_app_js_is_served_without_legacy_theme_conflicts()
     print('OK: home kawaii theme checks passed')
 
 
