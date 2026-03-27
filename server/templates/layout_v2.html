@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#6366f1">
+  <title>{{ title|default('infinitas skill') }} 🎯</title>
+  
+  <!-- Preconnect for performance -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="/static/css/variables.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%236366f1'/%3E%3Cpath d='M16 32c5-7 9-11 16-11 7 0 11 4 16 11 5 7 9 11 16 11' stroke='white' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M48 32c-5 7-9 11-16 11-6 0-10-4-16-11' stroke='white' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+  
+  <style>
+    /* Layout-specific styles */
+    .app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Header */
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: var(--z-sticky);
+      background: var(--color-bg);
+      border-bottom: 1px solid var(--color-border);
+      backdrop-filter: blur(10px);
+    }
+    
+    .header-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-3) 0;
+      gap: var(--space-4);
+    }
+    
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      text-decoration: none;
+      color: var(--color-text);
+      flex-shrink: 0;
+    }
+    
+    .brand:hover {
+      text-decoration: none;
+    }
+    
+    .brand__icon {
+      width: 2.5rem;
+      height: 2.5rem;
+      background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700));
+      border-radius: var(--radius-lg);
+      display: grid;
+      place-items: center;
+      font-size: 1.25rem;
+      box-shadow: var(--shadow-md);
+    }
+    
+    .brand__text {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .brand__title {
+      font-size: var(--text-lg);
+      font-weight: var(--font-bold);
+      line-height: 1.2;
+    }
+    
+    .brand__subtitle {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+    }
+    
+    /* Main search bar in header */
+    .header-search {
+      flex: 1;
+      max-width: 500px;
+    }
+    
+    .header-search .search-bar {
+      background: var(--color-bg-soft);
+    }
+    
+    /* Header actions */
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    
+    .header-btn {
+      width: 2.5rem;
+      height: 2.5rem;
+      display: grid;
+      place-items: center;
+      background: transparent;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--text-lg);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    
+    .header-btn:hover {
+      background: var(--color-bg-soft);
+      border-color: var(--color-border-strong);
+    }
+    
+    /* Navigation */
+    .app-nav {
+      display: flex;
+      gap: var(--space-1);
+      padding: var(--space-2) 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    
+    .app-nav::-webkit-scrollbar {
+      display: none;
+    }
+    
+    .nav__link {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      font-size: var(--text-sm);
+      font-weight: var(--font-medium);
+      color: var(--color-text-secondary);
+      border-radius: var(--radius-md);
+      white-space: nowrap;
+      transition: all var(--transition-fast);
+    }
+    
+    .nav__link:hover {
+      color: var(--color-text);
+      background: var(--color-bg-soft);
+      text-decoration: none;
+    }
+    
+    .nav__link--active {
+      color: var(--color-primary-600);
+      background: var(--color-primary-50);
+    }
+    
+    [data-theme="dark"] .nav__link--active {
+      color: var(--color-primary-400);
+      background: rgb(99 102 241 / 0.15);
+    }
+    
+    /* Main content */
+    .app-main {
+      flex: 1;
+      padding: var(--space-6) 0;
+    }
+    
+    /* Footer */
+    .app-footer {
+      padding: var(--space-6) 0;
+      border-top: 1px solid var(--color-border);
+      margin-top: auto;
+    }
+    
+    .footer-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+    }
+    
+    /* Search dropdown styles */
+    .search-bar-wrapper {
+      position: relative;
+    }
+    
+    .search-dropdown {
+      position: absolute;
+      top: calc(100% + var(--space-2));
+      left: 0;
+      right: 0;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-xl);
+      max-height: 400px;
+      overflow-y: auto;
+      z-index: var(--z-dropdown);
+    }
+    
+    .search-dropdown__section {
+      padding: var(--space-3);
+    }
+    
+    .search-dropdown__section h4 {
+      font-size: var(--text-xs);
+      font-weight: var(--font-semibold);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-2);
+    }
+    
+    .search-results {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+    
+    .search-result {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: background var(--transition-fast);
+      text-decoration: none;
+      color: inherit;
+    }
+    
+    .search-result:hover,
+    .search-result--selected {
+      background: var(--color-bg-soft);
+    }
+    
+    .search-result__icon {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+    
+    .search-result__info {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .search-result__name {
+      font-weight: var(--font-medium);
+      color: var(--color-text);
+      margin-bottom: var(--space-1);
+    }
+    
+    .search-result__desc,
+    .search-result__code {
+      font-size: var(--text-xs);
+      color: var(--color-text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .search-result__code {
+      font-family: var(--font-mono);
+      background: var(--color-bg-muted);
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-sm);
+    }
+    
+    .search-result__badge {
+      font-size: var(--text-xs);
+      font-family: var(--font-mono);
+      color: var(--color-text-muted);
+      background: var(--color-bg-muted);
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-sm);
+      flex-shrink: 0;
+    }
+    
+    .search-empty {
+      text-align: center;
+      padding: var(--space-6);
+    }
+    
+    .search-empty__icon {
+      font-size: 3rem;
+      margin-bottom: var(--space-3);
+      opacity: 0.5;
+    }
+    
+    .search-empty p {
+      color: var(--color-text-secondary);
+      margin-bottom: var(--space-4);
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .header-content {
+        flex-wrap: wrap;
+      }
+      
+      .header-search {
+        order: 3;
+        max-width: none;
+        width: 100%;
+      }
+      
+      .brand__subtitle {
+        display: none;
+      }
+    }
+  </style>
+  
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="container">
+        <div class="header-content">
+          <!-- Brand -->
+          <a href="/" class="brand">
+            <div class="brand__icon" aria-label="infinitas logo">🎯</div>
+            <div class="brand__text">
+              <div class="brand__title">infinitas</div>
+              <div class="brand__subtitle">skill registry</div>
+            </div>
+          </a>
+          
+          <!-- Search -->
+          <div class="header-search search-bar-wrapper">
+            <div class="search-bar">
+              <span class="search-bar__icon">🔍</span>
+              <input 
+                type="text" 
+                class="search-bar__input" 
+                id="global-search"
+                placeholder="搜索技能、命令..."
+                autocomplete="off"
+              >
+              <kbd class="search-bar__kbd">⌘K</kbd>
+            </div>
+            <div 
+              class="search-dropdown" 
+              id="search-dropdown" 
+              role="listbox"
+              aria-label="搜索结果"
+              hidden
+            ></div>
+          </div>
+          
+          <!-- Actions -->
+          <div class="header-actions">
+            <button class="header-btn" onclick="toggleTheme()" title="切换主题" aria-label="切换主题">
+              <span aria-hidden="true">🌙</span>
+            </button>
+            <a href="/settings" class="header-btn" title="设置" aria-label="设置">
+              <span aria-hidden="true">⚙️</span>
+            </a>
+          </div>
+        </div>
+        
+        <!-- Navigation -->
+        <nav class="app-nav" aria-label="主导航">
+          {% set nav_items = [
+            {'href': '/', 'label': '首页', 'icon': '🏠', 'icon_label': '首页'},
+            {'href': '/skills', 'label': '技能库', 'icon': '🎯', 'icon_label': '技能'},
+            {'href': '/submissions', 'label': '提交', 'icon': '📦', 'icon_label': '提交'},
+            {'href': '/reviews', 'label': '评审', 'icon': '✨', 'icon_label': '评审'},
+            {'href': '/jobs', 'label': '任务', 'icon': '⚙️', 'icon_label': '任务'}
+          ] %}
+          
+          {% for item in nav_items %}
+            {% set is_active = request.url.path == item.href or (item.href != '/' and request.url.path.startswith(item.href)) %}
+            <a href="{{ item.href }}" class="nav__link {% if is_active %}nav__link--active{% endif %}" {% if is_active %}aria-current="page"{% endif %}>
+              <span aria-label="{{ item.icon_label }}" role="img">{{ item.icon }}</span>
+              <span>{{ item.label }}</span>
+            </a>
+          {% endfor %}
+        </nav>
+      </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="app-main">
+      <div class="container">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="container">
+        <div class="footer-content">
+          <div>infinitas-skill v2.0 • Private registry</div>
+          <div>{{ now().strftime('%Y') }}</div>
+        </div>
+      </div>
+    </footer>
+  </div>
+  
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+  
+  <!-- Scripts -->
+  <script src="/static/js/app.js"></script>
+  
+  <!-- Expose skills data for client-side search -->
+  <script>
+    window.SKILLS_DATA = {{ skills_json|default('[]')|safe }};
+  </script>
+  
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

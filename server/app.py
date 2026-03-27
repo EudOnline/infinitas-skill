@@ -15,6 +15,7 @@ from server.api.jobs import router as jobs_router
 from server.api.reviews import router as reviews_router
 from server.api.submissions import router as submissions_router
 from server.api.skills import router as skills_router
+from server.api.search import router as search_router
 from server.api.reviews import serialize_review
 from server.auth import get_current_user, require_registry_reader, require_role
 from server.db import ensure_database_ready, get_db
@@ -48,6 +49,42 @@ def _catalog_payload(settings, name: str) -> dict:
         if payload:
             return payload
     return {}
+
+
+def _get_skill_icon(skill: dict) -> str:
+    """Get emoji icon based on skill tags/name"""
+    name = skill.get('name', '').lower()
+    tags = [t.lower() for t in skill.get('tags', [])]
+    
+    if 'discovery' in tags or 'search' in tags:
+        return '🔍'
+    if 'install' in tags or 'pull' in tags:
+        return '📦'
+    if 'release' in tags or 'publish' in tags:
+        return '🚀'
+    if 'operate' in tags or 'manage' in tags:
+        return '🔧'
+    if 'security' in tags or 'check' in tags:
+        return '🔒'
+    if 'consume' in name:
+        return '🎯'
+    if 'federation' in name:
+        return '🌐'
+    
+    return '🎯'
+
+
+def _calculate_skill_rating(skill: dict) -> float | None:
+    """Calculate skill rating based on review state"""
+    review_state = skill.get('review_state', '')
+    approval_count = skill.get('approval_count', 0)
+    
+    if review_state == 'approved' and approval_count > 0:
+        base = 4.5
+        if approval_count >= 2:
+            base = 4.8
+        return round(base, 1)
+    return None
 
 
 def _short_stamp(value: str | None) -> str:
@@ -245,6 +282,7 @@ def create_app() -> FastAPI:
 
     @app.get('/', response_class=HTMLResponse)
     def index(request: Request, db: Session = Depends(get_db)):
+        """Legacy index page"""
         context = {
             'request': request,
             'app_name': settings.app_name,
@@ -255,6 +293,46 @@ def create_app() -> FastAPI:
         }
         context.update(_build_home_context(settings, db))
         return templates.TemplateResponse('index.html', context)
+    
+    @app.get('/v2', response_class=HTMLResponse)
+    def index_v2(request: Request, db: Session = Depends(get_db)):
+        """New v2 dashboard with modern UI"""
+        # Load skills from catalog
+        discovery_payload = _catalog_payload(settings, 'discovery-index.json')
+        skills = discovery_payload.get('skills', [])
+        
+        # Format skills for template
+        all_skills = []
+        for skill in skills:
+            all_skills.append({
+                'id': skill.get('name', ''),
+                'name': skill.get('name', ''),
+                'version': skill.get('version', ''),
+                'summary': skill.get('summary', '')[:80] + '...' if len(skill.get('summary', '')) > 80 else skill.get('summary', ''),
+                'icon': _get_skill_icon(skill),
+                'tags': skill.get('tags', [])[:3],
+                'rating': _calculate_skill_rating(skill)
+            })
+        
+        # Get counts
+        pending_reviews = db.scalar(select(func.count()).select_from(Review).where(Review.status == 'pending')) or 0
+        queued_jobs = db.scalar(select(func.count()).select_from(Job).where(Job.status == 'queued')) or 0
+        running_jobs = db.scalar(select(func.count()).select_from(Job).where(Job.status == 'running')) or 0
+        
+        context = {
+            'request': request,
+            'all_skills': all_skills,
+            'recent_skills': all_skills[:4],  # Show first 4 as recent
+            'skill_count': len(all_skills),
+            'pending_reviews': pending_reviews,
+            'running_jobs': running_jobs,
+            'submission_count': db.scalar(select(func.count()).select_from(Submission)) or 0,
+            'review_count': db.scalar(select(func.count()).select_from(Review)) or 0,
+            'job_count': db.scalar(select(func.count()).select_from(Job)) or 0,
+            'access_mode': '私有' if settings.registry_read_tokens else '开放',
+            'skills_json': json.dumps(all_skills)  # For client-side search
+        }
+        return templates.TemplateResponse('index_v2.html', context)
 
     @app.get('/submissions', response_class=HTMLResponse)
     def submissions_page(
@@ -409,6 +487,7 @@ def create_app() -> FastAPI:
     app.include_router(skills_router)
     app.include_router(jobs_router)
     app.include_router(registry_router)
+    app.include_router(search_router)
 
     return app
 
