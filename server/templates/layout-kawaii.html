@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN" data-theme="kawaii">
+<html lang="{{ page_lang_attr or 'zh-CN' }}" data-theme="kawaii">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -10,6 +10,23 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Quicksand:wght@400;500;600;700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+
+    <script>
+      (() => {
+        const root = document.documentElement;
+        const storageKey = 'kawaii-color-scheme';
+        const fallback = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        try {
+          const saved = window.localStorage.getItem(storageKey);
+          const scheme = saved === 'light' || saved === 'dark' ? saved : fallback;
+          root.dataset.colorScheme = scheme;
+          root.style.colorScheme = scheme;
+        } catch (_error) {
+          root.dataset.colorScheme = fallback;
+          root.style.colorScheme = fallback;
+        }
+      })();
+    </script>
     
     <style>
       /* ========================================
@@ -44,14 +61,24 @@
         
         /* 📝 文字色 */
         --kawaii-ink: #4a4a6a;
-        --kawaii-ink-soft: #7a7a9a;
-        --kawaii-ink-muted: #a0a0b8;
+        --kawaii-ink-soft: #64637d;
+        --kawaii-ink-muted: #7c7b92;
         
         /* 🎨 背景色 */
         --kawaii-paper: #fff9fb;
         --kawaii-paper-soft: #fff0f5;
         --kawaii-surface: rgba(255, 255, 255, 0.85);
         --kawaii-surface-elevated: rgba(255, 255, 255, 0.95);
+        --kawaii-panel: rgba(255, 255, 255, 0.84);
+        --kawaii-panel-soft: rgba(255, 255, 255, 0.74);
+        --kawaii-panel-muted: rgba(255, 255, 255, 0.62);
+        --kawaii-line: rgba(220, 196, 210, 0.72);
+        --kawaii-line-soft: rgba(220, 196, 210, 0.58);
+        --kawaii-accent-soft: rgba(255, 179, 196, 0.55);
+        --kawaii-toggle-surface: rgba(255, 255, 255, 0.52);
+        --kawaii-toggle-inset: rgba(255, 255, 255, 0.4);
+        --kawaii-code-surface: rgba(73, 78, 100, 0.06);
+        --kawaii-code-surface-hover: rgba(73, 78, 100, 0.1);
         
         /* 🌈 渐变定义 */
         --gradient-hero: linear-gradient(135deg, 
@@ -69,27 +96,24 @@
           var(--kawaii-secondary-deep) 100%);
         
         /* 💫 效果 */
-        --shadow-soft: 
-          0 4px 20px rgba(255, 182, 193, 0.25),
-          0 2px 8px rgba(135, 206, 235, 0.15);
-        --shadow-elevated: 
-          0 8px 32px rgba(255, 182, 193, 0.35),
-          0 4px 12px rgba(135, 206, 235, 0.2);
-        --shadow-glow: 
-          0 0 20px rgba(255, 182, 193, 0.4),
-          0 0 40px rgba(135, 206, 235, 0.2);
+        --shadow-soft:
+          0 12px 28px rgba(118, 98, 128, 0.08),
+          0 2px 6px rgba(118, 98, 128, 0.04);
+        --shadow-elevated:
+          0 16px 36px rgba(118, 98, 128, 0.12),
+          0 4px 10px rgba(118, 98, 128, 0.06);
         
         /* 📐 尺寸 */
         --radius-sm: 12px;
-        --radius-md: 20px;
-        --radius-lg: 28px;
-        --radius-xl: 36px;
+        --radius-md: 18px;
+        --radius-lg: 24px;
+        --radius-xl: 30px;
         --radius-full: 9999px;
         
         /* ⏱️ 动画 */
-        --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
         --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
-        --ease-elastic: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        --ease-out-quiet: cubic-bezier(0.25, 1, 0.5, 1);
+        --ease-out-gentle: cubic-bezier(0.22, 1, 0.36, 1);
         
         /* 🔤 字体 */
         --font-display: 'Quicksand', 'ZCOOL KuaiLe', sans-serif;
@@ -98,22 +122,55 @@
       }
 
       /* 🌙 深色模式（夜樱主题） */
+      html[data-color-scheme="dark"] {
+        color-scheme: dark;
+        --kawaii-paper: #1a1a2e;
+        --kawaii-paper-soft: #16213e;
+        --kawaii-surface: rgba(30, 30, 50, 0.85);
+        --kawaii-surface-elevated: rgba(40, 40, 60, 0.95);
+        --kawaii-panel: rgba(38, 40, 66, 0.9);
+        --kawaii-panel-soft: rgba(34, 36, 58, 0.84);
+        --kawaii-panel-muted: rgba(32, 34, 56, 0.76);
+        --kawaii-line: rgba(126, 132, 176, 0.34);
+        --kawaii-line-soft: rgba(126, 132, 176, 0.22);
+        --kawaii-accent-soft: rgba(255, 133, 162, 0.32);
+        --kawaii-toggle-surface: rgba(255, 255, 255, 0.08);
+        --kawaii-toggle-inset: rgba(255, 255, 255, 0.06);
+        --kawaii-code-surface: rgba(255, 255, 255, 0.06);
+        --kawaii-code-surface-hover: rgba(255, 255, 255, 0.1);
+        --kawaii-ink: #f0f0f5;
+        --kawaii-ink-soft: #d3d0de;
+        --kawaii-ink-muted: #a5a1b6;
+        --kawaii-primary: #ff85a2;
+        --kawaii-primary-soft: #ffb6c1;
+        --kawaii-secondary: #5eb3d9;
+        --shadow-soft:
+          0 12px 28px rgba(27, 29, 54, 0.2),
+          0 2px 6px rgba(27, 29, 54, 0.1);
+        --shadow-elevated:
+          0 16px 36px rgba(27, 29, 54, 0.28),
+          0 4px 12px rgba(27, 29, 54, 0.16);
+      }
+
       @media (prefers-color-scheme: dark) {
-        :root {
+        html:not([data-color-scheme]) {
           color-scheme: dark;
           --kawaii-paper: #1a1a2e;
           --kawaii-paper-soft: #16213e;
           --kawaii-surface: rgba(30, 30, 50, 0.85);
           --kawaii-surface-elevated: rgba(40, 40, 60, 0.95);
           --kawaii-ink: #f0f0f5;
-          --kawaii-ink-soft: #c0c0d0;
-          --kawaii-ink-muted: #808090;
+          --kawaii-ink-soft: #d3d0de;
+          --kawaii-ink-muted: #a5a1b6;
           --kawaii-primary: #ff85a2;
           --kawaii-primary-soft: #ffb6c1;
           --kawaii-secondary: #5eb3d9;
-          --shadow-soft: 
-            0 4px 20px rgba(255, 133, 162, 0.2),
-            0 2px 8px rgba(94, 179, 217, 0.15);
+          --shadow-soft:
+            0 12px 28px rgba(27, 29, 54, 0.2),
+            0 2px 6px rgba(27, 29, 54, 0.1);
+          --shadow-elevated:
+            0 16px 36px rgba(27, 29, 54, 0.28),
+            0 4px 12px rgba(27, 29, 54, 0.16);
         }
       }
 
@@ -132,7 +189,7 @@
 
       body {
         font-family: var(--font-body);
-        font-size: 15px;
+        font-size: 16px;
         line-height: 1.6;
         color: var(--kawaii-ink);
         background: var(--kawaii-paper);
@@ -156,12 +213,6 @@
           linear-gradient(90deg, rgba(255,182,193,0.03) 1px, transparent 1px),
           linear-gradient(rgba(135,206,235,0.03) 1px, transparent 1px);
         background-size: 100% 100%, 100% 100%, 100% 100%, 40px 40px, 40px 40px;
-        animation: bgFloat 20s ease-in-out infinite;
-      }
-
-      @keyframes bgFloat {
-        0%, 100% { transform: translateY(0) rotate(0deg); }
-        50% { transform: translateY(-10px) rotate(1deg); }
       }
 
       /* ========================================
@@ -179,16 +230,20 @@
         align-items: center;
         padding: 0.75rem 1.25rem;
         background: var(--kawaii-surface);
-        border: 2px solid rgba(255, 182, 193, 0.3);
+        border: 1px solid rgba(215, 174, 193, 0.42);
         border-radius: var(--radius-xl);
-        backdrop-filter: blur(20px) saturate(180%);
+        backdrop-filter: blur(14px) saturate(135%);
         box-shadow: var(--shadow-soft);
-        transition: all 300ms var(--ease-smooth);
+        transition:
+          border-color 220ms var(--ease-out-quiet),
+          box-shadow 220ms var(--ease-out-quiet),
+          transform 220ms var(--ease-out-quiet);
       }
 
       .topbar:hover {
         box-shadow: var(--shadow-elevated);
-        border-color: rgba(255, 182, 193, 0.5);
+        border-color: rgba(215, 174, 193, 0.6);
+        transform: translateY(-1px);
       }
 
       /* 🏠 品牌区域 */
@@ -198,11 +253,11 @@
         gap: 0.75rem;
         text-decoration: none;
         color: inherit;
-        transition: transform 200ms var(--ease-bounce);
+        transition: transform 160ms var(--ease-out-quiet);
       }
 
       .brand:hover {
-        transform: scale(1.02);
+        transform: translateY(-1px);
       }
 
       .brand-mark {
@@ -213,35 +268,27 @@
         display: grid;
         place-items: center;
         font-size: 1.25rem;
-        box-shadow: 
-          inset 0 2px 4px rgba(255,255,255,0.4),
-          0 4px 12px rgba(255, 182, 193, 0.3);
-        animation: brandPulse 3s ease-in-out infinite;
-      }
-
-      @keyframes brandPulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.05); }
+        box-shadow:
+          inset 0 1px 2px rgba(255,255,255,0.45),
+          0 6px 14px rgba(187, 161, 180, 0.16);
       }
 
       .brand-copy {
         display: flex;
         flex-direction: column;
+        min-width: 0;
       }
 
       .brand-title {
         font-family: var(--font-display);
-        font-size: 1.1rem;
+        font-size: 1.08rem;
         font-weight: 700;
         letter-spacing: -0.02em;
-        background: linear-gradient(135deg, var(--kawaii-primary-deep), var(--kawaii-secondary-deep));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        color: var(--kawaii-ink);
       }
 
       .brand-subtitle {
-        font-size: 0.7rem;
+        font-size: 0.76rem;
         color: var(--kawaii-ink-soft);
         font-weight: 600;
       }
@@ -251,6 +298,7 @@
         display: flex;
         gap: 0.5rem;
         justify-content: center;
+        flex-wrap: wrap;
       }
 
       .nav a {
@@ -260,40 +308,29 @@
         font-weight: 600;
         color: var(--kawaii-ink-soft);
         text-decoration: none;
-        transition: all 200ms var(--ease-bounce);
+        transition:
+          color 180ms var(--ease-out-quiet),
+          background-color 180ms var(--ease-out-quiet),
+          transform 180ms var(--ease-out-quiet),
+          box-shadow 180ms var(--ease-out-quiet);
         position: relative;
-        overflow: hidden;
-      }
-
-      .nav a::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: var(--gradient-hero);
-        opacity: 0;
-        transition: opacity 200ms;
-        border-radius: inherit;
-        z-index: -1;
       }
 
       .nav a:hover {
         color: var(--kawaii-ink);
-        transform: translateY(-2px);
-      }
-
-      .nav a:hover::before {
-        opacity: 0.3;
+        background: var(--kawaii-panel-soft);
+        transform: translateY(-1px);
       }
 
       .nav a[aria-current="page"] {
-        color: white;
-        background: var(--gradient-button-primary);
-        box-shadow: 0 4px 12px rgba(255, 182, 193, 0.4);
+        color: var(--kawaii-ink);
+        background: var(--kawaii-accent-soft);
+        box-shadow: inset 0 0 0 1px rgba(221, 145, 176, 0.25);
       }
 
       .nav a[aria-current="page"]:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(255, 182, 193, 0.5);
+        transform: none;
+        box-shadow: inset 0 0 0 1px rgba(221, 145, 176, 0.32);
       }
 
       /* 💫 状态指示器 */
@@ -301,9 +338,9 @@
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
-        padding: 0.5rem 1rem;
-        background: rgba(255, 255, 255, 0.6);
-        border: 2px solid rgba(144, 238, 144, 0.4);
+        padding: 0.48rem 0.92rem;
+        background: var(--kawaii-toggle-surface);
+        border: 1px solid var(--kawaii-line);
         border-radius: var(--radius-full);
         font-size: 0.8rem;
         font-weight: 600;
@@ -311,14 +348,75 @@
       }
 
       .status-pill::before {
-        content: "●";
-        color: var(--kawaii-success);
-        animation: pulse 2s ease-in-out infinite;
+        content: "";
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--kawaii-success) 76%, white);
       }
 
-      @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
+      .topbar-side {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        min-width: 0;
+        flex-wrap: wrap;
+      }
+
+      .topbar-controls {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .toggle-group {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.22rem;
+        padding: 0.22rem;
+        background: var(--kawaii-toggle-surface);
+        border: 1px solid var(--kawaii-line);
+        border-radius: var(--radius-full);
+        box-shadow: inset 0 1px 0 var(--kawaii-toggle-inset);
+      }
+
+      .toggle-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 2rem;
+        min-width: 2.8rem;
+        padding: 0.4rem 0.72rem;
+        border: none;
+        border-radius: var(--radius-full);
+        background: transparent;
+        color: var(--kawaii-ink-soft);
+        font-family: var(--font-body);
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+        transition:
+          color 180ms var(--ease-out-quiet),
+          background-color 180ms var(--ease-out-quiet),
+          transform 180ms var(--ease-out-quiet),
+          box-shadow 180ms var(--ease-out-quiet);
+      }
+
+      .toggle-chip:hover {
+        color: var(--kawaii-ink);
+        transform: translateY(-1px);
+      }
+
+      .toggle-chip.is-active,
+      .toggle-chip[aria-pressed="true"],
+      .toggle-chip[aria-current="true"] {
+        background: var(--kawaii-accent-soft);
+        color: var(--kawaii-ink);
+        box-shadow: inset 0 0 0 1px rgba(221, 145, 176, 0.24);
       }
 
       /* ========================================
@@ -334,12 +432,15 @@
          🎴 卡片组件
          ======================================== */
       .kawaii-card {
-        background: var(--gradient-card);
-        border: 2px solid rgba(255, 182, 193, 0.2);
+        background: var(--kawaii-panel);
+        border: 1px solid var(--kawaii-line);
         border-radius: var(--radius-lg);
         padding: 1.5rem;
         box-shadow: var(--shadow-soft);
-        transition: all 300ms var(--ease-bounce);
+        transition:
+          transform 220ms var(--ease-out-quiet),
+          box-shadow 220ms var(--ease-out-quiet),
+          border-color 220ms var(--ease-out-quiet);
         position: relative;
         overflow: hidden;
       }
@@ -350,31 +451,18 @@
         top: 0;
         left: 0;
         right: 0;
-        height: 3px;
+        height: 2px;
         background: linear-gradient(90deg, 
           var(--kawaii-primary), 
           var(--kawaii-secondary),
           var(--kawaii-mint));
-        opacity: 0.6;
-      }
-
-      .kawaii-card::after {
-        content: "";
-        position: absolute;
-        bottom: -50%;
-        right: -50%;
-        width: 100%;
-        height: 100%;
-        background: radial-gradient(circle, 
-          rgba(255,182,193,0.15) 0%, 
-          transparent 70%);
-        pointer-events: none;
+        opacity: 0.45;
       }
 
       .kawaii-card:hover {
-        transform: translateY(-4px) scale(1.005);
+        transform: translateY(-2px);
         box-shadow: var(--shadow-elevated);
-        border-color: rgba(255, 182, 193, 0.4);
+        border-color: color-mix(in srgb, var(--kawaii-primary) 38%, var(--kawaii-line));
       }
 
       /* ========================================
@@ -392,25 +480,28 @@
         border: none;
         border-radius: var(--radius-full);
         cursor: pointer;
-        transition: all 200ms var(--ease-bounce);
+        transition:
+          transform 180ms var(--ease-out-quiet),
+          background-color 180ms var(--ease-out-quiet),
+          border-color 180ms var(--ease-out-quiet),
+          box-shadow 180ms var(--ease-out-quiet);
         text-decoration: none;
         position: relative;
-        overflow: hidden;
       }
 
       .kawaii-button--primary {
         background: var(--gradient-button-primary);
         color: white;
-        box-shadow: 
-          0 4px 12px rgba(255, 182, 193, 0.4),
-          inset 0 1px 2px rgba(255,255,255,0.3);
+        box-shadow:
+          0 8px 18px rgba(205, 143, 168, 0.22),
+          inset 0 1px 1px rgba(255,255,255,0.2);
       }
 
       .kawaii-button--primary:hover {
-        transform: translateY(-2px) scale(1.02);
-        box-shadow: 
-          0 6px 20px rgba(255, 182, 193, 0.5),
-          inset 0 1px 2px rgba(255,255,255,0.3);
+        transform: translateY(-1px);
+        box-shadow:
+          0 10px 20px rgba(205, 143, 168, 0.28),
+          inset 0 1px 1px rgba(255,255,255,0.2);
       }
 
       .kawaii-button--secondary {
@@ -422,40 +513,18 @@
       }
 
       .kawaii-button--ghost {
-        background: rgba(255, 255, 255, 0.5);
+        background: var(--kawaii-panel-muted);
         color: var(--kawaii-ink);
-        border: 2px solid rgba(255, 182, 193, 0.3);
+        border: 1px solid var(--kawaii-line);
       }
 
       .kawaii-button--ghost:hover {
-        background: rgba(255, 182, 193, 0.1);
-        border-color: rgba(255, 182, 193, 0.5);
+        background: var(--kawaii-panel-soft);
+        border-color: color-mix(in srgb, var(--kawaii-primary) 42%, var(--kawaii-line));
       }
 
       .kawaii-button:active {
         transform: translateY(0) scale(0.98);
-      }
-
-      /* 按钮闪烁效果 */
-      .kawaii-button::after {
-        content: "";
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: linear-gradient(
-          45deg,
-          transparent 40%,
-          rgba(255,255,255,0.3) 50%,
-          transparent 60%
-        );
-        transform: translateX(-100%) rotate(45deg);
-        transition: transform 0.6s;
-      }
-
-      .kawaii-button:hover::after {
-        transform: translateX(100%) rotate(45deg);
       }
 
       /* ========================================
@@ -469,7 +538,10 @@
         font-size: 0.75rem;
         font-weight: 700;
         border-radius: var(--radius-full);
-        transition: all 200ms var(--ease-bounce);
+        transition:
+          background-color 180ms var(--ease-out-quiet),
+          border-color 180ms var(--ease-out-quiet),
+          transform 180ms var(--ease-out-quiet);
       }
 
       .kawaii-tag--pink {
@@ -491,7 +563,7 @@
       }
 
       .kawaii-tag:hover {
-        transform: scale(1.05);
+        transform: translateY(-1px);
       }
 
       /* ========================================
@@ -506,7 +578,10 @@
         font-weight: 700;
         border-radius: var(--radius-full);
         border: 2px solid;
-        transition: all 200ms var(--ease-bounce);
+        transition:
+          background-color 180ms var(--ease-out-quiet),
+          border-color 180ms var(--ease-out-quiet),
+          transform 180ms var(--ease-out-quiet);
       }
 
       .kawaii-badge--success {
@@ -542,7 +617,7 @@
         font-family: var(--font-body);
         font-size: 0.95rem;
         color: var(--kawaii-ink);
-        background: rgba(255, 255, 255, 0.7);
+        background: var(--kawaii-panel-soft);
         border: 2px solid rgba(255, 182, 193, 0.2);
         border-radius: var(--radius-full);
         transition: all 200ms var(--ease-smooth);
@@ -552,7 +627,7 @@
       .kawaii-input:focus {
         border-color: var(--kawaii-primary);
         box-shadow: 0 0 0 4px rgba(255, 182, 193, 0.15);
-        background: white;
+        background: var(--kawaii-surface-elevated);
       }
 
       .kawaii-input::placeholder {
@@ -580,18 +655,18 @@
 
       .kawaii-table td {
         padding: 1rem;
-        background: rgba(255, 255, 255, 0.5);
+        background: var(--kawaii-panel-muted);
         border: none;
         transition: all 200ms var(--ease-smooth);
       }
 
       .kawaii-table tr {
-        transition: transform 200ms var(--ease-bounce);
+        transition: transform 180ms var(--ease-out-quiet);
       }
 
       .kawaii-table tr:hover td {
-        background: rgba(255, 182, 193, 0.08);
-        transform: scale(1.005);
+        background: color-mix(in srgb, var(--kawaii-primary) 8%, var(--kawaii-panel-soft));
+        transform: translateY(-1px);
       }
 
       .kawaii-table tr td:first-child {
@@ -603,34 +678,291 @@
       }
 
       /* ========================================
+         🧭 Console Shared Blocks
+         ======================================== */
+      .console-head {
+        margin-bottom: 1rem;
+      }
+
+      .console-head-shell {
+        padding: 1.2rem 1.25rem;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.78rem;
+        color: var(--kawaii-ink-soft);
+        letter-spacing: 0.04em;
+      }
+
+      .eyebrow::before {
+        content: "";
+        width: 1.4rem;
+        height: 1px;
+        background: var(--kawaii-line);
+      }
+
+      .page-title {
+        margin: 0.65rem 0 0;
+        font-family: var(--font-display);
+        font-size: clamp(1.75rem, 3.8vw, 2.5rem);
+        line-height: 1.1;
+        color: var(--kawaii-ink);
+      }
+
+      .page-copy {
+        margin: 0.65rem 0 0;
+        color: var(--kawaii-ink-soft);
+        max-width: 66ch;
+      }
+
+      .console-head-grid {
+        display: grid;
+        gap: 0.85rem;
+      }
+
+      .console-command {
+        margin-top: 0.85rem;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.65rem;
+        padding: 0.8rem 0.95rem;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--kawaii-line);
+        background: var(--kawaii-panel-soft);
+      }
+
+      .console-command code {
+        font-size: 0.82rem;
+        color: var(--kawaii-ink);
+        overflow-wrap: anywhere;
+      }
+
+      .copy-button {
+        appearance: none;
+        border: 1px solid var(--kawaii-line);
+        background: var(--kawaii-panel-muted);
+        color: var(--kawaii-ink);
+        border-radius: var(--radius-full);
+        cursor: pointer;
+        min-height: 2.25rem;
+        padding: 0.4rem 0.9rem;
+        font-weight: 700;
+      }
+
+      .copy-button:hover {
+        background: var(--kawaii-panel-soft);
+      }
+
+      .page-stats {
+        margin-top: 0.95rem;
+        display: grid;
+        gap: 0.6rem;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .stat {
+        border: 1px solid var(--kawaii-line);
+        border-radius: var(--radius-md);
+        background: var(--kawaii-panel-soft);
+        padding: 0.75rem 0.85rem;
+      }
+
+      .stat-value {
+        display: block;
+        font-family: var(--font-display);
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--kawaii-ink);
+      }
+
+      .stat-label {
+        display: block;
+        margin-top: 0.2rem;
+        font-size: 0.76rem;
+        color: var(--kawaii-ink-muted);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .stat-detail {
+        margin-top: 0.2rem;
+        font-size: 0.84rem;
+        color: var(--kawaii-ink-soft);
+      }
+
+      .insight-grid {
+        margin-bottom: 1rem;
+        display: grid;
+        gap: 0.8rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .insight-card {
+        border: 1px solid var(--kawaii-line);
+        border-radius: var(--radius-md);
+        background: var(--kawaii-panel-soft);
+        padding: 0.9rem 1rem;
+      }
+
+      .insight-card h3 {
+        margin: 0.35rem 0 0;
+        font-size: 1rem;
+        color: var(--kawaii-ink);
+      }
+
+      .insight-card p {
+        margin: 0.45rem 0 0;
+        font-size: 0.9rem;
+        color: var(--kawaii-ink-soft);
+      }
+
+      .section-kicker {
+        display: inline-block;
+        font-size: 0.74rem;
+        letter-spacing: 0.04em;
+        color: var(--kawaii-ink-muted);
+        text-transform: uppercase;
+      }
+
+      .command-chip {
+        margin-top: 0.6rem;
+        border: 1px solid var(--kawaii-line);
+        border-radius: var(--radius-sm);
+        background: var(--kawaii-code-surface);
+        padding: 0.5rem 0.6rem;
+      }
+
+      .command-chip code {
+        font-size: 0.78rem;
+        color: var(--kawaii-ink);
+        overflow-wrap: anywhere;
+      }
+
+      .console-table-shell {
+        border: 1px solid var(--kawaii-line);
+        border-radius: var(--radius-md);
+        background: var(--kawaii-panel-soft);
+        padding: 1rem;
+      }
+
+      .table-scroll {
+        margin-top: 0.65rem;
+        overflow-x: auto;
+      }
+
+      .table-scroll table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .table-scroll th {
+        text-align: left;
+        font-size: 0.75rem;
+        letter-spacing: 0.04em;
+        color: var(--kawaii-ink-muted);
+        text-transform: uppercase;
+        padding: 0.55rem 0.5rem;
+        border-bottom: 1px solid var(--kawaii-line);
+      }
+
+      .table-scroll td {
+        padding: 0.65rem 0.5rem;
+        border-bottom: 1px solid var(--kawaii-line-soft);
+        color: var(--kawaii-ink);
+        font-size: 0.9rem;
+        vertical-align: top;
+      }
+
+      .table-scroll tr:last-child td {
+        border-bottom: none;
+      }
+
+      .table-id {
+        font-family: var(--font-mono);
+        font-size: 0.82rem;
+      }
+
+      .skill-name {
+        overflow-wrap: anywhere;
+      }
+
+      .table-note {
+        color: var(--kawaii-ink-soft);
+      }
+
+      .status-stack {
+        display: grid;
+        gap: 0.2rem;
+      }
+
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border-radius: var(--radius-full);
+        font-size: 0.76rem;
+        font-weight: 700;
+        padding: 0.25rem 0.65rem;
+        border: 1px solid var(--kawaii-line);
+        background: var(--kawaii-panel-muted);
+      }
+
+      .status-badge[data-status*="approved"],
+      .status-badge[data-status*="completed"] {
+        color: #2a7a42;
+        border-color: rgba(76, 175, 80, 0.42);
+        background: rgba(76, 175, 80, 0.16);
+      }
+
+      .status-badge[data-status*="pending"],
+      .status-badge[data-status*="queued"],
+      .status-badge[data-status*="review_requested"] {
+        color: #926f0f;
+        border-color: rgba(255, 193, 7, 0.48);
+        background: rgba(255, 193, 7, 0.18);
+      }
+
+      .status-badge[data-status*="running"] {
+        color: #1f5f8a;
+        border-color: rgba(33, 150, 243, 0.4);
+        background: rgba(33, 150, 243, 0.15);
+      }
+
+      .status-badge[data-status*="rejected"],
+      .status-badge[data-status*="failed"] {
+        color: #a73737;
+        border-color: rgba(244, 67, 54, 0.45);
+        background: rgba(244, 67, 54, 0.15);
+      }
+
+      .empty-copy {
+        color: var(--kawaii-ink-soft);
+        font-size: 0.92rem;
+      }
+
+      /* ========================================
          🎨 装饰元素
          ======================================== */
       .sparkle {
         display: inline-block;
-        animation: sparkle 2s ease-in-out infinite;
-      }
-
-      @keyframes sparkle {
-        0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
-        50% { transform: scale(1.2) rotate(10deg); opacity: 0.8; }
+        opacity: 0.78;
       }
 
       .float {
-        animation: float 3s ease-in-out infinite;
-      }
-
-      @keyframes float {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-6px); }
+        animation: none;
       }
 
       /* 角落装饰 */
       .corner-decoration {
         position: absolute;
-        width: 60px;
-        height: 60px;
+        width: 52px;
+        height: 52px;
         pointer-events: none;
-        opacity: 0.4;
+        opacity: 0.22;
       }
 
       .corner-decoration--tl {
@@ -669,7 +1001,10 @@
         white-space: nowrap;
         opacity: 0;
         visibility: hidden;
-        transition: all 200ms var(--ease-bounce);
+        transition:
+          opacity 180ms var(--ease-out-quiet),
+          transform 180ms var(--ease-out-quiet),
+          visibility 180ms var(--ease-out-quiet);
         pointer-events: none;
       }
 
@@ -686,7 +1021,7 @@
         .topbar {
           grid-template-columns: auto 1fr;
           grid-template-areas: 
-            "brand status"
+            "brand side"
             "nav nav";
         }
         
@@ -697,7 +1032,10 @@
           gap: 0.25rem;
           padding-bottom: 0.25rem;
         }
-        .status-pill { grid-area: status; }
+        .topbar-side {
+          grid-area: side;
+          justify-self: end;
+        }
         
         .nav::-webkit-scrollbar {
           display: none;
@@ -713,6 +1051,53 @@
         .topbar {
           position: static;
           margin-top: 0.5rem;
+          grid-template-columns: 1fr;
+          grid-template-areas:
+            "brand"
+            "side"
+            "nav";
+          gap: 0.75rem;
+          padding: 0.9rem 1rem;
+        }
+
+        .brand {
+          min-width: 0;
+        }
+
+        .topbar-side {
+          justify-self: start;
+          gap: 0.55rem;
+        }
+
+        .topbar-controls {
+          justify-content: flex-start;
+        }
+
+        .toggle-chip {
+          min-height: 2.1rem;
+        }
+
+        .nav {
+          justify-content: flex-start;
+          gap: 0.4rem;
+        }
+
+        .nav a {
+          padding: 0.46rem 0.82rem;
+          font-size: 0.82rem;
+        }
+
+        .site-shell {
+          width: min(1200px, calc(100vw - 1rem));
+          padding: 1rem 0 3rem;
+        }
+
+        .insight-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .page-stats {
+          grid-template-columns: 1fr;
         }
         
         .kawaii-card {
@@ -724,17 +1109,17 @@
          🎭 动画工具类
          ======================================== */
       .animate-in {
-        animation: animateIn 600ms var(--ease-elastic) both;
+        animation: animateIn 520ms var(--ease-out-gentle) both;
       }
 
       @keyframes animateIn {
         from {
           opacity: 0;
-          transform: translateY(20px) scale(0.95);
+          transform: translateY(14px);
         }
         to {
           opacity: 1;
-          transform: translateY(0) scale(1);
+          transform: translateY(0);
         }
       }
 
@@ -763,80 +1148,153 @@
     </style>
   </head>
   
-  <body>
+  <body
+    class="page-{{ page_mode or 'default' }}"
+    data-copy-success="{{ ui.copy_success if ui else '已复制' }}"
+    data-copy-error="{{ ui.copy_error if ui else '复制失败' }}"
+  >
     <!-- 🎀 顶部导航 -->
     <header class="topbar animate-in">
       <a class="brand" href="/">
         <div class="brand-mark">✨</div>
         <div class="brand-copy">
-          <div class="brand-title">infinitas</div>
-          <div class="brand-subtitle">skill registry</div>
+          <div class="brand-title">infinitas-skill</div>
+          <div class="brand-subtitle">{{ ui.brand_subtitle if ui else '私有技能仓库' }}</div>
         </div>
       </a>
       
       <nav class="nav" aria-label="Primary">
-        <a href="/" aria-current="page">首页</a>
-        <a href="/skills">技能</a>
-        <a href="/submissions">提交</a>
-        <a href="/reviews">评审</a>
-        <a href="/jobs">任务</a>
+        {% set current_path = request.url.path %}
+        {% for link in nav_links or [] %}
+        {% set href = link.href %}
+        {% set is_current = href == current_path %}
+        {% if not is_current and current_path == "/" and href == "#start" %}
+        {% set is_current = true %}
+        {% endif %}
+        <a href="{{ href }}"{% if is_current %} aria-current="page"{% endif %}>{{ link.label }}</a>
+        {% endfor %}
       </nav>
       
-      <div class="status-pill">运行中</div>
+      <div class="topbar-side">
+        <div class="topbar-controls">
+          <div class="toggle-group" role="group" aria-label="{{ ui.theme_toggle_label if ui else 'Theme switcher' }}">
+            {% for option in theme_switches or [] %}
+            <button class="toggle-chip" type="button" data-theme-choice="{{ option.value }}" aria-pressed="false">{{ option.label }}</button>
+            {% endfor %}
+          </div>
+          <div class="toggle-group" role="group" aria-label="{{ ui.language_toggle_label if ui else 'Language switcher' }}">
+            {% for option in language_switches or [] %}
+            <a class="toggle-chip{% if option.active %} is-active{% endif %}" href="{{ option.href }}"{% if option.active %} aria-current="true"{% endif %}>{{ option.label }}</a>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="status-pill">{{ ui.page_kicker if ui else page_kicker or page_eyebrow or "运行中" }}</div>
+      </div>
     </header>
 
     <!-- 📦 主内容区 -->
     <main class="site-shell">
-      {% block body %}{% endblock %}
+      {% if page_mode == "console" %}
+      <section class="console-head">
+        <article class="console-head-shell kawaii-card animate-in">
+          <div class="console-head-grid">
+            <div>
+              {% if page_eyebrow %}
+              <p class="eyebrow">{{ page_eyebrow }}</p>
+              {% endif %}
+              <h1 class="page-title">{{ title or "infinitas hosted registry" }}</h1>
+              {% if content %}
+              <p class="page-copy">{{ content }}</p>
+              {% endif %}
+            </div>
+            {% if cli_command %}
+            <div class="console-command">
+              <div>
+                <div class="section-kicker">{{ ui.cli_mirror_label if ui else "CLI mirror" }}</div>
+                <code>{{ cli_command }}</code>
+              </div>
+              <button class="copy-button" type="button" data-copy="{{ cli_command }}">{{ ui.copy_button_label if ui else "Copy" }}</button>
+            </div>
+            {% endif %}
+          </div>
+          {% if page_stats %}
+          <div class="page-stats">
+            {% for stat in page_stats %}
+            <div class="stat">
+              <span class="stat-value">{{ stat.value }}</span>
+              <span class="stat-label">{{ stat.label }}</span>
+              <div class="stat-detail">{{ stat.detail }}</div>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </article>
+      </section>
+      {% endif %}
+      {% block body %}
+      {% if content %}
+      <section class="kawaii-card animate-in">
+        <p>{{ content }}</p>
+      </section>
+      {% endif %}
+      {% endblock %}
     </main>
 
-    <!-- 🎊 装饰元素 -->
+    <!-- 🎊 交互 -->
     <script>
-      // 鼠标跟随的轻微视差效果
-      document.addEventListener('mousemove', (e) => {
-        const cards = document.querySelectorAll('.kawaii-card');
-        const mouseX = e.clientX / window.innerWidth - 0.5;
-        const mouseY = e.clientY / window.innerHeight - 0.5;
-        
-        cards.forEach((card, index) => {
-          const speed = (index % 3 + 1) * 0.5;
-          const x = mouseX * speed;
-          const y = mouseY * speed;
-          card.style.transform = `translate(${x}px, ${y}px)`;
+      const root = document.documentElement;
+      const themeStorageKey = 'kawaii-color-scheme';
+
+      const updateThemeButtons = (scheme) => {
+        document.querySelectorAll('[data-theme-choice]').forEach((button) => {
+          const active = button.dataset.themeChoice === scheme;
+          button.classList.toggle('is-active', active);
+          button.setAttribute('aria-pressed', String(active));
         });
-      });
+      };
 
-      // 点击产生星星效果
-      document.addEventListener('click', (e) => {
-        createSparkle(e.clientX, e.clientY);
-      });
-
-      function createSparkle(x, y) {
-        const sparkle = document.createElement('div');
-        sparkle.innerHTML = ['✨', '⭐', '🌟', '💫'][Math.floor(Math.random() * 4)];
-        sparkle.style.cssText = `
-          position: fixed;
-          left: ${x}px;
-          top: ${y}px;
-          font-size: 1.5rem;
-          pointer-events: none;
-          z-index: 9999;
-          animation: sparklePop 600ms ease-out forwards;
-        `;
-        document.body.appendChild(sparkle);
-        setTimeout(() => sparkle.remove(), 600);
-      }
-
-      // 添加星星动画样式
-      const style = document.createElement('style');
-      style.textContent = `
-        @keyframes sparklePop {
-          0% { transform: scale(0) rotate(0deg); opacity: 1; }
-          50% { transform: scale(1.2) rotate(180deg); }
-          100% { transform: scale(0) rotate(360deg) translateY(-20px); opacity: 0; }
+      const applyThemeChoice = (scheme, persist = true) => {
+        root.dataset.colorScheme = scheme;
+        root.style.colorScheme = scheme;
+        updateThemeButtons(scheme);
+        if (!persist) {
+          return;
         }
-      `;
-      document.head.appendChild(style);
+        try {
+          window.localStorage.setItem(themeStorageKey, scheme);
+        } catch (_error) {
+          // Ignore storage failures so the toggle still works for the session.
+        }
+      };
+
+      updateThemeButtons(root.dataset.colorScheme || 'light');
+
+      // Copy interactions
+      document.addEventListener('click', async (e) => {
+        const themeButton = e.target.closest('[data-theme-choice]');
+        if (themeButton) {
+          applyThemeChoice(themeButton.dataset.themeChoice);
+          return;
+        }
+
+        const copyButton = e.target.closest('[data-copy]');
+        if (copyButton) {
+          const text = copyButton.dataset.copy || '';
+          const original = copyButton.dataset.originalHtml || copyButton.innerHTML;
+          const copySuccess = document.body.dataset.copySuccess || 'Copied';
+          const copyError = document.body.dataset.copyError || 'Copy failed';
+          copyButton.dataset.originalHtml = original;
+          try {
+            await navigator.clipboard.writeText(text);
+            copyButton.innerHTML = copySuccess;
+          } catch (_error) {
+            copyButton.innerHTML = copyError;
+          }
+          window.setTimeout(() => {
+            copyButton.innerHTML = original;
+          }, 1400);
+        }
+      });
     </script>
   </body>
 </html>

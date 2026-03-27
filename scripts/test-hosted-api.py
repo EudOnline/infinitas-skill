@@ -68,12 +68,8 @@ def scenario_health_login_and_me():
             '搜索、检查和执行都交给它。',
             '交任务',
             '执行命令',
-            '复制一条即可。',
-            '推荐提示',
-            'scripts/recommend-skill.sh',
-            '复制提示',
             '同步',
-            '进入维护台',
+            '有事再进维护台',
         ]:
             if needle not in response.text:
                 fail(f'index page missing agent-first homepage content {needle!r}')
@@ -130,6 +126,29 @@ def scenario_health_login_and_me():
                 fail(f'expected {route} with maintainer token to return 200, got {response.status_code}: {response.text}')
             if heading not in response.text:
                 fail(f'expected {route} page to contain heading {heading!r}')
+            for marker in ['data-theme="kawaii"', 'data-theme-choice="light"', 'data-theme-choice="dark"']:
+                if marker not in response.text:
+                    fail(f'expected {route} page to include kawaii theme marker {marker!r}')
+            theme_label_candidates = ['aria-label="Theme switcher"', 'aria-label="主题切换"']
+            if not any(label in response.text for label in theme_label_candidates):
+                fail(f'expected {route} page to expose the theme toggle group')
+            language_label_candidates = ['aria-label="Language switcher"', 'aria-label="语言切换"']
+            if not any(label in response.text for label in language_label_candidates):
+                fail(f'expected {route} page to expose the language toggle group')
+            for shell_marker in [
+                'class="topbar animate-in"',
+                'class="topbar-controls"',
+                'class="site-shell"',
+            ]:
+                if shell_marker not in response.text:
+                    fail(f'expected {route} page to include kawaii shell marker {shell_marker!r}')
+
+        response = client.get('/v2', follow_redirects=False)
+        if response.status_code not in (307, 308):
+            fail(f'/v2 should redirect to / with 307/308, got {response.status_code}')
+        location = response.headers.get('location')
+        if location != '/':
+            fail(f'/v2 redirect location should be /, got {location!r}')
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 

@@ -2,7 +2,7 @@
 {% block body %}
 
 <!-- 🎀 英雄区 -->
-<section class="hero-section animate-in">
+<section class="hero-section animate-in" id="start">
   <div class="hero-card kawaii-card">
     <div class="corner-decoration corner-decoration--tl"></div>
     <div class="corner-decoration corner-decoration--br"></div>
@@ -12,52 +12,56 @@
       <div class="hero-content">
         <div class="hero-eyebrow">
           <span class="sparkle">✨</span>
-          <span>私人技能工作台</span>
+          <span>{{ page_eyebrow }}</span>
           <span class="sparkle">✨</span>
         </div>
         
         <h1 class="hero-title">
-          交给 Agent
-          <span class="hero-title-highlight">来处理</span>
+          {{ hero_title }}
+          {% if hero_emphasis %}
+          <span class="hero-title-highlight">{{ hero_emphasis }}</span>
+          {% endif %}
         </h1>
         
         <p class="hero-desc">
-          搜索、检查和执行都交给它 ✨<br>
-          你只要说明<strong>目标</strong>、<strong>位置</strong>和<strong>风险偏好</strong>
+          {{ hero_body }}<br>
+          {{ hero_support }}
         </p>
         
         <div class="hero-tags">
-          <span class="kawaii-tag kawaii-tag--pink">🎯 目标</span>
-          <span class="kawaii-tag kawaii-tag--blue">📍 位置</span>
-          <span class="kawaii-tag kawaii-tag--green">⚡ 风险</span>
+          {% for field in human_input_fields %}
+          <span class="kawaii-tag {{ loop.cycle('kawaii-tag--pink', 'kawaii-tag--blue', 'kawaii-tag--green') }}">
+            {% if loop.index0 == 0 %}🎯{% elif loop.index0 == 1 %}📍{% else %}⚡{% endif %} {{ field }}
+          </span>
+          {% endfor %}
         </div>
         
         <div class="hero-actions">
-          <button class="kawaii-button kawaii-button--primary float">
-            <span>🚀</span>
-            <span>开始探索</span>
+          <button class="kawaii-button kawaii-button--primary" type="button" data-copy="{{ hero_primary_copy }}">
+            <span>📋</span>
+            <span>{{ hero_primary_link.label }}</span>
           </button>
-          <button class="kawaii-button kawaii-button--ghost">
-            <span>📖</span>
-            <span>查看文档</span>
-          </button>
+          <a class="kawaii-button kawaii-button--ghost" href="{{ hero_secondary_link.href }}">
+            <span>🎮</span>
+            <span>{{ hero_secondary_link.label }}</span>
+          </a>
         </div>
       </div>
       
       <!-- 右侧：交接台 -->
-      <div class="hero-handoff">
+      <div class="hero-handoff" id="handoff">
         <div class="handoff-header">
           <span class="handoff-icon">🎀</span>
-          <span class="handoff-title">交接台</span>
+          <span class="handoff-title">{{ ui.handoff_title }}</span>
         </div>
         
         <!-- 切换标签 -->
         <div class="handoff-tabs">
           <button class="handoff-tab active" data-tab="human">
-            <span>💬</span> 交任务
+            <span>💬</span> {{ ui.handoff_human_tab }}
           </button>
           <button class="handoff-tab" data-tab="agent">
-            <span>⌨️</span> 执行命令
+            <span>⌨️</span> {{ ui.handoff_agent_tab }}
           </button>
         </div>
         
@@ -66,41 +70,30 @@
           <!-- 人类视角 -->
           <div class="handoff-panel active" data-panel="human">
             <div class="preset-list">
+              {% for prompt in human_prompts %}
               <div class="preset-item">
                 <div class="preset-header">
-                  <span class="preset-emoji">🔍</span>
-                  <span class="preset-name">找 skill，再给步骤</span>
+                  <span class="preset-emoji">{{ '🔍' if loop.first else '✅' }}</span>
+                  <span class="preset-name">{{ prompt.title }}</span>
                 </div>
-                <p class="preset-desc">帮我在私有技能仓库里找适合做 registry 运维的 skill</p>
-                <button class="kawaii-button kawaii-button--secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-                  📋 复制提示
+                <p class="preset-desc">{{ prompt.prompt }}</p>
+                <button class="kawaii-button kawaii-button--secondary action-button--compact" type="button" data-copy="{{ prompt.prompt }}">
+                  📋 {{ ui.copy_prompt_action }}
                 </button>
               </div>
-              
-              <div class="preset-item">
-                <div class="preset-header">
-                  <span class="preset-emoji">✅</span>
-                  <span class="preset-name">先检查，再安装</span>
-                </div>
-                <p class="preset-desc">我需要做 immutable install，先检查来源和版本</p>
-                <button class="kawaii-button kawaii-button--secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-                  📋 复制提示
-                </button>
-              </div>
+              {% endfor %}
             </div>
           </div>
           
           <!-- Agent视角 -->
           <div class="handoff-panel" data-panel="agent">
             <div class="command-list">
+              {% for example in command_examples %}
               <div class="command-item">
-                <code class="command-code">scripts/recommend-skill.sh "Need a skill for..."</code>
-                <button class="command-copy" title="复制">📋</button>
+                <code class="command-code">{{ example.command }}</code>
+                <button class="command-copy" type="button" title="{{ ui.copy_icon_title }}" aria-label="{{ ui.copy_icon_title }}" data-copy="{{ example.command }}">📋</button>
               </div>
-              <div class="command-item">
-                <code class="command-code">scripts/inspect-skill.sh lvxiaoer/my-skill</code>
-                <button class="command-copy" title="复制">📋</button>
-              </div>
+              {% endfor %}
             </div>
           </div>
         </div>
@@ -112,161 +105,110 @@
 <!-- 📊 状态条 -->
 <section class="status-section animate-in stagger-1">
   <div class="status-grid">
-    <div class="status-item kawaii-card">
-      <div class="status-icon">🔒</div>
-      <div class="status-label">访问模式</div>
-      <div class="status-value">私有</div>
-      <div class="status-detail">需 token 读取</div>
+    {% for state in operating_states %}
+    <div class="status-item">
+      <div class="status-icon">{{ state.icon }}</div>
+      <div class="status-label">{{ state.label }}</div>
+      <div class="status-value">{{ state.value }}</div>
+      <div class="status-detail">{{ state.detail }}</div>
     </div>
-    
-    <div class="status-item kawaii-card">
-      <div class="status-icon">📅</div>
-      <div class="status-label">最后同步</div>
-      <div class="status-value">2025-03</div>
-      <div class="status-detail">catalog 快照</div>
-    </div>
-    
-    <div class="status-item kawaii-card">
-      <div class="status-icon">⚡</div>
-      <div class="status-label">队列状态</div>
-      <div class="status-value">2/1</div>
-      <div class="status-detail">待评审 / 排队</div>
-    </div>
+    {% endfor %}
   </div>
 </section>
 
 <!-- 🎮 维护台 -->
-<section class="console-section animate-in stagger-2">
-  <div class="section-header">
-    <div class="section-icon">🎮</div>
-    <div>
-      <h2 class="section-title">维护控制台</h2>
-      <p class="section-subtitle">首页只负责交接；审批、队列和放行都在维护台</p>
+<section class="console-section animate-in stagger-2" id="console">
+  <div class="section-topline">
+    <div class="section-header">
+      <div class="section-icon">🎮</div>
+      <div>
+        <h2 class="section-title">{{ ui.console_section_title }}</h2>
+        <p class="section-subtitle">{{ maintainer_body }}</p>
+      </div>
+    </div>
+
+    <div class="section-action">
+      <a class="kawaii-button kawaii-button--primary" href="{{ maintainer_primary_link.href }}">
+        <span>🎮</span>
+        <span>{{ maintainer_primary_link.label }}</span>
+      </a>
     </div>
   </div>
   
   <div class="console-grid">
-    <a href="/submissions" class="console-card kawaii-card kawaii-tooltip" data-tooltip="查看提交队列">
+    {% for link in console_links %}
+    <a href="{{ link.href }}" class="console-card kawaii-tooltip" data-tooltip="{{ link.title }}">
       <div class="console-card-header">
-        <span class="console-emoji">📦</span>
-        <span class="console-count">12</span>
+        <span class="console-emoji">{{ link.icon }}</span>
+        <span class="console-count">{{ link.value }}</span>
       </div>
-      <h3 class="console-name">提交队列</h3>
-      <p class="console-desc">新提案与待评审</p>
+      <h3 class="console-name">{{ link.title }}</h3>
+      <p class="console-desc">{{ link.detail }}</p>
       <div class="console-arrow">→</div>
     </a>
-    
-    <a href="/reviews" class="console-card kawaii-card kawaii-tooltip" data-tooltip="管理评审">
-      <div class="console-card-header">
-        <span class="console-emoji">✨</span>
-        <span class="console-count">5</span>
-      </div>
-      <h3 class="console-name">评审台</h3>
-      <p class="console-desc">审批与决策</p>
-      <div class="console-arrow">→</div>
-    </a>
-    
-    <a href="/jobs" class="console-card kawaii-card kawaii-tooltip" data-tooltip="监控任务">
-      <div class="console-card-header">
-        <span class="console-emoji">⚙️</span>
-        <span class="console-count">8</span>
-      </div>
-      <h3 class="console-name">任务队列</h3>
-      <p class="console-desc">运行与调度</p>
-      <div class="console-arrow">→</div>
-    </a>
+    {% endfor %}
   </div>
 </section>
 
 <!-- 🌟 快捷技能 -->
+{% if featured_skills %}
 <section class="skills-section animate-in stagger-3">
   <div class="section-header">
     <div class="section-icon">🌟</div>
     <div>
-      <h2 class="section-title">常用技能</h2>
-      <p class="section-subtitle">最近使用的热门技能</p>
+      <h2 class="section-title">{{ ui.skills_section_title }}</h2>
+      <p class="section-subtitle">{{ ui.skills_section_subtitle }}</p>
     </div>
   </div>
   
   <div class="skills-grid">
-    <div class="skill-card kawaii-card">
+    {% for skill in featured_skills %}
+    <div class="skill-card">
       <div class="skill-header">
-        <span class="skill-emoji">🎯</span>
+        <span class="skill-emoji">{{ skill.icon }}</span>
         <div class="skill-meta">
-          <span class="kawaii-tag kawaii-tag--pink">v2.1.0</span>
-          <span class="skill-stars">⭐ 4.8</span>
+          <span class="kawaii-tag {{ loop.cycle('kawaii-tag--pink', 'kawaii-tag--blue', 'kawaii-tag--green') }}">{{ skill.version }}</span>
+          <span class="skill-stars">
+            {% if skill.rating %}⭐ {{ skill.rating }}{% elif skill.publisher %}@{{ skill.publisher }}{% else %}{{ ui.featured_skill_fallback }}{% endif %}
+          </span>
         </div>
       </div>
-      <h3 class="skill-name">operate-infinitas</h3>
-      <p class="skill-desc">Registry 运维操作</p>
+      <h3 class="skill-name">{{ skill.name }}</h3>
+      <p class="skill-desc">{{ skill.summary }}</p>
       <div class="skill-actions">
-        <button class="kawaii-button kawaii-button--primary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-          使用
+        <button class="kawaii-button kawaii-button--primary action-button--compact" type="button" data-copy="{{ skill.inspect_command }}">
+          {{ ui.copy_inspect_action }}
         </button>
-        <button class="kawaii-button kawaii-button--ghost" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-          详情
-        </button>
+        <a class="kawaii-button kawaii-button--ghost action-button--compact" href="#handoff">
+          {{ ui.go_handoff_action }}
+        </a>
       </div>
     </div>
-    
-    <div class="skill-card kawaii-card">
-      <div class="skill-header">
-        <span class="skill-emoji">🔧</span>
-        <div class="skill-meta">
-          <span class="kawaii-tag kawaii-tag--blue">v1.5.0</span>
-          <span class="skill-stars">⭐ 4.5</span>
-        </div>
-      </div>
-      <h3 class="skill-name">check-skill</h3>
-      <p class="skill-desc">技能验证工具</p>
-      <div class="skill-actions">
-        <button class="kawaii-button kawaii-button--primary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-          使用
-        </button>
-        <button class="kawaii-button kawaii-button--ghost" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-          详情
-        </button>
-      </div>
-    </div>
-    
-    <div class="skill-card kawaii-card">
-      <div class="skill-header">
-        <span class="skill-emoji">📊</span>
-        <div class="skill-meta">
-          <span class="kawaii-tag kawaii-tag--green">v3.0.0</span>
-          <span class="skill-stars">⭐ 5.0</span>
-        </div>
-      </div>
-      <h3 class="skill-name">build-catalog</h3>
-      <p class="skill-desc">构建技能目录</p>
-      <div class="skill-actions">
-        <button class="kawaii-button kawaii-button--primary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-          使用
-        </button>
-        <button class="kawaii-button kawaii-button--ghost" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-          详情
-        </button>
-      </div>
-    </div>
+    {% endfor %}
   </div>
 </section>
+{% endif %}
 
 <style>
   /* Hero Section */
   .hero-section {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
   }
   
   .hero-card {
-    padding: 2.5rem;
+    padding: 2.35rem;
     position: relative;
   }
   
   .hero-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 2.5rem;
+    gap: 2.25rem;
     align-items: center;
+  }
+
+  .hero-grid > * {
+    min-width: 0;
   }
   
   .hero-eyebrow {
@@ -276,10 +218,11 @@
     padding: 0.5rem 1rem;
     background: rgba(255, 182, 193, 0.15);
     border-radius: var(--radius-full);
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     font-weight: 700;
-    color: var(--kawaii-primary-deep);
-    margin-bottom: 1rem;
+    color: var(--kawaii-ink-soft);
+    margin-bottom: 0.9rem;
+    flex-wrap: wrap;
   }
   
   .hero-title {
@@ -288,22 +231,20 @@
     font-weight: 800;
     line-height: 1.1;
     color: var(--kawaii-ink);
-    margin-bottom: 1rem;
+    margin-bottom: 0.85rem;
   }
   
   .hero-title-highlight {
     display: block;
-    background: var(--gradient-hero);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--kawaii-primary-deep);
   }
   
   .hero-desc {
     font-size: 1.1rem;
     color: var(--kawaii-ink-soft);
-    margin-bottom: 1.25rem;
+    margin-bottom: 1.1rem;
     line-height: 1.7;
+    max-width: 30rem;
   }
   
   .hero-desc strong {
@@ -313,7 +254,7 @@
   .hero-tags {
     display: flex;
     gap: 0.5rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
     flex-wrap: wrap;
   }
   
@@ -322,22 +263,28 @@
     gap: 0.75rem;
     flex-wrap: wrap;
   }
+
+  .action-button--compact {
+    min-height: 2.5rem;
+    padding: 0.55rem 1rem;
+    font-size: 0.82rem;
+  }
   
   /* Handoff Panel */
   .hero-handoff {
-    background: rgba(255, 255, 255, 0.5);
+    background: var(--kawaii-panel-muted);
     border-radius: var(--radius-lg);
     padding: 1.5rem;
-    border: 2px solid rgba(255, 182, 193, 0.15);
+    border: 1px solid var(--kawaii-line);
   }
   
   .handoff-header {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin-bottom: 1rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 2px solid rgba(255, 182, 193, 0.1);
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.65rem;
+    border-bottom: 2px solid var(--kawaii-line-soft);
   }
   
   .handoff-icon {
@@ -354,21 +301,25 @@
   .handoff-tabs {
     display: flex;
     gap: 0.5rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.85rem;
   }
   
   .handoff-tab {
     flex: 1;
     padding: 0.625rem 1rem;
-    border: 2px solid rgba(255, 182, 193, 0.2);
-    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid var(--kawaii-line);
+    background: var(--kawaii-panel-muted);
     border-radius: var(--radius-full);
     font-family: var(--font-body);
     font-size: 0.85rem;
     font-weight: 600;
     color: var(--kawaii-ink-soft);
     cursor: pointer;
-    transition: all 200ms var(--ease-bounce);
+    transition:
+      border-color 180ms var(--ease-out-quiet),
+      background-color 180ms var(--ease-out-quiet),
+      transform 180ms var(--ease-out-quiet),
+      color 180ms var(--ease-out-quiet);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -376,7 +327,7 @@
   }
   
   .handoff-tab:hover {
-    border-color: rgba(255, 182, 193, 0.4);
+    border-color: rgba(203, 164, 182, 0.9);
     transform: translateY(-1px);
   }
   
@@ -384,7 +335,6 @@
     background: var(--gradient-button-primary);
     border-color: transparent;
     color: white;
-    box-shadow: 0 4px 12px rgba(255, 182, 193, 0.3);
   }
   
   .handoff-panels {
@@ -393,7 +343,7 @@
   
   .handoff-panel {
     display: none;
-    animation: panelIn 300ms var(--ease-elastic);
+    animation: panelIn 260ms var(--ease-out-gentle);
   }
   
   .handoff-panel.active {
@@ -401,34 +351,37 @@
   }
   
   @keyframes panelIn {
-    from { opacity: 0; transform: translateY(10px) scale(0.98); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
   }
   
   .preset-list {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.65rem;
   }
   
   .preset-item {
-    padding: 1rem;
-    background: rgba(255, 255, 255, 0.7);
+    padding: 0.95rem 1rem;
+    background: var(--kawaii-panel-soft);
     border-radius: var(--radius-md);
-    border: 2px solid rgba(135, 206, 235, 0.15);
-    transition: all 200ms var(--ease-bounce);
+    border: 1px solid var(--kawaii-line);
+    transition:
+      border-color 180ms var(--ease-out-quiet),
+      background-color 180ms var(--ease-out-quiet),
+      transform 180ms var(--ease-out-quiet);
   }
   
   .preset-item:hover {
-    border-color: rgba(135, 206, 235, 0.3);
-    transform: translateX(4px);
+    border-color: rgba(167, 184, 205, 0.96);
+    transform: translateX(2px);
   }
   
   .preset-header {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.45rem;
   }
   
   .preset-emoji {
@@ -439,19 +392,21 @@
     font-weight: 700;
     font-size: 0.95rem;
     color: var(--kawaii-ink);
+    overflow-wrap: anywhere;
   }
   
   .preset-desc {
-    font-size: 0.8rem;
+    font-size: 0.88rem;
     color: var(--kawaii-ink-soft);
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.65rem;
     line-height: 1.5;
+    overflow-wrap: anywhere;
   }
   
   .command-list {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.65rem;
   }
   
   .command-item {
@@ -459,23 +414,28 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.875rem 1rem;
-    background: rgba(30, 30, 40, 0.05);
+    background: var(--kawaii-code-surface);
     border-radius: var(--radius-md);
     font-family: var(--font-mono);
     font-size: 0.8rem;
-    transition: all 200ms var(--ease-bounce);
+    transition:
+      background-color 180ms var(--ease-out-quiet),
+      transform 180ms var(--ease-out-quiet);
+    min-width: 0;
   }
   
   .command-item:hover {
-    background: rgba(30, 30, 40, 0.08);
-    transform: translateX(4px);
+    background: var(--kawaii-code-surface-hover);
+    transform: translateX(2px);
   }
   
   .command-code {
     flex: 1;
-    overflow-x: auto;
-    white-space: nowrap;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
     color: var(--kawaii-ink);
+    line-height: 1.45;
   }
   
   .command-copy {
@@ -485,33 +445,43 @@
     cursor: pointer;
     padding: 0.25rem;
     border-radius: var(--radius-sm);
-    transition: transform 200ms var(--ease-bounce);
+    transition: transform 180ms var(--ease-out-quiet);
   }
   
   .command-copy:hover {
-    transform: scale(1.2);
+    transform: scale(1.06);
   }
   
   /* Status Section */
   .status-section {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
   }
   
   .status-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
+    gap: 0;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--kawaii-line);
+    background: var(--kawaii-panel-soft);
+    box-shadow: var(--shadow-soft);
   }
   
   .status-item {
-    text-align: center;
-    padding: 1.25rem;
+    text-align: left;
+    padding: 1.1rem 1.25rem;
+    position: relative;
+    min-width: 0;
+  }
+
+  .status-item:not(:last-child) {
+    border-right: 1px solid var(--kawaii-line-soft);
   }
   
   .status-icon {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-    animation: float 3s ease-in-out infinite;
+    font-size: 1rem;
+    margin-bottom: 0.65rem;
   }
   
   .status-label {
@@ -525,68 +495,96 @@
   
   .status-value {
     font-family: var(--font-display);
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: var(--kawaii-ink);
-    margin-bottom: 0.25rem;
-  }
-  
-  .status-detail {
-    font-size: 0.8rem;
-    color: var(--kawaii-ink-soft);
-  }
-  
-  /* Console Section */
-  .console-section {
-    margin-bottom: 1.5rem;
-  }
-  
-  .section-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-  }
-  
-  .section-icon {
-    font-size: 1.5rem;
-    animation: float 3s ease-in-out infinite;
-  }
-  
-  .section-title {
-    font-family: var(--font-display);
-    font-size: 1.5rem;
+    font-size: 1.35rem;
     font-weight: 700;
     color: var(--kawaii-ink);
     margin-bottom: 0.25rem;
   }
   
-  .section-subtitle {
-    font-size: 0.9rem;
+  .status-detail {
+    font-size: 0.88rem;
     color: var(--kawaii-ink-soft);
+    overflow-wrap: anywhere;
+  }
+  
+  /* Console Section */
+  .console-section {
+    margin-bottom: 1.25rem;
+  }
+  
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .section-header > div:last-child {
+    min-width: 0;
+  }
+
+  .section-topline {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.9rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .section-action {
+    flex-shrink: 0;
+  }
+  
+  .section-icon {
+    font-size: 1.15rem;
+  }
+  
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--kawaii-ink);
+    margin-bottom: 0.2rem;
+  }
+  
+  .section-subtitle {
+    font-size: 0.96rem;
+    color: var(--kawaii-ink-soft);
+    line-height: 1.55;
+    max-width: 34rem;
+    overflow-wrap: anywhere;
   }
   
   .console-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
+    gap: 0.95rem;
   }
   
   .console-card {
     text-decoration: none;
     color: inherit;
-    padding: 1.25rem;
+    padding: 1.15rem;
     position: relative;
     overflow: hidden;
-    transition: all 300ms var(--ease-bounce);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--kawaii-line);
+    background: var(--kawaii-panel-soft);
+    box-shadow: var(--shadow-soft);
+    transition:
+      transform 200ms var(--ease-out-quiet),
+      box-shadow 200ms var(--ease-out-quiet),
+      border-color 200ms var(--ease-out-quiet);
+    min-width: 0;
   }
   
   .console-card:hover {
-    transform: translateY(-6px) scale(1.02);
+    transform: translateY(-2px);
+    border-color: rgba(203, 164, 182, 0.92);
+    box-shadow: var(--shadow-elevated);
   }
   
   .console-card:hover .console-arrow {
-    transform: translateX(4px);
+    transform: translateX(2px);
   }
   
   .console-card-header {
@@ -604,14 +602,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 2rem;
-    height: 2rem;
-    background: var(--gradient-button-primary);
-    color: white;
-    font-weight: 800;
-    font-size: 0.9rem;
+    min-width: 1.8rem;
+    height: 1.8rem;
+    background: var(--kawaii-accent-soft);
+    color: var(--kawaii-ink);
+    font-weight: 700;
+    font-size: 0.82rem;
     border-radius: var(--radius-full);
-    box-shadow: 0 4px 12px rgba(255, 182, 193, 0.3);
   }
   
   .console-name {
@@ -623,48 +620,61 @@
   }
   
   .console-desc {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     color: var(--kawaii-ink-soft);
+    overflow-wrap: anywhere;
   }
   
   .console-arrow {
     position: absolute;
     bottom: 1rem;
     right: 1rem;
-    font-size: 1.25rem;
+    font-size: 1rem;
     color: var(--kawaii-primary);
-    transition: transform 200ms var(--ease-bounce);
+    transition: transform 180ms var(--ease-out-quiet);
   }
   
   /* Skills Section */
   .skills-section {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
   }
   
   .skills-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
+    gap: 0.95rem;
   }
   
   .skill-card {
-    padding: 1.25rem;
-    transition: all 300ms var(--ease-bounce);
+    padding: 1.15rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--kawaii-line);
+    background: var(--kawaii-panel-soft);
+    box-shadow: none;
+    transition:
+      transform 200ms var(--ease-out-quiet),
+      border-color 200ms var(--ease-out-quiet),
+      background-color 200ms var(--ease-out-quiet);
+    min-width: 0;
   }
   
   .skill-card:hover {
-    transform: translateY(-6px);
+    transform: translateY(-2px);
+    border-color: rgba(203, 164, 182, 0.9);
+    background: var(--kawaii-panel);
   }
   
   .skill-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.65rem;
+    gap: 0.75rem;
+    min-width: 0;
   }
   
   .skill-emoji {
-    font-size: 2rem;
+    font-size: 1.35rem;
   }
   
   .skill-meta {
@@ -682,21 +692,23 @@
   
   .skill-name {
     font-family: var(--font-display);
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 700;
     color: var(--kawaii-ink);
     margin-bottom: 0.25rem;
+    overflow-wrap: anywhere;
   }
   
   .skill-desc {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     color: var(--kawaii-ink-soft);
-    margin-bottom: 1rem;
+    margin-bottom: 0.85rem;
+    overflow-wrap: anywhere;
   }
   
   .skill-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.45rem;
   }
   
   /* Responsive */
@@ -705,24 +717,97 @@
       grid-template-columns: 1fr;
     }
     
+    .section-topline {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
     .status-grid,
     .console-grid,
     .skills-grid {
       grid-template-columns: 1fr;
     }
+
+    .status-grid {
+      gap: 0;
+    }
+
+    .status-item:not(:last-child) {
+      border-right: none;
+      border-bottom: 1px solid var(--kawaii-line-soft);
+    }
   }
   
   @media (max-width: 720px) {
+    .hero-section,
+    .status-section,
+    .console-section,
+    .skills-section {
+      margin-bottom: 1rem;
+    }
+
     .hero-card {
-      padding: 1.5rem;
+      padding: 1.25rem;
+    }
+
+    .hero-grid {
+      gap: 1.25rem;
     }
     
     .hero-title {
       font-size: 1.75rem;
     }
+
+    .hero-desc {
+      font-size: 1rem;
+    }
+
+    .hero-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .hero-actions .kawaii-button {
+      width: 100%;
+    }
+
+    .hero-handoff {
+      padding: 1rem;
+    }
     
     .handoff-tabs {
       flex-direction: column;
+    }
+
+    .preset-item,
+    .command-item,
+    .console-card,
+    .skill-card {
+      padding: 0.95rem;
+    }
+
+    .command-item {
+      align-items: flex-start;
+    }
+
+    .section-action {
+      width: 100%;
+    }
+
+    .section-action .kawaii-button {
+      width: 100%;
+    }
+
+    .skill-meta {
+      align-items: flex-start;
+    }
+
+    .skill-actions {
+      flex-direction: column;
+    }
+
+    .skill-actions .kawaii-button {
+      width: 100%;
     }
   }
 </style>

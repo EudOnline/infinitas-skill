@@ -333,6 +333,22 @@ def scenario_operator_lists_and_cli():
             for shared_needle in ['Maintainer-only console', 'registryctl.py']:
                 if shared_needle not in response.text:
                     fail(f'expected {route} page to contain {shared_needle!r}, got:\n{response.text}')
+            for theme_marker in ['data-theme=\"kawaii\"', 'data-theme-choice=\"light\"', 'data-theme-choice=\"dark\"']:
+                if theme_marker not in response.text:
+                    fail(f'expected {route} page to feature kawaii theme marker {theme_marker!r}')
+            theme_label_candidates = ['aria-label=\"Theme switcher\"', 'aria-label=\"主题切换\"']
+            if not any(label in response.text for label in theme_label_candidates):
+                fail(f'expected {route} page to expose the theme toggle group')
+            language_label_candidates = ['aria-label=\"Language switcher\"', 'aria-label=\"语言切换\"']
+            if not any(label in response.text for label in language_label_candidates):
+                fail(f'expected {route} page to expose the language toggle group')
+            for shell_marker in [
+                'class=\"topbar animate-in\"',
+                'class=\"topbar-controls\"',
+                'class=\"site-shell\"',
+            ]:
+                if shell_marker not in response.text:
+                    fail(f'expected {route} page to include kawaii shell marker {shell_marker!r}, got:\n{response.text}')
         for route, needle in [
             ('/reviews', 'Decision hints'),
             ('/reviews', 'Approve quickly'),
@@ -345,6 +361,13 @@ def scenario_operator_lists_and_cli():
             )
             if needle not in response.text:
                 fail(f'expected {route} page to contain {needle!r}, got:\n{response.text}')
+
+        response = client.get('/v2', follow_redirects=False)
+        if response.status_code not in (307, 308):
+            fail(f'/v2 should redirect to / with 307/308, got {response.status_code}')
+        location = response.headers.get('location')
+        if location != '/':
+            fail(f'/v2 redirect location should be /, got {location!r}')
 
         with HostedAppServer(ROOT, os.environ.copy()) as server:
             payload = run_cli(server.base_url, 'fixture-maintainer-token', 'submissions', 'list')

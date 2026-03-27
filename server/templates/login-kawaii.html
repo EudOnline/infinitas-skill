@@ -1,0 +1,15 @@
+{% extends "layout-kawaii.html" %}
+{% block body %}
+<section class="kawaii-card animate-in">
+  <div class="section-kicker">{{ '令牌认证' if page_language == 'zh' else 'Token auth' }}</div>
+  <h2 class="page-title" style="font-size: clamp(1.35rem, 3vw, 1.85rem); margin-top: 0.45rem;">Login</h2>
+  <p class="page-copy">{{ content }}</p>
+  <div class="console-command" style="margin-top: 0.9rem;">
+    <div>
+      <div class="section-kicker">{{ 'API 请求' if page_language == 'zh' else 'API request' }}</div>
+      <code>Authorization: Bearer &lt;token&gt;</code>
+    </div>
+    <button class="copy-button" type="button" data-copy="Authorization: Bearer &lt;token&gt;">{{ ui.copy_button_label if ui else "Copy" }}</button>
+  </div>
+</section>
+{% endblock %}

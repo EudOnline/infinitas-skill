@@ -1,10 +1,10 @@
-{% extends "layout.html" %}
+{% extends "layout-kawaii.html" %}
 {% block body %}
 {% if insight_cards %}
 <section class="insight-grid" data-reveal style="--reveal-index: 1">
   {% for card in insight_cards %}
   <article class="insight-card">
-    <div class="section-kicker">Maintainer note / 维护说明</div>
+    <div class="section-kicker">{{ '维护说明' if page_language == 'zh' else 'Maintainer note' }}</div>
     <h3>{{ card.title }}</h3>
     <p>{{ card.body }}</p>
     <div class="command-chip">
@@ -15,19 +15,19 @@
 </section>
 {% endif %}
 <section class="console-table-shell" data-reveal style="--reveal-index: 1">
-  <div class="section-kicker">Worker queue</div>
+  <div class="section-kicker">{{ '工作队列' if page_language == 'zh' else 'Worker queue' }}</div>
   <div class="table-scroll">
     {% if items %}
     <table>
       <thead>
         <tr>
           <th>ID</th>
-          <th>Kind</th>
-          <th>Status</th>
-          <th>Submission</th>
-          <th>Requested By</th>
-          <th>Note</th>
-          <th>Updated</th>
+          <th>{{ '类型' if page_language == 'zh' else 'Kind' }}</th>
+          <th>{{ '状态' if page_language == 'zh' else 'Status' }}</th>
+          <th>{{ '提交项' if page_language == 'zh' else 'Submission' }}</th>
+          <th>{{ '请求人' if page_language == 'zh' else 'Requested By' }}</th>
+          <th>{{ '备注' if page_language == 'zh' else 'Note' }}</th>
+          <th>{{ '更新时间' if page_language == 'zh' else 'Updated' }}</th>
         </tr>
       </thead>
       <tbody>
@@ -45,7 +45,7 @@
       </tbody>
     </table>
     {% else %}
-    <p class="empty-copy">No jobs found.</p>
+    <p class="empty-copy">{{ '没有任务记录。' if page_language == 'zh' else 'No jobs found.' }}</p>
     {% endif %}
   </div>
 </section>

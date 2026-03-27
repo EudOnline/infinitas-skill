@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -96,118 +96,239 @@ def _short_stamp(value: str | None) -> str:
         return value
 
 
-def _site_nav(home: bool) -> list[dict[str, str]]:
-    if home:
-        return [
-            {'href': '#start', 'label': '开始'},
-            {'href': '#handoff', 'label': '交接'},
-            {'href': '#console', 'label': '维护台'},
-        ]
+def _pick_lang(lang: str, zh: str, en: str) -> str:
+    return zh if lang == 'zh' else en
+
+
+def _resolve_language(request: Request) -> str:
+    lang = (request.query_params.get('lang') or 'zh').strip().lower()
+    return 'en' if lang.startswith('en') else 'zh'
+
+
+def _localized_stamp(value: str | None, lang: str) -> str:
+    if not value:
+        return _pick_lang(lang, '暂无快照', 'No snapshot')
+    try:
+        return datetime.fromisoformat(value.replace('Z', '+00:00')).strftime('%Y-%m-%d')
+    except ValueError:
+        return value
+
+
+def _build_language_switches(request: Request, lang: str) -> list[dict[str, str | bool]]:
+    options = [('zh', '中'), ('en', 'EN')]
     return [
-        {'href': '/', 'label': '首页'},
-        {'href': '/submissions', 'label': '提交'},
-        {'href': '/reviews', 'label': '评审'},
-        {'href': '/jobs', 'label': '任务'},
+        {
+            'code': code,
+            'label': label,
+            'href': str(request.url.include_query_params(lang=code)),
+            'active': code == lang,
+        }
+        for code, label in options
     ]
 
 
-def _build_home_context(settings, db: Session) -> dict:
+def _build_kawaii_ui_context(request: Request, lang: str, page_kicker: str, page_eyebrow: str) -> dict:
+    return {
+        'page_language': lang,
+        'page_lang_attr': 'zh-CN' if lang == 'zh' else 'en',
+        'language_switches': _build_language_switches(request, lang),
+        'theme_switches': [
+            {'value': 'light', 'label': _pick_lang(lang, '浅色', 'Light')},
+            {'value': 'dark', 'label': _pick_lang(lang, '深色', 'Dark')},
+        ],
+        'ui': {
+            'brand_subtitle': _pick_lang(lang, '私有技能仓库', 'Private skill registry'),
+            'theme_toggle_label': _pick_lang(lang, '主题切换', 'Theme switcher'),
+            'language_toggle_label': _pick_lang(lang, '语言切换', 'Language switcher'),
+            'copy_success': _pick_lang(lang, '已复制', 'Copied'),
+            'copy_error': _pick_lang(lang, '复制失败', 'Copy failed'),
+            'copy_icon_title': _pick_lang(lang, '复制', 'Copy'),
+            'copy_button_label': _pick_lang(lang, '复制', 'Copy'),
+            'status_running': _pick_lang(lang, '运行中', 'Running'),
+            'page_kicker': page_kicker,
+            'page_eyebrow': page_eyebrow,
+            'handoff_title': _pick_lang(lang, '交接台', 'Hand-off desk'),
+            'handoff_human_tab': _pick_lang(lang, '交任务', 'Delegate'),
+            'handoff_agent_tab': _pick_lang(lang, '执行命令', 'Run command'),
+            'copy_prompt_action': _pick_lang(lang, '复制这条提示', 'Copy this prompt'),
+            'cli_mirror_label': _pick_lang(lang, '命令镜像', 'CLI mirror'),
+            'console_section_title': _pick_lang(lang, '有事再进维护台', 'Open console when needed'),
+            'skills_section_title': _pick_lang(lang, '常用技能', 'Popular skills'),
+            'skills_section_subtitle': _pick_lang(
+                lang,
+                '从目录里挑 3 个入口，先检查再交给 Agent。',
+                'Pick 3 likely entries, inspect first, then hand them off.',
+            ),
+            'featured_skill_fallback': _pick_lang(lang, '精选', 'Featured'),
+            'copy_inspect_action': _pick_lang(lang, '复制检查命令', 'Copy inspect command'),
+            'go_handoff_action': _pick_lang(lang, '去交接台', 'Go to hand-off'),
+        },
+    }
+
+
+def _site_nav(home: bool, lang: str) -> list[dict[str, str]]:
+    if home:
+        return [
+            {'href': '#start', 'label': _pick_lang(lang, '开始', 'Home base')},
+            {'href': '#handoff', 'label': _pick_lang(lang, '交接', 'Handoff')},
+            {'href': '#console', 'label': _pick_lang(lang, '维护台', 'Console')},
+        ]
+    return [
+        {'href': '/', 'label': _pick_lang(lang, '首页', 'Home')},
+        {'href': '/submissions', 'label': _pick_lang(lang, '提交', 'Submissions')},
+        {'href': '/reviews', 'label': _pick_lang(lang, '评审', 'Reviews')},
+        {'href': '/jobs', 'label': _pick_lang(lang, '任务', 'Jobs')},
+    ]
+
+
+def _build_home_context(settings, db: Session, request: Request) -> dict:
+    lang = _resolve_language(request)
     discovery_payload = _catalog_payload(settings, 'discovery-index.json')
+    featured_skills = []
+    for skill in (discovery_payload.get('skills') or [])[:3]:
+        publisher = skill.get('publisher') or ''
+        name = skill.get('name') or ''
+        qualified_name = f'{publisher}/{name}' if publisher and name else name
+        summary = skill.get('summary') or _pick_lang(lang, '查看信任状态、版本和安装建议。', 'Review trust, version, and install guidance.')
+        if len(summary) > 96:
+            summary = summary[:93].rstrip() + '...'
+        featured_skills.append(
+            {
+                'name': name or qualified_name or _pick_lang(lang, '未命名 skill', 'Unnamed skill'),
+                'qualified_name': qualified_name,
+                'publisher': publisher,
+                'version': skill.get('version') or 'active',
+                'summary': summary,
+                'icon': _get_skill_icon(skill),
+                'rating': _calculate_skill_rating(skill),
+                'inspect_command': f'scripts/inspect-skill.sh {qualified_name}' if qualified_name else '',
+            }
+        )
     pending_reviews = int(db.scalar(select(func.count()).select_from(Review).where(Review.status == 'pending')) or 0)
     queued_jobs = int(db.scalar(select(func.count()).select_from(Job).where(Job.status == 'queued')) or 0)
     running_jobs = int(db.scalar(select(func.count()).select_from(Job).where(Job.status == 'running')) or 0)
-    access_mode = '私有' if settings.registry_read_tokens else '开放'
+    access_mode = _pick_lang(lang, '私有', 'Private') if settings.registry_read_tokens else _pick_lang(lang, '开放', 'Open')
     operating_states = [
         {
-            'label': '模式',
+            'icon': '🔒',
+            'label': _pick_lang(lang, '模式', 'Mode'),
             'value': access_mode,
-            'detail': '需 token 读取' if settings.registry_read_tokens else '允许匿名读取',
+            'detail': (
+                _pick_lang(lang, '需 token 读取', 'Token required')
+                if settings.registry_read_tokens
+                else _pick_lang(lang, '允许匿名读取', 'Anonymous read enabled')
+            ),
         },
         {
-            'label': '同步',
-            'value': _short_stamp(discovery_payload.get('generated_at')),
-            'detail': 'catalog 快照',
+            'icon': '📅',
+            'label': _pick_lang(lang, '同步', 'Sync'),
+            'value': _localized_stamp(discovery_payload.get('generated_at'), lang),
+            'detail': _pick_lang(lang, 'catalog 快照', 'Catalog snapshot'),
         },
         {
-            'label': '队列',
-            'value': f'{pending_reviews} 待评审 / {queued_jobs} 排队',
-            'detail': f'{running_jobs} 运行中',
+            'icon': '⚡',
+            'label': _pick_lang(lang, '队列', 'Queue'),
+            'value': (
+                f'{pending_reviews} 待评审 / {queued_jobs} 排队'
+                if lang == 'zh'
+                else f'{pending_reviews} pending / {queued_jobs} queued'
+            ),
+            'detail': f'{running_jobs} 运行中' if lang == 'zh' else f'{running_jobs} running',
         },
     ]
     command_examples = [
         {
-            'label': '执行命令',
-            'title': '搜索候选',
-            'short_label': '搜索',
+            'label': _pick_lang(lang, '执行命令', 'Run command'),
+            'title': _pick_lang(lang, '搜索候选', 'Search options'),
+            'short_label': _pick_lang(lang, '搜索', 'Search'),
             'command': 'scripts/recommend-skill.sh "Need a codex skill for repository operations"',
         },
         {
-            'label': '执行命令',
-            'title': '检查细节',
-            'short_label': '检查',
+            'label': _pick_lang(lang, '执行命令', 'Run command'),
+            'title': _pick_lang(lang, '检查细节', 'Inspect details'),
+            'short_label': _pick_lang(lang, '检查', 'Inspect'),
             'command': 'scripts/inspect-skill.sh lvxiaoer/operate-infinitas-skill',
         },
     ]
     human_prompts = [
         {
-            'label': '交任务',
-            'title': '找 skill，再给步骤',
-            'short_label': '找 skill',
+            'label': _pick_lang(lang, '交任务', 'Delegate'),
+            'title': _pick_lang(lang, '找 skill，再给步骤', 'Find a skill, then outline steps'),
+            'short_label': _pick_lang(lang, '找 skill', 'Find skill'),
             'prompt': (
                 '帮我在私有技能仓库里找适合做 registry 运维的 skill，先说明风险，再给安装步骤。'
+                if lang == 'zh'
+                else 'Help me find a skill for registry operations in the private catalog, explain the risks first, then give me the install steps.'
             ),
         },
         {
-            'label': '交任务',
-            'title': '先检查，再安装',
-            'short_label': '先检查',
+            'label': _pick_lang(lang, '交任务', 'Delegate'),
+            'title': _pick_lang(lang, '先检查，再安装', 'Inspect first, then install'),
+            'short_label': _pick_lang(lang, '先检查', 'Inspect first'),
             'prompt': (
                 '我需要做 immutable install。先检查来源和版本，再告诉我应该安装哪一个。'
+                if lang == 'zh'
+                else 'I need to do an immutable install. Inspect the source and version first, then tell me which one I should install.'
             ),
         },
     ]
-    human_input_fields = ['目标', '安装位置', '风险偏好']
+    human_input_fields = (
+        ['目标', '安装位置', '风险偏好']
+        if lang == 'zh'
+        else ['Goal', 'Install path', 'Risk level']
+    )
     console_links = [
         {
             'href': '/submissions',
-            'title': '提交',
+            'icon': '📦',
+            'title': _pick_lang(lang, '提交', 'Submissions'),
             'value': str(db.scalar(select(func.count()).select_from(Submission)) or 0),
-            'detail': '新提案',
+            'detail': _pick_lang(lang, '新提案', 'New proposals'),
         },
         {
             'href': '/reviews',
-            'title': '评审',
+            'icon': '✨',
+            'title': _pick_lang(lang, '评审', 'Reviews'),
             'value': str(db.scalar(select(func.count()).select_from(Review)) or 0),
-            'detail': '审批备注',
+            'detail': _pick_lang(lang, '审批备注', 'Decision notes'),
         },
         {
             'href': '/jobs',
-            'title': '任务',
+            'icon': '⚙️',
+            'title': _pick_lang(lang, '任务', 'Jobs'),
             'value': str(db.scalar(select(func.count()).select_from(Job)) or 0),
-            'detail': '队列状态',
+            'detail': _pick_lang(lang, '队列状态', 'Queue state'),
         },
     ]
-    return {
+    page_eyebrow = _pick_lang(lang, 'Private agent workspace / 私人技能工作台', 'Private agent workspace / personal skill desk')
+    context = {
         'title': 'infinitas hosted registry',
-        'page_eyebrow': 'Private agent workspace / 私人技能工作台',
+        'page_eyebrow': page_eyebrow,
         'page_kicker': access_mode,
         'page_mode': 'home',
-        'nav_links': _site_nav(home=True),
-        'hero_title': '交给 Agent',
+        'nav_links': _site_nav(home=True, lang=lang),
+        'hero_title': _pick_lang(lang, '交给 Agent', 'Hand it to Agent'),
         'hero_emphasis': '',
-        'hero_body': '搜索、检查和执行都交给它。',
-        'hero_support': '你只要说明目标、位置和风险。',
-        'hero_primary_link': {'href': '#handoff', 'label': '复制提示'},
-        'hero_secondary_link': {'href': '#console', 'label': '维护台'},
+        'hero_body': _pick_lang(lang, '搜索、检查和执行都交给它。', 'Let it search, inspect, and execute.'),
+        'hero_support': _pick_lang(lang, '你只要说明目标、位置和风险。', 'You only need to name the goal, location, and risk level.'),
+        'hero_primary_link': {'href': '#handoff', 'label': _pick_lang(lang, '复制任务提示', 'Copy task prompt')},
+        'hero_secondary_link': {'href': '#console', 'label': _pick_lang(lang, '查看维护台', 'Open console')},
         'hero_primary_copy': human_prompts[0]['prompt'] if human_prompts else '',
         'operating_states': operating_states,
         'human_input_fields': human_input_fields,
         'human_prompts': human_prompts,
         'command_examples': command_examples,
         'console_links': console_links,
-        'maintainer_primary_link': {'href': '/submissions', 'label': '进入维护台'},
-        'maintainer_body': '首页只负责交接；审批、队列和放行都在维护台。',
+        'featured_skills': featured_skills,
+        'maintainer_primary_link': {'href': '/submissions', 'label': _pick_lang(lang, '打开维护台', 'Open console')},
+        'maintainer_body': _pick_lang(
+            lang,
+            '首页只负责交接；审批、队列和放行都在维护台。',
+            'The home page is only for hand-off; approvals, queues, and release all happen in the console.',
+        ),
     }
+    context.update(_build_kawaii_ui_context(request, lang, access_mode, page_eyebrow))
+    return context
 
 
 def _build_console_context(
@@ -221,19 +342,25 @@ def _build_console_context(
     stats: list[dict[str, str]],
     insight_cards: list[dict[str, str]] | None = None,
 ) -> dict:
-    return {
+    lang = _resolve_language(request)
+    page_eyebrow = _pick_lang(lang, 'Maintainer-only console / 维护控制台', 'Maintainer-only console')
+    page_kicker = _pick_lang(lang, '维护模式', 'Maintainer mode')
+    context = {
         'request': request,
         'title': title,
         'content': content,
-        'page_eyebrow': 'Maintainer-only console / 维护控制台',
+        'page_eyebrow': page_eyebrow,
+        'page_kicker': page_kicker,
         'page_mode': 'console',
-        'nav_links': _site_nav(home=False),
+        'nav_links': _site_nav(home=False, lang=lang),
         'items': items,
         'limit': limit,
         'cli_command': cli_command,
         'page_stats': stats,
         'insight_cards': insight_cards or [],
     }
+    context.update(_build_kawaii_ui_context(request, lang, page_kicker, page_eyebrow))
+    return context
 
 
 def create_app() -> FastAPI:
@@ -291,48 +418,12 @@ def create_app() -> FastAPI:
             'submission_count': db.scalar(select(func.count()).select_from(Submission)) or 0,
             'job_count': db.scalar(select(func.count()).select_from(Job)) or 0,
         }
-        context.update(_build_home_context(settings, db))
-        return templates.TemplateResponse('index.html', context)
+        context.update(_build_home_context(settings, db, request))
+        return templates.TemplateResponse('index-kawaii.html', context)
     
-    @app.get('/v2', response_class=HTMLResponse)
-    def index_v2(request: Request, db: Session = Depends(get_db)):
-        """New v2 dashboard with modern UI"""
-        # Load skills from catalog
-        discovery_payload = _catalog_payload(settings, 'discovery-index.json')
-        skills = discovery_payload.get('skills', [])
-        
-        # Format skills for template
-        all_skills = []
-        for skill in skills:
-            all_skills.append({
-                'id': skill.get('name', ''),
-                'name': skill.get('name', ''),
-                'version': skill.get('version', ''),
-                'summary': skill.get('summary', '')[:80] + '...' if len(skill.get('summary', '')) > 80 else skill.get('summary', ''),
-                'icon': _get_skill_icon(skill),
-                'tags': skill.get('tags', [])[:3],
-                'rating': _calculate_skill_rating(skill)
-            })
-        
-        # Get counts
-        pending_reviews = db.scalar(select(func.count()).select_from(Review).where(Review.status == 'pending')) or 0
-        queued_jobs = db.scalar(select(func.count()).select_from(Job).where(Job.status == 'queued')) or 0
-        running_jobs = db.scalar(select(func.count()).select_from(Job).where(Job.status == 'running')) or 0
-        
-        context = {
-            'request': request,
-            'all_skills': all_skills,
-            'recent_skills': all_skills[:4],  # Show first 4 as recent
-            'skill_count': len(all_skills),
-            'pending_reviews': pending_reviews,
-            'running_jobs': running_jobs,
-            'submission_count': db.scalar(select(func.count()).select_from(Submission)) or 0,
-            'review_count': db.scalar(select(func.count()).select_from(Review)) or 0,
-            'job_count': db.scalar(select(func.count()).select_from(Job)) or 0,
-            'access_mode': '私有' if settings.registry_read_tokens else '开放',
-            'skills_json': json.dumps(all_skills)  # For client-side search
-        }
-        return templates.TemplateResponse('index_v2.html', context)
+    @app.get('/v2')
+    def index_v2_redirect():
+        return RedirectResponse(url='/', status_code=307)
 
     @app.get('/submissions', response_class=HTMLResponse)
     def submissions_page(
@@ -341,6 +432,7 @@ def create_app() -> FastAPI:
         _: User = Depends(require_role('maintainer')),
         db: Session = Depends(get_db),
     ):
+        lang = _resolve_language(request)
         rows = (
             db.query(Submission)
             .order_by(Submission.updated_at.desc(), Submission.id.desc())
@@ -352,20 +444,36 @@ def create_app() -> FastAPI:
         approved = sum(1 for item in items if item.get('status') == 'approved')
         context = _build_console_context(
             request=request,
-            title='Submissions 提交队列',
-            content='查看新提案、当前评审状态，以及哪些 skill 已经接近进入后续校验和发布流程。',
+            title=_pick_lang(lang, 'Submissions 提交队列', 'Submissions queue'),
+            content=_pick_lang(
+                lang,
+                '查看新提案、当前评审状态，以及哪些 skill 已经接近进入后续校验和发布流程。',
+                'Review new proposals, current review state, and which skills are close to validation and release.',
+            ),
             limit=limit,
             items=items,
             cli_command='python scripts/registryctl.py --base-url https://skills.example.com --token <maintainer-token> submissions list',
             stats=[
-                {'value': str(len(items)), 'label': '当前可见', 'detail': f'limit {limit}'},
-                {'value': str(review_requested), 'label': '等待评审', 'detail': '需要 maintainer 介入'},
-                {'value': str(approved), 'label': '已批准', 'detail': '可以进入后续动作'},
+                {'value': str(len(items)), 'label': _pick_lang(lang, '当前可见', 'Visible now'), 'detail': f'limit {limit}'},
+                {
+                    'value': str(review_requested),
+                    'label': _pick_lang(lang, '等待评审', 'Waiting review'),
+                    'detail': _pick_lang(lang, '需要 maintainer 介入', 'Maintainer decision needed'),
+                },
+                {
+                    'value': str(approved),
+                    'label': _pick_lang(lang, '已批准', 'Approved'),
+                    'detail': _pick_lang(lang, '可以进入后续动作', 'Ready for next actions'),
+                },
             ],
             insight_cards=[
                 {
-                    'title': 'Submission cues / 提交判断',
-                    'body': '先看 status 和 review 字段，再决定是继续 request-review、排队 validation，还是直接返回提案人补信息。',
+                    'title': _pick_lang(lang, 'Submission cues / 提交判断', 'Submission cues'),
+                    'body': _pick_lang(
+                        lang,
+                        '先看 status 和 review 字段，再决定是继续 request-review、排队 validation，还是直接返回提案人补信息。',
+                        'Start with status and review fields, then decide to request review, queue validation, or send back for missing context.',
+                    ),
                     'command': 'python scripts/registryctl.py --base-url https://skills.example.com --token <maintainer-token> submissions list',
                 }
             ],
@@ -379,6 +487,7 @@ def create_app() -> FastAPI:
         _: User = Depends(require_role('maintainer')),
         db: Session = Depends(get_db),
     ):
+        lang = _resolve_language(request)
         rows = (
             db.query(Review)
             .order_by(Review.updated_at.desc(), Review.id.desc())
@@ -390,25 +499,45 @@ def create_app() -> FastAPI:
         pending = sum(1 for item in items if item.get('status') == 'pending')
         context = _build_console_context(
             request=request,
-            title='Reviews 评审台',
-            content='集中看评审决策、review note 和 pending 项，让人类能快速判断该批准、拒绝，还是先补证据。',
+            title=_pick_lang(lang, 'Reviews 评审台', 'Reviews desk'),
+            content=_pick_lang(
+                lang,
+                '集中看评审决策、review note 和 pending 项，让人类能快速判断该批准、拒绝，还是先补证据。',
+                'Review decisions, review notes, and pending items in one place so maintainers can approve, reject, or request more evidence quickly.',
+            ),
             limit=limit,
             items=items,
             cli_command='python scripts/registryctl.py --base-url https://skills.example.com --token <maintainer-token> reviews list',
             stats=[
-                {'value': str(len(items)), 'label': '当前可见', 'detail': f'limit {limit}'},
-                {'value': str(pending), 'label': '待决策', 'detail': 'waiting for a maintainer decision'},
-                {'value': str(approved), 'label': '已批准', 'detail': 'already cleared'},
+                {'value': str(len(items)), 'label': _pick_lang(lang, '当前可见', 'Visible now'), 'detail': f'limit {limit}'},
+                {
+                    'value': str(pending),
+                    'label': _pick_lang(lang, '待决策', 'Pending decision'),
+                    'detail': _pick_lang(lang, '等待 maintainer 决策', 'Waiting for a maintainer decision'),
+                },
+                {
+                    'value': str(approved),
+                    'label': _pick_lang(lang, '已批准', 'Approved'),
+                    'detail': _pick_lang(lang, '已通过当前 gate', 'Already cleared'),
+                },
             ],
             insight_cards=[
                 {
-                    'title': 'Decision hints / 决策提示',
-                    'body': 'Pending 说明还没有 maintainer 最终决策；approved 说明该条目已经通过当前 review gate，可以看是否进入 queue-validation 或 publish。',
+                    'title': _pick_lang(lang, 'Decision hints / 决策提示', 'Decision hints'),
+                    'body': _pick_lang(
+                        lang,
+                        'Pending 说明还没有 maintainer 最终决策；approved 说明该条目已经通过当前 review gate，可以看是否进入 queue-validation 或 publish。',
+                        'Pending means no final maintainer decision yet; approved means the item passed the current review gate and can move toward queue-validation or publish.',
+                    ),
                     'command': 'python scripts/registryctl.py --base-url https://skills.example.com --token <maintainer-token> reviews list',
                 },
                 {
-                    'title': 'Approve quickly / 快速放行',
-                    'body': '如果 note 足够明确、submission 状态一致，而且 reviewer 身份可信，就可以快速批准；否则先回到 submissions 看上下文。',
+                    'title': _pick_lang(lang, 'Approve quickly / 快速放行', 'Approve quickly'),
+                    'body': _pick_lang(
+                        lang,
+                        '如果 note 足够明确、submission 状态一致，而且 reviewer 身份可信，就可以快速批准；否则先回到 submissions 看上下文。',
+                        'When the note is clear, the submission state is consistent, and reviewer identity is trusted, approve quickly; otherwise return to submissions for context.',
+                    ),
                     'command': 'python scripts/registryctl.py --base-url https://skills.example.com --token <maintainer-token> reviews approve <review-id> --note "Looks good"',
                 },
             ],
@@ -422,6 +551,7 @@ def create_app() -> FastAPI:
         _: User = Depends(require_role('maintainer')),
         db: Session = Depends(get_db),
     ):
+        lang = _resolve_language(request)
         rows = (
             db.query(Job)
             .order_by(Job.updated_at.desc(), Job.id.desc())
@@ -434,25 +564,45 @@ def create_app() -> FastAPI:
         running = sum(1 for item in items if item.get('status') == 'running')
         context = _build_console_context(
             request=request,
-            title='Jobs 任务台',
-            content='观察 worker 队列节奏：哪些 job 还在排队，哪些刚完成，哪些可能需要人类重新检查 submission 或 review 前置条件。',
+            title=_pick_lang(lang, 'Jobs 任务台', 'Jobs desk'),
+            content=_pick_lang(
+                lang,
+                '观察 worker 队列节奏：哪些 job 还在排队，哪些刚完成，哪些可能需要人类重新检查 submission 或 review 前置条件。',
+                'Track worker queue rhythm: which jobs are queued, which just finished, and which may require a maintainer to re-check submission or review prerequisites.',
+            ),
             limit=limit,
             items=items,
             cli_command='python scripts/registryctl.py --base-url https://skills.example.com --token <maintainer-token> jobs list',
             stats=[
-                {'value': str(len(items)), 'label': '当前可见', 'detail': f'limit {limit}'},
-                {'value': str(queued), 'label': '排队中', 'detail': 'waiting for the worker loop'},
-                {'value': str(completed), 'label': '已完成', 'detail': 'finished recently'},
+                {'value': str(len(items)), 'label': _pick_lang(lang, '当前可见', 'Visible now'), 'detail': f'limit {limit}'},
+                {
+                    'value': str(queued),
+                    'label': _pick_lang(lang, '排队中', 'Queued'),
+                    'detail': _pick_lang(lang, '等待 worker 轮询', 'Waiting for the worker loop'),
+                },
+                {
+                    'value': str(completed),
+                    'label': _pick_lang(lang, '已完成', 'Completed'),
+                    'detail': _pick_lang(lang, '最近完成', 'Finished recently'),
+                },
             ],
             insight_cards=[
                 {
-                    'title': 'Queue health / 队列健康',
-                    'body': '看 queued / running / completed 的比例。queued 很多通常意味着 worker 还没跟上，或者前置 review / validation 节点正在堆积。',
+                    'title': _pick_lang(lang, 'Queue health / 队列健康', 'Queue health'),
+                    'body': _pick_lang(
+                        lang,
+                        '看 queued / running / completed 的比例。queued 很多通常意味着 worker 还没跟上，或者前置 review / validation 节点正在堆积。',
+                        'Watch the ratio of queued, running, and completed. A high queued count usually means workers are lagging or upstream review/validation is backing up.',
+                    ),
                     'command': f'queued={queued} running={running} completed={completed}',
                 },
                 {
-                    'title': 'Worker rhythm / Worker 节奏',
-                    'body': 'Validation、promote、publish 这些 job 应该和 submission 状态变化相互对应。如果 job note 和当前 submission 状态对不上，就该回头查队列原因。',
+                    'title': _pick_lang(lang, 'Worker rhythm / Worker 节奏', 'Worker rhythm'),
+                    'body': _pick_lang(
+                        lang,
+                        'Validation、promote、publish 这些 job 应该和 submission 状态变化相互对应。如果 job note 和当前 submission 状态对不上，就该回头查队列原因。',
+                        'Validation, promote, and publish jobs should align with submission state changes. If job notes do not match current submission state, inspect queue causes first.',
+                    ),
                     'command': 'python scripts/registryctl.py --base-url https://skills.example.com --token <maintainer-token> jobs list',
                 },
             ],
@@ -461,15 +611,43 @@ def create_app() -> FastAPI:
 
     @app.get('/login', response_class=HTMLResponse)
     def login(request: Request):
+        lang = _resolve_language(request)
+        page_eyebrow = _pick_lang(lang, 'Maintainer-only console / 维护控制台', 'Maintainer-only console')
+        page_kicker = _pick_lang(lang, '认证入口', 'Auth entry')
+        content = _pick_lang(
+            lang,
+            '使用由托管控制台签发的 Bearer Token 调用 API 路由。',
+            'Use a bearer token created by the hosted control plane to access API routes.',
+        )
         return templates.TemplateResponse(
-            'layout.html',
+            'login-kawaii.html',
             {
                 'request': request,
                 'title': 'Login',
-                'content': 'Use a bearer token created by the hosted registry control plane to access API routes.',
-                'page_eyebrow': 'Maintainer-only console',
+                'content': content,
+                'page_eyebrow': page_eyebrow,
+                'page_kicker': page_kicker,
                 'page_mode': 'console',
-                'nav_links': _site_nav(home=False),
+                'nav_links': _site_nav(home=False, lang=lang),
+                'cli_command': 'curl -H "Authorization: Bearer <token>" https://skills.example.com/api/v1/me',
+                'page_stats': [
+                    {
+                        'value': _pick_lang(lang, 'Bearer Token', 'Bearer Token'),
+                        'label': _pick_lang(lang, '认证方式', 'Auth scheme'),
+                        'detail': _pick_lang(lang, '由控制台签发', 'Issued by control plane'),
+                    },
+                    {
+                        'value': '/api/v1/me',
+                        'label': _pick_lang(lang, '首个检查点', 'First probe'),
+                        'detail': _pick_lang(lang, '验证 token 是否生效', 'Validate token works'),
+                    },
+                    {
+                        'value': '/submissions',
+                        'label': _pick_lang(lang, '维护入口', 'Maintainer entry'),
+                        'detail': _pick_lang(lang, '仅 maintainer 可访问', 'Maintainer role required'),
+                    },
+                ],
+                **_build_kawaii_ui_context(request, lang, page_kicker, page_eyebrow),
             },
         )
 
