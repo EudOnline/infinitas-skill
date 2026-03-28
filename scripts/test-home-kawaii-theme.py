@@ -298,6 +298,84 @@ def scenario_home_english_copy_stays_english_and_preserves_lang_routes():
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
+def scenario_home_chinese_copy_stays_chinese_in_primary_chrome():
+    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-home-kawaii-zh-i18n-'))
+    try:
+        configure_env(tmpdir)
+        sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
+
+        from fastapi.testclient import TestClient
+        from server.app import create_app
+
+        client = TestClient(create_app())
+        response = client.get('/')
+        if response.status_code != 200:
+            fail(f'expected GET / to return 200, got {response.status_code}: {response.text}')
+
+        html = response.text
+        required_strings = [
+            '私人技能工作台',
+            '复制任务提示',
+            '打开维护台',
+        ]
+        missing_strings = [marker for marker in required_strings if marker not in html]
+        if missing_strings:
+            fail(f'chinese home page is missing localized primary chrome copy: {", ".join(missing_strings)}')
+
+        unexpected_strings = [
+            'Private agent workspace / 私人技能工作台',
+            'Private agent workspace / personal skill desk',
+        ]
+        present_unexpected = [marker for marker in unexpected_strings if marker in html]
+        if present_unexpected:
+            fail(
+                'chinese home page should avoid mixed-language primary chrome copy, found: '
+                + ', '.join(present_unexpected)
+            )
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def scenario_home_chinese_auth_copy_uses_access_token_terms():
+    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-home-kawaii-zh-auth-copy-'))
+    try:
+        configure_env(tmpdir)
+        sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
+
+        from fastapi.testclient import TestClient
+        from server.app import create_app
+
+        client = TestClient(create_app())
+        response = client.get('/')
+        if response.status_code != 200:
+            fail(f'expected GET / to return 200, got {response.status_code}: {response.text}')
+
+        html = response.text
+        required_strings = [
+            '输入访问令牌',
+            '访问令牌有效期 30 天',
+            '访问令牌无效',
+        ]
+        missing_strings = [marker for marker in required_strings if marker not in html]
+        if missing_strings:
+            fail(f'chinese home auth UI is missing access-token wording: {", ".join(missing_strings)}')
+
+        unexpected_strings = [
+            '输入 Token',
+            'Token 有效期 30 天',
+            'Token 无效',
+            '请输入 Token',
+        ]
+        present_unexpected = [marker for marker in unexpected_strings if marker in html]
+        if present_unexpected:
+            fail(
+                'chinese home auth UI should avoid mixed Token wording, found: '
+                + ', '.join(present_unexpected)
+            )
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 def scenario_home_auth_gate_opens_before_console_navigation():
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-home-kawaii-auth-gate-'))
     try:
@@ -524,6 +602,8 @@ def main():
     scenario_home_polish_tightens_rhythm_and_clarifies_ctas()
     scenario_home_supports_manual_theme_and_language_switches()
     scenario_home_english_copy_stays_english_and_preserves_lang_routes()
+    scenario_home_chinese_copy_stays_chinese_in_primary_chrome()
+    scenario_home_chinese_auth_copy_uses_access_token_terms()
     scenario_home_auth_gate_opens_before_console_navigation()
     scenario_home_user_entry_stays_in_flow_without_fixed_overlap()
     scenario_home_dark_mode_uses_dark_aware_surface_tokens()

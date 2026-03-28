@@ -271,18 +271,18 @@ def _build_kawaii_ui_context(request: Request, lang: str, page_kicker: str, page
             'auth_modal_title': _pick_lang(lang, '身份认证', 'Identity check'),
             'auth_modal_desc': _pick_lang(lang, '请输入访问令牌以解锁个性化设置', 'Enter your access token to unlock personalized settings'),
             'auth_modal_placeholder': _pick_lang(lang, '输入你的访问令牌', 'Enter your access token'),
-            'auth_modal_hint': _pick_lang(lang, 'Token 有效期 30 天', 'Token stays valid for 30 days'),
-            'auth_invalid': _pick_lang(lang, 'Token 无效', 'Invalid token'),
+            'auth_modal_hint': _pick_lang(lang, '访问令牌有效期 30 天', 'Token stays valid for 30 days'),
+            'auth_invalid': _pick_lang(lang, '访问令牌无效', 'Invalid token'),
             'auth_cancel': _pick_lang(lang, '取消', 'Cancel'),
             'auth_close': _pick_lang(lang, '关闭', 'Close'),
             'auth_verify': _pick_lang(lang, '验证', 'Verify'),
             'auth_verify_loading': _pick_lang(lang, '验证中...', 'Verifying...'),
             'auth_login': _pick_lang(lang, '登录', 'Login'),
-            'auth_enter_token': _pick_lang(lang, '请输入 Token', 'Please enter token'),
-            'auth_token_min': _pick_lang(lang, 'Token 长度不能少于 8 位', 'Token must be at least 8 characters'),
-            'auth_token_max': _pick_lang(lang, 'Token 长度不能超过 128 位', 'Token must not exceed 128 characters'),
-            'auth_invalid_characters': _pick_lang(lang, 'Token 包含非法字符', 'Token contains invalid characters'),
-            'auth_verify_failed': _pick_lang(lang, '验证失败，请检查 Token 是否正确', 'Verification failed, please check your token'),
+            'auth_enter_token': _pick_lang(lang, '请输入访问令牌', 'Please enter token'),
+            'auth_token_min': _pick_lang(lang, '访问令牌长度不能少于 8 位', 'Token must be at least 8 characters'),
+            'auth_token_max': _pick_lang(lang, '访问令牌长度不能超过 128 位', 'Token must not exceed 128 characters'),
+            'auth_invalid_characters': _pick_lang(lang, '访问令牌包含非法字符', 'Token contains invalid characters'),
+            'auth_verify_failed': _pick_lang(lang, '验证失败，请检查访问令牌是否正确', 'Verification failed, please check your token'),
             'auth_network_error': _pick_lang(lang, '网络错误，请检查网络连接后重试', 'Network error, please check your connection and try again'),
             'auth_bad_server_data': _pick_lang(lang, '服务器返回无效数据', 'The server returned invalid data'),
             'auth_session_active': _pick_lang(lang, '会话已连接', 'Session active'),
@@ -292,7 +292,7 @@ def _build_kawaii_ui_context(request: Request, lang: str, page_kicker: str, page
             'toggle_password_visibility': _pick_lang(lang, '切换密码可见性', 'Toggle password visibility'),
             'user_panel_auth_title': _pick_lang(lang, '认证', 'Authentication'),
             'user_panel_auth_desc': _pick_lang(lang, '登录后可保存背景设置到云端', 'Sign in to sync background preferences'),
-            'user_panel_auth_action': _pick_lang(lang, '输入 Token', 'Enter token'),
+            'user_panel_auth_action': _pick_lang(lang, '输入访问令牌', 'Enter token'),
             'user_panel_background_label': _pick_lang(lang, '背景', 'Background'),
             'user_panel_theme_light': _pick_lang(lang, '浅色', 'Light'),
             'user_panel_theme_dark': _pick_lang(lang, '深色', 'Dark'),
@@ -305,7 +305,7 @@ def _build_kawaii_ui_context(request: Request, lang: str, page_kicker: str, page
                 '登录后可继续在维护台搜索、检查和处理任务。',
                 'Sign in to keep searching, inspecting, and operating from the console.',
             ),
-            'console_session_open_auth': _pick_lang(lang, '输入 Token', 'Enter token'),
+            'console_session_open_auth': _pick_lang(lang, '输入访问令牌', 'Enter token'),
             'console_session_label': _pick_lang(lang, '当前会话', 'Current session'),
             'console_session_role': _pick_lang(lang, '角色：{role}', 'Role: {role}'),
             'console_session_ready': _pick_lang(lang, '会话可用', 'Session ready'),
@@ -457,7 +457,7 @@ def _build_home_context(settings, db: Session, request: Request) -> dict:
             'detail': _pick_lang(lang, '队列状态', 'Queue state'),
         },
     ]
-    page_eyebrow = _pick_lang(lang, 'Private agent workspace / 私人技能工作台', 'Private agent workspace / personal skill desk')
+    page_eyebrow = _pick_lang(lang, '私人技能工作台', 'Private agent workspace')
     context = {
         'title': 'infinitas hosted registry',
         'page_eyebrow': page_eyebrow,
@@ -501,7 +501,7 @@ def _build_console_context(
     show_console_session: bool = True,
 ) -> dict:
     lang = _resolve_language(request)
-    page_eyebrow = _pick_lang(lang, 'Maintainer-only console / 维护控制台', 'Maintainer-only console')
+    page_eyebrow = _pick_lang(lang, '维护控制台', 'Maintainer-only console')
     page_kicker = _pick_lang(lang, '维护模式', 'Maintainer mode')
     context = {
         'request': request,
@@ -545,6 +545,8 @@ def _build_console_forbidden_context(request: Request, user: User, *allowed_role
     )
     context.update(
         {
+            'page_kicker': _pick_lang(lang, '访问受限', 'Access limited'),
+            'page_eyebrow': _pick_lang(lang, '受限控制台', 'Protected console'),
             'denied_title': _pick_lang(lang, '维护台访问受限', 'Console access denied'),
             'denied_body': _pick_lang(
                 lang,
@@ -555,6 +557,9 @@ def _build_console_forbidden_context(request: Request, user: User, *allowed_role
             'denied_home_label': _pick_lang(lang, '返回首页', 'Back home'),
         }
     )
+    if isinstance(context.get('ui'), dict):
+        context['ui']['page_kicker'] = context['page_kicker']
+        context['ui']['page_eyebrow'] = context['page_eyebrow']
     return context
 
 
@@ -663,7 +668,7 @@ def create_app() -> FastAPI:
         approved = sum(1 for item in items if item.get('status') == 'approved')
         context = _build_console_context(
             request=request,
-            title=_pick_lang(lang, 'Submissions 提交队列', 'Submissions queue'),
+            title=_pick_lang(lang, '提交队列', 'Submissions queue'),
             content=_pick_lang(
                 lang,
                 '查看新提案、当前评审状态，以及哪些 skill 已经接近进入后续校验和发布流程。',
@@ -687,7 +692,7 @@ def create_app() -> FastAPI:
             ],
             insight_cards=[
                 {
-                    'title': _pick_lang(lang, 'Submission cues / 提交判断', 'Submission cues'),
+                    'title': _pick_lang(lang, '提交判断', 'Submission cues'),
                     'body': _pick_lang(
                         lang,
                         '先看 status 和 review 字段，再决定是继续 request-review、排队 validation，还是直接返回提案人补信息。',
@@ -729,7 +734,7 @@ def create_app() -> FastAPI:
         pending = sum(1 for item in items if item.get('status') == 'pending')
         context = _build_console_context(
             request=request,
-            title=_pick_lang(lang, 'Reviews 评审台', 'Reviews desk'),
+            title=_pick_lang(lang, '评审台', 'Reviews desk'),
             content=_pick_lang(
                 lang,
                 '集中看评审决策、review note 和 pending 项，让人类能快速判断该批准、拒绝，还是先补证据。',
@@ -753,7 +758,7 @@ def create_app() -> FastAPI:
             ],
             insight_cards=[
                 {
-                    'title': _pick_lang(lang, 'Decision hints / 决策提示', 'Decision hints'),
+                    'title': _pick_lang(lang, '决策提示', 'Decision hints'),
                     'body': _pick_lang(
                         lang,
                         'Pending 说明还没有 maintainer 最终决策；approved 说明该条目已经通过当前 review gate，可以看是否进入 queue-validation 或 publish。',
@@ -762,7 +767,7 @@ def create_app() -> FastAPI:
                     'command': 'python scripts/registryctl.py --base-url https://skills.example.com --token <maintainer-token> reviews list',
                 },
                 {
-                    'title': _pick_lang(lang, 'Approve quickly / 快速放行', 'Approve quickly'),
+                    'title': _pick_lang(lang, '快速放行', 'Approve quickly'),
                     'body': _pick_lang(
                         lang,
                         '如果 note 足够明确、submission 状态一致，而且 reviewer 身份可信，就可以快速批准；否则先回到 submissions 看上下文。',
@@ -805,7 +810,7 @@ def create_app() -> FastAPI:
         running = sum(1 for item in items if item.get('status') == 'running')
         context = _build_console_context(
             request=request,
-            title=_pick_lang(lang, 'Jobs 任务台', 'Jobs desk'),
+            title=_pick_lang(lang, '任务台', 'Jobs desk'),
             content=_pick_lang(
                 lang,
                 '观察 worker 队列节奏：哪些 job 还在排队，哪些刚完成，哪些可能需要人类重新检查 submission 或 review 前置条件。',
@@ -829,7 +834,7 @@ def create_app() -> FastAPI:
             ],
             insight_cards=[
                 {
-                    'title': _pick_lang(lang, 'Queue health / 队列健康', 'Queue health'),
+                    'title': _pick_lang(lang, '队列健康', 'Queue health'),
                     'body': _pick_lang(
                         lang,
                         '看 queued / running / completed 的比例。queued 很多通常意味着 worker 还没跟上，或者前置 review / validation 节点正在堆积。',
@@ -838,7 +843,7 @@ def create_app() -> FastAPI:
                     'command': f'queued={queued} running={running} completed={completed}',
                 },
                 {
-                    'title': _pick_lang(lang, 'Worker rhythm / Worker 节奏', 'Worker rhythm'),
+                    'title': _pick_lang(lang, '工作节奏', 'Worker rhythm'),
                     'body': _pick_lang(
                         lang,
                         'Validation、promote、publish 这些 job 应该和 submission 状态变化相互对应。如果 job note 和当前 submission 状态对不上，就该回头查队列原因。',
@@ -853,7 +858,7 @@ def create_app() -> FastAPI:
     @app.get('/login', response_class=HTMLResponse)
     def login(request: Request):
         lang = _resolve_language(request)
-        page_eyebrow = _pick_lang(lang, 'Maintainer-only console / 维护控制台', 'Maintainer-only console')
+        page_eyebrow = _pick_lang(lang, '维护控制台', 'Maintainer-only console')
         page_kicker = _pick_lang(lang, '认证入口', 'Auth entry')
         content = _pick_lang(
             lang,
@@ -864,7 +869,7 @@ def create_app() -> FastAPI:
             'login-kawaii.html',
             {
                 'request': request,
-                'title': 'Login',
+                'title': _pick_lang(lang, '登录', 'Login'),
                 'content': content,
                 'page_eyebrow': page_eyebrow,
                 'page_kicker': page_kicker,

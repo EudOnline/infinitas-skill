@@ -1648,11 +1648,11 @@
   }
 
   function validateToken(token) {
-    if (!token) return uiText('auth_enter_token', '请输入 Token');
-    if (token.length < 8) return uiText('auth_token_min', 'Token 长度不能少于 8 位');
-    if (token.length > 128) return uiText('auth_token_max', 'Token 长度不能超过 128 位');
+    if (!token) return uiText('auth_enter_token', '请输入访问令牌');
+    if (token.length < 8) return uiText('auth_token_min', '访问令牌长度不能少于 8 位');
+    if (token.length > 128) return uiText('auth_token_max', '访问令牌长度不能超过 128 位');
     // 防止 XSS - 检查非法字符
-    if (/[<>"'&]/.test(token)) return uiText('auth_invalid_characters', 'Token 包含非法字符');
+    if (/[<>"'&]/.test(token)) return uiText('auth_invalid_characters', '访问令牌包含非法字符');
     return null;
   }
 
@@ -1726,7 +1726,7 @@
           window.location.href = nextTarget;
         }
       } else {
-        showError(data.error || uiText('auth_verify_failed', '验证失败，请检查 Token 是否正确'));
+        showError(data.error || uiText('auth_verify_failed', '验证失败，请检查访问令牌是否正确'));
       }
     } catch (e) {
       showError(e.message || uiText('auth_network_error', '网络错误，请检查网络连接后重试'));

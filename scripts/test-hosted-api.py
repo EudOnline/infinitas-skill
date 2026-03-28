@@ -99,6 +99,36 @@ def scenario_health_login_and_me():
         response = client.get('/login')
         if response.status_code != 200:
             fail(f'/login returned {response.status_code}: {response.text}')
+        zh_login_html = response.text
+        zh_login_markers = [
+            '令牌认证',
+            '输入访问令牌',
+            '输入你的访问令牌',
+            '访问令牌可在个人账户设置中获取',
+            '访问令牌无效',
+            '请输入访问令牌',
+            '访问令牌长度不能少于 8 位',
+            '访问令牌长度不能超过 128 位',
+            'window.location.href = \'/?lang=zh\'',
+            'href="/?lang=zh"',
+            "/api/auth/login?lang=zh",
+        ]
+        missing_zh_login = [marker for marker in zh_login_markers if marker not in zh_login_html]
+        if missing_zh_login:
+            fail(f'chinese login page is missing localized auth markers: {", ".join(missing_zh_login)}')
+        unexpected_zh_login = [
+            'Token 可在个人账户设置中获取',
+            'Token 无效',
+            '请输入 Token',
+            'Token 长度不能少于 8 位',
+            'Token 长度不能超过 128 位',
+        ]
+        present_zh_login = [marker for marker in unexpected_zh_login if marker in zh_login_html]
+        if present_zh_login:
+            fail(
+                'chinese login page should avoid mixed Token wording, found: '
+                + ', '.join(present_zh_login)
+            )
 
         response = client.get('/login?lang=en')
         if response.status_code != 200:
@@ -208,9 +238,9 @@ def scenario_health_login_and_me():
                 fail(f'{route} returned {response.status_code}: {response.text}')
 
         for route, heading in [
-            ('/submissions', 'Submissions'),
-            ('/reviews', 'Reviews'),
-            ('/jobs', 'Jobs'),
+            ('/submissions', '提交队列'),
+            ('/reviews', '评审台'),
+            ('/jobs', '任务台'),
         ]:
             response = client.get(route, follow_redirects=False)
             if response.status_code not in (302, 303, 307, 308):
@@ -297,7 +327,7 @@ def scenario_health_login_and_me():
                 'expected /submissions to accept the authenticated browser session after login, '
                 f'got {response.status_code}: {response.text}'
             )
-        if 'Submissions' not in response.text:
+        if '提交队列' not in response.text:
             fail('expected /submissions session-auth response to render the console page')
 
         response = session_client.get('/submissions?lang=en')

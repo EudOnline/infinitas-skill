@@ -309,9 +309,9 @@ def scenario_operator_lists_and_cli():
         assert_job_list(response.json(), [seeded['submission_a_id']])
 
         for route, heading, needle in [
-            ('/submissions', 'Submissions', 'operator-skill-a'),
-            ('/reviews', 'Reviews', 'Approved A.'),
-            ('/jobs', 'Jobs', 'Queue validation A.'),
+            ('/submissions', '提交队列', 'operator-skill-a'),
+            ('/reviews', '评审台', 'Approved A.'),
+            ('/jobs', '任务台', 'Queue validation A.'),
         ]:
             response = client.get(route, follow_redirects=False)
             if response.status_code not in (302, 303, 307, 308):
@@ -327,9 +327,9 @@ def scenario_operator_lists_and_cli():
                 fail(f'expected {route} with contributor token to return 403, got {response.status_code}')
             contributor_html = response.text
             forbidden_markers = (
-                ['Console access denied', 'Maintainer role required', 'href="/?lang=en"']
+                ['Console access denied', 'Maintainer role required', 'href="/?lang=en"', 'Protected console']
                 if '?lang=en' in route
-                else ['维护台访问受限', '维护者权限', 'href="/?lang=zh"']
+                else ['维护台访问受限', '维护者权限', 'href="/?lang=zh"', '受限控制台']
             )
             for forbidden_marker in forbidden_markers:
                 if forbidden_marker not in contributor_html:
@@ -337,6 +337,8 @@ def scenario_operator_lists_and_cli():
                         f'expected {route} contributor response to render themed forbidden UI with {forbidden_marker!r}, '
                         f'got:\n{contributor_html}'
                     )
+            if '维护模式' in contributor_html:
+                fail(f'expected {route} contributor forbidden page to avoid misleading maintainer-mode chrome')
             response = client.get(
                 route,
                 headers={'Authorization': 'Bearer fixture-maintainer-token'},
@@ -345,9 +347,20 @@ def scenario_operator_lists_and_cli():
                 fail(f'expected {route} with maintainer token to return 200, got {response.status_code}: {response.text}')
             if heading not in response.text or needle not in response.text:
                 fail(f'expected {route} page to contain {heading!r} and {needle!r}, got:\n{response.text}')
-            for shared_needle in ['Maintainer-only console', 'registryctl.py']:
+            for shared_needle in ['维护控制台', 'registryctl.py']:
                 if shared_needle not in response.text:
                     fail(f'expected {route} page to contain {shared_needle!r}, got:\n{response.text}')
+            unexpected_mixed_copy = [
+                'Maintainer-only console / 维护控制台',
+                'Submissions 提交队列',
+                'Reviews 评审台',
+                'Jobs 任务台',
+            ]
+            present_mixed_copy = [marker for marker in unexpected_mixed_copy if marker in response.text]
+            if present_mixed_copy:
+                fail(
+                    f'expected {route} zh console to avoid mixed-language chrome, found: {", ".join(present_mixed_copy)}'
+                )
             for theme_marker in ['data-theme=\"kawaii\"', 'data-theme-choice=\"light\"', 'data-theme-choice=\"dark\"']:
                 if theme_marker not in response.text:
                     fail(f'expected {route} page to feature kawaii theme marker {theme_marker!r}')
@@ -365,10 +378,11 @@ def scenario_operator_lists_and_cli():
                 if shell_marker not in response.text:
                     fail(f'expected {route} page to include kawaii shell marker {shell_marker!r}, got:\n{response.text}')
         for route, needle in [
-            ('/reviews', 'Decision hints'),
-            ('/reviews', 'Approve quickly'),
-            ('/jobs', 'Queue health'),
-            ('/jobs', 'Worker rhythm'),
+            ('/submissions', '提交判断'),
+            ('/reviews', '决策提示'),
+            ('/reviews', '快速放行'),
+            ('/jobs', '队列健康'),
+            ('/jobs', '工作节奏'),
         ]:
             response = client.get(
                 route,
@@ -376,6 +390,46 @@ def scenario_operator_lists_and_cli():
             )
             if needle not in response.text:
                 fail(f'expected {route} page to contain {needle!r}, got:\n{response.text}')
+
+        response = client.get(
+            '/submissions?lang=en',
+            headers={'Authorization': 'Bearer fixture-contributor-a-token'},
+        )
+        if response.status_code != 403:
+            fail(
+                'expected /submissions?lang=en with contributor token to return themed 403, '
+                f'got {response.status_code}'
+            )
+        english_forbidden_html = response.text
+        for marker in ['Console access denied', 'Maintainer role required', 'href="/?lang=en"', 'Access limited']:
+            if marker not in english_forbidden_html:
+                fail(
+                    'expected /submissions?lang=en contributor response to preserve english forbidden chrome with '
+                    f'{marker!r}, got:\n{english_forbidden_html}'
+                )
+        if '维护模式' in english_forbidden_html:
+            fail('expected /submissions?lang=en contributor forbidden page to avoid chinese maintainer-mode chrome')
+        if 'Protected console / 受限控制台' in english_forbidden_html:
+            fail('expected /submissions?lang=en contributor forbidden page to avoid mixed-language protected-console chrome')
+
+        response = client.get('/login?lang=zh')
+        if response.status_code != 200:
+            fail(f'expected /login?lang=zh to return 200, got {response.status_code}')
+        zh_login_html = response.text
+        for marker in ['<title>登录</title>', '维护控制台', '认证入口', '输入访问令牌']:
+            if marker not in zh_login_html:
+                fail(f'expected /login?lang=zh to contain {marker!r}, got:\n{zh_login_html}')
+        for marker in ['<title>Login</title>', 'Maintainer-only console / 维护控制台']:
+            if marker in zh_login_html:
+                fail(f'expected /login?lang=zh to avoid mixed english chrome {marker!r}')
+
+        response = client.get('/login?lang=en')
+        if response.status_code != 200:
+            fail(f'expected /login?lang=en to return 200, got {response.status_code}')
+        en_login_html = response.text
+        for marker in ['<title>Login</title>', 'Maintainer-only console', 'Auth entry', 'Enter Access Token']:
+            if marker not in en_login_html:
+                fail(f'expected /login?lang=en to contain {marker!r}, got:\n{en_login_html}')
 
         response = client.get('/v2', follow_redirects=False)
         if response.status_code not in (307, 308):

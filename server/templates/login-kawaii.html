@@ -20,7 +20,7 @@
           <span aria-hidden="true">👁️</span>
         </button>
       </div>
-      <p class="auth-hint login-auth-hint">💡 {{ 'Token 可在个人账户设置中获取' if page_language == 'zh' else 'Token can be found in account settings' }}</p>
+      <p class="auth-hint login-auth-hint">💡 {{ '访问令牌可在个人账户设置中获取' if page_language == 'zh' else 'Token can be found in account settings' }}</p>
       <button class="kawaii-button kawaii-button--primary" id="login-btn" type="button">
         <span class="btn-icon" aria-hidden="true">🔓</span>
         <span class="btn-text">{{ '登录' if page_language == 'zh' else 'Login' }}</span>
@@ -29,7 +29,7 @@
     
     <div class="auth-error login-auth-error" id="auth-error" role="alert" aria-live="polite" hidden>
       <span aria-hidden="true">❌</span>
-      <span id="error-message">Token {{ '无效' if page_language == 'zh' else 'invalid' }}</span>
+      <span id="error-message">{{ '访问令牌无效' if page_language == 'zh' else 'Token invalid' }}</span>
     </div>
   </div>
 </section>
@@ -82,9 +82,9 @@
   }
 
   function validateToken(token) {
-    if (!token) return '{{ "请输入 Token" if page_language == "zh" else "Please enter token" }}';
-    if (token.length < 8) return '{{ "Token 长度不能少于 8 位" if page_language == "zh" else "Token must be at least 8 characters" }}';
-    if (token.length > 128) return '{{ "Token 长度不能超过 128 位" if page_language == "zh" else "Token must not exceed 128 characters" }}';
+    if (!token) return '{{ "请输入访问令牌" if page_language == "zh" else "Please enter token" }}';
+    if (token.length < 8) return '{{ "访问令牌长度不能少于 8 位" if page_language == "zh" else "Token must be at least 8 characters" }}';
+    if (token.length > 128) return '{{ "访问令牌长度不能超过 128 位" if page_language == "zh" else "Token must not exceed 128 characters" }}';
     return null;
   }
 
@@ -130,7 +130,7 @@
         TokenManager.save(token);
         window.location.href = '{{ home_href or "/" }}';
       } else {
-        showError(data.error || '{{ "验证失败，请检查 Token 是否正确" if page_language == "zh" else "Verification failed, please check your token" }}');
+        showError(data.error || '{{ "验证失败，请检查访问令牌是否正确" if page_language == "zh" else "Verification failed, please check your token" }}');
       }
     } catch (e) {
       showError('{{ "网络错误，请检查网络连接后重试" if page_language == "zh" else "Network error, please check your connection and try again" }}');
