@@ -22,6 +22,8 @@ class User(Base):
     display_name: Mapped[str] = mapped_column(String(200))
     role: Mapped[str] = mapped_column(String(32), default='contributor')
     token: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    light_bg_id: Mapped[str | None] = mapped_column(String(64), nullable=True, default=None)
+    dark_bg_id: Mapped[str | None] = mapped_column(String(64), nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 

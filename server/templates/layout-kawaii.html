@@ -3,8 +3,27 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="{{ page_description or 'infinitas - 小二的私人 Agent 技能库，发现、试用、归档，技能即插即用' }}" />
+    <meta name="keywords" content="AI, Agent, Skill, 技能库, MCP, 工具调用, {{ page_keywords or '' }}" />
+    <meta name="author" content="lvxiaoer" />
+    <meta name="robots" content="index, follow" />
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="{{ title or 'infinitas skill registry ✨' }}" />
+    <meta property="og:description" content="{{ page_description or '小二的私人 Agent 技能库' }}" />
+    <meta property="og:site_name" content="infinitas" />
+    
+    <!-- Theme Color for Mobile Browsers -->
+    <meta name="theme-color" content="#ff69b4" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a0a14" media="(prefers-color-scheme: dark)" />
+    
     <title>{{ title or "infinitas skill registry ✨" }}</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='20' fill='%23ffb6c1'/%3E%3Cpath d='M20 32c4-6 8-10 14-10 6 0 10 4 14 10 4 6 8 10 14 10' stroke='%23fff' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M44 32c-4 6-8 10-14 10-6 0-10-4-14-10-4-6-8-10-14-10' stroke='%23fff' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='48' cy='16' r='6' fill='%23ffd700'/%3E%3C/svg%3E" />
+    
+    <!-- 🎨 预加载动漫背景图 -->
+    <link rel="preload" as="image" href="https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1920&q=80" type="image/jpeg" media="(prefers-color-scheme: light)">
+    <link rel="preload" as="image" href="https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1920&q=80" type="image/jpeg" media="(prefers-color-scheme: dark)">
     
     <!-- Google Fonts: 可爱圆润字体 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -57,13 +76,6 @@
         --kawaii-peach: #ffdab9;             /* 桃色 */
         --kawaii-sky: #87cefa;               /* 浅天蓝 */
         --kawaii-lemonade: #fffacd;          /* 柠檬黄 */
-        
-        /* 🍬 辅助色：糖果色系 */
-        --kawaii-mint: #98fb98;              /* 薄荷绿 */
-        --kawaii-lavender: #e6e6fa;          /* 淡紫 */
-        --kawaii-lemon: #fffacd;             /* 柠檬黄 */
-        --kawaii-coral: #ffa07a;             /* 珊瑚橙 */
-        --kawaii-rose: #ffe4e1;              /* 玫瑰雾 */
         
         /* ✨ 功能色 */
         --kawaii-success: #90ee90;
@@ -286,6 +298,8 @@
 
       html {
         scroll-behavior: smooth;
+        -webkit-text-size-adjust: 100%; /* 防止 iOS 横屏时字体自动调整 */
+        touch-action: manipulation; /* 优化触摸响应 */
       }
 
       body {
@@ -296,50 +310,44 @@
         background: var(--kawaii-paper);
         min-height: 100vh;
         overflow-x: hidden;
+        -webkit-tap-highlight-color: transparent; /* 移除移动端点击高亮 */
+        touch-action: manipulation;
       }
 
-      /* 🎨 动态背景 - 更丰富的二次元氛围 */
+      /* 🎨 动漫背景图 - 浅色模式（樱花/二次元风景） */
       body::before {
         content: "";
         position: fixed;
         inset: 0;
         pointer-events: none;
         z-index: -1;
-        background: 
-          /* 浮动气泡 - 更鲜艳的粉色 */
-          radial-gradient(circle at 10% 20%, rgba(255, 105, 180, 0.2) 0%, transparent 30%),
-          radial-gradient(circle at 90% 80%, rgba(0, 191, 255, 0.2) 0%, transparent 30%),
-          radial-gradient(circle at 50% 50%, rgba(218, 112, 214, 0.15) 0%, transparent 40%),
-          radial-gradient(circle at 80% 30%, rgba(255, 215, 0, 0.1) 0%, transparent 25%),
-          /* 渐变背景 - 魔法少女午后 */
+        /* 使用 CSS 变量支持动态背景切换 */
+        background: var(--bg-image, 
+          /* 默认渐变遮罩 - 提升文字可读性 */
           linear-gradient(135deg, 
-            rgba(255, 240, 245, 0.8) 0%, 
-            rgba(255, 228, 235, 0.6) 50%,
-            rgba(255, 248, 250, 0.8) 100%);
-        background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
-        animation: background-float 15s ease-in-out infinite;
+            rgba(255, 240, 245, 0.88) 0%, 
+            rgba(255, 228, 235, 0.82) 50%,
+            rgba(255, 248, 250, 0.88) 100%),
+          /* 默认动漫风景背景图 */
+          url('https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1920&q=80') center/cover no-repeat
+        );
+        background-size: cover;
+        animation: background-float 20s ease-in-out infinite;
       }
       
-      /* 🌙 深色模式背景 - 霓虹星空 */
+      /* 🌙 动漫背景图 - 深色模式（星空/夜景） */
       html[data-color-scheme="dark"] body::before {
-        background: 
-          /* 发光星云 - 荧光粉 */
-          radial-gradient(circle at 15% 25%, rgba(255, 0, 255, 0.25) 0%, transparent 35%),
-          radial-gradient(circle at 85% 75%, rgba(0, 255, 255, 0.2) 0%, transparent 30%),
-          radial-gradient(circle at 50% 50%, rgba(191, 0, 255, 0.15) 0%, transparent 45%),
-          radial-gradient(circle at 75% 20%, rgba(57, 255, 20, 0.1) 0%, transparent 20%),
-          /* 星星点点 */
-          radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.8) 0%, transparent 1%),
-          radial-gradient(circle at 40% 30%, rgba(255, 255, 255, 0.6) 0%, transparent 1%),
-          radial-gradient(circle at 60% 70%, rgba(255, 255, 255, 0.7) 0%, transparent 1%),
-          radial-gradient(circle at 80% 40%, rgba(255, 255, 255, 0.5) 0%, transparent 1%),
-          radial-gradient(circle at 90% 90%, rgba(255, 255, 255, 0.6) 0%, transparent 1%),
-          /* 极光渐变 */
+        background: var(--bg-image-dark, 
+          /* 默认深色遮罩 - 确保文字可读 */
           linear-gradient(135deg, 
-            rgba(26, 10, 46, 0.9) 0%, 
-            rgba(15, 15, 35, 0.95) 50%,
-            rgba(10, 10, 25, 0.9) 100%);
-        animation: nebula-float 20s ease-in-out infinite;
+            rgba(15, 10, 25, 0.88) 0%, 
+            rgba(25, 15, 35, 0.85) 50%,
+            rgba(20, 10, 30, 0.88) 100%),
+          /* 默认深色动漫背景图 */
+          url('https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1920&q=80') center/cover no-repeat
+        );
+        background-size: cover;
+        animation: nebula-float 25s ease-in-out infinite;
       }
       
       @keyframes nebula-float {
@@ -540,10 +548,18 @@
         border-radius: var(--radius-full);
         background: var(--kawaii-panel-soft);
         font-family: var(--font-body);
-        font-size: 0.9rem;
+        font-size: 16px; /* 16px 防止 iOS 自动缩放 */
         color: var(--kawaii-ink);
         transition: all 200ms var(--ease-out-quiet);
         outline: none;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+      }
+      
+      @media (min-width: 721px) {
+        .search-input {
+          font-size: 0.9rem;
+        }
       }
       
       .search-input::placeholder {
@@ -664,8 +680,13 @@
         align-items: center;
         gap: 0.75rem;
         padding: 0.6rem 0.75rem;
+        width: 100%;
+        border: none;
+        background: transparent;
         border-radius: var(--radius-md);
         text-decoration: none;
+        text-align: left;
+        font: inherit;
         color: inherit;
         cursor: pointer;
         transition: all 150ms var(--ease-out-quiet);
@@ -955,6 +976,242 @@
         box-shadow: inset 0 0 0 1px rgba(221, 145, 176, 0.24);
       }
 
+      .console-session {
+        position: relative;
+      }
+
+      .session-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        min-height: 2.35rem;
+        max-width: min(14rem, calc(100vw - 2rem));
+        padding: 0.48rem 0.9rem;
+        border: 1px solid var(--kawaii-line);
+        border-radius: var(--radius-full);
+        background: var(--kawaii-panel-soft);
+        color: var(--kawaii-ink);
+        font-family: var(--font-body);
+        font-size: 0.82rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition:
+          background-color 180ms var(--ease-out-quiet),
+          border-color 180ms var(--ease-out-quiet),
+          transform 180ms var(--ease-out-quiet),
+          box-shadow 180ms var(--ease-out-quiet);
+      }
+
+      .session-chip:hover,
+      .session-chip[aria-expanded="true"] {
+        background: var(--kawaii-surface-elevated);
+        border-color: color-mix(in srgb, var(--kawaii-primary) 42%, var(--kawaii-line));
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .session-chip__icon {
+        font-size: 1rem;
+        flex-shrink: 0;
+      }
+
+      .session-chip__label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .session-panel {
+        position: absolute;
+        top: calc(100% + 0.65rem);
+        right: 0;
+        width: min(22rem, calc(100vw - 1rem));
+        padding: 1rem;
+        background: var(--kawaii-surface-elevated);
+        border: 1px solid var(--kawaii-line);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-elevated);
+        backdrop-filter: blur(14px) saturate(135%);
+        z-index: 220;
+      }
+
+      .session-panel__section {
+        display: grid;
+        gap: 0.85rem;
+      }
+
+      .session-panel__header {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+      }
+
+      .session-panel__emoji,
+      .session-panel__avatar {
+        width: 2.4rem;
+        height: 2.4rem;
+        display: grid;
+        place-items: center;
+        border-radius: 999px;
+        background: var(--kawaii-accent-soft);
+        color: var(--kawaii-ink);
+        font-size: 1.05rem;
+        flex-shrink: 0;
+      }
+
+      .session-panel__title {
+        font-size: 0.95rem;
+        font-weight: 800;
+        color: var(--kawaii-ink);
+      }
+
+      .session-panel__name {
+        display: block;
+        margin-top: 0.2rem;
+        font-size: 0.98rem;
+        font-weight: 800;
+        color: var(--kawaii-ink);
+      }
+
+      .session-panel__desc,
+      .session-panel__meta {
+        margin: 0.25rem 0 0;
+        font-size: 0.82rem;
+        color: var(--kawaii-ink-soft);
+        line-height: 1.5;
+      }
+
+      .session-panel__divider {
+        height: 1px;
+        background: var(--kawaii-line-soft);
+      }
+
+      .session-panel__action,
+      .session-panel__logout {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .console-auth-modal {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        z-index: 320;
+      }
+
+      .console-auth-modal__backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(36, 22, 42, 0.45);
+        backdrop-filter: blur(6px);
+      }
+
+      .console-auth-modal__card {
+        position: relative;
+        width: min(32rem, calc(100vw - 2rem));
+        padding: 1.35rem;
+        border-radius: var(--radius-xl);
+        background: var(--kawaii-surface-elevated);
+        border: 1px solid var(--kawaii-line);
+        box-shadow: var(--shadow-elevated);
+      }
+
+      .console-auth-modal__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .console-auth-modal__title {
+        margin: 0;
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: var(--kawaii-ink);
+      }
+
+      .console-auth-modal__close {
+        width: 2.25rem;
+        height: 2.25rem;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--kawaii-line);
+        border-radius: 999px;
+        background: var(--kawaii-panel-soft);
+        color: var(--kawaii-ink);
+        font-size: 1rem;
+        cursor: pointer;
+        transition:
+          background-color 180ms var(--ease-out-quiet),
+          transform 180ms var(--ease-out-quiet);
+      }
+
+      .console-auth-modal__close:hover {
+        background: var(--kawaii-accent-soft);
+        transform: translateY(-1px);
+      }
+
+      .console-auth-modal__desc {
+        margin: 0 0 1rem;
+        color: var(--kawaii-ink-soft);
+        line-height: 1.65;
+      }
+
+      .console-auth-modal__input-row {
+        position: relative;
+      }
+
+      .console-auth-modal__input {
+        padding-right: 3.25rem;
+      }
+
+      .console-auth-modal__toggle {
+        position: absolute;
+        top: 50%;
+        right: 0.5rem;
+        transform: translateY(-50%);
+        width: 2.25rem;
+        height: 2.25rem;
+        display: grid;
+        place-items: center;
+        border: none;
+        border-radius: 999px;
+        background: transparent;
+        color: var(--kawaii-ink-soft);
+        cursor: pointer;
+      }
+
+      .console-auth-modal__hint {
+        margin: 0.6rem 0 0;
+        font-size: 0.8rem;
+        color: var(--kawaii-ink-muted);
+      }
+
+      .console-auth-modal__error {
+        margin-top: 0.85rem;
+        padding: 0.75rem 0.9rem;
+        border-radius: var(--radius-md);
+        background: rgba(255, 107, 107, 0.12);
+        border: 1px solid rgba(255, 107, 107, 0.28);
+        color: var(--kawaii-danger);
+        font-size: 0.88rem;
+        font-weight: 700;
+      }
+
+      .console-auth-modal__footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        margin-top: 1.2rem;
+        flex-wrap: wrap;
+      }
+
+      .console-auth-modal__footer .kawaii-button {
+        min-width: 8rem;
+      }
+
       /* ========================================
          📦 主容器
          ======================================== */
@@ -1063,6 +1320,10 @@
           box-shadow 180ms var(--ease-out-quiet);
         text-decoration: none;
         position: relative;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
       }
 
       .kawaii-button--primary {
@@ -2266,6 +2527,25 @@
           --radius-xl: 24px;
         }
         
+        /* 📱 移动端背景图优化 */
+        body::before {
+          background: 
+            linear-gradient(135deg, 
+              rgba(255, 240, 245, 0.92) 0%, 
+              rgba(255, 228, 235, 0.88) 50%,
+              rgba(255, 248, 250, 0.92) 100%),
+            url('https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800&q=70') center/cover no-repeat;
+        }
+        
+        html[data-color-scheme="dark"] body::before {
+          background: 
+            linear-gradient(135deg, 
+              rgba(15, 10, 25, 0.92) 0%, 
+              rgba(25, 15, 35, 0.9) 50%,
+              rgba(20, 10, 30, 0.92) 100%),
+            url('https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&q=70') center/cover no-repeat;
+        }
+        
         .topbar {
           position: static;
           margin-top: 0.5rem;
@@ -2470,6 +2750,27 @@
         outline-offset: 3px;
         border-radius: var(--radius-sm);
       }
+      
+      /* 跳过链接（无障碍） */
+      .skip-link {
+        position: absolute;
+        top: -100%;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10000;
+        padding: 0.75rem 1.5rem;
+        background: var(--kawaii-primary);
+        color: white;
+        font-weight: 700;
+        text-decoration: none;
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-elevated);
+        transition: top 200ms ease;
+      }
+      
+      .skip-link:focus {
+        top: 1rem;
+      }
     </style>
   </head>
   
@@ -2478,9 +2779,12 @@
     data-copy-success="{{ ui.copy_success if ui else '已复制' }}"
     data-copy-error="{{ ui.copy_error if ui else '复制失败' }}"
   >
+    <!-- 跳过导航链接（无障碍） -->
+    <a href="#main-content" class="skip-link">{{ '跳转到主内容' if page_language == 'zh' else 'Skip to main content' }}</a>
+    
     <!-- 🎀 顶部导航 -->
     <header class="topbar animate-in">
-      <a class="brand" href="/">
+      <a class="brand" href="{{ home_href or '/' }}">
         <div class="brand-mark">✨</div>
         <div class="brand-copy">
           <div class="brand-title">infinitas-skill</div>
@@ -2492,7 +2796,8 @@
         {% set current_path = request.url.path %}
         {% for link in nav_links or [] %}
         {% set href = link.href %}
-        {% set is_current = href == current_path %}
+        {% set href_path = href.split('?')[0].split('#')[0] %}
+        {% set is_current = href_path == current_path %}
         {% if not is_current and current_path == "/" and href == "#start" %}
         {% set is_current = true %}
         {% endif %}
@@ -2500,17 +2805,21 @@
         {% endfor %}
       </nav>
       
-      <div class="search-bar-wrapper">
-        <span class="search-icon">🔍</span>
+      <div class="search-bar-wrapper" role="search">
+        <span class="search-icon" aria-hidden="true">🔍</span>
         <input 
           type="search" 
           id="global-search" 
           class="search-input" 
-          placeholder="{{ ui.search_placeholder if ui else '搜索技能...' }}"
+          placeholder="{{ ui.search_placeholder if ui else '搜索技能或命令' }}"
           autocomplete="off"
+          aria-label="{{ ui.search_placeholder if ui else '搜索技能或命令' }}"
+          aria-autocomplete="list"
+          aria-controls="search-dropdown"
+          aria-expanded="false"
         />
-        <kbd class="search-shortcut">⌘K</kbd>
-        <div id="search-dropdown" class="search-dropdown" hidden></div>
+        <kbd class="search-shortcut" aria-hidden="true">⌘K</kbd>
+        <div id="search-dropdown" class="search-dropdown" role="listbox" aria-label="{{ ui.search_results_label if ui else '搜索结果' }}" hidden></div>
       </div>
       
       <div class="topbar-side">
@@ -2526,12 +2835,58 @@
             {% endfor %}
           </div>
         </div>
+        {% if show_console_session %}
+        <div class="console-session" id="console-session-root">
+          <button
+            class="session-chip"
+            id="console-session-trigger"
+            type="button"
+            aria-label="{{ ui.user_menu_anon_label if ui else 'Sign in' }}"
+            aria-haspopup="true"
+            aria-expanded="false"
+            aria-controls="console-session-panel"
+          >
+            <span class="session-chip__icon" id="console-session-icon">🔒</span>
+            <span class="session-chip__label" id="console-session-label">{{ ui.console_session_guest if ui else 'Sign in' }}</span>
+          </button>
+          <div class="session-panel" id="console-session-panel" hidden>
+            <div class="session-panel__section" id="console-session-anon">
+              <div class="session-panel__header">
+                <span class="session-panel__emoji">🔑</span>
+                <div>
+                  <div class="session-panel__title">{{ ui.user_panel_auth_title if ui else 'Authentication' }}</div>
+                  <p class="session-panel__desc">{{ ui.console_session_desc if ui else 'Sign in to continue from the console.' }}</p>
+                </div>
+              </div>
+              <button class="kawaii-button kawaii-button--primary session-panel__action" id="console-open-auth-modal-btn" type="button">
+                <span>🔓</span>
+                <span>{{ ui.console_session_open_auth if ui else 'Enter token' }}</span>
+              </button>
+            </div>
+            <div class="session-panel__section" id="console-session-logged" hidden>
+              <div class="session-panel__header">
+                <span class="session-panel__avatar" id="console-session-avatar">👤</span>
+                <div>
+                  <div class="session-panel__title">{{ ui.console_session_label if ui else 'Current session' }}</div>
+                  <span class="session-panel__name" id="console-session-username">-</span>
+                  <p class="session-panel__meta" id="console-session-meta">-</p>
+                </div>
+              </div>
+              <div class="session-panel__divider"></div>
+              <button class="kawaii-button kawaii-button--ghost session-panel__logout" id="console-logout-btn" type="button">
+                <span>🚪</span>
+                <span>{{ ui.user_panel_logout if ui else 'Sign out' }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        {% endif %}
         <div class="status-pill">{{ ui.page_kicker if ui else page_kicker or page_eyebrow or "运行中" }}</div>
       </div>
     </header>
 
     <!-- 📦 主内容区 -->
-    <main class="site-shell">
+    <main class="site-shell" id="main-content" aria-label="主内容">
       {% if page_mode == "console" %}
       <section class="console-head">
         <article class="console-head-shell kawaii-card animate-in">
@@ -2577,6 +2932,59 @@
       {% endif %}
       {% endblock %}
     </main>
+
+    {% if show_console_session %}
+    <div
+      class="console-auth-modal"
+      id="console-auth-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="console-auth-modal-title"
+      hidden
+    >
+      <div class="console-auth-modal__backdrop" id="console-auth-modal-backdrop"></div>
+      <div class="console-auth-modal__card">
+        <div class="console-auth-modal__header">
+          <h2 class="console-auth-modal__title" id="console-auth-modal-title">🔑 {{ ui.auth_modal_title if ui else 'Identity check' }}</h2>
+          <button class="console-auth-modal__close" id="console-auth-modal-close" type="button" aria-label="{{ ui.auth_close if ui else 'Close' }}">✕</button>
+        </div>
+        <p class="console-auth-modal__desc">{{ ui.auth_modal_desc if ui else 'Enter your access token to continue.' }}</p>
+        <div class="console-auth-modal__input-row">
+          <input
+            type="password"
+            id="console-token-input"
+            class="kawaii-input console-auth-modal__input"
+            placeholder="{{ ui.auth_modal_placeholder if ui else 'Enter your access token' }}"
+            autocomplete="off"
+            minlength="8"
+            maxlength="128"
+            aria-label="{{ ui.auth_modal_placeholder if ui else 'Enter your access token' }}"
+            aria-describedby="console-token-hint"
+          />
+          <button
+            type="button"
+            class="console-auth-modal__toggle"
+            id="console-token-toggle"
+            title="{{ ui.toggle_password_visibility if ui else 'Toggle password visibility' }}"
+            aria-label="{{ ui.toggle_password_visibility if ui else 'Toggle password visibility' }}"
+          >
+            <span aria-hidden="true">👁️</span>
+          </button>
+        </div>
+        <p class="console-auth-modal__hint" id="console-token-hint">💡 {{ ui.auth_modal_hint if ui else 'Token stays valid for 30 days' }}</p>
+        <div class="console-auth-modal__error" id="console-auth-error" role="alert" aria-live="polite" hidden>
+          <span id="console-error-message">{{ ui.auth_invalid if ui else 'Invalid token' }}</span>
+        </div>
+        <div class="console-auth-modal__footer">
+          <button class="kawaii-button kawaii-button--ghost" id="console-cancel-auth-btn" type="button">{{ ui.auth_cancel if ui else 'Cancel' }}</button>
+          <button class="kawaii-button kawaii-button--primary" id="console-login-btn" type="button">
+            <span class="btn-icon" aria-hidden="true">🔓</span>
+            <span class="btn-text">{{ ui.auth_verify if ui else 'Verify' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    {% endif %}
 
     <!-- 🎀 装饰元素 -->
     <div class="floating-decoration floating-heart" style="top: 10%; left: 5%;">💕</div>
@@ -2732,60 +3140,497 @@
       `;
       document.head.appendChild(rippleStyle);
       
-      const root = document.documentElement;
-      const themeStorageKey = 'kawaii-color-scheme';
-
-      const updateThemeButtons = (scheme) => {
-        document.querySelectorAll('[data-theme-choice]').forEach((button) => {
-          const active = button.dataset.themeChoice === scheme;
-          button.classList.toggle('is-active', active);
-          button.setAttribute('aria-pressed', String(active));
-        });
-      };
-
-      const applyThemeChoice = (scheme, persist = true) => {
-        root.dataset.colorScheme = scheme;
-        root.style.colorScheme = scheme;
-        updateThemeButtons(scheme);
-        if (!persist) {
-          return;
-        }
-        try {
-          window.localStorage.setItem(themeStorageKey, scheme);
-        } catch (_error) {
-          // Ignore storage failures so the toggle still works for the session.
-        }
-      };
-
-      updateThemeButtons(root.dataset.colorScheme || 'light');
-
-      // Copy interactions
-      document.addEventListener('click', async (e) => {
-        const themeButton = e.target.closest('[data-theme-choice]');
-        if (themeButton) {
-          applyThemeChoice(themeButton.dataset.themeChoice);
-          return;
-        }
-
-        const copyButton = e.target.closest('[data-copy]');
-        if (copyButton) {
-          const text = copyButton.dataset.copy || '';
-          const original = copyButton.dataset.originalHtml || copyButton.innerHTML;
-          const copySuccess = document.body.dataset.copySuccess || 'Copied';
-          const copyError = document.body.dataset.copyError || 'Copy failed';
-          copyButton.dataset.originalHtml = original;
-          try {
-            await navigator.clipboard.writeText(text);
-            copyButton.innerHTML = copySuccess;
-          } catch (_error) {
-            copyButton.innerHTML = copyError;
-          }
-          window.setTimeout(() => {
-            copyButton.innerHTML = original;
-          }, 1400);
-        }
-      });
+      // Theme and copy interactions are handled by app.js
+      // This script only handles decorative effects (hearts, ripples)
+    </script>
+    <script>
+      window.APP_UI = {{ (ui or {}) | tojson }};
     </script>
     <script src="/static/js/app.js"></script>
+    {% if show_console_session %}
+    <script>
+      (() => {
+        const root = document.getElementById('console-session-root');
+        if (!root) {
+          return;
+        }
+
+        const STORAGE_KEY = 'infinitas_auth_token';
+        const EXPIRY_KEY = 'infinitas_auth_expiry';
+        const DAYS_30 = 30 * 24 * 60 * 60 * 1000;
+
+        let currentUser = null;
+        let panelOpen = false;
+        let modalOpen = false;
+        let pendingTarget = null;
+        let lastTrigger = null;
+        let errorTimeout = null;
+
+        function currentLang() {
+          const lang = (document.documentElement.lang || '').toLowerCase();
+          return lang.startsWith('en') ? 'en' : 'zh';
+        }
+
+        function saveLocalSession(token) {
+          try {
+            window.localStorage.setItem(STORAGE_KEY, token);
+            window.localStorage.setItem(EXPIRY_KEY, String(Date.now() + DAYS_30));
+          } catch (_error) {
+            // Ignore storage failures so the cookie-backed session can still work.
+          }
+        }
+
+        function clearLocalSession() {
+          try {
+            window.localStorage.removeItem(STORAGE_KEY);
+            window.localStorage.removeItem(EXPIRY_KEY);
+          } catch (_error) {
+            // Ignore storage cleanup failures.
+          }
+        }
+
+        function remainingDays() {
+          try {
+            const raw = window.localStorage.getItem(EXPIRY_KEY);
+            if (!raw) {
+              return 0;
+            }
+            return Math.max(0, Math.ceil((Number(raw) - Date.now()) / 86400000));
+          } catch (_error) {
+            return 0;
+          }
+        }
+
+        function hasAuthCookie() {
+          return document.cookie
+            .split(';')
+            .map((part) => part.trim())
+            .some((part) => part.startsWith(`${STORAGE_KEY}=`));
+        }
+
+        function clearAuthCookie() {
+          document.cookie = `${STORAGE_KEY}=; Max-Age=0; path=/; SameSite=Lax`;
+        }
+
+        function closePanel() {
+          const panel = document.getElementById('console-session-panel');
+          const trigger = document.getElementById('console-session-trigger');
+          if (!panel || panel.hidden) {
+            return;
+          }
+          panel.hidden = true;
+          panelOpen = false;
+          if (trigger) {
+            trigger.setAttribute('aria-expanded', 'false');
+          }
+        }
+
+        function roleLabel(role) {
+          const normalized = (role || '').toLowerCase();
+          if (normalized === 'maintainer') {
+            return uiText('role_maintainer', 'Maintainer');
+          }
+          if (normalized === 'contributor') {
+            return uiText('role_contributor', 'Contributor');
+          }
+          return normalized || uiText('console_session_ready', 'Session ready');
+        }
+
+        function sessionMeta() {
+          const role = currentUser?.role
+            ? uiTemplate('console_session_role', 'Role: {role}', { role: roleLabel(currentUser.role) })
+            : uiText('console_session_ready', 'Session ready');
+          const days = remainingDays();
+          if (days > 0) {
+            return `${role} · ${uiTemplate('auth_expiry_days', 'Expires in {days} days', { days })}`;
+          }
+          return `${role} · ${uiText('auth_session_active', 'Session active')}`;
+        }
+
+        function renderSessionState() {
+          const trigger = document.getElementById('console-session-trigger');
+          const icon = document.getElementById('console-session-icon');
+          const label = document.getElementById('console-session-label');
+          const anonSection = document.getElementById('console-session-anon');
+          const loggedSection = document.getElementById('console-session-logged');
+          const username = document.getElementById('console-session-username');
+          const meta = document.getElementById('console-session-meta');
+          const avatar = document.getElementById('console-session-avatar');
+
+          const authenticated = !!currentUser;
+          if (icon) {
+            icon.textContent = authenticated ? '👤' : '🔒';
+          }
+          if (label) {
+            label.textContent = authenticated ? currentUser.username : uiText('console_session_guest', 'Sign in');
+          }
+          if (trigger) {
+            trigger.setAttribute(
+              'aria-label',
+              authenticated
+                ? uiText('user_menu_logged_label', 'Account menu')
+                : uiText('user_menu_anon_label', 'Sign in')
+            );
+          }
+          if (anonSection) {
+            anonSection.hidden = authenticated;
+          }
+          if (loggedSection) {
+            loggedSection.hidden = !authenticated;
+          }
+          if (authenticated) {
+            if (username) {
+              username.textContent = currentUser.username;
+            }
+            if (meta) {
+              meta.textContent = sessionMeta();
+            }
+            if (avatar) {
+              avatar.textContent = (currentUser.username || 'U').charAt(0).toUpperCase();
+            }
+          }
+        }
+
+        function togglePanel() {
+          const panel = document.getElementById('console-session-panel');
+          const trigger = document.getElementById('console-session-trigger');
+          if (!panel || !trigger) {
+            return;
+          }
+          if (panel.hidden) {
+            panel.hidden = false;
+            panelOpen = true;
+            trigger.setAttribute('aria-expanded', 'true');
+            return;
+          }
+          closePanel();
+        }
+
+        function resetLoginButton() {
+          const button = document.getElementById('console-login-btn');
+          if (!button) {
+            return;
+          }
+          const icon = button.querySelector('.btn-icon');
+          const text = button.querySelector('.btn-text');
+          button.disabled = false;
+          if (icon) {
+            icon.textContent = '🔓';
+          }
+          if (text) {
+            text.textContent = uiText('auth_verify', 'Verify');
+          }
+        }
+
+        function setLoginLoading(loading) {
+          const button = document.getElementById('console-login-btn');
+          if (!button) {
+            return;
+          }
+          const icon = button.querySelector('.btn-icon');
+          const text = button.querySelector('.btn-text');
+          button.disabled = loading;
+          if (icon) {
+            icon.textContent = loading ? '⏳' : '🔓';
+          }
+          if (text) {
+            text.textContent = loading
+              ? uiText('auth_verify_loading', 'Verifying...')
+              : uiText('auth_verify', 'Verify');
+          }
+        }
+
+        function hideError() {
+          const errorBox = document.getElementById('console-auth-error');
+          if (errorBox) {
+            errorBox.hidden = true;
+          }
+          if (errorTimeout) {
+            clearTimeout(errorTimeout);
+            errorTimeout = null;
+          }
+        }
+
+        function showError(message) {
+          const errorBox = document.getElementById('console-auth-error');
+          const errorMessage = document.getElementById('console-error-message');
+          if (!errorBox || !errorMessage) {
+            return;
+          }
+          errorMessage.textContent = message;
+          errorBox.hidden = false;
+          if (errorTimeout) {
+            clearTimeout(errorTimeout);
+          }
+          errorTimeout = window.setTimeout(() => {
+            errorBox.hidden = true;
+            errorTimeout = null;
+          }, 5000);
+        }
+
+        function validateToken(token) {
+          if (!token) {
+            return uiText('auth_enter_token', 'Please enter token');
+          }
+          if (token.length < 8) {
+            return uiText('auth_token_min', 'Token must be at least 8 characters');
+          }
+          if (token.length > 128) {
+            return uiText('auth_token_max', 'Token must not exceed 128 characters');
+          }
+          if (/[<>\"'&]/.test(token)) {
+            return uiText('auth_invalid_characters', 'Token contains invalid characters');
+          }
+          return null;
+        }
+
+        function resolveReturnTarget() {
+          const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          if (!active) {
+            return document.getElementById('console-session-trigger');
+          }
+          if (active.closest('#console-session-panel')) {
+            return document.getElementById('console-session-trigger');
+          }
+          return active;
+        }
+
+        function openAuthModal(targetHref = null) {
+          const modal = document.getElementById('console-auth-modal');
+          if (!modal) {
+            return;
+          }
+          lastTrigger = resolveReturnTarget();
+          pendingTarget = targetHref;
+          modal.hidden = false;
+          modalOpen = true;
+          document.body.style.overflow = 'hidden';
+          hideError();
+          closePanel();
+          window.setTimeout(() => {
+            const input = document.getElementById('console-token-input');
+            if (input) {
+              input.focus();
+            }
+          }, 40);
+        }
+
+        function closeAuthModal(clearTarget = true) {
+          const modal = document.getElementById('console-auth-modal');
+          const input = document.getElementById('console-token-input');
+          const toggle = document.getElementById('console-token-toggle');
+          const toggleIcon = toggle?.querySelector('span');
+          if (!modal) {
+            return;
+          }
+          modal.hidden = true;
+          modalOpen = false;
+          document.body.style.overflow = '';
+          if (clearTarget) {
+            pendingTarget = null;
+          }
+          if (input) {
+            input.value = '';
+            input.type = 'password';
+          }
+          if (toggleIcon) {
+            toggleIcon.textContent = '👁️';
+          }
+          if (toggle) {
+            toggle.setAttribute('aria-label', uiText('toggle_password_visibility', 'Toggle password visibility'));
+          }
+          hideError();
+          resetLoginButton();
+          if (lastTrigger && typeof lastTrigger.focus === 'function' && document.contains(lastTrigger)) {
+            window.setTimeout(() => {
+              if (document.contains(lastTrigger)) {
+                lastTrigger.focus();
+              }
+            }, 0);
+          }
+        }
+
+        async function refreshCurrentUser() {
+          const response = await fetch('/api/auth/me');
+          if (!response.ok) {
+            throw new Error('auth probe failed');
+          }
+          const payload = await response.json();
+          currentUser = payload.authenticated ? payload : null;
+          renderSessionState();
+          return currentUser;
+        }
+
+        async function initAuthState() {
+          if (!hasAuthCookie()) {
+            clearLocalSession();
+            currentUser = null;
+            renderSessionState();
+            return;
+          }
+          try {
+            const user = await refreshCurrentUser();
+            if (user) {
+              return;
+            }
+            clearAuthCookie();
+          } catch (error) {
+            console.error('Console auth validation failed:', error);
+            clearAuthCookie();
+          }
+          clearLocalSession();
+          currentUser = null;
+          renderSessionState();
+        }
+
+        async function handleLogin() {
+          const input = document.getElementById('console-token-input');
+          if (!input) {
+            return;
+          }
+          const token = input.value.trim();
+          const validationError = validateToken(token);
+          if (validationError) {
+            showError(validationError);
+            return;
+          }
+
+          hideError();
+          setLoginLoading(true);
+          try {
+            const response = await fetch(`/api/auth/login?lang=${encodeURIComponent(currentLang())}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token }),
+            });
+            let payload;
+            try {
+              payload = await response.json();
+            } catch (_error) {
+              throw new Error(uiText('auth_bad_server_data', 'The server returned invalid data'));
+            }
+            if (!response.ok || payload.success !== true) {
+              showError(payload.error || uiText('auth_verify_failed', 'Verification failed, please check your token'));
+              return;
+            }
+
+            saveLocalSession(token);
+            await refreshCurrentUser();
+            const nextTarget = pendingTarget;
+            closeAuthModal(false);
+            pendingTarget = null;
+            if (window.toast) {
+              toast.success(uiText('auth_session_active', 'Session active'));
+            }
+            if (nextTarget) {
+              window.location.href = nextTarget;
+            }
+          } catch (error) {
+            showError(error.message || uiText('auth_network_error', 'Network error, please check your connection and try again'));
+          } finally {
+            setLoginLoading(false);
+          }
+        }
+
+        async function handleLogout() {
+          clearLocalSession();
+          clearAuthCookie();
+          try {
+            await fetch('/api/auth/logout', { method: 'POST' });
+          } catch (error) {
+            console.error('Console logout request failed:', error);
+          }
+          currentUser = null;
+          renderSessionState();
+          closePanel();
+          window.location.href = '{{ home_href or "/" }}';
+        }
+
+        function togglePasswordVisibility() {
+          const input = document.getElementById('console-token-input');
+          const toggle = document.getElementById('console-token-toggle');
+          const icon = toggle?.querySelector('span');
+          if (!input || !toggle) {
+            return;
+          }
+          const revealing = input.type === 'password';
+          input.type = revealing ? 'text' : 'password';
+          if (icon) {
+            icon.textContent = revealing ? '🙈' : '👁️';
+          }
+          toggle.setAttribute(
+            'aria-label',
+            revealing ? uiText('hide_password', 'Hide password') : uiText('show_password', 'Show password')
+          );
+        }
+
+        function handleDocumentClick(event) {
+          const trigger = document.getElementById('console-session-trigger');
+          const panel = document.getElementById('console-session-panel');
+          if (
+            panelOpen &&
+            trigger &&
+            panel &&
+            !trigger.contains(event.target) &&
+            !panel.contains(event.target)
+          ) {
+            closePanel();
+          }
+          if (
+            modalOpen &&
+            event.target instanceof HTMLElement &&
+            event.target.id === 'console-auth-modal-backdrop'
+          ) {
+            closeAuthModal();
+          }
+        }
+
+        function handleKeyDown(event) {
+          if (event.key !== 'Escape') {
+            return;
+          }
+          if (modalOpen) {
+            closeAuthModal();
+            return;
+          }
+          if (panelOpen) {
+            closePanel();
+          }
+        }
+
+        function bindEvents() {
+          document.getElementById('console-session-trigger')?.addEventListener('click', togglePanel);
+          document.getElementById('console-open-auth-modal-btn')?.addEventListener('click', () => openAuthModal());
+          document.getElementById('console-logout-btn')?.addEventListener('click', handleLogout);
+          document.getElementById('console-auth-modal-close')?.addEventListener('click', () => closeAuthModal());
+          document.getElementById('console-cancel-auth-btn')?.addEventListener('click', () => closeAuthModal());
+          document.getElementById('console-login-btn')?.addEventListener('click', handleLogin);
+          document.getElementById('console-token-toggle')?.addEventListener('click', togglePasswordVisibility);
+          document.getElementById('console-token-input')?.addEventListener('input', hideError);
+          document.getElementById('console-token-input')?.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+              handleLogin();
+            }
+          });
+          document.addEventListener('click', handleDocumentClick);
+          document.addEventListener('keydown', handleKeyDown);
+        }
+
+        window.openAuthModal = openAuthModal;
+
+        async function init() {
+          renderSessionState();
+          bindEvents();
+          await initAuthState();
+        }
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', init);
+        } else {
+          init();
+        }
+      })();
+    </script>
+    {% endif %}
   </body>
 </html>

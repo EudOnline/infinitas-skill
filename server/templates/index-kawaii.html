@@ -1,6 +1,56 @@
 {% extends "layout-kawaii.html" %}
 {% block body %}
 
+<!-- 👤 用户按钮（固定在页面右上角） -->
+<div class="user-trigger-wrapper" id="user-trigger-wrapper">
+  <button class="user-trigger" id="user-trigger" type="button" aria-label="{{ ui.user_menu_anon_label }}" aria-haspopup="true" aria-expanded="false" aria-controls="user-panel">
+    <span class="user-trigger-icon" id="user-trigger-icon">🔒</span>
+    <span class="user-trigger-pulse" id="user-trigger-pulse" hidden></span>
+  </button>
+  
+  <!-- 用户下拉面板 -->
+  <div class="user-panel" id="user-panel" hidden>
+    <!-- 未登录状态 -->
+    <div class="user-panel-section" id="user-panel-login">
+      <div class="user-panel-header">
+        <span class="user-panel-icon">🔑</span>
+        <span class="user-panel-title">{{ ui.user_panel_auth_title }}</span>
+      </div>
+      <p class="user-panel-desc">{{ ui.user_panel_auth_desc }}</p>
+      <button class="kawaii-button kawaii-button--primary user-panel-btn" id="open-auth-modal-btn" type="button">
+        <span>🔓</span><span>{{ ui.user_panel_auth_action }}</span>
+      </button>
+    </div>
+    
+    <!-- 已登录状态 -->
+    <div class="user-panel-section" id="user-panel-logged" hidden>
+      <div class="user-panel-header">
+        <span class="user-panel-avatar" id="user-avatar">👤</span>
+        <div class="user-panel-info">
+          <span class="user-panel-name" id="user-panel-username">-</span>
+          <span class="user-panel-meta" id="user-panel-expiry">-</span>
+        </div>
+      </div>
+      <div class="user-panel-divider"></div>
+      <!-- 背景选择器 -->
+      <div class="user-panel-bg-section">
+        <div class="user-panel-bg-header">
+          <span>🎨</span>
+          <span>{{ ui.user_panel_background_label }}</span>
+          <span class="user-panel-bg-theme" id="bg-theme-label">{{ ui.user_panel_theme_light }}</span>
+        </div>
+        <div class="user-panel-bg-grid" id="bg-grid">
+          <!-- 动态生成 -->
+        </div>
+      </div>
+      <div class="user-panel-divider"></div>
+      <button class="kawaii-button kawaii-button--ghost user-panel-btn" id="logout-btn" type="button">
+        <span>🚪</span><span>{{ ui.user_panel_logout }}</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- 🎀 英雄区 -->
 <section class="hero-section animate-in" id="start">
   <div class="hero-card kawaii-card">
@@ -29,10 +79,10 @@
       
       <!-- 右侧：快速开始 -->
       <div class="quick-start" id="handoff">
-        <div class="quick-start-header">
-          <span class="quick-start-icon">🚀</span>
-          <span class="quick-start-title">快速开始</span>
-        </div>
+      <div class="quick-start-header">
+        <span class="quick-start-icon">🚀</span>
+        <span class="quick-start-title">{{ ui.quick_start_title }}</span>
+      </div>
         
         <div class="quick-pills">
           {% for prompt in human_prompts[:3] %}
@@ -47,11 +97,44 @@
           {% endfor %}
         </div>
         
-        <p class="quick-hint">💡 点击复制，粘贴到 Agent 对话框使用</p>
+        <p class="quick-hint">💡 {{ ui.quick_start_hint }}</p>
       </div>
     </div>
   </div>
 </section>
+
+<!-- 🔐 认证模态框 -->
+<div class="auth-modal" id="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" hidden>
+  <div class="auth-modal-backdrop" id="auth-modal-backdrop"></div>
+  <div class="auth-modal-content">
+    <div class="auth-modal-header">
+      <h3 class="auth-modal-title" id="auth-modal-title">🔑 {{ ui.auth_modal_title }}</h3>
+      <button class="auth-modal-close" id="auth-modal-close" type="button" aria-label="{{ ui.auth_close }}">✕</button>
+    </div>
+    <div class="auth-modal-body">
+      <p class="auth-modal-desc">{{ ui.auth_modal_desc }}</p>
+      <div class="token-input-wrapper">
+        <input type="password" id="token-input" class="token-input" 
+               placeholder="{{ ui.auth_modal_placeholder }}" autocomplete="off" minlength="8" maxlength="128"
+               aria-label="{{ ui.auth_modal_placeholder }}" aria-describedby="token-hint"/>
+        <button type="button" class="token-toggle" id="token-toggle" title="{{ ui.toggle_password_visibility }}" aria-label="{{ ui.toggle_password_visibility }}">
+          <span aria-hidden="true">👁️</span>
+        </button>
+      </div>
+      <p class="auth-hint" id="token-hint">💡 {{ ui.auth_modal_hint }}</p>
+      <div class="auth-error" id="auth-error" role="alert" aria-live="polite" hidden>
+        <span aria-hidden="true">❌</span><span id="error-message">{{ ui.auth_invalid }}</span>
+      </div>
+    </div>
+    <div class="auth-modal-footer">
+      <button class="kawaii-button kawaii-button--ghost" id="cancel-auth-btn" type="button">{{ ui.auth_cancel }}</button>
+      <button class="kawaii-button kawaii-button--primary" id="login-btn" type="button">
+        <span class="btn-icon" aria-hidden="true">🔓</span>
+        <span class="btn-text">{{ ui.auth_verify }}</span>
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- 📊 状态条 -->
 <section class="status-section animate-in stagger-1">
@@ -74,7 +157,12 @@
     </div>
 
     <div class="section-action">
-      <a class="kawaii-button kawaii-button--primary" href="{{ maintainer_primary_link.href }}">
+      <a
+        class="kawaii-button kawaii-button--primary"
+        href="{{ maintainer_primary_link.href }}"
+        data-auth-required="true"
+        data-auth-target="{{ maintainer_primary_link.href }}"
+      >
         <span>🎮</span>
         <span>{{ maintainer_primary_link.label }}</span>
       </a>
@@ -83,7 +171,7 @@
   
   <div class="console-grid">
     {% for link in console_links %}
-    <a href="{{ link.href }}" class="console-card">
+    <a href="{{ link.href }}" class="console-card" data-auth-required="true" data-auth-target="{{ link.href }}">
       <div class="console-card-header">
         <span class="console-emoji">{{ link.icon }}</span>
         <span class="console-count">{{ link.value }}</span>
@@ -121,7 +209,7 @@
       <h3 class="skill-name">{{ skill.name }}</h3>
       <p class="skill-desc">{{ skill.summary }}</p>
       <button class="skill-copy" type="button" data-copy="{{ skill.inspect_command }}" title="{{ ui.copy_icon_title }}">
-        📋 复制检查命令
+        📋 {{ ui.copy_inspect_action }}
       </button>
     </div>
     {% endfor %}
@@ -235,12 +323,21 @@
     cursor: pointer;
     transition: all 180ms var(--ease-out-quiet);
     white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
   }
   
   .quick-pill:hover {
     border-color: var(--kawaii-primary);
     transform: translateY(-1px);
     box-shadow: 0 2px 6px rgba(255, 105, 180, 0.15);
+  }
+  
+  .quick-pill:active {
+    transform: translateY(0);
+    box-shadow: none;
   }
   
   .quick-pill--primary {
@@ -352,12 +449,19 @@
     box-shadow: var(--shadow-soft);
     transition: all 200ms var(--ease-out-quiet);
     min-width: 0;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
   
   .console-card:hover {
     transform: translateY(-2px);
     border-color: rgba(203, 164, 182, 0.92);
     box-shadow: var(--shadow-elevated);
+  }
+  
+  .console-card:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-soft);
   }
   
   .console-card-header {
@@ -416,12 +520,18 @@
     background: var(--kawaii-panel-soft);
     transition: all 200ms var(--ease-out-quiet);
     min-width: 0;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
   
   .skill-card:hover {
     transform: translateY(-2px);
     border-color: rgba(203, 164, 182, 0.9);
     background: var(--kawaii-panel);
+  }
+  
+  .skill-card:active {
+    transform: translateY(0);
   }
   
   .skill-header {
@@ -561,6 +671,1321 @@
       align-items: flex-start;
     }
   }
+
+  /* ===== User Trigger Button ===== */
+  .user-trigger-wrapper {
+    position: relative;
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.75rem;
+    z-index: 30;
+  }
+
+  .user-trigger {
+    width: 3rem;
+    height: 3rem;
+    border-radius: var(--radius-full);
+    border: 2px solid var(--kawaii-line);
+    background: var(--kawaii-surface);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    font-size: 1.25rem;
+    transition: all 200ms var(--ease-out-quiet);
+    position: relative;
+    box-shadow: var(--shadow-soft);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .user-trigger:hover {
+    transform: translateY(-2px) scale(1.05);
+    border-color: var(--kawaii-primary);
+    box-shadow: var(--shadow-elevated);
+  }
+
+  .user-trigger.is-active {
+    border-color: var(--kawaii-primary);
+    background: linear-gradient(135deg, var(--kawaii-primary-soft), var(--kawaii-primary));
+  }
+
+  .user-trigger-pulse {
+    position: absolute;
+    inset: -4px;
+    border-radius: var(--radius-full);
+    border: 2px solid var(--kawaii-primary);
+    opacity: 0;
+    animation: pulse-ring 2s ease-out infinite;
+    pointer-events: none;
+  }
+
+  @keyframes pulse-ring {
+    0% { transform: scale(0.95); opacity: 0.5; }
+    100% { transform: scale(1.15); opacity: 0; }
+  }
+
+  /* ===== User Panel Dropdown ===== */
+  .user-panel {
+    position: absolute;
+    top: calc(100% + 0.75rem);
+    right: 0;
+    width: min(280px, calc(100vw - 2rem));
+    background: var(--kawaii-surface-elevated);
+    border: 1px solid var(--kawaii-line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-elevated);
+    backdrop-filter: blur(12px);
+    padding: 1rem;
+    animation: panel-in 200ms var(--ease-out-quiet);
+    z-index: 220;
+  }
+
+  @keyframes panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(-10px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .user-panel-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .user-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .user-panel-icon {
+    font-size: 1.5rem;
+  }
+
+  .user-panel-avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, var(--kawaii-primary), var(--kawaii-secondary));
+    display: grid;
+    place-items: center;
+    font-size: 1.25rem;
+    box-shadow: 0 2px 8px rgba(255, 105, 180, 0.3);
+  }
+
+  .user-panel-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .user-panel-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--kawaii-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .user-panel-meta {
+    font-size: 0.75rem;
+    color: var(--kawaii-ink-muted);
+  }
+
+  .user-panel-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--kawaii-ink);
+  }
+
+  .user-panel-desc {
+    font-size: 0.85rem;
+    color: var(--kawaii-ink-soft);
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .user-panel-divider {
+    height: 1px;
+    background: var(--kawaii-line);
+    margin: 0.5rem 0;
+  }
+
+  .user-panel-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Background Section in Panel */
+  .user-panel-bg-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .user-panel-bg-header {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--kawaii-ink);
+  }
+
+  .user-panel-bg-theme {
+    margin-left: auto;
+    font-size: 0.75rem;
+    padding: 0.15rem 0.5rem;
+    background: var(--kawaii-panel-soft);
+    border-radius: var(--radius-full);
+    color: var(--kawaii-ink-soft);
+  }
+
+  .user-panel-bg-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.5rem;
+  }
+
+  .bg-option {
+    aspect-ratio: 1;
+    border-radius: var(--radius-md);
+    border: 2px solid transparent;
+    background-size: cover;
+    background-position: center;
+    cursor: pointer;
+    transition: all 150ms ease;
+    position: relative;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .bg-option::after {
+    content: attr(data-name);
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity 150ms ease;
+    padding: 0.25rem;
+    text-align: center;
+    overflow-wrap: break-word;
+    line-height: 1.2;
+  }
+
+  .bg-option:hover::after,
+  .bg-option.is-active::after {
+    opacity: 1;
+  }
+
+  .bg-option:hover {
+    transform: scale(1.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  .bg-option.is-active {
+    border-color: var(--kawaii-primary);
+    box-shadow: 0 0 0 2px var(--kawaii-primary-soft), 0 4px 12px rgba(255, 105, 180, 0.3);
+  }
+
+  .bg-option--gradient {
+    background: var(--gradient-hero);
+  }
+
+  @media (max-width: 720px) {
+    .user-trigger-wrapper {
+      margin-bottom: 0.625rem;
+    }
+    .user-trigger {
+      width: 2.75rem;
+      height: 2.75rem;
+      font-size: 1.1rem;
+    }
+    .user-panel {
+      top: calc(100% + 0.5rem);
+      right: 0;
+      width: min(260px, calc(100vw - 2rem));
+    }
+  }
+
+  /* ===== Auth Modal ===== */
+  .auth-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+  }
+
+  .auth-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    animation: fade-in 200ms ease;
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .auth-modal-content {
+    position: relative;
+    width: 100%;
+    max-width: 360px;
+    background: var(--kawaii-surface-elevated);
+    border: 1px solid var(--kawaii-line);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    animation: modal-in 300ms var(--ease-out-quiet);
+  }
+
+  @keyframes modal-in {
+    from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .auth-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.25rem 0.75rem;
+    border-bottom: 1px solid var(--kawaii-line);
+  }
+
+  .auth-modal-title {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--kawaii-ink);
+    margin: 0;
+  }
+
+  .auth-modal-close {
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--radius-full);
+    border: none;
+    background: var(--kawaii-panel-soft);
+    color: var(--kawaii-ink-soft);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 150ms ease;
+    display: grid;
+    place-items: center;
+  }
+
+  .auth-modal-close:hover {
+    background: var(--kawaii-primary-soft);
+    color: var(--kawaii-primary-deep);
+    transform: rotate(90deg);
+  }
+
+  .auth-modal-body {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .auth-modal-desc {
+    font-size: 0.9rem;
+    color: var(--kawaii-ink-soft);
+    margin: 0;
+    text-align: center;
+  }
+
+  .token-input-wrapper {
+    position: relative;
+  }
+
+  .token-input {
+    width: 100%;
+    padding: 0.875rem 2.75rem 0.875rem 1rem;
+    border: 2px solid var(--kawaii-line);
+    border-radius: var(--radius-md);
+    background: var(--kawaii-panel-soft);
+    font-family: var(--font-mono);
+    font-size: 16px;
+    color: var(--kawaii-ink);
+    transition: all 200ms ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .token-input:focus {
+    border-color: var(--kawaii-primary);
+    box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.15);
+    outline: none;
+  }
+
+  .token-toggle {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    padding: 0.35rem;
+    cursor: pointer;
+    font-size: 1rem;
+    opacity: 0.6;
+    transition: opacity 200ms ease;
+    border-radius: var(--radius-sm);
+  }
+
+  .token-toggle:hover {
+    opacity: 1;
+    background: var(--kawaii-panel-soft);
+  }
+
+  .auth-hint {
+    font-size: 0.8rem;
+    color: var(--kawaii-ink-muted);
+    margin: 0;
+    text-align: center;
+  }
+
+  .auth-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: rgba(255, 107, 107, 0.1);
+    border: 1px solid rgba(255, 107, 107, 0.3);
+    border-radius: var(--radius-md);
+    color: var(--kawaii-danger);
+    font-size: 0.85rem;
+    animation: shake 300ms ease;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+
+  .auth-modal-footer {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0 1.25rem 1.25rem;
+  }
+
+  .auth-modal-footer .kawaii-button {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .kawaii-button--loading {
+    opacity: 0.7;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .kawaii-button--loading .btn-icon {
+    animation: spin 1s linear infinite;
+    display: inline-block;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* 深色模式适配 */
+  html[data-color-scheme="dark"] .user-trigger {
+    background: rgba(30, 30, 50, 0.9);
+    border-color: rgba(147, 112, 219, 0.4);
+  }
+
+  html[data-color-scheme="dark"] .user-trigger:hover {
+    border-color: #ff69b4;
+    box-shadow: 0 0 20px rgba(255, 105, 180, 0.3);
+  }
+
+  html[data-color-scheme="dark"] .user-panel {
+    background: rgba(30, 30, 50, 0.98);
+    border-color: rgba(147, 112, 219, 0.4);
+  }
+
+  html[data-color-scheme="dark"] .user-panel-name,
+  html[data-color-scheme="dark"] .user-panel-title {
+    color: #fff;
+  }
+
+  html[data-color-scheme="dark"] .auth-modal-content {
+    background: rgba(30, 30, 50, 0.98);
+    border-color: rgba(147, 112, 219, 0.4);
+  }
+
+  html[data-color-scheme="dark"] .token-input {
+    background: rgba(20, 20, 40, 0.9);
+    border-color: rgba(147, 112, 219, 0.35);
+    color: #fff;
+  }
+
+  html[data-color-scheme="dark"] .token-input:focus {
+    border-color: #ff69b4;
+    box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.25);
+  }
+
+  html[data-color-scheme="dark"] .auth-modal-title {
+    color: #fff;
+  }
+
+  /* 添加半个 stagger 延迟 */
+  .stagger-1-half {
+    animation-delay: 150ms;
+  }
+
+  /* 背景选项样式 - 用户面板内使用 */
+  .bg-option {
+    aspect-ratio: 1;
+    border-radius: var(--radius-md);
+    border: 2px solid transparent;
+    background-size: cover;
+    background-position: center;
+    cursor: pointer;
+    transition: all 150ms ease;
+    position: relative;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .bg-option::after {
+    content: attr(data-name);
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity 150ms ease;
+    padding: 0.25rem;
+    text-align: center;
+    overflow-wrap: break-word;
+    line-height: 1.2;
+  }
+
+  .bg-option:hover::after,
+  .bg-option.is-active::after {
+    opacity: 1;
+  }
+
+  .bg-option:hover {
+    transform: scale(1.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  .bg-option.is-active {
+    border-color: var(--kawaii-primary);
+    box-shadow: 0 0 0 2px var(--kawaii-primary-soft), 0 4px 12px rgba(255, 105, 180, 0.3);
+  }
+
+  .bg-option--gradient {
+    background: var(--gradient-hero);
+  }
+
+  /* 深色模式适配 */
+  html[data-color-scheme="dark"] .bg-option.is-active {
+    border-color: #ff69b4;
+    box-shadow: 0 0 0 2px rgba(255, 105, 180, 0.5), 0 4px 12px rgba(255, 105, 180, 0.3);
+  }
 </style>
+
+<script>
+/**
+ * 认证模块 - 管理 Token 登录状态
+ */
+(function() {
+  'use strict';
+  
+  // 常量定义
+  const STORAGE_KEY = 'infinitas_auth_token';
+  const EXPIRY_KEY = 'infinitas_auth_expiry';
+  const DAYS_30 = 30 * 24 * 60 * 60 * 1000;
+  const BG_STORAGE_KEY = 'infinitas_bg_settings';
+  const ui = window.APP_UI || {};
+
+  function uiText(key, fallback) {
+    const value = ui[key];
+    return typeof value === 'string' && value ? value : fallback;
+  }
+
+  function uiTemplate(key, fallback, replacements = {}) {
+    let template = uiText(key, fallback);
+    Object.entries(replacements).forEach(([name, value]) => {
+      template = template.replace(`{${name}}`, String(value));
+    });
+    return template;
+  }
+  
+  // 预置背景图库
+  const BG_PRESETS = {
+    light: [
+      { id: 'sakura-street', name: '{{ "樱花街道" if page_language == "zh" else "Sakura Street" }}', url: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1920&q=80' },
+      { id: 'anime-sky', name: '{{ "动漫天空" if page_language == "zh" else "Anime Sky" }}', url: 'https://images.unsplash.com/photo-1560972550-aba3456b5564?w=1920&q=80' },
+      { id: 'city-sunset', name: '{{ "城市日落" if page_language == "zh" else "City Sunset" }}', url: 'https://images.unsplash.com/photo-1514565131-fce0801e5785?w=1920&q=80' },
+      { id: 'cherry-blossom', name: '{{ "樱花盛开" if page_language == "zh" else "Cherry Blossom" }}', url: 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=1920&q=80' },
+      { id: 'gradient-pink', name: '{{ "粉色渐变" if page_language == "zh" else "Pink Gradient" }}', url: null },
+    ],
+    dark: [
+      { id: 'starry-night', name: '{{ "星空夜景" if page_language == "zh" else "Starry Night" }}', url: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1920&q=80' },
+      { id: 'neon-city', name: '{{ "霓虹城市" if page_language == "zh" else "Neon City" }}', url: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1920&q=80' },
+      { id: 'aurora', name: '{{ "极光" if page_language == "zh" else "Aurora" }}', url: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=1920&q=80' },
+      { id: 'cyberpunk', name: '{{ "赛博朋克" if page_language == "zh" else "Cyberpunk" }}', url: 'https://images.unsplash.com/photo-1555680202-c86f0e12f086?w=1920&q=80' },
+      { id: 'gradient-dark', name: '{{ "深色渐变" if page_language == "zh" else "Night Gradient" }}', url: null },
+    ]
+  };
+  
+  // DOM 元素缓存
+  const dom = {};
+  let errorTimeout = null;
+
+  // Token 管理器
+  const TokenManager = {
+    save(token) {
+      const expiry = Date.now() + DAYS_30;
+      localStorage.setItem(STORAGE_KEY, token);
+      localStorage.setItem(EXPIRY_KEY, expiry.toString());
+    },
+    get() {
+      const token = localStorage.getItem(STORAGE_KEY);
+      const expiry = localStorage.getItem(EXPIRY_KEY);
+      if (!token || !expiry) return null;
+      if (Date.now() > parseInt(expiry)) {
+        TokenManager.clear();
+        return null;
+      }
+      return token;
+    },
+    clear() {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(EXPIRY_KEY);
+    },
+    getRemainingDays() {
+      const expiry = localStorage.getItem(EXPIRY_KEY);
+      if (!expiry) return 0;
+      return Math.max(0, Math.ceil((parseInt(expiry) - Date.now()) / 86400000));
+    }
+  };
+
+  function browserHasAuthCookie() {
+    return document.cookie
+      .split(';')
+      .map(part => part.trim())
+      .some(part => part.startsWith(`${STORAGE_KEY}=`));
+  }
+
+  function currentPageLanguage() {
+    return document.documentElement.lang.toLowerCase().startsWith('en') ? 'en' : 'zh';
+  }
+
+  function resolveAuthReturnTarget() {
+    const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (!active) {
+      return null;
+    }
+    if (active.closest('#user-panel')) {
+      return document.getElementById('user-trigger');
+    }
+    return active;
+  }
+
+  function normalizeProtectedTarget(rawTarget) {
+    if (typeof rawTarget !== 'string' || !rawTarget.startsWith('/')) {
+      return null;
+    }
+    return rawTarget;
+  }
+
+  function consumePendingAuthRedirect() {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('auth') !== 'required') {
+      return null;
+    }
+
+    const target = normalizeProtectedTarget(url.searchParams.get('next'));
+    url.searchParams.delete('auth');
+    url.searchParams.delete('next');
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    return target;
+  }
+
+  // 背景管理器
+  const BackgroundManager = {
+    getSettings() {
+      const saved = localStorage.getItem(BG_STORAGE_KEY);
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error('Failed to parse background settings:', e);
+        }
+      }
+      return { light: null, dark: null };
+    },
+    saveSettings(settings) {
+      localStorage.setItem(BG_STORAGE_KEY, JSON.stringify(settings));
+    },
+    getCurrentBgId(theme) {
+      const settings = BackgroundManager.getSettings();
+      return settings[theme] || null;
+    },
+    setCurrentBgId(theme, bgId) {
+      const settings = BackgroundManager.getSettings();
+      settings[theme] = bgId;
+      BackgroundManager.saveSettings(settings);
+    },
+    apply(theme, bgId) {
+      const preset = BG_PRESETS[theme]?.find(p => p.id === bgId);
+      const varName = theme === 'dark' ? '--bg-image-dark' : '--bg-image';
+      
+      if (!preset) {
+        // 恢复默认背景
+        document.body.style.removeProperty(varName);
+        return;
+      }
+      
+      const lightGradient = 'linear-gradient(135deg, rgba(255, 240, 245, 0.88) 0%, rgba(255, 228, 235, 0.82) 50%, rgba(255, 248, 250, 0.88) 100%)';
+      const darkGradient = 'linear-gradient(135deg, rgba(15, 10, 25, 0.88) 0%, rgba(25, 15, 35, 0.85) 50%, rgba(20, 10, 30, 0.88) 100%)';
+      
+      if (preset.url) {
+        const gradient = theme === 'light' ? lightGradient : darkGradient;
+        document.body.style.setProperty(varName, `${gradient}, url('${preset.url}')`);
+      } else {
+        document.body.style.removeProperty(varName);
+      }
+    },
+    renderSelector(theme) {
+      const grid = document.getElementById('bg-grid');
+      const themeLabel = document.getElementById('bg-theme-label');
+      if (!grid) return;
+      
+      const currentBgId = BackgroundManager.getCurrentBgId(theme);
+      const presets = BG_PRESETS[theme] || [];
+      
+      if (themeLabel) {
+        themeLabel.textContent = theme === 'light'
+          ? uiText('user_panel_theme_light', '浅色')
+          : uiText('user_panel_theme_dark', '深色');
+      }
+      
+      // 对名称进行 HTML 转义防止 XSS
+      const escapeHtml = (str) => str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+      
+      grid.innerHTML = presets.map(preset => {
+        const isActive = preset.id === currentBgId;
+        const bgStyle = preset.url ? `background-image: url('${preset.url}')` : '';
+        const gradientClass = preset.url ? '' : 'bg-option--gradient';
+        
+        return `<button class="bg-option ${gradientClass} ${isActive ? 'is-active' : ''}" 
+                data-bg-id="${preset.id}"
+                data-name="${escapeHtml(preset.name)}"
+                type="button"
+                aria-label="${escapeHtml(preset.name)}"
+                aria-pressed="${isActive ? 'true' : 'false'}"
+                style="${bgStyle}"></button>`;
+      }).join('');
+      
+      // 绑定点击事件
+      grid.querySelectorAll('.bg-option').forEach(btn => {
+        btn.addEventListener('click', () => handleBgSelect(theme, btn.dataset.bgId));
+      });
+    },
+    init() {
+      // 应用当前主题的背景
+      const currentTheme = document.documentElement.getAttribute('data-color-scheme') || 'light';
+      const currentBgId = BackgroundManager.getCurrentBgId(currentTheme);
+      if (currentBgId) {
+        BackgroundManager.apply(currentTheme, currentBgId);
+      }
+      
+      // 监听主题变化
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.attributeName === 'data-color-scheme') {
+            const newTheme = document.documentElement.getAttribute('data-color-scheme') || 'light';
+            const bgId = BackgroundManager.getCurrentBgId(newTheme);
+            BackgroundManager.apply(newTheme, bgId);
+            // 如果用户面板打开，重新渲染背景选择器
+            if (isUserPanelOpen) {
+              BackgroundManager.renderSelector(newTheme);
+            }
+          }
+        });
+      });
+      observer.observe(document.documentElement, { attributes: true });
+    }
+  };
+
+  // 处理背景选择
+  async function handleBgSelect(theme, bgId) {
+    // 立即应用预览
+    BackgroundManager.apply(theme, bgId);
+    BackgroundManager.setCurrentBgId(theme, bgId);
+    
+    // 如果已登录，同步到服务器
+    if (currentUser) {
+      try {
+        const res = await fetch('/api/background/set', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ theme, bg_id: bgId })
+        });
+        if (!res.ok) {
+          console.error('Failed to save background to server');
+        }
+      } catch (e) {
+        console.error('Network error saving background:', e);
+      }
+    }
+    
+    // 更新选中状态
+    const grid = document.getElementById('bg-grid');
+    if (grid) {
+      grid.querySelectorAll('.bg-option').forEach(b => {
+        b.classList.remove('is-active');
+        b.setAttribute('aria-pressed', 'false');
+      });
+      const activeBtn = grid.querySelector(`[data-bg-id="${bgId}"]`);
+      if (activeBtn) {
+        activeBtn.classList.add('is-active');
+        activeBtn.setAttribute('aria-pressed', 'true');
+      }
+    }
+  }
+
+  // UI 状态
+  let isUserPanelOpen = false;
+  let isAuthModalOpen = false;
+  let currentUser = null;
+  let pendingAuthTarget = null;
+  let lastAuthTrigger = null;
+
+  // DOM 操作
+  function cacheElements(ids) {
+    ids.forEach(id => dom[id] = document.getElementById(id));
+  }
+
+  function updateUserTriggerIcon(isLoggedIn) {
+    const icon = document.getElementById('user-trigger-icon');
+    const pulse = document.getElementById('user-trigger-pulse');
+    const trigger = document.getElementById('user-trigger');
+    if (icon) {
+      icon.textContent = isLoggedIn ? '👤' : '🔒';
+    }
+    if (pulse) {
+      pulse.hidden = isLoggedIn;
+    }
+    if (trigger) {
+      trigger.classList.toggle('is-active', isLoggedIn);
+      trigger.setAttribute(
+        'aria-label',
+        isLoggedIn
+          ? uiText('user_menu_logged_label', '已登录用户菜单')
+          : uiText('user_menu_anon_label', '登录')
+      );
+    }
+  }
+
+  function toggleUserPanel() {
+    const panel = document.getElementById('user-panel');
+    const trigger = document.getElementById('user-trigger');
+    if (!panel) return;
+    
+    isUserPanelOpen = !isUserPanelOpen;
+    panel.hidden = !isUserPanelOpen;
+    trigger.setAttribute('aria-expanded', isUserPanelOpen);
+    
+    if (isUserPanelOpen && currentUser) {
+      // 刷新背景选择器
+      const currentTheme = document.documentElement.getAttribute('data-color-scheme') || 'light';
+      BackgroundManager.renderSelector(currentTheme);
+    }
+  }
+
+  function closeUserPanel() {
+    const panel = document.getElementById('user-panel');
+    const trigger = document.getElementById('user-trigger');
+    if (!panel || panel.hidden) return;
+    
+    isUserPanelOpen = false;
+    panel.hidden = true;
+    trigger.setAttribute('aria-expanded', 'false');
+  }
+
+  function openAuthModal(targetHref = null) {
+    const modal = document.getElementById('auth-modal');
+    if (!modal) return;
+    
+    lastAuthTrigger = resolveAuthReturnTarget();
+    pendingAuthTarget = targetHref;
+    isAuthModalOpen = true;
+    modal.hidden = false;
+    document.body.style.overflow = 'hidden';
+    
+    // 聚焦输入框
+    setTimeout(() => {
+      const input = document.getElementById('token-input');
+      if (input) input.focus();
+    }, 100);
+    
+    // 关闭用户面板
+    closeUserPanel();
+  }
+
+  function closeAuthModal(clearPendingTarget = true) {
+    const modal = document.getElementById('auth-modal');
+    if (!modal) return;
+    
+    isAuthModalOpen = false;
+    modal.hidden = true;
+    document.body.style.overflow = '';
+    if (clearPendingTarget) {
+      pendingAuthTarget = null;
+    }
+    
+    // 清空输入和错误
+    const input = document.getElementById('token-input');
+    const error = document.getElementById('auth-error');
+    if (input) input.value = '';
+    if (error) error.hidden = true;
+    
+    // 重置按钮状态
+    setLoading(false);
+
+    if (lastAuthTrigger && typeof lastAuthTrigger.focus === 'function' && document.contains(lastAuthTrigger)) {
+      window.setTimeout(() => {
+        if (document.contains(lastAuthTrigger)) {
+          lastAuthTrigger.focus();
+        }
+      }, 0);
+    }
+  }
+
+  function formatSessionMeta() {
+    const remainingDays = TokenManager.getRemainingDays();
+    if (remainingDays > 0) {
+      return uiTemplate('auth_expiry_days', '{days} 天后过期', { days: remainingDays });
+    }
+    return uiText('auth_session_active', '会话已连接');
+  }
+
+  function updateUserPanelState() {
+    const loginSection = document.getElementById('user-panel-login');
+    const loggedSection = document.getElementById('user-panel-logged');
+    
+    if (currentUser) {
+      if (loginSection) loginSection.hidden = true;
+      if (loggedSection) loggedSection.hidden = false;
+      
+      const usernameEl = document.getElementById('user-panel-username');
+      const expiryEl = document.getElementById('user-panel-expiry');
+      const avatarEl = document.getElementById('user-avatar');
+      
+      if (usernameEl) usernameEl.textContent = currentUser.username;
+      if (expiryEl) expiryEl.textContent = formatSessionMeta();
+      if (avatarEl) {
+        // 使用用户名首字母作为头像
+        const initial = currentUser.username.charAt(0).toUpperCase();
+        avatarEl.textContent = initial;
+      }
+      
+      // 刷新背景选择器
+      const currentTheme = document.documentElement.getAttribute('data-color-scheme') || 'light';
+      BackgroundManager.renderSelector(currentTheme);
+    } else {
+      if (loginSection) loginSection.hidden = false;
+      if (loggedSection) loggedSection.hidden = true;
+    }
+  }
+
+  // UI 状态管理
+  function setLoading(loading) {
+    const btn = dom['login-btn'];
+    if (!btn) return;
+    const btnIcon = btn.querySelector('.btn-icon');
+    const btnText = btn.querySelector('.btn-text');
+    if (loading) {
+      btn.classList.add('kawaii-button--loading');
+      if (btnIcon) btnIcon.textContent = '⏳';
+      if (btnText) btnText.textContent = uiText('auth_verify_loading', '验证中...');
+      btn.disabled = true;
+    } else {
+      btn.classList.remove('kawaii-button--loading');
+      if (btnIcon) btnIcon.textContent = '🔓';
+      if (btnText) btnText.textContent = uiText('auth_verify', '验证');
+      btn.disabled = false;
+    }
+  }
+
+  function validateToken(token) {
+    if (!token) return uiText('auth_enter_token', '请输入 Token');
+    if (token.length < 8) return uiText('auth_token_min', 'Token 长度不能少于 8 位');
+    if (token.length > 128) return uiText('auth_token_max', 'Token 长度不能超过 128 位');
+    // 防止 XSS - 检查非法字符
+    if (/[<>"'&]/.test(token)) return uiText('auth_invalid_characters', 'Token 包含非法字符');
+    return null;
+  }
+
+  function showError(message) {
+    const errorDiv = document.getElementById('auth-error');
+    const errorMessage = document.getElementById('error-message');
+    if (!errorDiv || !errorMessage) return;
+    
+    // 转义HTML防止XSS
+    errorMessage.textContent = message;
+    errorDiv.hidden = false;
+    
+    if (errorTimeout) clearTimeout(errorTimeout);
+    errorTimeout = setTimeout(() => {
+      errorDiv.hidden = true;
+      errorTimeout = null;
+    }, 5000);
+  }
+
+  function hideError() {
+    const errorDiv = document.getElementById('auth-error');
+    if (errorDiv) errorDiv.hidden = true;
+    if (errorTimeout) {
+      clearTimeout(errorTimeout);
+      errorTimeout = null;
+    }
+  }
+
+  // 事件处理
+  async function handleLogin() {
+    const input = document.getElementById('token-input');
+    if (!input) return;
+    
+    const token = input.value.trim();
+    
+    const validationError = validateToken(token);
+    if (validationError) {
+      showError(validationError);
+      return;
+    }
+
+    hideError();
+    setLoading(true);
+
+    try {
+      const res = await fetch(`/api/auth/login?lang=${currentPageLanguage()}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({token})
+      });
+      
+      let data;
+      try {
+        data = await res.json();
+      } catch (e) {
+        throw new Error(uiText('auth_bad_server_data', '服务器返回无效数据'));
+      }
+      
+      if (res.ok && data.success) {
+        TokenManager.save(token);
+        currentUser = { username: data.username };
+        updateUserTriggerIcon(true);
+        updateUserPanelState();
+        const nextTarget = pendingAuthTarget;
+        closeAuthModal(false);
+        
+        // 同步背景设置到服务器
+        await syncBackgroundToServer();
+        pendingAuthTarget = null;
+        if (nextTarget) {
+          window.location.href = nextTarget;
+        }
+      } else {
+        showError(data.error || uiText('auth_verify_failed', '验证失败，请检查 Token 是否正确'));
+      }
+    } catch (e) {
+      showError(e.message || uiText('auth_network_error', '网络错误，请检查网络连接后重试'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // 同步本地背景设置到服务器
+  async function syncBackgroundToServer() {
+    if (!currentUser) return;
+    
+    const settings = BackgroundManager.getSettings();
+    
+    try {
+      // 同步浅色背景
+      if (settings.light) {
+        await fetch('/api/background/set', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ theme: 'light', bg_id: settings.light })
+        });
+      }
+      // 同步深色背景
+      if (settings.dark) {
+        await fetch('/api/background/set', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ theme: 'dark', bg_id: settings.dark })
+        });
+      }
+    } catch (e) {
+      console.error('Failed to sync background:', e);
+    }
+  }
+
+  function clearBrowserAuthCookie() {
+    document.cookie = 'infinitas_auth_token=; Max-Age=0; path=/; SameSite=Lax';
+  }
+
+  async function handleLogout() {
+    TokenManager.clear();
+    clearBrowserAuthCookie();
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (error) {
+      console.error('Failed to clear auth cookie on server:', error);
+    }
+    currentUser = null;
+    updateUserTriggerIcon(false);
+    updateUserPanelState();
+    closeUserPanel();
+    
+    // 清除用户特定的背景设置（恢复默认）
+    document.body.style.removeProperty('--bg-image');
+    document.body.style.removeProperty('--bg-image-dark');
+  }
+
+  function togglePasswordVisibility() {
+    const input = document.getElementById('token-input');
+    const toggle = document.getElementById('token-toggle');
+    if (!input || !toggle) return;
+    
+    const isPassword = input.type === 'password';
+    input.type = isPassword ? 'text' : 'password';
+    
+    const span = toggle.querySelector('span');
+    if (span) span.textContent = isPassword ? '🙈' : '👁️';
+    toggle.setAttribute(
+      'aria-label',
+      isPassword ? uiText('hide_password', '隐藏密码') : uiText('show_password', '显示密码')
+    );
+  }
+
+  // 点击外部关闭处理
+  function handleClickOutside(e) {
+    // 关闭用户面板
+    const userWrapper = document.getElementById('user-trigger-wrapper');
+    if (userWrapper && !userWrapper.contains(e.target) && isUserPanelOpen) {
+      closeUserPanel();
+    }
+  }
+
+  // ESC键处理
+  function handleKeyDown(e) {
+    if (e.key === 'Escape') {
+      if (isAuthModalOpen) {
+        closeAuthModal();
+      } else if (isUserPanelOpen) {
+        closeUserPanel();
+      }
+    }
+  }
+
+  function handleProtectedNavigation(e) {
+    const link = e.currentTarget;
+    if (currentUser) {
+      return;
+    }
+    e.preventDefault();
+    const targetHref = link.dataset.authTarget || link.getAttribute('href') || null;
+    openAuthModal(targetHref);
+  }
+
+  // 初始化认证状态
+  async function initAuthState() {
+    const localToken = TokenManager.get();
+    const hasAuthCookie = browserHasAuthCookie();
+
+    if (!hasAuthCookie) {
+      if (localToken) {
+        TokenManager.clear();
+      }
+      currentUser = null;
+      updateUserTriggerIcon(false);
+      updateUserPanelState();
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/auth/me');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.authenticated) {
+          currentUser = { username: data.username };
+          updateUserTriggerIcon(true);
+          updateUserPanelState();
+          
+          // 获取服务器保存的背景设置并应用
+          await fetchAndApplyUserBackground();
+          return;
+        }
+        clearBrowserAuthCookie();
+      }
+    } catch (e) {
+      console.error('Auth validation failed:', e);
+    }
+
+    if (localToken) {
+      TokenManager.clear();
+    }
+    currentUser = null;
+    updateUserTriggerIcon(false);
+    updateUserPanelState();
+  }
+
+  // 获取并应用用户保存的背景
+  async function fetchAndApplyUserBackground() {
+    try {
+      const res = await fetch('/api/background/me');
+      if (res.ok) {
+        const data = await res.json();
+        const currentTheme = document.documentElement.getAttribute('data-color-scheme') || 'light';
+        
+        // 应用服务器保存的背景设置
+        if (data.light_bg_id) {
+          BackgroundManager.setCurrentBgId('light', data.light_bg_id);
+          if (currentTheme === 'light') {
+            BackgroundManager.apply('light', data.light_bg_id);
+          }
+        }
+        if (data.dark_bg_id) {
+          BackgroundManager.setCurrentBgId('dark', data.dark_bg_id);
+          if (currentTheme === 'dark') {
+            BackgroundManager.apply('dark', data.dark_bg_id);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch background:', e);
+    }
+  }
+
+  // 绑定所有事件
+  function bindAllEvents() {
+    // 用户触发按钮
+    const userTrigger = document.getElementById('user-trigger');
+    if (userTrigger) {
+      userTrigger.addEventListener('click', toggleUserPanel);
+    }
+    
+    // 打开认证模态框
+    const openAuthBtn = document.getElementById('open-auth-modal-btn');
+    if (openAuthBtn) {
+      openAuthBtn.addEventListener('click', () => openAuthModal());
+    }
+    
+    // 关闭认证模态框
+    const closeAuthBtn = document.getElementById('auth-modal-close');
+    const cancelAuthBtn = document.getElementById('cancel-auth-btn');
+    const authBackdrop = document.getElementById('auth-modal-backdrop');
+    
+    if (closeAuthBtn) closeAuthBtn.addEventListener('click', closeAuthModal);
+    if (cancelAuthBtn) cancelAuthBtn.addEventListener('click', closeAuthModal);
+    if (authBackdrop) authBackdrop.addEventListener('click', closeAuthModal);
+    
+    // 模态框内登录按钮
+    const loginBtn = document.getElementById('login-btn');
+    if (loginBtn) loginBtn.addEventListener('click', handleLogin);
+    
+    // Token 输入框事件
+    const tokenInput = document.getElementById('token-input');
+    const tokenToggle = document.getElementById('token-toggle');
+    
+    if (tokenInput) {
+      tokenInput.addEventListener('input', hideError);
+      tokenInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleLogin();
+      });
+    }
+    
+    if (tokenToggle) {
+      tokenToggle.addEventListener('click', togglePasswordVisibility);
+    }
+    
+    // 登出按钮
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+
+    document.querySelectorAll('[data-auth-required="true"]').forEach((link) => {
+      link.addEventListener('click', handleProtectedNavigation);
+    });
+    
+    // 全局事件
+    document.addEventListener('click', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+  }
+
+  // 主初始化函数
+  async function init() {
+    // 先初始化背景（从 localStorage）
+    BackgroundManager.init();
+    
+    // 然后验证认证状态
+    await initAuthState();
+    
+    // 绑定所有事件
+    bindAllEvents();
+
+    const protectedTarget = consumePendingAuthRedirect();
+    if (!protectedTarget) {
+      return;
+    }
+    if (currentUser) {
+      window.location.replace(protectedTarget);
+      return;
+    }
+    openAuthModal(protectedTarget);
+  }
+
+  window.openAuthModal = openAuthModal;
+
+  // 启动
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
 
 {% endblock %}

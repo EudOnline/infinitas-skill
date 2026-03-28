@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
@@ -12,13 +13,15 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from server.api.submissions import latest_review, serialize_submission
+from server.api.auth import router as auth_router
+from server.api.background import router as background_router
 from server.api.jobs import router as jobs_router
 from server.api.reviews import router as reviews_router
 from server.api.submissions import router as submissions_router
 from server.api.skills import router as skills_router
 from server.api.search import router as search_router
 from server.api.reviews import serialize_review
-from server.auth import get_current_user, require_registry_reader, require_role
+from server.auth import get_current_user, maybe_get_current_user, require_registry_reader
 from server.db import ensure_database_ready, get_db
 from server.jobs import serialize_job
 from server.models import Job, Review, Submission, User
@@ -101,9 +104,100 @@ def _pick_lang(lang: str, zh: str, en: str) -> str:
     return zh if lang == 'zh' else en
 
 
+def _humanize_identifier(value: str | None) -> str:
+    if not value:
+        return '-'
+    return value.replace('_', ' ').replace('-', ' ').strip().title()
+
+
+def _humanize_status(status: str | None, lang: str) -> str:
+    mapping = {
+        'draft': ('草稿', 'Draft'),
+        'validation_requested': ('等待校验', 'Waiting validation'),
+        'review_requested': ('待评审', 'Waiting review'),
+        'approved': ('已批准', 'Approved'),
+        'rejected': ('已驳回', 'Rejected'),
+        'validated': ('已校验', 'Validated'),
+        'promoted': ('已提升', 'Promoted'),
+        'published': ('已发布', 'Published'),
+        'pending': ('待处理', 'Pending'),
+        'queued': ('排队中', 'Queued'),
+        'running': ('运行中', 'Running'),
+        'completed': ('已完成', 'Completed'),
+        'failed': ('失败', 'Failed'),
+    }
+    labels = mapping.get((status or '').strip().lower())
+    if labels is not None:
+        return _pick_lang(lang, labels[0], labels[1])
+    return _humanize_identifier(status)
+
+
+def _humanize_job_kind(kind: str | None, lang: str) -> str:
+    mapping = {
+        'validate_submission': ('校验提交项', 'Validate submission'),
+        'promote_submission': ('提升提交项', 'Promote submission'),
+        'publish_submission': ('发布提交项', 'Publish submission'),
+    }
+    labels = mapping.get((kind or '').strip().lower())
+    if labels is not None:
+        return _pick_lang(lang, labels[0], labels[1])
+    return _humanize_identifier(kind)
+
+
+def _humanize_role(role: str | None, lang: str) -> str:
+    mapping = {
+        'maintainer': ('维护者', 'Maintainer'),
+        'contributor': ('贡献者', 'Contributor'),
+    }
+    labels = mapping.get((role or '').strip().lower())
+    if labels is not None:
+        return _pick_lang(lang, labels[0], labels[1])
+    return _humanize_identifier(role)
+
+
+def _humanize_timestamp(value: str | None) -> str:
+    if not value:
+        return '-'
+    try:
+        parsed = datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+    except ValueError:
+        return value
+    stamp = parsed.strftime('%Y-%m-%d %H:%M')
+    if parsed.tzinfo is not None and parsed.utcoffset() is not None:
+        stamp = f'{stamp} UTC'
+    return stamp
+
+
+def _with_lang(href: str, lang: str) -> str:
+    if not href or href.startswith('#'):
+        return href
+    parts = urlsplit(href)
+    if parts.scheme or parts.netloc:
+        return href
+    query = dict(parse_qsl(parts.query, keep_blank_values=True))
+    query['lang'] = lang
+    return urlunsplit(('', '', parts.path or '/', urlencode(query), parts.fragment))
+
+
 def _resolve_language(request: Request) -> str:
     lang = (request.query_params.get('lang') or 'zh').strip().lower()
     return 'en' if lang.startswith('en') else 'zh'
+
+
+def _request_path_with_query(request: Request) -> str:
+    path = request.url.path or '/'
+    query = request.url.query
+    if query:
+        return f'{path}?{query}'
+    return path
+
+
+def _build_auth_redirect_url(request: Request, lang: str) -> str:
+    target_parts = urlsplit(_with_lang('/', lang))
+    query = dict(parse_qsl(target_parts.query, keep_blank_values=True))
+    query['auth'] = 'required'
+    query['next'] = _request_path_with_query(request)
+    return urlunsplit(('', '', target_parts.path or '/', urlencode(query), target_parts.fragment))
 
 
 def _localized_stamp(value: str | None, lang: str) -> str:
@@ -132,6 +226,7 @@ def _build_kawaii_ui_context(request: Request, lang: str, page_kicker: str, page
     return {
         'page_language': lang,
         'page_lang_attr': 'zh-CN' if lang == 'zh' else 'en',
+        'home_href': _with_lang('/', lang),
         'language_switches': _build_language_switches(request, lang),
         'theme_switches': [
             {'value': 'light', 'label': _pick_lang(lang, '浅色', 'Light')},
@@ -146,6 +241,14 @@ def _build_kawaii_ui_context(request: Request, lang: str, page_kicker: str, page
             'copy_icon_title': _pick_lang(lang, '复制', 'Copy'),
             'copy_button_label': _pick_lang(lang, '复制', 'Copy'),
             'status_running': _pick_lang(lang, '运行中', 'Running'),
+            'search_placeholder': _pick_lang(lang, '搜索技能或命令', 'Search skills or commands'),
+            'search_results_label': _pick_lang(lang, '搜索结果', 'Search results'),
+            'search_skills_label': _pick_lang(lang, '技能', 'Skills'),
+            'search_commands_label': _pick_lang(lang, '命令', 'Commands'),
+            'search_empty_label': _pick_lang(lang, '未找到匹配结果', 'No matching results'),
+            'search_create_label': _pick_lang(lang, '创建新技能', 'Create skill'),
+            'search_create_command': 'scripts/new-skill.sh lvxiaoer/my-skill basic',
+            'search_auth_required': _pick_lang(lang, '请先登录后搜索私有目录', 'Sign in to search the private catalog'),
             'page_kicker': page_kicker,
             'page_eyebrow': page_eyebrow,
             'handoff_title': _pick_lang(lang, '交接台', 'Hand-off desk'),
@@ -163,6 +266,59 @@ def _build_kawaii_ui_context(request: Request, lang: str, page_kicker: str, page
             'featured_skill_fallback': _pick_lang(lang, '精选', 'Featured'),
             'copy_inspect_action': _pick_lang(lang, '复制检查命令', 'Copy inspect command'),
             'go_handoff_action': _pick_lang(lang, '去交接台', 'Go to hand-off'),
+            'quick_start_title': _pick_lang(lang, '快速开始', 'Quick start'),
+            'quick_start_hint': _pick_lang(lang, '点击复制，粘贴到 Agent 对话框使用', 'Tap to copy and paste into your Agent chat'),
+            'auth_modal_title': _pick_lang(lang, '身份认证', 'Identity check'),
+            'auth_modal_desc': _pick_lang(lang, '请输入访问令牌以解锁个性化设置', 'Enter your access token to unlock personalized settings'),
+            'auth_modal_placeholder': _pick_lang(lang, '输入你的访问令牌', 'Enter your access token'),
+            'auth_modal_hint': _pick_lang(lang, 'Token 有效期 30 天', 'Token stays valid for 30 days'),
+            'auth_invalid': _pick_lang(lang, 'Token 无效', 'Invalid token'),
+            'auth_cancel': _pick_lang(lang, '取消', 'Cancel'),
+            'auth_close': _pick_lang(lang, '关闭', 'Close'),
+            'auth_verify': _pick_lang(lang, '验证', 'Verify'),
+            'auth_verify_loading': _pick_lang(lang, '验证中...', 'Verifying...'),
+            'auth_login': _pick_lang(lang, '登录', 'Login'),
+            'auth_enter_token': _pick_lang(lang, '请输入 Token', 'Please enter token'),
+            'auth_token_min': _pick_lang(lang, 'Token 长度不能少于 8 位', 'Token must be at least 8 characters'),
+            'auth_token_max': _pick_lang(lang, 'Token 长度不能超过 128 位', 'Token must not exceed 128 characters'),
+            'auth_invalid_characters': _pick_lang(lang, 'Token 包含非法字符', 'Token contains invalid characters'),
+            'auth_verify_failed': _pick_lang(lang, '验证失败，请检查 Token 是否正确', 'Verification failed, please check your token'),
+            'auth_network_error': _pick_lang(lang, '网络错误，请检查网络连接后重试', 'Network error, please check your connection and try again'),
+            'auth_bad_server_data': _pick_lang(lang, '服务器返回无效数据', 'The server returned invalid data'),
+            'auth_session_active': _pick_lang(lang, '会话已连接', 'Session active'),
+            'auth_expiry_days': _pick_lang(lang, '{days} 天后过期', 'Expires in {days} days'),
+            'show_password': _pick_lang(lang, '显示密码', 'Show password'),
+            'hide_password': _pick_lang(lang, '隐藏密码', 'Hide password'),
+            'toggle_password_visibility': _pick_lang(lang, '切换密码可见性', 'Toggle password visibility'),
+            'user_panel_auth_title': _pick_lang(lang, '认证', 'Authentication'),
+            'user_panel_auth_desc': _pick_lang(lang, '登录后可保存背景设置到云端', 'Sign in to sync background preferences'),
+            'user_panel_auth_action': _pick_lang(lang, '输入 Token', 'Enter token'),
+            'user_panel_background_label': _pick_lang(lang, '背景', 'Background'),
+            'user_panel_theme_light': _pick_lang(lang, '浅色', 'Light'),
+            'user_panel_theme_dark': _pick_lang(lang, '深色', 'Dark'),
+            'user_panel_logout': _pick_lang(lang, '退出登录', 'Sign out'),
+            'user_menu_anon_label': _pick_lang(lang, '登录', 'Sign in'),
+            'user_menu_logged_label': _pick_lang(lang, '已登录用户菜单', 'Account menu'),
+            'console_session_guest': _pick_lang(lang, '登录', 'Sign in'),
+            'console_session_desc': _pick_lang(
+                lang,
+                '登录后可继续在维护台搜索、检查和处理任务。',
+                'Sign in to keep searching, inspecting, and operating from the console.',
+            ),
+            'console_session_open_auth': _pick_lang(lang, '输入 Token', 'Enter token'),
+            'console_session_label': _pick_lang(lang, '当前会话', 'Current session'),
+            'console_session_role': _pick_lang(lang, '角色：{role}', 'Role: {role}'),
+            'console_session_ready': _pick_lang(lang, '会话可用', 'Session ready'),
+            'logout_success': _pick_lang(lang, '已退出登录', 'Signed out'),
+            'role_maintainer': _pick_lang(lang, '维护者', 'Maintainer'),
+            'role_contributor': _pick_lang(lang, '贡献者', 'Contributor'),
+            'theme_light_name': _pick_lang(lang, '浅色主题', 'light theme'),
+            'theme_dark_name': _pick_lang(lang, '深色主题', 'dark theme'),
+            'theme_switched': _pick_lang(lang, '已切换到 {theme}', 'Switched to {theme}'),
+            'use_skill_ready': _pick_lang(lang, '技能 {name} 已就绪，命令已复制', 'Skill {name} is ready and the command has been copied'),
+            'use_skill_error': _pick_lang(lang, '使用技能失败，请重试', 'Failed to use skill, please try again'),
+            'generic_action_failed': _pick_lang(lang, '操作失败，请刷新页面重试', 'Action failed, please refresh and try again'),
+            'generic_unexpected_error': _pick_lang(lang, '发生错误，请刷新页面重试', 'An error occurred, please refresh and try again'),
         },
     }
 
@@ -175,10 +331,10 @@ def _site_nav(home: bool, lang: str) -> list[dict[str, str]]:
             {'href': '#console', 'label': _pick_lang(lang, '维护台', 'Console')},
         ]
     return [
-        {'href': '/', 'label': _pick_lang(lang, '首页', 'Home')},
-        {'href': '/submissions', 'label': _pick_lang(lang, '提交', 'Submissions')},
-        {'href': '/reviews', 'label': _pick_lang(lang, '评审', 'Reviews')},
-        {'href': '/jobs', 'label': _pick_lang(lang, '任务', 'Jobs')},
+        {'href': _with_lang('/', lang), 'label': _pick_lang(lang, '首页', 'Home')},
+        {'href': _with_lang('/submissions', lang), 'label': _pick_lang(lang, '提交', 'Submissions')},
+        {'href': _with_lang('/reviews', lang), 'label': _pick_lang(lang, '评审', 'Reviews')},
+        {'href': _with_lang('/jobs', lang), 'label': _pick_lang(lang, '任务', 'Jobs')},
     ]
 
 
@@ -280,21 +436,21 @@ def _build_home_context(settings, db: Session, request: Request) -> dict:
     )
     console_links = [
         {
-            'href': '/submissions',
+            'href': _with_lang('/submissions', lang),
             'icon': '📦',
             'title': _pick_lang(lang, '提交', 'Submissions'),
             'value': str(db.scalar(select(func.count()).select_from(Submission)) or 0),
             'detail': _pick_lang(lang, '新提案', 'New proposals'),
         },
         {
-            'href': '/reviews',
+            'href': _with_lang('/reviews', lang),
             'icon': '✨',
             'title': _pick_lang(lang, '评审', 'Reviews'),
             'value': str(db.scalar(select(func.count()).select_from(Review)) or 0),
             'detail': _pick_lang(lang, '审批备注', 'Decision notes'),
         },
         {
-            'href': '/jobs',
+            'href': _with_lang('/jobs', lang),
             'icon': '⚙️',
             'title': _pick_lang(lang, '任务', 'Jobs'),
             'value': str(db.scalar(select(func.count()).select_from(Job)) or 0),
@@ -321,7 +477,7 @@ def _build_home_context(settings, db: Session, request: Request) -> dict:
         'command_examples': command_examples,
         'console_links': console_links,
         'featured_skills': featured_skills,
-        'maintainer_primary_link': {'href': '/submissions', 'label': _pick_lang(lang, '打开维护台', 'Open console')},
+        'maintainer_primary_link': {'href': _with_lang('/submissions', lang), 'label': _pick_lang(lang, '打开维护台', 'Open console')},
         'maintainer_body': _pick_lang(
             lang,
             '首页只负责交接；审批、队列和放行都在维护台。',
@@ -342,6 +498,7 @@ def _build_console_context(
     cli_command: str,
     stats: list[dict[str, str]],
     insight_cards: list[dict[str, str]] | None = None,
+    show_console_session: bool = True,
 ) -> dict:
     lang = _resolve_language(request)
     page_eyebrow = _pick_lang(lang, 'Maintainer-only console / 维护控制台', 'Maintainer-only console')
@@ -359,9 +516,58 @@ def _build_console_context(
         'cli_command': cli_command,
         'page_stats': stats,
         'insight_cards': insight_cards or [],
+        'show_console_session': show_console_session,
+        'format_status': lambda value: _humanize_status(value, lang),
+        'format_job_kind': lambda value: _humanize_job_kind(value, lang),
+        'format_timestamp': _humanize_timestamp,
     }
     context.update(_build_kawaii_ui_context(request, lang, page_kicker, page_eyebrow))
     return context
+
+
+def _build_console_forbidden_context(request: Request, user: User, *allowed_roles: str) -> dict:
+    lang = _resolve_language(request)
+    allowed_text = ', '.join(_humanize_role(role, lang) for role in allowed_roles) or _pick_lang(lang, '维护者', 'Maintainer')
+    context = _build_console_context(
+        request=request,
+        title=_pick_lang(lang, '维护台访问受限', 'Console access denied'),
+        content=_pick_lang(
+            lang,
+            f'当前账号角色是{_humanize_role(user.role, lang)}，此页面仅允许{allowed_text}访问。',
+            f'Your current role is {_humanize_role(user.role, lang)}. This page is limited to {allowed_text}.',
+        ),
+        limit=0,
+        items=[],
+        cli_command='',
+        stats=[],
+        insight_cards=[],
+        show_console_session=True,
+    )
+    context.update(
+        {
+            'denied_title': _pick_lang(lang, '维护台访问受限', 'Console access denied'),
+            'denied_body': _pick_lang(
+                lang,
+                f'需要{allowed_text}权限才能继续访问维护台。你可以先返回首页，或者切换到有权限的账号。',
+                f'Maintainer role required before you can continue into the console. Head back home or switch to an authorized account.',
+            ),
+            'denied_home_href': _with_lang('/', lang),
+            'denied_home_label': _pick_lang(lang, '返回首页', 'Back home'),
+        }
+    )
+    return context
+
+
+def _require_console_user_or_redirect(request: Request, db: Session, *allowed_roles: str) -> User | RedirectResponse:
+    user = maybe_get_current_user(request, db)
+    if user is None:
+        return RedirectResponse(
+            url=_build_auth_redirect_url(request, _resolve_language(request)),
+            status_code=303,
+        )
+    if user.role not in set(allowed_roles):
+        raise HTTPException(status_code=403, detail='insufficient role')
+    return user
 
 
 def create_app() -> FastAPI:
@@ -431,9 +637,20 @@ def create_app() -> FastAPI:
     def submissions_page(
         request: Request,
         limit: int = Query(default=20, ge=1, le=100),
-        _: User = Depends(require_role('maintainer')),
         db: Session = Depends(get_db),
     ):
+        user = maybe_get_current_user(request, db)
+        if user is None:
+            return RedirectResponse(
+                url=_build_auth_redirect_url(request, _resolve_language(request)),
+                status_code=303,
+            )
+        if user.role != 'maintainer':
+            return templates.TemplateResponse(
+                'console-forbidden.html',
+                _build_console_forbidden_context(request, user, 'maintainer'),
+                status_code=403,
+            )
         lang = _resolve_language(request)
         rows = (
             db.query(Submission)
@@ -486,9 +703,20 @@ def create_app() -> FastAPI:
     def reviews_page(
         request: Request,
         limit: int = Query(default=20, ge=1, le=100),
-        _: User = Depends(require_role('maintainer')),
         db: Session = Depends(get_db),
     ):
+        user = maybe_get_current_user(request, db)
+        if user is None:
+            return RedirectResponse(
+                url=_build_auth_redirect_url(request, _resolve_language(request)),
+                status_code=303,
+            )
+        if user.role != 'maintainer':
+            return templates.TemplateResponse(
+                'console-forbidden.html',
+                _build_console_forbidden_context(request, user, 'maintainer'),
+                status_code=403,
+            )
         lang = _resolve_language(request)
         rows = (
             db.query(Review)
@@ -550,9 +778,20 @@ def create_app() -> FastAPI:
     def jobs_page(
         request: Request,
         limit: int = Query(default=20, ge=1, le=100),
-        _: User = Depends(require_role('maintainer')),
         db: Session = Depends(get_db),
     ):
+        user = maybe_get_current_user(request, db)
+        if user is None:
+            return RedirectResponse(
+                url=_build_auth_redirect_url(request, _resolve_language(request)),
+                status_code=303,
+            )
+        if user.role != 'maintainer':
+            return templates.TemplateResponse(
+                'console-forbidden.html',
+                _build_console_forbidden_context(request, user, 'maintainer'),
+                status_code=403,
+            )
         lang = _resolve_language(request)
         rows = (
             db.query(Job)
@@ -630,6 +869,7 @@ def create_app() -> FastAPI:
                 'page_eyebrow': page_eyebrow,
                 'page_kicker': page_kicker,
                 'page_mode': 'console',
+                'show_console_session': False,
                 'nav_links': _site_nav(home=False, lang=lang),
                 'cli_command': 'curl -H "Authorization: Bearer <token>" https://skills.example.com/api/v1/me',
                 'page_stats': [
@@ -662,6 +902,8 @@ def create_app() -> FastAPI:
             'role': user.role,
         }
 
+    app.include_router(auth_router)
+    app.include_router(background_router)
     app.include_router(submissions_router)
     app.include_router(reviews_router)
     app.include_router(skills_router)

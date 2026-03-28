@@ -1,52 +1,40 @@
 {% extends "layout-kawaii.html" %}
+{% from "macros.html" import insight_cards_section, console_table_shell, status_badge, table_id, table_note %}
+
 {% block body %}
-{% if insight_cards %}
-<section class="insight-grid" data-reveal style="--reveal-index: 1">
-  {% for card in insight_cards %}
-  <article class="insight-card">
-    <div class="section-kicker">{{ '维护说明' if page_language == 'zh' else 'Maintainer note' }}</div>
-    <h3>{{ card.title }}</h3>
-    <p>{{ card.body }}</p>
-    <div class="command-chip">
-      <code>{{ card.command }}</code>
-    </div>
-  </article>
-  {% endfor %}
-</section>
-{% endif %}
-<section class="console-table-shell" data-reveal style="--reveal-index: 1">
-  <div class="section-kicker">{{ '决策记录' if page_language == 'zh' else 'Decision ledger' }}</div>
-  <div class="table-scroll">
-    {% if items %}
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>{{ '提交项' if page_language == 'zh' else 'Submission' }}</th>
-          <th>{{ '状态' if page_language == 'zh' else 'Status' }}</th>
-          <th>{{ '请求人' if page_language == 'zh' else 'Requested By' }}</th>
-          <th>{{ '评审人' if page_language == 'zh' else 'Reviewed By' }}</th>
-          <th>{{ '备注' if page_language == 'zh' else 'Note' }}</th>
-          <th>{{ '更新时间' if page_language == 'zh' else 'Updated' }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in items %}
-        <tr>
-          <td><span class="table-id">{{ item.id }}</span></td>
-          <td><span class="table-id">{{ item.submission_id }}</span></td>
-          <td><span class="status-badge" data-status="{{ (item.status or '')|lower }}">{{ item.status }}</span></td>
-          <td>{{ item.requested_by or "-" }}</td>
-          <td>{{ item.reviewed_by or "-" }}</td>
-          <td><span class="table-note">{{ item.note or "-" }}</span></td>
-          <td>{{ item.updated_at }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-    <p class="empty-copy">{{ '没有评审记录。' if page_language == 'zh' else 'No reviews found.' }}</p>
-    {% endif %}
-  </div>
-</section>
+{{ insight_cards_section(insight_cards, page_language) }}
+
+{% call console_table_shell(
+  '决策记录' if page_language == 'zh' else 'Decision ledger',
+  '没有评审记录。' if page_language == 'zh' else 'No reviews found.',
+  items,
+  page_language
+) %}
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>{{ '提交项' if page_language == 'zh' else 'Submission' }}</th>
+      <th>{{ '状态' if page_language == 'zh' else 'Status' }}</th>
+      <th>{{ '请求人' if page_language == 'zh' else 'Requested By' }}</th>
+      <th>{{ '评审人' if page_language == 'zh' else 'Reviewed By' }}</th>
+      <th>{{ '备注' if page_language == 'zh' else 'Note' }}</th>
+      <th>{{ '更新时间' if page_language == 'zh' else 'Updated' }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in items %}
+    <tr>
+      <td>{{ table_id(item.id) }}</td>
+      <td>{{ table_id(item.submission_id) }}</td>
+      <td>{{ status_badge(item.status, format_status) }}</td>
+      <td>{{ item.requested_by or "-" }}</td>
+      <td>{{ item.reviewed_by or "-" }}</td>
+      <td>{{ table_note(item.note) }}</td>
+      <td>{{ format_timestamp(item.updated_at) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endcall %}
 {% endblock %}

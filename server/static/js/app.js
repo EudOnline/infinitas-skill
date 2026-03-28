@@ -2,6 +2,26 @@
  * infinitas-skill v2 - Core JavaScript
  */
 
+const APP_UI = window.APP_UI || {};
+
+function currentPageLanguage() {
+  const lang = (document.documentElement.lang || '').toLowerCase();
+  return lang.startsWith('en') ? 'en' : 'zh';
+}
+
+function uiText(key, fallback) {
+  const value = APP_UI[key];
+  return typeof value === 'string' && value ? value : fallback;
+}
+
+function uiTemplate(key, fallback, replacements = {}) {
+  let template = uiText(key, fallback);
+  Object.entries(replacements).forEach(([name, value]) => {
+    template = template.replace(`{${name}}`, String(value));
+  });
+  return template;
+}
+
 // ============================================
 // Toast Notification System
 // ============================================
@@ -19,11 +39,23 @@ class ToastManager {
   show(message, type = 'info', duration = 3000) {
     const toast = document.createElement('div');
     toast.className = `toast toast--${type}`;
-    toast.innerHTML = `
-      <span class="toast__icon">${this.getIcon(type)}</span>
-      <span class="toast__content">${message}</span>
-      <button class="toast__close" onclick="this.parentElement.remove()">×</button>
-    `;
+    
+    const icon = document.createElement('span');
+    icon.className = 'toast__icon';
+    icon.textContent = this.getIcon(type);
+    
+    const content = document.createElement('span');
+    content.className = 'toast__content';
+    content.textContent = message;
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'toast__close';
+    closeBtn.textContent = '×';
+    closeBtn.addEventListener('click', () => toast.remove());
+    
+    toast.appendChild(icon);
+    toast.appendChild(content);
+    toast.appendChild(closeBtn);
 
     this.container.appendChild(toast);
 
@@ -117,7 +149,7 @@ class ThemeManager {
     const currentScheme = document.documentElement.dataset.colorScheme === 'dark' ? 'dark' : 'light';
     const next = currentScheme === 'dark' ? 'light' : 'dark';
     this.apply(next);
-    toast.success(`已切换到 ${this.getThemeName(next)}`);
+    toast.success(uiTemplate('theme_switched', '已切换到 {theme}', { theme: this.getThemeName(next) }));
   }
 
   set(scheme) {
@@ -128,8 +160,8 @@ class ThemeManager {
 
   getThemeName(scheme) {
     const names = {
-      light: '浅色主题',
-      dark: '深色主题',
+      light: uiText('theme_light_name', '浅色主题'),
+      dark: uiText('theme_dark_name', '深色主题'),
     };
     return names[scheme] || scheme;
   }
@@ -150,22 +182,24 @@ class SearchManager {
     this.searchId = 0;
     this.abortController = null;
     
+    // Store bound handlers for cleanup
+    this._handlers = {};
+    
     if (this.input) {
       this.init();
     }
   }
 
   init() {
-    // Input handling
-    this.input.addEventListener('input', (e) => {
+    // Bind handlers once for proper cleanup
+    this._handlers.input = (e) => {
       clearTimeout(this.debounceTimer);
       this.debounceTimer = setTimeout(() => {
         this.search(e.target.value);
       }, 150);
-    });
-
-    // Keyboard shortcuts
-    document.addEventListener('keydown', (e) => {
+    };
+    
+    this._handlers.keydown = (e) => {
       // Cmd/Ctrl + K to focus search
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
@@ -190,14 +224,39 @@ class SearchManager {
           this.activateSelected();
         }
       }
-    });
-
-    // Click outside to close
-    document.addEventListener('click', (e) => {
+    };
+    
+    this._handlers.click = (e) => {
       if (!e.target.closest('.search-bar-wrapper')) {
         this.close();
       }
-    });
+    };
+
+    // Attach listeners
+    this.input.addEventListener('input', this._handlers.input);
+    document.addEventListener('keydown', this._handlers.keydown);
+    document.addEventListener('click', this._handlers.click);
+  }
+  
+  destroy() {
+    // Clean up all event listeners
+    if (this.input && this._handlers.input) {
+      this.input.removeEventListener('input', this._handlers.input);
+    }
+    if (this._handlers.keydown) {
+      document.removeEventListener('keydown', this._handlers.keydown);
+    }
+    if (this._handlers.click) {
+      document.removeEventListener('click', this._handlers.click);
+    }
+    
+    // Clear timers
+    clearTimeout(this.debounceTimer);
+    
+    // Abort pending requests
+    if (this.abortController) {
+      this.abortController.abort();
+    }
   }
 
   async search(query) {
@@ -216,9 +275,15 @@ class SearchManager {
 
     try {
       const response = await fetch(
-        `/api/search?q=${encodeURIComponent(query)}`,
+        `/api/search?q=${encodeURIComponent(query)}&lang=${encodeURIComponent(currentPageLanguage())}`,
         { signal: this.abortController.signal }
       );
+
+      if (response.status === 401) {
+        const error = new Error('Search requires authentication');
+        error.code = 'SEARCH_AUTH_REQUIRED';
+        throw error;
+      }
       
       // Check if this is the latest request
       if (currentSearchId !== this.searchId) return;
@@ -237,6 +302,15 @@ class SearchManager {
       if (err.name === 'AbortError') return;
       
       if (currentSearchId !== this.searchId) return;
+
+      if (err.code === 'SEARCH_AUTH_REQUIRED') {
+        this.close();
+        toast.info(uiText('search_auth_required', '请先登录后搜索私有目录'));
+        if (typeof window.openAuthModal === 'function') {
+          window.openAuthModal();
+        }
+        return;
+      }
       
       console.error('Search error:', err);
       this.renderFallback(query);
@@ -246,37 +320,68 @@ class SearchManager {
   render(data) {
     if (!this.dropdown) return;
     
-    // Clear previous content
+    // Clear previous content and reset ARIA
     this.dropdown.innerHTML = '';
+    this.dropdown.setAttribute('role', 'listbox');
+    this.dropdown.setAttribute('aria-label', uiText('search_results_label', '搜索结果'));
     
     // Skills section
     if (data.skills && data.skills.length > 0) {
       const section = document.createElement('div');
       section.className = 'search-dropdown__section';
-      section.innerHTML = '<h4>技能</h4>';
+      section.setAttribute('role', 'group');
+      section.setAttribute('aria-label', uiText('search_skills_label', '技能'));
+      
+      const heading = document.createElement('h4');
+      heading.textContent = uiText('search_skills_label', '技能');
+      heading.setAttribute('aria-hidden', 'true');
+      section.appendChild(heading);
       
       const results = document.createElement('div');
       results.className = 'search-results';
+      results.setAttribute('role', 'presentation');
       
       data.skills.forEach((skill, i) => {
-        const el = document.createElement('a');
-        el.href = `/skills/${encodeURIComponent(skill.id)}`;
+        const el = document.createElement('button');
+        const inspectTarget = skill.qualified_name || skill.id || skill.name || '';
+        const inspectCommand = inspectTarget ? `scripts/inspect-skill.sh ${inspectTarget}` : '';
+        el.type = 'button';
         el.className = 'search-result';
+        el.setAttribute('role', 'option');
+        el.setAttribute('id', `search-option-${i}`);
+        el.setAttribute('aria-selected', 'false');
+        el.setAttribute('tabindex', '-1');
         el.dataset.index = i;
+        if (inspectCommand) {
+          el.dataset.copy = inspectCommand;
+        }
         
-        el.innerHTML = `
-          <span class="search-result__icon" aria-hidden="true">${skill.icon || '🎯'}</span>
-          <div class="search-result__info">
-            <div class="search-result__name"></div>
-            <div class="search-result__desc"></div>
-          </div>
-          <span class="search-result__badge"></span>
-        `;
+        const icon = document.createElement('span');
+        icon.className = 'search-result__icon';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = skill.icon || '🎯';
         
-        // Use textContent to prevent XSS
-        el.querySelector('.search-result__name').textContent = skill.name;
-        el.querySelector('.search-result__desc').textContent = skill.summary || '';
-        el.querySelector('.search-result__badge').textContent = skill.version || '';
+        const info = document.createElement('div');
+        info.className = 'search-result__info';
+        
+        const name = document.createElement('div');
+        name.className = 'search-result__name';
+        name.textContent = skill.name;
+        
+        const desc = document.createElement('div');
+        desc.className = 'search-result__desc';
+        desc.textContent = skill.summary || '';
+        
+        info.appendChild(name);
+        info.appendChild(desc);
+        
+        const badge = document.createElement('span');
+        badge.className = 'search-result__badge';
+        badge.textContent = skill.version || '';
+        
+        el.appendChild(icon);
+        el.appendChild(info);
+        el.appendChild(badge);
         
         results.appendChild(el);
       });
@@ -289,28 +394,50 @@ class SearchManager {
     if (data.commands && data.commands.length > 0) {
       const section = document.createElement('div');
       section.className = 'search-dropdown__section';
-      section.innerHTML = '<h4>命令</h4>';
+      section.setAttribute('role', 'group');
+      section.setAttribute('aria-label', uiText('search_commands_label', '命令'));
+      
+      const heading = document.createElement('h4');
+      heading.textContent = uiText('search_commands_label', '命令');
+      heading.setAttribute('aria-hidden', 'true');
+      section.appendChild(heading);
       
       const results = document.createElement('div');
       results.className = 'search-results';
+      results.setAttribute('role', 'presentation');
       
+      const skillsOffset = data.skills?.length || 0;
       data.commands.forEach((cmd, i) => {
         const el = document.createElement('div');
         el.className = 'search-result';
-        el.dataset.index = i + (data.skills?.length || 0);
+        el.setAttribute('role', 'option');
+        el.setAttribute('id', `search-option-${skillsOffset + i}`);
+        el.setAttribute('aria-selected', 'false');
+        el.setAttribute('tabindex', '-1');
+        el.dataset.index = skillsOffset + i;
         el.style.cursor = 'pointer';
         
-        el.innerHTML = `
-          <span class="search-result__icon" aria-hidden="true">⌨️</span>
-          <div class="search-result__info">
-            <div class="search-result__name"></div>
-            <code class="search-result__code"></code>
-          </div>
-        `;
+        const icon = document.createElement('span');
+        icon.className = 'search-result__icon';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = '⌨️';
         
-        // Use textContent to prevent XSS
-        el.querySelector('.search-result__name').textContent = cmd.name;
-        el.querySelector('.search-result__code').textContent = cmd.command;
+        const info = document.createElement('div');
+        info.className = 'search-result__info';
+        
+        const name = document.createElement('div');
+        name.className = 'search-result__name';
+        name.textContent = cmd.name;
+        
+        const code = document.createElement('code');
+        code.className = 'search-result__code';
+        code.textContent = cmd.command;
+        
+        info.appendChild(name);
+        info.appendChild(code);
+        
+        el.appendChild(icon);
+        el.appendChild(info);
         
         // Safely bind click event
         el.addEventListener('click', () => copyToClipboard(cmd.command));
@@ -324,14 +451,34 @@ class SearchManager {
     
     // Empty state
     if (!this.dropdown.hasChildNodes()) {
-      this.dropdown.innerHTML = `
-        <div class="search-empty">
-          <div class="search-empty__icon" aria-hidden="true">🔍</div>
-          <p>未找到匹配结果</p>
-          <a href="/console/new-skill" class="kawaii-button kawaii-button--primary" style="font-size: 0.85rem; padding: 0.5rem 1rem;">创建新技能</a>
-        </div>
-      `;
+      const empty = document.createElement('div');
+      empty.className = 'search-empty';
+      empty.setAttribute('role', 'status');
+      empty.setAttribute('aria-live', 'polite');
+      
+      const icon = document.createElement('div');
+      icon.className = 'search-empty__icon';
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = '🔍';
+      
+      const text = document.createElement('p');
+      text.textContent = uiText('search_empty_label', '未找到匹配结果');
+      
+      const trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.className = 'kawaii-button kawaii-button--primary';
+      trigger.style.cssText = 'font-size: 0.85rem; padding: 0.5rem 1rem;';
+      trigger.dataset.copy = uiText('search_create_command', 'scripts/new-skill.sh lvxiaoer/my-skill basic');
+      trigger.textContent = uiText('search_create_label', '创建新技能');
+      
+      empty.appendChild(icon);
+      empty.appendChild(text);
+      empty.appendChild(trigger);
+      
+      this.dropdown.appendChild(empty);
     }
+
+    bindCopyTriggers(this.dropdown);
     
     this.selectedIndex = -1;
   }
@@ -365,7 +512,13 @@ class SearchManager {
 
   updateSelection(items) {
     items.forEach((item, i) => {
-      item.classList.toggle('search-result--selected', i === this.selectedIndex);
+      const isSelected = i === this.selectedIndex;
+      item.classList.toggle('search-result--selected', isSelected);
+      item.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+      // Update input's aria-activedescendant for screen readers
+      if (isSelected && this.input) {
+        this.input.setAttribute('aria-activedescendant', item.id);
+      }
     });
     
     const selected = items[this.selectedIndex];
@@ -385,12 +538,19 @@ class SearchManager {
   open() {
     if (this.dropdown) {
       this.dropdown.hidden = false;
+      if (this.input) {
+        this.input.setAttribute('aria-expanded', 'true');
+      }
     }
   }
 
   close() {
     if (this.dropdown) {
       this.dropdown.hidden = true;
+      if (this.input) {
+        this.input.setAttribute('aria-expanded', 'false');
+        this.input.removeAttribute('aria-activedescendant');
+      }
     }
     this.selectedIndex = -1;
   }
@@ -401,9 +561,14 @@ class SearchManager {
 // ============================================
 
 async function copyToClipboard(text) {
+  if (!text) {
+    toast.error(document.body.dataset.copyError || uiText('copy_error', '复制失败'));
+    return;
+  }
+
   try {
     await navigator.clipboard.writeText(text);
-    toast.success('已复制到剪贴板');
+    toast.success(document.body.dataset.copySuccess || uiText('copy_success', '已复制'));
   } catch (err) {
     // Fallback
     const textarea = document.createElement('textarea');
@@ -415,13 +580,27 @@ async function copyToClipboard(text) {
     
     try {
       document.execCommand('copy');
-      toast.success('已复制到剪贴板');
+      toast.success(document.body.dataset.copySuccess || uiText('copy_success', '已复制'));
     } catch (err) {
-      toast.error('复制失败');
+      toast.error(document.body.dataset.copyError || uiText('copy_error', '复制失败'));
     }
     
     document.body.removeChild(textarea);
   }
+}
+
+function bindCopyTriggers(root = document) {
+  if (!root || typeof root.querySelectorAll !== 'function') {
+    return;
+  }
+
+  root.querySelectorAll('[data-copy]').forEach((trigger) => {
+    if (trigger.dataset.copyBound === 'true') {
+      return;
+    }
+    trigger.dataset.copyBound = 'true';
+    trigger.addEventListener('click', () => copyToClipboard(trigger.dataset.copy || ''));
+  });
 }
 
 async function useSkill(skillId) {
@@ -438,9 +617,9 @@ async function useSkill(skillId) {
     // Copy command to clipboard
     await copyToClipboard(data.command);
     
-    toast.success(`技能 ${data.skill.name} 已就绪，命令已复制`);
+    toast.success(uiTemplate('use_skill_ready', '技能 {name} 已就绪，命令已复制', { name: data.skill.name }));
   } catch (err) {
-    toast.error('使用技能失败，请重试');
+    toast.error(uiText('use_skill_error', '使用技能失败，请重试'));
     console.error(err);
   }
 }
@@ -459,14 +638,14 @@ function setTheme(theme) {
 window.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled promise rejection:', event.reason);
   if (window.toast) {
-    toast.error('操作失败，请刷新页面重试');
+    toast.error(uiText('generic_action_failed', '操作失败，请刷新页面重试'));
   }
 });
 
 window.addEventListener('error', (event) => {
   console.error('Global error:', event.error);
   if (window.toast) {
-    toast.error('发生错误，请刷新页面重试');
+    toast.error(uiText('generic_unexpected_error', '发生错误，请刷新页面重试'));
   }
 });
 
@@ -474,6 +653,8 @@ window.addEventListener('error', (event) => {
 // Initialize
 // ============================================
 document.addEventListener('DOMContentLoaded', () => {
+  bindCopyTriggers();
+
   // Initialize search
   try {
     window.searchManager = new SearchManager();
@@ -481,25 +662,59 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('Failed to initialize search:', err);
   }
 
-  // Animate elements on scroll (throttled)
-  let ticking = false;
-  const animateOnScroll = () => {
-    if (!ticking) {
-      window.requestAnimationFrame(() => {
-        document.querySelectorAll('[data-animate]').forEach(el => {
-          const rect = el.getBoundingClientRect();
-          if (rect.top < window.innerHeight * 0.9) {
-            el.classList.add('animate-fadeInUp');
+  // Animate elements on scroll using Intersection Observer (better performance)
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  
+  if (!prefersReducedMotion.matches && 'IntersectionObserver' in window) {
+    const revealElements = document.querySelectorAll('[data-reveal]');
+    
+    if (revealElements.length > 0) {
+      // Set initial state for reveal elements
+      revealElements.forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(14px)';
+        el.style.transition = `opacity 520ms var(--ease-out-gentle), transform 520ms var(--ease-out-gentle)`;
+        // Apply stagger delay if specified
+        const delay = el.style.getPropertyValue('--reveal-index');
+        if (delay) {
+          el.style.transitionDelay = `${parseInt(delay) * 100}ms`;
+        }
+      });
+      
+      // Use Intersection Observer for better performance
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.style.opacity = '1';
+            entry.target.style.transform = 'translateY(0)';
+            // Stop observing once animated
+            observer.unobserve(entry.target);
           }
         });
-        ticking = false;
+      }, {
+        threshold: 0.1,
+        rootMargin: '0px 0px -10% 0px'
       });
-      ticking = true;
+      
+      revealElements.forEach(el => observer.observe(el));
+      
+      // Store for cleanup
+      window._revealObserver = observer;
     }
-  };
+  }
+});
+
+// Cleanup on page unload (for SPA or navigation scenarios)
+window.addEventListener('beforeunload', () => {
+  if (window.searchManager) {
+    window.searchManager.destroy();
+  }
   
-  window.addEventListener('scroll', animateOnScroll, { passive: true });
-  animateOnScroll(); // Initial check
+  // Clean up Intersection Observer
+  if (window._revealObserver) {
+    window._revealObserver.disconnect();
+    window._revealObserver = null;
+  }
 });
 
 // Expose globals for inline handlers

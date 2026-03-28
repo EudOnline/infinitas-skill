@@ -13,10 +13,14 @@ from difflib import SequenceMatcher
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from server.auth import get_current_user, require_registry_reader
+from server.auth import get_current_user, require_registry_reader, require_registry_reader_or_user
 from server.settings import get_settings
 
 router = APIRouter(prefix="/api", tags=["search"])
+
+
+def _pick_lang(lang: str, zh: str, en: str) -> str:
+    return en if lang == "en" else zh
 
 
 class SkillSearchResult(BaseModel):
@@ -174,53 +178,53 @@ def _calculate_rating(skill: dict) -> Optional[float]:
     return None
 
 
-def _search_commands(query: str, limit: int = 3) -> List[CommandSearchResult]:
+def _search_commands(query: str, limit: int = 3, lang: str = "zh") -> List[CommandSearchResult]:
     """Search common commands"""
     commands = [
         CommandSearchResult(
-            name="搜索技能",
+            name=_pick_lang(lang, "搜索技能", "Search skills"),
             command='scripts/search-skills.sh "keyword"',
-            description="从发现索引搜索技能"
+            description=_pick_lang(lang, "从发现索引搜索技能", "Search skills from the discovery index"),
         ),
         CommandSearchResult(
-            name="推荐技能",
+            name=_pick_lang(lang, "推荐技能", "Recommend skill"),
             command='scripts/recommend-skill.sh "task description"',
-            description="根据任务描述推荐最佳技能"
+            description=_pick_lang(lang, "根据任务描述推荐最佳技能", "Recommend the best skill for a task"),
         ),
         CommandSearchResult(
-            name="检查技能",
+            name=_pick_lang(lang, "检查技能", "Inspect skill"),
             command='scripts/inspect-skill.sh publisher/skill-name',
-            description="检查技能的信任状态和兼容性"
+            description=_pick_lang(lang, "检查技能的信任状态和兼容性", "Inspect trust state and compatibility"),
         ),
         CommandSearchResult(
-            name="安装技能",
+            name=_pick_lang(lang, "安装技能", "Install skill"),
             command='scripts/install-by-name.sh skill-name',
-            description="通过名称安装技能"
+            description=_pick_lang(lang, "通过名称安装技能", "Install a skill by name"),
         ),
         CommandSearchResult(
-            name="拉取技能",
+            name=_pick_lang(lang, "拉取技能", "Pull skill"),
             command='scripts/pull-skill.sh publisher/skill/version',
-            description="从不可变工件拉取技能"
+            description=_pick_lang(lang, "从不可变工件拉取技能", "Pull a skill from immutable artifacts"),
         ),
         CommandSearchResult(
-            name="检查更新",
+            name=_pick_lang(lang, "检查更新", "Check updates"),
             command='scripts/check-skill-update.sh skill-name',
-            description="检查技能是否有新版本"
+            description=_pick_lang(lang, "检查技能是否有新版本", "Check whether a skill has a newer version"),
         ),
         CommandSearchResult(
-            name="升级技能",
+            name=_pick_lang(lang, "升级技能", "Upgrade skill"),
             command='scripts/upgrade-skill.sh skill-name',
-            description="升级已安装的技能"
+            description=_pick_lang(lang, "升级已安装的技能", "Upgrade an installed skill"),
         ),
         CommandSearchResult(
-            name="构建目录",
+            name=_pick_lang(lang, "构建目录", "Build catalog"),
             command='scripts/build-catalog.sh',
-            description="重新生成技能目录索引"
+            description=_pick_lang(lang, "重新生成技能目录索引", "Rebuild the catalog index"),
         ),
         CommandSearchResult(
-            name="验证技能",
+            name=_pick_lang(lang, "验证技能", "Validate skill"),
             command='scripts/check-skill.sh skills/active/skill-name',
-            description="验证技能元数据和结构"
+            description=_pick_lang(lang, "验证技能元数据和结构", "Validate skill metadata and structure"),
         ),
     ]
     
@@ -253,7 +257,8 @@ def _search_commands(query: str, limit: int = 3) -> List[CommandSearchResult]:
 async def search(
     q: str = Query(..., min_length=1, max_length=100, description="Search query"),
     limit: int = Query(default=5, ge=1, le=10, description="Max results per category"),
-    _: dict = Depends(require_registry_reader)
+    lang: str = Query(default="zh", description="UI language"),
+    _: None = Depends(require_registry_reader_or_user),
 ):
     """
     Global search across skills and commands
@@ -272,7 +277,7 @@ async def search(
     skills = _search_skills(q, catalog_data, limit)
     
     # Search commands
-    commands = _search_commands(q, limit)
+    commands = _search_commands(q, limit, "en" if lang.startswith("en") else "zh")
     
     return SearchResponse(
         skills=skills,
@@ -284,7 +289,7 @@ async def search(
 @router.get("/skills/{skill_id}", response_model=SkillSearchResult)
 async def get_skill_detail(
     skill_id: str,
-    _: dict = Depends(require_registry_reader)
+    _: None = Depends(require_registry_reader_or_user),
 ):
     """Get detailed information about a specific skill"""
     settings = get_settings()

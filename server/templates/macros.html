@@ -32,8 +32,10 @@
 </section>
 {%- endmacro -%}
 
-{%- macro status_badge(status) -%}
-<span class="status-badge" data-status="{{ (status or '')|lower }}">{{ status }}</span>
+{%- macro status_badge(status, formatter=None) -%}
+{% set raw_status = status or '' %}
+{% set label = formatter(raw_status) if formatter else raw_status %}
+<span class="status-badge" data-status="{{ raw_status|lower }}">{{ label }}</span>
 {%- endmacro -%}
 
 {%- macro table_id(value) -%}
