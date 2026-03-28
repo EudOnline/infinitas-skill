@@ -313,15 +313,30 @@ def scenario_operator_lists_and_cli():
             ('/reviews', 'Reviews', 'Approved A.'),
             ('/jobs', 'Jobs', 'Queue validation A.'),
         ]:
-            response = client.get(route)
-            if response.status_code != 401:
-                fail(f'expected {route} without token to return 401, got {response.status_code}')
+            response = client.get(route, follow_redirects=False)
+            if response.status_code not in (302, 303, 307, 308):
+                fail(f'expected {route} without token to redirect into the auth flow, got {response.status_code}')
+            location = response.headers.get('location', '')
+            if not location.startswith('/?lang=zh&auth=required&next='):
+                fail(f'expected {route} anonymous redirect to land on the home auth flow, got {location!r}')
             response = client.get(
                 route,
                 headers={'Authorization': 'Bearer fixture-contributor-a-token'},
             )
             if response.status_code != 403:
                 fail(f'expected {route} with contributor token to return 403, got {response.status_code}')
+            contributor_html = response.text
+            forbidden_markers = (
+                ['Console access denied', 'Maintainer role required', 'href="/?lang=en"']
+                if '?lang=en' in route
+                else ['维护台访问受限', '维护者权限', 'href="/?lang=zh"']
+            )
+            for forbidden_marker in forbidden_markers:
+                if forbidden_marker not in contributor_html:
+                    fail(
+                        f'expected {route} contributor response to render themed forbidden UI with {forbidden_marker!r}, '
+                        f'got:\n{contributor_html}'
+                    )
             response = client.get(
                 route,
                 headers={'Authorization': 'Bearer fixture-maintainer-token'},

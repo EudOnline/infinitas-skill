@@ -3,6 +3,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -60,6 +61,8 @@ def scenario_home_uses_kawaii_theme_with_live_context():
             ('home anchor nav handoff', 'href="#handoff"' in html),
             ('home anchor nav console', 'href="#console"' in html),
             ('no broken skills nav on home', 'href="/skills"' not in html),
+            ('auth modal uses dialog semantics', 'role="dialog"' in html and 'aria-modal="true"' in html and 'aria-labelledby="auth-modal-title"' in html),
+            ('user trigger exposes controlled panel', 'aria-controls="user-panel"' in html),
             ('status chip mode present', '🔒 模式' in html),
             ('status chip sync present', '📅 同步' in html),
             ('status chip queue present', '⚡ 队列' in html),
@@ -236,6 +239,135 @@ def scenario_home_supports_manual_theme_and_language_switches():
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
+def scenario_home_english_copy_stays_english_and_preserves_lang_routes():
+    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-home-kawaii-en-i18n-'))
+    try:
+        configure_env(tmpdir)
+        sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
+
+        from fastapi.testclient import TestClient
+        from server.app import create_app
+
+        client = TestClient(create_app())
+        response = client.get('/?lang=en')
+        if response.status_code != 200:
+            fail(f'expected GET /?lang=en to return 200, got {response.status_code}: {response.text}')
+
+        html = response.text
+        required_strings = [
+            'Quick start',
+            'Tap to copy and paste into your Agent chat',
+            'Authentication',
+            'Enter your access token to unlock personalized settings',
+            'Enter your access token',
+            'Token stays valid for 30 days',
+            '>Cancel<',
+            '>Verify<',
+            'Copy inspect command',
+            "name: 'Sakura Street'",
+            "name: 'Starry Night'",
+        ]
+        missing_strings = [marker for marker in required_strings if marker not in html]
+        if missing_strings:
+            fail(f'english home page is missing localized ui copy: {", ".join(missing_strings)}')
+
+        unexpected_chinese_bg_names = ['樱花街道', '动漫天空', '星空夜景', '赛博朋克']
+        present_chinese_bg_names = [marker for marker in unexpected_chinese_bg_names if marker in html]
+        if present_chinese_bg_names:
+            fail(f'english home page should not embed chinese-only background preset names: {", ".join(present_chinese_bg_names)}')
+
+        required_href_markers = [
+            'href="/?lang=en"',
+            'data-auth-target="/submissions?lang=en"',
+            'data-auth-target="/reviews?lang=en"',
+            'data-auth-target="/jobs?lang=en"',
+        ]
+        missing_hrefs = [marker for marker in required_href_markers if marker not in html]
+        if missing_hrefs:
+            fail(f'english home page is missing language-preserving navigation markers: {", ".join(missing_hrefs)}')
+
+        search_markers = [
+            'placeholder="Search skills or commands"',
+            'aria-label="Search skills or commands"',
+            'aria-label="Search results"',
+        ]
+        missing_search = [marker for marker in search_markers if marker not in html]
+        if missing_search:
+            fail(f'english home page is missing localized search accessibility markers: {", ".join(missing_search)}')
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def scenario_home_auth_gate_opens_before_console_navigation():
+    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-home-kawaii-auth-gate-'))
+    try:
+        configure_env(tmpdir)
+        sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
+
+        from fastapi.testclient import TestClient
+        from server.app import create_app
+
+        client = TestClient(create_app())
+        response = client.get('/')
+        if response.status_code != 200:
+            fail(f'expected GET / to return 200, got {response.status_code}: {response.text}')
+
+        html = response.text
+        required_markers = [
+            'id="auth-modal"',
+            'data-auth-required="true"',
+            'data-auth-target="/submissions?lang=zh"',
+            'data-auth-target="/reviews?lang=zh"',
+            'data-auth-target="/jobs?lang=zh"',
+            'let pendingAuthTarget = null;',
+            "openAuthModal(targetHref = null)",
+            "document.querySelectorAll('[data-auth-required=\"true\"]').forEach",
+        ]
+        missing = [marker for marker in required_markers if marker not in html]
+        if missing:
+            fail(f'home page is missing auth gate markers for console links: {", ".join(missing)}')
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def scenario_home_user_entry_stays_in_flow_without_fixed_overlap():
+    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-home-kawaii-user-trigger-layout-'))
+    try:
+        configure_env(tmpdir)
+        sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
+
+        from fastapi.testclient import TestClient
+        from server.app import create_app
+
+        client = TestClient(create_app())
+        response = client.get('/')
+        if response.status_code != 200:
+            fail(f'expected GET / to return 200, got {response.status_code}: {response.text}')
+
+        html = response.text
+        required_patterns = {
+            'user trigger wrapper uses flow layout': (
+                r'\.user-trigger-wrapper\s*\{[^}]*position:\s*relative;[^}]*display:\s*flex;[^}]*justify-content:\s*flex-end;'
+            ),
+            'user panel anchors to wrapper instead of viewport': (
+                r'\.user-panel\s*\{[^}]*position:\s*absolute;[^}]*top:\s*calc\(100%\s*\+\s*0\.75rem\);[^}]*right:\s*0;'
+            ),
+        }
+        missing = [label for label, pattern in required_patterns.items() if not re.search(pattern, html, re.S)]
+        if missing:
+            fail(f'home page still uses overlapping user overlay positioning: {", ".join(missing)}')
+
+        banned_patterns = {
+            'user trigger fixed to viewport': r'\.user-trigger-wrapper\s*\{[^}]*position:\s*fixed;',
+            'user panel fixed to viewport': r'\.user-panel\s*\{[^}]*position:\s*fixed;',
+        }
+        present = [label for label, pattern in banned_patterns.items() if re.search(pattern, html, re.S)]
+        if present:
+            fail(f'home page still contains overlapping fixed user overlay rules: {", ".join(present)}')
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 def scenario_home_dark_mode_uses_dark_aware_surface_tokens():
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-home-kawaii-dark-surfaces-'))
     try:
@@ -336,15 +468,69 @@ def scenario_static_app_js_is_served_without_legacy_theme_conflicts():
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
+def scenario_static_app_js_binds_copy_triggers_and_avoids_dead_create_route():
+    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-home-kawaii-copy-js-'))
+    try:
+        configure_env(tmpdir)
+        sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
+
+        from fastapi.testclient import TestClient
+        from server.app import create_app
+
+        client = TestClient(create_app())
+        response = client.get('/static/js/app.js')
+        if response.status_code != 200:
+            fail(f'expected GET /static/js/app.js to return 200, got {response.status_code}: {response.text}')
+
+        js = response.text
+        required_snippets = [
+            "querySelectorAll('[data-copy]')",
+            'copyToClipboard(trigger.dataset.copy',
+            'scripts/new-skill.sh lvxiaoer/my-skill basic',
+        ]
+        missing = [snippet for snippet in required_snippets if snippet not in js]
+        if missing:
+            fail(f'static app.js is missing copy trigger hardening markers: {", ".join(missing)}')
+
+        banned_snippets = [
+            "link.href = '/console/new-skill';",
+        ]
+        present = [snippet for snippet in banned_snippets if snippet in js]
+        if present:
+            fail(f'static app.js still contains dead create-skill navigation: {", ".join(present)}')
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def scenario_static_app_js_is_valid_javascript():
+    try:
+        result = subprocess.run(
+            ['node', '--check', str(ROOT / 'server' / 'static' / 'js' / 'app.js')],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        fail(f'node is required to verify app.js syntax: {exc}')
+
+    if result.returncode != 0:
+        fail(f'app.js should be valid javascript, got: {(result.stderr or result.stdout).strip()}')
+
+
 def main():
     scenario_home_uses_kawaii_theme_with_live_context()
     scenario_home_uses_refined_kawaii_presentation()
     scenario_home_supports_readable_copy_and_mobile_adaptation()
     scenario_home_polish_tightens_rhythm_and_clarifies_ctas()
     scenario_home_supports_manual_theme_and_language_switches()
+    scenario_home_english_copy_stays_english_and_preserves_lang_routes()
+    scenario_home_auth_gate_opens_before_console_navigation()
+    scenario_home_user_entry_stays_in_flow_without_fixed_overlap()
     scenario_home_dark_mode_uses_dark_aware_surface_tokens()
     scenario_home_dark_mode_softens_card_highlights()
     scenario_static_app_js_is_served_without_legacy_theme_conflicts()
+    scenario_static_app_js_binds_copy_triggers_and_avoids_dead_create_route()
+    scenario_static_app_js_is_valid_javascript()
     print('OK: home kawaii theme checks passed')
 
 

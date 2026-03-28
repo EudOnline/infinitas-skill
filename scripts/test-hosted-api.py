@@ -5,6 +5,7 @@ import shutil
 import sys
 import tempfile
 from pathlib import Path
+from urllib.parse import parse_qsl, urlsplit
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -46,6 +47,48 @@ def scenario_health_login_and_me():
         client = TestClient(create_app())
         maintainer_headers = {'Authorization': 'Bearer fixture-maintainer-token'}
 
+        submission_response = client.post(
+            '/api/v1/submissions',
+            headers=maintainer_headers,
+            json={
+                'skill_name': 'ui-audit-skill',
+                'publisher': 'lvxiaoer',
+                'payload_summary': 'UI audit helper',
+                'payload': {
+                    'name': 'ui-audit-skill',
+                    'summary': 'UI audit helper',
+                },
+            },
+        )
+        if submission_response.status_code != 201:
+            fail(f'failed to seed submission fixture: {submission_response.status_code}: {submission_response.text}')
+        submission_payload = submission_response.json()
+        submission_id = submission_payload['id']
+
+        review_request_response = client.post(
+            f'/api/v1/submissions/{submission_id}/request-review',
+            headers=maintainer_headers,
+            json={'note': 'Queue for review'},
+        )
+        if review_request_response.status_code != 200:
+            fail(
+                'failed to move seeded submission into review_requested: '
+                f'{review_request_response.status_code}: {review_request_response.text}'
+            )
+        review_requested_payload = review_request_response.json()
+
+        queue_validation_response = client.post(
+            f'/api/v1/submissions/{submission_id}/queue-validation',
+            headers=maintainer_headers,
+            json={'note': 'Run validation'},
+        )
+        if queue_validation_response.status_code != 202:
+            fail(
+                'failed to queue seeded validation job: '
+                f'{queue_validation_response.status_code}: {queue_validation_response.text}'
+            )
+        queued_job_payload = queue_validation_response.json().get('job') or {}
+
         response = client.get('/healthz')
         if response.status_code != 200:
             fail(f'/healthz returned {response.status_code}: {response.text}')
@@ -56,6 +99,49 @@ def scenario_health_login_and_me():
         response = client.get('/login')
         if response.status_code != 200:
             fail(f'/login returned {response.status_code}: {response.text}')
+
+        response = client.get('/login?lang=en')
+        if response.status_code != 200:
+            fail(f'/login?lang=en returned {response.status_code}: {response.text}')
+        english_login_html = response.text
+        english_login_markers = [
+            'Token Auth',
+            'Enter Access Token',
+            'Enter your access token',
+            'window.location.href = \'/?lang=en\'',
+            'href="/?lang=en"',
+            "/api/auth/login?lang=en",
+        ]
+        missing_english_login = [marker for marker in english_login_markers if marker not in english_login_html]
+        if missing_english_login:
+            fail(f'english login page is missing localized auth markers: {", ".join(missing_english_login)}')
+        duplicate_console_auth_markers = [
+            'id="console-session-trigger"',
+            'id="console-session-panel"',
+            'id="console-auth-modal"',
+        ]
+        unexpected_console_auth_markers = [
+            marker for marker in duplicate_console_auth_markers if marker in english_login_html
+        ]
+        if unexpected_console_auth_markers:
+            fail(
+                'expected /login to avoid rendering duplicate shared console auth controls, found: '
+                + ', '.join(unexpected_console_auth_markers)
+            )
+
+        response = client.post('/api/auth/login?lang=en', json={'token': 'badtoken'})
+        if response.status_code != 200:
+            fail(f'/api/auth/login?lang=en returned {response.status_code}: {response.text}')
+        payload = response.json()
+        if payload.get('error') != 'Invalid token':
+            fail(f'expected english invalid token error, got {payload}')
+
+        response = client.get('/api/auth/me')
+        if response.status_code != 200:
+            fail(f'/api/auth/me without session should return 200, got {response.status_code}: {response.text}')
+        payload = response.json()
+        if payload.get('authenticated') is not False:
+            fail(f'expected anonymous /api/auth/me probe to report authenticated=false, got {payload}')
 
         response = client.get('/')
         if response.status_code != 200:
@@ -85,6 +171,14 @@ def scenario_health_login_and_me():
             fail(f'unexpected username payload: {payload}')
         if payload.get('role') != 'maintainer':
             fail(f'unexpected role payload: {payload}')
+
+        response = client.get('/api/search?q=install&lang=en', headers={'Authorization': 'Bearer registry-reader-token'})
+        if response.status_code != 200:
+            fail(f'/api/search?q=install&lang=en returned {response.status_code}: {response.text}')
+        payload = response.json()
+        english_command_names = [item.get('name') for item in payload.get('commands', [])]
+        if 'Install skill' not in english_command_names:
+            fail(f'expected english search commands for lang=en, got {english_command_names}')
 
         response = client.get('/registry/ai-index.json')
         if response.status_code != 401:
@@ -118,9 +212,12 @@ def scenario_health_login_and_me():
             ('/reviews', 'Reviews'),
             ('/jobs', 'Jobs'),
         ]:
-            response = client.get(route)
-            if response.status_code != 401:
-                fail(f'expected {route} without token to return 401, got {response.status_code}')
+            response = client.get(route, follow_redirects=False)
+            if response.status_code not in (302, 303, 307, 308):
+                fail(f'expected {route} without token to redirect into the auth flow, got {response.status_code}')
+            location = response.headers.get('location', '')
+            if not location.startswith('/?lang=zh&auth=required&next='):
+                fail(f'expected {route} redirect to land on the home auth flow, got {location!r}')
             response = client.get(route, headers=maintainer_headers)
             if response.status_code != 200:
                 fail(f'expected {route} with maintainer token to return 200, got {response.status_code}: {response.text}')
@@ -142,6 +239,139 @@ def scenario_health_login_and_me():
             ]:
                 if shell_marker not in response.text:
                     fail(f'expected {route} page to include kawaii shell marker {shell_marker!r}')
+
+        for route in ['/submissions?lang=en', '/reviews?lang=en', '/jobs?lang=en']:
+            response = client.get(route, follow_redirects=False)
+            if response.status_code not in (302, 303, 307, 308):
+                fail(f'expected {route} without a session to redirect into the auth flow, got {response.status_code}')
+            location = response.headers.get('location')
+            if not location:
+                fail(f'expected {route} redirect to include a location header')
+            parts = urlsplit(location)
+            params = dict(parse_qsl(parts.query, keep_blank_values=True))
+            if parts.path != '/':
+                fail(f'expected {route} redirect to land on /, got {location!r}')
+            if params.get('lang') != 'en':
+                fail(f'expected {route} redirect to preserve lang=en, got {location!r}')
+            if params.get('auth') != 'required':
+                fail(f'expected {route} redirect to request auth, got {location!r}')
+            if params.get('next') != route:
+                fail(f'expected {route} redirect to preserve the protected target, got {location!r}')
+
+        for route, heading in [
+            ('/submissions?lang=en', 'Submissions queue'),
+            ('/reviews?lang=en', 'Reviews desk'),
+            ('/jobs?lang=en', 'Jobs desk'),
+        ]:
+            response = client.get(route, headers=maintainer_headers)
+            if response.status_code != 200:
+                fail(f'expected {route} with maintainer token to return 200, got {response.status_code}: {response.text}')
+            if heading not in response.text:
+                fail(f'expected {route} page to contain english heading {heading!r}')
+            english_nav_markers = [
+                'href="/?lang=en"',
+                'href="/submissions?lang=en"',
+                'href="/reviews?lang=en"',
+                'href="/jobs?lang=en"',
+                'aria-label="Theme switcher"',
+                'aria-label="Language switcher"',
+            ]
+            missing_english_nav = [marker for marker in english_nav_markers if marker not in response.text]
+            if missing_english_nav:
+                fail(f'expected {route} page to preserve english navigation markers: {", ".join(missing_english_nav)}')
+
+        session_client = TestClient(create_app())
+        response = session_client.post('/api/auth/login', json={'token': 'fixture-maintainer-token'})
+        if response.status_code != 200:
+            fail(f'/api/auth/login returned {response.status_code}: {response.text}')
+        payload = response.json()
+        if payload.get('success') is not True:
+            fail(f'/api/auth/login should accept valid token, got {payload}')
+        set_cookie = response.headers.get('set-cookie', '')
+        if 'infinitas_auth_token=' not in set_cookie:
+            fail(f'/api/auth/login should set auth cookie, got headers {dict(response.headers)}')
+
+        response = session_client.get('/submissions')
+        if response.status_code != 200:
+            fail(
+                'expected /submissions to accept the authenticated browser session after login, '
+                f'got {response.status_code}: {response.text}'
+            )
+        if 'Submissions' not in response.text:
+            fail('expected /submissions session-auth response to render the console page')
+
+        response = session_client.get('/submissions?lang=en')
+        if response.status_code != 200:
+            fail(
+                'expected /submissions?lang=en to accept the authenticated browser session after login, '
+                f'got {response.status_code}: {response.text}'
+            )
+        english_submissions_html = response.text
+        english_console_auth_markers = [
+            'id="console-session-trigger"',
+            'id="console-session-panel"',
+            'id="console-open-auth-modal-btn"',
+            'id="console-logout-btn"',
+            'id="console-auth-modal"',
+            'window.openAuthModal = openAuthModal;',
+        ]
+        missing_console_auth_markers = [
+            marker for marker in english_console_auth_markers if marker not in english_submissions_html
+        ]
+        if missing_console_auth_markers:
+            fail(
+                'expected english submissions console to expose shared auth controls, missing: '
+                + ', '.join(missing_console_auth_markers)
+            )
+        if 'Waiting review' not in english_submissions_html:
+            fail('expected submissions console to humanize review_requested into Waiting review')
+        if '>review_requested<' in english_submissions_html:
+            fail('submissions console should not leak raw review_requested status text into the UI')
+        raw_submission_updated_at = review_requested_payload.get('updated_at')
+        if raw_submission_updated_at and raw_submission_updated_at in english_submissions_html:
+            fail(
+                'submissions console should format timestamps for humans instead of rendering raw ISO values, '
+                f'but still found {raw_submission_updated_at!r}'
+            )
+
+        response = session_client.get('/jobs?lang=en')
+        if response.status_code != 200:
+            fail(
+                'expected /jobs?lang=en to accept the authenticated browser session after login, '
+                f'got {response.status_code}: {response.text}'
+            )
+        english_jobs_html = response.text
+        if 'Validate submission' not in english_jobs_html:
+            fail('expected jobs console to humanize validate_submission into Validate submission')
+        if '>validate_submission<' in english_jobs_html:
+            fail('jobs console should not leak raw validate_submission job kinds into the UI')
+        raw_job_updated_at = queued_job_payload.get('updated_at')
+        if raw_job_updated_at and raw_job_updated_at in english_jobs_html:
+            fail(
+                'jobs console should format timestamps for humans instead of rendering raw ISO values, '
+                f'but still found {raw_job_updated_at!r}'
+            )
+
+        response = session_client.get('/api/search?q=install&lang=en')
+        if response.status_code != 200:
+            fail(
+                'expected /api/search to accept the authenticated browser session in private mode, '
+                f'got {response.status_code}: {response.text}'
+            )
+        payload = response.json()
+        english_session_command_names = [item.get('name') for item in payload.get('commands', [])]
+        if 'Install skill' not in english_session_command_names:
+            fail(f'expected session-auth search to stay localized in english, got {english_session_command_names}')
+
+        response = session_client.get('/api/skills/consume-infinitas-skill')
+        if response.status_code != 200:
+            fail(
+                'expected /api/skills/{id} to accept the authenticated browser session in private mode, '
+                f'got {response.status_code}: {response.text}'
+            )
+        payload = response.json()
+        if payload.get('name') != 'consume-infinitas-skill':
+            fail(f'expected session-auth skill detail payload, got {payload}')
 
         response = client.get('/v2', follow_redirects=False)
         if response.status_code not in (307, 308):
