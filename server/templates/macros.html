@@ -1,0 +1,45 @@
+{#
+  infinitas-skill 可复用模板宏
+#}
+
+{%- macro insight_cards_section(cards, language='zh') -%}
+{% if cards %}
+<section class="insight-grid" data-reveal style="--reveal-index: 1">
+  {% for card in cards %}
+  <article class="insight-card">
+    <div class="section-kicker">{{ '维护说明' if language == 'zh' else 'Maintainer note' }}</div>
+    <h3>{{ card.title }}</h3>
+    <p>{{ card.body }}</p>
+    <div class="command-chip">
+      <code>{{ card.command }}</code>
+    </div>
+  </article>
+  {% endfor %}
+</section>
+{% endif %}
+{%- endmacro -%}
+
+{%- macro console_table_shell(title, empty_text, items, language='zh') -%}
+<section class="console-table-shell" data-reveal style="--reveal-index: 1">
+  <div class="section-kicker">{{ title }}</div>
+  <div class="table-scroll">
+    {% if items %}
+    {{ caller() }}
+    {% else %}
+    <p class="empty-copy">{{ empty_text }}</p>
+    {% endif %}
+  </div>
+</section>
+{%- endmacro -%}
+
+{%- macro status_badge(status) -%}
+<span class="status-badge" data-status="{{ (status or '')|lower }}">{{ status }}</span>
+{%- endmacro -%}
+
+{%- macro table_id(value) -%}
+<span class="table-id">{{ value or "-" }}</span>
+{%- endmacro -%}
+
+{%- macro table_note(value) -%}
+<span class="table-note">{{ value or "-" }}</span>
+{%- endmacro -%}
