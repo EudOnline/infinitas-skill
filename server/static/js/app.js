@@ -34,11 +34,14 @@ class ToastManager {
       this.container.className = 'toast-container';
       document.body.appendChild(this.container);
     }
+    this.container.setAttribute('aria-live', 'polite');
+    this.container.setAttribute('aria-atomic', 'false');
   }
 
   show(message, type = 'info', duration = 3000) {
     const toast = document.createElement('div');
     toast.className = `toast toast--${type}`;
+    toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
     
     const icon = document.createElement('span');
     icon.className = 'toast__icon';
@@ -50,6 +53,8 @@ class ToastManager {
     
     const closeBtn = document.createElement('button');
     closeBtn.className = 'toast__close';
+    closeBtn.setAttribute('type', 'button');
+    closeBtn.setAttribute('aria-label', uiText('toast_close', 'Dismiss notification'));
     closeBtn.textContent = '×';
     closeBtn.addEventListener('click', () => toast.remove());
     

@@ -10,7 +10,7 @@
       <span class="auth-title">{{ '输入访问令牌' if page_language == 'zh' else 'Enter Access Token' }}</span>
     </div>
     
-    <div class="auth-form">
+    <form class="auth-form" id="login-form" novalidate>
       <div class="token-input-wrapper login-token-wrapper">
         <input type="password" id="token-input" class="token-input login-token-input" 
                placeholder="{{ '输入你的访问令牌' if page_language == 'zh' else 'Enter your access token' }}" 
@@ -21,11 +21,11 @@
         </button>
       </div>
       <p class="auth-hint login-auth-hint">💡 {{ '访问令牌可在个人账户设置中获取' if page_language == 'zh' else 'Token can be found in account settings' }}</p>
-      <button class="kawaii-button kawaii-button--primary" id="login-btn" type="button">
+      <button class="kawaii-button kawaii-button--primary" id="login-btn" type="submit">
         <span class="btn-icon" aria-hidden="true">🔓</span>
         <span class="btn-text">{{ '登录' if page_language == 'zh' else 'Login' }}</span>
       </button>
-    </div>
+    </form>
     
     <div class="auth-error login-auth-error" id="auth-error" role="alert" aria-live="polite" hidden>
       <span aria-hidden="true">❌</span>
@@ -48,6 +48,7 @@
   
   // Cache DOM elements
   const dom = {
+    loginForm: document.getElementById('login-form'),
     tokenInput: document.getElementById('token-input'),
     loginBtn: document.getElementById('login-btn'),
     authError: document.getElementById('auth-error'),
@@ -156,9 +157,9 @@
     hideError();
   });
 
-  dom.loginBtn.addEventListener('click', handleLogin);
-  dom.tokenInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') handleLogin();
+  dom.loginForm?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    handleLogin();
   });
 })();
 </script>
@@ -203,7 +204,7 @@
   
   .login-token-input {
     width: 100%;
-    padding: 0.75rem 2.5rem 0.75rem 1rem;
+    padding: 0.75rem 3.5rem 0.75rem 1rem;
     border: 2px solid var(--kawaii-line);
     border-radius: var(--radius-md);
     background: var(--kawaii-surface);
@@ -232,6 +233,10 @@
     right: 0.5rem;
     top: 50%;
     transform: translateY(-50%);
+    width: 2.75rem;
+    height: 2.75rem;
+    display: grid;
+    place-items: center;
     background: transparent;
     border: none;
     padding: 0.25rem;

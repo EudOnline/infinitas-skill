@@ -1,5 +1,7 @@
 # 🔐 Token 持久化登录设计方案
 
+> **Status:** Superseded on 2026-03-29 by [2026-03-28-ui-auth-i18n-hardening-plan.md](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/docs/plans/2026-03-28-ui-auth-i18n-hardening-plan.md). This document records the original localStorage-first spike; the current hosted UI treats the cookie-backed browser session as authoritative and uses `localStorage` only as optional convenience metadata.
+
 ## 📋 需求分析
 
 ### 现状问题

@@ -255,6 +255,8 @@ def scenario_home_english_copy_stays_english_and_preserves_lang_routes():
 
         html = response.text
         required_strings = [
+            '<title>infinitas hosted registry</title>',
+            'content="infinitas - a private Agent skill registry for discovery, trial, and archiving, with plug-and-play skills"',
             'Quick start',
             'Tap to copy and paste into your Agent chat',
             'Authentication',
@@ -264,6 +266,8 @@ def scenario_home_english_copy_stays_english_and_preserves_lang_routes():
             '>Cancel<',
             '>Verify<',
             'Copy inspect command',
+            'aria-label="Main content"',
+            'aria-label="Primary navigation"',
             "name: 'Sakura Street'",
             "name: 'Starry Night'",
         ]
@@ -275,6 +279,8 @@ def scenario_home_english_copy_stays_english_and_preserves_lang_routes():
         present_chinese_bg_names = [marker for marker in unexpected_chinese_bg_names if marker in html]
         if present_chinese_bg_names:
             fail(f'english home page should not embed chinese-only background preset names: {", ".join(present_chinese_bg_names)}')
+        if 'aria-label="主内容"' in html:
+            fail('english home page should not keep chinese main landmark labels')
 
         required_href_markers = [
             'href="/?lang=en"',
@@ -317,6 +323,9 @@ def scenario_home_chinese_copy_stays_chinese_in_primary_chrome():
             '私人技能工作台',
             '复制任务提示',
             '打开维护台',
+            '<title>infinitas 托管技能仓库</title>',
+            'content="infinitas - 小二的私人 Agent 技能库，发现、试用、归档，技能即插即用"',
+            'aria-label="主导航"',
         ]
         missing_strings = [marker for marker in required_strings if marker not in html]
         if missing_strings:
@@ -325,6 +334,7 @@ def scenario_home_chinese_copy_stays_chinese_in_primary_chrome():
         unexpected_strings = [
             'Private agent workspace / 私人技能工作台',
             'Private agent workspace / personal skill desk',
+            '<title>infinitas hosted registry</title>',
         ]
         present_unexpected = [marker for marker in unexpected_strings if marker in html]
         if present_unexpected:
@@ -376,6 +386,147 @@ def scenario_home_chinese_auth_copy_uses_access_token_terms():
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
+def scenario_home_mobile_touch_targets_stay_thumb_friendly():
+    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-home-kawaii-touch-targets-'))
+    try:
+        configure_env(tmpdir)
+        sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
+
+        from fastapi.testclient import TestClient
+        from server.app import create_app
+
+        client = TestClient(create_app())
+        response = client.get('/')
+        if response.status_code != 200:
+            fail(f'expected GET / to return 200, got {response.status_code}: {response.text}')
+
+        html = response.text
+        required_patterns = {
+            'mobile nav links reserve 44px touch height': (
+                r'@media \(max-width: 720px\).*?\.nav a\s*\{[^}]*min-height:\s*2\.75rem;'
+            ),
+            'theme and language chips reserve 44px touch height': (
+                r'\.toggle-chip\s*\{[^}]*min-height:\s*2\.75rem;'
+            ),
+            'quick-start pills reserve 44px touch height': (
+                r'\.quick-pill\s*\{[^}]*min-height:\s*2\.75rem;'
+            ),
+            'skill copy buttons reserve 44px touch height': (
+                r'\.skill-copy\s*\{[^}]*min-height:\s*2\.75rem;'
+            ),
+            'console copy buttons reserve 44px touch height': (
+                r'\.copy-button\s*\{[^}]*min-height:\s*2\.75rem;'
+            ),
+        }
+        missing = [label for label, pattern in required_patterns.items() if not re.search(pattern, html, re.S)]
+        if missing:
+            fail(f'home page is missing mobile touch target hardening markers: {", ".join(missing)}')
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def scenario_home_auth_controls_keep_thumb_friendly_targets():
+    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-home-kawaii-auth-controls-'))
+    try:
+        configure_env(tmpdir)
+        sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
+
+        from fastapi.testclient import TestClient
+        from server.app import create_app
+
+        client = TestClient(create_app())
+        response = client.get('/')
+        if response.status_code != 200:
+            fail(f'expected GET / to return 200, got {response.status_code}: {response.text}')
+
+        html = response.text
+        required_patterns = {
+            'auth modal close button keeps a 44px square target': (
+                r'\.auth-modal-close\s*\{[^}]*width:\s*2\.75rem;[^}]*height:\s*2\.75rem;'
+            ),
+            'auth modal password toggle keeps a 44px square target': (
+                r'\.token-toggle\s*\{[^}]*width:\s*2\.75rem;[^}]*height:\s*2\.75rem;'
+            ),
+        }
+        missing = [label for label, pattern in required_patterns.items() if not re.search(pattern, html, re.S)]
+        if missing:
+            fail(f'home page is missing thumb-friendly auth control markers: {", ".join(missing)}')
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def scenario_home_toast_close_action_is_accessible():
+    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-home-kawaii-toast-a11y-'))
+    try:
+        configure_env(tmpdir)
+        sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
+
+        from fastapi.testclient import TestClient
+        from server.app import create_app
+
+        client = TestClient(create_app())
+        response = client.get('/')
+        if response.status_code != 200:
+            fail(f'expected GET / to return 200, got {response.status_code}: {response.text}')
+
+        html = response.text
+        if not re.search(r'\.toast__close\s*\{[^}]*width:\s*2\.75rem;[^}]*height:\s*2\.75rem;', html, re.S):
+            fail('home page should keep the toast close button at a 44px target size')
+        if 'toast_close' not in html:
+            fail('home page should expose a localized toast close label in APP_UI')
+
+        app_js = (ROOT / 'server' / 'static' / 'js' / 'app.js').read_text(encoding='utf-8')
+        required_js_markers = [
+            "closeBtn.className = 'toast__close';",
+            "closeBtn.setAttribute('type', 'button');",
+            "closeBtn.setAttribute('aria-label', uiText('toast_close', 'Dismiss notification'));",
+        ]
+        missing_js = [marker for marker in required_js_markers if marker not in app_js]
+        if missing_js:
+            fail(f'toast manager is missing accessible close button markers: {", ".join(missing_js)}')
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def scenario_home_background_picker_keeps_thumb_friendly_tiles():
+    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-home-kawaii-bg-picker-'))
+    try:
+        configure_env(tmpdir)
+        sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
+
+        from fastapi.testclient import TestClient
+        from server.app import create_app
+
+        client = TestClient(create_app())
+        response = client.get('/')
+        if response.status_code != 200:
+            fail(f'expected GET / to return 200, got {response.status_code}: {response.text}')
+
+        html = response.text
+        if not re.search(
+            r'\.user-panel-bg-grid\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit,\s*minmax\(2\.75rem,\s*1fr\)\);',
+            html,
+            re.S,
+        ):
+            fail('home page should size background picker columns with a 44px minimum')
+        if not re.search(r'\.bg-option\s*\{[^}]*min-width:\s*2\.75rem;[^}]*min-height:\s*2\.75rem;', html, re.S):
+            fail('home page should keep each background option at or above a 44px target size')
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def scenario_home_toasts_expose_live_region_semantics():
+    app_js = (ROOT / 'server' / 'static' / 'js' / 'app.js').read_text(encoding='utf-8')
+    required_js_markers = [
+        "this.container.setAttribute('aria-live', 'polite');",
+        "this.container.setAttribute('aria-atomic', 'false');",
+        "toast.setAttribute('role', type === 'error' ? 'alert' : 'status');",
+    ]
+    missing_js = [marker for marker in required_js_markers if marker not in app_js]
+    if missing_js:
+        fail(f'toast manager is missing live region semantics: {", ".join(missing_js)}')
+
+
 def scenario_home_auth_gate_opens_before_console_navigation():
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-home-kawaii-auth-gate-'))
     try:
@@ -393,6 +544,7 @@ def scenario_home_auth_gate_opens_before_console_navigation():
         html = response.text
         required_markers = [
             'id="auth-modal"',
+            'id="auth-form"',
             'data-auth-required="true"',
             'data-auth-target="/submissions?lang=zh"',
             'data-auth-target="/reviews?lang=zh"',
@@ -404,11 +556,13 @@ def scenario_home_auth_gate_opens_before_console_navigation():
         missing = [marker for marker in required_markers if marker not in html]
         if missing:
             fail(f'home page is missing auth gate markers for console links: {", ".join(missing)}')
+        if 'id="login-btn" type="submit"' not in html and 'type="submit" id="login-btn"' not in html:
+            fail('home page auth modal should expose a submit button for the token form')
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
-def scenario_home_user_entry_stays_in_flow_without_fixed_overlap():
+def scenario_home_user_entry_floats_clear_of_content_cards():
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-home-kawaii-user-trigger-layout-'))
     try:
         configure_env(tmpdir)
@@ -424,24 +578,32 @@ def scenario_home_user_entry_stays_in_flow_without_fixed_overlap():
 
         html = response.text
         required_patterns = {
-            'user trigger wrapper uses flow layout': (
-                r'\.user-trigger-wrapper\s*\{[^}]*position:\s*relative;[^}]*display:\s*flex;[^}]*justify-content:\s*flex-end;'
+            'user trigger wrapper fixed to viewport': (
+                r'\.user-trigger-wrapper\s*\{[^}]*position:\s*fixed;[^}]*right:\s*max\(1rem,\s*calc\(\(100vw\s*-\s*1200px\)\s*/\s*2\)\);'
             ),
-            'user panel anchors to wrapper instead of viewport': (
+            'user trigger stays below the top chrome on desktop': (
+                r'\.user-trigger-wrapper\s*\{[^}]*top:\s*calc\(12px\s*\+\s*5\.5rem\);'
+            ),
+            'user panel still anchors to trigger': (
                 r'\.user-panel\s*\{[^}]*position:\s*absolute;[^}]*top:\s*calc\(100%\s*\+\s*0\.75rem\);[^}]*right:\s*0;'
+            ),
+            'mobile user trigger docks away from content cards': (
+                r'@media\s*\(max-width:\s*720px\)\s*\{.*?\.user-trigger-wrapper\s*\{[^}]*top:\s*auto;[^}]*bottom:\s*max\(1rem,\s*env\(safe-area-inset-bottom\)\);'
+            ),
+            'mobile user panel opens upward from the docked trigger': (
+                r'@media\s*\(max-width:\s*720px\)\s*\{.*?\.user-panel\s*\{[^}]*top:\s*auto;[^}]*bottom:\s*calc\(100%\s*\+\s*0\.5rem\);'
             ),
         }
         missing = [label for label, pattern in required_patterns.items() if not re.search(pattern, html, re.S)]
         if missing:
-            fail(f'home page still uses overlapping user overlay positioning: {", ".join(missing)}')
+            fail(f'home page user entry still overlaps the content layout: {", ".join(missing)}')
 
         banned_patterns = {
-            'user trigger fixed to viewport': r'\.user-trigger-wrapper\s*\{[^}]*position:\s*fixed;',
-            'user panel fixed to viewport': r'\.user-panel\s*\{[^}]*position:\s*fixed;',
+            'user trigger wrapper in normal flow': r'\.user-trigger-wrapper\s*\{[^}]*position:\s*relative;',
         }
         present = [label for label, pattern in banned_patterns.items() if re.search(pattern, html, re.S)]
         if present:
-            fail(f'home page still contains overlapping fixed user overlay rules: {", ".join(present)}')
+            fail(f'home page still contains in-flow user trigger rules: {", ".join(present)}')
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -604,8 +766,13 @@ def main():
     scenario_home_english_copy_stays_english_and_preserves_lang_routes()
     scenario_home_chinese_copy_stays_chinese_in_primary_chrome()
     scenario_home_chinese_auth_copy_uses_access_token_terms()
+    scenario_home_mobile_touch_targets_stay_thumb_friendly()
+    scenario_home_auth_controls_keep_thumb_friendly_targets()
+    scenario_home_toast_close_action_is_accessible()
+    scenario_home_background_picker_keeps_thumb_friendly_tiles()
+    scenario_home_toasts_expose_live_region_semantics()
     scenario_home_auth_gate_opens_before_console_navigation()
-    scenario_home_user_entry_stays_in_flow_without_fixed_overlap()
+    scenario_home_user_entry_floats_clear_of_content_cards()
     scenario_home_dark_mode_uses_dark_aware_surface_tokens()
     scenario_home_dark_mode_softens_card_highlights()
     scenario_static_app_js_is_served_without_legacy_theme_conflicts()

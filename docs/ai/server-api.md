@@ -1,13 +1,16 @@
 # Hosted server API
 
-The hosted control plane exposes a small bearer-token API for submission, review, and publish orchestration.
+The hosted control plane exposes a small token-backed API for submission, review, and publish orchestration.
 
 The same hosted app also exposes a read-only distribution surface for installers. That surface remains immutable-artifact-first under `/registry/*`, and can be left public in dev or protected with dedicated registry bearer tokens in hosted deployments.
 
 ## Auth
 
 - Send `Authorization: Bearer <token>`
-- `/api/v1/*` and maintainer HTML pages map tokens to hosted `users.role`
+- `/api/v1/*` accepts bearer tokens directly and maps them to hosted `users.role`
+- Maintainer HTML pages can also bootstrap a browser session through `POST /api/auth/login`, which sets the same token into the `infinitas_auth_token` cookie
+- Browser UI code can probe `GET /api/auth/me` to restore cookie-backed session state after reloads
+- `POST /api/auth/logout` clears the browser session cookie
 - `contributor` may create submissions and request validation / review
 - `maintainer` may approve, reject, and queue publish requests
 - `/registry/*` optionally uses `INFINITAS_REGISTRY_READ_TOKENS` instead of database-backed users
@@ -15,6 +18,9 @@ The same hosted app also exposes a read-only distribution surface for installers
 ## Endpoints
 
 - `GET /healthz`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
 - `GET /registry/ai-index.json`
 - `GET /registry/distributions.json`
 - `GET /registry/compatibility.json`
@@ -39,11 +45,12 @@ The same hosted app also exposes a read-only distribution surface for installers
 
 ## Operator pages
 
+- `GET /login`
 - `GET /submissions`
 - `GET /reviews`
 - `GET /jobs`
 
-These pages are intentionally minimal server-rendered maintainer views for queue inspection; they are not yet a full workflow UI.
+These pages are intentionally minimal server-rendered maintainer views for queue inspection; they are not yet a full workflow UI. `/login` and the inline console auth modal both bootstrap the same cookie-backed browser session, while bearer tokens remain the underlying auth primitive.
 
 ## CLI mapping
 

@@ -111,28 +111,30 @@
       <h3 class="auth-modal-title" id="auth-modal-title">🔑 {{ ui.auth_modal_title }}</h3>
       <button class="auth-modal-close" id="auth-modal-close" type="button" aria-label="{{ ui.auth_close }}">✕</button>
     </div>
-    <div class="auth-modal-body">
-      <p class="auth-modal-desc">{{ ui.auth_modal_desc }}</p>
-      <div class="token-input-wrapper">
-        <input type="password" id="token-input" class="token-input" 
-               placeholder="{{ ui.auth_modal_placeholder }}" autocomplete="off" minlength="8" maxlength="128"
-               aria-label="{{ ui.auth_modal_placeholder }}" aria-describedby="token-hint"/>
-        <button type="button" class="token-toggle" id="token-toggle" title="{{ ui.toggle_password_visibility }}" aria-label="{{ ui.toggle_password_visibility }}">
-          <span aria-hidden="true">👁️</span>
+    <form id="auth-form" class="auth-form" novalidate>
+      <div class="auth-modal-body">
+        <p class="auth-modal-desc">{{ ui.auth_modal_desc }}</p>
+        <div class="token-input-wrapper">
+          <input type="password" id="token-input" class="token-input" 
+                 placeholder="{{ ui.auth_modal_placeholder }}" autocomplete="off" minlength="8" maxlength="128"
+                 aria-label="{{ ui.auth_modal_placeholder }}" aria-describedby="token-hint"/>
+          <button type="button" class="token-toggle" id="token-toggle" title="{{ ui.toggle_password_visibility }}" aria-label="{{ ui.toggle_password_visibility }}">
+            <span aria-hidden="true">👁️</span>
+          </button>
+        </div>
+        <p class="auth-hint" id="token-hint">💡 {{ ui.auth_modal_hint }}</p>
+        <div class="auth-error" id="auth-error" role="alert" aria-live="polite" hidden>
+          <span aria-hidden="true">❌</span><span id="error-message">{{ ui.auth_invalid }}</span>
+        </div>
+      </div>
+      <div class="auth-modal-footer">
+        <button class="kawaii-button kawaii-button--ghost" id="cancel-auth-btn" type="button">{{ ui.auth_cancel }}</button>
+        <button class="kawaii-button kawaii-button--primary" id="login-btn" type="submit">
+          <span class="btn-icon" aria-hidden="true">🔓</span>
+          <span class="btn-text">{{ ui.auth_verify }}</span>
         </button>
       </div>
-      <p class="auth-hint" id="token-hint">💡 {{ ui.auth_modal_hint }}</p>
-      <div class="auth-error" id="auth-error" role="alert" aria-live="polite" hidden>
-        <span aria-hidden="true">❌</span><span id="error-message">{{ ui.auth_invalid }}</span>
-      </div>
-    </div>
-    <div class="auth-modal-footer">
-      <button class="kawaii-button kawaii-button--ghost" id="cancel-auth-btn" type="button">{{ ui.auth_cancel }}</button>
-      <button class="kawaii-button kawaii-button--primary" id="login-btn" type="button">
-        <span class="btn-icon" aria-hidden="true">🔓</span>
-        <span class="btn-text">{{ ui.auth_verify }}</span>
-      </button>
-    </div>
+    </form>
   </div>
 </div>
 
@@ -312,6 +314,10 @@
   }
   
   .quick-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
     padding: 0.5rem 0.9rem;
     border-radius: var(--radius-full);
     border: 1px solid var(--kawaii-line);
@@ -578,7 +584,11 @@
   }
   
   .skill-copy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
+    min-height: 2.75rem;
     padding: 0.5rem;
     border: 1px dashed var(--kawaii-line);
     border-radius: var(--radius-md);
@@ -674,11 +684,13 @@
 
   /* ===== User Trigger Button ===== */
   .user-trigger-wrapper {
-    position: relative;
+    position: fixed;
+    top: calc(12px + 5.5rem);
+    right: max(1rem, calc((100vw - 1200px) / 2));
     display: flex;
     justify-content: flex-end;
-    margin-bottom: 0.75rem;
-    z-index: 30;
+    margin-bottom: 0;
+    z-index: 110;
   }
 
   .user-trigger {
@@ -851,12 +863,14 @@
 
   .user-panel-bg-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(2.75rem, 1fr));
     gap: 0.5rem;
   }
 
   .bg-option {
     aspect-ratio: 1;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
     border-radius: var(--radius-md);
     border: 2px solid transparent;
     background-size: cover;
@@ -908,7 +922,10 @@
 
   @media (max-width: 720px) {
     .user-trigger-wrapper {
-      margin-bottom: 0.625rem;
+      top: auto;
+      right: max(0.75rem, env(safe-area-inset-right));
+      bottom: max(1rem, env(safe-area-inset-bottom));
+      margin-bottom: 0;
     }
     .user-trigger {
       width: 2.75rem;
@@ -916,9 +933,10 @@
       font-size: 1.1rem;
     }
     .user-panel {
-      top: calc(100% + 0.5rem);
+      top: auto;
+      bottom: calc(100% + 0.5rem);
       right: 0;
-      width: min(260px, calc(100vw - 2rem));
+      width: min(260px, calc(100vw - 1.5rem));
     }
   }
 
@@ -985,8 +1003,8 @@
   }
 
   .auth-modal-close {
-    width: 2rem;
-    height: 2rem;
+    width: 2.75rem;
+    height: 2.75rem;
     border-radius: var(--radius-full);
     border: none;
     background: var(--kawaii-panel-soft);
@@ -1024,7 +1042,7 @@
 
   .token-input {
     width: 100%;
-    padding: 0.875rem 2.75rem 0.875rem 1rem;
+    padding: 0.875rem 3.75rem 0.875rem 1rem;
     border: 2px solid var(--kawaii-line);
     border-radius: var(--radius-md);
     background: var(--kawaii-panel-soft);
@@ -1046,6 +1064,10 @@
     right: 0.75rem;
     top: 50%;
     transform: translateY(-50%);
+    width: 2.75rem;
+    height: 2.75rem;
+    display: grid;
+    place-items: center;
     background: transparent;
     border: none;
     padding: 0.35rem;
@@ -1164,6 +1186,8 @@
   /* 背景选项样式 - 用户面板内使用 */
   .bg-option {
     aspect-ratio: 1;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
     border-radius: var(--radius-md);
     border: 2px solid transparent;
     background-size: cover;
@@ -1232,10 +1256,9 @@
   const EXPIRY_KEY = 'infinitas_auth_expiry';
   const DAYS_30 = 30 * 24 * 60 * 60 * 1000;
   const BG_STORAGE_KEY = 'infinitas_bg_settings';
-  const ui = window.APP_UI || {};
 
   function uiText(key, fallback) {
-    const value = ui[key];
+    const value = (window.APP_UI || {})[key];
     return typeof value === 'string' && value ? value : fallback;
   }
 
@@ -1923,9 +1946,13 @@
     if (cancelAuthBtn) cancelAuthBtn.addEventListener('click', closeAuthModal);
     if (authBackdrop) authBackdrop.addEventListener('click', closeAuthModal);
     
-    // 模态框内登录按钮
-    const loginBtn = document.getElementById('login-btn');
-    if (loginBtn) loginBtn.addEventListener('click', handleLogin);
+    const authForm = document.getElementById('auth-form');
+    if (authForm) {
+      authForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        handleLogin();
+      });
+    }
     
     // Token 输入框事件
     const tokenInput = document.getElementById('token-input');
@@ -1933,9 +1960,6 @@
     
     if (tokenInput) {
       tokenInput.addEventListener('input', hideError);
-      tokenInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleLogin();
-      });
     }
     
     if (tokenToggle) {

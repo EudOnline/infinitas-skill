@@ -3,15 +3,21 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="description" content="{{ page_description or 'infinitas - 小二的私人 Agent 技能库，发现、试用、归档，技能即插即用' }}" />
-    <meta name="keywords" content="AI, Agent, Skill, 技能库, MCP, 工具调用, {{ page_keywords or '' }}" />
+    <meta
+      name="description"
+      content="{{ page_description or ('infinitas - 小二的私人 Agent 技能库，发现、试用、归档，技能即插即用' if page_language == 'zh' else 'infinitas - a private Agent skill registry for discovery, trial, and archiving, with plug-and-play skills') }}"
+    />
+    <meta
+      name="keywords"
+      content="{{ 'AI, Agent, Skill, 技能库, MCP, 工具调用' if page_language == 'zh' else 'AI, Agent, Skill, registry, MCP, tool calling' }}{% if page_keywords %}, {{ page_keywords }}{% endif %}"
+    />
     <meta name="author" content="lvxiaoer" />
     <meta name="robots" content="index, follow" />
     
     <!-- Open Graph / Social Media -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="{{ title or 'infinitas skill registry ✨' }}" />
-    <meta property="og:description" content="{{ page_description or '小二的私人 Agent 技能库' }}" />
+    <meta property="og:description" content="{{ page_description or ('小二的私人 Agent 技能库' if page_language == 'zh' else 'A private Agent skill registry') }}" />
     <meta property="og:site_name" content="infinitas" />
     
     <!-- Theme Color for Mobile Browsers -->
@@ -479,6 +485,9 @@
       }
 
       .nav a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         padding: 0.5rem 1rem;
         border-radius: var(--radius-full);
         font-size: 0.875rem;
@@ -815,6 +824,11 @@
       }
       
       .toast__close {
+        width: 2.75rem;
+        height: 2.75rem;
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
         background: none;
         border: none;
         font-size: 1.25rem;
@@ -944,7 +958,7 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-height: 2rem;
+        min-height: 2.75rem;
         min-width: 2.8rem;
         padding: 0.4rem 0.72rem;
         border: none;
@@ -984,7 +998,7 @@
         display: inline-flex;
         align-items: center;
         gap: 0.55rem;
-        min-height: 2.35rem;
+        min-height: 2.75rem;
         max-width: min(14rem, calc(100vw - 2rem));
         padding: 0.48rem 0.9rem;
         border: 1px solid var(--kawaii-line);
@@ -1133,8 +1147,8 @@
       }
 
       .console-auth-modal__close {
-        width: 2.25rem;
-        height: 2.25rem;
+        width: 2.75rem;
+        height: 2.75rem;
         display: grid;
         place-items: center;
         border: 1px solid var(--kawaii-line);
@@ -1164,7 +1178,7 @@
       }
 
       .console-auth-modal__input {
-        padding-right: 3.25rem;
+        padding-right: 3.75rem;
       }
 
       .console-auth-modal__toggle {
@@ -1172,8 +1186,8 @@
         top: 50%;
         right: 0.5rem;
         transform: translateY(-50%);
-        width: 2.25rem;
-        height: 2.25rem;
+        width: 2.75rem;
+        height: 2.75rem;
         display: grid;
         place-items: center;
         border: none;
@@ -2047,12 +2061,15 @@
 
       .copy-button {
         appearance: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         border: 1px solid var(--kawaii-line);
         background: var(--kawaii-panel-muted);
         color: var(--kawaii-ink);
         border-radius: var(--radius-full);
         cursor: pointer;
-        min-height: 2.25rem;
+        min-height: 2.75rem;
         padding: 0.4rem 0.9rem;
         font-weight: 700;
       }
@@ -2583,7 +2600,7 @@
         }
 
         .toggle-chip {
-          min-height: 2.1rem;
+          min-height: 2.75rem;
         }
 
         .nav {
@@ -2592,6 +2609,7 @@
         }
 
         .nav a {
+          min-height: 2.75rem;
           padding: 0.46rem 0.82rem;
           font-size: 0.82rem;
         }
@@ -2792,7 +2810,7 @@
         </div>
       </a>
       
-      <nav class="nav" aria-label="Primary">
+      <nav class="nav" aria-label="{{ '主导航' if page_language == 'zh' else 'Primary navigation' }}">
         {% set current_path = request.url.path %}
         {% for link in nav_links or [] %}
         {% set href = link.href %}
@@ -2886,7 +2904,7 @@
     </header>
 
     <!-- 📦 主内容区 -->
-    <main class="site-shell" id="main-content" aria-label="主内容">
+    <main class="site-shell" id="main-content" aria-label="{{ '主内容' if page_language == 'zh' else 'Main content' }}">
       {% if page_mode == "console" %}
       <section class="console-head">
         <article class="console-head-shell kawaii-card animate-in">
@@ -2948,40 +2966,42 @@
           <h2 class="console-auth-modal__title" id="console-auth-modal-title">🔑 {{ ui.auth_modal_title if ui else 'Identity check' }}</h2>
           <button class="console-auth-modal__close" id="console-auth-modal-close" type="button" aria-label="{{ ui.auth_close if ui else 'Close' }}">✕</button>
         </div>
-        <p class="console-auth-modal__desc">{{ ui.auth_modal_desc if ui else 'Enter your access token to continue.' }}</p>
-        <div class="console-auth-modal__input-row">
-          <input
-            type="password"
-            id="console-token-input"
-            class="kawaii-input console-auth-modal__input"
-            placeholder="{{ ui.auth_modal_placeholder if ui else 'Enter your access token' }}"
-            autocomplete="off"
-            minlength="8"
-            maxlength="128"
-            aria-label="{{ ui.auth_modal_placeholder if ui else 'Enter your access token' }}"
-            aria-describedby="console-token-hint"
-          />
-          <button
-            type="button"
-            class="console-auth-modal__toggle"
-            id="console-token-toggle"
-            title="{{ ui.toggle_password_visibility if ui else 'Toggle password visibility' }}"
-            aria-label="{{ ui.toggle_password_visibility if ui else 'Toggle password visibility' }}"
-          >
-            <span aria-hidden="true">👁️</span>
-          </button>
-        </div>
-        <p class="console-auth-modal__hint" id="console-token-hint">💡 {{ ui.auth_modal_hint if ui else 'Token stays valid for 30 days' }}</p>
-        <div class="console-auth-modal__error" id="console-auth-error" role="alert" aria-live="polite" hidden>
-          <span id="console-error-message">{{ ui.auth_invalid if ui else 'Invalid token' }}</span>
-        </div>
-        <div class="console-auth-modal__footer">
-          <button class="kawaii-button kawaii-button--ghost" id="console-cancel-auth-btn" type="button">{{ ui.auth_cancel if ui else 'Cancel' }}</button>
-          <button class="kawaii-button kawaii-button--primary" id="console-login-btn" type="button">
-            <span class="btn-icon" aria-hidden="true">🔓</span>
-            <span class="btn-text">{{ ui.auth_verify if ui else 'Verify' }}</span>
-          </button>
-        </div>
+        <form id="console-auth-form" class="console-auth-modal__form" novalidate>
+          <p class="console-auth-modal__desc">{{ ui.auth_modal_desc if ui else 'Enter your access token to continue.' }}</p>
+          <div class="console-auth-modal__input-row">
+            <input
+              type="password"
+              id="console-token-input"
+              class="kawaii-input console-auth-modal__input"
+              placeholder="{{ ui.auth_modal_placeholder if ui else 'Enter your access token' }}"
+              autocomplete="off"
+              minlength="8"
+              maxlength="128"
+              aria-label="{{ ui.auth_modal_placeholder if ui else 'Enter your access token' }}"
+              aria-describedby="console-token-hint"
+            />
+            <button
+              type="button"
+              class="console-auth-modal__toggle"
+              id="console-token-toggle"
+              title="{{ ui.toggle_password_visibility if ui else 'Toggle password visibility' }}"
+              aria-label="{{ ui.toggle_password_visibility if ui else 'Toggle password visibility' }}"
+            >
+              <span aria-hidden="true">👁️</span>
+            </button>
+          </div>
+          <p class="console-auth-modal__hint" id="console-token-hint">💡 {{ ui.auth_modal_hint if ui else 'Token stays valid for 30 days' }}</p>
+          <div class="console-auth-modal__error" id="console-auth-error" role="alert" aria-live="polite" hidden>
+            <span id="console-error-message">{{ ui.auth_invalid if ui else 'Invalid token' }}</span>
+          </div>
+          <div class="console-auth-modal__footer">
+            <button class="kawaii-button kawaii-button--ghost" id="console-cancel-auth-btn" type="button">{{ ui.auth_cancel if ui else 'Cancel' }}</button>
+            <button class="kawaii-button kawaii-button--primary" id="console-login-btn" type="submit">
+              <span class="btn-icon" aria-hidden="true">🔓</span>
+              <span class="btn-text">{{ ui.auth_verify if ui else 'Verify' }}</span>
+            </button>
+          </div>
+        </form>
       </div>
     </div>
     {% endif %}
@@ -3604,14 +3624,12 @@
           document.getElementById('console-logout-btn')?.addEventListener('click', handleLogout);
           document.getElementById('console-auth-modal-close')?.addEventListener('click', () => closeAuthModal());
           document.getElementById('console-cancel-auth-btn')?.addEventListener('click', () => closeAuthModal());
-          document.getElementById('console-login-btn')?.addEventListener('click', handleLogin);
+          document.getElementById('console-auth-form')?.addEventListener('submit', (event) => {
+            event.preventDefault();
+            handleLogin();
+          });
           document.getElementById('console-token-toggle')?.addEventListener('click', togglePasswordVisibility);
           document.getElementById('console-token-input')?.addEventListener('input', hideError);
-          document.getElementById('console-token-input')?.addEventListener('keypress', (event) => {
-            if (event.key === 'Enter') {
-              handleLogin();
-            }
-          });
           document.addEventListener('click', handleDocumentClick);
           document.addEventListener('keydown', handleKeyDown);
         }

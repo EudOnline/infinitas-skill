@@ -568,6 +568,59 @@ def scenario_english_auth_errors_stay_english():
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
+def scenario_home_english_runtime_ui_copy_stays_english():
+    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-home-auth-runtime-copy-'))
+    session = f'homecopy{os.getpid()}'
+    try:
+        env = configure_env(tmpdir)
+        sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
+
+        stop_playwright_session(session)
+
+        with HostedAppServer(ROOT, env) as server:
+            if not server.base_url:
+                fail('hosted app did not expose a base URL')
+
+            run_playwright(session, 'open', f'{server.base_url}/?lang=en')
+            english_runtime_copy = parse_eval_result(
+                run_playwright(
+                    session,
+                    'eval',
+                    (
+                        'async () => {'
+                        'const trigger = document.getElementById("user-trigger");'
+                        'trigger.click();'
+                        'const openAuthBtn = document.getElementById("open-auth-modal-btn");'
+                        'openAuthBtn.click();'
+                        'const toggle = document.getElementById("token-toggle");'
+                        'toggle.click();'
+                        'document.getElementById("cancel-auth-btn").click();'
+                        'await new Promise((resolve) => setTimeout(resolve, 50));'
+                        'trigger.click();'
+                        'openAuthBtn.click();'
+                        'document.getElementById("token-input").value = "";'
+                        'document.getElementById("login-btn").click();'
+                        'await new Promise((resolve) => setTimeout(resolve, 50));'
+                        'return {'
+                        '  triggerAria: trigger.getAttribute("aria-label"),'
+                        '  toggleAria: toggle.getAttribute("aria-label"),'
+                        '  error: document.getElementById("error-message")?.textContent?.trim() || null'
+                        '};'
+                        '}'
+                    ),
+                )
+            )
+            if english_runtime_copy.get('triggerAria') != 'Sign in':
+                fail(f'expected english home trigger aria-label to stay english, got {english_runtime_copy}')
+            if english_runtime_copy.get('toggleAria') != 'Hide password':
+                fail(f'expected english password toggle label to stay english, got {english_runtime_copy}')
+            if english_runtime_copy.get('error') != 'Please enter token':
+                fail(f'expected english local validation copy, got {english_runtime_copy}')
+    finally:
+        stop_playwright_session(session)
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 def scenario_auth_modal_restores_focus_after_close():
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-home-auth-focus-runtime-'))
     session = f'homefocus{os.getpid()}'
@@ -762,6 +815,7 @@ def main():
     scenario_stale_auth_cookie_clears_without_console_errors()
     scenario_copy_triggers_work_and_search_empty_state_uses_copy_cta()
     scenario_english_auth_errors_stay_english()
+    scenario_home_english_runtime_ui_copy_stays_english()
     scenario_auth_modal_restores_focus_after_close()
     scenario_private_search_prompts_for_auth()
     scenario_protected_console_route_redirects_into_auth_modal()

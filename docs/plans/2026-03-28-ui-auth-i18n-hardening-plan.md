@@ -8,6 +8,8 @@
 
 **Tech Stack:** FastAPI, Jinja2 templates, vanilla JavaScript, Python smoke tests, Playwright CLI for browser verification
 
+**Status:** Implemented in the current working tree on 2026-03-29. The targeted regression suite now passes in `.venv`; remaining closeout is manual browser sanity checking plus commit selection.
+
 ---
 
 ### Task 1: Lock The Regressions With Tests

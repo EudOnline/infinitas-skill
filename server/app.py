@@ -244,6 +244,7 @@ def _build_kawaii_ui_context(request: Request, lang: str, page_kicker: str, page
             'language_toggle_label': _pick_lang(lang, '语言切换', 'Language switcher'),
             'copy_success': _pick_lang(lang, '已复制', 'Copied'),
             'copy_error': _pick_lang(lang, '复制失败', 'Copy failed'),
+            'toast_close': _pick_lang(lang, '关闭通知', 'Dismiss notification'),
             'copy_icon_title': _pick_lang(lang, '复制', 'Copy'),
             'copy_button_label': _pick_lang(lang, '复制', 'Copy'),
             'status_running': _pick_lang(lang, '运行中', 'Running'),
@@ -465,7 +466,7 @@ def _build_home_context(settings, db: Session, request: Request) -> dict:
     ]
     page_eyebrow = _pick_lang(lang, '私人技能工作台', 'Private agent workspace')
     context = {
-        'title': 'infinitas hosted registry',
+        'title': _pick_lang(lang, 'infinitas 托管技能仓库', 'infinitas hosted registry'),
         'page_eyebrow': page_eyebrow,
         'page_kicker': access_mode,
         'page_mode': 'home',

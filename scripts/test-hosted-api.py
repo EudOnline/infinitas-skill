@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -101,6 +102,7 @@ def scenario_health_login_and_me():
             fail(f'/login returned {response.status_code}: {response.text}')
         zh_login_html = response.text
         zh_login_markers = [
+            'id="login-form"',
             '令牌认证',
             '输入访问令牌',
             '输入你的访问令牌',
@@ -116,6 +118,10 @@ def scenario_health_login_and_me():
         missing_zh_login = [marker for marker in zh_login_markers if marker not in zh_login_html]
         if missing_zh_login:
             fail(f'chinese login page is missing localized auth markers: {", ".join(missing_zh_login)}')
+        if 'id="login-btn" type="submit"' not in zh_login_html and 'type="submit" id="login-btn"' not in zh_login_html:
+            fail('chinese login page should expose a submit button for the token form')
+        if '.login-token-toggle' not in zh_login_html or 'width: 2.75rem;' not in zh_login_html or 'height: 2.75rem;' not in zh_login_html:
+            fail('chinese login page should keep the token visibility toggle at a 44px target size')
         unexpected_zh_login = [
             'Token 可在个人账户设置中获取',
             'Token 无效',
@@ -135,16 +141,22 @@ def scenario_health_login_and_me():
             fail(f'/login?lang=en returned {response.status_code}: {response.text}')
         english_login_html = response.text
         english_login_markers = [
+            'id="login-form"',
             'Token Auth',
             'Enter Access Token',
             'Enter your access token',
             'window.location.href = \'/?lang=en\'',
             'href="/?lang=en"',
             "/api/auth/login?lang=en",
+            'aria-label="Main content"',
         ]
         missing_english_login = [marker for marker in english_login_markers if marker not in english_login_html]
         if missing_english_login:
             fail(f'english login page is missing localized auth markers: {", ".join(missing_english_login)}')
+        if 'id="login-btn" type="submit"' not in english_login_html and 'type="submit" id="login-btn"' not in english_login_html:
+            fail('english login page should expose a submit button for the token form')
+        if 'aria-label="主内容"' in english_login_html:
+            fail('english login page should not keep chinese main landmark labels')
         duplicate_console_auth_markers = [
             'id="console-session-trigger"',
             'id="console-session-panel"',
@@ -338,6 +350,7 @@ def scenario_health_login_and_me():
             )
         english_submissions_html = response.text
         english_console_auth_markers = [
+            'id="console-auth-form"',
             'id="console-session-trigger"',
             'id="console-session-panel"',
             'id="console-open-auth-modal-btn"',
@@ -353,6 +366,13 @@ def scenario_health_login_and_me():
                 'expected english submissions console to expose shared auth controls, missing: '
                 + ', '.join(missing_console_auth_markers)
             )
+        if not re.search(r'\.session-chip\s*\{[^}]*min-height:\s*2\.75rem;', english_submissions_html, re.S):
+            fail('expected english submissions console session trigger to keep a 44px target size')
+        if 'id="console-login-btn" type="submit"' not in english_submissions_html and 'type="submit" id="console-login-btn"' not in english_submissions_html:
+            fail('expected english submissions console auth modal to expose a submit button for the token form')
+        for marker in ['.console-auth-modal__close', '.console-auth-modal__toggle', 'width: 2.75rem;', 'height: 2.75rem;']:
+            if marker not in english_submissions_html:
+                fail(f'expected english submissions console auth controls to keep 44px target sizing with {marker!r}')
         if 'Waiting review' not in english_submissions_html:
             fail('expected submissions console to humanize review_requested into Waiting review')
         if '>review_requested<' in english_submissions_html:

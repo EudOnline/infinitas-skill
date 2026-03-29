@@ -270,7 +270,8 @@ The repository now includes a minimal hosted control plane under `server/` for t
 
 - `GET /healthz` for readiness
 - `GET /` for a lightweight HTML dashboard
-- `GET /login` for auth bootstrap guidance
+- `GET /login` plus `POST /api/auth/login` / `POST /api/auth/logout` for browser auth bootstrap
+- `GET /api/auth/me` for cookie-backed browser session probing
 - `GET /api/v1/me` for bearer-token identity checks
 - `GET /submissions`, `GET /reviews`, and `GET /jobs` for maintainer-only operator views
 - `GET /api/v1/submissions`, `GET /api/v1/reviews`, and `GET /api/v1/jobs` for JSON list inspection
@@ -286,7 +287,7 @@ The hosted server uses SQLite by default and can be configured with:
 - optional `INFINITAS_SERVER_MIRROR_REMOTE`
 - optional `INFINITAS_SERVER_MIRROR_BRANCH`
 
-Hosted submission and review APIs are documented in `docs/ai/server-api.md`. The matching CLI wrapper is `scripts/registryctl.py`, which talks to the hosted API instead of editing repository state directly.
+Hosted submission and review APIs are documented in `docs/ai/server-api.md`. The matching CLI wrapper is `scripts/registryctl.py`, which talks to the hosted API instead of editing repository state directly. The hosted HTML pages now also support cookie-backed browser sessions backed by the same token primitive.
 Operational runbooks live in `docs/ops/server-deployment.md` and `docs/ops/server-backup-and-restore.md`.
 Phase 1 hosted ops automation now includes:
 
