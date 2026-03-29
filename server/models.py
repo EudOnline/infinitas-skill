@@ -88,14 +88,21 @@ class Job(Base):
 
 
 from server.modules.authoring.models import Namespace, Skill, SkillDraft, SkillVersion
+from server.modules.access.models import AccessCredential, AccessGrant
+from server.modules.exposure.models import Exposure
 from server.modules.release.models import Artifact, Release
+from server.modules.review.models import ReviewCase
 
 __all__ = [
+    'AccessCredential',
+    'AccessGrant',
     'Artifact',
     'Base',
+    'Exposure',
     'Job',
     'Namespace',
     'Release',
+    'ReviewCase',
     'Review',
     'Skill',
     'SkillDraft',

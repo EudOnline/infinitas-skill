@@ -14,6 +14,7 @@ from server.settings import get_settings
 
 BOOTSTRAP_REVISION = '20260329_0001'
 RELEASE_GRAPH_REVISION = '20260329_0002'
+ACCESS_POLICY_REVISION = '20260329_0003'
 COMPATIBILITY_TABLE_COLUMNS = {
     'users': {
         'id': ('INTEGER', False, True),
@@ -113,6 +114,38 @@ RELEASE_GRAPH_TABLE_COLUMNS = {
         'created_at': ('DATETIME', False, False),
     },
 }
+ACCESS_POLICY_TABLE_COLUMNS = {
+    'exposures': {
+        'id': ('INTEGER', False, True),
+        'release_id': ('INTEGER', False, False),
+        'mode': ('VARCHAR(32)', False, False),
+        'review_requirement': ('VARCHAR(32)', False, False),
+        'created_at': ('DATETIME', False, False),
+        'updated_at': ('DATETIME', False, False),
+    },
+    'review_cases': {
+        'id': ('INTEGER', False, True),
+        'exposure_id': ('INTEGER', False, False),
+        'release_id': ('INTEGER', False, False),
+        'status': ('VARCHAR(64)', False, False),
+        'created_at': ('DATETIME', False, False),
+        'updated_at': ('DATETIME', False, False),
+    },
+    'access_grants': {
+        'id': ('INTEGER', False, True),
+        'exposure_id': ('INTEGER', False, False),
+        'release_id': ('INTEGER', False, False),
+        'created_at': ('DATETIME', False, False),
+        'updated_at': ('DATETIME', False, False),
+    },
+    'access_credentials': {
+        'id': ('INTEGER', False, True),
+        'grant_id': ('INTEGER', False, False),
+        'token': ('VARCHAR(255)', False, False),
+        'created_at': ('DATETIME', False, False),
+        'revoked_at': ('DATETIME', True, False),
+    },
+}
 COMPATIBILITY_TABLE_INDEXES = {
     'users': frozenset(
         {
@@ -172,6 +205,28 @@ RELEASE_GRAPH_TABLE_INDEXES = {
         }
     ),
 }
+ACCESS_POLICY_TABLE_INDEXES = {
+    'exposures': frozenset(
+        {
+            (('release_id', 'mode'), False),
+        }
+    ),
+    'review_cases': frozenset(
+        {
+            (('exposure_id', 'status'), False),
+        }
+    ),
+    'access_grants': frozenset(
+        {
+            (('release_id',), False),
+        }
+    ),
+    'access_credentials': frozenset(
+        {
+            (('token',), True),
+        }
+    ),
+}
 COMPATIBILITY_TABLE_FOREIGN_KEYS = {
     'users': frozenset(),
     'submissions': frozenset(
@@ -219,6 +274,30 @@ RELEASE_GRAPH_TABLE_FOREIGN_KEYS = {
     'artifacts': frozenset(
         {
             (('release_id',), 'releases', ('id',)),
+        }
+    ),
+}
+ACCESS_POLICY_TABLE_FOREIGN_KEYS = {
+    'exposures': frozenset(
+        {
+            (('release_id',), 'releases', ('id',)),
+        }
+    ),
+    'review_cases': frozenset(
+        {
+            (('exposure_id',), 'exposures', ('id',)),
+            (('release_id',), 'releases', ('id',)),
+        }
+    ),
+    'access_grants': frozenset(
+        {
+            (('exposure_id',), 'exposures', ('id',)),
+            (('release_id',), 'releases', ('id',)),
+        }
+    ),
+    'access_credentials': frozenset(
+        {
+            (('grant_id',), 'access_grants', ('id',)),
         }
     ),
 }
@@ -294,8 +373,39 @@ def init_db():
     has_compatibility_tables = len(existing_compatibility_tables) == len(COMPATIBILITY_TABLE_COLUMNS)
     existing_release_graph_tables = [name for name in RELEASE_GRAPH_TABLE_COLUMNS if inspector.has_table(name)]
     has_release_graph_tables = len(existing_release_graph_tables) == len(RELEASE_GRAPH_TABLE_COLUMNS)
+    existing_access_policy_tables = [name for name in ACCESS_POLICY_TABLE_COLUMNS if inspector.has_table(name)]
+    has_access_policy_tables = len(existing_access_policy_tables) == len(ACCESS_POLICY_TABLE_COLUMNS)
     if not has_version_table:
-        if has_release_graph_tables:
+        if has_access_policy_tables:
+            if not has_compatibility_tables or not has_release_graph_tables:
+                raise RuntimeError(
+                    f'refusing to auto-stamp unversioned database with access policy tables; missing earlier managed tables for head revision {ACCESS_POLICY_REVISION}'
+                )
+            if (
+                not _tables_match_signature(
+                    inspector,
+                    COMPATIBILITY_TABLE_COLUMNS,
+                    COMPATIBILITY_TABLE_INDEXES,
+                    COMPATIBILITY_TABLE_FOREIGN_KEYS,
+                )
+                or not _tables_match_signature(
+                    inspector,
+                    RELEASE_GRAPH_TABLE_COLUMNS,
+                    RELEASE_GRAPH_TABLE_INDEXES,
+                    RELEASE_GRAPH_TABLE_FOREIGN_KEYS,
+                )
+                or not _tables_match_signature(
+                    inspector,
+                    ACCESS_POLICY_TABLE_COLUMNS,
+                    ACCESS_POLICY_TABLE_INDEXES,
+                    ACCESS_POLICY_TABLE_FOREIGN_KEYS,
+                )
+            ):
+                raise RuntimeError(
+                    f'refusing to auto-stamp unversioned private registry database; managed tables do not match head revision {ACCESS_POLICY_REVISION}'
+                )
+            command.stamp(config, ACCESS_POLICY_REVISION)
+        elif has_release_graph_tables:
             if not has_compatibility_tables:
                 raise RuntimeError(
                     f'refusing to auto-stamp unversioned database with release graph tables; missing compatibility tables for head revision {RELEASE_GRAPH_REVISION}'
@@ -326,9 +436,9 @@ def init_db():
                     f'refusing to auto-stamp unversioned legacy database; compatibility tables do not match bootstrap revision {BOOTSTRAP_REVISION}'
                 )
             command.stamp(config, BOOTSTRAP_REVISION)
-        elif existing_compatibility_tables or existing_release_graph_tables:
+        elif existing_compatibility_tables or existing_release_graph_tables or existing_access_policy_tables:
             raise RuntimeError(
-                f'refusing to auto-stamp partially initialized database; managed tables do not match bootstrap revision {BOOTSTRAP_REVISION} or head revision {RELEASE_GRAPH_REVISION}'
+                f'refusing to auto-stamp partially initialized database; managed tables do not match bootstrap revision {BOOTSTRAP_REVISION}, release graph revision {RELEASE_GRAPH_REVISION}, or head revision {ACCESS_POLICY_REVISION}'
             )
     command.upgrade(config, 'head')
 

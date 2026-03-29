@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 
 from server.db import get_db
 from server.models import User
+from server.modules.access.authn import find_access_credential_by_token, find_user_by_token
+from server.modules.access.authz import credential_can_read_registry_path
 from server.settings import get_settings
 
 AUTH_COOKIE_NAME = 'infinitas_auth_token'
@@ -25,14 +27,8 @@ def _resolve_request_token(request: Request) -> str | None:
     return _extract_bearer_token(request.headers.get('authorization')) or request.cookies.get(AUTH_COOKIE_NAME)
 
 
-def _find_user_by_token(token: str | None, db: Session) -> User | None:
-    if not token:
-        return None
-    return db.query(User).filter(User.token == token).one_or_none()
-
-
 def maybe_get_current_user(request: Request, db: Session) -> User | None:
-    return _find_user_by_token(_resolve_request_token(request), db)
+    return find_user_by_token(_resolve_request_token(request), db)
 
 
 def get_current_user(
@@ -43,7 +39,7 @@ def get_current_user(
     token = _extract_bearer_token(authorization) or auth_cookie
     if not token:
         raise HTTPException(status_code=401, detail='missing bearer token')
-    user = _find_user_by_token(token, db)
+    user = find_user_by_token(token, db)
     if user is None:
         raise HTTPException(status_code=401, detail='invalid bearer token')
     return user
@@ -60,7 +56,11 @@ def require_role(*allowed_roles: str):
     return dependency
 
 
-def require_registry_reader(authorization: str | None = Header(default=None)) -> None:
+def require_registry_reader(
+    request: Request,
+    authorization: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+) -> None:
     settings = get_settings()
     if not settings.registry_read_tokens:
         return
@@ -69,7 +69,11 @@ def require_registry_reader(authorization: str | None = Header(default=None)) ->
     if not token:
         raise HTTPException(status_code=401, detail='missing registry bearer token')
     if token not in settings.registry_read_tokens:
-        raise HTTPException(status_code=401, detail='invalid registry bearer token')
+        credential = find_access_credential_by_token(token, db)
+        if credential is None:
+            raise HTTPException(status_code=401, detail='invalid registry bearer token')
+        if not credential_can_read_registry_path(credential, request.url.path):
+            raise HTTPException(status_code=403, detail='insufficient registry scope')
 
 
 def require_registry_reader_or_user(
@@ -85,7 +89,7 @@ def require_registry_reader_or_user(
     if token and token in settings.registry_read_tokens:
         return
 
-    user = _find_user_by_token(token or auth_cookie, db)
+    user = find_user_by_token(token or auth_cookie, db)
     if user is not None:
         return
 
