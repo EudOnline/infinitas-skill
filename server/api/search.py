@@ -10,10 +10,13 @@ from pathlib import Path
 from typing import List, Optional
 from difflib import SequenceMatcher
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from server.auth import get_current_user, require_registry_reader, require_registry_reader_or_user
+from server.db import get_db
+from server.modules.registry.service import load_search_skill_entries
 from server.settings import get_settings
 
 router = APIRouter(prefix="/api", tags=["search"])
@@ -102,7 +105,7 @@ def _search_skills(query: str, catalog_data: dict, limit: int = 5) -> List[Skill
                 score += 30
         
         # Author match
-        score += _calculate_relevance(query, skill.get("author", "")) * 0.3
+        score += _calculate_relevance(query, skill.get("author", "") or skill.get("publisher", "")) * 0.3
         
         if score > 10:  # Threshold
             # Determine emoji icon based on tags/name
@@ -113,7 +116,7 @@ def _search_skills(query: str, catalog_data: dict, limit: int = 5) -> List[Skill
                     id=skill.get("name", ""),
                     name=skill.get("name", ""),
                     qualified_name=skill.get("qualified_name", ""),
-                    version=skill.get("version", ""),
+                    version=skill.get("version") or skill.get("latest_version") or skill.get("default_install_version") or "",
                     summary=skill.get("summary", "")[:100] + "..." if len(skill.get("summary", "")) > 100 else skill.get("summary", ""),
                     icon=icon,
                     tags=skill.get("tags", [])[:3],
@@ -255,10 +258,12 @@ def _search_commands(query: str, limit: int = 3, lang: str = "zh") -> List[Comma
 
 @router.get("/search", response_model=SearchResponse)
 async def search(
+    request: Request,
     q: str = Query(..., min_length=1, max_length=100, description="Search query"),
     limit: int = Query(default=5, ge=1, le=10, description="Max results per category"),
     lang: str = Query(default="zh", description="UI language"),
     _: None = Depends(require_registry_reader_or_user),
+    db: Session = Depends(get_db),
 ):
     """
     Global search across skills and commands
@@ -268,10 +273,7 @@ async def search(
     - Results are ranked by relevance
     """
     settings = get_settings()
-    
-    # Load catalog
-    catalog_path = settings.root_dir / "catalog" / "catalog.json"
-    catalog_data = _read_json(catalog_path)
+    catalog_data = {"skills": load_search_skill_entries(settings, db, request)}
     
     # Search skills
     skills = _search_skills(q, catalog_data, limit)
@@ -289,13 +291,13 @@ async def search(
 @router.get("/skills/{skill_id}", response_model=SkillSearchResult)
 async def get_skill_detail(
     skill_id: str,
+    request: Request,
     _: None = Depends(require_registry_reader_or_user),
+    db: Session = Depends(get_db),
 ):
     """Get detailed information about a specific skill"""
     settings = get_settings()
-    
-    catalog_path = settings.root_dir / "catalog" / "catalog.json"
-    catalog_data = _read_json(catalog_path)
+    catalog_data = {"skills": load_search_skill_entries(settings, db, request)}
     
     for skill in catalog_data.get("skills", []):
         if skill.get("name") == skill_id or skill.get("qualified_name") == skill_id:
@@ -303,7 +305,7 @@ async def get_skill_detail(
                 id=skill.get("name", ""),
                 name=skill.get("name", ""),
                 qualified_name=skill.get("qualified_name", ""),
-                version=skill.get("version", ""),
+                version=skill.get("version") or skill.get("latest_version") or skill.get("default_install_version") or "",
                 summary=skill.get("summary", ""),
                 icon=_get_skill_icon(skill),
                 tags=skill.get("tags", []),
@@ -317,7 +319,9 @@ async def get_skill_detail(
 @router.post("/skills/{skill_id}/use")
 async def use_skill(
     skill_id: str,
-    user: dict = Depends(get_current_user)
+    request: Request,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """
     Record skill usage and return installation command
@@ -327,10 +331,7 @@ async def use_skill(
     2. Returns the appropriate command for the skill
     """
     settings = get_settings()
-    
-    # Load skill info
-    catalog_path = settings.root_dir / "catalog" / "catalog.json"
-    catalog_data = _read_json(catalog_path)
+    catalog_data = {"skills": load_search_skill_entries(settings, db, request)}
     
     skill = None
     for s in catalog_data.get("skills", []):

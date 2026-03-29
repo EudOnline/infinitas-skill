@@ -25,6 +25,12 @@ from server.auth import get_current_user, maybe_get_current_user, require_regist
 from server.db import ensure_database_ready, get_db
 from server.jobs import serialize_job
 from server.models import Job, Review, Submission, User
+from server.modules.registry.service import (
+    build_registry_ai_index_payload,
+    build_registry_compatibility_payload,
+    build_registry_discovery_payload,
+    build_registry_distributions_payload,
+)
 from server.settings import get_settings
 
 
@@ -340,7 +346,7 @@ def _site_nav(home: bool, lang: str) -> list[dict[str, str]]:
 
 def _build_home_context(settings, db: Session, request: Request) -> dict:
     lang = _resolve_language(request)
-    discovery_payload = _catalog_payload(settings, 'discovery-index.json')
+    discovery_payload = build_registry_discovery_payload(settings, db, request)
     featured_skills = []
     for skill in (discovery_payload.get('skills') or [])[:3]:
         publisher = skill.get('publisher') or ''
@@ -354,7 +360,7 @@ def _build_home_context(settings, db: Session, request: Request) -> dict:
                 'name': name or qualified_name or _pick_lang(lang, '未命名 skill', 'Unnamed skill'),
                 'qualified_name': qualified_name,
                 'publisher': publisher,
-                'version': skill.get('version') or 'active',
+                'version': skill.get('version') or skill.get('latest_version') or 'active',
                 'summary': summary,
                 'icon': _get_skill_icon(skill),
                 'rating': _calculate_skill_rating(skill),
@@ -588,20 +594,20 @@ def create_app() -> FastAPI:
     )
 
     @registry_router.get('/ai-index.json')
-    def registry_ai_index():
-        return _artifact_file_response(settings.artifact_path, 'ai-index.json')
+    def registry_ai_index(request: Request, db: Session = Depends(get_db)):
+        return build_registry_ai_index_payload(settings, db, request)
 
     @registry_router.get('/distributions.json')
-    def registry_distributions():
-        return _artifact_file_response(settings.artifact_path, 'distributions.json')
+    def registry_distributions(request: Request, db: Session = Depends(get_db)):
+        return build_registry_distributions_payload(settings, db, request)
 
     @registry_router.get('/compatibility.json')
-    def registry_compatibility():
-        return _artifact_file_response(settings.artifact_path, 'compatibility.json')
+    def registry_compatibility(request: Request, db: Session = Depends(get_db)):
+        return build_registry_compatibility_payload(settings, db, request)
 
     @registry_router.get('/discovery-index.json')
-    def registry_discovery():
-        return _artifact_file_response(settings.artifact_path, 'discovery-index.json')
+    def registry_discovery(request: Request, db: Session = Depends(get_db)):
+        return build_registry_discovery_payload(settings, db, request)
 
     @registry_router.get('/skills/{publisher}/{skill}/{version}/{filename}')
     def registry_skill_artifact(publisher: str, skill: str, version: str, filename: str):

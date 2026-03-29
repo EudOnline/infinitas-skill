@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from server.db import get_db
 from server.models import User
-from server.modules.access.authn import find_access_credential_by_token, find_user_by_token
+from server.modules.access.authn import extract_bearer_token, find_access_credential_by_token, find_user_by_token
 from server.modules.access.authz import credential_can_read_registry_path
 from server.settings import get_settings
 
@@ -13,18 +13,8 @@ AUTH_COOKIE_NAME = 'infinitas_auth_token'
 AUTH_COOKIE_MAX_AGE = 30 * 24 * 60 * 60
 
 
-def _extract_bearer_token(authorization: str | None) -> str | None:
-    if not isinstance(authorization, str):
-        return None
-    prefix = 'Bearer '
-    if not authorization.startswith(prefix):
-        return None
-    token = authorization[len(prefix) :].strip()
-    return token or None
-
-
 def _resolve_request_token(request: Request) -> str | None:
-    return _extract_bearer_token(request.headers.get('authorization')) or request.cookies.get(AUTH_COOKIE_NAME)
+    return extract_bearer_token(request.headers.get('authorization')) or request.cookies.get(AUTH_COOKIE_NAME)
 
 
 def maybe_get_current_user(request: Request, db: Session) -> User | None:
@@ -36,7 +26,7 @@ def get_current_user(
     auth_cookie: str | None = Cookie(default=None, alias=AUTH_COOKIE_NAME),
     db: Session = Depends(get_db),
 ) -> User:
-    token = _extract_bearer_token(authorization) or auth_cookie
+    token = extract_bearer_token(authorization) or auth_cookie
     if not token:
         raise HTTPException(status_code=401, detail='missing bearer token')
     user = find_user_by_token(token, db)
@@ -65,7 +55,7 @@ def require_registry_reader(
     if not settings.registry_read_tokens:
         return
 
-    token = _extract_bearer_token(authorization)
+    token = extract_bearer_token(authorization)
     if not token:
         raise HTTPException(status_code=401, detail='missing registry bearer token')
     if token not in settings.registry_read_tokens:
@@ -85,7 +75,7 @@ def require_registry_reader_or_user(
     if not settings.registry_read_tokens:
         return
 
-    token = _extract_bearer_token(authorization)
+    token = extract_bearer_token(authorization)
     if token and token in settings.registry_read_tokens:
         return
 
