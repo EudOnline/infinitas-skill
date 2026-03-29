@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "Hosted control plane for the infinitas private skill registry"
 requires-python = ">=3.11"
 dependencies = [
+  "alembic>=1.16,<2",
   "fastapi>=0.116,<1",
   "httpx>=0.28,<1",
   "jinja2>=3.1,<4",
