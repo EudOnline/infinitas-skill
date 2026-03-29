@@ -1,5 +1,7 @@
 """Auth API for token-based authentication."""
 
+import os
+
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -30,6 +32,17 @@ def _pick_lang(lang: str, zh: str, en: str) -> str:
     return en if lang == 'en' else zh
 
 
+def _secure_cookie_requested(request: Request) -> bool:
+    override = str(os.environ.get("INFINITAS_SERVER_SECURE_COOKIES") or "").strip().lower()
+    if override in {"1", "true", "yes", "on"}:
+        return True
+    if override in {"0", "false", "no", "off"}:
+        return False
+
+    forwarded_proto = (request.headers.get("x-forwarded-proto") or "").split(",", 1)[0].strip().lower()
+    return request.url.scheme == "https" or forwarded_proto == "https"
+
+
 @router.post("/login", response_model=TokenLoginResponse)
 async def login(
     payload: TokenLoginRequest,
@@ -43,6 +56,7 @@ async def login(
     if context is None or context.user is None:
         return TokenLoginResponse(success=False, error=_pick_lang(lang, "无效的 Token", "Invalid token"))
     user = context.user
+    secure_cookie = _secure_cookie_requested(request)
     response.set_cookie(
         key=AUTH_COOKIE_NAME,
         value=payload.token,
@@ -50,15 +64,22 @@ async def login(
         expires=AUTH_COOKIE_MAX_AGE,
         path="/",
         samesite="lax",
-        httponly=False,
+        secure=secure_cookie,
+        httponly=True,
     )
     return TokenLoginResponse(success=True, username=user.username)
 
 
 @router.post("/logout")
-async def logout(response: Response):
+async def logout(response: Response, request: Request):
     """Clear the browser auth cookie."""
-    response.delete_cookie(key=AUTH_COOKIE_NAME, path="/", samesite="lax")
+    response.delete_cookie(
+        key=AUTH_COOKIE_NAME,
+        path="/",
+        samesite="lax",
+        secure=_secure_cookie_requested(request),
+        httponly=True,
+    )
     return {"success": True}
 
 

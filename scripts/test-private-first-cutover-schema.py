@@ -61,7 +61,7 @@ def main() -> None:
             }
         )
 
-        result = run(["uv", "run", "alembic", "upgrade", "head"], env=env)
+        result = run(["uv", "run", "--active", "alembic", "upgrade", "head"], env=env)
         if result.returncode != 0:
             fail(
                 "alembic upgrade head failed.\n"

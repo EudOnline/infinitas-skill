@@ -7,6 +7,8 @@ from functools import lru_cache
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_SERVER_ENV = 'development'
+DEFAULT_SECRET_KEY = 'change-me'
 
 DEFAULT_BOOTSTRAP_USERS = [
     {
@@ -28,6 +30,7 @@ DEFAULT_BOOTSTRAP_USERS = [
 class Settings:
     app_name: str
     root_dir: Path
+    environment: str
     database_url: str
     secret_key: str
     template_dir: Path
@@ -41,7 +44,7 @@ class Settings:
 
 def _normalize_bootstrap_users(payload: object) -> list[dict]:
     if not isinstance(payload, list):
-        return list(DEFAULT_BOOTSTRAP_USERS)
+        return []
 
     normalized = []
     for item in payload:
@@ -61,7 +64,29 @@ def _normalize_bootstrap_users(payload: object) -> list[dict]:
                 'token': token,
             }
         )
-    return normalized or list(DEFAULT_BOOTSTRAP_USERS)
+    return normalized
+
+
+def _normalize_environment(raw: str | None) -> str:
+    environment = str(raw or DEFAULT_SERVER_ENV).strip().lower() or DEFAULT_SERVER_ENV
+    if environment not in {'development', 'test', 'production'}:
+        raise RuntimeError(
+            'INFINITAS_SERVER_ENV must be one of development, test, or production'
+        )
+    return environment
+
+
+def _env_flag(name: str) -> bool:
+    return str(os.environ.get(name) or '').strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+def _load_bootstrap_payload(raw: str | None, *, allow_default_fixture: bool) -> object:
+    if not raw:
+        return list(DEFAULT_BOOTSTRAP_USERS) if allow_default_fixture else None
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return list(DEFAULT_BOOTSTRAP_USERS) if allow_default_fixture else None
 
 
 def _normalize_string_list(payload: object) -> list[str]:
@@ -77,11 +102,35 @@ def _normalize_string_list(payload: object) -> list[str]:
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    bootstrap_raw = os.environ.get('INFINITAS_SERVER_BOOTSTRAP_USERS', '')
-    try:
-        bootstrap_payload = json.loads(bootstrap_raw) if bootstrap_raw else DEFAULT_BOOTSTRAP_USERS
-    except json.JSONDecodeError:
-        bootstrap_payload = DEFAULT_BOOTSTRAP_USERS
+    environment = _normalize_environment(os.environ.get('INFINITAS_SERVER_ENV'))
+    allow_insecure_defaults = environment in {'development', 'test'} or _env_flag(
+        'INFINITAS_SERVER_ALLOW_INSECURE_DEFAULTS'
+    )
+
+    secret_key = str(os.environ.get('INFINITAS_SERVER_SECRET_KEY') or '').strip()
+    if not secret_key and allow_insecure_defaults:
+        secret_key = DEFAULT_SECRET_KEY
+    if not secret_key or secret_key == DEFAULT_SECRET_KEY:
+        if not allow_insecure_defaults:
+            raise RuntimeError(
+                'INFINITAS_SERVER_SECRET_KEY must be set to a non-default value when '
+                'INFINITAS_SERVER_ENV=production'
+            )
+        secret_key = DEFAULT_SECRET_KEY
+
+    bootstrap_raw = os.environ.get('INFINITAS_SERVER_BOOTSTRAP_USERS')
+    bootstrap_payload = _load_bootstrap_payload(
+        bootstrap_raw,
+        allow_default_fixture=allow_insecure_defaults,
+    )
+    bootstrap_users = _normalize_bootstrap_users(bootstrap_payload)
+    if not bootstrap_users:
+        if not allow_insecure_defaults:
+            raise RuntimeError(
+                'INFINITAS_SERVER_BOOTSTRAP_USERS must be set to a non-empty JSON array '
+                'when INFINITAS_SERVER_ENV=production'
+            )
+        bootstrap_users = list(DEFAULT_BOOTSTRAP_USERS)
 
     default_db_path = ROOT / '.state' / 'server.db'
     database_url = os.environ.get('INFINITAS_SERVER_DATABASE_URL') or f'sqlite:///{default_db_path}'
@@ -94,10 +143,11 @@ def get_settings() -> Settings:
     return Settings(
         app_name='infinitas-hosted-registry',
         root_dir=ROOT,
+        environment=environment,
         database_url=database_url,
-        secret_key=os.environ.get('INFINITAS_SERVER_SECRET_KEY', 'change-me'),
+        secret_key=secret_key,
         template_dir=ROOT / 'server' / 'templates',
-        bootstrap_users=_normalize_bootstrap_users(bootstrap_payload),
+        bootstrap_users=bootstrap_users,
         repo_path=repo_path,
         artifact_path=artifact_path,
         repo_lock_path=repo_lock_path,

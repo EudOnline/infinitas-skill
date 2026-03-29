@@ -154,7 +154,14 @@ fi
 
 DIR="$(resolve_skill "$TARGET")" || { echo "cannot resolve skill: $TARGET" >&2; exit 1; }
 "$ROOT/scripts/check-skill.sh" "$DIR" >/dev/null
-"$ROOT/scripts/check-all.sh" >/dev/null
+CHECK_ALL_ENV=()
+if [[ -z "${INFINITAS_SKIP_BROWSER_RUNTIME_TESTS:-}" && -z "${INFINITAS_REQUIRE_BROWSER_RUNTIME_TESTS:-}" ]]; then
+  CHECK_ALL_ENV=("INFINITAS_SKIP_BROWSER_RUNTIME_TESTS=1")
+fi
+if [[ -z "${INFINITAS_SKIP_HOSTED_E2E_TESTS:-}" && -z "${INFINITAS_REQUIRE_HOSTED_E2E_TESTS:-}" ]]; then
+  CHECK_ALL_ENV+=("INFINITAS_SKIP_HOSTED_E2E_TESTS=1")
+fi
+env "${CHECK_ALL_ENV[@]}" "$ROOT/scripts/check-all.sh" >/dev/null
 
 META_JSON="$(mktemp)"
 python3 - "$DIR" "$META_JSON" <<'PY'

@@ -57,30 +57,36 @@ def init_db():
 
 
 def seed_bootstrap_users():
+    from server.modules.access.service import ensure_personal_credential_for_user, ensure_user_principal
+
     settings = get_settings()
     factory = get_session_factory()
     with factory() as session:
         existing = {user.username: user for user in session.query(User).all()}
-        changed = False
         for item in settings.bootstrap_users:
             user = existing.get(item["username"])
             if user is None:
-                session.add(
-                    User(
-                        username=item["username"],
-                        display_name=item["display_name"],
-                        role=item["role"],
-                        token=item["token"],
-                    )
+                user = User(
+                    username=item["username"],
+                    display_name=item["display_name"],
+                    role=item["role"],
+                    token=None,
                 )
-                changed = True
-                continue
-            if user.display_name != item["display_name"] or user.role != item["role"] or user.token != item["token"]:
+                session.add(user)
+                existing[user.username] = user
+            if user.display_name != item["display_name"] or user.role != item["role"]:
                 user.display_name = item["display_name"]
                 user.role = item["role"]
-                user.token = item["token"]
-                changed = True
-        if changed:
+            if user.token is not None:
+                user.token = None
+            principal = ensure_user_principal(session, user)
+            ensure_personal_credential_for_user(
+                session,
+                user=user,
+                principal=principal,
+                raw_token=item["token"],
+            )
+        if settings.bootstrap_users:
             session.commit()
 
 

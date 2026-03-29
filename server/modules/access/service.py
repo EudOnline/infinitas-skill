@@ -33,10 +33,9 @@ def token_matches_hash(token: str, stored_hash: str | None) -> bool:
     stored = str(stored_hash or "").strip()
     if not candidate or not stored:
         return False
-    if stored.startswith(TOKEN_HASH_PREFIX):
-        return hmac.compare_digest(hash_token(candidate), stored)
-    # Transitional fallback for legacy plaintext data.
-    return hmac.compare_digest(candidate, stored)
+    if not stored.startswith(TOKEN_HASH_PREFIX):
+        return False
+    return hmac.compare_digest(hash_token(candidate), stored)
 
 
 def parse_scopes(scopes_json: str | None) -> set[str]:
@@ -72,18 +71,9 @@ def resolve_credential_by_token(db: Session, token: str) -> Credential | None:
     if not normalized:
         return None
     now = _utcnow()
-    credentials = db.scalars(_active_credentials_query(now)).all()
-    for credential in credentials:
-        if token_matches_hash(normalized, credential.hashed_secret):
-            return credential
-    return None
-
-
-def find_user_by_legacy_token(db: Session, token: str) -> User | None:
-    normalized = normalize_token(token)
-    if not normalized:
-        return None
-    return db.scalar(select(User).where(User.token == normalized))
+    return db.scalar(
+        _active_credentials_query(now).where(Credential.hashed_secret == hash_token(normalized))
+    )
 
 
 def ensure_user_principal(db: Session, user: User) -> Principal:
@@ -156,21 +146,9 @@ class BridgedUserCredential:
 
 
 def bridge_legacy_user_token(db: Session, token: str) -> BridgedUserCredential | None:
-    user = find_user_by_legacy_token(db, token)
-    if user is None:
-        return None
-    principal = ensure_user_principal(db, user)
-    credential = ensure_personal_credential_for_user(
-        db,
-        user=user,
-        principal=principal,
-        raw_token=token,
-    )
-    db.commit()
-    db.refresh(credential)
-    db.refresh(principal)
-    db.refresh(user)
-    return BridgedUserCredential(user=user, principal=principal, credential=credential)
+    # Plaintext user tokens are migrated during schema upgrades and no longer act as
+    # a runtime authentication fallback. Records that bypassed migration are rejected.
+    return None
 
 
 def get_principal(db: Session, principal_id: int | None) -> Principal | None:

@@ -1,0 +1,36 @@
+<section class="console-section animate-in stagger-2" id="console">
+  <div class="section-topline">
+    <div class="section-header">
+      <div class="section-icon">🎮</div>
+      <div>
+        <h2 class="section-title">{{ ui.console_section_title }}</h2>
+        <p class="section-subtitle">{{ maintainer_body }}</p>
+      </div>
+    </div>
+
+    <div class="section-action">
+      <a
+        class="kawaii-button kawaii-button--primary"
+        href="{{ maintainer_primary_link.href }}"
+        data-auth-required="true"
+        data-auth-target="{{ maintainer_primary_link.href }}"
+      >
+        <span>🎮</span>
+        <span>{{ maintainer_primary_link.label }}</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="console-grid">
+    {% for link in console_links %}
+    <a href="{{ link.href }}" class="console-card" data-auth-required="true" data-auth-target="{{ link.href }}">
+      <div class="console-card-header">
+        <span class="console-emoji">{{ link.icon }}</span>
+        <span class="console-count">{{ link.value }}</span>
+      </div>
+      <h3 class="console-name">{{ link.title }}</h3>
+      <p class="console-desc">{{ link.detail }}</p>
+    </a>
+    {% endfor %}
+  </div>
+</section>

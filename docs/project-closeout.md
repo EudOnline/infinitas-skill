@@ -13,6 +13,15 @@ The closeout milestone is v20:
 - make hosted-registry e2e deterministic in CI
 - define one stable steady-state verification guide for project completion
 
+## 90+ Hardening Status
+
+The final hardening slice is now part of steady-state project truth:
+
+- browser auth uses server-owned session cookies, with authenticated UI state hydrated from `/api/auth/me` instead of client-side cookie parsing
+- production startup requires an explicit secret and explicit bootstrap operators whenever `INFINITAS_SERVER_ENV=production`
+- personal token authentication resolves through hashed credential records instead of plaintext `users.token` lookups
+- the maintained regression matrix in `scripts/check-all.sh` enforces these guardrails alongside the existing hosted-registry contract
+
 ## Final Readiness Matrix
 
 Overwrite-style mutation now follows one precedence order:
@@ -37,6 +46,11 @@ Use this operator matrix when interpreting mutation output:
 Fresh closeout verification should run these commands:
 
 ```bash
+uv run python3 scripts/test-settings-hardening.py
+uv run python3 scripts/test-private-first-cutover-schema.py
+uv run python3 scripts/test-private-registry-access-api.py
+uv run python3 scripts/test-private-registry-ui.py
+uv run python3 scripts/test-home-auth-session-runtime.py
 python3 scripts/test-project-complete-state.py
 python3 scripts/test-installed-integrity-never-verified-guardrails.py
 python3 scripts/test-installed-integrity-stale-guardrails.py
@@ -55,9 +69,12 @@ Hosted-registry end-to-end expectations:
 - CI is authoritative for the fully supported hosted-registry path.
 - `.github/workflows/validate.yml` installs dependencies with `python3 -m pip install .`.
 - CI then runs `scripts/check-all.sh` with `INFINITAS_REQUIRE_HOSTED_E2E_TESTS=1`, so hosted e2e cannot silently skip there.
+- `scripts/check-all.sh` now also includes the settings hardening, private access cutover, and private UI regression checks from the 90+ upgrade slice.
+- `scripts/test-home-auth-session-runtime.py` remains part of the maintained matrix, but it depends on the Codex Playwright wrapper under `$CODEX_HOME`; when that wrapper is unavailable, `scripts/check-all.sh` reports a skip instead of pretending the browser runtime check passed.
 - Local minimal environments may still skip `scripts/test-hosted-registry-e2e.py` unless the same dependency set is installed explicitly.
+- Local minimal environments may also skip `scripts/test-home-auth-session-runtime.py` unless the Codex Playwright skill wrapper is installed explicitly.
 - When local full hosted e2e coverage is desired, run `python3 -m pip install .` first, then run `python3 scripts/test-hosted-registry-e2e.py`.
-- Fresh local verification was rerun on 2026-03-20 for the maintained regression matrix; hosted-registry e2e remained CI-authoritative because the full optional dependency set was not installed in the local environment.
+- Fresh local verification was rerun on 2026-03-29 for the upgraded regression matrix; hosted-registry e2e remained CI-authoritative because the full optional dependency set was not installed in the local environment.
 
 ## Steady-State Guidance
 

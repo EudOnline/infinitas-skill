@@ -199,6 +199,9 @@ def scenario_private_first_console_ui() -> None:
         home_html = client.get("/").text
         if "私人技能库" not in home_html:
             fail("expected homepage copy to describe a private-first skill library")
+        for marker in ["id=\"user-panel-login\"", "id=\"open-auth-modal-btn\""]:
+            if marker not in home_html:
+                fail(f"expected homepage auth panel marker {marker!r} in homepage html")
 
         skills_response = client.get("/skills?lang=en", headers=headers)
         if skills_response.status_code != 200:

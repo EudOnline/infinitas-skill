@@ -16,6 +16,7 @@ from server.api.auth import router as auth_router
 from server.api.background import router as background_router
 from server.api.search import router as search_router
 from server.auth import (
+    AUTH_COOKIE_NAME,
     get_current_user,
     maybe_get_current_access_context,
     maybe_get_current_user,
@@ -43,6 +44,13 @@ from server.models import (
     User,
 )
 from server.settings import get_settings
+from server.ui import (
+    build_console_context as build_console_ui_context,
+    build_console_forbidden_context as build_console_forbidden_ui_context,
+    build_home_context as build_home_ui_context,
+    build_lifecycle_console_context as build_lifecycle_console_ui_context,
+    build_site_nav as build_site_nav_links,
+)
 
 
 def _read_json(path: Path) -> dict:
@@ -308,6 +316,9 @@ def _build_kawaii_ui_context(request: Request, lang: str, page_kicker: str, page
         'page_language': lang,
         'page_lang_attr': 'zh-CN' if lang == 'zh' else 'en',
         'home_href': _with_lang('/', lang),
+        'session_ui': {
+            'has_auth_cookie_hint': bool(request.cookies.get(AUTH_COOKIE_NAME)),
+        },
         'language_switches': _build_language_switches(request, lang),
         'theme_switches': [
             {'value': 'light', 'label': _pick_lang(lang, '浅色', 'Light')},
@@ -406,200 +417,23 @@ def _build_kawaii_ui_context(request: Request, lang: str, page_kicker: str, page
 
 
 def _site_nav(home: bool, lang: str) -> list[dict[str, str]]:
-    if home:
-        return [
-            {'href': '#start', 'label': _pick_lang(lang, '开始', 'Home base')},
-            {'href': '#handoff', 'label': _pick_lang(lang, '交接', 'Handoff')},
-            {'href': '#console', 'label': _pick_lang(lang, '维护台', 'Console')},
-        ]
-    return [
-        {'href': _with_lang('/', lang), 'label': _pick_lang(lang, '首页', 'Home')},
-        {'href': _with_lang('/skills', lang), 'label': _pick_lang(lang, '技能', 'Skills')},
-        {'href': _with_lang('/skills#drafts', lang), 'label': _pick_lang(lang, '草稿', 'Drafts')},
-        {'href': _with_lang('/skills#releases', lang), 'label': _pick_lang(lang, '发布', 'Releases')},
-        {'href': _with_lang('/skills#share', lang), 'label': _pick_lang(lang, '分享', 'Share')},
-        {'href': _with_lang('/access/tokens', lang), 'label': _pick_lang(lang, '访问', 'Access')},
-        {'href': _with_lang('/review-cases', lang), 'label': _pick_lang(lang, '审核', 'Review')},
-    ]
+    return build_site_nav_links(home=home, lang=lang, pick_lang=_pick_lang, with_lang=_with_lang)
 
 
 def _build_home_context(settings, db: Session, request: Request) -> dict:
-    lang = _resolve_language(request)
-    discovery_payload = _catalog_payload(settings, 'discovery-index.json')
-    featured_skills = []
-    for skill in (discovery_payload.get('skills') or [])[:3]:
-        publisher = skill.get('publisher') or ''
-        name = skill.get('name') or ''
-        qualified_name = f'{publisher}/{name}' if publisher and name else name
-        summary = skill.get('summary') or _pick_lang(lang, '查看信任状态、版本和安装建议。', 'Review trust, version, and install guidance.')
-        if len(summary) > 96:
-            summary = summary[:93].rstrip() + '...'
-        featured_skills.append(
-            {
-                'name': name or qualified_name or _pick_lang(lang, '未命名 skill', 'Unnamed skill'),
-                'qualified_name': qualified_name,
-                'publisher': publisher,
-                'version': skill.get('version') or 'active',
-                'summary': summary,
-                'icon': _get_skill_icon(skill),
-                'rating': _calculate_skill_rating(skill),
-                'inspect_command': f'scripts/inspect-skill.sh {qualified_name}' if qualified_name else '',
-            }
-        )
-    total_skills = int(db.scalar(select(func.count()).select_from(Skill)) or 0)
-    total_drafts = int(db.scalar(select(func.count()).select_from(SkillDraft)) or 0)
-    total_releases = int(db.scalar(select(func.count()).select_from(Release)) or 0)
-    total_exposures = int(db.scalar(select(func.count()).select_from(Exposure)) or 0)
-    total_access = int(db.scalar(select(func.count()).select_from(Credential)) or 0) + int(
-        db.scalar(select(func.count()).select_from(AccessGrant)) or 0
+    return build_home_ui_context(
+        settings=settings,
+        db=db,
+        request=request,
+        resolve_language=_resolve_language,
+        pick_lang=_pick_lang,
+        with_lang=_with_lang,
+        localized_stamp=_localized_stamp,
+        build_kawaii_ui_context=_build_kawaii_ui_context,
+        catalog_payload=_catalog_payload,
+        get_skill_icon=_get_skill_icon,
+        calculate_skill_rating=_calculate_skill_rating,
     )
-    pending_reviews = int(db.scalar(select(func.count()).select_from(ReviewCase).where(ReviewCase.state == 'open')) or 0)
-    queued_jobs = int(db.scalar(select(func.count()).select_from(Job).where(Job.status == 'queued')) or 0)
-    running_jobs = int(db.scalar(select(func.count()).select_from(Job).where(Job.status == 'running')) or 0)
-    lifecycle_mode = _pick_lang(lang, '私人优先', 'Private-first')
-    operating_states = [
-        {
-            'icon': '🔒',
-            'label': _pick_lang(lang, '模式', 'Mode'),
-            'value': lifecycle_mode,
-            'detail': _pick_lang(lang, '私人直达，公开必须审核', 'Private flows directly, public requires review'),
-        },
-        {
-            'icon': '📅',
-            'label': _pick_lang(lang, '同步', 'Sync'),
-            'value': _localized_stamp(discovery_payload.get('generated_at'), lang),
-            'detail': _pick_lang(lang, 'catalog 快照', 'Catalog snapshot'),
-        },
-        {
-            'icon': '⚡',
-            'label': _pick_lang(lang, '流转', 'Flow'),
-            'value': (
-                f'{pending_reviews} 审核单 / {queued_jobs} 待物化'
-                if lang == 'zh'
-                else f'{pending_reviews} review cases / {queued_jobs} materializations pending'
-            ),
-            'detail': f'{running_jobs} 物化中' if lang == 'zh' else f'{running_jobs} materializing',
-        },
-    ]
-    command_examples = [
-        {
-            'label': _pick_lang(lang, '执行命令', 'Run command'),
-            'title': _pick_lang(lang, '搜索候选', 'Search options'),
-            'short_label': _pick_lang(lang, '搜索', 'Search'),
-            'command': 'scripts/recommend-skill.sh "Need a codex skill for repository operations"',
-        },
-        {
-            'label': _pick_lang(lang, '执行命令', 'Run command'),
-            'title': _pick_lang(lang, '检查细节', 'Inspect details'),
-            'short_label': _pick_lang(lang, '检查', 'Inspect'),
-            'command': 'scripts/inspect-skill.sh lvxiaoer/operate-infinitas-skill',
-        },
-    ]
-    human_prompts = [
-        {
-            'label': _pick_lang(lang, '交任务', 'Delegate'),
-            'title': _pick_lang(lang, '找 skill，再给步骤', 'Find a skill, then outline steps'),
-            'short_label': _pick_lang(lang, '找 skill', 'Find skill'),
-            'prompt': (
-                '帮我在私有技能仓库里找适合做 registry 运维的 skill，先说明风险，再给安装步骤。'
-                if lang == 'zh'
-                else 'Help me find a skill for registry operations in the private catalog, explain the risks first, then give me the install steps.'
-            ),
-        },
-        {
-            'label': _pick_lang(lang, '交任务', 'Delegate'),
-            'title': _pick_lang(lang, '先检查，再安装', 'Inspect first, then install'),
-            'short_label': _pick_lang(lang, '先检查', 'Inspect first'),
-            'prompt': (
-                '我需要做 immutable install。先检查来源和版本，再告诉我应该安装哪一个。'
-                if lang == 'zh'
-                else 'I need to do an immutable install. Inspect the source and version first, then tell me which one I should install.'
-            ),
-        },
-    ]
-    human_input_fields = (
-        ['目标', '安装位置', '风险偏好']
-        if lang == 'zh'
-        else ['Goal', 'Install path', 'Risk level']
-    )
-    console_links = [
-        {
-            'href': _with_lang('/skills', lang),
-            'icon': '📦',
-            'title': _pick_lang(lang, '技能', 'Skills'),
-            'value': str(total_skills),
-            'detail': _pick_lang(lang, '命名空间中的技能', 'Skill records in the namespace'),
-        },
-        {
-            'href': _with_lang('/skills#drafts', lang),
-            'icon': '✨',
-            'title': _pick_lang(lang, '草稿', 'Drafts'),
-            'value': str(total_drafts),
-            'detail': _pick_lang(lang, '可继续编辑', 'Still editable'),
-        },
-        {
-            'href': _with_lang('/skills#releases', lang),
-            'icon': '⚙️',
-            'title': _pick_lang(lang, '发布', 'Releases'),
-            'value': str(total_releases),
-            'detail': _pick_lang(lang, '不可变产物', 'Immutable delivery units'),
-        },
-        {
-            'href': _with_lang('/skills#share', lang),
-            'icon': '🌐',
-            'title': _pick_lang(lang, '分享', 'Share'),
-            'value': str(total_exposures),
-            'detail': _pick_lang(lang, '私人、令牌和公开出口', 'Private, token, and public exits'),
-        },
-        {
-            'href': _with_lang('/access/tokens', lang),
-            'icon': '🗝️',
-            'title': _pick_lang(lang, '访问', 'Access'),
-            'value': str(total_access),
-            'detail': _pick_lang(lang, '令牌与授权记录', 'Tokens and grant records'),
-        },
-        {
-            'href': _with_lang('/review-cases', lang),
-            'icon': '📝',
-            'title': _pick_lang(lang, '审核', 'Review'),
-            'value': str(pending_reviews),
-            'detail': _pick_lang(lang, '公开出口审核单', 'Public exposure review cases'),
-        },
-    ]
-    page_eyebrow = _pick_lang(lang, '私人技能工作台', 'Private agent workspace')
-    context = {
-        'title': _pick_lang(lang, 'infinitas 私人技能库', 'infinitas private skill library'),
-        'page_description': _pick_lang(
-            lang,
-            'infinitas - 小二的私人技能库，覆盖技能创作、发布、分享与安装',
-            'infinitas - a private-first agent skill library for authoring, release, sharing, and install',
-        ),
-        'page_eyebrow': page_eyebrow,
-        'page_kicker': lifecycle_mode,
-        'page_mode': 'home',
-        'nav_links': _site_nav(home=True, lang=lang),
-        'hero_title': _pick_lang(lang, '交给 Agent', 'Hand it to Agent'),
-        'hero_emphasis': '',
-        'hero_body': _pick_lang(lang, '这里是你的私人技能库，搜索、检查和执行都交给它。', 'This private skill library lets the agent search, inspect, and execute for you.'),
-        'hero_support': _pick_lang(lang, '你只要说明目标、位置和风险，它会沿着技能生命周期继续推进。', 'You only need to name the goal, location, and risk level, then it moves through the skill lifecycle.'),
-        'hero_primary_link': {'href': '#handoff', 'label': _pick_lang(lang, '复制任务提示', 'Copy task prompt')},
-        'hero_secondary_link': {'href': '#console', 'label': _pick_lang(lang, '查看维护台', 'Open console')},
-        'hero_primary_copy': human_prompts[0]['prompt'] if human_prompts else '',
-        'operating_states': operating_states,
-        'human_input_fields': human_input_fields,
-        'human_prompts': human_prompts,
-        'command_examples': command_examples,
-        'console_links': console_links,
-        'featured_skills': featured_skills,
-        'maintainer_primary_link': {'href': _with_lang('/skills', lang), 'label': _pick_lang(lang, '打开维护台', 'Open console')},
-        'maintainer_body': _pick_lang(
-            lang,
-            '维护台现在完全围绕技能、草稿、发布、分享、访问和审核，不再经过旧的 submission 队列。',
-            'The console now centers on skills, drafts, releases, sharing, access, and review without routing work through legacy submission queues.',
-        ),
-    }
-    context.update(_build_kawaii_ui_context(request, lang, lifecycle_mode, page_eyebrow))
-    return context
 
 
 def _build_console_context(
@@ -615,67 +449,39 @@ def _build_console_context(
     show_console_session: bool = True,
     nav_links: list[dict[str, str]] | None = None,
 ) -> dict:
-    lang = _resolve_language(request)
-    page_eyebrow = _pick_lang(lang, '维护控制台', 'Maintainer-only console')
-    page_kicker = _pick_lang(lang, '维护模式', 'Maintainer mode')
-    context = {
-        'request': request,
-        'title': title,
-        'content': content,
-        'page_eyebrow': page_eyebrow,
-        'page_kicker': page_kicker,
-        'page_mode': 'console',
-        'nav_links': nav_links or _site_nav(home=False, lang=lang),
-        'items': items,
-        'limit': limit,
-        'cli_command': cli_command,
-        'page_stats': stats,
-        'insight_cards': insight_cards or [],
-        'show_console_session': show_console_session,
-        'format_status': lambda value: _humanize_status(value, lang),
-        'format_job_kind': lambda value: _humanize_job_kind(value, lang),
-        'format_timestamp': _humanize_timestamp,
-    }
-    context.update(_build_kawaii_ui_context(request, lang, page_kicker, page_eyebrow))
-    return context
+    return build_console_ui_context(
+        request=request,
+        title=title,
+        content=content,
+        limit=limit,
+        items=items,
+        cli_command=cli_command,
+        stats=stats,
+        insight_cards=insight_cards,
+        show_console_session=show_console_session,
+        nav_links=nav_links,
+        resolve_language=_resolve_language,
+        pick_lang=_pick_lang,
+        build_kawaii_ui_context=_build_kawaii_ui_context,
+        humanize_status=_humanize_status,
+        humanize_job_kind=_humanize_job_kind,
+        humanize_timestamp=_humanize_timestamp,
+        build_site_nav=build_site_nav_links,
+        with_lang=_with_lang,
+    )
 
 
 def _build_console_forbidden_context(request: Request, user: User, *allowed_roles: str) -> dict:
-    lang = _resolve_language(request)
-    allowed_text = ', '.join(_humanize_role(role, lang) for role in allowed_roles) or _pick_lang(lang, '维护者', 'Maintainer')
-    context = _build_console_context(
+    return build_console_forbidden_ui_context(
         request=request,
-        title=_pick_lang(lang, '维护台访问受限', 'Console access denied'),
-        content=_pick_lang(
-            lang,
-            f'当前账号角色是{_humanize_role(user.role, lang)}，此页面仅允许{allowed_text}访问。',
-            f'Your current role is {_humanize_role(user.role, lang)}. This page is limited to {allowed_text}.',
-        ),
-        limit=0,
-        items=[],
-        cli_command='',
-        stats=[],
-        insight_cards=[],
-        show_console_session=True,
+        user=user,
+        allowed_roles=allowed_roles,
+        resolve_language=_resolve_language,
+        pick_lang=_pick_lang,
+        humanize_role=_humanize_role,
+        with_lang=_with_lang,
+        build_console_context_fn=_build_console_context,
     )
-    context.update(
-        {
-            'page_kicker': _pick_lang(lang, '访问受限', 'Access limited'),
-            'page_eyebrow': _pick_lang(lang, '受限控制台', 'Protected console'),
-            'denied_title': _pick_lang(lang, '维护台访问受限', 'Console access denied'),
-            'denied_body': _pick_lang(
-                lang,
-                f'需要{allowed_text}权限才能继续访问维护台。你可以先返回首页，或者切换到有权限的账号。',
-                f'Maintainer role required before you can continue into the console. Head back home or switch to an authorized account.',
-            ),
-            'denied_home_href': _with_lang('/', lang),
-            'denied_home_label': _pick_lang(lang, '返回首页', 'Back home'),
-        }
-    )
-    if isinstance(context.get('ui'), dict):
-        context['ui']['page_kicker'] = context['page_kicker']
-        context['ui']['page_eyebrow'] = context['page_eyebrow']
-    return context
 
 
 def _require_console_user_or_redirect(request: Request, db: Session, *allowed_roles: str) -> User | RedirectResponse:
@@ -832,8 +638,7 @@ def _build_lifecycle_console_context(
     stats: list[dict[str, str]],
     insight_cards: list[dict[str, str]] | None = None,
 ) -> dict:
-    lang = _resolve_language(request)
-    return _build_console_context(
+    return build_lifecycle_console_ui_context(
         request=request,
         title=title,
         content=content,
@@ -842,7 +647,11 @@ def _build_lifecycle_console_context(
         cli_command=cli_command,
         stats=stats,
         insight_cards=insight_cards,
-        nav_links=_site_nav(home=False, lang=lang),
+        resolve_language=_resolve_language,
+        pick_lang=_pick_lang,
+        build_console_context_fn=_build_console_context,
+        build_site_nav=build_site_nav_links,
+        with_lang=_with_lang,
     )
 
 
@@ -876,6 +685,7 @@ def create_app() -> FastAPI:
 
     @app.get('/', response_class=HTMLResponse)
     def index(request: Request, db: Session = Depends(get_db)):
+        session_user = maybe_get_current_user(request, db)
         context = {
             'request': request,
             'app_name': settings.app_name,
@@ -883,6 +693,12 @@ def create_app() -> FastAPI:
             'user_count': db.scalar(select(func.count()).select_from(User)) or 0,
         }
         context.update(_build_home_context(settings, db, request))
+        if session_user is not None:
+            context.setdefault('session_ui', {})
+            context['session_ui']['current_user'] = {
+                'username': session_user.username,
+                'role': session_user.role,
+            }
         return templates.TemplateResponse('index-kawaii.html', context)
     
     @app.get('/v2')

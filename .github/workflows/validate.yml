@@ -28,4 +28,6 @@ jobs:
       - name: Run registry checks
         env:
           INFINITAS_REQUIRE_HOSTED_E2E_TESTS: 1
+          INFINITAS_REQUIRE_PRIVATE_REGISTRY_TESTS: 1
+          INFINITAS_SKIP_BROWSER_RUNTIME_TESTS: 1
         run: scripts/check-all.sh

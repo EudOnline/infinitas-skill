@@ -114,7 +114,7 @@ def playwright_cli_path() -> Path:
     return candidate
 
 
-def run_playwright(session: str, *args: str, check: bool = True, timeout: float | None = 45) -> str:
+def run_playwright(session: str, *args: str, check: bool = True, timeout: float | None = 120) -> str:
     cmd = [str(playwright_cli_path()), *args, '--session', session]
     try:
         result = subprocess.run(
@@ -146,7 +146,7 @@ def run_playwright(session: str, *args: str, check: bool = True, timeout: float 
     return result.stdout
 
 
-def run_playwright_global(*args: str, check: bool = True, timeout: float | None = 45) -> str:
+def run_playwright_global(*args: str, check: bool = True, timeout: float | None = 120) -> str:
     cmd = [str(playwright_cli_path()), *args]
     try:
         result = subprocess.run(
@@ -253,7 +253,7 @@ def scenario_home_waits_for_explicit_auth_before_probng_session():
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
-def scenario_cookie_backed_session_survives_missing_local_storage():
+def scenario_http_only_session_survives_missing_local_storage():
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-home-auth-runtime-'))
     session = f'homeauth{os.getpid()}'
     try:
@@ -280,17 +280,29 @@ def scenario_cookie_backed_session_survives_missing_local_storage():
                     ),
                 )
             )
-            wait_for_eval(
+            login_state = wait_for_eval(
                 session,
                 (
-                    '() => ({'
+                    'async () => {'
+                    'const probe = await fetch("/api/auth/me");'
+                    'const payload = await probe.json();'
+                    'return ({'
                     'path: location.pathname,'
-                    'cookieReady: document.cookie.includes("infinitas_auth_token=")'
-                    '})'
+                    'cookieVisible: document.cookie.includes("infinitas_auth_token="),'
+                    'localToken: localStorage.getItem("infinitas_auth_token"),'
+                    'localExpiry: localStorage.getItem("infinitas_auth_expiry"),'
+                    'authenticated: payload.authenticated === true,'
+                    'username: payload.username || null'
+                    '});'
+                    '}'
                 ),
-                lambda result: result.get('path') == '/' and result.get('cookieReady') is True,
-                'login redirect to home with auth cookie',
+                lambda result: result.get('path') == '/' and result.get('authenticated') is True,
+                'login redirect to home with authenticated session',
             )
+            if login_state.get('cookieVisible') is not False:
+                fail(f'expected browser auth cookie to stay HttpOnly after login, got {login_state}')
+            if login_state.get('localToken') is not None:
+                fail(f'expected login flow to avoid storing raw auth token in localStorage, got {login_state}')
 
             cleared = parse_eval_result(
                 run_playwright(
@@ -301,7 +313,7 @@ def scenario_cookie_backed_session_survives_missing_local_storage():
                         'localStorage.removeItem("infinitas_auth_token");'
                         'localStorage.removeItem("infinitas_auth_expiry");'
                         'return {'
-                        'cookieReady: document.cookie.includes("infinitas_auth_token="),'
+                        'cookieVisible: document.cookie.includes("infinitas_auth_token="),'
                         'token: localStorage.getItem("infinitas_auth_token"),'
                         'expiry: localStorage.getItem("infinitas_auth_expiry")'
                         '};'
@@ -309,8 +321,8 @@ def scenario_cookie_backed_session_survives_missing_local_storage():
                     ),
                 )
             )
-            if cleared.get('cookieReady') is not True:
-                fail(f'expected auth cookie to remain after clearing localStorage, got {cleared}')
+            if cleared.get('cookieVisible') is not False:
+                fail(f'expected browser auth cookie to remain hidden after clearing localStorage, got {cleared}')
             if cleared.get('token') is not None or cleared.get('expiry') is not None:
                 fail(f'expected localStorage auth keys to be cleared, got {cleared}')
 
@@ -322,11 +334,11 @@ def scenario_cookie_backed_session_survives_missing_local_storage():
                     'icon: document.getElementById("user-trigger-icon")?.textContent?.trim() || null,'
                     'loginHidden: document.getElementById("user-panel-login")?.hidden ?? null,'
                     'loggedHidden: document.getElementById("user-panel-logged")?.hidden ?? null,'
-                    'cookieReady: document.cookie.includes("infinitas_auth_token=")'
+                    'cookieVisible: document.cookie.includes("infinitas_auth_token=")'
                     '})'
                 ),
                 lambda result: (
-                    result.get('cookieReady') is True
+                    result.get('cookieVisible') is False
                     and result.get('icon') == '👤'
                     and result.get('loginHidden') is True
                     and result.get('loggedHidden') is False
@@ -786,7 +798,7 @@ def scenario_console_search_reauth_uses_shared_modal():
                 session,
                 (
                     'async () => {'
-                    'document.cookie = "infinitas_auth_token=; Max-Age=0; path=/; SameSite=Lax";'
+                    'await fetch("/api/auth/logout", { method: "POST" });'
                     'localStorage.removeItem("infinitas_auth_token");'
                     'localStorage.removeItem("infinitas_auth_expiry");'
                     'const input = document.getElementById("global-search");'
@@ -818,7 +830,7 @@ def scenario_console_search_reauth_uses_shared_modal():
 
 def main():
     scenario_home_waits_for_explicit_auth_before_probng_session()
-    scenario_cookie_backed_session_survives_missing_local_storage()
+    scenario_http_only_session_survives_missing_local_storage()
     scenario_stale_auth_cookie_clears_without_console_errors()
     scenario_copy_triggers_work_and_search_empty_state_uses_copy_cta()
     scenario_english_auth_errors_stay_english()

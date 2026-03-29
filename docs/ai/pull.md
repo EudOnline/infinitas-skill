@@ -28,3 +28,11 @@ The server also serves the same artifacts under `/registry/*`, including legacy 
 - `/registry/catalog/provenance/...`
 
 Those aliases are backed by the same private-first release graph and access checks.
+
+## Installed integrity follow-up
+
+Pull and install flows end with local verification, not just artifact download.
+
+- run `python3 scripts/report-installed-integrity.py <target-local> --json` after install when you need the current trust state of that target-local copy
+- `.infinitas-skill-installed-integrity.json` records the installed integrity snapshot beside the target-local runtime
+- `catalog/audit-export.json` remains the repository-side audit export for released artifacts, not a substitute for verifying the target-local install

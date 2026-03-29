@@ -1,0 +1,97 @@
+<div class="user-trigger-wrapper" id="user-trigger-wrapper">
+  <button class="user-trigger{% if session_current_user %} is-active{% endif %}" id="user-trigger" type="button" aria-label="{{ ui.user_menu_logged_label if session_current_user else ui.user_menu_anon_label }}" aria-haspopup="true" aria-expanded="false" aria-controls="user-panel">
+    <span class="user-trigger-icon" id="user-trigger-icon">{{ '👤' if session_current_user else '🔒' }}</span>
+    <span class="user-trigger-pulse" id="user-trigger-pulse" {% if session_current_user %}hidden{% else %}hidden{% endif %}></span>
+  </button>
+
+  <div class="user-panel" id="user-panel" hidden>
+    <div class="user-panel-section" id="user-panel-login" {% if session_current_user %}hidden{% endif %}>
+      <div class="user-panel-header">
+        <span class="user-panel-icon">🔑</span>
+        <span class="user-panel-title">{{ ui.user_panel_auth_title }}</span>
+      </div>
+      <p class="user-panel-desc">{{ ui.user_panel_auth_desc }}</p>
+      <button class="kawaii-button kawaii-button--primary user-panel-btn" id="open-auth-modal-btn" type="button">
+        <span>🔓</span><span>{{ ui.user_panel_auth_action }}</span>
+      </button>
+    </div>
+
+    <div class="user-panel-section" id="user-panel-logged" {% if not session_current_user %}hidden{% endif %}>
+      <div class="user-panel-header">
+        <span class="user-panel-avatar" id="user-avatar">{{ session_current_user.username[:1]|upper if session_current_user else '👤' }}</span>
+        <div class="user-panel-info">
+          <span class="user-panel-name" id="user-panel-username">{{ session_current_user.username if session_current_user else '-' }}</span>
+          <span class="user-panel-meta" id="user-panel-expiry">{{ ui.auth_session_active if session_current_user else '-' }}</span>
+        </div>
+      </div>
+      <div class="user-panel-divider"></div>
+      <div class="user-panel-bg-section">
+        <div class="user-panel-bg-header">
+          <span>🎨</span>
+          <span>{{ ui.user_panel_background_label }}</span>
+          <span class="user-panel-bg-theme" id="bg-theme-label">{{ ui.user_panel_theme_light }}</span>
+        </div>
+        <div class="user-panel-bg-grid" id="bg-grid"></div>
+      </div>
+      <div class="user-panel-divider"></div>
+      <button class="kawaii-button kawaii-button--ghost user-panel-btn" id="logout-btn" type="button">
+        <span>🚪</span><span>{{ ui.user_panel_logout }}</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="auth-modal" id="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" hidden>
+  <div class="auth-modal-backdrop" id="auth-modal-backdrop"></div>
+  <div class="auth-modal-content">
+    <div class="auth-modal-header">
+      <h3 class="auth-modal-title" id="auth-modal-title">🔑 {{ ui.auth_modal_title }}</h3>
+      <button class="auth-modal-close" id="auth-modal-close" type="button" aria-label="{{ ui.auth_close }}">✕</button>
+    </div>
+    <form id="auth-form">
+      <div class="auth-modal-body">
+        <p class="auth-modal-desc">{{ ui.auth_modal_desc }}</p>
+        <div class="token-input-wrapper">
+          <input type="password" id="token-input" class="token-input"
+                 placeholder="{{ ui.auth_modal_placeholder }}" autocomplete="off" minlength="8" maxlength="128"
+                 aria-label="{{ ui.auth_modal_placeholder }}" aria-describedby="token-hint"/>
+          <button type="button" class="token-toggle" id="token-toggle" title="{{ ui.toggle_password_visibility }}" aria-label="{{ ui.toggle_password_visibility }}">
+            <span aria-hidden="true">👁️</span>
+          </button>
+        </div>
+        <p class="auth-hint" id="token-hint">💡 {{ ui.auth_modal_hint }}</p>
+        <div class="auth-error" id="auth-error" role="alert" aria-live="polite" hidden>
+          <span aria-hidden="true">❌</span><span id="error-message">{{ ui.auth_invalid }}</span>
+        </div>
+      </div>
+      <div class="auth-modal-footer">
+        <button class="kawaii-button kawaii-button--ghost" id="cancel-auth-btn" type="button">{{ ui.auth_cancel }}</button>
+        <button class="kawaii-button kawaii-button--primary" id="login-btn" type="submit">
+          <span class="btn-icon" aria-hidden="true">🔓</span>
+          <span class="btn-text">{{ ui.auth_verify }}</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  window.HOME_AUTH_SESSION_CONFIG = {{ {
+    'bgPresets': {
+      'light': [
+        {'id': 'sakura-street', 'name': ('樱花街道' if page_language == 'zh' else 'Sakura Street'), 'url': 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1920&q=80'},
+        {'id': 'anime-sky', 'name': ('动漫天空' if page_language == 'zh' else 'Anime Sky'), 'url': 'https://images.unsplash.com/photo-1560972550-aba3456b5564?w=1920&q=80'},
+        {'id': 'city-sunset', 'name': ('城市日落' if page_language == 'zh' else 'City Sunset'), 'url': 'https://images.unsplash.com/photo-1514565131-fce0801e5785?w=1920&q=80'},
+        {'id': 'cherry-blossom', 'name': ('樱花盛开' if page_language == 'zh' else 'Cherry Blossom'), 'url': 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=1920&q=80'},
+        {'id': 'gradient-pink', 'name': ('粉色渐变' if page_language == 'zh' else 'Pink Gradient'), 'url': None},
+      ],
+      'dark': [
+        {'id': 'starry-night', 'name': ('星空夜景' if page_language == 'zh' else 'Starry Night'), 'url': 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1920&q=80'},
+        {'id': 'neon-city', 'name': ('霓虹城市' if page_language == 'zh' else 'Neon City'), 'url': 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1920&q=80'},
+        {'id': 'aurora', 'name': ('极光' if page_language == 'zh' else 'Aurora'), 'url': 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=1920&q=80'},
+        {'id': 'cyberpunk', 'name': ('赛博朋克' if page_language == 'zh' else 'Cyberpunk'), 'url': 'https://images.unsplash.com/photo-1555680202-c86f0e12f086?w=1920&q=80'},
+        {'id': 'gradient-dark', 'name': ('深色渐变' if page_language == 'zh' else 'Night Gradient'), 'url': None},
+      ],
+    },
+  } | tojson }};
+</script>

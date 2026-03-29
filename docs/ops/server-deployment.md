@@ -15,6 +15,7 @@ The recommended single-node deployment shape now includes a generated `systemd` 
 
 ## Required environment
 
+- `INFINITAS_SERVER_ENV=production`
 - `INFINITAS_SERVER_DATABASE_URL`
 - `INFINITAS_SERVER_SECRET_KEY`
 - `INFINITAS_SERVER_BOOTSTRAP_USERS`
@@ -24,6 +25,12 @@ The recommended single-node deployment shape now includes a generated `systemd` 
 - optional `INFINITAS_SERVER_REPO_LOCK_PATH`
 - optional `INFINITAS_SERVER_MIRROR_REMOTE`
 - optional `INFINITAS_SERVER_MIRROR_BRANCH`
+
+Production safety rails:
+
+- `INFINITAS_SERVER_SECRET_KEY` must not be left empty or set to `change-me`
+- `INFINITAS_SERVER_BOOTSTRAP_USERS` must be a non-empty JSON array in production
+- fixture defaults now remain available only in `development` or `test` mode, so a misconfigured production deployment fails fast during startup
 
 ## Startup sequence
 
@@ -75,6 +82,11 @@ Recommended bootstrap flow:
 ```bash
 cp .env.compose.example .env.compose
 mkdir -p .deploy/{repo,data,artifacts,backups,home}
+
+# Edit .env.compose before starting the stack:
+# - keep INFINITAS_SERVER_ENV=production
+# - replace INFINITAS_SERVER_SECRET_KEY=change-me
+# - replace the bootstrap operator tokens in INFINITAS_SERVER_BOOTSTRAP_USERS
 
 # If git push uses SSH, place credentials under .deploy/home/.ssh and ensure permissions are strict.
 # Optionally copy or create .deploy/home/.gitconfig for user.name / user.email / signing policy.

@@ -23,6 +23,35 @@ python3 scripts/test-review-governance.py
 python3 scripts/test-compat-regression.py
 python3 scripts/test-hosted-e2e-ci-contract.py
 python3 scripts/test-project-complete-state.py
+python3 scripts/test-settings-hardening.py
+python3 scripts/test-private-first-cutover-schema.py
+if python3 - <<'PY' >/dev/null 2>&1
+import fastapi  # noqa: F401
+import httpx  # noqa: F401
+import jinja2  # noqa: F401
+import sqlalchemy  # noqa: F401
+import uvicorn  # noqa: F401
+PY
+then
+  python3 scripts/test-private-registry-access-api.py
+  python3 scripts/test-private-registry-ui.py
+  if [[ "${INFINITAS_SKIP_BROWSER_RUNTIME_TESTS:-0}" != "1" ]]; then
+    PLAYWRIGHT_WRAPPER="${CODEX_HOME:-$HOME/.codex}/skills/playwright/scripts/playwright_cli.sh"
+    if [[ -x "$PLAYWRIGHT_WRAPPER" ]]; then
+      python3 scripts/test-home-auth-session-runtime.py
+    elif [[ "${INFINITAS_REQUIRE_BROWSER_RUNTIME_TESTS:-0}" == "1" ]]; then
+      echo "FAIL: browser runtime checks require Codex Playwright wrapper at $PLAYWRIGHT_WRAPPER" >&2
+      exit 1
+    else
+      echo "SKIP: home auth browser runtime checks (missing Codex Playwright wrapper at $PLAYWRIGHT_WRAPPER)"
+    fi
+  fi
+elif [[ "${INFINITAS_REQUIRE_PRIVATE_REGISTRY_TESTS:-0}" == "1" ]]; then
+  echo "FAIL: private registry API/UI checks require fastapi/httpx/jinja2/sqlalchemy/uvicorn in the current python environment" >&2
+  exit 1
+else
+  echo "SKIP: private registry API/UI checks (missing fastapi/httpx/jinja2/sqlalchemy/uvicorn in current python environment)"
+fi
 if [[ "${INFINITAS_SKIP_INSTALLED_INTEGRITY_TESTS:-0}" != "1" ]]; then
   python3 scripts/test-installed-skill-integrity.py
   python3 scripts/test-installed-integrity-report.py

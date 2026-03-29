@@ -1,0 +1,49 @@
+<section class="hero-section animate-in" id="start">
+  <div class="hero-card kawaii-card">
+    <div class="corner-decoration corner-decoration--tl"></div>
+    <div class="corner-decoration corner-decoration--br"></div>
+
+    <div class="hero-grid">
+      <div class="hero-content">
+        <div class="hero-kicker">✨ {{ page_eyebrow }}</div>
+
+        <h1 class="hero-title">
+          {{ hero_title }}
+          {% if hero_emphasis %}
+          <span class="hero-title-highlight">{{ hero_emphasis }}</span>
+          {% endif %}
+        </h1>
+
+        <p class="hero-desc">{{ hero_body }} {{ hero_support }}</p>
+        <p class="hero-note">{{ '私人技能库采用 private-first 结构：私人可直接流转，公开必须走审核。' if page_language == 'zh' else 'This private skill library is private-first: private paths flow directly, while public paths must pass review.' }}</p>
+
+        <button class="hero-cta kawaii-button kawaii-button--primary" type="button" data-copy="{{ hero_primary_copy }}">
+          <span>📋</span>
+          <span>{{ hero_primary_link.label }}</span>
+        </button>
+      </div>
+
+      <div class="quick-start" id="handoff">
+        <div class="quick-start-header">
+          <span class="quick-start-icon">🚀</span>
+          <span class="quick-start-title">{{ ui.quick_start_title }}</span>
+        </div>
+
+        <div class="quick-pills">
+          {% for prompt in human_prompts[:3] %}
+          <button class="quick-pill {{ 'quick-pill--primary' if loop.first }}" type="button" data-copy="{{ prompt.prompt }}">
+            {{ '🔍' if loop.first else '✨' if loop.index == 2 else '🎯' }} {{ prompt.title }}
+          </button>
+          {% endfor %}
+          {% for cmd in command_examples[:2] %}
+          <button class="quick-pill quick-pill--code" type="button" data-copy="{{ cmd.command }}">
+            ⌨️ {{ cmd.title }}
+          </button>
+          {% endfor %}
+        </div>
+
+        <p class="quick-hint">💡 {{ ui.quick_start_hint }}</p>
+      </div>
+    </div>
+  </div>
+</section>

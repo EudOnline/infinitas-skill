@@ -13,6 +13,8 @@ The API mirrors the same split:
 - `/api/v1/search/{public|me|grant}` for search
 - `/api/v1/install/{public|me|grant}/{skill_ref}` for exact install resolution
 
+For ranked recommendations on top of those audience-scoped views, use `scripts/recommend-skill.sh` so the caller gets one best-fit result plus comparison signals instead of a raw list.
+
 ## Listing rules
 
 - `listing_mode = listed`: release may appear in discovery and catalog views
@@ -45,3 +47,11 @@ An install response contains:
 - direct download paths and URLs for each artifact
 
 Use the API response as the source of truth for artifact download. Do not infer installability from repository source folders.
+
+## Installed integrity follow-up
+
+After a skill is installed into a target-local runtime, verify that concrete copy with `python3 scripts/report-installed-integrity.py <target-local> --json`.
+
+- use `--refresh` when the local report says freshness data needs to be recomputed
+- `.infinitas-skill-installed-integrity.json` is the target-local snapshot for that installed copy
+- `catalog/audit-export.json` stays the committed release-side audit surface and does not replace target-local verification

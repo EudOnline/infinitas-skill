@@ -45,6 +45,7 @@
   const STORAGE_KEY = 'infinitas_auth_token';
   const EXPIRY_KEY = 'infinitas_auth_expiry';
   const DAYS_30 = 30 * 24 * 60 * 60 * 1000;
+  const appSession = window.APP_SESSION || {};
   let errorTimeout = null;
   
   // Cache DOM elements
@@ -57,9 +58,9 @@
   };
 
   const TokenManager = {
-    save(token) {
+    save() {
       const expiry = Date.now() + DAYS_30;
-      localStorage.setItem(STORAGE_KEY, token);
+      localStorage.removeItem(STORAGE_KEY);
       localStorage.setItem(EXPIRY_KEY, expiry.toString());
     }
   };
@@ -128,7 +129,9 @@
       const data = await res.json();
       
       if (data.success) {
-        TokenManager.save(token);
+        TokenManager.save();
+        appSession.has_auth_cookie_hint = true;
+        appSession.hasAuthCookieHint = true;
         window.location.href = '{{ home_href or "/" }}';
       } else {
         showError(data.error || '{{ "验证失败，请检查访问令牌是否正确" if page_language == "zh" else "Verification failed, please check your token" }}');

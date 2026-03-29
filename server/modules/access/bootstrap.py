@@ -11,6 +11,8 @@ def ensure_bootstrap_user_credentials(db: Session) -> int:
     users = db.scalars(select(User)).all()
     created_or_updated = 0
     for user in users:
+        if not user.token:
+            continue
         principal = service.ensure_user_principal(db, user)
         credential = service.ensure_personal_credential_for_user(
             db,

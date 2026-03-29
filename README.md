@@ -62,6 +62,7 @@ Hosted registry surface:
 uv sync
 
 uv run python3 scripts/test-private-first-cutover-schema.py
+uv run python3 scripts/test-settings-hardening.py
 uv run python3 scripts/test-private-registry-access-api.py
 uv run python3 scripts/test-private-registry-authoring-api.py
 uv run python3 scripts/test-private-registry-release-api.py
@@ -74,7 +75,48 @@ uv run python3 scripts/test-private-registry-grant-install.py
 uv run python3 scripts/test-private-first-release-worker.py
 uv run python3 scripts/test-private-first-cli.py
 uv run python3 scripts/test-private-registry-ui.py
+uv run python3 scripts/test-home-auth-session-runtime.py
 ```
+
+Local runs default to `INFINITAS_SERVER_ENV=development`. If you want fixture-safe defaults in automated checks, set `INFINITAS_SERVER_ENV=test`; both modes can still use the built-in `change-me` secret and bootstrap user fixtures.
+
+`scripts/test-home-auth-session-runtime.py` uses the Codex Playwright wrapper under `$CODEX_HOME`. If that wrapper is unavailable, keep using the API/UI suite locally and treat the browser runtime check as an opt-in regression pass.
+
+## Production configuration
+
+Production startup is now intentionally strict:
+
+- set `INFINITAS_SERVER_ENV=production`
+- replace `INFINITAS_SERVER_SECRET_KEY=change-me` with a real secret before boot
+- set `INFINITAS_SERVER_BOOTSTRAP_USERS` to a non-empty JSON array of bootstrap operators
+
+If `INFINITAS_SERVER_ENV=production` is set and either the secret remains `change-me` or bootstrap users are omitted, the app now fails fast during startup instead of silently falling back to fixture defaults.
+
+## Policy trace and validation output
+
+Policy enforcement and release decisions now expose structured debug output for operators:
+
+- `scripts/check-promotion-policy.py --json` returns a `policy_trace` payload for promotion decisions, including exception usage when a break-glass path waives a blocker.
+- `scripts/check-release-state.py operate-infinitas-skill --json` returns the current release decision payload plus `policy_trace` details for the requested skill.
+- `scripts/validate-registry.py --json` returns namespace-level `policy_traces` together with `validation_errors` so callers can distinguish policy blockers from content validation failures.
+- The default team-review contract is sourced from `policy/team-policy.json`, which keeps the CLI output and hosted governance checks aligned around the same policy inputs.
+
+## Compatibility terms
+
+The compatibility surface now distinguishes between two meanings:
+
+- `declared support`: the agent runtimes a skill claims to support through author metadata such as `_meta.json.agent_compatible`
+- `verified support`: the runtimes confirmed by recent platform-specific checks and recorded compatibility evidence
+
+`catalog/compatibility.json` is the generated summary view that exposes both layers together.
+
+## Discovery and recommendation
+
+For audience-aware skill selection, start with:
+
+- `scripts/search-skills.sh` for broad discovery
+- `scripts/recommend-skill.sh` when you want the best-ranked fit for a task
+- `docs/ai/workflow-drills.md` for the current search / inspect / confirm workflow drills
 
 ## Operator workflow
 

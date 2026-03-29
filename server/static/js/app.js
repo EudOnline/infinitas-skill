@@ -29,6 +29,13 @@ function uiTemplate(key, fallback, replacements = {}) {
   return template;
 }
 
+window.infinitasAppShell = {
+  currentPageLanguage,
+  currentSearchScope,
+  uiText,
+  uiTemplate,
+};
+
 // ============================================
 // Toast Notification System
 // ============================================

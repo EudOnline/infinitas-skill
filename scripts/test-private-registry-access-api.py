@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
 import shutil
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -20,8 +22,27 @@ def fail(message: str) -> None:
     raise SystemExit(1)
 
 
+def run(command: list[str], *, expect: int = 0) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(
+        command,
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        env=os.environ.copy(),
+        check=False,
+    )
+    if result.returncode != expect:
+        fail(
+            f"command {command!r} exited {result.returncode}, expected {expect}\n"
+            f"stdout:\n{result.stdout}\n"
+            f"stderr:\n{result.stderr}"
+        )
+    return result
+
+
 def configure_env(tmpdir: Path) -> None:
     os.environ["INFINITAS_SERVER_DATABASE_URL"] = f"sqlite:///{tmpdir / 'server.db'}"
+    os.environ["INFINITAS_SERVER_ENV"] = "test"
     os.environ["INFINITAS_SERVER_SECRET_KEY"] = "test-secret-key"
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(tmpdir / "artifacts")
     os.environ["INFINITAS_REGISTRY_READ_TOKENS"] = json.dumps(["registry-reader-token"])
@@ -37,16 +58,36 @@ def configure_env(tmpdir: Path) -> None:
     )
 
 
+def insert_legacy_plaintext_user(db_path: Path, *, username: str, display_name: str, role: str, token: str) -> None:
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            """
+            INSERT INTO users (username, display_name, role, token, light_bg_id, dark_bg_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """,
+            (username, display_name, role, token),
+        )
+        conn.commit()
+
+
 def scenario_access_credentials_and_release_scope() -> None:
     tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-private-access-test-"))
     try:
         configure_env(tmpdir)
+        run(["uv", "run", "--active", "alembic", "upgrade", "20260329_0004"])
+        insert_legacy_plaintext_user(
+            tmpdir / "server.db",
+            username="legacy-migrated",
+            display_name="Legacy Migrated",
+            role="contributor",
+            token="legacy-migrated-token",
+        )
 
         from fastapi.testclient import TestClient
 
         from server.app import create_app
         from server.db import get_session_factory
-        from server.models import AccessGrant, Credential, Exposure, Principal, Release, Skill, SkillVersion
+        from server.models import AccessGrant, Credential, Exposure, Principal, Release, Skill, SkillVersion, User
         from server.modules.access.service import hash_token
 
         client = TestClient(create_app())
@@ -54,6 +95,21 @@ def scenario_access_credentials_and_release_scope() -> None:
         anonymous = client.get("/api/v1/access/me")
         if anonymous.status_code != 401:
             fail(f"expected anonymous /api/v1/access/me to return 401, got {anonymous.status_code}")
+
+        migrated = client.get(
+            "/api/v1/access/me",
+            headers={"Authorization": "Bearer legacy-migrated-token"},
+        )
+        if migrated.status_code != 200:
+            fail(
+                "expected migrated plaintext user to authenticate after credential cutover, "
+                f"got {migrated.status_code}: {migrated.text}"
+            )
+        migrated_payload = migrated.json()
+        if migrated_payload.get("credential_type") != "personal_token":
+            fail(f"expected migrated credential type personal_token, got {migrated_payload}")
+        if migrated_payload.get("username") != "legacy-migrated":
+            fail(f"expected migrated username legacy-migrated, got {migrated_payload}")
 
         me = client.get(
             "/api/v1/access/me",
@@ -69,11 +125,49 @@ def scenario_access_credentials_and_release_scope() -> None:
 
         session_factory = get_session_factory()
         with session_factory() as session:
+            migrated_user = session.scalar(select(User).where(User.username == "legacy-migrated"))
+            if migrated_user is None:
+                fail("expected migrated user row to exist after cutover")
+            if migrated_user.token is not None:
+                fail("expected migrated user token to be scrubbed after credential cutover")
+
+            migrated_principal = session.scalar(
+                select(Principal).where(Principal.kind == "user").where(Principal.slug == "legacy-migrated")
+            )
+            if migrated_principal is None:
+                fail("expected migrated user principal to be created during cutover")
+
+            migrated_credential = session.scalar(
+                select(Credential)
+                .where(Credential.principal_id == migrated_principal.id)
+                .where(Credential.type == "personal_token")
+            )
+            if migrated_credential is None:
+                fail("expected migrated personal credential to exist after cutover")
+            if migrated_credential.hashed_secret != hash_token("legacy-migrated-token"):
+                fail("expected migrated personal credential to store a hashed secret")
+
+            bootstrap_user = session.scalar(select(User).where(User.username == "fixture-maintainer"))
+            if bootstrap_user is None:
+                fail("expected bootstrap maintainer row to exist")
+            if bootstrap_user.token is not None:
+                fail("expected bootstrap personal token to live outside the users table")
+
             principal = session.scalar(
                 select(Principal).where(Principal.kind == "user").where(Principal.slug == "fixture-maintainer")
             )
             if principal is None:
                 fail("expected bridged user principal to exist")
+
+            bootstrap_credential = session.scalar(
+                select(Credential)
+                .where(Credential.principal_id == principal.id)
+                .where(Credential.type == "personal_token")
+            )
+            if bootstrap_credential is None:
+                fail("expected bootstrap personal credential to exist")
+            if bootstrap_credential.hashed_secret != hash_token("fixture-maintainer-token"):
+                fail("expected bootstrap personal credential to store a hashed secret")
 
             skill = Skill(
                 namespace_id=principal.id,
@@ -196,6 +290,27 @@ def scenario_access_credentials_and_release_scope() -> None:
             grant_release_id = grant_release.id
             private_release_id = private_release.id
             authenticated_release_id = authenticated_release.id
+
+        with session_factory() as session:
+            session.add(
+                User(
+                    username="plaintext-only",
+                    display_name="Plaintext Only",
+                    role="contributor",
+                    token="plaintext-only-token",
+                )
+            )
+            session.commit()
+
+        plaintext_only = client.get(
+            "/api/v1/access/me",
+            headers={"Authorization": "Bearer plaintext-only-token"},
+        )
+        if plaintext_only.status_code != 401:
+            fail(
+                "expected plaintext-only user records to be rejected after credential cutover, "
+                f"got {plaintext_only.status_code}: {plaintext_only.text}"
+            )
 
         grant_me = client.get(
             "/api/v1/access/me",
