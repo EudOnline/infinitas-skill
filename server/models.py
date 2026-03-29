@@ -85,3 +85,22 @@ class Job(Base):
 
     submission: Mapped[Submission | None] = relationship()
     requested_by: Mapped[User | None] = relationship(foreign_keys=[requested_by_user_id])
+
+
+from server.modules.authoring.models import Namespace, Skill, SkillDraft, SkillVersion
+from server.modules.release.models import Artifact, Release
+
+__all__ = [
+    'Artifact',
+    'Base',
+    'Job',
+    'Namespace',
+    'Release',
+    'Review',
+    'Skill',
+    'SkillDraft',
+    'SkillVersion',
+    'Submission',
+    'User',
+    'utcnow',
+]

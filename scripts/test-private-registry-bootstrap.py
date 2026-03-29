@@ -11,7 +11,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 AUTO_STAMP_REFUSAL = "refusing to auto-stamp"
-BOOTSTRAP_REVISION = "20260329_0001"
 LEGACY_INDEX_SPECS = (
     ("users", "users_token", ("token",), True),
     ("users", "users_username", ("username",), True),
@@ -73,6 +72,20 @@ def runtime_paths(tmpdir: Path) -> tuple[Path, Path, Path, Path]:
     return db_path, repo_path, artifact_path, lock_path
 
 
+def current_head_revision(env: dict[str, str]) -> str:
+    heads = run(["uv", "run", "alembic", "heads"], env=env)
+    if heads.returncode != 0:
+        fail(
+            "alembic heads failed.\n"
+            f"stdout:\n{heads.stdout}\n"
+            f"stderr:\n{heads.stderr}"
+        )
+    lines = [line.strip() for line in heads.stdout.splitlines() if line.strip()]
+    if len(lines) != 1:
+        fail(f"expected exactly one alembic head, got: {lines!r}")
+    return lines[0].split()[0]
+
+
 def run_ensure_database_ready(env: dict[str, str]) -> subprocess.CompletedProcess[str]:
     return run(
         [
@@ -109,6 +122,7 @@ def assert_auto_stamp_refused(db_path: Path, env: dict[str, str], *, case_name: 
 
 
 def assert_auto_stamp_succeeds(db_path: Path, env: dict[str, str], *, case_name: str) -> None:
+    head_revision = current_head_revision(env)
     result = run_ensure_database_ready(env)
     if result.returncode != 0:
         fail(
@@ -121,8 +135,8 @@ def assert_auto_stamp_succeeds(db_path: Path, env: dict[str, str], *, case_name:
     with sqlite3.connect(db_path) as conn:
         row = conn.execute("SELECT version_num FROM alembic_version").fetchone()
         user_count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-    if row is None or row[0] != BOOTSTRAP_REVISION:
-        fail(f"expected {case_name} to stamp {BOOTSTRAP_REVISION}, got {row!r}")
+    if row is None or row[0] != head_revision:
+        fail(f"expected {case_name} to stamp {head_revision}, got {row!r}")
     if user_count != 2:
         fail(f"expected {case_name} to seed 2 bootstrap users, got {user_count}")
 
@@ -251,6 +265,7 @@ def main() -> None:
         tmpdir = Path(tmp)
         db_path, repo_path, artifact_path, lock_path = runtime_paths(tmpdir)
         env = make_runtime_env(db_path, repo_path, artifact_path, lock_path)
+        os.environ.update(env)
 
         upgrade = run(["uv", "run", "alembic", "upgrade", "head"], env=env)
         if upgrade.returncode != 0:

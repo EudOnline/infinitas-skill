@@ -13,6 +13,7 @@ from server.models import User
 from server.settings import get_settings
 
 BOOTSTRAP_REVISION = '20260329_0001'
+RELEASE_GRAPH_REVISION = '20260329_0002'
 COMPATIBILITY_TABLE_COLUMNS = {
     'users': {
         'id': ('INTEGER', False, True),
@@ -66,6 +67,52 @@ COMPATIBILITY_TABLE_COLUMNS = {
         'updated_at': ('DATETIME', False, False),
     },
 }
+RELEASE_GRAPH_TABLE_COLUMNS = {
+    'namespaces': {
+        'id': ('INTEGER', False, True),
+        'slug': ('VARCHAR(200)', False, False),
+        'created_at': ('DATETIME', False, False),
+        'updated_at': ('DATETIME', False, False),
+    },
+    'skills': {
+        'id': ('INTEGER', False, True),
+        'namespace_id': ('INTEGER', False, False),
+        'slug': ('VARCHAR(200)', False, False),
+        'created_at': ('DATETIME', False, False),
+        'updated_at': ('DATETIME', False, False),
+    },
+    'skill_drafts': {
+        'id': ('INTEGER', False, True),
+        'skill_id': ('INTEGER', False, False),
+        'state': ('VARCHAR(64)', False, False),
+        'payload_json': ('TEXT', False, False),
+        'created_at': ('DATETIME', False, False),
+        'updated_at': ('DATETIME', False, False),
+    },
+    'skill_versions': {
+        'id': ('INTEGER', False, True),
+        'skill_id': ('INTEGER', False, False),
+        'version': ('VARCHAR(64)', False, False),
+        'payload_json': ('TEXT', False, False),
+        'created_at': ('DATETIME', False, False),
+        'updated_at': ('DATETIME', False, False),
+    },
+    'releases': {
+        'id': ('INTEGER', False, True),
+        'skill_version_id': ('INTEGER', False, False),
+        'state': ('VARCHAR(64)', False, False),
+        'created_at': ('DATETIME', False, False),
+        'updated_at': ('DATETIME', False, False),
+    },
+    'artifacts': {
+        'id': ('INTEGER', False, True),
+        'release_id': ('INTEGER', False, False),
+        'kind': ('VARCHAR(64)', False, False),
+        'digest': ('VARCHAR(255)', False, False),
+        'path': ('TEXT', False, False),
+        'created_at': ('DATETIME', False, False),
+    },
+}
 COMPATIBILITY_TABLE_INDEXES = {
     'users': frozenset(
         {
@@ -93,6 +140,38 @@ COMPATIBILITY_TABLE_INDEXES = {
         }
     ),
 }
+RELEASE_GRAPH_TABLE_INDEXES = {
+    'namespaces': frozenset(
+        {
+            (('slug',), True),
+        }
+    ),
+    'skills': frozenset(
+        {
+            (('namespace_id', 'slug'), True),
+        }
+    ),
+    'skill_drafts': frozenset(
+        {
+            (('skill_id', 'state'), False),
+        }
+    ),
+    'skill_versions': frozenset(
+        {
+            (('skill_id', 'version'), True),
+        }
+    ),
+    'releases': frozenset(
+        {
+            (('skill_version_id', 'state'), False),
+        }
+    ),
+    'artifacts': frozenset(
+        {
+            (('release_id', 'kind', 'digest'), True),
+        }
+    ),
+}
 COMPATIBILITY_TABLE_FOREIGN_KEYS = {
     'users': frozenset(),
     'submissions': frozenset(
@@ -112,6 +191,34 @@ COMPATIBILITY_TABLE_FOREIGN_KEYS = {
         {
             (('submission_id',), 'submissions', ('id',)),
             (('requested_by_user_id',), 'users', ('id',)),
+        }
+    ),
+}
+RELEASE_GRAPH_TABLE_FOREIGN_KEYS = {
+    'namespaces': frozenset(),
+    'skills': frozenset(
+        {
+            (('namespace_id',), 'namespaces', ('id',)),
+        }
+    ),
+    'skill_drafts': frozenset(
+        {
+            (('skill_id',), 'skills', ('id',)),
+        }
+    ),
+    'skill_versions': frozenset(
+        {
+            (('skill_id',), 'skills', ('id',)),
+        }
+    ),
+    'releases': frozenset(
+        {
+            (('skill_version_id',), 'skill_versions', ('id',)),
+        }
+    ),
+    'artifacts': frozenset(
+        {
+            (('release_id',), 'releases', ('id',)),
         }
     ),
 }
@@ -145,8 +252,8 @@ def _alembic_config() -> Config:
     return config
 
 
-def _compatibility_tables_match_bootstrap(inspector) -> bool:
-    for table_name, expected_columns in COMPATIBILITY_TABLE_COLUMNS.items():
+def _tables_match_signature(inspector, expected_columns_map, expected_indexes_map, expected_foreign_keys_map) -> bool:
+    for table_name, expected_columns in expected_columns_map.items():
         actual_columns = {
             column['name']: (
                 str(column['type']),
@@ -164,7 +271,7 @@ def _compatibility_tables_match_bootstrap(inspector) -> bool:
             )
             for index in inspector.get_indexes(table_name)
         }
-        if actual_indexes != COMPATIBILITY_TABLE_INDEXES[table_name]:
+        if actual_indexes != expected_indexes_map[table_name]:
             return False
         actual_foreign_keys = {
             (
@@ -174,7 +281,7 @@ def _compatibility_tables_match_bootstrap(inspector) -> bool:
             )
             for foreign_key in inspector.get_foreign_keys(table_name)
         }
-        if actual_foreign_keys != COMPATIBILITY_TABLE_FOREIGN_KEYS[table_name]:
+        if actual_foreign_keys != expected_foreign_keys_map[table_name]:
             return False
     return True
 
@@ -185,16 +292,44 @@ def init_db():
     has_version_table = inspector.has_table('alembic_version')
     existing_compatibility_tables = [name for name in COMPATIBILITY_TABLE_COLUMNS if inspector.has_table(name)]
     has_compatibility_tables = len(existing_compatibility_tables) == len(COMPATIBILITY_TABLE_COLUMNS)
-    if has_compatibility_tables and not has_version_table:
-        if not _compatibility_tables_match_bootstrap(inspector):
+    existing_release_graph_tables = [name for name in RELEASE_GRAPH_TABLE_COLUMNS if inspector.has_table(name)]
+    has_release_graph_tables = len(existing_release_graph_tables) == len(RELEASE_GRAPH_TABLE_COLUMNS)
+    if not has_version_table:
+        if has_release_graph_tables:
+            if not has_compatibility_tables:
+                raise RuntimeError(
+                    f'refusing to auto-stamp unversioned database with release graph tables; missing compatibility tables for head revision {RELEASE_GRAPH_REVISION}'
+                )
+            if not _tables_match_signature(
+                inspector,
+                COMPATIBILITY_TABLE_COLUMNS,
+                COMPATIBILITY_TABLE_INDEXES,
+                COMPATIBILITY_TABLE_FOREIGN_KEYS,
+            ) or not _tables_match_signature(
+                inspector,
+                RELEASE_GRAPH_TABLE_COLUMNS,
+                RELEASE_GRAPH_TABLE_INDEXES,
+                RELEASE_GRAPH_TABLE_FOREIGN_KEYS,
+            ):
+                raise RuntimeError(
+                    f'refusing to auto-stamp unversioned private registry database; managed tables do not match head revision {RELEASE_GRAPH_REVISION}'
+                )
+            command.stamp(config, RELEASE_GRAPH_REVISION)
+        elif has_compatibility_tables:
+            if not _tables_match_signature(
+                inspector,
+                COMPATIBILITY_TABLE_COLUMNS,
+                COMPATIBILITY_TABLE_INDEXES,
+                COMPATIBILITY_TABLE_FOREIGN_KEYS,
+            ):
+                raise RuntimeError(
+                    f'refusing to auto-stamp unversioned legacy database; compatibility tables do not match bootstrap revision {BOOTSTRAP_REVISION}'
+                )
+            command.stamp(config, BOOTSTRAP_REVISION)
+        elif existing_compatibility_tables or existing_release_graph_tables:
             raise RuntimeError(
-                f'refusing to auto-stamp unversioned legacy database; compatibility tables do not match bootstrap revision {BOOTSTRAP_REVISION}'
+                f'refusing to auto-stamp partially initialized database; managed tables do not match bootstrap revision {BOOTSTRAP_REVISION} or head revision {RELEASE_GRAPH_REVISION}'
             )
-        command.stamp(config, BOOTSTRAP_REVISION)
-    elif existing_compatibility_tables and not has_version_table:
-        raise RuntimeError(
-            f'refusing to auto-stamp partially initialized legacy database; missing compatibility tables for bootstrap revision {BOOTSTRAP_REVISION}'
-        )
     command.upgrade(config, 'head')
 
 
