@@ -1,0 +1,50 @@
+{% extends "layout-kawaii.html" %}
+{% from "macros.html" import console_table_shell %}
+
+{% block body %}
+<section class="kawaii-card animate-in detail-shell">
+  <div class="section-kicker">{{ '审核收件箱' if page_language == 'zh' else 'Review inbox' }}</div>
+  <p class="detail-copy">{{ '公开 exposure 会自动打开审核单。这样作者仍然可以自由发布私人版本，而公开版本必须通过额外 gate。' if page_language == 'zh' else 'Public exposures automatically open review cases. Authors can still ship private versions freely, while public versions pass through an extra gate.' }}</p>
+</section>
+
+{% call console_table_shell(
+  '审核单' if page_language == 'zh' else 'Review cases',
+  '还没有审核单。' if page_language == 'zh' else 'No review cases yet.',
+  review_rows,
+  page_language
+) %}
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>{{ '技能' if page_language == 'zh' else 'Skill' }}</th>
+      <th>{{ 'Audience' if page_language == 'en' else '可见范围' }}</th>
+      <th>{{ '模式' if page_language == 'zh' else 'Mode' }}</th>
+      <th>{{ '状态' if page_language == 'zh' else 'State' }}</th>
+      <th>{{ '打开时间' if page_language == 'zh' else 'Opened' }}</th>
+      <th>{{ '关闭时间' if page_language == 'zh' else 'Closed' }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in review_rows %}
+    <tr>
+      <td>#{{ item.id }}</td>
+      <td>{{ item.skill_name }}</td>
+      <td>{{ item.audience }}</td>
+      <td>{{ item.mode }}</td>
+      <td>{{ item.state }}</td>
+      <td>{{ item.opened_at }}</td>
+      <td>{{ item.closed_at }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endcall %}
+
+<style>
+  .detail-copy {
+    margin: 0;
+    color: var(--kawaii-ink-soft);
+  }
+</style>
+{% endblock %}

@@ -28,44 +28,6 @@ class User(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
-class Submission(Base):
-    __tablename__ = 'submissions'
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    skill_name: Mapped[str] = mapped_column(String(200), index=True)
-    publisher: Mapped[str] = mapped_column(String(200), default='local')
-    status: Mapped[str] = mapped_column(String(64), default='draft', index=True)
-    payload_json: Mapped[str] = mapped_column(Text, default='{}')
-    payload_summary: Mapped[str] = mapped_column(Text, default='')
-    status_log_json: Mapped[str] = mapped_column(Text, default='[]')
-    created_by_user_id: Mapped[int | None] = mapped_column(ForeignKey('users.id'))
-    updated_by_user_id: Mapped[int | None] = mapped_column(ForeignKey('users.id'))
-    review_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
-
-    created_by: Mapped[User | None] = relationship(foreign_keys=[created_by_user_id])
-    updated_by: Mapped[User | None] = relationship(foreign_keys=[updated_by_user_id])
-
-
-class Review(Base):
-    __tablename__ = 'reviews'
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    submission_id: Mapped[int] = mapped_column(ForeignKey('submissions.id'), index=True)
-    status: Mapped[str] = mapped_column(String(64), default='pending', index=True)
-    note: Mapped[str] = mapped_column(Text, default='')
-    requested_by_user_id: Mapped[int | None] = mapped_column(ForeignKey('users.id'))
-    reviewed_by_user_id: Mapped[int | None] = mapped_column(ForeignKey('users.id'), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
-
-    submission: Mapped[Submission] = relationship()
-    requested_by: Mapped[User | None] = relationship(foreign_keys=[requested_by_user_id])
-    reviewed_by: Mapped[User | None] = relationship(foreign_keys=[reviewed_by_user_id])
-
-
 class Job(Base):
     __tablename__ = 'jobs'
 
@@ -73,7 +35,7 @@ class Job(Base):
     kind: Mapped[str] = mapped_column(String(100), index=True)
     status: Mapped[str] = mapped_column(String(64), default='queued', index=True)
     payload_json: Mapped[str] = mapped_column(Text, default='{}')
-    submission_id: Mapped[int | None] = mapped_column(ForeignKey('submissions.id'), nullable=True, index=True)
+    release_id: Mapped[int | None] = mapped_column(ForeignKey('releases.id'), nullable=True, index=True)
     requested_by_user_id: Mapped[int | None] = mapped_column(ForeignKey('users.id'), nullable=True)
     note: Mapped[str] = mapped_column(Text, default='')
     log: Mapped[str] = mapped_column(Text, default='')
@@ -83,31 +45,20 @@ class Job(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
-    submission: Mapped[Submission | None] = relationship()
     requested_by: Mapped[User | None] = relationship(foreign_keys=[requested_by_user_id])
 
 
-from server.modules.authoring.models import Namespace, Skill, SkillDraft, SkillVersion
-from server.modules.access.models import AccessCredential, AccessGrant
-from server.modules.exposure.models import Exposure
-from server.modules.release.models import Artifact, Release
-from server.modules.review.models import ReviewCase
-
-__all__ = [
-    'AccessCredential',
-    'AccessGrant',
-    'Artifact',
-    'Base',
-    'Exposure',
-    'Job',
-    'Namespace',
-    'Release',
-    'ReviewCase',
-    'Review',
-    'Skill',
-    'SkillDraft',
-    'SkillVersion',
-    'Submission',
-    'User',
-    'utcnow',
-]
+# New private-first registry domain models.
+from server.modules.access.models import (  # noqa: E402
+    AccessGrant,
+    Credential,
+    Principal,
+    ServicePrincipal,
+    Team,
+    TeamMembership,
+)
+from server.modules.audit.models import AuditEvent  # noqa: E402
+from server.modules.authoring.models import Skill, SkillDraft, SkillVersion  # noqa: E402
+from server.modules.exposure.models import Exposure  # noqa: E402
+from server.modules.release.models import Artifact, Release  # noqa: E402
+from server.modules.review.models import ReviewCase, ReviewDecision, ReviewPolicy  # noqa: E402

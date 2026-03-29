@@ -1,25 +1,42 @@
 from __future__ import annotations
 
-from datetime import datetime
-
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
 
 from server.models import Base, utcnow
 
 
-class ReviewCase(Base):
-    __tablename__ = 'review_cases'
-    __table_args__ = (
-        Index('ix_review_cases_exposure_id_status', 'exposure_id', 'status'),
-    )
+class ReviewPolicy(Base):
+    __tablename__ = "review_policies"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    exposure_id: Mapped[int] = mapped_column(ForeignKey('exposures.id'))
-    release_id: Mapped[int] = mapped_column(ForeignKey('releases.id'))
-    status: Mapped[str] = mapped_column(String(64), default='pending')
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+    name: Mapped[str] = mapped_column(String(200))
+    version: Mapped[str] = mapped_column(String(64))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    rules_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
-    exposure: Mapped['Exposure'] = relationship()
-    release: Mapped['Release'] = relationship()
+
+class ReviewCase(Base):
+    __tablename__ = "review_cases"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    exposure_id: Mapped[int] = mapped_column(ForeignKey("exposures.id"), index=True)
+    policy_id: Mapped[int | None] = mapped_column(ForeignKey("review_policies.id"), nullable=True)
+    mode: Mapped[str] = mapped_column(String(32), default="blocking")
+    state: Mapped[str] = mapped_column(String(32), default="open")
+    opened_by_principal_id: Mapped[int | None] = mapped_column(ForeignKey("principals.id"), nullable=True)
+    opened_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    closed_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ReviewDecision(Base):
+    __tablename__ = "review_decisions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    review_case_id: Mapped[int] = mapped_column(ForeignKey("review_cases.id"), index=True)
+    reviewer_principal_id: Mapped[int | None] = mapped_column(ForeignKey("principals.id"), nullable=True)
+    decision: Mapped[str] = mapped_column(String(32))
+    note: Mapped[str] = mapped_column(Text, default="")
+    evidence_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)

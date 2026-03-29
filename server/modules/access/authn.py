@@ -1,41 +1,45 @@
 from __future__ import annotations
 
-from sqlalchemy.orm import Session, joinedload
+from dataclasses import dataclass
 
-from server.models import AccessCredential, AccessGrant, Namespace, Release, Skill, SkillVersion, User
+from sqlalchemy.orm import Session
+
+from server.models import Credential, Principal, User
+from server.modules.access import service
 
 
-def extract_bearer_token(authorization: str | None) -> str | None:
-    if not isinstance(authorization, str):
+@dataclass
+class AccessContext:
+    credential: Credential
+    principal: Principal | None
+    user: User | None
+    scopes: set[str]
+
+
+def resolve_access_context(
+    db: Session,
+    token: str | None,
+    *,
+    allow_user_bridge: bool = True,
+) -> AccessContext | None:
+    normalized = service.normalize_token(token)
+    if not normalized:
         return None
-    prefix = 'Bearer '
-    if not authorization.startswith(prefix):
+
+    credential = service.resolve_credential_by_token(db, normalized)
+    if credential is None and allow_user_bridge:
+        bridged = service.bridge_legacy_user_token(db, normalized)
+        if bridged is not None:
+            credential = bridged.credential
+
+    if credential is None:
         return None
-    token = authorization[len(prefix) :].strip()
-    return token or None
 
-
-def find_user_by_token(token: str | None, db: Session) -> User | None:
-    if not token:
-        return None
-    return db.query(User).filter(User.token == token).one_or_none()
-
-
-def find_access_credential_by_token(token: str | None, db: Session) -> AccessCredential | None:
-    if not token:
-        return None
-    return (
-        db.query(AccessCredential)
-        .options(
-            joinedload(AccessCredential.grant)
-            .joinedload(AccessGrant.release)
-            .joinedload(Release.artifacts),
-            joinedload(AccessCredential.grant)
-            .joinedload(AccessGrant.release)
-            .joinedload(Release.skill_version)
-            .joinedload(SkillVersion.skill)
-            .joinedload(Skill.namespace)
-        )
-        .filter(AccessCredential.token == token, AccessCredential.revoked_at.is_(None))
-        .one_or_none()
+    principal = service.get_principal(db, credential.principal_id)
+    user = service.get_user_for_principal(db, principal)
+    return AccessContext(
+        credential=credential,
+        principal=principal,
+        user=user,
+        scopes=service.parse_scopes(credential.scopes_json),
     )

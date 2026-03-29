@@ -1,0 +1,90 @@
+{% extends "layout-kawaii.html" %}
+
+{% block body %}
+<section class="kawaii-card animate-in detail-shell">
+  <div class="section-kicker">{{ '草稿详情' if page_language == 'zh' else 'Draft detail' }}</div>
+  <div class="detail-grid">
+    <article class="detail-panel">
+      <h2>{{ draft.skill_name }}</h2>
+      <p>{{ '草稿是可编辑态，封版后会进入不可变版本。' if page_language == 'zh' else 'Drafts stay editable until they are sealed into immutable versions.' }}</p>
+      <div class="detail-actions">
+        <a class="entity-link" href="{{ draft.skill_href }}">{{ '返回技能' if page_language == 'zh' else 'Open skill' }}</a>
+      </div>
+    </article>
+    <article class="detail-panel">
+      <dl class="detail-meta">
+        <div><dt>ID</dt><dd>#{{ draft.id }}</dd></div>
+        <div><dt>{{ '状态' if page_language == 'zh' else 'State' }}</dt><dd>{{ draft.state }}</dd></div>
+        <div><dt>{{ '基线版本' if page_language == 'zh' else 'Base version' }}</dt><dd>{{ draft.base_version }}</dd></div>
+        <div><dt>{{ '更新时间' if page_language == 'zh' else 'Updated' }}</dt><dd>{{ draft.updated_at }}</dd></div>
+      </dl>
+    </article>
+  </div>
+</section>
+
+<section class="kawaii-card animate-in detail-shell">
+  <div class="section-kicker">{{ '内容引用' if page_language == 'zh' else 'Content ref' }}</div>
+  <code class="long-code">{{ draft.content_ref }}</code>
+</section>
+
+<section class="kawaii-card animate-in detail-shell">
+  <div class="section-kicker">{{ '元数据快照' if page_language == 'zh' else 'Metadata snapshot' }}</div>
+  <pre class="json-block">{{ draft.metadata_pretty }}</pre>
+</section>
+
+<style>
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+
+  .detail-panel p {
+    margin: 0.4rem 0 0;
+    color: var(--kawaii-ink-soft);
+  }
+
+  .detail-meta {
+    display: grid;
+    gap: 0.85rem;
+    margin: 0;
+  }
+
+  .detail-meta dt {
+    font-size: 0.82rem;
+    color: var(--kawaii-ink-muted);
+  }
+
+  .detail-meta dd {
+    margin: 0.2rem 0 0;
+    font-weight: 700;
+  }
+
+  .detail-actions {
+    margin-top: 1rem;
+  }
+
+  .entity-link {
+    color: var(--kawaii-primary-deep);
+    text-decoration: none;
+    font-weight: 700;
+  }
+
+  .long-code,
+  .json-block {
+    display: block;
+    width: 100%;
+    overflow: auto;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    background: var(--kawaii-code-surface);
+    color: var(--kawaii-ink);
+  }
+
+  .json-block {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+</style>
+{% endblock %}

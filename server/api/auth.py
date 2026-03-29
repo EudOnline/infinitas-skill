@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from server.auth import AUTH_COOKIE_MAX_AGE, AUTH_COOKIE_NAME, maybe_get_current_user
 from server.db import get_db
-from server.modules.access.authn import find_user_by_token
+from server.modules.access.authn import resolve_access_context
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -39,9 +39,10 @@ async def login(
 ):
     """Validate token and return user info."""
     lang = _resolve_language(request)
-    user = find_user_by_token(payload.token, db)
-    if user is None:
+    context = resolve_access_context(db, payload.token, allow_user_bridge=True)
+    if context is None or context.user is None:
         return TokenLoginResponse(success=False, error=_pick_lang(lang, "无效的 Token", "Invalid token"))
+    user = context.user
     response.set_cookie(
         key=AUTH_COOKIE_NAME,
         value=payload.token,

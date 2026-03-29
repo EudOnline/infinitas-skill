@@ -1,100 +1,87 @@
 ---
 name: operate-infinitas-skill
-description: Use when OpenClaw, Codex, or Claude Code needs to operate inside the infinitas-skill repository to import prototypes, validate skills, publish immutable releases, pull stable installs, or export OpenClaw-compatible bundles.
+description: Use when OpenClaw, Codex, or Claude Code needs to operate the private-first infinitas-skill registry through drafts, releases, exposures, review cases, and audience-scoped discovery.
 ---
 
 # Operate infinitas-skill
 
 ## Overview
 
-This skill teaches an agent how to work inside the `infinitas-skill` repository without confusing editable source, released artifacts, and runtime installs.
+This skill teaches an agent how to work inside the `infinitas-skill` repository after the private-first cutover.
 
-Core rule: never install from `skills/incubating/` or `skills/active/`. Validate and publish first, then pull from immutable release artifacts.
+Core rule: operate the hosted registry lifecycle, not the removed submission/promotion shell flow.
 
 ## Shared Model
 
-Always distinguish these four states before choosing a command:
+Always distinguish these states before choosing a command:
 
-1. **Local prototype**: a working folder such as `~/.openclaw/workspace/skills/<skill>`
-2. **Registry source**: `skills/incubating/` or `skills/active/`
-3. **Immutable release artifacts**: `catalog/distributions/...` and `catalog/provenance/...`
-4. **Runtime install target**: a local runtime directory such as `~/.openclaw/skills`
-
-Do not mix these states together. A prototype is not a release. A reviewed source folder is not an install artifact. A runtime install should come from verified release data.
+1. **Draft authoring**: mutable `skill_drafts`
+2. **Immutable release state**: `skill_versions`, `releases`, `artifacts`
+3. **Audience policy**: `exposures`, `review_cases`, `access_grants`, `credentials`
+4. **Discovery/install**: `/api/v1/catalog/*`, `/api/v1/install/*`, and `/registry/*`
 
 Read this machine-facing surface first:
 
 - `README.md`
-- `docs/ai/agent-operations.md`
 - `docs/ai/discovery.md`
-- `docs/ai/openclaw.md`
 - `docs/ai/publish.md`
 - `docs/ai/pull.md`
-- `catalog/ai-index.json`
+- `docs/ai/server-api.md`
+- `docs/private-first-cutover.md`
 
 Use `--mode confirm` first when the request could mutate the repo, write into a runtime directory, or publish a release.
 
 ## Command Map
 
-- `scripts/import-openclaw-skill.sh`: import a local OpenClaw prototype into the registry
-- `scripts/check-skill.sh`: validate a skill folder before review or release
-- `scripts/publish-skill.sh`: produce immutable release artifacts and refresh catalogs
-- `scripts/pull-skill.sh`: install a released version into a runtime directory
-- `scripts/export-openclaw-skill.sh`: render an already released skill into an OpenClaw or ClawHub-compatible export folder
-- `scripts/resolve-skill.sh` and `scripts/install-by-name.sh`: discovery-first helpers that still resolve to immutable release artifacts
+- `scripts/registryctl.py`: the primary operator CLI for skills, drafts, releases, exposures, grants, tokens, and review cases
+- `/api/v1/skills`, `/api/v1/drafts/*`, `/api/v1/releases/*`: authoring and release lifecycle
+- `/api/v1/exposures/*`, `/api/v1/review-cases/*`: exposure and review lifecycle
+- `/api/v1/catalog/*`, `/api/v1/install/*`, `/registry/*`: discovery and install surfaces
 
 ## Default Workflow
 
-1. Identify whether the user is asking to import, validate, publish, install, upgrade, or export.
+1. Identify whether the user is asking to author, seal, release, expose, review, grant, discover, or download.
 2. Read only the machine-facing docs first unless debugging requires deeper script inspection.
-3. If the task starts from an OpenClaw local prototype, use `scripts/import-openclaw-skill.sh`.
-4. If the task starts from a registry skill and the user wants a stable version for others, validate it and use `scripts/publish-skill.sh`.
-5. If the task is about installing a stable version, use `scripts/pull-skill.sh` or `scripts/install-by-name.sh`, not direct copies from source folders.
-6. If the task is about ClawHub packaging, publish first and then use `scripts/export-openclaw-skill.sh`.
-7. Never auto-run `clawhub publish` unless the user explicitly asks for that public step.
+3. Create or patch drafts before talking about releases.
+4. Seal drafts into versions, then create releases.
+5. Expose releases to the intended audience and review public exposures before calling them installable.
+6. Use registry discovery or install endpoints when the task is about audience-scoped download.
 
 ## OpenClaw
 
 Use this section when the caller is working from an OpenClaw prototype or wants an OpenClaw runtime install.
 
-- Import prototypes from `~/.openclaw/workspace/skills/<skill>` with `scripts/import-openclaw-skill.sh ... --owner lvxiaoer --publisher lvxiaoer`
-- Publish reviewed registry skills with `scripts/publish-skill.sh lvxiaoer/<skill>`
-- Install released versions into `~/.openclaw/skills` with `scripts/pull-skill.sh lvxiaoer/<skill> ~/.openclaw/skills`
-- Export public-ready or review-ready folders with `scripts/export-openclaw-skill.sh lvxiaoer/<skill> --out /tmp/openclaw-export`
+- Author content into the hosted private-first registry instead of relying on source-folder promotion
+- Use `scripts/registryctl.py` or the hosted UI to create drafts, releases, and exposures
+- Treat `/api/v1/install/*` and `/registry/*` as the hosted download contract
 
 Hard rules for OpenClaw:
 
-- do not treat the local prototype folder as a published version
-- do not install directly from `skills/incubating/` or `skills/active/`
-- do not assume export success means `public_ready: true`
+- do not treat a draft as a release
+- do not treat a release as discoverable before exposure and review policy allow it
+- do not assume a grant token can read unrelated public or private releases
 
 ## Codex
 
 Use this section when Codex is acting as the repository operator.
 
-- Treat this repository as a private skill registry, not as `~/.agents/skills`
-- Use the docs listed above as the contract surface before reading internal implementation scripts
-- Prefer `scripts/publish-skill.sh`, `scripts/pull-skill.sh`, and `scripts/install-by-name.sh` over low-level manual file copies
-- Prefer qualified names such as `lvxiaoer/operate-infinitas-skill` when a skill might be ambiguous
-- Use `--mode confirm` before any action that could publish, install, or overwrite data
+- Treat this repository as a hosted private-first registry, not as a source-folder promotion workflow
+- Use `scripts/registryctl.py` and the hosted API surface before reaching for low-level DB edits
+- Prefer qualified names when resolving install targets
 
 ## Claude Code
 
 Use this section when Claude Code is acting as the repository operator.
 
 - Treat this repository as the registry source of truth, not as `~/.claude/skills` or `.claude/agents`
-- Follow the same import, validate, publish, pull, and export workflow as Codex and OpenClaw operators
-- Read the machine-facing docs first and only inspect internal scripts when debugging or when the docs leave a real gap
-- Keep installs tied to immutable release artifacts instead of direct copies from editable source trees
+- Follow the same draft -> release -> exposure -> review -> discovery workflow as other operators
+- Read the machine-facing docs first and only inspect internals when the docs leave a real gap
 
 ## Hard Rules
 
-- Do not install from `skills/incubating/` or `skills/active/`
-- Do not equate “merged” with “published”
-- Do not equate “tag exists” with “published”
-- Do not skip manifest or attestation verification for installs
-- Do not infer a default version from the working tree; use `catalog/ai-index.json`
-- Do not auto-publish to ClawHub
+- Do not reintroduce the removed submission/review/job product flow
+- Do not treat release creation as exposure or exposure as approval
+- Do not use removed publish/promotion shell scripts
 
 ## Bundled Resources
 

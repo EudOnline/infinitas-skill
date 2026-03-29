@@ -1,145 +1,54 @@
-# `publish-skill` Protocol
+# Publish and Release
 
-## Command
+Private-first publishing is no longer a shell pipeline around review, promotion, and publish scripts.
+
+The supported flow is:
+
+1. create or load a skill record
+2. create a draft
+3. patch the draft until ready
+4. seal the draft into an immutable version
+5. create a release for that version
+6. let the worker materialize release artifacts
+7. create exposures for `private`, `grant`, or `public`
+8. approve the public review case when public exposure is required
+
+## CLI entrypoint
+
+Use `scripts/registryctl.py` against the hosted API.
+
+Examples:
 
 ```bash
-scripts/publish-skill.sh <skill> [--version <semver>] [--mode auto|confirm]
+python3 scripts/registryctl.py skills create \
+  --slug demo-skill \
+  --display-name "Demo Skill" \
+  --summary "Private-first demo skill"
+
+python3 scripts/registryctl.py drafts create 1 \
+  --content-ref 'git+https://example.com/demo-skill.git#<commit>' \
+  --metadata-json '{"entrypoint":"SKILL.md","manifest":{"name":"demo-skill","version":"0.1.0"}}'
+
+python3 scripts/registryctl.py drafts seal 1 --version 0.1.0
+python3 scripts/registryctl.py releases create 1
+
+python3 scripts/registryctl.py exposures create 1 \
+  --audience-type public \
+  --listing-mode listed \
+  --install-mode enabled \
+  --requested-review-mode none
 ```
 
-## Inputs
+## Review semantics
 
-- `skill`: skill 名称、qualified name，或可解析到 `_meta.json` 的 skill 目录
-- `--version <semver>`: 可选；仅用于断言当前待发布版本，不负责自动 bump 版本
-- `--mode auto|confirm`: 可选；默认值为 `auto`
+- `private` exposure: usually auto-activates
+- `grant` exposure: usually auto-activates and becomes readable only through a bound grant token or explicit subject grant
+- `public` exposure: opens a blocking review case and activates only after approval
 
-## Preconditions
+## Worker semantics
 
-- 目标 skill 可以被仓库解析
-- 目标 skill 通过 `scripts/check-skill.sh`
-- 目标 skill 满足发布前 review / promotion gate
-- 目标 skill 必须最终以不可变发布物形式发布
-- 运行环境必须允许执行现有 release、tag、catalog 相关脚本
+The worker supports one lifecycle job kind:
 
-## Ordered Execution Steps
+- `materialize_release`
 
-1. 解析目标 skill
-2. 读取 `_meta.json` 并校验可选 `--version`
-3. 运行 skill 校验与发布前校验
-4. 若目标为 incubating skill，则先验证 active review gate，再执行 promotion
-5. 创建或验证稳定发布 tag
-6. 生成 bundle、manifest、provenance / attestation
-7. 验证发布物完整性
-8. 更新 catalog 与 AI index
-9. 如需刷新 `verified_support`，再运行 `python3 scripts/record-verified-support.py <skill> --platform ... --build-catalog`
-10. 输出结构化 JSON 结果
-
-## CI-native attestation
-
-- `config/signing.json` now supports `attestation.policy.release_trust_mode`
-- allowed values are `ssh`, `ci`, and `both`
-- when CI-native attestation is enabled, release verification may require a matching `catalog/provenance/<name>-<version>.ci.json`
-- use `python3 scripts/verify-ci-attestation.py <ci-attestation.json>` to verify the CI payload directly
-- use `python3 scripts/verify-attestation.py <attestation.json>` to enforce the repo policy end-to-end
-
-## Hosted control plane notes
-
-- hosted server mode can queue `validate_submission`、`promote_submission`、`publish_submission` jobs instead of mutating the repository directly from the API request
-- queued publish jobs must execute against the server-owned source-of-truth repo, not a contributor clone
-- worker execution may skip self-referential bootstrap test suites while running release scripts, but must still preserve signed tag, provenance, and immutable distribution output requirements
-- after publish completes, the worker must sync the generated `catalog/` outputs into the hosted artifact directory used by HTTP registry clients
-- when `INFINITAS_SERVER_MIRROR_REMOTE` is configured, the worker may also run an immediate best-effort one-way mirror push after artifact sync and the primary `origin` push
-- a mirror-hook warning must not silently change the published release outcome; operators should inspect the job log and rely on the scheduled mirror timer as fallback if configured
-
-## Stop Conditions
-
-出现以下任一情况必须立即停止，并返回失败结果：
-
-- skill 无法解析
-- `check-skill.sh` 或发布前检查失败
-- review gate 不通过
-- 缺少 manifest
-- 缺少 attestation / provenance
-- 生成的发布物验证失败
-- catalog 或 AI index 无法更新
-
-## Output JSON
-
-Stable integration consumers should validate stdout JSON against:
-
-- `schemas/publish-result.schema.json`
-
-`confirm` 预览结果与实际发布结果共用同一份 schema，区别在于 `state` 分别为 `planned` 与 `published`。
-
-成功时至少包含：
-
-```json
-{
-  "ok": true,
-  "skill": "my-skill",
-  "qualified_name": "publisher/my-skill",
-  "version": "1.2.3",
-  "state": "published",
-  "manifest_path": "catalog/distributions/.../manifest.json",
-  "bundle_path": "catalog/distributions/.../bundle.tar.gz",
-  "bundle_sha256": "...",
-  "attestation_path": "catalog/provenance/my-skill-1.2.3.json",
-  "published_at": "2026-03-09T00:00:00Z",
-  "next_step": "pull-skill"
-}
-```
-
-失败时至少包含：
-
-```json
-{
-  "ok": false,
-  "state": "failed",
-  "failed_at_step": "reviewed",
-  "error_code": "review-gate-failed",
-  "message": "...",
-  "suggested_action": "..."
-}
-```
-
-`confirm` 模式预览至少包含：
-
-```json
-{
-  "ok": true,
-  "skill": "my-skill",
-  "qualified_name": "publisher/my-skill",
-  "version": "1.2.3",
-  "status": "active",
-  "state": "planned",
-  "manifest_path": "catalog/distributions/.../manifest.json",
-  "bundle_path": "catalog/distributions/.../bundle.tar.gz",
-  "attestation_path": "catalog/provenance/my-skill-1.2.3.json",
-  "commands": [
-    ["scripts/release-skill.sh", "my-skill", "--push-tag", "--write-provenance"],
-    ["scripts/build-catalog.sh"]
-  ],
-  "promotion_required": false,
-  "next_step": "confirm-or-run"
-}
-```
-
-## OpenClaw Context
-
-- 如果 skill 最初来自 OpenClaw 本地工作区，先使用 `scripts/import-openclaw-skill.sh` 导入 registry，再发布
-- `publish-skill.sh` 只负责 registry → immutable release，不负责直接写入 OpenClaw 运行时目录
-- 若后续要进入 ClawHub，必须先从已发布版本导出；该导出会返回 `public_ready` 和 `validation_errors`，再由人工决定是否执行 `clawhub publish`
-- 若需要让 `catalog/compatibility.json` 反映 Claude / Codex / OpenClaw 的最新实测状态，发布后还需要运行 `scripts/record-verified-support.py`
-
-## Forbidden Assumptions
-
-- 不得把“代码已合并”视为“已发布”
-- 不得把“已生成 tag”视为“已发布”
-- 不得在缺少 manifest 或 attestation 时宣布发布成功
-- 不得在 `confirm` 模式下修改仓库、tag、catalog 或发布物
-- 不得从 `skills/active` 或 `skills/incubating` 直接暴露安装语义
-
-## Mode Rules
-
-- 默认模式是 `auto`
-- `auto` 模式可以执行完整发布链路
-- `confirm` 模式必须只输出执行计划，不得产生任何副作用
+Legacy submission-oriented worker kinds are intentionally unsupported.

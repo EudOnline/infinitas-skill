@@ -3,13 +3,15 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
+import shutil
 import sys
 import tempfile
 from pathlib import Path
 
+from sqlalchemy import select
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 
 
 def fail(message: str) -> None:
@@ -17,135 +19,202 @@ def fail(message: str) -> None:
     raise SystemExit(1)
 
 
-def run(cmd: list[str], *, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        cmd,
-        cwd=ROOT,
-        env=env,
-        text=True,
-        capture_output=True,
-        check=False,
+def configure_env(tmpdir: Path) -> None:
+    os.environ["INFINITAS_SERVER_DATABASE_URL"] = f"sqlite:///{tmpdir / 'server.db'}"
+    os.environ["INFINITAS_SERVER_SECRET_KEY"] = "test-secret-key"
+    os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(tmpdir / "artifacts")
+    os.environ["INFINITAS_REGISTRY_READ_TOKENS"] = json.dumps(["legacy-reader-token"])
+    os.environ["INFINITAS_SERVER_BOOTSTRAP_USERS"] = json.dumps(
+        [
+            {
+                "username": "fixture-maintainer",
+                "display_name": "Fixture Maintainer",
+                "role": "maintainer",
+                "token": "fixture-maintainer-token",
+            }
+        ]
     )
 
 
-def make_runtime_env(db_path: Path, repo_path: Path, artifact_path: Path, lock_path: Path) -> dict[str, str]:
-    env = os.environ.copy()
-    env.update(
-        {
-            "INFINITAS_SERVER_DATABASE_URL": f"sqlite:///{db_path}",
-            "INFINITAS_SERVER_REPO_PATH": str(repo_path),
-            "INFINITAS_SERVER_ARTIFACT_PATH": str(artifact_path),
-            "INFINITAS_SERVER_REPO_LOCK_PATH": str(lock_path),
-            "INFINITAS_REGISTRY_READ_TOKENS": json.dumps(["registry-reader-token"]),
-        }
+def create_ready_release(client, headers: dict[str, str], *, slug: str, display_name: str) -> int:
+    from server.worker import run_worker_loop
+
+    create_skill_response = client.post(
+        "/api/v1/skills",
+        headers=headers,
+        json={
+            "slug": slug,
+            "display_name": display_name,
+            "summary": f"{display_name} summary",
+        },
     )
-    return env
+    if create_skill_response.status_code != 201:
+        fail(
+            "expected skill creation to return 201, "
+            f"got {create_skill_response.status_code}: {create_skill_response.text}"
+        )
+    skill_id = int(create_skill_response.json()["id"])
+
+    create_draft_response = client.post(
+        f"/api/v1/skills/{skill_id}/drafts",
+        headers=headers,
+        json={
+            "content_ref": f"git+https://example.com/{slug}.git#0123456789abcdef0123456789abcdef01234567",
+            "metadata": {
+                "entrypoint": "SKILL.md",
+                "language": "zh-CN",
+                "manifest": {"name": slug, "version": "0.1.0"},
+            },
+        },
+    )
+    if create_draft_response.status_code != 201:
+        fail(
+            "expected draft creation to return 201, "
+            f"got {create_draft_response.status_code}: {create_draft_response.text}"
+        )
+    draft_id = int(create_draft_response.json()["id"])
+
+    seal_response = client.post(
+        f"/api/v1/drafts/{draft_id}/seal",
+        headers=headers,
+        json={"version": "0.1.0"},
+    )
+    if seal_response.status_code != 201:
+        fail(f"expected seal to return 201, got {seal_response.status_code}: {seal_response.text}")
+    version_id = int((seal_response.json().get("skill_version") or {})["id"])
+
+    create_release_response = client.post(
+        f"/api/v1/versions/{version_id}/releases",
+        headers=headers,
+    )
+    if create_release_response.status_code != 201:
+        fail(
+            "expected release creation to return 201, "
+            f"got {create_release_response.status_code}: {create_release_response.text}"
+        )
+    release_id = int(create_release_response.json()["id"])
+    processed = run_worker_loop(limit=1)
+    if processed != 1:
+        fail(f"expected worker to process 1 release job, got {processed}")
+    return release_id
 
 
-def write_release_artifact(artifact_root: Path, publisher: str, skill: str, version: str) -> None:
-    artifact_dir = artifact_root / "skills" / publisher / skill / version
-    artifact_dir.mkdir(parents=True, exist_ok=True)
-    (artifact_dir / "manifest.json").write_text(
-        json.dumps({"publisher": publisher, "skill": skill, "version": version}),
-        encoding="utf-8",
+def create_exposure(
+    client,
+    headers: dict[str, str],
+    *,
+    release_id: int,
+    audience_type: str,
+    listing_mode: str,
+    requested_review_mode: str,
+) -> dict:
+    response = client.post(
+        f"/api/v1/releases/{release_id}/exposures",
+        headers=headers,
+        json={
+            "audience_type": audience_type,
+            "listing_mode": listing_mode,
+            "install_mode": "enabled",
+            "requested_review_mode": requested_review_mode,
+        },
     )
+    if response.status_code != 201:
+        fail(
+            "expected exposure creation to return 201, "
+            f"got {response.status_code}: {response.text}"
+        )
+    return response.json()
+
+
+def approve_exposure_review(client, session_factory, headers: dict[str, str], exposure_id: int) -> None:
+    from server.models import ReviewCase
+
+    with session_factory() as session:
+        review_case = session.scalar(select(ReviewCase).where(ReviewCase.exposure_id == exposure_id))
+        if review_case is None:
+            fail(f"expected review case for exposure {exposure_id}")
+        review_case_id = review_case.id
+
+    decision_response = client.post(
+        f"/api/v1/review-cases/{review_case_id}/decisions",
+        headers=headers,
+        json={"decision": "approve", "note": "approved for registry policy fixture"},
+    )
+    if decision_response.status_code != 201:
+        fail(
+            "expected review approval to return 201, "
+            f"got {decision_response.status_code}: {decision_response.text}"
+        )
+
+
+def scenario_registry_access_uses_private_first_credentials() -> None:
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-private-registry-policy-"))
+    try:
+        configure_env(tmpdir)
+
+        from fastapi.testclient import TestClient
+
+        from server.app import create_app
+        from server.db import get_session_factory
+
+        client = TestClient(create_app())
+        session_factory = get_session_factory()
+        headers = {"Authorization": "Bearer fixture-maintainer-token"}
+
+        release_id = create_ready_release(
+            client,
+            headers,
+            slug="policy-public-skill",
+            display_name="Policy Public Skill",
+        )
+        public_exposure = create_exposure(
+            client,
+            headers,
+            release_id=release_id,
+            audience_type="public",
+            listing_mode="listed",
+            requested_review_mode="none",
+        )
+        approve_exposure_review(client, session_factory, headers, int(public_exposure["id"]))
+
+        unauthorized = client.get(
+            "/registry/ai-index.json",
+            headers={"Authorization": "Bearer definitely-invalid-token"},
+        )
+        if unauthorized.status_code != 401:
+            fail(f"expected invalid registry token to return 401, got {unauthorized.status_code}: {unauthorized.text}")
+
+        anonymous = client.get("/registry/ai-index.json")
+        if anonymous.status_code != 200:
+            fail(f"expected anonymous registry ai-index to return 200, got {anonymous.status_code}: {anonymous.text}")
+        anonymous_names = [
+            item.get("qualified_name")
+            for item in (anonymous.json().get("skills") or [])
+            if isinstance(item, dict)
+        ]
+        if anonymous_names != ["fixture-maintainer/policy-public-skill"]:
+            fail(f"expected anonymous ai-index to contain only public release, got {anonymous_names!r}")
+
+        authorized = client.get("/registry/ai-index.json", headers=headers)
+        if authorized.status_code != 200:
+            fail(f"expected user token ai-index to return 200, got {authorized.status_code}: {authorized.text}")
+        authorized_names = [
+            item.get("qualified_name")
+            for item in (authorized.json().get("skills") or [])
+            if isinstance(item, dict)
+        ]
+        if authorized_names != ["fixture-maintainer/policy-public-skill"]:
+            fail(f"expected user ai-index to remain private-first scoped, got {authorized_names!r}")
+
+        me_response = client.get("/api/v1/me", headers=headers)
+        if me_response.status_code != 200:
+            fail(f"expected /api/v1/me to return 200, got {me_response.status_code}: {me_response.text}")
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 def main() -> None:
-    with tempfile.TemporaryDirectory(prefix="infinitas-access-policy-") as tmp:
-        tmpdir = Path(tmp)
-        db_path = tmpdir / "server.db"
-        repo_path = tmpdir / "repo"
-        artifact_path = tmpdir / "artifacts"
-        lock_path = tmpdir / "repo.lock"
-        repo_path.mkdir(parents=True, exist_ok=True)
-        artifact_path.mkdir(parents=True, exist_ok=True)
-        env = make_runtime_env(db_path, repo_path, artifact_path, lock_path)
-        os.environ.update(env)
-
-        upgrade = run(["uv", "run", "alembic", "upgrade", "head"], env=env)
-        if upgrade.returncode != 0:
-            fail(
-                "alembic upgrade head failed.\n"
-                f"stdout:\n{upgrade.stdout}\n"
-                f"stderr:\n{upgrade.stderr}"
-            )
-
-        from fastapi.testclient import TestClient
-        from server import db as db_module
-        from server.app import create_app
-        from server.models import Namespace, Release, Skill, SkillVersion
-        from server.modules.access.service import create_release_exposure
-        from server.settings import get_settings
-
-        get_settings.cache_clear()
-        db_module.get_engine.cache_clear()
-        db_module.get_session_factory.cache_clear()
-        db_module.ensure_database_ready()
-
-        write_release_artifact(artifact_path, "core", "deploy-skill", "1.0.0")
-        write_release_artifact(artifact_path, "core", "deploy-skill", "2.0.0")
-        write_release_artifact(artifact_path, "core", "deploy-skill", "3.0.0")
-
-        factory = db_module.get_session_factory()
-        with factory() as session:
-            namespace = Namespace(slug="core")
-            session.add(namespace)
-            session.flush()
-
-            skill = Skill(namespace_id=namespace.id, slug="deploy-skill")
-            session.add(skill)
-            session.flush()
-
-            private_version = SkillVersion(skill_id=skill.id, version="1.0.0", payload_json='{"release":"1.0.0"}')
-            grant_version = SkillVersion(skill_id=skill.id, version="2.0.0", payload_json='{"release":"2.0.0"}')
-            public_version = SkillVersion(skill_id=skill.id, version="3.0.0", payload_json='{"release":"3.0.0"}')
-            session.add_all([private_version, grant_version, public_version])
-            session.flush()
-
-            private_release = Release(skill_version_id=private_version.id, state="published")
-            grant_release = Release(skill_version_id=grant_version.id, state="published")
-            public_release = Release(skill_version_id=public_version.id, state="published")
-            session.add_all([private_release, grant_release, public_release])
-            session.flush()
-
-            private_exposure, private_case, _, _ = create_release_exposure(session, private_release, mode="private")
-            _, _, _, credential = create_release_exposure(
-                session,
-                grant_release,
-                mode="grant",
-                credential_token="grant-release-token",
-            )
-            public_exposure, public_case, _, _ = create_release_exposure(session, public_release, mode="public")
-            session.commit()
-
-            assert private_exposure.review_requirement == "none"
-            assert private_case is None
-            assert public_exposure.review_requirement == "blocking"
-            assert public_case.status == "pending"
-            assert credential is not None
-
-        app = create_app()
-        with TestClient(app) as client:
-            allowed = client.get(
-                "/registry/skills/core/deploy-skill/2.0.0/manifest.json",
-                headers={"Authorization": "Bearer grant-release-token"},
-            )
-            if allowed.status_code != 200:
-                fail(f"expected grant credential to read granted release, got {allowed.status_code}: {allowed.text}")
-
-            denied = client.get(
-                "/registry/skills/core/deploy-skill/1.0.0/manifest.json",
-                headers={"Authorization": "Bearer grant-release-token"},
-            )
-            assert denied.status_code == 403
-
-            legacy_me = client.get(
-                "/api/v1/me",
-                headers={"Authorization": "Bearer dev-maintainer-token"},
-            )
-            assert legacy_me.status_code == 200
-
+    scenario_registry_access_uses_private_first_credentials()
     print("OK: private registry access policy checks passed")
 
 

@@ -1,69 +1,73 @@
-# Hosted server API
+# Hosted Server API
 
-The hosted control plane exposes a small token-backed API for submission, review, and publish orchestration.
-
-The same hosted app also exposes a read-only distribution surface for installers. That surface remains immutable-artifact-first under `/registry/*`, and can be left public in dev or protected with dedicated registry bearer tokens in hosted deployments.
+The hosted app is now private-first only. There is no supported `submissions / reviews / jobs` control plane anymore.
 
 ## Auth
 
-- Send `Authorization: Bearer <token>`
-- `/api/v1/*` accepts bearer tokens directly and maps them to hosted `users.role`
-- Maintainer HTML pages can also bootstrap a browser session through `POST /api/auth/login`, which sets the same token into the `infinitas_auth_token` cookie
-- Browser UI code can probe `GET /api/auth/me` to restore cookie-backed session state after reloads
-- `POST /api/auth/logout` clears the browser session cookie
-- `contributor` may create submissions and request validation / review
-- `maintainer` may approve, reject, and queue publish requests
-- `/registry/*` optionally uses `INFINITAS_REGISTRY_READ_TOKENS` instead of database-backed users
+- Bearer token: `Authorization: Bearer <token>`
+- Browser session: `POST /api/auth/login` sets `infinitas_auth_token`
+- `GET /api/auth/me` restores cookie-backed browser auth
+- Hosted user tokens are bridged into private-first principals automatically
+- Grant tokens resolve through `credentials.grant_id`
 
-## Endpoints
+## Control plane endpoints
 
 - `GET /healthz`
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
 - `GET /api/auth/me`
+- `GET /api/v1/me`
+- `GET /api/v1/access/me`
+- `GET /api/v1/access/releases/{release_id}/check`
+- `POST /api/v1/skills`
+- `GET /api/v1/skills/{skill_id}`
+- `POST /api/v1/skills/{skill_id}/drafts`
+- `PATCH /api/v1/drafts/{draft_id}`
+- `POST /api/v1/drafts/{draft_id}/seal`
+- `POST /api/v1/versions/{version_id}/releases`
+- `GET /api/v1/releases/{release_id}`
+- `GET /api/v1/releases/{release_id}/artifacts`
+- `POST /api/v1/releases/{release_id}/exposures`
+- `PATCH /api/v1/exposures/{exposure_id}`
+- `POST /api/v1/exposures/{exposure_id}/activate`
+- `POST /api/v1/exposures/{exposure_id}/revoke`
+- `POST /api/v1/exposures/{exposure_id}/review-cases`
+- `GET /api/v1/review-cases/{review_case_id}`
+- `POST /api/v1/review-cases/{review_case_id}/decisions`
+
+## Discovery and install endpoints
+
+- `GET /api/v1/catalog/public`
+- `GET /api/v1/catalog/me`
+- `GET /api/v1/catalog/grant`
+- `GET /api/v1/search/public`
+- `GET /api/v1/search/me`
+- `GET /api/v1/search/grant`
+- `GET /api/v1/install/public/{skill_ref}`
+- `GET /api/v1/install/me/{skill_ref}`
+- `GET /api/v1/install/grant/{skill_ref}`
+
+When `artifact=manifest|bundle|provenance|signature` is supplied to an install endpoint, the server returns the requested immutable artifact directly.
+
+## Registry surface
+
+The `/registry/*` surface stays as the stable hosted registry contract, but it is now generated entirely from private-first release projections:
+
 - `GET /registry/ai-index.json`
+- `GET /registry/discovery-index.json`
 - `GET /registry/distributions.json`
 - `GET /registry/compatibility.json`
-- `GET /registry/discovery-index.json`
 - `GET /registry/skills/{publisher}/{skill}/{version}/manifest.json`
 - `GET /registry/skills/{publisher}/{skill}/{version}/skill.tar.gz`
-- `GET /registry/provenance/{skill}-{version}.json`
-- `GET /registry/provenance/{skill}-{version}.json.ssig`
-- `GET /registry/catalog/...` (legacy artifact compatibility aliases)
-- `GET /api/v1/me`
-- `GET /api/v1/submissions`
-- `POST /api/v1/submissions`
-- `GET /api/v1/submissions/{id}`
-- `POST /api/v1/submissions/{id}/request-validation`
-- `POST /api/v1/submissions/{id}/request-review`
-- `GET /api/v1/reviews`
-- `POST /api/v1/reviews/{id}/approve`
-- `POST /api/v1/reviews/{id}/reject`
-- `GET /api/v1/jobs`
-- `GET /api/v1/skills`
-- `POST /api/v1/skills/{skill_name}/publish`
+- `GET /registry/provenance/{publisher}--{skill}-{version}.json`
+- `GET /registry/provenance/{publisher}--{skill}-{version}.json.ssig`
+- `GET /registry/catalog/distributions/...`
+- `GET /registry/catalog/provenance/...`
 
-## Operator pages
+Audience rules:
 
-- `GET /login`
-- `GET /submissions`
-- `GET /reviews`
-- `GET /jobs`
+- no token: public active exposures only
+- hosted user token: releases accessible to that principal
+- grant token: only the granted release scope
 
-These pages are intentionally minimal server-rendered maintainer views for queue inspection; they are not yet a full workflow UI. `/login` and the inline console auth modal both bootstrap the same cookie-backed browser session, while bearer tokens remain the underlying auth primitive.
-
-## CLI mapping
-
-`scripts/registryctl.py` calls the hosted API instead of mutating the repository directly:
-
-- `submissions list`
-- `submissions create`
-- `submissions request-validation`
-- `submissions request-review`
-- `reviews list`
-- `reviews approve`
-- `reviews reject`
-- `jobs list`
-- `releases publish`
-
-Hosted installers and registry source configs should target the distribution surface with a `base_url` like `https://skills.example.com/registry`.
+Invalid tokens return `401` on registry metadata and artifact requests.

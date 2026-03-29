@@ -5,20 +5,49 @@ from sqlalchemy.orm import Session
 
 from server.db import get_db
 from server.models import User
-from server.modules.access.authn import extract_bearer_token, find_access_credential_by_token, find_user_by_token
-from server.modules.access.authz import credential_can_read_registry_path
-from server.settings import get_settings
+from server.modules.access.authn import AccessContext, resolve_access_context
 
 AUTH_COOKIE_NAME = 'infinitas_auth_token'
 AUTH_COOKIE_MAX_AGE = 30 * 24 * 60 * 60
 
 
+def _extract_bearer_token(authorization: str | None) -> str | None:
+    if not isinstance(authorization, str):
+        return None
+    prefix = 'Bearer '
+    if not authorization.startswith(prefix):
+        return None
+    token = authorization[len(prefix) :].strip()
+    return token or None
+
+
 def _resolve_request_token(request: Request) -> str | None:
-    return extract_bearer_token(request.headers.get('authorization')) or request.cookies.get(AUTH_COOKIE_NAME)
+    return _extract_bearer_token(request.headers.get('authorization')) or request.cookies.get(AUTH_COOKIE_NAME)
+
+
+def maybe_get_current_access_context(request: Request, db: Session) -> AccessContext | None:
+    return resolve_access_context(db, _resolve_request_token(request), allow_user_bridge=True)
 
 
 def maybe_get_current_user(request: Request, db: Session) -> User | None:
-    return find_user_by_token(_resolve_request_token(request), db)
+    context = maybe_get_current_access_context(request, db)
+    if context is None:
+        return None
+    return context.user
+
+
+def get_current_access_context(
+    authorization: str | None = Header(default=None),
+    auth_cookie: str | None = Cookie(default=None, alias=AUTH_COOKIE_NAME),
+    db: Session = Depends(get_db),
+) -> AccessContext:
+    token = _extract_bearer_token(authorization) or auth_cookie
+    if not token:
+        raise HTTPException(status_code=401, detail='missing bearer token')
+    context = resolve_access_context(db, token, allow_user_bridge=True)
+    if context is None:
+        raise HTTPException(status_code=401, detail='invalid bearer token')
+    return context
 
 
 def get_current_user(
@@ -26,13 +55,14 @@ def get_current_user(
     auth_cookie: str | None = Cookie(default=None, alias=AUTH_COOKIE_NAME),
     db: Session = Depends(get_db),
 ) -> User:
-    token = extract_bearer_token(authorization) or auth_cookie
-    if not token:
-        raise HTTPException(status_code=401, detail='missing bearer token')
-    user = find_user_by_token(token, db)
-    if user is None:
+    context = get_current_access_context(
+        authorization=authorization,
+        auth_cookie=auth_cookie,
+        db=db,
+    )
+    if context.user is None:
         raise HTTPException(status_code=401, detail='invalid bearer token')
-    return user
+    return context.user
 
 
 def require_role(*allowed_roles: str):
@@ -44,45 +74,3 @@ def require_role(*allowed_roles: str):
         return user
 
     return dependency
-
-
-def require_registry_reader(
-    request: Request,
-    authorization: str | None = Header(default=None),
-    db: Session = Depends(get_db),
-) -> None:
-    settings = get_settings()
-    if not settings.registry_read_tokens:
-        return
-
-    token = extract_bearer_token(authorization)
-    if not token:
-        raise HTTPException(status_code=401, detail='missing registry bearer token')
-    if token not in settings.registry_read_tokens:
-        credential = find_access_credential_by_token(token, db)
-        if credential is None:
-            raise HTTPException(status_code=401, detail='invalid registry bearer token')
-        if not credential_can_read_registry_path(credential, request.url.path):
-            raise HTTPException(status_code=403, detail='insufficient registry scope')
-
-
-def require_registry_reader_or_user(
-    authorization: str | None = Header(default=None),
-    auth_cookie: str | None = Cookie(default=None, alias=AUTH_COOKIE_NAME),
-    db: Session = Depends(get_db),
-) -> None:
-    settings = get_settings()
-    if not settings.registry_read_tokens:
-        return
-
-    token = extract_bearer_token(authorization)
-    if token and token in settings.registry_read_tokens:
-        return
-
-    user = find_user_by_token(token or auth_cookie, db)
-    if user is not None:
-        return
-
-    if token or auth_cookie:
-        raise HTTPException(status_code=401, detail='invalid registry bearer token')
-    raise HTTPException(status_code=401, detail='missing registry bearer token')

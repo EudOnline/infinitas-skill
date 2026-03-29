@@ -41,9 +41,9 @@ The built-in hosted app now serves immutable distribution artifacts directly fro
 - `https://skills.example.com/api/v1/...`
 - `https://skills.example.com/registry/ai-index.json`
 - `https://skills.example.com/registry/skills/<publisher>/<skill>/<version>/manifest.json`
-- `https://skills.example.com/submissions`
-- `https://skills.example.com/reviews`
-- `https://skills.example.com/jobs`
+- `https://skills.example.com/skills`
+- `https://skills.example.com/access/tokens`
+- `https://skills.example.com/review-cases`
 
 If `INFINITAS_REGISTRY_READ_TOKENS` is unset or empty, `/registry/*` stays public for local/dev compatibility.
 If it is set to a JSON array of bearer tokens, hosted installers must send one of those tokens when reading `/registry/*`.
@@ -157,11 +157,11 @@ Phase 1 automation validates SQLite deployments only. PostgreSQL health probes c
 For hosted installs on other machines, point the registry source `base_url` at the `/registry` prefix, not the app root.
 If the hosted registry requires bearer auth, set the registry source `auth.mode` to `token` and point `auth.env` at the local environment variable that holds one of the configured read tokens.
 
-For operators inspecting queue state manually, the hosted app now exposes minimal maintainer-only HTML views at `/submissions`, `/reviews`, and `/jobs`, and the matching CLI surface is available through:
+For operators inspecting queue state manually, the hosted app now exposes private-first maintainer HTML views at `/skills`, `/access/tokens`, and `/review-cases`, and the matching CLI surface is available through:
 
 ```bash
-python scripts/registryctl.py --base-url https://skills.example.com --token <maintainer-token> submissions list
-python scripts/registryctl.py --base-url https://skills.example.com --token <maintainer-token> reviews list
+python scripts/registryctl.py --base-url https://skills.example.com --token <maintainer-token> skills get <skill-id>
+python scripts/registryctl.py --base-url https://skills.example.com --token <maintainer-token> reviews get-case <review-case-id>
 python scripts/registryctl.py --base-url https://skills.example.com --token <maintainer-token> jobs list
 ```
 
@@ -188,7 +188,7 @@ This summarizes:
 - recent failed jobs with error messages
 - recent queued/running jobs
 - recent jobs whose logs contain `WARNING:`
-- submissions by status
+- releases grouped by exposure audience and review state
 
 When any configured threshold is exceeded, the script still emits its summary but exits with status code `2`. That makes it suitable for `systemd` oneshot health/alert runs.
 This is especially useful for best-effort publish mirror hooks: a publish may still complete successfully while leaving a warning that operators should inspect.

@@ -1,56 +1,53 @@
 ---
 name: release-infinitas-skill
-description: Use when Codex, Claude, or Claude Code needs to validate a registry skill, move it through review and promotion, and produce immutable release artifacts inside infinitas-skill.
+description: Use when Codex, Claude, or Claude Code needs to move a private-first skill through draft sealing, release materialization, exposure policy, and review approval.
 ---
 
 # Release infinitas-skill
 
 ## Overview
 
-This skill handles the release side of the repository lifecycle: validation, review, promotion, immutable release output, and compatibility evidence refresh.
+This skill handles the release side of the private-first lifecycle: draft sealing, immutable release materialization, audience exposure, and public review approval.
 
-Use it when the job is to make a skill safely releasable for other agents, not when the job is simply to find or install an already released version.
+Use it when the job is to make a skill safely releasable for other agents, not when the job is simply to search or download an already exposed release.
 
 ## Read First
 
 Start with these machine-facing docs before opening implementation internals:
 
 - `README.md`
-- `docs/ai/agent-operations.md`
 - `docs/ai/publish.md`
-- `docs/release-strategy.md`
-- `catalog/ai-index.json`
+- `docs/ai/server-api.md`
+- `docs/private-first-cutover.md`
 
-Default to confirm-first reasoning when a command could change review state, promote a skill, create a tag, or write release artifacts.
+Default to confirm-first reasoning when a command could seal a draft, create a release, open a review case, or change exposure state.
 
 ## Workflow
 
-1. Resolve the target skill and confirm whether it is still `incubating` or already `active`.
-2. Run `scripts/check-skill.sh <skill>` before any review or release action.
-3. If review has not been requested yet, use `scripts/request-review.sh <skill> --note ...`.
-4. When approval is intended, record it with `scripts/approve-skill.sh <skill> --reviewer ... --note ...`.
-5. Promote approved incubating skills with `scripts/promote-skill.sh <skill>`.
-6. Produce immutable release artifacts with `scripts/release-skill.sh <skill> --create-tag --write-provenance`.
-7. Refresh generated indexes with `scripts/build-catalog.sh`.
-8. If compatibility evidence should stay current, run `python3 scripts/record-verified-support.py <skill> --platform ... --build-catalog`.
+1. Resolve the target skill and current draft/version/release state.
+2. Create or patch a draft until content and metadata are ready.
+3. Seal the draft into an immutable version.
+4. Create a release for that version.
+5. Let the worker materialize the release artifacts.
+6. Create the intended exposure.
+7. If the exposure is public, approve the review case before announcing it as public.
 
 ## Command Map
 
-- `scripts/check-skill.sh`: validate metadata, frontmatter, and core repository invariants
-- `scripts/request-review.sh`: open the review process for an incubating skill
-- `scripts/approve-skill.sh`: record approval or rejection decisions
-- `scripts/promote-skill.sh`: move an approved skill from `skills/incubating/` to `skills/active/`
-- `scripts/release-skill.sh`: create a signed local release tag and immutable distribution artifacts
-- `scripts/build-catalog.sh`: regenerate catalog, AI index, discovery index, and export views
-- `python3 scripts/record-verified-support.py`: write compatibility evidence and refresh catalog views
+- `scripts/registryctl.py skills create`
+- `scripts/registryctl.py drafts create`
+- `scripts/registryctl.py drafts update`
+- `scripts/registryctl.py drafts seal`
+- `scripts/registryctl.py releases create`
+- `scripts/registryctl.py exposures create`
+- `scripts/registryctl.py reviews decide`
 
 ## Hard Rules
 
-- Do not treat a successful review as a release
-- Do not treat an `active` folder as an installable artifact
-- Do not skip `scripts/check-skill.sh` before review or release
-- Do not use `scripts/publish-skill.sh` when branch-local work must avoid remote pushes
-- Do not claim release success until manifest, bundle, provenance, and catalog outputs all exist
+- Do not treat a sealed version as a release until materialization completes
+- Do not treat a release as public until the blocking review case is approved
+- Do not use removed review/promotion/publish shell scripts
+- Do not claim installability until manifest, bundle, provenance, and signature artifacts exist
 
 ## Bundled Resources
 

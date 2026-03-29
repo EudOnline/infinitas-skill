@@ -1,0 +1,70 @@
+{% extends "layout-kawaii.html" %}
+{% from "macros.html" import console_table_shell %}
+
+{% block body %}
+<section class="kawaii-card animate-in detail-shell">
+  <div class="section-kicker">{{ '分享详情' if page_language == 'zh' else 'Share detail' }}</div>
+  <div class="detail-grid">
+    <article>
+      <h2>{{ release.skill_name }} {{ release.version }}</h2>
+      <p>{{ '同一个 release 可以同时保留私人、令牌共享和公开三种出口，彼此不互相覆盖。' if page_language == 'zh' else 'One release can keep private, token-shared, and public audiences side by side without one replacing another.' }}</p>
+      <div class="detail-actions">
+        <a class="entity-link" href="{{ release.detail_href }}">{{ '返回发布' if page_language == 'zh' else 'Back to release' }}</a>
+      </div>
+    </article>
+  </div>
+</section>
+
+{% call console_table_shell(
+  '可见性出口' if page_language == 'zh' else 'Audience exits',
+  '还没有可见性出口。' if page_language == 'zh' else 'No audience exits.',
+  share_rows,
+  page_language
+) %}
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>{{ 'Audience' if page_language == 'en' else '可见范围' }}</th>
+      <th>{{ '列出策略' if page_language == 'zh' else 'Listing' }}</th>
+      <th>{{ '安装' if page_language == 'zh' else 'Install' }}</th>
+      <th>{{ '审核要求' if page_language == 'zh' else 'Review requirement' }}</th>
+      <th>{{ '审核状态' if page_language == 'zh' else 'Review state' }}</th>
+      <th>{{ 'Grant' if page_language == 'en' else '授权数' }}</th>
+      <th>{{ '状态' if page_language == 'zh' else 'State' }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in share_rows %}
+    <tr>
+      <td>#{{ item.id }}</td>
+      <td>{{ item.audience }}</td>
+      <td>{{ item.listing_mode }}</td>
+      <td>{{ item.install_mode }}</td>
+      <td>{{ item.review_requirement }}</td>
+      <td>{{ item.review_case_state }}</td>
+      <td>{{ item.grant_count }}</td>
+      <td>{{ item.state }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endcall %}
+
+<style>
+  .detail-grid p {
+    margin: 0.4rem 0 0;
+    color: var(--kawaii-ink-soft);
+  }
+
+  .detail-actions {
+    margin-top: 1rem;
+  }
+
+  .entity-link {
+    color: var(--kawaii-primary-deep);
+    text-decoration: none;
+    font-weight: 700;
+  }
+</style>
+{% endblock %}

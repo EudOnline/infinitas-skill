@@ -1,19 +1,45 @@
 from __future__ import annotations
 
-from server.models import AccessCredential
-from server.modules.registry.service import visible_registry_request_paths
-from server.settings import get_settings
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from server.models import AccessGrant, Exposure
+from server.modules.access.authn import AccessContext
+from server.modules.access.service import grant_allows_release
 
 
-def credential_can_read_registry_path(credential: AccessCredential, path: str) -> bool:
-    if not isinstance(path, str) or not path:
-        return False
-    allowed_paths = visible_registry_request_paths(credential.grant.release, get_settings().artifact_path)
-    if path in allowed_paths:
-        return True
+def require_any_scope(context: AccessContext, allowed_scopes: set[str]) -> bool:
+    return bool(context.scopes.intersection(allowed_scopes))
 
-    release = credential.grant.release
-    skill_version = release.skill_version
-    skill = skill_version.skill
-    namespace = skill.namespace
-    return path.startswith(f'/registry/skills/{namespace.slug}/{skill.slug}/{skill_version.version}/')
+
+def can_access_release(db: Session, *, context: AccessContext, release_id: int) -> bool:
+    credential = context.credential
+    if credential.grant_id is not None:
+        return grant_allows_release(db, grant_id=credential.grant_id, release_id=release_id)
+
+    exposures = db.scalars(
+        select(Exposure)
+        .where(Exposure.release_id == release_id)
+        .where(Exposure.state == "active")
+        .where(Exposure.install_mode == "enabled")
+    ).all()
+
+    principal_id = context.principal.id if context.principal is not None else None
+    for exposure in exposures:
+        if exposure.audience_type == "public":
+            return True
+        if exposure.audience_type == "authenticated" and context.user is not None:
+            return True
+        if exposure.audience_type == "private" and principal_id is not None:
+            if exposure.requested_by_principal_id == principal_id:
+                return True
+        if exposure.audience_type == "grant" and principal_id is not None:
+            grants = db.scalars(
+                select(AccessGrant)
+                .where(AccessGrant.exposure_id == exposure.id)
+                .where(AccessGrant.state == "active")
+            ).all()
+            for grant in grants:
+                if grant.subject_ref == f"principal:{principal_id}":
+                    return True
+    return False

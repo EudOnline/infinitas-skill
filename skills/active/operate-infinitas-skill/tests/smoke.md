@@ -2,12 +2,11 @@
 
 Scenario:
 
-The user says: "I have an OpenClaw prototype in `~/.openclaw/workspace/skills/demo-skill`. Import it into this repo, get it ready for review, publish a stable version, then tell another agent how to install it."
+The user says: "Create a new private skill entry, author it as a draft, turn it into a release, expose it publicly after review, then tell another agent which hosted endpoints to use."
 
 Expected behavior:
 
-- identify the four repository states before choosing commands
-- use `scripts/import-openclaw-skill.sh` for the prototype ingest
-- use `scripts/check-skill.sh` plus the review flow before release
-- use `scripts/publish-skill.sh` to create the immutable release
-- instruct the second agent to use `scripts/pull-skill.sh`, not a direct copy from `skills/incubating/` or `skills/active/`
+- identify the private-first lifecycle stages before choosing commands
+- use `scripts/registryctl.py` or hosted API endpoints instead of removed publish/promotion scripts
+- require public exposure review before calling the release public
+- point the second agent at `/api/v1/install/*` or `/registry/*`, not source folders

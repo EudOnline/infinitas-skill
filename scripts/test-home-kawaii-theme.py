@@ -65,7 +65,7 @@ def scenario_home_uses_kawaii_theme_with_live_context():
             ('user trigger exposes controlled panel', 'aria-controls="user-panel"' in html),
             ('status chip mode present', '🔒 模式' in html),
             ('status chip sync present', '📅 同步' in html),
-            ('status chip queue present', '⚡ 队列' in html),
+            ('status chip flow present', '⚡ 流转' in html),
         ]
         if '/v2' in html:
             fail('home page should not reference /v2 after kawaii cutover')
@@ -255,8 +255,8 @@ def scenario_home_english_copy_stays_english_and_preserves_lang_routes():
 
         html = response.text
         required_strings = [
-            '<title>infinitas hosted registry</title>',
-            'content="infinitas - a private Agent skill registry for discovery, trial, and archiving, with plug-and-play skills"',
+            '<title>infinitas private skill library</title>',
+            'content="infinitas - a private-first agent skill library for authoring, release, sharing, and install"',
             'Quick start',
             'Tap to copy and paste into your Agent chat',
             'Authentication',
@@ -284,9 +284,9 @@ def scenario_home_english_copy_stays_english_and_preserves_lang_routes():
 
         required_href_markers = [
             'href="/?lang=en"',
-            'data-auth-target="/submissions?lang=en"',
-            'data-auth-target="/reviews?lang=en"',
-            'data-auth-target="/jobs?lang=en"',
+            'data-auth-target="/skills?lang=en"',
+            'data-auth-target="/access/tokens?lang=en"',
+            'data-auth-target="/review-cases?lang=en"',
         ]
         missing_hrefs = [marker for marker in required_href_markers if marker not in html]
         if missing_hrefs:
@@ -323,8 +323,8 @@ def scenario_home_chinese_copy_stays_chinese_in_primary_chrome():
             '私人技能工作台',
             '复制任务提示',
             '打开维护台',
-            '<title>infinitas 托管技能仓库</title>',
-            'content="infinitas - 小二的私人 Agent 技能库，发现、试用、归档，技能即插即用"',
+            '<title>infinitas 私人技能库</title>',
+            'content="infinitas - 小二的私人技能库，覆盖技能创作、发布、分享与安装"',
             'aria-label="主导航"',
         ]
         missing_strings = [marker for marker in required_strings if marker not in html]
@@ -546,9 +546,9 @@ def scenario_home_auth_gate_opens_before_console_navigation():
             'id="auth-modal"',
             'id="auth-form"',
             'data-auth-required="true"',
-            'data-auth-target="/submissions?lang=zh"',
-            'data-auth-target="/reviews?lang=zh"',
-            'data-auth-target="/jobs?lang=zh"',
+            'data-auth-target="/skills?lang=zh"',
+            'data-auth-target="/access/tokens?lang=zh"',
+            'data-auth-target="/review-cases?lang=zh"',
             'let pendingAuthTarget = null;',
             "openAuthModal(targetHref = null)",
             "document.querySelectorAll('[data-auth-required=\"true\"]').forEach",

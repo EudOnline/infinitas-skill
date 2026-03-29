@@ -1,0 +1,244 @@
+{% extends "layout-kawaii.html" %}
+{% from "macros.html" import console_table_shell %}
+
+{% block body %}
+<section class="kawaii-card animate-in lifecycle-overview">
+  <div class="section-kicker">{{ '生命周期总览' if page_language == 'zh' else 'Lifecycle overview' }}</div>
+  <div class="lifecycle-overview__grid">
+    <article>
+      <h2>{{ '先写，再封版，再发布' if page_language == 'zh' else 'Draft, seal, then release' }}</h2>
+      <p>{{ '技能、草稿、发布、分享和访问令牌已经拆成独立领域对象，后续扩展审核、授权和安装规则时不必再修改同一张大表。' if page_language == 'zh' else 'Skills, drafts, releases, sharing, and access tokens now live as separate domain objects so review, authorization, and install rules can evolve without reshaping one giant table.' }}</p>
+    </article>
+    <article>
+      <h2>{{ '查看访问与审核' if page_language == 'zh' else 'Open access and review' }}</h2>
+      <p>{{ '令牌和 grant 放在访问页，公开暴露的审核单放在审核页。' if page_language == 'zh' else 'Tokens and grants live on the access page, while public exposure review cases live in the review inbox.' }}</p>
+      <div class="lifecycle-actions">
+        <a class="kawaii-button kawaii-button--primary" href="{{ access_href }}">{{ '访问页' if page_language == 'zh' else 'Access' }}</a>
+        <a class="kawaii-button kawaii-button--ghost" href="{{ review_cases_href }}">{{ '审核页' if page_language == 'zh' else 'Review' }}</a>
+      </div>
+    </article>
+  </div>
+</section>
+
+{% call console_table_shell(
+  '技能' if page_language == 'zh' else 'Skills',
+  '还没有技能。' if page_language == 'zh' else 'No skills yet.',
+  skill_items,
+  page_language
+) %}
+<table id="skills">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>{{ '技能' if page_language == 'zh' else 'Skill' }}</th>
+      <th>{{ '命名空间' if page_language == 'zh' else 'Namespace' }}</th>
+      <th>{{ '草稿 / 版本 / 发布' if page_language == 'zh' else 'Drafts / Versions / Releases' }}</th>
+      <th>{{ '默认可见性' if page_language == 'zh' else 'Default visibility' }}</th>
+      <th>{{ '更新时间' if page_language == 'zh' else 'Updated' }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in skill_items %}
+    <tr>
+      <td>{{ item.id }}</td>
+      <td>
+        <a class="entity-link" href="{{ item.detail_href }}">{{ item.display_name }}</a>
+        <div class="table-note">{{ item.summary }}</div>
+      </td>
+      <td>{{ item.namespace }}</td>
+      <td>{{ item.draft_count }} / {{ item.version_count }} / {{ item.release_count }}</td>
+      <td>{{ item.default_visibility_profile }}</td>
+      <td>{{ item.updated_at }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endcall %}
+
+{% call console_table_shell(
+  '草稿' if page_language == 'zh' else 'Drafts',
+  '还没有草稿。' if page_language == 'zh' else 'No drafts yet.',
+  draft_items,
+  page_language
+) %}
+<table id="drafts">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>{{ '技能' if page_language == 'zh' else 'Skill' }}</th>
+      <th>{{ '状态' if page_language == 'zh' else 'State' }}</th>
+      <th>{{ '入口文件' if page_language == 'zh' else 'Entrypoint' }}</th>
+      <th>{{ '内容引用' if page_language == 'zh' else 'Content ref' }}</th>
+      <th>{{ '更新时间' if page_language == 'zh' else 'Updated' }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in draft_items %}
+    <tr>
+      <td><a class="entity-link" href="{{ item.detail_href }}">{{ item.id }}</a></td>
+      <td>{{ item.skill_name }}</td>
+      <td>{{ item.state }}</td>
+      <td>{{ item.entrypoint }}</td>
+      <td><code class="table-code">{{ item.content_ref }}</code></td>
+      <td>{{ item.updated_at }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endcall %}
+
+{% call console_table_shell(
+  '发布' if page_language == 'zh' else 'Releases',
+  '还没有发布。' if page_language == 'zh' else 'No releases yet.',
+  release_items,
+  page_language
+) %}
+<table id="releases">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>{{ '技能' if page_language == 'zh' else 'Skill' }}</th>
+      <th>{{ '版本' if page_language == 'zh' else 'Version' }}</th>
+      <th>{{ '状态' if page_language == 'zh' else 'State' }}</th>
+      <th>{{ '分享出口' if page_language == 'zh' else 'Share exits' }}</th>
+      <th>{{ '操作' if page_language == 'zh' else 'Actions' }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in release_items %}
+    <tr>
+      <td>{{ item.id }}</td>
+      <td>{{ item.skill_name }}</td>
+      <td>{{ item.version }}</td>
+      <td>{{ item.state }}</td>
+      <td>{{ item.exposure_count }}</td>
+      <td>
+        <div class="table-actions">
+          <a class="entity-link" href="{{ item.detail_href }}">{{ '详情' if page_language == 'zh' else 'Detail' }}</a>
+          <a class="entity-link" href="{{ item.share_href }}">{{ '分享' if page_language == 'zh' else 'Share' }}</a>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endcall %}
+
+{% call console_table_shell(
+  '分享' if page_language == 'zh' else 'Share',
+  '还没有可见性出口。' if page_language == 'zh' else 'No share entries yet.',
+  share_items,
+  page_language
+) %}
+<table id="share">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>{{ '技能' if page_language == 'zh' else 'Skill' }}</th>
+      <th>{{ 'Audience' if page_language == 'en' else '可见范围' }}</th>
+      <th>{{ '列出 / 安装' if page_language == 'zh' else 'Listing / Install' }}</th>
+      <th>{{ '审核' if page_language == 'zh' else 'Review' }}</th>
+      <th>{{ '状态' if page_language == 'zh' else 'State' }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in share_items %}
+    <tr>
+      <td><a class="entity-link" href="{{ item.share_href }}">#{{ item.id }}</a></td>
+      <td>{{ item.skill_name }}</td>
+      <td>{{ item.audience }}</td>
+      <td>{{ item.listing_mode }} / {{ item.install_mode }}</td>
+      <td>{{ item.review_gate }} / {{ item.review_case_state }}</td>
+      <td>{{ item.state }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endcall %}
+
+{% call console_table_shell(
+  '审核' if page_language == 'zh' else 'Review',
+  '还没有审核单。' if page_language == 'zh' else 'No review cases yet.',
+  review_items,
+  page_language
+) %}
+<table id="review">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>{{ '技能' if page_language == 'zh' else 'Skill' }}</th>
+      <th>{{ 'Audience' if page_language == 'en' else '可见范围' }}</th>
+      <th>{{ '模式' if page_language == 'zh' else 'Mode' }}</th>
+      <th>{{ '状态' if page_language == 'zh' else 'State' }}</th>
+      <th>{{ '打开时间' if page_language == 'zh' else 'Opened' }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in review_items %}
+    <tr>
+      <td><a class="entity-link" href="{{ item.review_href }}">#{{ item.id }}</a></td>
+      <td>{{ item.skill_name }}</td>
+      <td>{{ item.audience }}</td>
+      <td>{{ item.mode }}</td>
+      <td>{{ item.state }}</td>
+      <td>{{ item.opened_at }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endcall %}
+
+<style>
+  .lifecycle-overview {
+    margin-bottom: 1.5rem;
+  }
+
+  .lifecycle-overview__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+  }
+
+  .lifecycle-overview__grid h2 {
+    margin: 0 0 0.4rem;
+    font-size: 1.05rem;
+  }
+
+  .lifecycle-overview__grid p {
+    margin: 0;
+    color: var(--kawaii-ink-soft);
+  }
+
+  .lifecycle-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .entity-link {
+    font-weight: 700;
+    color: var(--kawaii-primary-deep);
+    text-decoration: none;
+  }
+
+  .table-note {
+    margin-top: 0.35rem;
+    color: var(--kawaii-ink-soft);
+  }
+
+  .table-code {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    max-width: 28rem;
+  }
+
+  .table-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+</style>
+{% endblock %}

@@ -2,12 +2,11 @@
 
 Scenario:
 
-"A new registry skill is ready for other agents. Validate it, move it through review and promotion, create immutable release artifacts locally, and refresh compatibility evidence without pushing anything to the remote yet."
+"A new private-first skill is ready for other agents. Seal the draft, materialize a release, expose it publicly, and complete the review approval needed before others can discover it."
 
 Expected guidance:
 
-- run `scripts/check-skill.sh`
-- request or record review before promotion
-- use `scripts/promote-skill.sh` only after approval
-- use `scripts/release-skill.sh ... --create-tag --write-provenance`
-- rebuild catalogs and optionally run `python3 scripts/record-verified-support.py`
+- use `scripts/registryctl.py` or hosted API endpoints
+- seal the draft before creating the release
+- create the public exposure and approve its review case
+- confirm the release has immutable manifest, bundle, provenance, and signature artifacts

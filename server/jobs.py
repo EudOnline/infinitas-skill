@@ -5,7 +5,6 @@ import json
 from sqlalchemy.orm import Session
 
 from server.models import Job, User, utcnow
-from server.schemas import JobView
 
 
 def _iso(value) -> str | None:
@@ -22,6 +21,14 @@ def load_job_payload(job: Job) -> dict:
     return payload if isinstance(payload, dict) else {}
 
 
+def _optional_positive_int(value: object) -> int | None:
+    try:
+        candidate = int(value or 0)
+    except (TypeError, ValueError):
+        return None
+    return candidate if candidate > 0 else None
+
+
 def append_job_log(job: Job, *lines: str):
     existing = job.log or ''
     parts = [existing.rstrip()] if existing.strip() else []
@@ -32,53 +39,32 @@ def append_job_log(job: Job, *lines: str):
     job.log = '\n'.join(parts).strip() + ('\n' if parts else '')
 
 
-def serialize_job(job: Job) -> JobView:
-    return JobView(
-        id=job.id,
-        kind=job.kind,
-        status=job.status,
-        submission_id=job.submission_id,
-        requested_by=job.requested_by.username if job.requested_by else None,
-        note=job.note or '',
-        log=job.log or '',
-        error_message=job.error_message or '',
-        created_at=_iso(job.created_at) or '',
-        updated_at=_iso(job.updated_at) or '',
-        started_at=_iso(job.started_at),
-        finished_at=_iso(job.finished_at),
-    )
-
-
 def enqueue_job(
     db: Session,
     *,
     kind: str,
     payload: dict | None,
     requested_by: User,
-    submission_id: int | None = None,
+    release_id: int | None = None,
     note: str = '',
+    commit: bool = True,
 ) -> Job:
+    normalized_payload = payload or {}
     job = Job(
         kind=kind,
         status='queued',
-        payload_json=json.dumps(payload or {}, ensure_ascii=False),
-        submission_id=submission_id,
+        payload_json=json.dumps(normalized_payload, ensure_ascii=False),
+        release_id=release_id or _optional_positive_int(normalized_payload.get('release_id')),
         requested_by_user_id=requested_by.id,
         note=note or '',
     )
-    append_job_log(job, f'queued job {kind}', f'payload={json.dumps(payload or {}, ensure_ascii=False, sort_keys=True)}')
+    append_job_log(job, f'queued job {kind}', f'payload={json.dumps(normalized_payload, ensure_ascii=False, sort_keys=True)}')
     db.add(job)
-    db.commit()
-    db.refresh(job)
-    return job
-
-
-def get_job_or_404(db: Session, job_id: int) -> Job:
-    job = db.query(Job).filter(Job.id == job_id).one_or_none()
-    if job is None:
-        from fastapi import HTTPException
-
-        raise HTTPException(status_code=404, detail='job not found')
+    if commit:
+        db.commit()
+        db.refresh(job)
+    else:
+        db.flush()
     return job
 
 

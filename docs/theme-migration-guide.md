@@ -8,7 +8,7 @@
 
 - 首页模板：`server/templates/index-kawaii.html`
 - 通用壳：`server/templates/layout-kawaii.html`
-- 控制台页：`/submissions`、`/reviews`、`/jobs`
+- 控制台页：`/skills`、`/access/tokens`、`/review-cases`
 - 登录页：`server/templates/login-kawaii.html`
 - `/v2`：保留为重定向入口，返回 `307 -> /`
 

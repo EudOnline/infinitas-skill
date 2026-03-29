@@ -1,0 +1,141 @@
+{% extends "layout-kawaii.html" %}
+{% from "macros.html" import console_table_shell %}
+
+{% block body %}
+<section class="kawaii-card animate-in detail-shell">
+  <div class="section-kicker">{{ '发布详情' if page_language == 'zh' else 'Release detail' }}</div>
+  <div class="detail-grid">
+    <article>
+      <h2>{{ release.skill_name }} {{ release.version }}</h2>
+      <p>{{ '发布是不可变交付物，后续分享只是在 release 外侧叠加 audience 策略。' if page_language == 'zh' else 'A release is immutable; later sharing only adds audience policies around the release.' }}</p>
+      <div class="detail-actions">
+        <a class="entity-link" href="{{ release.skill_href }}">{{ '查看技能' if page_language == 'zh' else 'Open skill' }}</a>
+        <a class="entity-link" href="{{ release.share_href }}">{{ '分享设置' if page_language == 'zh' else 'Share settings' }}</a>
+      </div>
+    </article>
+    <dl class="detail-meta">
+      <div><dt>ID</dt><dd>#{{ release.id }}</dd></div>
+      <div><dt>{{ '状态' if page_language == 'zh' else 'State' }}</dt><dd>{{ release.state }}</dd></div>
+      <div><dt>{{ '格式版本' if page_language == 'zh' else 'Format version' }}</dt><dd>{{ release.format_version }}</dd></div>
+      <div><dt>{{ '就绪时间' if page_language == 'zh' else 'Ready at' }}</dt><dd>{{ release.ready_at }}</dd></div>
+      <div><dt>{{ '创建时间' if page_language == 'zh' else 'Created at' }}</dt><dd>{{ release.created_at }}</dd></div>
+    </dl>
+  </div>
+</section>
+
+{% call console_table_shell(
+  '产物' if page_language == 'zh' else 'Artifacts',
+  '还没有产物。' if page_language == 'zh' else 'No artifacts yet.',
+  artifact_rows,
+  page_language
+) %}
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>{{ '类型' if page_language == 'zh' else 'Kind' }}</th>
+      <th>SHA256</th>
+      <th>{{ '大小' if page_language == 'zh' else 'Size' }}</th>
+      <th>{{ '存储位置' if page_language == 'zh' else 'Storage URI' }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in artifact_rows %}
+    <tr>
+      <td>{{ item.id }}</td>
+      <td>{{ item.kind }}</td>
+      <td><code class="table-code">{{ item.sha256 }}</code></td>
+      <td>{{ item.size_bytes }}</td>
+      <td><code class="table-code">{{ item.storage_uri }}</code></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endcall %}
+
+{% call console_table_shell(
+  '分享出口' if page_language == 'zh' else 'Share exits',
+  '还没有分享出口。' if page_language == 'zh' else 'No share exits.',
+  exposure_rows,
+  page_language
+) %}
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>{{ 'Audience' if page_language == 'en' else '可见范围' }}</th>
+      <th>{{ '状态' if page_language == 'zh' else 'State' }}</th>
+      <th>{{ '列出策略' if page_language == 'zh' else 'Listing' }}</th>
+      <th>{{ '跳转' if page_language == 'zh' else 'Open' }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in exposure_rows %}
+    <tr>
+      <td>#{{ item.id }}</td>
+      <td>{{ item.audience }}</td>
+      <td>{{ item.state }}</td>
+      <td>{{ item.listing_mode }}</td>
+      <td><a class="entity-link" href="{{ item.share_href }}">{{ '分享页' if page_language == 'zh' else 'Share page' }}</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endcall %}
+
+<style>
+  .detail-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.85fr);
+    gap: 1rem;
+  }
+
+  .detail-grid p {
+    margin: 0.4rem 0 0;
+    color: var(--kawaii-ink-soft);
+  }
+
+  .detail-meta {
+    display: grid;
+    gap: 0.85rem;
+    margin: 0;
+  }
+
+  .detail-meta dt {
+    font-size: 0.82rem;
+    color: var(--kawaii-ink-muted);
+  }
+
+  .detail-meta dd {
+    margin: 0.2rem 0 0;
+    font-weight: 700;
+  }
+
+  .detail-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+  }
+
+  .entity-link {
+    color: var(--kawaii-primary-deep);
+    text-decoration: none;
+    font-weight: 700;
+  }
+
+  .table-code {
+    display: inline-block;
+    max-width: 24rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 860px) {
+    .detail-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}

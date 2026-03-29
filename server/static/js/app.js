@@ -9,6 +9,13 @@ function currentPageLanguage() {
   return lang.startsWith('en') ? 'en' : 'zh';
 }
 
+function currentSearchScope() {
+  if (document.body?.classList.contains('page-console')) {
+    return 'me';
+  }
+  return 'public';
+}
+
 function uiText(key, fallback) {
   const value = APP_UI[key];
   return typeof value === 'string' && value ? value : fallback;
@@ -280,7 +287,7 @@ class SearchManager {
 
     try {
       const response = await fetch(
-        `/api/search?q=${encodeURIComponent(query)}&lang=${encodeURIComponent(currentPageLanguage())}`,
+        `/api/search?q=${encodeURIComponent(query)}&lang=${encodeURIComponent(currentPageLanguage())}&scope=${encodeURIComponent(currentSearchScope())}`,
         { signal: this.abortController.signal }
       );
 
@@ -310,7 +317,7 @@ class SearchManager {
 
       if (err.code === 'SEARCH_AUTH_REQUIRED') {
         this.close();
-        toast.info(uiText('search_auth_required', '请先登录后搜索私有目录'));
+        toast.info(uiText('search_auth_required', '请先登录后搜索私人技能库'));
         if (typeof window.openAuthModal === 'function') {
           window.openAuthModal();
         }

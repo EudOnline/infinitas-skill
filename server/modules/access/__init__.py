@@ -1,6 +1,17 @@
-from server.modules.access.models import AccessCredential, AccessGrant
+from server.modules.access.models import (
+    AccessGrant,
+    Credential,
+    Principal,
+    ServicePrincipal,
+    Team,
+    TeamMembership,
+)
 
 __all__ = [
-    'AccessCredential',
-    'AccessGrant',
+    "Principal",
+    "Team",
+    "TeamMembership",
+    "ServicePrincipal",
+    "AccessGrant",
+    "Credential",
 ]

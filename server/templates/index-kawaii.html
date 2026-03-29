@@ -70,6 +70,7 @@
         </h1>
         
         <p class="hero-desc">{{ hero_body }} {{ hero_support }}</p>
+        <p class="hero-note">{{ '私人技能库采用 private-first 结构：私人可直接流转，公开必须走审核。' if page_language == 'zh' else 'This private skill library is private-first: private paths flow directly, while public paths must pass review.' }}</p>
         
         <button class="hero-cta kawaii-button kawaii-button--primary" type="button" data-copy="{{ hero_primary_copy }}">
           <span>📋</span>
@@ -111,7 +112,7 @@
       <h3 class="auth-modal-title" id="auth-modal-title">🔑 {{ ui.auth_modal_title }}</h3>
       <button class="auth-modal-close" id="auth-modal-close" type="button" aria-label="{{ ui.auth_close }}">✕</button>
     </div>
-    <form id="auth-form" class="auth-form" novalidate>
+    <form id="auth-form">
       <div class="auth-modal-body">
         <p class="auth-modal-desc">{{ ui.auth_modal_desc }}</p>
         <div class="token-input-wrapper">
@@ -274,6 +275,13 @@
     line-height: 1.6;
     max-width: 26rem;
   }
+
+  .hero-note {
+    margin: -0.45rem 0 1.2rem;
+    font-size: 0.86rem;
+    color: var(--kawaii-ink-muted);
+    max-width: 28rem;
+  }
   
   .hero-cta {
     min-height: 2.75rem;
@@ -314,9 +322,6 @@
   }
   
   .quick-pill {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     min-height: 2.75rem;
     padding: 0.5rem 0.9rem;
     border-radius: var(--radius-full);
@@ -584,9 +589,6 @@
   }
   
   .skill-copy {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     width: 100%;
     min-height: 2.75rem;
     padding: 0.5rem;
@@ -689,8 +691,7 @@
     right: max(1rem, calc((100vw - 1200px) / 2));
     display: flex;
     justify-content: flex-end;
-    margin-bottom: 0;
-    z-index: 110;
+    z-index: 260;
   }
 
   .user-trigger {
@@ -923,9 +924,8 @@
   @media (max-width: 720px) {
     .user-trigger-wrapper {
       top: auto;
-      right: max(0.75rem, env(safe-area-inset-right));
       bottom: max(1rem, env(safe-area-inset-bottom));
-      margin-bottom: 0;
+      right: 1rem;
     }
     .user-trigger {
       width: 2.75rem;
@@ -936,7 +936,7 @@
       top: auto;
       bottom: calc(100% + 0.5rem);
       right: 0;
-      width: min(260px, calc(100vw - 1.5rem));
+      width: min(260px, calc(100vw - 2rem));
     }
   }
 
@@ -1042,7 +1042,7 @@
 
   .token-input {
     width: 100%;
-    padding: 0.875rem 3.75rem 0.875rem 1rem;
+    padding: 0.875rem 2.75rem 0.875rem 1rem;
     border: 2px solid var(--kawaii-line);
     border-radius: var(--radius-md);
     background: var(--kawaii-panel-soft);
@@ -1063,14 +1063,12 @@
     position: absolute;
     right: 0.75rem;
     top: 50%;
-    transform: translateY(-50%);
     width: 2.75rem;
     height: 2.75rem;
-    display: grid;
-    place-items: center;
+    transform: translateY(-50%);
     background: transparent;
     border: none;
-    padding: 0.35rem;
+    padding: 0;
     cursor: pointer;
     font-size: 1rem;
     opacity: 0.6;
@@ -1186,8 +1184,6 @@
   /* 背景选项样式 - 用户面板内使用 */
   .bg-option {
     aspect-ratio: 1;
-    min-width: 2.75rem;
-    min-height: 2.75rem;
     border-radius: var(--radius-md);
     border: 2px solid transparent;
     background-size: cover;
@@ -1946,6 +1942,7 @@
     if (cancelAuthBtn) cancelAuthBtn.addEventListener('click', closeAuthModal);
     if (authBackdrop) authBackdrop.addEventListener('click', closeAuthModal);
     
+    // 模态框内登录按钮
     const authForm = document.getElementById('auth-form');
     if (authForm) {
       authForm.addEventListener('submit', (event) => {

@@ -664,9 +664,9 @@ def scenario_auth_modal_restores_focus_after_close():
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
-def scenario_private_search_prompts_for_auth():
-    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-home-private-search-runtime-'))
-    session = f'homeprivate{os.getpid()}'
+def scenario_legacy_registry_reader_env_does_not_gate_home_search():
+    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-home-legacy-reader-env-'))
+    session = f'homelegacy{os.getpid()}'
     try:
         env = configure_private_env(tmpdir)
         sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
@@ -678,7 +678,7 @@ def scenario_private_search_prompts_for_auth():
                 fail('hosted app did not expose a base URL')
 
             run_playwright(session, 'open', f'{server.base_url}/?lang=en')
-            private_search = wait_for_eval(
+            public_search = wait_for_eval(
                 session,
                 (
                     'async () => {'
@@ -686,18 +686,25 @@ def scenario_private_search_prompts_for_auth():
                     'input.value = "install";'
                     'input.dispatchEvent(new Event("input", { bubbles: true }));'
                     'await new Promise((resolve) => setTimeout(resolve, 500));'
+                    'const trigger = document.querySelector("#search-dropdown .search-result");'
                     'return {'
                     '  modalHidden: document.getElementById("auth-modal")?.hidden ?? null,'
                     '  bodyOverflow: document.body.style.overflow || "",'
-                    '  dropdownHidden: document.getElementById("search-dropdown")?.hidden ?? null'
+                    '  dropdownHidden: document.getElementById("search-dropdown")?.hidden ?? null,'
+                    '  resultTag: trigger?.tagName || null,'
+                    '  resultCopy: trigger?.dataset.copy || null'
                     '};'
                     '}'
                 ),
-                lambda result: result.get('modalHidden') is False,
-                'private search auth prompt',
+                lambda result: result.get('dropdownHidden') is False and result.get('resultTag') == 'BUTTON',
+                'legacy registry reader env should not gate home search',
             )
-            if private_search.get('bodyOverflow') != 'hidden':
-                fail(f'expected private search to lock scroll while auth modal is open, got {private_search}')
+            if public_search.get('modalHidden') is False:
+                fail(f'expected legacy registry reader env to stop triggering auth prompts on home search, got {public_search}')
+            if public_search.get('bodyOverflow'):
+                fail(f'expected home search to keep body scroll unlocked, got {public_search}')
+            if not (public_search.get('resultCopy') or '').startswith('scripts/inspect-skill.sh '):
+                fail(f'expected legacy registry reader env to preserve home inspect actions, got {public_search}')
     finally:
         stop_playwright_session(session)
         shutil.rmtree(tmpdir, ignore_errors=True)
@@ -716,7 +723,7 @@ def scenario_protected_console_route_redirects_into_auth_modal():
             if not server.base_url:
                 fail('hosted app did not expose a base URL')
 
-            run_playwright(session, 'open', f'{server.base_url}/submissions?lang=en')
+            run_playwright(session, 'open', f'{server.base_url}/skills?lang=en')
             protected_redirect = wait_for_eval(
                 session,
                 (
@@ -744,7 +751,7 @@ def scenario_console_search_reauth_uses_shared_modal():
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-console-shared-auth-runtime-'))
     session = f'consoleauth{os.getpid()}'
     try:
-        env = configure_private_env(tmpdir)
+        env = configure_env(tmpdir)
         sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
 
         stop_playwright_session(session)
@@ -774,7 +781,7 @@ def scenario_console_search_reauth_uses_shared_modal():
             if login_state.get('ok') is not True or login_state.get('success') is not True:
                 fail(f'expected browser login bootstrap to succeed before console audit, got {login_state}')
 
-            run_playwright(session, 'open', f'{server.base_url}/submissions?lang=en')
+            run_playwright(session, 'open', f'{server.base_url}/skills?lang=en')
             reauth_state = wait_for_eval(
                 session,
                 (
@@ -817,7 +824,7 @@ def main():
     scenario_english_auth_errors_stay_english()
     scenario_home_english_runtime_ui_copy_stays_english()
     scenario_auth_modal_restores_focus_after_close()
-    scenario_private_search_prompts_for_auth()
+    scenario_legacy_registry_reader_env_does_not_gate_home_search()
     scenario_protected_console_route_redirects_into_auth_modal()
     scenario_console_search_reauth_uses_shared_modal()
     print('OK: home auth runtime checks passed')

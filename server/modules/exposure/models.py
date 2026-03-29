@@ -1,25 +1,28 @@
 from __future__ import annotations
 
-from datetime import datetime
-
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
 
 from server.models import Base, utcnow
-from server.modules.shared.enums import ExposureMode, ReviewRequirement
 
 
 class Exposure(Base):
-    __tablename__ = 'exposures'
-    __table_args__ = (
-        Index('ix_exposures_release_id_mode', 'release_id', 'mode'),
-    )
+    __tablename__ = "exposures"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    release_id: Mapped[int] = mapped_column(ForeignKey('releases.id'))
-    mode: Mapped[str] = mapped_column(String(32), default=ExposureMode.PRIVATE.value)
-    review_requirement: Mapped[str] = mapped_column(String(32), default=ReviewRequirement.NONE.value)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+    release_id: Mapped[int] = mapped_column(ForeignKey("releases.id"), index=True)
+    audience_type: Mapped[str] = mapped_column(String(32), default="private")
+    listing_mode: Mapped[str] = mapped_column(String(32), default="listed")
+    install_mode: Mapped[str] = mapped_column(String(32), default="enabled")
+    review_requirement: Mapped[str] = mapped_column(String(32), default="none")
+    state: Mapped[str] = mapped_column(String(32), default="draft")
+    requested_by_principal_id: Mapped[int | None] = mapped_column(ForeignKey("principals.id"), nullable=True)
+    policy_snapshot_json: Mapped[str] = mapped_column(Text, default="{}")
+    activated_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ended_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    release: Mapped['Release'] = relationship()
+    def __init__(self, **kwargs):
+        audience_type = kwargs.get("audience_type")
+        if kwargs.get("review_requirement") is None:
+            kwargs["review_requirement"] = "blocking" if audience_type == "public" else "none"
+        super().__init__(**kwargs)
