@@ -39,8 +39,10 @@ The current cutoff for removing maintainability-reset aliases is `2026-06-30`. A
 
 - `infinitas compatibility check-platform-contracts` is the maintained CLI path for platform contract freshness checks.
 - `infinitas install resolve-plan` and `infinitas install check-target` are the maintained CLI paths for install dependency planning.
+- `infinitas registry ...` is the maintained CLI path for hosted private-first registry control-plane actions.
 - `infinitas release check-state` is the maintained CLI path for release state checks.
 - `python3 scripts/check-platform-contracts.py ...` remains a compatibility shim during the migration window.
 - `python3 scripts/resolve-install-plan.py ...` and `python3 scripts/check-install-target.py ...` remain compatibility shims during the migration window.
+- `python3 scripts/registryctl.py ...` remains a compatibility shim during the migration window.
 - `python3 scripts/check-release-state.py ...` remains a compatibility shim during the migration window.
 - `scripts/release_lib.py`, `scripts/platform_contract_lib.py`, and `scripts/compatibility_policy_lib.py` remain temporary compatibility modules because other legacy scripts still import them.

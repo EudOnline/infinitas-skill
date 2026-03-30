@@ -3,6 +3,7 @@
 from infinitas_skill.cli.main import build_parser
 from infinitas_skill.compatibility.checks import build_platform_contracts_parser
 from infinitas_skill.install.planning import build_check_install_target_parser, build_resolve_install_plan_parser
+from infinitas_skill.registry.cli import build_registry_parser
 from infinitas_skill.release.state import build_release_check_state_parser
 
 GENERATED_CLI_REFERENCE_LAST_REVIEWED = '2026-03-30'
@@ -19,6 +20,7 @@ def render_cli_reference() -> str:
     ).format_help()
     install_resolve_plan_help = build_resolve_install_plan_parser(prog='infinitas install resolve-plan').format_help()
     install_check_target_help = build_check_install_target_parser(prog='infinitas install check-target').format_help()
+    registry_help = build_registry_parser(prog='infinitas registry').format_help()
     release_help = build_release_check_state_parser(prog='infinitas release check-state').format_help()
     lines = [
         '---',
@@ -54,6 +56,10 @@ def render_cli_reference() -> str:
         '## `infinitas install check-target`',
         '',
         _render_help_block(install_check_target_help).rstrip(),
+        '',
+        '## `infinitas registry`',
+        '',
+        _render_help_block(registry_help).rstrip(),
         '',
         '## `infinitas release check-state`',
         '',

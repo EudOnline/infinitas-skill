@@ -7,6 +7,11 @@ from infinitas_skill.install.planning import (
     run_check_install_target,
     run_resolve_install_plan,
 )
+from infinitas_skill.registry.cli import (
+    REGISTRY_PARSER_DESCRIPTION,
+    REGISTRY_TOP_LEVEL_HELP,
+    configure_registry_parser,
+)
 from infinitas_skill.release.state import configure_release_check_state_parser, run_release_check_state
 
 
@@ -96,6 +101,13 @@ def build_parser() -> argparse.ArgumentParser:
     install_sub = install.add_subparsers(dest='install_command')
     _build_install_resolve_plan_parser(install_sub)
     _build_install_check_target_parser(install_sub)
+
+    registry = top.add_parser(
+        'registry',
+        help=REGISTRY_TOP_LEVEL_HELP,
+        description=REGISTRY_PARSER_DESCRIPTION,
+    )
+    configure_registry_parser(registry)
 
     return parser
 

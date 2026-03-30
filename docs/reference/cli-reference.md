@@ -19,15 +19,16 @@ uv run python3 -m infinitas_skill.cli.reference
 ## Top-level CLI
 
 ```text
-usage: infinitas [-h] {compatibility,release,install} ...
+usage: infinitas [-h] {compatibility,release,install,registry} ...
 
 infinitas project CLI
 
 positional arguments:
-  {compatibility,release,install}
+  {compatibility,release,install,registry}
     compatibility       Compatibility tools
     release             Release tools
     install             Install planning tools
+    registry            Hosted registry control-plane tools
 
 options:
   -h, --help            show this help message and exit
@@ -99,6 +100,32 @@ options:
   --mode {install,sync}
                         Whether to check an install or sync flow
   --json                Print machine-readable plan output
+```
+
+## `infinitas registry`
+
+```text
+usage: infinitas registry [-h] [--base-url BASE_URL] [--token TOKEN]
+                          {skills,drafts,releases,exposures,grants,tokens,reviews}
+                          ...
+
+Hosted registry private-first control plane CLI
+
+positional arguments:
+  {skills,drafts,releases,exposures,grants,tokens,reviews}
+    skills              Manage private-first skill records
+    drafts              Manage editable drafts and immutable version sealing
+    releases            Create and inspect immutable releases
+    exposures           Manage audience exposure and share policy
+    grants              Inspect grant policy scaffolding for token-scoped
+                        access
+    tokens              Inspect token identity and release authorization
+    reviews             Manage review cases for public-facing exposures
+
+options:
+  -h, --help            show this help message and exit
+  --base-url BASE_URL   Hosted registry API base URL
+  --token TOKEN         Bearer token for hosted registry API
 ```
 
 ## `infinitas release check-state`
