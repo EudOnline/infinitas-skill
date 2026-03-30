@@ -57,6 +57,7 @@ uv run python3 scripts/test-infinitas-cli-policy.py
 uv run python3 scripts/test-infinitas-cli-registry.py
 uv run python3 scripts/test-infinitas-cli-server.py
 uv run python3 scripts/test-infinitas-cli-reference-docs.py
+uv run python3 scripts/test-doc-governance.py
 ```
 
 Local runs default to `INFINITAS_SERVER_ENV=development`. Use `INFINITAS_SERVER_ENV=test` when you need fixture-safe automated behavior.
