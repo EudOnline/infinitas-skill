@@ -1,3 +1,11 @@
+---
+audience: contributors, integrators, reviewers
+owner: repository maintainers
+source_of_truth: metadata schema reference
+last_reviewed: 2026-03-30
+status: maintained
+---
+
 # `_meta.json` Schema (MVP)
 
 Every registry-managed skill should include `_meta.json`.

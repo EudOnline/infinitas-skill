@@ -51,7 +51,7 @@ Every installable skill should declare at least:
 - `risk_level`
 - `distribution.installable`
 
-See `docs/metadata-schema.md` for the full shape.
+See `docs/reference/metadata-schema.md` for the full shape.
 
 ## Promotion bar
 
