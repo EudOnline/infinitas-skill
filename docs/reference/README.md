@@ -20,6 +20,7 @@ Reference docs describe exact behavior, contracts, schemas, and migration mappin
 
 - [Compatibility contract](compatibility-contract.md)
 - [Compatibility matrix](compatibility-matrix.md)
+- [Installed skill integrity](installed-skill-integrity.md)
 - [Metadata schema](metadata-schema.md)
 - [Distribution manifests](distribution-manifests.md)
 

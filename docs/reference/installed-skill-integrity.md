@@ -1,3 +1,11 @@
+---
+audience: contributors, integrators, operators
+owner: repository maintainers
+source_of_truth: installed skill integrity reference
+last_reviewed: 2026-03-30
+status: maintained
+---
+
 # Installed Skill Integrity
 
 Installed skills are not trusted just because they were once installed from a verified distribution manifest. Local runtime files can still drift afterward through manual edits, partial copy failures, or accidental overwrite.
@@ -180,7 +188,7 @@ If the install lacks those immutable references, the integrity state remains `un
 
 ## Steady-State Verification
 
-Repository steady-state verification guidance is documented in `docs/project-closeout.md`.
+Repository steady-state verification guidance is documented in `../project-closeout.md`.
 
 - CI installs the hosted-registry dependency set with `python3 -m pip install .` and runs `scripts/check-all.sh` with `INFINITAS_REQUIRE_HOSTED_E2E_TESTS=1`.
 - Minimal local environments may still skip `scripts/test-hosted-registry-e2e.py` until that same dependency set is installed explicitly.

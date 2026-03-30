@@ -603,7 +603,7 @@ def scenario_stale_mutation_guardrails_for_sync_and_upgrade():
 
 
 def scenario_installed_integrity_docs_exist():
-    guide = ROOT / 'docs' / 'installed-skill-integrity.md'
+    guide = ROOT / 'docs' / 'reference' / 'installed-skill-integrity.md'
     if not guide.exists():
         fail(f'missing installed integrity guide {guide}')
     content = guide.read_text(encoding='utf-8')
