@@ -10,11 +10,9 @@ test-full:
 	./scripts/check-all.sh
 
 lint-maintained:
-	mkdir -p tests/unit
 	uv run ruff check src/infinitas_skill server/ui server/app.py tests/integration tests/unit
 
 fmt-maintained:
-	mkdir -p tests/unit
 	uv run ruff format src/infinitas_skill server/ui server/app.py tests/integration tests/unit
 
 doctor:

@@ -13,6 +13,13 @@ make lint-maintained
 
 Raw `uv` and script commands remain available below as fallback detail.
 
+```bash
+uv sync
+uv run pytest tests/integration/test_cli_release_state.py tests/integration/test_cli_server_ops.py tests/integration/test_private_registry_ui.py -q
+uv run ruff check src/infinitas_skill server/ui server/app.py tests/integration tests/unit
+./scripts/check-all.sh
+```
+
 ## Focused maintained-surface checks
 
 Run the fast `pytest` tier first when touching the maintained CLI or hosted UI surfaces:

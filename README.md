@@ -66,6 +66,7 @@ Raw commands remain available as fallback detail:
 ```bash
 uv sync
 uv run pytest tests/integration/test_cli_release_state.py tests/integration/test_cli_server_ops.py tests/integration/test_private_registry_ui.py -q
+uv run ruff check src/infinitas_skill server/ui server/app.py tests/integration tests/unit
 uv run python3 scripts/test-platform-contracts.py
 uv run python3 scripts/test-install-manifest-compat.py
 uv run python3 scripts/test-release-invariants.py
