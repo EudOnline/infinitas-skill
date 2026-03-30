@@ -24,7 +24,7 @@ def assert_contains(path: Path, needle: str):
 
 def main():
     readme = ROOT / 'README.md'
-    policy_packs = ROOT / 'docs' / 'policy-packs.md'
+    policy_packs = ROOT / 'docs' / 'reference' / 'policy-packs.md'
 
     assert_contains(readme, 'policy_trace')
     assert_contains(readme, 'validation_errors')

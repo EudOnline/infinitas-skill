@@ -1,3 +1,11 @@
+---
+audience: contributors, integrators, reviewers
+owner: repository maintainers
+source_of_truth: policy pack reference
+last_reviewed: 2026-03-30
+status: maintained
+---
+
 # Policy Packs
 
 Policy packs let this repository compose reusable policy defaults without forcing every policy domain to live in a single top-level file.

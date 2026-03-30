@@ -18,8 +18,8 @@ def assert_contains(path: Path, needle: str):
 
 def main():
     assert_contains(ROOT / 'README.md', 'policy/policy-packs.json')
-    assert_contains(ROOT / 'docs' / 'policy-packs.md', 'repository-local files win over packs')
-    assert_contains(ROOT / 'docs' / 'policy-packs.md', 'policy/packs/')
+    assert_contains(ROOT / 'docs' / 'reference' / 'policy-packs.md', 'repository-local files win over packs')
+    assert_contains(ROOT / 'docs' / 'reference' / 'policy-packs.md', 'policy/packs/')
     assert_contains(ROOT / 'docs' / 'reference' / 'promotion-policy.md', 'policy/policy-packs.json')
     assert_contains(ROOT / 'docs' / 'ops' / 'signing-bootstrap.md', 'policy/policy-packs.json')
     assert_contains(ROOT / 'docs' / 'multi-registry.md', 'policy/policy-packs.json')
