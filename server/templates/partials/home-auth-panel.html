@@ -76,22 +76,22 @@
 </div>
 
 <script>
-  window.HOME_AUTH_SESSION_CONFIG = {{ {
-    'bgPresets': {
-      'light': [
-        {'id': 'sakura-street', 'name': ('樱花街道' if page_language == 'zh' else 'Sakura Street'), 'url': 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1920&q=80'},
-        {'id': 'anime-sky', 'name': ('动漫天空' if page_language == 'zh' else 'Anime Sky'), 'url': 'https://images.unsplash.com/photo-1560972550-aba3456b5564?w=1920&q=80'},
-        {'id': 'city-sunset', 'name': ('城市日落' if page_language == 'zh' else 'City Sunset'), 'url': 'https://images.unsplash.com/photo-1514565131-fce0801e5785?w=1920&q=80'},
-        {'id': 'cherry-blossom', 'name': ('樱花盛开' if page_language == 'zh' else 'Cherry Blossom'), 'url': 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=1920&q=80'},
-        {'id': 'gradient-pink', 'name': ('粉色渐变' if page_language == 'zh' else 'Pink Gradient'), 'url': None},
+  window.HOME_AUTH_SESSION_CONFIG = {
+    bgPresets: {
+      light: [
+        {id: 'sakura-street', name: '{{ "樱花街道" if page_language == "zh" else "Sakura Street" }}', url: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1920&q=80'},
+        {id: 'anime-sky', name: '{{ "动漫天空" if page_language == "zh" else "Anime Sky" }}', url: 'https://images.unsplash.com/photo-1560972550-aba3456b5564?w=1920&q=80'},
+        {id: 'city-sunset', name: '{{ "城市日落" if page_language == "zh" else "City Sunset" }}', url: 'https://images.unsplash.com/photo-1514565131-fce0801e5785?w=1920&q=80'},
+        {id: 'cherry-blossom', name: '{{ "樱花盛开" if page_language == "zh" else "Cherry Blossom" }}', url: 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=1920&q=80'},
+        {id: 'gradient-pink', name: '{{ "粉色渐变" if page_language == "zh" else "Pink Gradient" }}', url: null},
       ],
-      'dark': [
-        {'id': 'starry-night', 'name': ('星空夜景' if page_language == 'zh' else 'Starry Night'), 'url': 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1920&q=80'},
-        {'id': 'neon-city', 'name': ('霓虹城市' if page_language == 'zh' else 'Neon City'), 'url': 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1920&q=80'},
-        {'id': 'aurora', 'name': ('极光' if page_language == 'zh' else 'Aurora'), 'url': 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=1920&q=80'},
-        {'id': 'cyberpunk', 'name': ('赛博朋克' if page_language == 'zh' else 'Cyberpunk'), 'url': 'https://images.unsplash.com/photo-1555680202-c86f0e12f086?w=1920&q=80'},
-        {'id': 'gradient-dark', 'name': ('深色渐变' if page_language == 'zh' else 'Night Gradient'), 'url': None},
+      dark: [
+        {id: 'starry-night', name: '{{ "星空夜景" if page_language == "zh" else "Starry Night" }}', url: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1920&q=80'},
+        {id: 'neon-city', name: '{{ "霓虹城市" if page_language == "zh" else "Neon City" }}', url: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1920&q=80'},
+        {id: 'aurora', name: '{{ "极光" if page_language == "zh" else "Aurora" }}', url: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=1920&q=80'},
+        {id: 'cyberpunk', name: '{{ "赛博朋克" if page_language == "zh" else "Cyberpunk" }}', url: 'https://images.unsplash.com/photo-1555680202-c86f0e12f086?w=1920&q=80'},
+        {id: 'gradient-dark', name: '{{ "深色渐变" if page_language == "zh" else "Night Gradient" }}', url: null},
       ],
     },
-  } | tojson }};
+  };
 </script>

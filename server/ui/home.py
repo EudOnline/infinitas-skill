@@ -1,25 +1,65 @@
 from __future__ import annotations
 
-from typing import Any, Callable
+import json
+from pathlib import Path
+from typing import Any
 
 from fastapi import Request
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from server.models import AccessGrant, Credential, Exposure, Job, Release, ReviewCase, Skill, SkillDraft
+from server.ui.formatting import build_kawaii_ui_context, localized_stamp
+from server.ui.i18n import pick_lang, resolve_language, with_lang
 
 
-PickLang = Callable[[str, str, str], str]
-WithLang = Callable[[str, str], str]
-ResolveLanguage = Callable[[Request], str]
-LocalizedStamp = Callable[[str | None, str], str]
-BuildKawaiiUIContext = Callable[[Request, str, str, str], dict[str, Any]]
-CatalogPayload = Callable[[Any, str], dict[str, Any]]
-SkillIcon = Callable[[dict[str, Any]], str]
-SkillRating = Callable[[dict[str, Any]], float | None]
+def _read_json(path: Path) -> dict:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
 
 
-def build_site_nav(*, home: bool, lang: str, pick_lang: PickLang, with_lang: WithLang) -> list[dict[str, str]]:
+def _catalog_payload(settings: Any, name: str) -> dict:
+    for root in (settings.artifact_path, settings.root_dir / "catalog"):
+        payload = _read_json(root / name)
+        if payload:
+            return payload
+    return {}
+
+
+def _get_skill_icon(skill: dict[str, Any]) -> str:
+    name = skill.get("name", "").lower()
+    tags = [tag.lower() for tag in skill.get("tags", [])]
+
+    if "discovery" in tags or "search" in tags:
+        return "🔍"
+    if "install" in tags or "pull" in tags:
+        return "📦"
+    if "release" in tags or "publish" in tags:
+        return "🚀"
+    if "operate" in tags or "manage" in tags:
+        return "🔧"
+    if "security" in tags or "check" in tags:
+        return "🔒"
+    if "consume" in name:
+        return "🎯"
+    if "federation" in name:
+        return "🌐"
+    return "🎯"
+
+
+def _calculate_skill_rating(skill: dict[str, Any]) -> float | None:
+    review_state = skill.get("review_state", "")
+    approval_count = skill.get("approval_count", 0)
+
+    if review_state == "approved" and approval_count > 0:
+        base = 4.8 if approval_count >= 2 else 4.5
+        return round(base, 1)
+    return None
+
+
+def build_site_nav(*, home: bool, lang: str) -> list[dict[str, str]]:
     if home:
         return [
             {"href": "#start", "label": pick_lang(lang, "开始", "Home base")},
@@ -37,22 +77,9 @@ def build_site_nav(*, home: bool, lang: str, pick_lang: PickLang, with_lang: Wit
     ]
 
 
-def build_home_context(
-    *,
-    settings: Any,
-    db: Session,
-    request: Request,
-    resolve_language: ResolveLanguage,
-    pick_lang: PickLang,
-    with_lang: WithLang,
-    localized_stamp: LocalizedStamp,
-    build_kawaii_ui_context: BuildKawaiiUIContext,
-    catalog_payload: CatalogPayload,
-    get_skill_icon: SkillIcon,
-    calculate_skill_rating: SkillRating,
-) -> dict[str, Any]:
+def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[str, Any]:
     lang = resolve_language(request)
-    discovery_payload = catalog_payload(settings, "discovery-index.json")
+    discovery_payload = _catalog_payload(settings, "discovery-index.json")
     featured_skills = []
     for skill in (discovery_payload.get("skills") or [])[:3]:
         publisher = skill.get("publisher") or ""
@@ -72,11 +99,12 @@ def build_home_context(
                 "publisher": publisher,
                 "version": skill.get("version") or "active",
                 "summary": summary,
-                "icon": get_skill_icon(skill),
-                "rating": calculate_skill_rating(skill),
+                "icon": _get_skill_icon(skill),
+                "rating": _calculate_skill_rating(skill),
                 "inspect_command": f"scripts/inspect-skill.sh {qualified_name}" if qualified_name else "",
             }
         )
+
     total_skills = int(db.scalar(select(func.count()).select_from(Skill)) or 0)
     total_drafts = int(db.scalar(select(func.count()).select_from(SkillDraft)) or 0)
     total_releases = int(db.scalar(select(func.count()).select_from(Release)) or 0)
@@ -89,6 +117,7 @@ def build_home_context(
     )
     queued_jobs = int(db.scalar(select(func.count()).select_from(Job).where(Job.status == "queued")) or 0)
     running_jobs = int(db.scalar(select(func.count()).select_from(Job).where(Job.status == "running")) or 0)
+
     lifecycle_mode = pick_lang(lang, "私人优先", "Private-first")
     operating_states = [
         {
@@ -206,7 +235,7 @@ def build_home_context(
         "page_eyebrow": page_eyebrow,
         "page_kicker": lifecycle_mode,
         "page_mode": "home",
-        "nav_links": build_site_nav(home=True, lang=lang, pick_lang=pick_lang, with_lang=with_lang),
+        "nav_links": build_site_nav(home=True, lang=lang),
         "hero_title": pick_lang(lang, "交给 Agent", "Hand it to Agent"),
         "hero_emphasis": "",
         "hero_body": pick_lang(

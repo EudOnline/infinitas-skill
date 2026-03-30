@@ -6,17 +6,43 @@ import os
 import shutil
 import sys
 import tempfile
+import ast
 from pathlib import Path
 
 from sqlalchemy import select
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+APP_PATH = ROOT / "server" / "app.py"
+APP_LINE_BUDGET = 220
 
 
 def fail(message: str) -> None:
     print(f"FAIL: {message}", file=sys.stderr)
     raise SystemExit(1)
+
+
+def assert_ui_route_registration_boundary() -> None:
+    module = ast.parse(APP_PATH.read_text(encoding="utf-8"), filename=str(APP_PATH))
+    imported = False
+    delegated = False
+    for node in ast.walk(module):
+        if isinstance(node, ast.ImportFrom) and node.module == "server.ui.routes":
+            if any(alias.name == "register_ui_routes" for alias in node.names):
+                imported = True
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "register_ui_routes":
+            delegated = True
+    if not imported or not delegated:
+        fail("expected server.app to import and call register_ui_routes from server.ui.routes")
+
+
+def assert_app_size_budget() -> None:
+    line_count = len(APP_PATH.read_text(encoding="utf-8").splitlines())
+    if line_count > APP_LINE_BUDGET:
+        fail(
+            f"expected server/app.py to stay within {APP_LINE_BUDGET} lines after UI extraction, "
+            f"got {line_count}"
+        )
 
 
 def configure_env(tmpdir: Path) -> None:
@@ -223,6 +249,8 @@ def scenario_private_first_console_ui() -> None:
 
 
 def main() -> None:
+    assert_ui_route_registration_boundary()
+    assert_app_size_budget()
     scenario_private_first_console_ui()
     print("OK: private registry ui checks passed")
 

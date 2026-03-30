@@ -542,20 +542,27 @@ def scenario_home_auth_gate_opens_before_console_navigation():
             fail(f'expected GET / to return 200, got {response.status_code}: {response.text}')
 
         html = response.text
-        required_markers = [
+        required_html_markers = [
             'id="auth-modal"',
             'id="auth-form"',
             'data-auth-required="true"',
             'data-auth-target="/skills?lang=zh"',
             'data-auth-target="/access/tokens?lang=zh"',
             'data-auth-target="/review-cases?lang=zh"',
+        ]
+        missing_html = [marker for marker in required_html_markers if marker not in html]
+        if missing_html:
+            fail(f'home page is missing auth gate markers for console links: {", ".join(missing_html)}')
+
+        auth_js = (ROOT / 'server' / 'static' / 'js' / 'auth-session.js').read_text(encoding='utf-8')
+        required_js_markers = [
             'let pendingAuthTarget = null;',
             "openAuthModal(targetHref = null)",
             "document.querySelectorAll('[data-auth-required=\"true\"]').forEach",
         ]
-        missing = [marker for marker in required_markers if marker not in html]
-        if missing:
-            fail(f'home page is missing auth gate markers for console links: {", ".join(missing)}')
+        missing_js = [marker for marker in required_js_markers if marker not in auth_js]
+        if missing_js:
+            fail(f'auth session runtime is missing auth gate markers: {", ".join(missing_js)}')
         if 'id="login-btn" type="submit"' not in html and 'type="submit" id="login-btn"' not in html:
             fail('home page auth modal should expose a submit button for the token form')
     finally:
