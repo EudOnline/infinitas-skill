@@ -1,3 +1,11 @@
+---
+audience: contributors, integrators, reviewers
+owner: repository maintainers
+source_of_truth: compatibility matrix reference
+last_reviewed: 2026-03-30
+status: maintained
+---
+
 # Compatibility Matrix
 
 The registry now exports a machine-readable compatibility view at:
@@ -55,7 +63,7 @@ Verified support freshness is additive:
 - `stale`: evidence exists, but it is too old or predates a newer platform contract review
 - `unknown`: no evidence has been recorded for that declared platform yet
 
-When freshness turns `stale` or `unknown`, discovery can still show the skill, but release readiness now blocks until the evidence is refreshed. The maintenance loop for that workflow lives in [docs/ops/platform-drift-playbook.md](ops/platform-drift-playbook.md).
+When freshness turns `stale` or `unknown`, discovery can still show the skill, but release readiness now blocks until the evidence is refreshed. The maintenance loop for that workflow lives in [docs/ops/platform-drift-playbook.md](../ops/platform-drift-playbook.md).
 
 It does **not** guarantee:
 
@@ -63,4 +71,4 @@ It does **not** guarantee:
 - install-manifest compatibility across tool versions
 - migration support for persisted state
 
-Those concerns are defined separately in `docs/reference/compatibility-contract.md`.
+Those concerns are defined separately in `compatibility-contract.md`.

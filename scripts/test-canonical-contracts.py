@@ -114,7 +114,7 @@ def main():
             fail(f'expected profile platforms {expected_platforms!r}, got {seen_platforms!r}')
 
         readme = (repo / 'README.md').read_text(encoding='utf-8')
-        matrix = (repo / 'docs' / 'compatibility-matrix.md').read_text(encoding='utf-8')
+        matrix = (repo / 'docs' / 'reference' / 'compatibility-matrix.md').read_text(encoding='utf-8')
         contract_doc = (repo / 'docs' / 'reference' / 'compatibility-contract.md').read_text(encoding='utf-8')
         assert_contains(readme, 'declared support', 'README declared support terminology')
         assert_contains(readme, 'verified support', 'README verified support terminology')
