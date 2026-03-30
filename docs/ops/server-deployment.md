@@ -1,3 +1,11 @@
+---
+audience: operators and release maintainers
+owner: repository maintainers
+source_of_truth: hosted deployment runbook
+last_reviewed: 2026-03-30
+status: maintained
+---
+
 # Hosted Registry Server Deployment
 
 This runbook describes the smallest hosted deployment for the server-owned `infinitas-skill` registry.

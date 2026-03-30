@@ -1,3 +1,11 @@
+---
+audience: operators and release maintainers
+owner: repository maintainers
+source_of_truth: hosted backup and restore runbook
+last_reviewed: 2026-03-30
+status: maintained
+---
+
 # Hosted Registry Backup and Restore
 
 This runbook covers the minimum backup set for a hosted `infinitas-skill` server.
