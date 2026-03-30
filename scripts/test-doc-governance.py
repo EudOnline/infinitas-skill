@@ -9,21 +9,9 @@ REQUIRED_FIELDS = ['audience', 'owner', 'source_of_truth', 'last_reviewed', 'sta
 BAD_LINK_PATTERN = re.compile(r'/Users/.+?/\.worktrees/')
 LEGACY_ROOT_ALLOWLIST = {
     'README.md',
-    'dark-mode-audit.md',
-    'kawaii-color-research.md',
-    'kawaii-enhancement-plan.md',
-    'kawaii-theme-demo.md',
-    'kawaii-theme-design.md',
-    'layout-audit.md',
-    'layout-conflicts-fixed.md',
-    'override-fix-report.md',
     'project-closeout.md',
     'registry-snapshot-mirrors.md',
     'release-strategy.md',
-    'theme-migration-guide.md',
-    'theme-preview.md',
-    'ui-ux-analysis-and-rebuild.md',
-    'v2-migration-guide.md',
 }
 SECTION_LANDINGS = {
     'guide': DOCS_ROOT / 'guide' / 'README.md',
