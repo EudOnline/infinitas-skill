@@ -1,15 +1,11 @@
-"""Install planning CLI helpers built around the legacy dependency planner."""
+"""Install planning CLI helpers built around the package install planner."""
 
 import argparse
 import json
 import sys
 
-from infinitas_skill.install.service import (
-    DependencyError,
-    error_to_payload,
-    plan_from_skill_dir,
-    plan_to_text,
-)
+from infinitas_skill.install.output import error_to_payload, plan_to_text
+from infinitas_skill.install.service import DependencyError, plan_from_skill_dir
 
 INSTALL_MODES = ('install', 'sync')
 
