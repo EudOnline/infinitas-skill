@@ -882,11 +882,7 @@ def format_release_state(state):
     return '\n'.join(lines)
 
 
-def build_release_check_state_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog=prog,
-        description='Check stable release invariants for a skill',
-    )
+def configure_release_check_state_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument('skill', help='Skill name or path')
     parser.add_argument(
         '--mode',
@@ -897,6 +893,14 @@ def build_release_check_state_parser(*, prog: str | None = None) -> argparse.Arg
     parser.add_argument('--json', action='store_true', help='Print machine-readable state')
     parser.add_argument('--debug-policy', action='store_true', help='Print a human-readable policy trace')
     return parser
+
+
+def build_release_check_state_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog=prog,
+        description='Check stable release invariants for a skill',
+    )
+    return configure_release_check_state_parser(parser)
 
 
 def parse_release_check_state_args(argv: list[str] | None = None, *, prog: str | None = None) -> argparse.Namespace:
@@ -954,6 +958,7 @@ __all__ = [
     'collect_transparency_log_state',
     'collect_platform_compatibility_state',
     'collect_release_state',
+    'configure_release_check_state_parser',
     'format_release_state',
     'build_release_check_state_parser',
     'parse_release_check_state_args',

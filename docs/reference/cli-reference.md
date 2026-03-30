@@ -19,14 +19,15 @@ uv run python3 -m infinitas_skill.cli.reference
 ## Top-level CLI
 
 ```text
-usage: infinitas [-h] {compatibility,release} ...
+usage: infinitas [-h] {compatibility,release,install} ...
 
 infinitas project CLI
 
 positional arguments:
-  {compatibility,release}
+  {compatibility,release,install}
     compatibility       Compatibility tools
     release             Release tools
+    install             Install planning tools
 
 options:
   -h, --help            show this help message and exit
@@ -47,6 +48,57 @@ options:
                         Warn when Last verified is older than this many days.
   --stale-policy {warn,fail}
                         Whether over-age contract docs should warn or fail.
+```
+
+## `infinitas install resolve-plan`
+
+```text
+usage: infinitas install resolve-plan [-h] --skill-dir SKILL_DIR
+                                      [--target-dir TARGET_DIR]
+                                      [--source-registry SOURCE_REGISTRY]
+                                      [--source-json SOURCE_JSON]
+                                      [--mode {install,sync}] [--json]
+
+Resolve an install or sync dependency plan
+
+options:
+  -h, --help            show this help message and exit
+  --skill-dir SKILL_DIR
+                        Skill directory to resolve from
+  --target-dir TARGET_DIR
+                        Existing install target directory to plan against
+  --source-registry SOURCE_REGISTRY
+                        Registry hint for the root skill source
+  --source-json SOURCE_JSON
+                        Resolved source metadata JSON for the root skill
+  --mode {install,sync}
+                        Whether to plan an install or sync flow
+  --json                Print machine-readable plan output
+```
+
+## `infinitas install check-target`
+
+```text
+usage: infinitas install check-target [-h] [--source-registry SOURCE_REGISTRY]
+                                      [--source-json SOURCE_JSON]
+                                      [--mode {install,sync}] [--json]
+                                      skill_dir target_dir
+
+Check whether an install target is dependency-safe
+
+positional arguments:
+  skill_dir             Skill directory to validate
+  target_dir            Install target directory to validate against
+
+options:
+  -h, --help            show this help message and exit
+  --source-registry SOURCE_REGISTRY
+                        Registry hint for the root skill source
+  --source-json SOURCE_JSON
+                        Resolved source metadata JSON for the root skill
+  --mode {install,sync}
+                        Whether to check an install or sync flow
+  --json                Print machine-readable plan output
 ```
 
 ## `infinitas release check-state`

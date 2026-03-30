@@ -33,6 +33,7 @@ Maintained entrypoints introduced so far:
 
 ```bash
 uv run infinitas compatibility check-platform-contracts --max-age-days 30 --stale-policy fail
+uv run infinitas install resolve-plan --skill-dir templates/basic-skill --target-dir .tmp-installed-skills --json
 uv run infinitas release check-state <skill> --mode local-preflight --json
 ```
 
@@ -43,9 +44,11 @@ Legacy wrappers such as `python3 scripts/check-release-state.py ...` remain avai
 ```bash
 uv sync
 uv run python3 scripts/test-platform-contracts.py
+uv run python3 scripts/test-install-manifest-compat.py
 uv run python3 scripts/test-release-invariants.py
 uv run python3 scripts/test-infinitas-cli-release-state.py
 uv run python3 scripts/test-infinitas-cli-platform-contracts.py
+uv run python3 scripts/test-infinitas-cli-install-planning.py
 uv run python3 scripts/test-infinitas-cli-reference-docs.py
 ```
 
