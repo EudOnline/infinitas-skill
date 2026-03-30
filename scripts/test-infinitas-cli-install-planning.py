@@ -78,6 +78,22 @@ def run_cli(repo: Path, args: list[str]):
     return run([sys.executable, '-m', 'infinitas_skill.cli.main', *args], cwd=repo, env=env)
 
 
+def run_cli_probe(repo: Path, args: list[str], probe_modules: list[str]):
+    env = os.environ.copy()
+    env['PYTHONPATH'] = str(repo / 'src')
+    script = (
+        "import contextlib, io, json, sys\n"
+        "from infinitas_skill.cli.main import main\n"
+        "stdout = io.StringIO()\n"
+        "stderr = io.StringIO()\n"
+        "with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):\n"
+        f"    code = main({args!r})\n"
+        f"payload = {{'returncode': code, 'stdout': stdout.getvalue(), 'stderr': stderr.getvalue(), 'modules': {{name: name in sys.modules for name in {probe_modules!r}}}}}\n"
+        "print(json.dumps(payload))\n"
+    )
+    return run([sys.executable, '-c', script], cwd=repo, env=env)
+
+
 def assert_same_result(repo: Path, cli_args: list[str], legacy_args: list[str], expect_returncode: int):
     cli = run_cli(repo, cli_args)
     legacy = run([sys.executable, *legacy_args], cwd=repo)
@@ -102,6 +118,27 @@ def assert_same_result(repo: Path, cli_args: list[str], legacy_args: list[str], 
         fail(f'CLI stderr != legacy stderr\ncli:\n{cli.stderr}\nlegacy:\n{legacy.stderr}')
 
 
+def assert_package_owned_install_command(repo: Path, cli_args: list[str]):
+    probe = run_cli_probe(
+        repo,
+        cli_args,
+        ['dependency_lib', 'infinitas_skill.install.service'],
+    )
+    if probe.returncode != 0:
+        fail(f'ownership probe failed\nstdout:\n{probe.stdout}\nstderr:\n{probe.stderr}')
+    payload = json.loads(probe.stdout)
+    if payload['returncode'] != 0:
+        fail(
+            f'ownership probe command returned {payload["returncode"]}, expected 0\n'
+            f'stdout:\n{payload["stdout"]}\n'
+            f'stderr:\n{payload["stderr"]}'
+        )
+    if payload['modules'].get('dependency_lib'):
+        fail('install CLI still imports legacy dependency_lib directly from scripts/')
+    if not payload['modules'].get('infinitas_skill.install.service'):
+        fail('install CLI did not route through infinitas_skill.install.service')
+
+
 def main():
     tmpdir, repo = prepare_repo()
     try:
@@ -119,6 +156,14 @@ def main():
             ['install', 'check-target', str(skill_dir), str(target)],
             [str(repo / 'scripts' / 'check-install-target.py'), str(skill_dir), str(target)],
             expect_returncode=0,
+        )
+        assert_package_owned_install_command(
+            repo,
+            ['install', 'resolve-plan', '--skill-dir', str(skill_dir), '--target-dir', str(target), '--json'],
+        )
+        assert_package_owned_install_command(
+            repo,
+            ['install', 'check-target', str(skill_dir), str(target)],
         )
 
         manifest_path = target / '.infinitas-skill-install-manifest.json'

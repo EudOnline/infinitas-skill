@@ -1,6 +1,5 @@
 """Temporary bridge helpers for modules that still live under scripts/."""
 
-from importlib import import_module
 import os
 import sys
 from pathlib import Path
@@ -53,16 +52,9 @@ def ensure_legacy_scripts_on_path(root: str | Path | None = None) -> Path:
             sys.path.insert(0, scripts_path)
     return scripts_dir
 
-
-def import_legacy_module(name: str, *, root: str | Path | None = None):
-    ensure_legacy_scripts_on_path(root)
-    return import_module(name)
-
-
 __all__ = [
     'ROOT',
     'ensure_legacy_scripts_on_path',
-    'import_legacy_module',
     'looks_like_repo_root',
     'resolve_repo_root',
 ]

@@ -3,16 +3,13 @@
 import argparse
 import json
 import sys
-from pathlib import Path
 
-from infinitas_skill.legacy import import_legacy_module
-
-dependency_lib = import_legacy_module('dependency_lib')
-
-DependencyError = dependency_lib.DependencyError
-error_to_payload = dependency_lib.error_to_payload
-plan_from_skill_dir = dependency_lib.plan_from_skill_dir
-plan_to_text = dependency_lib.plan_to_text
+from infinitas_skill.install.service import (
+    DependencyError,
+    error_to_payload,
+    plan_from_skill_dir,
+    plan_to_text,
+)
 
 INSTALL_MODES = ('install', 'sync')
 
