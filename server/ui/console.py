@@ -89,7 +89,7 @@ def build_console_forbidden_context(
             "denied_body": pick_lang(
                 lang,
                 f"需要{allowed_text}权限才能继续访问维护台。你可以先返回首页，或者切换到有权限的账号。",
-                f"Maintainer role required before you can continue into the console. Head back home or switch to an authorized account.",
+                "Maintainer role required before you can continue into the console. Head back home or switch to an authorized account.",
             ),
             "denied_home_href": with_lang("/", lang),
             "denied_home_label": pick_lang(lang, "返回首页", "Back home"),

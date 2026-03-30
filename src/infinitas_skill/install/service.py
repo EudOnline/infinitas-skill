@@ -12,7 +12,11 @@ ensure_legacy_scripts_on_path(ROOT)
 from distribution_lib import load_distribution_index
 from install_manifest_lib import InstallManifestError, load_install_manifest
 from registry_source_lib import load_registry_config, registry_identity, resolve_registry_root
-from skill_identity_lib import derive_qualified_name, normalize_skill_identity, parse_requested_skill
+from skill_identity_lib import (
+    derive_qualified_name,
+    normalize_skill_identity,
+    parse_requested_skill,
+)
 
 SKILL_NAME_RE = re.compile(r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
 LEGACY_REF_RE = re.compile(r'^[a-z0-9]+(?:-[a-z0-9]+)*(?:@\d+\.\d+\.\d+(?:[-+][A-Za-z0-9_.-]+)?)?$')
@@ -621,7 +625,7 @@ class DependencyPlanner:
         okay, problem = constraints_compatible(same_name)
         if not okay:
             raise DependencyError(
-                f'conflicting requirements for {name}',
+                f'conflicting requirements for {display_name}',
                 {
                     'skill': display_name,
                     'constraints': same_name,

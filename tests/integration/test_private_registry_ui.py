@@ -9,7 +9,6 @@ from pathlib import Path
 
 from sqlalchemy import select
 
-
 ROOT = Path(__file__).resolve().parents[2]
 APP_PATH = ROOT / "server" / "app.py"
 APP_LINE_BUDGET = 220

@@ -2,7 +2,10 @@
 
 from infinitas_skill.cli.main import build_parser
 from infinitas_skill.compatibility.checks import build_platform_contracts_parser
-from infinitas_skill.install.planning import build_check_install_target_parser, build_resolve_install_plan_parser
+from infinitas_skill.install.planning import (
+    build_check_install_target_parser,
+    build_resolve_install_plan_parser,
+)
 from infinitas_skill.policy.cli import (
     build_check_policy_packs_parser,
     build_check_promotion_parser,

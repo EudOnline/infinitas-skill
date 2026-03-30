@@ -8,7 +8,16 @@ from fastapi import Request
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from server.models import AccessGrant, Credential, Exposure, Job, Release, ReviewCase, Skill, SkillDraft
+from server.models import (
+    AccessGrant,
+    Credential,
+    Exposure,
+    Job,
+    Release,
+    ReviewCase,
+    Skill,
+    SkillDraft,
+)
 from server.ui.formatting import build_kawaii_ui_context, localized_stamp
 from server.ui.i18n import pick_lang, resolve_language, with_lang
 

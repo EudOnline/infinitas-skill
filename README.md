@@ -81,6 +81,10 @@ uv run python3 scripts/test-doc-governance.py
 ./scripts/check-all.sh
 ```
 
+`make lint-maintained` currently enforces the maintained-surface `E/F/I` baseline while temporarily deferring
+repository-wide `E501` line-length cleanup and a few legacy path-bootstrap `E402` cases until the planned module
+splits land.
+
 Local runs default to `INFINITAS_SERVER_ENV=development`. Use `INFINITAS_SERVER_ENV=test` when you need fixture-safe automated behavior.
 
 ## Maintainability reset rules

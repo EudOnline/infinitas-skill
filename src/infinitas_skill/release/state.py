@@ -8,8 +8,8 @@ from pathlib import Path
 from infinitas_skill.policy.trace import render_policy_trace
 from infinitas_skill.release.formatting import format_release_state
 from infinitas_skill.release.service import (
-    ROOT,
     RELEASE_STATE_MODES,
+    ROOT,
     ReleaseError,
     collect_platform_compatibility_state,
     collect_release_state,

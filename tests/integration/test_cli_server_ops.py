@@ -7,9 +7,10 @@ import sys
 import tempfile
 from pathlib import Path
 
-from tests.fixtures.repo_state import create_repo_state
-from test_support.server_ops import HealthServer, run_command as shared_run_command
+from test_support.server_ops import HealthServer
+from test_support.server_ops import run_command as shared_run_command
 
+from tests.fixtures.repo_state import create_repo_state
 
 ROOT = Path(__file__).resolve().parents[2]
 

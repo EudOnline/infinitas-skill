@@ -1,20 +1,34 @@
 import argparse
 
-from infinitas_skill.compatibility.checks import configure_platform_contracts_parser, run_check_platform_contracts
+from infinitas_skill.compatibility.checks import (
+    configure_platform_contracts_parser,
+    run_check_platform_contracts,
+)
 from infinitas_skill.install.planning import (
     configure_check_install_target_parser,
     configure_resolve_install_plan_parser,
     run_check_install_target,
     run_resolve_install_plan,
 )
-from infinitas_skill.policy.cli import POLICY_PARSER_DESCRIPTION, POLICY_TOP_LEVEL_HELP, configure_policy_parser
+from infinitas_skill.policy.cli import (
+    POLICY_PARSER_DESCRIPTION,
+    POLICY_TOP_LEVEL_HELP,
+    configure_policy_parser,
+)
 from infinitas_skill.registry.cli import (
     REGISTRY_PARSER_DESCRIPTION,
     REGISTRY_TOP_LEVEL_HELP,
     configure_registry_parser,
 )
-from infinitas_skill.release.state import configure_release_check_state_parser, run_release_check_state
-from infinitas_skill.server.ops import SERVER_PARSER_DESCRIPTION, SERVER_TOP_LEVEL_HELP, configure_server_parser
+from infinitas_skill.release.state import (
+    configure_release_check_state_parser,
+    run_release_check_state,
+)
+from infinitas_skill.server.ops import (
+    SERVER_PARSER_DESCRIPTION,
+    SERVER_TOP_LEVEL_HELP,
+    configure_server_parser,
+)
 
 
 def _build_compatibility_check_platform_contracts_parser(subparsers):
