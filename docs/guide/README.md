@@ -14,6 +14,7 @@ Use the guide section when you need orientation, decision framing, or contributo
 
 - [Maintainability reset policy](maintainability-reset-policy.md)
 - [Private-first cutover](private-first-cutover.md)
+- [Trust model](trust-model.md)
 - [Workflow drills](../ai/workflow-drills.md)
 
 ## What belongs here

@@ -1,3 +1,11 @@
+---
+audience: contributors, operators, integrators
+owner: repository maintainers
+source_of_truth: trust model guide
+last_reviewed: 2026-03-30
+status: maintained
+---
+
 # Trust Model
 
 This repository is a **private skill registry**, not just a prompt scrapbook.
@@ -37,7 +45,7 @@ Track derivation with `_meta.json.derived_from` or a CHANGELOG entry so consumer
 - `mirror` registries are visible for operator inventory and backup, but they are not authoritative default resolver candidates.
 - When publisher namespaces are mapped, tooling must preserve the original upstream publisher identity alongside the mapped local namespace.
 
-Operational failure modes and recovery steps are documented in [docs/ops/federation-operations.md](ops/federation-operations.md). Treat that guide as the operator playbook when policy, exports, or provenance appear to disagree.
+Operational failure modes and recovery steps are documented in [docs/ops/federation-operations.md](../ops/federation-operations.md). Treat that guide as the operator playbook when policy, exports, or provenance appear to disagree.
 
 ## Recommended runtime pattern
 

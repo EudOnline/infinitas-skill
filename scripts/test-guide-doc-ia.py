@@ -27,18 +27,24 @@ def assert_contains(path: Path, needle: str):
 
 
 def main():
-    guide_doc = ROOT / 'docs' / 'guide' / 'private-first-cutover.md'
-    old_doc = ROOT / 'docs' / 'private-first-cutover.md'
+    private_first_cutover = ROOT / 'docs' / 'guide' / 'private-first-cutover.md'
+    trust_model = ROOT / 'docs' / 'guide' / 'trust-model.md'
+    old_private_first_cutover = ROOT / 'docs' / 'private-first-cutover.md'
+    old_trust_model = ROOT / 'docs' / 'trust-model.md'
     guide_index = ROOT / 'docs' / 'guide' / 'README.md'
     root_readme = ROOT / 'README.md'
 
-    assert_exists(guide_doc)
-    assert_missing(old_doc)
+    assert_exists(private_first_cutover)
+    assert_exists(trust_model)
+    assert_missing(old_private_first_cutover)
+    assert_missing(old_trust_model)
     assert_contains(guide_index, '(private-first-cutover.md)')
+    assert_contains(guide_index, '(trust-model.md)')
     assert_contains(root_readme, '(docs/guide/private-first-cutover.md)')
-    assert_contains(guide_doc, 'source_of_truth:')
+    assert_contains(private_first_cutover, 'source_of_truth:')
+    assert_contains(trust_model, 'source_of_truth:')
 
-    print('OK: guide document IA keeps private-first cutover under docs/guide')
+    print('OK: guide document IA keeps maintained guide docs under docs/guide')
 
 
 if __name__ == '__main__':
