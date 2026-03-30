@@ -1,3 +1,11 @@
+---
+audience: contributors, integrators, reviewers
+owner: repository maintainers
+source_of_truth: distribution manifest reference
+last_reviewed: 2026-03-30
+status: maintained
+---
+
 # Distribution Manifests
 
 V10 Phase 3 adds a verified distribution layer on top of the Git-native registry.

@@ -20,7 +20,7 @@ Reference docs describe exact behavior, contracts, schemas, and migration mappin
 
 - [Compatibility contract](../compatibility-contract.md)
 - [Metadata schema](metadata-schema.md)
-- [Distribution manifests](../distribution-manifests.md)
+- [Distribution manifests](distribution-manifests.md)
 
 ## Policy reference
 

@@ -625,9 +625,9 @@ def scenario_installed_integrity_docs_exist():
         if required not in content:
             fail(f'expected installed integrity guide to mention {required!r}')
 
-    distribution_docs = (ROOT / 'docs' / 'distribution-manifests.md').read_text(encoding='utf-8')
+    distribution_docs = (ROOT / 'docs' / 'reference' / 'distribution-manifests.md').read_text(encoding='utf-8')
     if 'repair-installed-skill.sh' not in distribution_docs:
-        fail("expected docs/distribution-manifests.md to mention 'repair-installed-skill.sh'")
+        fail("expected docs/reference/distribution-manifests.md to mention 'repair-installed-skill.sh'")
 
     compatibility_docs = (ROOT / 'docs' / 'compatibility-contract.md').read_text(encoding='utf-8')
     for required in ['integrity_capability', 'integrity_reason', 'integrity_events']:
