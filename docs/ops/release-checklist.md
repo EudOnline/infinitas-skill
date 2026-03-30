@@ -1,3 +1,11 @@
+---
+audience: operators and release maintainers
+owner: repository maintainers
+source_of_truth: release checklist
+last_reviewed: 2026-03-30
+status: maintained
+---
+
 # Release / Promote Checklist
 
 Before pushing or promoting a skill:

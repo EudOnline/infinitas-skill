@@ -16,6 +16,16 @@ Hosted private-first pulls are release-artifact downloads, not mutable source ch
 - do not assume a token expands visibility beyond its audience scope
 - do not guess artifact paths; use the paths returned by install resolution
 
+## Verification requirements
+
+Install-resolution responses may declare `required_formats` so callers know which release artifacts must be fetched and verified before installation is trusted.
+
+When provenance or manifest verification is required:
+
+- use `python3 scripts/verify-distribution-manifest.py ...` to confirm the downloaded distribution manifest still matches the referenced artifacts
+- verify CI attestation when the release publishes a CI-native provenance bundle alongside the SSH attestation record
+- treat missing required artifacts as a blocking install error rather than silently falling back to partial verification
+
 ## Registry aliases
 
 The server also serves the same artifacts under `/registry/*`, including legacy catalog aliases:

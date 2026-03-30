@@ -14,7 +14,7 @@ Reference docs describe exact behavior, contracts, schemas, and migration mappin
 
 - [CLI command map](cli-command-map.md)
 - [CLI reference](cli-reference.md)
-- [Release checklist](../release-checklist.md)
+- [Release checklist](../ops/release-checklist.md)
 
 ## Contracts and schemas
 

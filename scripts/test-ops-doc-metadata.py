@@ -9,6 +9,7 @@ TARGETS = [
     ROOT / 'docs' / 'ops' / 'README.md',
     ROOT / 'docs' / 'ops' / 'server-deployment.md',
     ROOT / 'docs' / 'ops' / 'server-backup-and-restore.md',
+    ROOT / 'docs' / 'ops' / 'release-checklist.md',
 ]
 
 

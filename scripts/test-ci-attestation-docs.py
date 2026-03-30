@@ -41,7 +41,7 @@ def main():
         ['required_formats', 'scripts/verify-distribution-manifest.py', 'CI attestation'],
     )
     assert_contains(
-        ROOT / 'docs' / 'release-checklist.md',
+        ROOT / 'docs' / 'ops' / 'release-checklist.md',
         ['CI attestation', '`release_trust_mode`', '`both`'],
     )
     assert_contains(
