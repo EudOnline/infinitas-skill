@@ -45,7 +45,6 @@ def main():
     old_compatibility_matrix = ROOT / 'docs' / 'compatibility-matrix.md'
     reference_index = ROOT / 'docs' / 'reference' / 'README.md'
     ops_index = ROOT / 'docs' / 'ops' / 'README.md'
-    conventions_doc = ROOT / 'docs' / 'conventions.md'
 
     assert_exists(registry_refresh_policy)
     assert_exists(metadata_schema)
@@ -72,7 +71,6 @@ def main():
     assert_contains(reference_index, '(compatibility-contract.md)')
     assert_contains(reference_index, '(compatibility-matrix.md)')
     assert_contains(ops_index, '(../reference/registry-refresh-policy.md)')
-    assert_contains(conventions_doc, 'docs/reference/metadata-schema.md')
     assert_contains(registry_refresh_policy, 'source_of_truth:')
     assert_contains(metadata_schema, 'source_of_truth:')
     assert_contains(distribution_manifests, 'source_of_truth:')

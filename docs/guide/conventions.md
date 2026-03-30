@@ -1,3 +1,11 @@
+---
+audience: contributors
+owner: repository maintainers
+source_of_truth: repository conventions guide
+last_reviewed: 2026-03-30
+status: maintained
+---
+
 # Repository Conventions
 
 ## Lifecycle
@@ -51,7 +59,7 @@ Every installable skill should declare at least:
 - `risk_level`
 - `distribution.installable`
 
-See `docs/reference/metadata-schema.md` for the full shape.
+See `../reference/metadata-schema.md` for the full shape.
 
 ## Promotion bar
 

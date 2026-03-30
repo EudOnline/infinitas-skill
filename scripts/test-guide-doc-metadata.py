@@ -9,6 +9,7 @@ TARGETS = [
     ROOT / 'docs' / 'guide' / 'README.md',
     ROOT / 'docs' / 'guide' / 'private-first-cutover.md',
     ROOT / 'docs' / 'guide' / 'trust-model.md',
+    ROOT / 'docs' / 'guide' / 'conventions.md',
 ]
 
 
