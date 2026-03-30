@@ -7,6 +7,9 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+SRC = ROOT / 'src'
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
 
 from test_support.server_ops import (
     HealthServer,
@@ -57,6 +60,20 @@ def scenario_server_cli_surface():
     for command in ['healthcheck', 'backup', 'render-systemd', 'prune-backups', 'worker', 'inspect-state']:
         if command not in help_text:
             fail(f'expected {command!r} in infinitas server help')
+
+
+def scenario_server_ops_split_into_modules():
+    from infinitas_skill.server import ops
+
+    ops_path = ROOT / 'src' / 'infinitas_skill' / 'server' / 'ops.py'
+    line_count = len(ops_path.read_text(encoding='utf-8').splitlines())
+    if line_count > 650:
+        fail(f'expected src/infinitas_skill/server/ops.py to stay within 650 lines after extraction, got {line_count}')
+
+    if ops.run_server_healthcheck.__module__ != 'infinitas_skill.server.health':
+        fail('expected run_server_healthcheck to resolve from infinitas_skill.server.health')
+    if ops.run_server_prune_backups.__module__ != 'infinitas_skill.server.backup':
+        fail('expected run_server_prune_backups to resolve from infinitas_skill.server.backup')
 
 
 def scenario_healthcheck_matches_legacy():
@@ -258,6 +275,7 @@ def scenario_worker_once_matches_legacy():
 
 def main():
     scenario_server_cli_surface()
+    scenario_server_ops_split_into_modules()
     scenario_healthcheck_matches_legacy()
     scenario_backup_matches_legacy()
     scenario_render_systemd_matches_legacy()
