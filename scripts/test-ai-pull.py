@@ -10,6 +10,13 @@ from pathlib import Path
 from result_schema_lib import validate_pull_result
 
 ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from tests.helpers.env import make_test_env
+from tests.helpers.repo_copy import copy_repo_without_local_state
+from tests.helpers.signing import add_allowed_signer, configure_git_ssh_signing, generate_signing_key
+
 FIXTURE_NAME = 'release-fixture'
 FIXTURE_VERSION = '1.2.3'
 EXTERNAL_REGISTRY_NAME = 'external-demo'
@@ -36,20 +43,6 @@ def run(command, cwd, expect=0, env=None):
 def write_json(path: Path, payload):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-
-
-def make_env(extra=None):
-    env = os.environ.copy()
-    env['INFINITAS_SKIP_RELEASE_TESTS'] = '1'
-    env['INFINITAS_SKIP_ATTESTATION_TESTS'] = '1'
-    env['INFINITAS_SKIP_DISTRIBUTION_TESTS'] = '1'
-    env['INFINITAS_SKIP_BOOTSTRAP_TESTS'] = '1'
-    env['INFINITAS_SKIP_AI_WRAPPER_TESTS'] = '1'
-    env['INFINITAS_SKIP_COMPAT_PIPELINE_TESTS'] = '1'
-    env['INFINITAS_SKIP_INSTALLED_INTEGRITY_TESTS'] = '1'
-    if extra:
-        env.update(extra)
-    return env
 
 
 def scaffold_fixture(repo: Path):
@@ -111,13 +104,8 @@ def scaffold_fixture(repo: Path):
 
 def prepare_repo():
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-ai-pull-test-'))
-    repo = tmpdir / 'repo'
+    repo = copy_repo_without_local_state(tmpdir)
     origin = tmpdir / 'origin.git'
-    shutil.copytree(
-        ROOT,
-        repo,
-        ignore=shutil.ignore_patterns('.git', '.planning', '__pycache__', '.cache', 'scripts/__pycache__'),
-    )
     scaffold_fixture(repo)
     run(['git', 'init', '--bare', str(origin)], cwd=tmpdir)
     run(['git', 'init', '-b', 'main'], cwd=repo)
@@ -132,21 +120,16 @@ def prepare_repo():
     run(['git', 'commit', '-m', 'build fixture catalog'], cwd=repo)
     run(['git', 'push'], cwd=repo)
 
-    key_path = tmpdir / 'release-test-key'
-    identity = 'release-test'
-    run(['ssh-keygen', '-q', '-t', 'ed25519', '-N', '', '-C', identity, '-f', str(key_path)], cwd=repo)
-    with (repo / 'config' / 'allowed_signers').open('a', encoding='utf-8') as handle:
-        public_key = Path(str(key_path) + '.pub').read_text(encoding='utf-8').strip()
-        handle.write(f'{identity} {public_key}\n')
-    run(['git', 'config', 'gpg.format', 'ssh'], cwd=repo)
-    run(['git', 'config', 'user.signingkey', str(key_path)], cwd=repo)
+    key_path = generate_signing_key(tmpdir, identity='release-test')
+    add_allowed_signer(repo / 'config' / 'allowed_signers', identity='release-test', key_path=key_path)
+    configure_git_ssh_signing(repo, key_path)
     run(['git', 'add', 'config/allowed_signers'], cwd=repo)
     run(['git', 'commit', '-m', 'add release signer'], cwd=repo)
     run(['git', 'push'], cwd=repo)
     run(
         [str(repo / 'scripts' / 'release-skill.sh'), FIXTURE_NAME, '--push-tag', '--write-provenance'],
         cwd=repo,
-        env=make_env(),
+        env=make_test_env(),
     )
     return tmpdir, repo
 

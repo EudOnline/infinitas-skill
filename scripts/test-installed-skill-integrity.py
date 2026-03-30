@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -9,6 +8,13 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from tests.helpers.env import make_test_env
+from tests.helpers.repo_copy import copy_repo_without_local_state
+from tests.helpers.signing import add_allowed_signer, configure_git_ssh_signing, generate_signing_key
+
 FIXTURE_NAME = 'release-fixture'
 VERSION = '1.2.3'
 
@@ -35,20 +41,6 @@ def write_json(path: Path, payload):
 
 def iso_hours_ago(hours: int):
     return (datetime.now(timezone.utc) - timedelta(hours=hours)).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
-
-
-def make_env(extra=None):
-    env = os.environ.copy()
-    env['INFINITAS_SKIP_RELEASE_TESTS'] = '1'
-    env['INFINITAS_SKIP_ATTESTATION_TESTS'] = '1'
-    env['INFINITAS_SKIP_DISTRIBUTION_TESTS'] = '1'
-    env['INFINITAS_SKIP_BOOTSTRAP_TESTS'] = '1'
-    env['INFINITAS_SKIP_AI_WRAPPER_TESTS'] = '1'
-    env['INFINITAS_SKIP_COMPAT_PIPELINE_TESTS'] = '1'
-    env['INFINITAS_SKIP_INSTALLED_INTEGRITY_TESTS'] = '1'
-    if extra:
-        env.update(extra)
-    return env
 
 
 def scaffold_fixture(repo: Path):
@@ -111,13 +103,8 @@ def scaffold_fixture(repo: Path):
 
 def prepare_repo():
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-installed-integrity-'))
-    repo = tmpdir / 'repo'
+    repo = copy_repo_without_local_state(tmpdir)
     origin = tmpdir / 'origin.git'
-    shutil.copytree(
-        ROOT,
-        repo,
-        ignore=shutil.ignore_patterns('.git', '.planning', '__pycache__', '.cache', 'scripts/__pycache__'),
-    )
     scaffold_fixture(repo)
     run(['git', 'init', '--bare', str(origin)], cwd=tmpdir)
     run(['git', 'init', '-b', 'main'], cwd=repo)
@@ -132,14 +119,9 @@ def prepare_repo():
     run(['git', 'commit', '-m', 'build fixture catalog'], cwd=repo)
     run(['git', 'push'], cwd=repo)
 
-    key_path = tmpdir / 'release-test-key'
-    identity = 'release-test'
-    run(['ssh-keygen', '-q', '-t', 'ed25519', '-N', '', '-C', identity, '-f', str(key_path)], cwd=repo)
-    with (repo / 'config' / 'allowed_signers').open('a', encoding='utf-8') as handle:
-        public_key = Path(str(key_path) + '.pub').read_text(encoding='utf-8').strip()
-        handle.write(f'{identity} {public_key}\n')
-    run(['git', 'config', 'gpg.format', 'ssh'], cwd=repo)
-    run(['git', 'config', 'user.signingkey', str(key_path)], cwd=repo)
+    key_path = generate_signing_key(tmpdir, identity='release-test')
+    add_allowed_signer(repo / 'config' / 'allowed_signers', identity='release-test', key_path=key_path)
+    configure_git_ssh_signing(repo, key_path)
     run(['git', 'add', 'config/allowed_signers'], cwd=repo)
     run(['git', 'commit', '-m', 'add release signer'], cwd=repo)
     run(['git', 'push'], cwd=repo)
@@ -150,7 +132,7 @@ def release_fixture(repo: Path):
     run(
         [str(repo / 'scripts' / 'release-skill.sh'), FIXTURE_NAME, '--push-tag', '--write-provenance'],
         cwd=repo,
-        env=make_env(),
+        env=make_test_env(),
     )
 
 
@@ -158,7 +140,7 @@ def install_fixture(repo: Path, target_dir: Path):
     run(
         [str(repo / 'scripts' / 'install-skill.sh'), FIXTURE_NAME, str(target_dir), '--version', VERSION],
         cwd=repo,
-        env=make_env(),
+        env=make_test_env(),
     )
 
 
@@ -235,7 +217,7 @@ def refresh_installed_integrity(repo: Path, target_dir: Path):
             '--json',
         ],
         cwd=repo,
-        env=make_env(),
+        env=make_test_env(),
     )
     try:
         return json.loads(result.stdout)
@@ -247,7 +229,7 @@ def verify_installed_skill(repo: Path, target_dir: Path, *, expect=0):
     result = run(
         [sys.executable, str(repo / 'scripts' / 'verify-installed-skill.py'), FIXTURE_NAME, str(target_dir), '--json'],
         cwd=repo,
-        env=make_env(),
+        env=make_test_env(),
         expect=expect,
     )
     if not result.stdout.strip():
@@ -346,7 +328,7 @@ def scenario_verify_clean_and_drifted_install():
         sync_result = run(
             [str(repo / 'scripts' / 'sync-skill.sh'), FIXTURE_NAME, str(target_dir)],
             cwd=repo,
-            env=make_env(),
+            env=make_test_env(),
             expect=1,
         )
         sync_output = sync_result.stdout + sync_result.stderr
@@ -356,7 +338,7 @@ def scenario_verify_clean_and_drifted_install():
         repair_result = run(
             [str(repo / 'scripts' / 'repair-installed-skill.sh'), FIXTURE_NAME, str(target_dir)],
             cwd=repo,
-            env=make_env(),
+            env=make_test_env(),
         )
         repair_output = repair_result.stdout + repair_result.stderr
         if 'repaired:' not in repair_output:
@@ -401,7 +383,7 @@ def scenario_stale_mutation_guardrails_for_sync_and_upgrade():
         run(
             [str(repo / 'scripts' / 'release-skill.sh'), FIXTURE_NAME, '--push-tag', '--write-provenance'],
             cwd=repo,
-            env=make_env(),
+            env=make_test_env(),
         )
 
         target_warn = tmpdir / 'installed-warn'
@@ -411,12 +393,12 @@ def scenario_stale_mutation_guardrails_for_sync_and_upgrade():
         write_install_integrity_policy(repo, stale_policy='warn')
         mark_install_stale(target_warn, FIXTURE_NAME)
 
-        sync_warn = run([str(repo / 'scripts' / 'sync-skill.sh'), FIXTURE_NAME, str(target_warn)], cwd=repo, env=make_env())
+        sync_warn = run([str(repo / 'scripts' / 'sync-skill.sh'), FIXTURE_NAME, str(target_warn)], cwd=repo, env=make_test_env())
         sync_warn_output = sync_warn.stdout + sync_warn.stderr
         if 'report-installed-integrity.py' not in sync_warn_output or '--refresh' not in sync_warn_output:
             fail(f'expected stale warn sync output to recommend refresh command\n{sync_warn_output}')
 
-        upgrade_warn = run([str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_warn)], cwd=repo, env=make_env())
+        upgrade_warn = run([str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_warn)], cwd=repo, env=make_test_env())
         upgrade_warn_output = upgrade_warn.stdout + upgrade_warn.stderr
         if 'report-installed-integrity.py' not in upgrade_warn_output or '--refresh' not in upgrade_warn_output:
             fail(f'expected stale warn upgrade output to recommend refresh command\n{upgrade_warn_output}')
@@ -430,12 +412,12 @@ def scenario_stale_mutation_guardrails_for_sync_and_upgrade():
         write_install_integrity_policy(repo, stale_policy='warn', never_verified_policy='warn')
         mark_install_never_verified(target_never_warn, FIXTURE_NAME)
 
-        sync_never_warn = run([str(repo / 'scripts' / 'sync-skill.sh'), FIXTURE_NAME, str(target_never_warn)], cwd=repo, env=make_env())
+        sync_never_warn = run([str(repo / 'scripts' / 'sync-skill.sh'), FIXTURE_NAME, str(target_never_warn)], cwd=repo, env=make_test_env())
         sync_never_warn_output = sync_never_warn.stdout + sync_never_warn.stderr
         if 'report-installed-integrity.py' not in sync_never_warn_output or '--refresh' not in sync_never_warn_output:
             fail(f'expected never-verified warn sync output to recommend refresh command\n{sync_never_warn_output}')
 
-        upgrade_never_warn = run([str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_never_warn)], cwd=repo, env=make_env())
+        upgrade_never_warn = run([str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_never_warn)], cwd=repo, env=make_test_env())
         upgrade_never_warn_output = upgrade_never_warn.stdout + upgrade_never_warn.stderr
         if 'report-installed-integrity.py' not in upgrade_never_warn_output or '--refresh' not in upgrade_never_warn_output:
             fail(f'expected never-verified warn upgrade output to recommend refresh command\n{upgrade_never_warn_output}')
@@ -452,7 +434,7 @@ def scenario_stale_mutation_guardrails_for_sync_and_upgrade():
         sync_fail = run(
             [str(repo / 'scripts' / 'sync-skill.sh'), FIXTURE_NAME, str(target_fail)],
             cwd=repo,
-            env=make_env(),
+            env=make_test_env(),
             expect=1,
         )
         sync_fail_output = sync_fail.stdout + sync_fail.stderr
@@ -462,7 +444,7 @@ def scenario_stale_mutation_guardrails_for_sync_and_upgrade():
         upgrade_fail = run(
             [str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_fail)],
             cwd=repo,
-            env=make_env(),
+            env=make_test_env(),
             expect=1,
         )
         upgrade_fail_payload = json.loads(upgrade_fail.stdout)
@@ -482,7 +464,7 @@ def scenario_stale_mutation_guardrails_for_sync_and_upgrade():
         if refreshed_item.get('freshness_state') == 'stale':
             fail(f'expected refresh run to clear stale state, got {refreshed_item!r}')
 
-        run([str(repo / 'scripts' / 'sync-skill.sh'), FIXTURE_NAME, str(target_fail)], cwd=repo, env=make_env())
+        run([str(repo / 'scripts' / 'sync-skill.sh'), FIXTURE_NAME, str(target_fail)], cwd=repo, env=make_test_env())
 
         target_never_fail = tmpdir / 'installed-never-fail'
         target_never_fail.mkdir(parents=True, exist_ok=True)
@@ -493,7 +475,7 @@ def scenario_stale_mutation_guardrails_for_sync_and_upgrade():
         sync_never_fail = run(
             [str(repo / 'scripts' / 'sync-skill.sh'), FIXTURE_NAME, str(target_never_fail)],
             cwd=repo,
-            env=make_env(),
+            env=make_test_env(),
             expect=1,
         )
         sync_never_fail_output = sync_never_fail.stdout + sync_never_fail.stderr
@@ -503,7 +485,7 @@ def scenario_stale_mutation_guardrails_for_sync_and_upgrade():
         upgrade_never_fail = run(
             [str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_never_fail)],
             cwd=repo,
-            env=make_env(),
+            env=make_test_env(),
             expect=1,
         )
         upgrade_never_fail_payload = json.loads(upgrade_never_fail.stdout)
@@ -527,19 +509,19 @@ def scenario_stale_mutation_guardrails_for_sync_and_upgrade():
         if refreshed_never_item.get('freshness_state') != 'fresh':
             fail(f'expected refresh run to clear never-verified state, got {refreshed_never_item!r}')
 
-        run([str(repo / 'scripts' / 'sync-skill.sh'), FIXTURE_NAME, str(target_never_fail)], cwd=repo, env=make_env())
+        run([str(repo / 'scripts' / 'sync-skill.sh'), FIXTURE_NAME, str(target_never_fail)], cwd=repo, env=make_test_env())
 
         mark_install_never_verified(target_never_fail, FIXTURE_NAME)
-        run([str(repo / 'scripts' / 'sync-skill.sh'), FIXTURE_NAME, str(target_never_fail), '--force'], cwd=repo, env=make_env())
+        run([str(repo / 'scripts' / 'sync-skill.sh'), FIXTURE_NAME, str(target_never_fail), '--force'], cwd=repo, env=make_test_env())
 
         mark_install_never_verified(target_never_fail, FIXTURE_NAME)
-        run([str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_never_fail), '--force'], cwd=repo, env=make_env())
+        run([str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_never_fail), '--force'], cwd=repo, env=make_test_env())
 
         mark_install_stale(target_fail, FIXTURE_NAME)
-        run([str(repo / 'scripts' / 'sync-skill.sh'), FIXTURE_NAME, str(target_fail), '--force'], cwd=repo, env=make_env())
+        run([str(repo / 'scripts' / 'sync-skill.sh'), FIXTURE_NAME, str(target_fail), '--force'], cwd=repo, env=make_test_env())
 
         mark_install_stale(target_fail, FIXTURE_NAME)
-        run([str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_fail), '--force'], cwd=repo, env=make_env())
+        run([str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_fail), '--force'], cwd=repo, env=make_test_env())
 
         mark_install_stale(target_fail, FIXTURE_NAME)
         installed_dir = target_fail / FIXTURE_NAME
@@ -549,7 +531,7 @@ def scenario_stale_mutation_guardrails_for_sync_and_upgrade():
         sync_drift = run(
             [str(repo / 'scripts' / 'sync-skill.sh'), FIXTURE_NAME, str(target_fail)],
             cwd=repo,
-            env=make_env(),
+            env=make_test_env(),
             expect=1,
         )
         sync_drift_output = sync_drift.stdout + sync_drift.stderr
@@ -561,7 +543,7 @@ def scenario_stale_mutation_guardrails_for_sync_and_upgrade():
         upgrade_drift = run(
             [str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_fail)],
             cwd=repo,
-            env=make_env(),
+            env=make_test_env(),
             expect=1,
         )
         upgrade_drift_output = upgrade_drift.stdout + upgrade_drift.stderr
@@ -578,7 +560,7 @@ def scenario_stale_mutation_guardrails_for_sync_and_upgrade():
         sync_never_drift = run(
             [str(repo / 'scripts' / 'sync-skill.sh'), FIXTURE_NAME, str(target_never_fail)],
             cwd=repo,
-            env=make_env(),
+            env=make_test_env(),
             expect=1,
         )
         sync_never_drift_output = sync_never_drift.stdout + sync_never_drift.stderr
@@ -590,7 +572,7 @@ def scenario_stale_mutation_guardrails_for_sync_and_upgrade():
         upgrade_never_drift = run(
             [str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_never_fail)],
             cwd=repo,
-            env=make_env(),
+            env=make_test_env(),
             expect=1,
         )
         upgrade_never_drift_output = upgrade_never_drift.stdout + upgrade_never_drift.stderr

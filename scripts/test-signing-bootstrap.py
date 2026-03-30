@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -8,6 +7,12 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from tests.helpers.env import make_test_env
+from tests.helpers.repo_copy import copy_repo_without_local_state
+
 FIXTURE_NAME = 'bootstrap-fixture'
 FIXTURE_VERSION = '1.2.3'
 
@@ -30,20 +35,6 @@ def run(command, cwd, expect=0, env=None):
 
 def write_json(path: Path, payload):
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-
-
-def make_env(extra=None):
-    env = os.environ.copy()
-    env['INFINITAS_SKIP_RELEASE_TESTS'] = '1'
-    env['INFINITAS_SKIP_ATTESTATION_TESTS'] = '1'
-    env['INFINITAS_SKIP_DISTRIBUTION_TESTS'] = '1'
-    env['INFINITAS_SKIP_BOOTSTRAP_TESTS'] = '1'
-    env['INFINITAS_SKIP_AI_WRAPPER_TESTS'] = '1'
-    env['INFINITAS_SKIP_COMPAT_PIPELINE_TESTS'] = '1'
-    env['INFINITAS_SKIP_INSTALLED_INTEGRITY_TESTS'] = '1'
-    if extra:
-        env.update(extra)
-    return env
 
 
 def scaffold_fixture(repo: Path):
@@ -167,13 +158,8 @@ def stabilize_active_skill_reviews(repo: Path):
 
 def prepare_repo():
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-bootstrap-test-'))
-    repo = tmpdir / 'repo'
+    repo = copy_repo_without_local_state(tmpdir)
     origin = tmpdir / 'origin.git'
-    shutil.copytree(
-        ROOT,
-        repo,
-        ignore=shutil.ignore_patterns('.git', '.planning', '__pycache__', '.cache', 'scripts/__pycache__'),
-    )
     rewrite_promotion_policy(repo)
     (repo / 'config' / 'allowed_signers').write_text('', encoding='utf-8')
     stabilize_active_skill_reviews(repo)
@@ -206,7 +192,7 @@ def scenario_bootstrap_rehearsal_passes():
             [sys.executable, str(repo / 'scripts' / 'doctor-signing.py'), FIXTURE_NAME, '--identity', 'release-test', '--json'],
             cwd=repo,
             expect=1,
-            env=make_env(),
+            env=make_test_env(),
         )
         before_report = json.loads(doctor_before.stdout)
         failing_checks = {check['id'] for check in before_report.get('checks', []) if check.get('status') == 'fail'}
@@ -227,7 +213,7 @@ def scenario_bootstrap_rehearsal_passes():
                 str(key_path),
             ],
             cwd=repo,
-            env=make_env(),
+            env=make_test_env(),
         )
         run(
             [
@@ -240,7 +226,7 @@ def scenario_bootstrap_rehearsal_passes():
                 str(key_path),
             ],
             cwd=repo,
-            env=make_env(),
+            env=make_test_env(),
         )
         run(
             [
@@ -251,7 +237,7 @@ def scenario_bootstrap_rehearsal_passes():
                 str(key_path),
             ],
             cwd=repo,
-            env=make_env(),
+            env=make_test_env(),
         )
         run(
             [
@@ -266,7 +252,7 @@ def scenario_bootstrap_rehearsal_passes():
                 'Release Fixture',
             ],
             cwd=repo,
-            env=make_env(),
+            env=make_test_env(),
         )
         run(['git', 'add', 'config/allowed_signers', 'policy/namespace-policy.json'], cwd=repo)
         run(['git', 'commit', '-m', 'bootstrap release signer'], cwd=repo)
@@ -275,7 +261,7 @@ def scenario_bootstrap_rehearsal_passes():
         doctor_ready = run(
             [sys.executable, str(repo / 'scripts' / 'doctor-signing.py'), FIXTURE_NAME, '--identity', 'release-test', '--json'],
             cwd=repo,
-            env=make_env(),
+            env=make_test_env(),
         )
         ready_report = json.loads(doctor_ready.stdout)
         if ready_report.get('overall_status') != 'ok':
@@ -295,7 +281,7 @@ def scenario_bootstrap_rehearsal_passes():
                 '--write-provenance',
             ],
             cwd=repo,
-            env=make_env(),
+            env=make_test_env(),
         )
         assert_contains(release_result.stdout + release_result.stderr, 'verified attestation:', 'release attestation summary')
 
@@ -312,7 +298,7 @@ def scenario_bootstrap_rehearsal_passes():
                 '--json',
             ],
             cwd=repo,
-            env=make_env(),
+            env=make_test_env(),
         )
         after_report = json.loads(doctor_after.stdout)
         if after_report.get('overall_status') not in {'ok', 'warn'}:
