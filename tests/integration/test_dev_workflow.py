@@ -13,10 +13,12 @@ def _read(rel_path: str) -> str:
 def test_make_targets_and_docs_expose_dev_workflow_entrypoints() -> None:
     makefile = _read("Makefile")
     lint_command = (
-        "uv run ruff check src/infinitas_skill server/ui server/app.py tests/integration tests/unit"
+        "uv run ruff check src/infinitas_skill server/ui server/app.py "
+        "tests/integration tests/unit"
     )
     fmt_command = (
-        "uv run ruff format src/infinitas_skill server/ui server/app.py tests/integration tests/unit"
+        "uv run ruff format src/infinitas_skill server/ui server/app.py "
+        "tests/integration tests/unit"
     )
     required_targets = [
         "bootstrap",
@@ -59,16 +61,28 @@ def test_make_targets_and_docs_expose_dev_workflow_entrypoints() -> None:
     assert 'select = ["E", "F", "I"]' in pyproject, (
         "pyproject.toml should configure Ruff lint select"
     )
-    assert 'ignore = ["E501"]' in pyproject, (
-        "pyproject.toml should defer the current line-length debt while the refactors land"
+    assert 'ignore = ["E501"]' not in pyproject, (
+        "pyproject.toml should not disable E501 globally for all maintained files"
     )
+    assert re.search(
+        r'"src/infinitas_skill/install/service\.py"\s*=\s*\[[^\]]*"E402"[^\]]*"E501"[^\]]*\]',
+        pyproject,
+    ), "install service should keep targeted E402/E501 carveouts"
+    assert re.search(
+        r'"src/infinitas_skill/policy/service\.py"\s*=\s*\[[^\]]*"E402"[^\]]*"E501"[^\]]*\]',
+        pyproject,
+    ), "policy service should keep targeted E402/E501 carveouts"
+    assert re.search(
+        r'"src/infinitas_skill/release/service\.py"\s*=\s*\[[^\]]*"E402"[^\]]*"E501"[^\]]*\]',
+        pyproject,
+    ), "release service should keep targeted E402/E501 carveouts"
     for path in [
-        'src/infinitas_skill/install/service.py',
-        'src/infinitas_skill/policy/service.py',
-        'src/infinitas_skill/release/service.py',
+        "server/app.py",
+        "server/ui/lifecycle.py",
+        "src/infinitas_skill/server/ops.py",
     ]:
-        assert f'"{path}" = ["E402"]' in pyproject, (
-            f"pyproject.toml should isolate the legacy path-bootstrap E402 exception for {path}"
+        assert re.search(rf'"{re.escape(path)}"\s*=\s*\[[^\]]*"E501"[^\]]*\]', pyproject), (
+            f"pyproject.toml should scope E501 deferrals to the current debt file {path}"
         )
     assert '"I001"' not in pyproject, (
         "pyproject.toml should keep import sorting in the maintained lint baseline"

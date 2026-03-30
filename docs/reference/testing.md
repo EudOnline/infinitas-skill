@@ -20,8 +20,9 @@ uv run ruff check src/infinitas_skill server/ui server/app.py tests/integration 
 ./scripts/check-all.sh
 ```
 
-`make lint-maintained` keeps the maintained-surface `E/F/I` baseline active, but it temporarily defers global
-`E501` line-length cleanup and a few legacy path-bootstrap `E402` cases until the larger service and UI splits land.
+`make lint-maintained` keeps the maintained-surface `E/F/I` baseline active, but it temporarily defers `E501` only
+in the current debt-heavy maintained files, plus a few legacy path-bootstrap `E402` cases, until the larger service
+and UI splits land.
 
 ## Focused maintained-surface checks
 
