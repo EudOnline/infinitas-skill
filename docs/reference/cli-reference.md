@@ -16,7 +16,15 @@ Regenerate and review it with:
 uv run python3 -m infinitas_skill.cli.reference
 ```
 
+Status labels used in this reference:
+
+- `maintained`: canonical `infinitas ...` entrypoint defined in `src/infinitas_skill/`
+- `shim`: temporary script wrapper still available during the reset
+- `legacy-only`: intentionally omitted from this maintained reference; use [CLI Command Map](cli-command-map.md) for bridge inventory details
+
 ## Top-level CLI
+
+Status: `maintained` umbrella CLI. `legacy-only` surfaces should migrate behind one of the documented families below.
 
 ```text
 usage: infinitas [-h]
@@ -39,6 +47,8 @@ options:
 
 ## `infinitas compatibility check-platform-contracts`
 
+Status: `maintained`. Shim: `python3 scripts/check-platform-contracts.py ...`.
+
 ```text
 usage: infinitas compatibility check-platform-contracts [-h]
                                                         [--max-age-days MAX_AGE_DAYS]
@@ -55,6 +65,8 @@ options:
 ```
 
 ## `infinitas install resolve-plan`
+
+Status: `maintained`. Shim: `python3 scripts/resolve-install-plan.py ...`.
 
 ```text
 usage: infinitas install resolve-plan [-h] --skill-dir SKILL_DIR
@@ -82,6 +94,8 @@ options:
 
 ## `infinitas install check-target`
 
+Status: `maintained`. Shim: `python3 scripts/check-install-target.py ...`.
+
 ```text
 usage: infinitas install check-target [-h] [--source-registry SOURCE_REGISTRY]
                                       [--source-json SOURCE_JSON]
@@ -107,6 +121,8 @@ options:
 
 ## `infinitas policy`
 
+Status: `maintained` family. Shims: `python3 scripts/check-policy-packs.py` and `python3 scripts/check-promotion-policy.py ...`.
+
 ```text
 usage: infinitas policy [-h] {check-packs,check-promotion} ...
 
@@ -123,6 +139,8 @@ options:
 
 ## `infinitas policy check-packs`
 
+Status: `maintained`. Shim: `python3 scripts/check-policy-packs.py`.
+
 ```text
 usage: infinitas policy check-packs [-h]
 
@@ -133,6 +151,8 @@ options:
 ```
 
 ## `infinitas policy check-promotion`
+
+Status: `maintained`. Shim: `python3 scripts/check-promotion-policy.py ...`.
 
 ```text
 usage: infinitas policy check-promotion [-h] [--as-active] [--json]
@@ -152,6 +172,8 @@ options:
 ```
 
 ## `infinitas registry`
+
+Status: `maintained`. Shim: `python3 scripts/registryctl.py ...`.
 
 ```text
 usage: infinitas registry [-h] [--base-url BASE_URL] [--token TOKEN]
@@ -179,6 +201,8 @@ options:
 
 ## `infinitas release check-state`
 
+Status: `maintained`. Shim: `python3 scripts/check-release-state.py ...`.
+
 ```text
 usage: infinitas release check-state [-h]
                                      [--mode {preflight,local-preflight,local-tag,stable-release}]
@@ -199,6 +223,8 @@ options:
 ```
 
 ## `infinitas server`
+
+Status: `maintained` family. Shims: `python3 scripts/server-healthcheck.py ...`, `python3 scripts/backup-hosted-registry.py ...`, `python3 scripts/inspect-hosted-state.py ...`, `python3 scripts/render-hosted-systemd.py ...`, `python3 scripts/prune-hosted-backups.py ...`, and `python3 scripts/run-hosted-worker.py ...`.
 
 ```text
 usage: infinitas server [-h]
@@ -221,6 +247,8 @@ options:
 ```
 
 ## `infinitas server healthcheck`
+
+Status: `maintained`. Shim: `python3 scripts/server-healthcheck.py ...`.
 
 ```text
 usage: infinitas server healthcheck [-h] --api-url API_URL --repo-path
@@ -245,6 +273,8 @@ options:
 
 ## `infinitas server backup`
 
+Status: `maintained`. Shim: `python3 scripts/backup-hosted-registry.py ...`.
+
 ```text
 usage: infinitas server backup [-h] --repo-path REPO_PATH --database-url
                                DATABASE_URL --artifact-path ARTIFACT_PATH
@@ -268,6 +298,8 @@ options:
 ```
 
 ## `infinitas server inspect-state`
+
+Status: `maintained`. Shim: `python3 scripts/inspect-hosted-state.py ...`.
 
 ```text
 usage: infinitas server inspect-state [-h] --database-url DATABASE_URL
@@ -305,6 +337,8 @@ options:
 ```
 
 ## `infinitas server render-systemd`
+
+Status: `maintained`. Shim: `python3 scripts/render-hosted-systemd.py ...`.
 
 ```text
 usage: infinitas server render-systemd [-h] --output-dir OUTPUT_DIR
@@ -409,6 +443,8 @@ options:
 
 ## `infinitas server prune-backups`
 
+Status: `maintained`. Shim: `python3 scripts/prune-hosted-backups.py ...`.
+
 ```text
 usage: infinitas server prune-backups [-h] --backup-root BACKUP_ROOT
                                       --keep-last KEEP_LAST [--json]
@@ -426,6 +462,8 @@ options:
 ```
 
 ## `infinitas server worker`
+
+Status: `maintained`. Shim: `python3 scripts/run-hosted-worker.py ...`.
 
 ```text
 usage: infinitas server worker [-h] [--poll-interval POLL_INTERVAL] [--once]

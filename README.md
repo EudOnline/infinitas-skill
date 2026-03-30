@@ -18,7 +18,8 @@ This repository is in a breaking maintainability reset. The runtime model remain
 - [Maintainability reset policy](docs/guide/maintainability-reset-policy.md)
 - [Reference docs](docs/reference/README.md)
 - [Operator runbooks](docs/ops/README.md)
-- [Architecture decisions](docs/adr/0001-maintainability-reset.md)
+- [Architecture decision 0001: Maintainability reset](docs/adr/0001-maintainability-reset.md)
+- [Architecture decision 0002: Maintained surface cutover](docs/adr/0002-maintained-surface-cutover.md)
 
 ## Repository shape
 
@@ -26,6 +27,12 @@ This repository is in a breaking maintainability reset. The runtime model remain
 - `scripts/`: legacy command and library surface; keep only temporary shims or not-yet-migrated tools here
 - `server/`: hosted control-plane runtime
 - `docs/`: role-based documentation during the reset
+
+## Maintained surfaces
+
+- package-owned: `src/infinitas_skill/install/...`, `src/infinitas_skill/policy/...`, `src/infinitas_skill/release/...`, and `src/infinitas_skill/server/...` own maintained CLI logic.
+- runtime-owned: `server/modules/...` and `server/ui/...` own hosted API, UI, and presentation logic, while `server/app.py` stays focused on app assembly.
+- compatibility-only: wrappers such as `scripts/check-release-state.py` may survive only as thin adapters until the default `2026-06-30` alias cutoff.
 
 ## Maintained CLI surface
 
@@ -41,7 +48,7 @@ uv run infinitas server healthcheck --api-url http://127.0.0.1:8000 --repo-path 
 uv run infinitas server prune-backups --backup-root /srv/infinitas/backups --keep-last 7 --json
 ```
 
-Legacy wrappers such as `python3 scripts/check-release-state.py ...` remain available only as migration shims. That includes operator-facing shims like `python3 scripts/render-hosted-systemd.py ...` while the maintained CLI surface is still consolidating. New command surfaces should land under `infinitas`, not as new top-level scripts.
+Legacy wrappers such as `python3 scripts/check-release-state.py ...` remain available only as migration shims. That includes operator-facing shims like `python3 scripts/render-hosted-systemd.py ...` for the canonical `uv run infinitas server render-systemd ...` path while the maintained CLI surface is still consolidating. New command surfaces should land under `infinitas`, not as new top-level scripts.
 
 ## Local verification
 
@@ -89,8 +96,8 @@ Compatibility reporting now distinguishes between `declared support` from author
 
 Policy-aware commands continue to expose structured diagnostics for operators and automation:
 
-- `scripts/check-promotion-policy.py --json` returns a `policy_trace` payload for promotion decisions.
-- `scripts/check-release-state.py operate-infinitas-skill --json` returns the release decision plus `policy_trace` details.
+- `uv run infinitas policy check-promotion <skill> --json` returns a `policy_trace` payload for promotion decisions.
+- `uv run infinitas release check-state operate-infinitas-skill --json` returns the release decision plus `policy_trace` details.
 - `scripts/validate-registry.py --json` returns `validation_errors` alongside namespace-level `policy_trace` data.
 - `policy/policy-packs.json` selects ordered shared defaults from `policy/packs/*.json`, while repository-local policy files remain the last override layer.
 - `policy/team-policy.json` remains the default team-governance input that keeps review and release checks aligned.

@@ -40,9 +40,9 @@ Before creating stable release output for an active skill:
 - [ ] current branch tracks its upstream and is neither ahead nor behind it
 - [ ] expected tag `skill/<name>/v<version>` does not already point at the wrong commit
 - [ ] default stable tag is created with `scripts/release-skill.sh <name> --push-tag` or `scripts/release-skill-tag.sh <name> --create --push`
-- [ ] `scripts/check-release-state.py <name>` passes before writing notes, provenance, or GitHub releases
-- [ ] `python3 scripts/check-release-state.py <name> --mode preflight --json` shows `release.platform_compatibility.blocking_platforms = []` for every declared platform
-- [ ] if delegated reviewer groups, delegated publisher teams, or break-glass waivers are involved, `python3 scripts/check-release-state.py <name> --mode preflight --json` shows the expected `review.latest_decisions`, `review.ignored_decisions`, `release.delegated_teams`, and `release.exception_usage`
+- [ ] `uv run infinitas release check-state <name> --mode preflight --json` passes before writing notes, provenance, or GitHub releases
+- [ ] `uv run infinitas release check-state <name> --mode preflight --json` shows `release.platform_compatibility.blocking_platforms = []` for every declared platform
+- [ ] if delegated reviewer groups, delegated publisher teams, or break-glass waivers are involved, `uv run infinitas release check-state <name> --mode preflight --json` shows the expected `review.latest_decisions`, `review.ignored_decisions`, `release.delegated_teams`, and `release.exception_usage`
 - [ ] any command that writes release notes or distribution output also includes `--write-provenance` while the v9 attestation policy is enabled
 - [ ] release notes or provenance reference `refs/tags/skill/<name>/v<version>` instead of local-only `HEAD`
 - [ ] `catalog/provenance/<name>-<version>.json` records the resolved registry context, dependency plan, and attestation signer identity

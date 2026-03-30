@@ -20,6 +20,34 @@ SECTION_LANDINGS = {
     'archive': DOCS_ROOT / 'archive' / 'README.md',
 }
 GLOBAL_INDEXES = [ROOT / 'README.md', DOCS_ROOT / 'README.md']
+MAINTAINED_SURFACE_DOCS = {
+    ROOT / 'README.md',
+    DOCS_ROOT / 'guide' / 'maintainability-reset-policy.md',
+    DOCS_ROOT / 'reference' / 'cli-command-map.md',
+    DOCS_ROOT / 'reference' / 'cli-reference.md',
+    DOCS_ROOT / 'ops' / 'release-checklist.md',
+}
+REQUIRED_MAINTAINED_SURFACE_MARKERS = [
+    '## Maintained surfaces',
+    'package-owned:',
+    'runtime-owned:',
+    'compatibility-only:',
+]
+LEGACY_CANONICAL_ENTRYPOINTS = {
+    'scripts/check-platform-contracts.py': 'infinitas compatibility check-platform-contracts',
+    'scripts/resolve-install-plan.py': 'infinitas install resolve-plan',
+    'scripts/check-install-target.py': 'infinitas install check-target',
+    'scripts/check-policy-packs.py': 'infinitas policy check-packs',
+    'scripts/check-promotion-policy.py': 'infinitas policy check-promotion',
+    'scripts/registryctl.py': 'infinitas registry',
+    'scripts/check-release-state.py': 'infinitas release check-state',
+    'scripts/server-healthcheck.py': 'infinitas server healthcheck',
+    'scripts/backup-hosted-registry.py': 'infinitas server backup',
+    'scripts/inspect-hosted-state.py': 'infinitas server inspect-state',
+    'scripts/render-hosted-systemd.py': 'infinitas server render-systemd',
+    'scripts/prune-hosted-backups.py': 'infinitas server prune-backups',
+    'scripts/run-hosted-worker.py': 'infinitas server worker',
+}
 
 
 def fail(message):
@@ -128,17 +156,41 @@ def ensure_no_worktree_links(path: Path):
         fail(f'maintained doc must not contain absolute worktree links: {path}')
 
 
+def ensure_readme_has_maintained_surface_inventory():
+    text = (ROOT / 'README.md').read_text(encoding='utf-8')
+    for marker in REQUIRED_MAINTAINED_SURFACE_MARKERS:
+        if marker not in text:
+            fail(f'missing maintained surface inventory marker {marker!r} in README.md')
+
+
+def ensure_legacy_command_mentions_have_canonical_entrypoints(path: Path):
+    if path not in MAINTAINED_SURFACE_DOCS:
+        return
+
+    text = path.read_text(encoding='utf-8')
+    for legacy_marker, canonical_entrypoint in LEGACY_CANONICAL_ENTRYPOINTS.items():
+        if legacy_marker in text and canonical_entrypoint not in text:
+            fail(
+                'maintained surface doc mentions legacy command '
+                f'{legacy_marker!r} without canonical entrypoint '
+                f'{canonical_entrypoint!r}: {path}'
+            )
+
+
 def main():
     check_root_allowlist()
     docs = maintained_docs()
     if not docs:
         fail('expected at least one maintained document')
 
+    ensure_readme_has_maintained_surface_inventory()
+
     for path, metadata in docs:
         ensure_allowed_location(path)
         ensure_required_metadata(path, metadata)
         ensure_landing_coverage(path)
         ensure_no_worktree_links(path)
+        ensure_legacy_command_mentions_have_canonical_entrypoints(path)
 
     print('OK: document governance checks passed')
 

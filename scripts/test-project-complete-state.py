@@ -24,6 +24,11 @@ def assert_not_contains(path: str, needle: str) -> None:
         fail(f"expected {path} not to contain {needle!r}")
 
 
+def assert_exists(path: str) -> None:
+    if not (ROOT / path).exists():
+        fail(f"expected required file to exist: {path}")
+
+
 REQUIRED = {
     ".planning/PROJECT.md": [
         "v20 is complete on `main`.",
@@ -83,6 +88,7 @@ def main() -> None:
     if all(not path.exists() for path in planning_paths):
         print("SKIP: project complete state checks (planning docs unavailable in this workspace copy)")
         return
+    assert_exists("docs/adr/0002-maintained-surface-cutover.md")
     for path, needles in REQUIRED.items():
         for needle in needles:
             assert_contains(path, needle)
