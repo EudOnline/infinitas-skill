@@ -24,10 +24,19 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install .
+          python3 -m pip install "pytest>=8,<9"
+
+      - name: Run focused integration suite
+        run: |
+          python3 -m pytest \
+            tests/integration/test_cli_release_state.py \
+            tests/integration/test_cli_server_ops.py \
+            tests/integration/test_private_registry_ui.py \
+            -q
 
       - name: Run registry checks
         env:
           INFINITAS_REQUIRE_HOSTED_E2E_TESTS: 1
           INFINITAS_REQUIRE_PRIVATE_REGISTRY_TESTS: 1
           INFINITAS_SKIP_BROWSER_RUNTIME_TESTS: 1
-        run: scripts/check-all.sh
+        run: scripts/check-all.sh hosted-ui full-regression

@@ -19,6 +19,14 @@ dependencies = [
 [project.scripts]
 infinitas = "infinitas_skill.cli.main:main"
 
+[dependency-groups]
+dev = [
+  "pytest>=8,<9",
+]
+
 [tool.setuptools.packages.find]
 where = [".", "src"]
 include = ["server*", "infinitas_skill*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
