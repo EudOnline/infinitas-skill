@@ -52,6 +52,17 @@ Legacy wrappers such as `python3 scripts/check-release-state.py ...` remain avai
 
 ## Local verification
 
+Preferred maintained-surface entrypoints:
+
+```bash
+make bootstrap
+make test-fast
+make test-full
+make lint-maintained
+```
+
+Raw commands remain available as fallback detail:
+
 ```bash
 uv sync
 uv run pytest tests/integration/test_cli_release_state.py tests/integration/test_cli_server_ops.py tests/integration/test_private_registry_ui.py -q

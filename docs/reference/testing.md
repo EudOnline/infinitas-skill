@@ -1,5 +1,18 @@
 # Testing
 
+## Preferred command layer
+
+Use the repo-native `make` targets first:
+
+```bash
+make bootstrap
+make test-fast
+make test-full
+make lint-maintained
+```
+
+Raw `uv` and script commands remain available below as fallback detail.
+
 ## Focused maintained-surface checks
 
 Run the fast `pytest` tier first when touching the maintained CLI or hosted UI surfaces:

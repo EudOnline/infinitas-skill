@@ -22,6 +22,7 @@ infinitas = "infinitas_skill.cli.main:main"
 [dependency-groups]
 dev = [
   "pytest>=8,<9",
+  "ruff>=0.11,<1",
 ]
 
 [tool.setuptools.packages.find]
@@ -30,3 +31,11 @@ include = ["server*", "infinitas_skill*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E402", "E501", "F541", "F821", "I001"]
