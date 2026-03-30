@@ -9,7 +9,9 @@ from infinitas_skill.install.plan_builder import build_plan, candidate_view
 from infinitas_skill.install.source_resolution import (
     DependencyError,
     candidate_from_skill_dir,
+    constraint_display,
     display_identity,
+    normalize_meta_dependencies,
     scan_enabled_registry_skills,
 )
 from infinitas_skill.install.target_validation import (
@@ -167,7 +169,9 @@ def plan_from_skill_dir(
 __all__ = [
     "DependencyError",
     "DependencyPlanner",
+    "constraint_display",
     "error_to_payload",
+    "normalize_meta_dependencies",
     "plan_from_skill_dir",
     "plan_to_text",
 ]
