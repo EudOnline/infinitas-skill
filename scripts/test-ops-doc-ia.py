@@ -30,23 +30,29 @@ def main():
     signing_bootstrap = ROOT / 'docs' / 'ops' / 'signing-bootstrap.md'
     signing_operations = ROOT / 'docs' / 'ops' / 'signing-operations.md'
     release_checklist = ROOT / 'docs' / 'ops' / 'release-checklist.md'
+    platform_drift_playbook = ROOT / 'docs' / 'ops' / 'platform-drift-playbook.md'
     old_bootstrap = ROOT / 'docs' / 'signing-bootstrap.md'
     old_operations = ROOT / 'docs' / 'signing-operations.md'
     old_release_checklist = ROOT / 'docs' / 'release-checklist.md'
+    old_platform_drift_playbook = ROOT / 'docs' / 'platform-drift-playbook.md'
     ops_index = ROOT / 'docs' / 'ops' / 'README.md'
 
     assert_exists(signing_bootstrap)
     assert_exists(signing_operations)
     assert_exists(release_checklist)
+    assert_exists(platform_drift_playbook)
     assert_missing(old_bootstrap)
     assert_missing(old_operations)
     assert_missing(old_release_checklist)
+    assert_missing(old_platform_drift_playbook)
     assert_contains(ops_index, '(signing-bootstrap.md)')
     assert_contains(ops_index, '(signing-operations.md)')
     assert_contains(ops_index, '(release-checklist.md)')
+    assert_contains(ops_index, '(platform-drift-playbook.md)')
     assert_contains(signing_bootstrap, 'source_of_truth:')
     assert_contains(signing_operations, 'source_of_truth:')
     assert_contains(release_checklist, 'source_of_truth:')
+    assert_contains(platform_drift_playbook, 'source_of_truth:')
 
     print('OK: ops document IA keeps maintained runbooks under docs/ops')
 

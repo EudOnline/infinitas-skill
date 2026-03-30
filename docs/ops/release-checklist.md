@@ -31,7 +31,7 @@ Before pushing or promoting a skill:
 
 Before creating stable release output for an active skill:
 
-- [ ] if upstream Codex / Claude Code / OpenClaw behavior changed, follow `docs/platform-drift-playbook.md` before starting release work
+- [ ] if upstream Codex / Claude Code / OpenClaw behavior changed, follow `docs/ops/platform-drift-playbook.md` before starting release work
 - [ ] trusted signer bootstrap was completed with `python3 scripts/bootstrap-signing.py ...` or an equivalent existing-key flow from `docs/ops/signing-bootstrap.md`
 - [ ] `config/allowed_signers` contains at least one trusted release signer entry committed in-repo
 - [ ] publisher `authorized_signers` / `authorized_releasers` policy was updated when the release uses a qualified publisher namespace
@@ -53,7 +53,7 @@ Before creating stable release output for an active skill:
 - [ ] `python3 scripts/doctor-signing.py <name> --provenance catalog/provenance/<name>-<version>.json` reports no blocking failures after the rehearsal
 - [ ] any optional legacy HMAC provenance signing happens after the required SSH attestation has already been verified
 - [ ] platform evidence was refreshed with `python3 scripts/record-verified-support.py <name> --platform codex --platform claude --platform openclaw --build-catalog` if verified compatibility claims changed
-- [ ] if any declared platform shows `freshness_state = stale|unknown`, refresh the evidence and rerun the playbook steps in `docs/platform-drift-playbook.md`
+- [ ] if any declared platform shows `freshness_state = stale|unknown`, refresh the evidence and rerun the playbook steps in `docs/ops/platform-drift-playbook.md`
 
 When the hosted control plane performs the release:
 

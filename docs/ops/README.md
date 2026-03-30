@@ -20,7 +20,7 @@ Use the ops section for procedures that keep the hosted control plane, release f
 
 ## Drift and freshness management
 
-- [Platform drift playbook](../platform-drift-playbook.md)
+- [Platform drift playbook](platform-drift-playbook.md)
 - [Registry refresh policy](../reference/registry-refresh-policy.md)
 
 ## Migration note

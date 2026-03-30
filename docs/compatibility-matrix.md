@@ -55,7 +55,7 @@ Verified support freshness is additive:
 - `stale`: evidence exists, but it is too old or predates a newer platform contract review
 - `unknown`: no evidence has been recorded for that declared platform yet
 
-When freshness turns `stale` or `unknown`, discovery can still show the skill, but release readiness now blocks until the evidence is refreshed. The maintenance loop for that workflow lives in [docs/platform-drift-playbook.md](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/docs/platform-drift-playbook.md).
+When freshness turns `stale` or `unknown`, discovery can still show the skill, but release readiness now blocks until the evidence is refreshed. The maintenance loop for that workflow lives in [docs/ops/platform-drift-playbook.md](ops/platform-drift-playbook.md).
 
 It does **not** guarantee:
 

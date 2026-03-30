@@ -77,7 +77,7 @@ The supported runtime remains:
 Use these canonical docs for the current model:
 
 - [Private-first cutover](docs/guide/private-first-cutover.md)
-- [Platform drift playbook](docs/platform-drift-playbook.md)
+- [Platform drift playbook](docs/ops/platform-drift-playbook.md)
 - [Release checklist](docs/ops/release-checklist.md)
 - [CI-native attestation](docs/ai/ci-attestation.md) documents `.github/workflows/release-attestation.yml` and `python3 scripts/verify-ci-attestation.py`
 - [Hosted registry server deployment](docs/ops/server-deployment.md)

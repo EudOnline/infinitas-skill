@@ -10,6 +10,7 @@ TARGETS = [
     ROOT / 'docs' / 'ops' / 'server-deployment.md',
     ROOT / 'docs' / 'ops' / 'server-backup-and-restore.md',
     ROOT / 'docs' / 'ops' / 'release-checklist.md',
+    ROOT / 'docs' / 'ops' / 'platform-drift-playbook.md',
 ]
 
 

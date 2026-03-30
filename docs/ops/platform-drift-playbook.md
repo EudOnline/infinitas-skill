@@ -1,3 +1,11 @@
+---
+audience: operators and release maintainers
+owner: repository maintainers
+source_of_truth: platform drift playbook
+last_reviewed: 2026-03-30
+status: maintained
+---
+
 # Platform Drift Playbook
 
 Codex, Claude Code, and OpenClaw will keep changing their runtime assumptions, export formats, and recommended repository layouts. This playbook is the maintenance loop for keeping `infinitas-skill` aligned with those upstream shifts without letting stale claims leak into discovery or release output.
