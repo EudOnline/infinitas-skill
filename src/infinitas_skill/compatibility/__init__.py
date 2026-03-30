@@ -1,1 +1,1 @@
-"""Compatibility contracts and policy helpers."""
+"""Compatibility contracts, checks, and policy helpers."""

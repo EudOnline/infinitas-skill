@@ -13,6 +13,7 @@ Reference docs describe exact behavior, contracts, schemas, and migration mappin
 ## CLI and command surfaces
 
 - [CLI command map](cli-command-map.md)
+- [CLI reference](cli-reference.md)
 - [Release checklist](../release-checklist.md)
 
 ## Contracts and schemas

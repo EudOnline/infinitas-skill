@@ -14,6 +14,7 @@ The maintainability reset is consolidating maintained commands behind one CLI: `
 
 | Legacy surface | Maintained surface | Status | Alias removal date |
 | --- | --- | --- | --- |
+| `python3 scripts/check-platform-contracts.py [--max-age-days N] [--stale-policy warn|fail]` | `uv run infinitas compatibility check-platform-contracts [--max-age-days N] [--stale-policy warn|fail]` | live shim | 2026-06-30 |
 | `python3 scripts/check-release-state.py <skill> --mode <mode> [--json] [--debug-policy]` | `uv run infinitas release check-state <skill> --mode <mode> [--json] [--debug-policy]` | live shim | 2026-06-30 |
 
 ## Planned families
@@ -27,4 +28,4 @@ The target CLI layout for later slices is:
 - `infinitas policy ...`
 - `infinitas server ...`
 
-Only `infinitas release check-state` is migrated in the current slice. Remaining families should move behind `infinitas` rather than adding fresh one-off scripts.
+The current migrated surfaces are `infinitas compatibility check-platform-contracts` and `infinitas release check-state`. Remaining families should move behind `infinitas` rather than adding fresh one-off scripts.

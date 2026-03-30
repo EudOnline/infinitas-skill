@@ -29,9 +29,10 @@ This repository is in a breaking maintainability reset. The runtime model remain
 
 ## Maintained CLI surface
 
-The maintained entrypoint introduced in this slice is:
+Maintained entrypoints introduced so far:
 
 ```bash
+uv run infinitas compatibility check-platform-contracts --max-age-days 30 --stale-policy fail
 uv run infinitas release check-state <skill> --mode local-preflight --json
 ```
 
@@ -44,6 +45,8 @@ uv sync
 uv run python3 scripts/test-platform-contracts.py
 uv run python3 scripts/test-release-invariants.py
 uv run python3 scripts/test-infinitas-cli-release-state.py
+uv run python3 scripts/test-infinitas-cli-platform-contracts.py
+uv run python3 scripts/test-infinitas-cli-reference-docs.py
 ```
 
 Local runs default to `INFINITAS_SERVER_ENV=development`. Use `INFINITAS_SERVER_ENV=test` when you need fixture-safe automated behavior.
