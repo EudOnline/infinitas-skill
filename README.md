@@ -37,9 +37,10 @@ uv run infinitas install resolve-plan --skill-dir templates/basic-skill --target
 uv run infinitas policy check-packs
 uv run infinitas registry --help
 uv run infinitas release check-state <skill> --mode local-preflight --json
+uv run infinitas server healthcheck --api-url http://127.0.0.1:8000 --repo-path /srv/infinitas/repo --artifact-path /srv/infinitas/artifacts --database-url sqlite:////srv/infinitas/data/server.db --json
 ```
 
-Legacy wrappers such as `python3 scripts/check-release-state.py ...` remain available only as migration shims. New command surfaces should land under `infinitas`, not as new top-level scripts.
+Legacy wrappers such as `python3 scripts/check-release-state.py ...` remain available only as migration shims. That includes operator-facing shims like `python3 scripts/render-hosted-systemd.py ...` while the maintained CLI surface is still consolidating. New command surfaces should land under `infinitas`, not as new top-level scripts.
 
 ## Local verification
 
@@ -53,6 +54,7 @@ uv run python3 scripts/test-infinitas-cli-platform-contracts.py
 uv run python3 scripts/test-infinitas-cli-install-planning.py
 uv run python3 scripts/test-infinitas-cli-policy.py
 uv run python3 scripts/test-infinitas-cli-registry.py
+uv run python3 scripts/test-infinitas-cli-server.py
 uv run python3 scripts/test-infinitas-cli-reference-docs.py
 ```
 

@@ -10,6 +10,12 @@ from infinitas_skill.policy.cli import (
 )
 from infinitas_skill.registry.cli import build_registry_parser
 from infinitas_skill.release.state import build_release_check_state_parser
+from infinitas_skill.server.ops import (
+    build_server_backup_parser,
+    build_server_healthcheck_parser,
+    build_server_parser,
+    build_server_render_systemd_parser,
+)
 
 GENERATED_CLI_REFERENCE_LAST_REVIEWED = '2026-03-30'
 
@@ -30,6 +36,10 @@ def render_cli_reference() -> str:
     policy_check_promotion_help = build_check_promotion_parser(prog='infinitas policy check-promotion').format_help()
     registry_help = build_registry_parser(prog='infinitas registry').format_help()
     release_help = build_release_check_state_parser(prog='infinitas release check-state').format_help()
+    server_help = build_server_parser(prog='infinitas server').format_help()
+    server_healthcheck_help = build_server_healthcheck_parser(prog='infinitas server healthcheck').format_help()
+    server_backup_help = build_server_backup_parser(prog='infinitas server backup').format_help()
+    server_render_systemd_help = build_server_render_systemd_parser(prog='infinitas server render-systemd').format_help()
     lines = [
         '---',
         'audience: contributors, integrators, operators',
@@ -84,6 +94,22 @@ def render_cli_reference() -> str:
         '## `infinitas release check-state`',
         '',
         _render_help_block(release_help).rstrip(),
+        '',
+        '## `infinitas server`',
+        '',
+        _render_help_block(server_help).rstrip(),
+        '',
+        '## `infinitas server healthcheck`',
+        '',
+        _render_help_block(server_healthcheck_help).rstrip(),
+        '',
+        '## `infinitas server backup`',
+        '',
+        _render_help_block(server_backup_help).rstrip(),
+        '',
+        '## `infinitas server render-systemd`',
+        '',
+        _render_help_block(server_render_systemd_help).rstrip(),
         '',
     ]
     return '\n'.join(lines)

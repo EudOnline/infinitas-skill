@@ -19,17 +19,19 @@ uv run python3 -m infinitas_skill.cli.reference
 ## Top-level CLI
 
 ```text
-usage: infinitas [-h] {compatibility,release,install,registry,policy} ...
+usage: infinitas [-h]
+                 {compatibility,release,install,registry,policy,server} ...
 
 infinitas project CLI
 
 positional arguments:
-  {compatibility,release,install,registry,policy}
+  {compatibility,release,install,registry,policy,server}
     compatibility       Compatibility tools
     release             Release tools
     install             Install planning tools
     registry            Hosted registry control-plane tools
     policy              Policy validation and promotion tools
+    server              Hosted server operations tools
 
 options:
   -h, --help            show this help message and exit
@@ -194,4 +196,171 @@ options:
                         Which release invariant set to enforce
   --json                Print machine-readable state
   --debug-policy        Print a human-readable policy trace
+```
+
+## `infinitas server`
+
+```text
+usage: infinitas server [-h] {healthcheck,backup,render-systemd} ...
+
+Hosted server operations CLI
+
+positional arguments:
+  {healthcheck,backup,render-systemd}
+    healthcheck         Run hosted server health checks
+    backup              Create a hosted registry backup set
+    render-systemd      Render a hosted registry systemd deployment bundle
+
+options:
+  -h, --help            show this help message and exit
+```
+
+## `infinitas server healthcheck`
+
+```text
+usage: infinitas server healthcheck [-h] --api-url API_URL --repo-path
+                                    REPO_PATH --artifact-path ARTIFACT_PATH
+                                    --database-url DATABASE_URL
+                                    [--token TOKEN] [--json]
+
+Hosted registry server health check
+
+options:
+  -h, --help            show this help message and exit
+  --api-url API_URL     Hosted registry API base URL or /healthz URL
+  --repo-path REPO_PATH
+                        Path to the server-owned git checkout
+  --artifact-path ARTIFACT_PATH
+                        Path to the hosted artifact directory
+  --database-url DATABASE_URL
+                        Database URL, currently sqlite:///... only
+  --token TOKEN         Reserved for future authenticated probes
+  --json                Emit machine-readable JSON output
+```
+
+## `infinitas server backup`
+
+```text
+usage: infinitas server backup [-h] --repo-path REPO_PATH --database-url
+                               DATABASE_URL --artifact-path ARTIFACT_PATH
+                               --output-dir OUTPUT_DIR [--label LABEL]
+                               [--json]
+
+Create a hosted registry backup set
+
+options:
+  -h, --help            show this help message and exit
+  --repo-path REPO_PATH
+                        Path to the server-owned git checkout
+  --database-url DATABASE_URL
+                        Database URL, currently sqlite:///... only
+  --artifact-path ARTIFACT_PATH
+                        Path to the hosted artifact directory
+  --output-dir OUTPUT_DIR
+                        Directory where backup snapshots should be created
+  --label LABEL         Optional label appended to the backup directory name
+  --json                Emit machine-readable JSON output
+```
+
+## `infinitas server render-systemd`
+
+```text
+usage: infinitas server render-systemd [-h] --output-dir OUTPUT_DIR
+                                       --repo-root REPO_ROOT --python-bin
+                                       PYTHON_BIN --env-file ENV_FILE
+                                       [--service-prefix SERVICE_PREFIX]
+                                       [--service-user SERVICE_USER]
+                                       [--listen-host LISTEN_HOST]
+                                       [--listen-port LISTEN_PORT]
+                                       [--worker-poll-interval WORKER_POLL_INTERVAL]
+                                       --backup-output-dir BACKUP_OUTPUT_DIR
+                                       [--backup-on-calendar BACKUP_ON_CALENDAR]
+                                       [--backup-label BACKUP_LABEL]
+                                       [--mirror-remote MIRROR_REMOTE]
+                                       [--mirror-branch MIRROR_BRANCH]
+                                       [--mirror-on-calendar MIRROR_ON_CALENDAR]
+                                       [--prune-on-calendar PRUNE_ON_CALENDAR]
+                                       [--prune-keep-last PRUNE_KEEP_LAST]
+                                       [--inspect-on-calendar INSPECT_ON_CALENDAR]
+                                       [--inspect-limit INSPECT_LIMIT]
+                                       [--inspect-max-queued-jobs INSPECT_MAX_QUEUED_JOBS]
+                                       [--inspect-max-running-jobs INSPECT_MAX_RUNNING_JOBS]
+                                       [--inspect-max-failed-jobs INSPECT_MAX_FAILED_JOBS]
+                                       [--inspect-max-warning-jobs INSPECT_MAX_WARNING_JOBS]
+                                       [--inspect-alert-webhook-url INSPECT_ALERT_WEBHOOK_URL]
+                                       [--inspect-alert-fallback-file INSPECT_ALERT_FALLBACK_FILE]
+                                       [--artifact-path ARTIFACT_PATH]
+                                       [--database-url DATABASE_URL]
+                                       [--repo-lock-path REPO_LOCK_PATH]
+
+Render a hosted registry systemd deployment bundle
+
+options:
+  -h, --help            show this help message and exit
+  --output-dir OUTPUT_DIR
+                        Directory where rendered files will be written
+  --repo-root REPO_ROOT
+                        Hosted registry repository checkout path
+  --python-bin PYTHON_BIN
+                        Python binary used by the hosted services
+  --env-file ENV_FILE   System path to the deployed environment file
+  --service-prefix SERVICE_PREFIX
+                        Prefix used for service names
+  --service-user SERVICE_USER
+                        User account that should run the hosted services
+  --listen-host LISTEN_HOST
+                        Host binding for the hosted API
+  --listen-port LISTEN_PORT
+                        Port binding for the hosted API
+  --worker-poll-interval WORKER_POLL_INTERVAL
+                        Worker poll interval in seconds
+  --backup-output-dir BACKUP_OUTPUT_DIR
+                        Directory where scheduled backups should be written
+  --backup-on-calendar BACKUP_ON_CALENDAR
+                        systemd OnCalendar expression for backups
+  --backup-label BACKUP_LABEL
+                        Backup label passed to the backup helper
+  --mirror-remote MIRROR_REMOTE
+                        Optional outward mirror remote; when set, render
+                        mirror service and timer
+  --mirror-branch MIRROR_BRANCH
+                        Optional branch passed to the mirror helper; defaults
+                        to current branch when omitted
+  --mirror-on-calendar MIRROR_ON_CALENDAR
+                        systemd OnCalendar expression for optional outward
+                        mirroring
+  --prune-on-calendar PRUNE_ON_CALENDAR
+                        systemd OnCalendar expression for backup retention
+                        pruning
+  --prune-keep-last PRUNE_KEEP_LAST
+                        How many newest backup directories the prune job
+                        should keep
+  --inspect-on-calendar INSPECT_ON_CALENDAR
+                        systemd OnCalendar expression for queue inspection
+                        runs
+  --inspect-limit INSPECT_LIMIT
+                        Number of recent rows included in each inspection run
+  --inspect-max-queued-jobs INSPECT_MAX_QUEUED_JOBS
+                        Alert when queued job count exceeds this threshold
+  --inspect-max-running-jobs INSPECT_MAX_RUNNING_JOBS
+                        Alert when running job count exceeds this threshold
+  --inspect-max-failed-jobs INSPECT_MAX_FAILED_JOBS
+                        Alert when failed job count exceeds this threshold
+  --inspect-max-warning-jobs INSPECT_MAX_WARNING_JOBS
+                        Alert when jobs with WARNING log entries exceed this
+                        threshold
+  --inspect-alert-webhook-url INSPECT_ALERT_WEBHOOK_URL
+                        Optional webhook URL for scheduled inspect alert
+                        delivery
+  --inspect-alert-fallback-file INSPECT_ALERT_FALLBACK_FILE
+                        Optional file path for storing the latest inspect
+                        alert snapshot when webhook delivery is unavailable
+  --artifact-path ARTIFACT_PATH
+                        Override artifact path for the env template and backup
+                        service
+  --database-url DATABASE_URL
+                        Override database URL for the env template and backup
+                        service
+  --repo-lock-path REPO_LOCK_PATH
+                        Override repo lock path for the env template
 ```

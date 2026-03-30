@@ -14,6 +14,7 @@ from infinitas_skill.registry.cli import (
     configure_registry_parser,
 )
 from infinitas_skill.release.state import configure_release_check_state_parser, run_release_check_state
+from infinitas_skill.server.ops import SERVER_PARSER_DESCRIPTION, SERVER_TOP_LEVEL_HELP, configure_server_parser
 
 
 def _build_compatibility_check_platform_contracts_parser(subparsers):
@@ -116,6 +117,13 @@ def build_parser() -> argparse.ArgumentParser:
         description=POLICY_PARSER_DESCRIPTION,
     )
     configure_policy_parser(policy)
+
+    server = top.add_parser(
+        'server',
+        help=SERVER_TOP_LEVEL_HELP,
+        description=SERVER_PARSER_DESCRIPTION,
+    )
+    configure_server_parser(server)
 
     return parser
 
