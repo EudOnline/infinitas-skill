@@ -42,11 +42,11 @@ The current cutoff for removing maintainability-reset aliases is `2026-06-30`. A
 - `infinitas policy check-packs` and `infinitas policy check-promotion` are the maintained CLI paths for policy validation and promotion checks.
 - `infinitas registry ...` is the maintained CLI path for hosted private-first registry control-plane actions.
 - `infinitas release check-state` is the maintained CLI path for release state checks.
-- `infinitas server healthcheck`, `infinitas server backup`, and `infinitas server render-systemd` are the maintained CLI paths for hosted server operations.
+- `infinitas server healthcheck`, `infinitas server backup`, `infinitas server render-systemd`, and `infinitas server prune-backups` are the maintained CLI paths for hosted server operations.
 - `python3 scripts/check-platform-contracts.py ...` remains a compatibility shim during the migration window.
 - `python3 scripts/resolve-install-plan.py ...` and `python3 scripts/check-install-target.py ...` remain compatibility shims during the migration window.
 - `python3 scripts/check-policy-packs.py` and `python3 scripts/check-promotion-policy.py ...` remain compatibility shims during the migration window.
 - `python3 scripts/registryctl.py ...` remains a compatibility shim during the migration window.
 - `python3 scripts/check-release-state.py ...` remains a compatibility shim during the migration window.
-- `python3 scripts/server-healthcheck.py ...`, `python3 scripts/backup-hosted-registry.py ...`, and `python3 scripts/render-hosted-systemd.py ...` remain compatibility shims during the migration window.
+- `python3 scripts/server-healthcheck.py ...`, `python3 scripts/backup-hosted-registry.py ...`, `python3 scripts/render-hosted-systemd.py ...`, and `python3 scripts/prune-hosted-backups.py ...` remain compatibility shims during the migration window.
 - `scripts/release_lib.py`, `scripts/platform_contract_lib.py`, and `scripts/compatibility_policy_lib.py` remain temporary compatibility modules because other legacy scripts still import them.

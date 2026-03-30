@@ -38,6 +38,7 @@ uv run infinitas policy check-packs
 uv run infinitas registry --help
 uv run infinitas release check-state <skill> --mode local-preflight --json
 uv run infinitas server healthcheck --api-url http://127.0.0.1:8000 --repo-path /srv/infinitas/repo --artifact-path /srv/infinitas/artifacts --database-url sqlite:////srv/infinitas/data/server.db --json
+uv run infinitas server prune-backups --backup-root /srv/infinitas/backups --keep-last 7 --json
 ```
 
 Legacy wrappers such as `python3 scripts/check-release-state.py ...` remain available only as migration shims. That includes operator-facing shims like `python3 scripts/render-hosted-systemd.py ...` while the maintained CLI surface is still consolidating. New command surfaces should land under `infinitas`, not as new top-level scripts.

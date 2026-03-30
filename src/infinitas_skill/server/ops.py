@@ -16,6 +16,7 @@ from urllib import error, request
 
 SERVER_TOP_LEVEL_HELP = 'Hosted server operations tools'
 SERVER_PARSER_DESCRIPTION = 'Hosted server operations CLI'
+BACKUP_DIR_RE = re.compile(r'^\d{8}T\d{6}Z(?:-[A-Za-z0-9._-]+)?$')
 
 
 def fail(message: str):
@@ -102,6 +103,21 @@ def require_artifacts(artifact_path: str) -> Path:
     if not (path / 'catalog').is_dir():
         fail(f'artifact path is missing catalog/: {path / "catalog"}')
     return path
+
+
+def require_backup_root(path: str) -> Path:
+    root = Path(path)
+    if not root.exists():
+        fail(f'backup root does not exist: {root}')
+    if not root.is_dir():
+        fail(f'backup root is not a directory: {root}')
+    return root
+
+
+def require_keep_last(value: int) -> int:
+    if value < 1:
+        fail(f'keep-last must be at least 1: {value}')
+    return value
 
 
 def git_output(repo: Path, *args: str) -> str:
@@ -214,6 +230,42 @@ def archive_artifacts(artifact_path: Path, backup_dir: Path) -> str:
     with tarfile.open(archive_path, 'w:gz') as archive:
         archive.add(artifact_path, arcname='artifacts')
     return archive_name
+
+
+def classify_backup_entries(root: Path) -> tuple[list[Path], list[Path]]:
+    eligible = []
+    ignored = []
+    for entry in sorted(root.iterdir(), key=lambda item: item.name):
+        if not entry.is_dir():
+            ignored.append(entry)
+            continue
+        if not BACKUP_DIR_RE.match(entry.name):
+            ignored.append(entry)
+            continue
+        if not (entry / 'manifest.json').is_file():
+            ignored.append(entry)
+            continue
+        eligible.append(entry)
+    return eligible, ignored
+
+
+def build_prune_summary(root: Path, keep_last: int) -> dict:
+    eligible, ignored = classify_backup_entries(root)
+    eligible_desc = sorted(eligible, key=lambda item: item.name, reverse=True)
+    kept = eligible_desc[:keep_last]
+    deleted = eligible_desc[keep_last:]
+
+    for path in deleted:
+        shutil.rmtree(path)
+
+    return {
+        'ok': True,
+        'backup_root': str(root),
+        'keep_last': keep_last,
+        'kept': [str(path) for path in kept],
+        'deleted': [str(path) for path in deleted],
+        'ignored': [str(path) for path in ignored],
+    }
 
 
 def render_env_example(args: argparse.Namespace) -> str:
@@ -439,6 +491,17 @@ def emit_backup_summary(summary: dict, as_json: bool):
     print(f"OK: artifact archive {summary['files']['artifacts']}")
 
 
+def emit_prune_summary(summary: dict, as_json: bool):
+    if as_json:
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return
+    print(f"OK: backup root {summary['backup_root']}")
+    print(f"OK: kept {len(summary['kept'])} recognized backup directories")
+    print(f"OK: deleted {len(summary['deleted'])} recognized backup directories")
+    if summary['ignored']:
+        print(f"OK: ignored {len(summary['ignored'])} non-hosted entries")
+
+
 def configure_server_healthcheck_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument('--api-url', required=True, help='Hosted registry API base URL or /healthz URL')
     parser.add_argument('--repo-path', required=True, help='Path to the server-owned git checkout')
@@ -491,6 +554,13 @@ def configure_server_render_systemd_parser(parser: argparse.ArgumentParser) -> a
     return parser
 
 
+def configure_server_prune_backups_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    parser.add_argument('--backup-root', required=True, help='Directory containing hosted backup snapshot directories')
+    parser.add_argument('--keep-last', required=True, type=int, help='How many newest recognized backup directories to keep')
+    parser.add_argument('--json', action='store_true', help='Emit machine-readable JSON output')
+    return parser
+
+
 def build_server_healthcheck_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description='Hosted registry server health check', prog=prog)
     return configure_server_healthcheck_parser(parser)
@@ -504,6 +574,11 @@ def build_server_backup_parser(*, prog: str | None = None) -> argparse.ArgumentP
 def build_server_render_systemd_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description='Render a hosted registry systemd deployment bundle', prog=prog)
     return configure_server_render_systemd_parser(parser)
+
+
+def build_server_prune_backups_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description='Prune older hosted registry backup snapshots', prog=prog)
+    return configure_server_prune_backups_parser(parser)
 
 
 def run_server_healthcheck(
@@ -602,8 +677,16 @@ def run_server_render_systemd(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_server_prune_backups(*, backup_root: str, keep_last: int, as_json: bool = False) -> int:
+    root = require_backup_root(backup_root)
+    count = require_keep_last(keep_last)
+    summary = build_prune_summary(root, count)
+    emit_prune_summary(summary, as_json=as_json)
+    return 0
+
+
 def configure_server_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
-    subparsers = parser.add_subparsers(dest='server_command', metavar='{healthcheck,backup,render-systemd}')
+    subparsers = parser.add_subparsers(dest='server_command', metavar='{healthcheck,backup,render-systemd,prune-backups}')
 
     healthcheck = subparsers.add_parser(
         'healthcheck',
@@ -646,6 +729,20 @@ def configure_server_parser(parser: argparse.ArgumentParser) -> argparse.Argumen
     )
     configure_server_render_systemd_parser(render_systemd)
     render_systemd.set_defaults(_handler=run_server_render_systemd)
+
+    prune_backups = subparsers.add_parser(
+        'prune-backups',
+        help='Prune older hosted registry backup snapshots',
+        description='Prune older hosted registry backup snapshots',
+    )
+    configure_server_prune_backups_parser(prune_backups)
+    prune_backups.set_defaults(
+        _handler=lambda args: run_server_prune_backups(
+            backup_root=args.backup_root,
+            keep_last=args.keep_last,
+            as_json=args.json,
+        )
+    )
     return parser
 
 
@@ -670,13 +767,16 @@ __all__ = [
     'build_server_backup_parser',
     'build_server_healthcheck_parser',
     'build_server_parser',
+    'build_server_prune_backups_parser',
     'build_server_render_systemd_parser',
     'configure_server_backup_parser',
     'configure_server_healthcheck_parser',
     'configure_server_parser',
+    'configure_server_prune_backups_parser',
     'configure_server_render_systemd_parser',
     'run_server_backup',
     'run_server_healthcheck',
+    'run_server_prune_backups',
     'run_server_render_systemd',
     'server_main',
 ]

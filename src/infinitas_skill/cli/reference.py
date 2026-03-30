@@ -14,6 +14,7 @@ from infinitas_skill.server.ops import (
     build_server_backup_parser,
     build_server_healthcheck_parser,
     build_server_parser,
+    build_server_prune_backups_parser,
     build_server_render_systemd_parser,
 )
 
@@ -40,6 +41,7 @@ def render_cli_reference() -> str:
     server_healthcheck_help = build_server_healthcheck_parser(prog='infinitas server healthcheck').format_help()
     server_backup_help = build_server_backup_parser(prog='infinitas server backup').format_help()
     server_render_systemd_help = build_server_render_systemd_parser(prog='infinitas server render-systemd').format_help()
+    server_prune_backups_help = build_server_prune_backups_parser(prog='infinitas server prune-backups').format_help()
     lines = [
         '---',
         'audience: contributors, integrators, operators',
@@ -110,6 +112,10 @@ def render_cli_reference() -> str:
         '## `infinitas server render-systemd`',
         '',
         _render_help_block(server_render_systemd_help).rstrip(),
+        '',
+        '## `infinitas server prune-backups`',
+        '',
+        _render_help_block(server_prune_backups_help).rstrip(),
         '',
     ]
     return '\n'.join(lines)

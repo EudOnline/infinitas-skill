@@ -201,15 +201,17 @@ options:
 ## `infinitas server`
 
 ```text
-usage: infinitas server [-h] {healthcheck,backup,render-systemd} ...
+usage: infinitas server [-h]
+                        {healthcheck,backup,render-systemd,prune-backups} ...
 
 Hosted server operations CLI
 
 positional arguments:
-  {healthcheck,backup,render-systemd}
+  {healthcheck,backup,render-systemd,prune-backups}
     healthcheck         Run hosted server health checks
     backup              Create a hosted registry backup set
     render-systemd      Render a hosted registry systemd deployment bundle
+    prune-backups       Prune older hosted registry backup snapshots
 
 options:
   -h, --help            show this help message and exit
@@ -363,4 +365,22 @@ options:
                         service
   --repo-lock-path REPO_LOCK_PATH
                         Override repo lock path for the env template
+```
+
+## `infinitas server prune-backups`
+
+```text
+usage: infinitas server prune-backups [-h] --backup-root BACKUP_ROOT
+                                      --keep-last KEEP_LAST [--json]
+
+Prune older hosted registry backup snapshots
+
+options:
+  -h, --help            show this help message and exit
+  --backup-root BACKUP_ROOT
+                        Directory containing hosted backup snapshot
+                        directories
+  --keep-last KEEP_LAST
+                        How many newest recognized backup directories to keep
+  --json                Emit machine-readable JSON output
 ```

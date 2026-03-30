@@ -119,7 +119,7 @@ def load_json_output(result, *, label):
 def scenario_server_cli_surface():
     result = run_cli(['server', '--help'], expect=0)
     help_text = result.stdout + result.stderr
-    for command in ['healthcheck', 'backup', 'render-systemd']:
+    for command in ['healthcheck', 'backup', 'render-systemd', 'prune-backups']:
         if command not in help_text:
             fail(f'expected {command!r} in infinitas server help')
 
@@ -235,11 +235,62 @@ def scenario_render_systemd_matches_legacy():
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
+def scenario_prune_backups_matches_legacy():
+    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-cli-server-prune-'))
+    try:
+        source_root = tmpdir / 'source-backups'
+        source_root.mkdir()
+        for name in [
+            '20260314T010000Z-nightly',
+            '20260314T020000Z-nightly',
+            '20260314T030000Z-nightly',
+        ]:
+            backup_dir = source_root / name
+            backup_dir.mkdir()
+            (backup_dir / 'manifest.json').write_text(json.dumps({'created_at': name.split('-')[0]}, ensure_ascii=False) + '\n', encoding='utf-8')
+        ignored = source_root / 'manual-notes'
+        ignored.mkdir()
+
+        cli_root = tmpdir / 'cli-backups'
+        legacy_root = tmpdir / 'legacy-backups'
+        shutil.copytree(source_root, cli_root)
+        shutil.copytree(source_root, legacy_root)
+
+        cli = run_cli(
+            ['server', 'prune-backups', '--backup-root', str(cli_root), '--keep-last', '2', '--json'],
+            expect=0,
+        )
+        legacy = run_legacy(
+            'prune-hosted-backups.py',
+            ['--backup-root', str(legacy_root), '--keep-last', '2', '--json'],
+            expect=0,
+        )
+
+        cli_payload = load_json_output(cli, label='infinitas server prune-backups')
+        legacy_payload = load_json_output(legacy, label='legacy prune-hosted-backups.py')
+
+        for field in ['ok', 'keep_last']:
+            if cli_payload.get(field) != legacy_payload.get(field):
+                fail(f'prune field {field!r} mismatch\ncli={cli_payload}\nlegacy={legacy_payload}')
+
+        for field in ['kept', 'deleted', 'ignored']:
+            cli_names = sorted(Path(item).name for item in cli_payload.get(field) or [])
+            legacy_names = sorted(Path(item).name for item in legacy_payload.get(field) or [])
+            if cli_names != legacy_names:
+                fail(f'prune field {field!r} mismatch\ncli={cli_names}\nlegacy={legacy_names}')
+
+        if ignored.name not in [Path(item).name for item in cli_payload.get('ignored') or []]:
+            fail(f'expected ignored directory to remain visible in prune output: {cli_payload}')
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 def main():
     scenario_server_cli_surface()
     scenario_healthcheck_matches_legacy()
     scenario_backup_matches_legacy()
     scenario_render_systemd_matches_legacy()
+    scenario_prune_backups_matches_legacy()
     print('OK: infinitas server CLI mirrors legacy server ops scripts')
 
 
