@@ -13,7 +13,7 @@ Use the guide section when you need orientation, decision framing, or contributo
 ## Start here
 
 - [Maintainability reset policy](maintainability-reset-policy.md)
-- [Private-first cutover](../private-first-cutover.md)
+- [Private-first cutover](private-first-cutover.md)
 - [Workflow drills](../ai/workflow-drills.md)
 
 ## What belongs here

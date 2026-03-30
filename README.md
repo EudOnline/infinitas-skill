@@ -76,7 +76,7 @@ The supported runtime remains:
 
 Use these canonical docs for the current model:
 
-- [Private-first cutover](docs/private-first-cutover.md)
+- [Private-first cutover](docs/guide/private-first-cutover.md)
 - [Platform drift playbook](docs/platform-drift-playbook.md)
 - [Release checklist](docs/release-checklist.md)
 - [Hosted registry server deployment](docs/ops/server-deployment.md)

@@ -1,3 +1,11 @@
+---
+audience: contributors, operators, integrators
+owner: repository maintainers
+source_of_truth: private-first cutover guide
+last_reviewed: 2026-03-30
+status: maintained
+---
+
 # Private-First Cutover
 
 ## What changed
