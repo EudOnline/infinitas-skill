@@ -130,7 +130,7 @@ This repository already has a committed `lvxiaoer` signer entry, so the usual op
 python3 scripts/report-signing-readiness.py --skill operate-infinitas-skill --json
 ```
 
-For the steady-state playbook after bootstrap, see `docs/signing-operations.md`.
+For the steady-state playbook after bootstrap, see `docs/ops/signing-operations.md`.
 
 Committed signer entries are expected to contain only public signer identities and public keys. Never commit private SSH keys.
 
@@ -204,7 +204,7 @@ python3 scripts/bootstrap-signing.py authorize-publisher --publisher lvxiaoer --
 python3 scripts/doctor-signing.py repo-audit
 ```
 
-For a full walkthrough, see `docs/signing-bootstrap.md`.
+For a full walkthrough, see `docs/ops/signing-bootstrap.md`.
 
 ## Release helper
 

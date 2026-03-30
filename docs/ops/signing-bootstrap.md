@@ -1,3 +1,11 @@
+---
+audience: operators and release maintainers
+owner: repository maintainers
+source_of_truth: signing bootstrap runbook
+last_reviewed: 2026-03-30
+status: maintained
+---
+
 # Signing Bootstrap and First Stable Release
 
 Fresh repositories typically begin with comment-only guidance in `config/allowed_signers` until maintainers commit the first trusted signer identities.
@@ -12,7 +20,7 @@ For the current repository state, check the live status first:
 python3 scripts/report-signing-readiness.py --skill my-skill --json
 ```
 
-If you need the steady-state operator playbook after bootstrap is already complete, see `docs/signing-operations.md`.
+If you need the steady-state operator playbook after bootstrap is already complete, see `signing-operations.md`.
 
 Signing defaults may now be seeded from ordered packs declared in `policy/policy-packs.json`, but `config/signing.json` still wins last as the repository-local override layer for the effective `signing` domain.
 

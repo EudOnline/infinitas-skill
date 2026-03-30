@@ -14,8 +14,8 @@ Use the ops section for procedures that keep the hosted control plane, release f
 
 - [Hosted registry server deployment](server-deployment.md)
 - [Hosted registry backup and restore](server-backup-and-restore.md)
-- [Signing bootstrap](../signing-bootstrap.md)
-- [Signing operations](../signing-operations.md)
+- [Signing bootstrap](signing-bootstrap.md)
+- [Signing operations](signing-operations.md)
 - [Release checklist](../release-checklist.md)
 
 ## Drift and freshness management

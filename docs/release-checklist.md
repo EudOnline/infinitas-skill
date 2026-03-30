@@ -24,7 +24,7 @@ Before pushing or promoting a skill:
 Before creating stable release output for an active skill:
 
 - [ ] if upstream Codex / Claude Code / OpenClaw behavior changed, follow `docs/platform-drift-playbook.md` before starting release work
-- [ ] trusted signer bootstrap was completed with `python3 scripts/bootstrap-signing.py ...` or an equivalent existing-key flow from `docs/signing-bootstrap.md`
+- [ ] trusted signer bootstrap was completed with `python3 scripts/bootstrap-signing.py ...` or an equivalent existing-key flow from `docs/ops/signing-bootstrap.md`
 - [ ] `config/allowed_signers` contains at least one trusted release signer entry committed in-repo
 - [ ] publisher `authorized_signers` / `authorized_releasers` policy was updated when the release uses a qualified publisher namespace
 - [ ] `python3 scripts/doctor-signing.py <name>` has no `FAIL` items before the first stable tag

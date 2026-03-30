@@ -291,16 +291,16 @@ def assert_signing_docs_synced(repo: Path):
             'Bootstrap real trusted signer entries in `config/allowed_signers` before the first actual stable release.',
             '`config/allowed_signers` still contains bootstrap guidance comments only; the bootstrap and doctor flow exist, but a real production signer ceremony is still pending.',
         ],
-        'docs/signing-bootstrap.md': [
+        'docs/ops/signing-bootstrap.md': [
             '`config/allowed_signers` intentionally starts with comments only.',
         ],
     }
     required_phrases = {
-        'docs/signing-bootstrap.md': [
+        'docs/ops/signing-bootstrap.md': [
             'python3 scripts/report-signing-readiness.py --skill my-skill --json',
             'This repository is already bootstrapped with a committed `lvxiaoer` signer entry',
         ],
-        'docs/signing-operations.md': [
+        'docs/ops/signing-operations.md': [
             '# Signing Operations',
             'python3 scripts/report-signing-readiness.py --skill operate-infinitas-skill --json',
         ],

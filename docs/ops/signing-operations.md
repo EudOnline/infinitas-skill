@@ -1,3 +1,11 @@
+---
+audience: operators and release maintainers
+owner: repository maintainers
+source_of_truth: signing operations runbook
+last_reviewed: 2026-03-30
+status: maintained
+---
+
 # Signing Operations
 
 This guide covers the steady-state operator workflow after the first trusted signer and first stable release already exist.

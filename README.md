@@ -88,4 +88,5 @@ Policy-aware commands continue to expose structured diagnostics for operators an
 - `scripts/check-promotion-policy.py --json` returns a `policy_trace` payload for promotion decisions.
 - `scripts/check-release-state.py operate-infinitas-skill --json` returns the release decision plus `policy_trace` details.
 - `scripts/validate-registry.py --json` returns `validation_errors` alongside namespace-level `policy_trace` data.
+- `policy/policy-packs.json` selects ordered shared defaults from `policy/packs/*.json`, while repository-local policy files remain the last override layer.
 - `policy/team-policy.json` remains the default team-governance input that keeps review and release checks aligned.
