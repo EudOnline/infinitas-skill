@@ -26,7 +26,7 @@ Reference docs describe exact behavior, contracts, schemas, and migration mappin
 
 - [Promotion policy](../promotion-policy.md)
 - [Policy packs](../policy-packs.md)
-- [Registry refresh policy](../registry-refresh-policy.md)
+- [Registry refresh policy](registry-refresh-policy.md)
 
 ## Migration note
 

@@ -1,3 +1,11 @@
+---
+audience: contributors, integrators, operators
+owner: repository maintainers
+source_of_truth: registry refresh policy reference
+last_reviewed: 2026-03-30
+status: maintained
+---
+
 # Registry Refresh Policy
 
 Version 13 Phase 1 adds an explicit freshness contract for cached remote Git registries.
