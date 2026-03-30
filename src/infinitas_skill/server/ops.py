@@ -10,6 +10,7 @@ import sqlite3
 import subprocess
 import sys
 import tarfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib import error, request
@@ -325,7 +326,8 @@ Type=simple
 User={args.service_user}
 WorkingDirectory={args.repo_root}
 EnvironmentFile={args.env_file}
-ExecStart={args.python_bin} {args.repo_root}/scripts/run-hosted-worker.py --poll-interval {args.worker_poll_interval:g}
+Environment=PYTHONPATH={args.repo_root.rstrip("/")}/src
+ExecStart={args.python_bin} -m infinitas_skill.cli.main server worker --poll-interval {args.worker_poll_interval:g}
 Restart=always
 RestartSec=2
 
@@ -561,6 +563,13 @@ def configure_server_prune_backups_parser(parser: argparse.ArgumentParser) -> ar
     return parser
 
 
+def configure_server_worker_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    parser.add_argument('--poll-interval', type=float, default=5.0, help='Seconds to wait between empty queue polls')
+    parser.add_argument('--once', action='store_true', help='Drain the queue once and exit')
+    parser.add_argument('--limit', type=int, default=None, help='Maximum jobs to process per loop iteration')
+    return parser
+
+
 def build_server_healthcheck_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description='Hosted registry server health check', prog=prog)
     return configure_server_healthcheck_parser(parser)
@@ -579,6 +588,11 @@ def build_server_render_systemd_parser(*, prog: str | None = None) -> argparse.A
 def build_server_prune_backups_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description='Prune older hosted registry backup snapshots', prog=prog)
     return configure_server_prune_backups_parser(parser)
+
+
+def build_server_worker_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description='Run the hosted registry worker loop', prog=prog)
+    return configure_server_worker_parser(parser)
 
 
 def run_server_healthcheck(
@@ -685,8 +699,29 @@ def run_server_prune_backups(*, backup_root: str, keep_last: int, as_json: bool 
     return 0
 
 
+def run_server_worker(*, poll_interval: float = 5.0, once: bool = False, limit: int | None = None) -> int:
+    from server.db import ensure_database_ready
+    from server.worker import run_worker_loop
+
+    ensure_database_ready()
+    if once:
+        processed = run_worker_loop(limit=limit)
+        print(f'processed {processed} job(s) in once mode')
+        return 0
+
+    try:
+        while True:
+            processed = run_worker_loop(limit=limit)
+            print(f'processed {processed} job(s)')
+            if processed == 0:
+                time.sleep(max(poll_interval, 0.1))
+    except KeyboardInterrupt:
+        print('worker loop interrupted; exiting cleanly')
+        return 0
+
+
 def configure_server_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
-    subparsers = parser.add_subparsers(dest='server_command', metavar='{healthcheck,backup,render-systemd,prune-backups}')
+    subparsers = parser.add_subparsers(dest='server_command', metavar='{healthcheck,backup,render-systemd,prune-backups,worker}')
 
     healthcheck = subparsers.add_parser(
         'healthcheck',
@@ -743,6 +778,20 @@ def configure_server_parser(parser: argparse.ArgumentParser) -> argparse.Argumen
             as_json=args.json,
         )
     )
+
+    worker = subparsers.add_parser(
+        'worker',
+        help='Run the hosted registry worker loop',
+        description='Run the hosted registry worker loop',
+    )
+    configure_server_worker_parser(worker)
+    worker.set_defaults(
+        _handler=lambda args: run_server_worker(
+            poll_interval=args.poll_interval,
+            once=args.once,
+            limit=args.limit,
+        )
+    )
     return parser
 
 
@@ -769,14 +818,17 @@ __all__ = [
     'build_server_parser',
     'build_server_prune_backups_parser',
     'build_server_render_systemd_parser',
+    'build_server_worker_parser',
     'configure_server_backup_parser',
     'configure_server_healthcheck_parser',
     'configure_server_parser',
     'configure_server_prune_backups_parser',
     'configure_server_render_systemd_parser',
+    'configure_server_worker_parser',
     'run_server_backup',
     'run_server_healthcheck',
     'run_server_prune_backups',
     'run_server_render_systemd',
+    'run_server_worker',
     'server_main',
 ]

@@ -99,7 +99,8 @@ def scenario_render_systemd_bundle():
         assert_contains(api_unit, f'EnvironmentFile={env_file}', 'api unit')
         assert_contains(api_unit, python_bin, 'api unit')
         assert_contains(api_unit, 'uvicorn server.app:app', 'api unit')
-        assert_contains(worker_unit, 'run-hosted-worker.py', 'worker unit')
+        assert_contains(worker_unit, f'Environment=PYTHONPATH={repo_root}/src', 'worker unit')
+        assert_contains(worker_unit, '-m infinitas_skill.cli.main server worker', 'worker unit')
         assert_contains(worker_unit, repo_root, 'worker unit')
         assert_contains(worker_unit, 'poll-interval', 'worker unit')
         assert_contains(backup_service, 'backup-hosted-registry.py', 'backup service')
@@ -112,6 +113,7 @@ def scenario_render_systemd_bundle():
         backup_doc = (ROOT / 'docs' / 'ops' / 'server-backup-and-restore.md').read_text(encoding='utf-8')
         readme = (ROOT / 'README.md').read_text(encoding='utf-8')
         assert_contains(deployment_doc, 'systemd', 'deployment doc')
+        assert_contains(deployment_doc, 'infinitas server worker', 'deployment doc')
         assert_contains(backup_doc, 'timer', 'backup doc')
         assert_contains(readme, 'render-hosted-systemd.py', 'README')
     finally:

@@ -1,38 +1,23 @@
 #!/usr/bin/env python3
-from __future__ import annotations
+import sys
+from pathlib import Path
 
-import argparse
-import time
+ROOT = Path(__file__).resolve().parent.parent
+SRC = ROOT / 'src'
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
 
-from server.db import ensure_database_ready
-from server.worker import run_worker_loop
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description='Run the hosted registry worker loop')
-    parser.add_argument('--poll-interval', type=float, default=5.0, help='Seconds to wait between empty queue polls')
-    parser.add_argument('--once', action='store_true', help='Drain the queue once and exit')
-    parser.add_argument('--limit', type=int, default=None, help='Maximum jobs to process per loop iteration')
-    return parser.parse_args()
+from infinitas_skill.server.ops import build_server_worker_parser, run_server_worker
 
 
-def main() -> int:
-    args = parse_args()
-    ensure_database_ready()
-    if args.once:
-        processed = run_worker_loop(limit=args.limit)
-        print(f'processed {processed} job(s) in once mode')
-        return 0
-
-    try:
-        while True:
-            processed = run_worker_loop(limit=args.limit)
-            print(f'processed {processed} job(s)')
-            if processed == 0:
-                time.sleep(max(args.poll_interval, 0.1))
-    except KeyboardInterrupt:
-        print('worker loop interrupted; exiting cleanly')
-        return 0
+def main(argv=None) -> int:
+    parser = build_server_worker_parser(prog='run-hosted-worker.py')
+    args = parser.parse_args(argv)
+    return run_server_worker(
+        poll_interval=args.poll_interval,
+        once=args.once,
+        limit=args.limit,
+    )
 
 
 if __name__ == '__main__':

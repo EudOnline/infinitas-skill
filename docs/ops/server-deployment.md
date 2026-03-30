@@ -8,7 +8,7 @@ The recommended single-node deployment shape now includes a generated `systemd` 
 
 - **Reverse proxy**: terminate TLS and expose the hosted API plus static artifact paths
 - **App**: run `uvicorn server.app:app`
-- **Worker**: run `scripts/run-hosted-worker.py` on the same host or a trusted sibling process
+- **Worker**: run the maintained `infinitas server worker` entrypoint on the same host or a trusted sibling process
 - **Repo path**: a writable checkout of the private source-of-truth repository
 - **Artifact path**: a filesystem directory served over HTTPS for `ai-index.json`, `catalog/`, provenance, and bundles
 - **Secrets**: bootstrap user tokens, SSH signing key wiring, and any database credentials
@@ -39,7 +39,7 @@ Production safety rails:
 3. Point `INFINITAS_SERVER_REPO_PATH` at the writable checkout
 4. Point `INFINITAS_SERVER_ARTIFACT_PATH` at a durable filesystem path
 5. Start the API app with `uv run uvicorn server.app:app --host 0.0.0.0 --port 8000`
-6. Start a worker loop process that drains queued validate / promote / publish jobs, for example `python scripts/run-hosted-worker.py --poll-interval 5`
+6. Start a worker loop process that drains queued validate / promote / publish jobs, for example `uv run infinitas server worker --poll-interval 5`
 7. Configure the reverse proxy so hosted registry clients reach the API and immutable artifacts over HTTPS
 
 The built-in hosted app now serves immutable distribution artifacts directly from the synchronized artifact root under `/registry/*`. That means operators can expose both the control-plane API and hosted install surface through the same app process, for example:
@@ -286,7 +286,7 @@ If mirror automation is enabled in the rendered bundle, also run:
 
 - `sudo systemctl enable --now infinitas-hosted-mirror.timer`
 
-The API service starts `uvicorn`, the worker service runs `scripts/run-hosted-worker.py`, the backup timer schedules `scripts/backup-hosted-registry.py`, the prune timer runs `scripts/prune-hosted-backups.py` against the backup root, and the inspect timer runs `scripts/inspect-hosted-state.py` with configured alert thresholds.
+The API service starts `uvicorn`, the worker service runs `python -m infinitas_skill.cli.main server worker` with `PYTHONPATH` pointed at `<repo>/src`, the backup timer schedules `scripts/backup-hosted-registry.py`, the prune timer runs `scripts/prune-hosted-backups.py` against the backup root, and the inspect timer runs `scripts/inspect-hosted-state.py` with configured alert thresholds.
 When configured, the mirror timer runs `scripts/mirror-registry.sh` for one-way outward mirroring only.
 If `INFINITAS_SERVER_MIRROR_REMOTE` is set in the worker environment, each successful publish also attempts an immediate best-effort one-way mirror push after artifact sync and the primary `origin` push complete.
 Published artifacts remain filesystem-backed under `INFINITAS_SERVER_ARTIFACT_PATH`, and the hosted app serves that synchronized artifact root read-only from `/registry/*`.

@@ -202,16 +202,18 @@ options:
 
 ```text
 usage: infinitas server [-h]
-                        {healthcheck,backup,render-systemd,prune-backups} ...
+                        {healthcheck,backup,render-systemd,prune-backups,worker}
+                        ...
 
 Hosted server operations CLI
 
 positional arguments:
-  {healthcheck,backup,render-systemd,prune-backups}
+  {healthcheck,backup,render-systemd,prune-backups,worker}
     healthcheck         Run hosted server health checks
     backup              Create a hosted registry backup set
     render-systemd      Render a hosted registry systemd deployment bundle
     prune-backups       Prune older hosted registry backup snapshots
+    worker              Run the hosted registry worker loop
 
 options:
   -h, --help            show this help message and exit
@@ -383,4 +385,20 @@ options:
   --keep-last KEEP_LAST
                         How many newest recognized backup directories to keep
   --json                Emit machine-readable JSON output
+```
+
+## `infinitas server worker`
+
+```text
+usage: infinitas server worker [-h] [--poll-interval POLL_INTERVAL] [--once]
+                               [--limit LIMIT]
+
+Run the hosted registry worker loop
+
+options:
+  -h, --help            show this help message and exit
+  --poll-interval POLL_INTERVAL
+                        Seconds to wait between empty queue polls
+  --once                Drain the queue once and exit
+  --limit LIMIT         Maximum jobs to process per loop iteration
 ```

@@ -25,6 +25,7 @@ The maintainability reset is consolidating maintained commands behind one CLI: `
 | `python3 scripts/backup-hosted-registry.py --repo-path PATH --database-url URL --artifact-path PATH --output-dir PATH [--label LABEL] [--json]` | `uv run infinitas server backup --repo-path PATH --database-url URL --artifact-path PATH --output-dir PATH [--label LABEL] [--json]` | live shim | 2026-06-30 |
 | `python3 scripts/render-hosted-systemd.py --output-dir PATH --repo-root PATH --python-bin PATH --env-file PATH --backup-output-dir PATH ...` | `uv run infinitas server render-systemd --output-dir PATH --repo-root PATH --python-bin PATH --env-file PATH --backup-output-dir PATH ...` | live shim | 2026-06-30 |
 | `python3 scripts/prune-hosted-backups.py --backup-root PATH --keep-last N [--json]` | `uv run infinitas server prune-backups --backup-root PATH --keep-last N [--json]` | live shim | 2026-06-30 |
+| `python3 scripts/run-hosted-worker.py [--poll-interval SECONDS] [--once] [--limit N]` | `uv run infinitas server worker [--poll-interval SECONDS] [--once] [--limit N]` | live shim | 2026-06-30 |
 
 ## Planned families
 
@@ -37,4 +38,4 @@ The planned top-level families from the maintainability reset are now present:
 - `infinitas registry ...`
 - `infinitas server ...`
 
-The current migrated surfaces are `infinitas compatibility check-platform-contracts`, `infinitas install resolve-plan`, `infinitas install check-target`, `infinitas policy check-packs`, `infinitas policy check-promotion`, `infinitas registry ...`, `infinitas release check-state`, `infinitas server healthcheck`, `infinitas server backup`, `infinitas server render-systemd`, and `infinitas server prune-backups`. Remaining command migrations should move behind these families rather than adding fresh one-off scripts.
+The current migrated surfaces are `infinitas compatibility check-platform-contracts`, `infinitas install resolve-plan`, `infinitas install check-target`, `infinitas policy check-packs`, `infinitas policy check-promotion`, `infinitas registry ...`, `infinitas release check-state`, `infinitas server healthcheck`, `infinitas server backup`, `infinitas server render-systemd`, `infinitas server prune-backups`, and `infinitas server worker`. Remaining command migrations should move behind these families rather than adding fresh one-off scripts.

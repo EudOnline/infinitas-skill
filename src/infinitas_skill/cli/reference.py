@@ -16,6 +16,7 @@ from infinitas_skill.server.ops import (
     build_server_parser,
     build_server_prune_backups_parser,
     build_server_render_systemd_parser,
+    build_server_worker_parser,
 )
 
 GENERATED_CLI_REFERENCE_LAST_REVIEWED = '2026-03-30'
@@ -42,6 +43,7 @@ def render_cli_reference() -> str:
     server_backup_help = build_server_backup_parser(prog='infinitas server backup').format_help()
     server_render_systemd_help = build_server_render_systemd_parser(prog='infinitas server render-systemd').format_help()
     server_prune_backups_help = build_server_prune_backups_parser(prog='infinitas server prune-backups').format_help()
+    server_worker_help = build_server_worker_parser(prog='infinitas server worker').format_help()
     lines = [
         '---',
         'audience: contributors, integrators, operators',
@@ -116,6 +118,10 @@ def render_cli_reference() -> str:
         '## `infinitas server prune-backups`',
         '',
         _render_help_block(server_prune_backups_help).rstrip(),
+        '',
+        '## `infinitas server worker`',
+        '',
+        _render_help_block(server_worker_help).rstrip(),
         '',
     ]
     return '\n'.join(lines)

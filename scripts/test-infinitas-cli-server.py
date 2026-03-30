@@ -29,14 +29,19 @@ def run(command, cwd=ROOT, expect=None, env=None):
     return result
 
 
-def run_cli(args, *, expect=None):
-    env = os.environ.copy()
-    env['PYTHONPATH'] = str(ROOT / 'src')
-    return run([sys.executable, '-m', 'infinitas_skill.cli.main', *args], expect=expect, env=env)
+def run_cli(args, *, expect=None, env=None):
+    merged_env = os.environ.copy()
+    if env is not None:
+        merged_env.update(env)
+    existing_pythonpath = merged_env.get('PYTHONPATH', '')
+    merged_env['PYTHONPATH'] = (
+        f"{ROOT / 'src'}{os.pathsep}{existing_pythonpath}" if existing_pythonpath else str(ROOT / 'src')
+    )
+    return run([sys.executable, '-m', 'infinitas_skill.cli.main', *args], expect=expect, env=merged_env)
 
 
-def run_legacy(script_name, args, *, expect=None):
-    return run([sys.executable, str(ROOT / 'scripts' / script_name), *args], expect=expect)
+def run_legacy(script_name, args, *, expect=None, env=None):
+    return run([sys.executable, str(ROOT / 'scripts' / script_name), *args], expect=expect, env=env)
 
 
 def prepare_repo(base: Path) -> Path:
@@ -119,7 +124,7 @@ def load_json_output(result, *, label):
 def scenario_server_cli_surface():
     result = run_cli(['server', '--help'], expect=0)
     help_text = result.stdout + result.stderr
-    for command in ['healthcheck', 'backup', 'render-systemd', 'prune-backups']:
+    for command in ['healthcheck', 'backup', 'render-systemd', 'prune-backups', 'worker']:
         if command not in help_text:
             fail(f'expected {command!r} in infinitas server help')
 
@@ -285,12 +290,49 @@ def scenario_prune_backups_matches_legacy():
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
+def scenario_worker_once_matches_legacy():
+    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-cli-server-worker-'))
+    try:
+        db_path = prepare_sqlite_db(tmpdir)
+        artifact_dir = tmpdir / 'artifacts'
+        artifact_dir.mkdir()
+        repo_lock = tmpdir / 'repo.lock'
+        env = os.environ.copy()
+        env['INFINITAS_SERVER_DATABASE_URL'] = f'sqlite:///{db_path}'
+        env['INFINITAS_SERVER_SECRET_KEY'] = 'fixture-secret'
+        env['INFINITAS_SERVER_BOOTSTRAP_USERS'] = json.dumps(
+            [
+                {
+                    'username': 'fixture-maintainer',
+                    'display_name': 'Fixture Maintainer',
+                    'role': 'maintainer',
+                    'token': 'fixture-token',
+                }
+            ]
+        )
+        env['INFINITAS_SERVER_REPO_PATH'] = str(ROOT)
+        env['INFINITAS_SERVER_ARTIFACT_PATH'] = str(artifact_dir)
+        env['INFINITAS_SERVER_REPO_LOCK_PATH'] = str(repo_lock)
+
+        cli = run_cli(['server', 'worker', '--once'], expect=0, env=env)
+        legacy = run_legacy('run-hosted-worker.py', ['--once'], expect=0, env=env)
+
+        cli_output = cli.stdout.strip()
+        legacy_output = legacy.stdout.strip()
+        expected = 'processed 0 job(s) in once mode'
+        if cli_output != expected or legacy_output != expected:
+            fail(f'worker once output mismatch\ncli:\n{cli.stdout}\nlegacy:\n{legacy.stdout}')
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 def main():
     scenario_server_cli_surface()
     scenario_healthcheck_matches_legacy()
     scenario_backup_matches_legacy()
     scenario_render_systemd_matches_legacy()
     scenario_prune_backups_matches_legacy()
+    scenario_worker_once_matches_legacy()
     print('OK: infinitas server CLI mirrors legacy server ops scripts')
 
 
