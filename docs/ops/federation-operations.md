@@ -1,3 +1,11 @@
+---
+audience: operators and release maintainers
+owner: repository maintainers
+source_of_truth: federation operations guide
+last_reviewed: 2026-03-30
+status: maintained
+---
+
 # Federation Operations Guide
 
 This guide explains how to reason about federation trust boundaries, what common failure states look like, and which recovery order to follow when a registry, provenance bundle, or export artifact looks suspicious.

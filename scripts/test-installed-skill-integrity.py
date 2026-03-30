@@ -644,10 +644,10 @@ def scenario_installed_integrity_docs_exist():
         if required not in pull_docs:
             fail(f'expected docs/ai/pull.md to mention {required!r}')
 
-    federation_docs = (ROOT / 'docs' / 'federation-operations.md').read_text(encoding='utf-8')
+    federation_docs = (ROOT / 'docs' / 'ops' / 'federation-operations.md').read_text(encoding='utf-8')
     for required in ['report-installed-integrity.py', 'catalog/audit-export.json', 'target-local']:
         if required not in federation_docs:
-            fail(f'expected docs/federation-operations.md to mention {required!r}')
+            fail(f'expected docs/ops/federation-operations.md to mention {required!r}')
 
 
 def main():
