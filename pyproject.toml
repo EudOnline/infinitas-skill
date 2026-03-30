@@ -16,5 +16,9 @@ dependencies = [
   "uvicorn>=0.35,<1",
 ]
 
+[project.scripts]
+infinitas = "infinitas_skill.cli.main:main"
+
 [tool.setuptools.packages.find]
-include = ["server*"]
+where = [".", "src"]
+include = ["server*", "infinitas_skill*"]

@@ -1,165 +1,78 @@
+---
+audience: contributors, operators, integrators
+owner: repository maintainers
+source_of_truth: repo entry page
+last_reviewed: 2026-03-30
+status: maintained
+---
+
 # infinitas-skill
 
 Private-first skill registry and hosted control plane.
 
-This repository now runs on a single lifecycle:
+This repository is in a breaking maintainability reset. The runtime model remains private-first, while the code and docs are being reorganized around one Python package, one maintained CLI, and one role-based documentation tree.
 
-`skill -> draft -> sealed version -> release -> exposure -> review case -> grant/credential -> discovery/install`
+## Start here
 
-The legacy `submissions / reviews / jobs` product workflow and the old shell-driven publish flow are no longer part of the supported runtime model.
+- [Documentation map](docs/README.md)
+- [Maintainability reset policy](docs/guide/maintainability-reset-policy.md)
+- [Reference docs](docs/reference/README.md)
+- [Operator runbooks](docs/ops/README.md)
+- [Architecture decisions](docs/adr/0001-maintainability-reset.md)
 
-## Current product surface
+## Repository shape
 
-Hosted UI:
+- `src/infinitas_skill/`: maintained Python package and future home for shared runtime logic
+- `scripts/`: legacy command and library surface; keep only temporary shims or not-yet-migrated tools here
+- `server/`: hosted control-plane runtime
+- `docs/`: role-based documentation during the reset
 
-- `/`
-- `/skills`
-- `/skills/{skill_id}`
-- `/drafts/{draft_id}`
-- `/releases/{release_id}`
-- `/releases/{release_id}/share`
-- `/access/tokens`
-- `/review-cases`
+## Maintained CLI surface
 
-Hosted control-plane API:
+The maintained entrypoint introduced in this slice is:
 
-- `/api/auth/*`
-- `/api/v1/me`
-- `/api/v1/access/*`
-- `/api/v1/skills`
-- `/api/v1/skills/{skill_id}/drafts`
-- `/api/v1/drafts/{draft_id}`
-- `/api/v1/drafts/{draft_id}/seal`
-- `/api/v1/versions/{version_id}/releases`
-- `/api/v1/releases/{release_id}`
-- `/api/v1/releases/{release_id}/artifacts`
-- `/api/v1/releases/{release_id}/exposures`
-- `/api/v1/exposures/{exposure_id}`
-- `/api/v1/exposures/{exposure_id}/activate`
-- `/api/v1/exposures/{exposure_id}/revoke`
-- `/api/v1/exposures/{exposure_id}/review-cases`
-- `/api/v1/review-cases/{review_case_id}`
-- `/api/v1/review-cases/{review_case_id}/decisions`
-- `/api/v1/catalog/{public|me|grant}`
-- `/api/v1/search/{public|me|grant}`
-- `/api/v1/install/{public|me|grant}/{skill_ref}`
+```bash
+uv run infinitas release check-state <skill> --mode local-preflight --json
+```
 
-Hosted registry surface:
+Legacy wrappers such as `python3 scripts/check-release-state.py ...` remain available only as migration shims. New command surfaces should land under `infinitas`, not as new top-level scripts.
 
-- `/registry/ai-index.json`
-- `/registry/discovery-index.json`
-- `/registry/distributions.json`
-- `/registry/compatibility.json`
-- `/registry/skills/{publisher}/{skill}/{version}/manifest.json`
-- `/registry/skills/{publisher}/{skill}/{version}/skill.tar.gz`
-- `/registry/provenance/{publisher}--{skill}-{version}.json`
-- `/registry/provenance/{publisher}--{skill}-{version}.json.ssig`
-- `/registry/catalog/distributions/...` and `/registry/catalog/provenance/...` remain as artifact aliases backed by the same private-first release data
-
-## Local development
+## Local verification
 
 ```bash
 uv sync
-
-uv run python3 scripts/test-private-first-cutover-schema.py
-uv run python3 scripts/test-settings-hardening.py
-uv run python3 scripts/test-private-registry-access-api.py
-uv run python3 scripts/test-private-registry-authoring-api.py
-uv run python3 scripts/test-private-registry-release-api.py
-uv run python3 scripts/test-private-registry-exposure-review.py
-uv run python3 scripts/test-private-registry-discovery.py
-uv run python3 scripts/test-private-registry-install-resolution.py
-uv run python3 scripts/test-private-registry-access-policy.py
-uv run python3 scripts/test-private-registry-audience-views.py
-uv run python3 scripts/test-private-registry-grant-install.py
-uv run python3 scripts/test-private-first-release-worker.py
-uv run python3 scripts/test-private-first-cli.py
-uv run python3 scripts/test-private-registry-ui.py
-uv run python3 scripts/test-home-auth-session-runtime.py
+uv run python3 scripts/test-platform-contracts.py
+uv run python3 scripts/test-release-invariants.py
+uv run python3 scripts/test-infinitas-cli-release-state.py
 ```
 
-Local runs default to `INFINITAS_SERVER_ENV=development`. If you want fixture-safe defaults in automated checks, set `INFINITAS_SERVER_ENV=test`; both modes can still use the built-in `change-me` secret and bootstrap user fixtures.
+Local runs default to `INFINITAS_SERVER_ENV=development`. Use `INFINITAS_SERVER_ENV=test` when you need fixture-safe automated behavior.
 
-`scripts/test-home-auth-session-runtime.py` uses the Codex Playwright wrapper under `$CODEX_HOME`. If that wrapper is unavailable, keep using the API/UI suite locally and treat the browser runtime check as an opt-in regression pass.
+## Maintainability reset rules
 
-## Production configuration
+- No new top-level script may be added under `scripts/` without explicit architecture approval.
+- No new long-lived doc may be added outside `docs/guide/`, `docs/reference/`, `docs/ops/`, `docs/archive/`, or `docs/adr/`.
+- New shared Python logic should land under `src/infinitas_skill/`.
+- Compatibility aliases introduced during this reset expire on `2026-06-30` unless a later ADR extends them.
 
-Production startup is now intentionally strict:
+## Product and policy context
 
-- set `INFINITAS_SERVER_ENV=production`
-- replace `INFINITAS_SERVER_SECRET_KEY=change-me` with a real secret before boot
-- set `INFINITAS_SERVER_BOOTSTRAP_USERS` to a non-empty JSON array of bootstrap operators
+The supported runtime remains:
 
-If `INFINITAS_SERVER_ENV=production` is set and either the secret remains `change-me` or bootstrap users are omitted, the app now fails fast during startup instead of silently falling back to fixture defaults.
+`skill -> draft -> sealed version -> release -> exposure -> review case -> grant/credential -> discovery/install`
+
+Use these canonical docs for the current model:
+
+- [Private-first cutover](docs/private-first-cutover.md)
+- [Platform drift playbook](docs/platform-drift-playbook.md)
+- [Release checklist](docs/release-checklist.md)
+- [Hosted registry server deployment](docs/ops/server-deployment.md)
 
 ## Policy trace and validation output
 
-Policy enforcement and release decisions now expose structured debug output for operators:
+Policy-aware commands continue to expose structured diagnostics for operators and automation:
 
-- `scripts/check-promotion-policy.py --json` returns a `policy_trace` payload for promotion decisions, including exception usage when a break-glass path waives a blocker.
-- `scripts/check-release-state.py operate-infinitas-skill --json` returns the current release decision payload plus `policy_trace` details for the requested skill.
-- `scripts/validate-registry.py --json` returns namespace-level `policy_traces` together with `validation_errors` so callers can distinguish policy blockers from content validation failures.
-- The default team-review contract is sourced from `policy/team-policy.json`, which keeps the CLI output and hosted governance checks aligned around the same policy inputs.
-
-## Compatibility terms
-
-The compatibility surface now distinguishes between two meanings:
-
-- `declared support`: the agent runtimes a skill claims to support through author metadata such as `_meta.json.agent_compatible`
-- `verified support`: the runtimes confirmed by recent platform-specific checks and recorded compatibility evidence
-
-`catalog/compatibility.json` is the generated summary view that exposes both layers together.
-
-Verified support freshness now affects release readiness, not just discovery quality. If a declared platform is stale or missing verified evidence, `scripts/check-release-state.py` blocks `preflight` and `stable-release` until the evidence is refreshed.
-
-For the operator loop that handles upstream Codex / Claude Code / OpenClaw changes, see [docs/platform-drift-playbook.md](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/docs/platform-drift-playbook.md).
-
-## Discovery and recommendation
-
-For audience-aware skill selection, start with:
-
-- `scripts/search-skills.sh` for broad discovery
-- `scripts/recommend-skill.sh` when you want the best-ranked fit for a task
-- `docs/ai/workflow-drills.md` for the current search / inspect / confirm workflow drills
-
-## Operator workflow
-
-Use the hosted API or `scripts/registryctl.py` instead of repository-mutation shell scripts.
-
-Typical sequence:
-
-```bash
-# create a skill namespace record
-python3 scripts/registryctl.py skills create \
-  --slug demo-skill \
-  --display-name "Demo Skill" \
-  --summary "Private-first demo skill"
-
-# create and patch a draft
-python3 scripts/registryctl.py drafts create 1 \
-  --content-ref 'git+https://example.com/demo-skill.git#<commit>' \
-  --metadata-json '{"entrypoint":"SKILL.md","manifest":{"name":"demo-skill","version":"0.1.0"}}'
-
-# seal the draft into an immutable version
-python3 scripts/registryctl.py drafts seal 1 --version 0.1.0
-
-# create a release and let the worker materialize artifacts
-python3 scripts/registryctl.py releases create 1
-
-# expose the release to an audience
-python3 scripts/registryctl.py exposures create 1 \
-  --audience-type public \
-  --listing-mode listed \
-  --install-mode enabled \
-  --requested-review-mode none
-```
-
-Public exposures become installable only after their review case is approved. Private and grant exposures can activate immediately unless policy requires review.
-
-## Design notes
-
-- The database is Alembic-managed only. Unversioned compatibility databases are intentionally not auto-upgraded.
-- `INFINITAS_REGISTRY_READ_TOKENS` is no longer a primary auth path for the registry surface. Access is derived from private-first credentials and bridged hosted user tokens.
-- The registry surface is generated from release/exposure/access state. It is no longer a compatibility view layered on top of submission state.
-
-Additional migration notes live in [docs/private-first-cutover.md](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/.worktrees/codex-private-first-cutover/docs/private-first-cutover.md).
+- `scripts/check-promotion-policy.py --json` returns a `policy_trace` payload for promotion decisions.
+- `scripts/check-release-state.py operate-infinitas-skill --json` returns the release decision plus `policy_trace` details.
+- `scripts/validate-registry.py --json` returns `validation_errors` alongside namespace-level `policy_trace` data.
+- `policy/team-policy.json` remains the default team-governance input that keeps review and release checks aligned.
