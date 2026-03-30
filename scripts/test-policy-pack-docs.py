@@ -20,7 +20,7 @@ def main():
     assert_contains(ROOT / 'README.md', 'policy/policy-packs.json')
     assert_contains(ROOT / 'docs' / 'policy-packs.md', 'repository-local files win over packs')
     assert_contains(ROOT / 'docs' / 'policy-packs.md', 'policy/packs/')
-    assert_contains(ROOT / 'docs' / 'promotion-policy.md', 'policy/policy-packs.json')
+    assert_contains(ROOT / 'docs' / 'reference' / 'promotion-policy.md', 'policy/policy-packs.json')
     assert_contains(ROOT / 'docs' / 'ops' / 'signing-bootstrap.md', 'policy/policy-packs.json')
     assert_contains(ROOT / 'docs' / 'multi-registry.md', 'policy/policy-packs.json')
     assert_contains(ROOT / 'scripts' / 'check-all.sh', 'python3 scripts/check-policy-packs.py')

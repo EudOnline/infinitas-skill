@@ -1,3 +1,11 @@
+---
+audience: contributors, integrators, reviewers
+owner: repository maintainers
+source_of_truth: promotion policy reference
+last_reviewed: 2026-03-30
+status: maintained
+---
+
 # Promotion Policy
 
 Version 6 introduces a machine-readable promotion policy file:
