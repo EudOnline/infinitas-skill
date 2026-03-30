@@ -12,8 +12,12 @@ SKILL_NAME = "operate-infinitas-skill"
 MODE = "local-preflight"
 
 
-def _run_release_state(command: list[str]) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(command, cwd=ROOT, text=True, capture_output=True)
+def _cli_env() -> dict[str, str]:
+    return dict(os.environ, PYTHONPATH=str(ROOT / "src"))
+
+
+def _run_release_state(command: list[str], *, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(command, cwd=ROOT, text=True, capture_output=True, env=env)
     assert result.returncode in {0, 1}, (
         f"command {command!r} exited {result.returncode}, expected 0 or 1\n"
         f"stdout:\n{result.stdout}\n"
@@ -49,14 +53,17 @@ def _load_payload(result: subprocess.CompletedProcess[str], label: str) -> dict:
 def assert_release_state_matches_legacy_json() -> None:
     cli = _run_release_state(
         [
-            "infinitas",
+            sys.executable,
+            "-m",
+            "infinitas_skill.cli.main",
             "release",
             "check-state",
             SKILL_NAME,
             "--mode",
             MODE,
             "--json",
-        ]
+        ],
+        env=_cli_env(),
     )
     legacy = _run_release_state(
         [

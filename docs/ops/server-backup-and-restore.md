@@ -46,7 +46,7 @@ Each backup directory contains:
 
 The backup helper refuses dirty repo snapshots so operators do not accidentally capture an in-flight publish worktree.
 
-If you install the generated `systemd` bundle from `scripts/render-hosted-systemd.py`, enable the matching backup timer so this command runs on a predictable schedule:
+If you install the generated `systemd` bundle from `uv run infinitas server render-systemd ...`, enable the matching backup timer so this command runs on a predictable schedule:
 
 ```bash
 sudo systemctl enable --now infinitas-hosted-backup.timer

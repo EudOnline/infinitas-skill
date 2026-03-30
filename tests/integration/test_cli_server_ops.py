@@ -29,11 +29,7 @@ def _run_cli(args: list[str], *, expect: int | None = 0, env: dict[str, str] | N
     merged_env["PYTHONPATH"] = (
         f"{ROOT / 'src'}{os.pathsep}{existing_pythonpath}" if existing_pythonpath else str(ROOT / "src")
     )
-    return _run(["infinitas", *args], expect=expect, env=merged_env)
-
-
-def _run_legacy(script_name: str, args: list[str], *, expect: int | None = 0, env: dict[str, str] | None = None):
-    return _run([sys.executable, str(ROOT / "scripts" / script_name), *args], expect=expect, env=env)
+    return _run([sys.executable, "-m", "infinitas_skill.cli.main", *args], expect=expect, env=merged_env)
 
 
 def _load_json_output(result, *, label: str) -> dict:
@@ -64,7 +60,7 @@ def assert_server_ops_split_into_modules() -> None:
     assert ops.run_server_prune_backups.__module__ == "infinitas_skill.server.backup"
 
 
-def assert_server_healthcheck_matches_legacy() -> None:
+def assert_server_healthcheck_reports_expected_summary() -> None:
     tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-cli-server-health-"))
     try:
         repo_state = create_repo_state(tmpdir)
@@ -81,13 +77,14 @@ def assert_server_healthcheck_matches_legacy() -> None:
                 "--json",
             ]
             cli = _run_cli(["server", "healthcheck", *args], expect=0)
-            legacy = _run_legacy("server-healthcheck.py", args, expect=0)
 
         cli_payload = _load_json_output(cli, label="infinitas server healthcheck")
-        legacy_payload = _load_json_output(legacy, label="legacy server-healthcheck.py")
-        assert cli_payload == legacy_payload, (
-            f"healthcheck payload mismatch\ncli:\n{cli.stdout}\nlegacy:\n{legacy.stdout}"
-        )
+        assert cli_payload.get("ok") is True
+        assert cli_payload.get("api", {}).get("ok") is True
+        assert cli_payload.get("api", {}).get("url", "").endswith("/healthz")
+        assert cli_payload.get("repo", {}).get("clean") is True
+        assert cli_payload.get("artifacts", {}).get("ai_index") is True
+        assert cli_payload.get("database", {}).get("kind") == "sqlite"
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -100,11 +97,11 @@ def test_server_ops_split_into_smaller_modules() -> None:
     assert_server_ops_split_into_modules()
 
 
-def test_server_healthcheck_matches_legacy_script() -> None:
-    assert_server_healthcheck_matches_legacy()
+def test_server_healthcheck_reports_expected_summary() -> None:
+    assert_server_healthcheck_reports_expected_summary()
 
 
 def main() -> None:
     assert_server_cli_help_lists_maintained_subcommands()
     assert_server_ops_split_into_modules()
-    assert_server_healthcheck_matches_legacy()
+    assert_server_healthcheck_reports_expected_summary()

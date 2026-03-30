@@ -222,7 +222,7 @@ This is intentionally SQLite-first for the current single-node deployment shape.
 Generate a ready-to-install deployment bundle with:
 
 ```bash
-python scripts/render-hosted-systemd.py \
+uv run infinitas server render-systemd \
   --output-dir /tmp/infinitas-systemd \
   --repo-root /srv/infinitas/repo \
   --python-bin /srv/infinitas/.venv/bin/python \
@@ -241,7 +241,7 @@ python scripts/render-hosted-systemd.py \
 To include optional one-way mirror automation in the same rendered bundle, render with:
 
 ```bash
-python scripts/render-hosted-systemd.py \
+uv run infinitas server render-systemd \
   --output-dir /tmp/infinitas-systemd \
   --repo-root /srv/infinitas/repo \
   --python-bin /srv/infinitas/.venv/bin/python \

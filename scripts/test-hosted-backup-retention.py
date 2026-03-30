@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -7,6 +8,7 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+SRC = ROOT / 'src'
 
 
 def fail(message):
@@ -23,6 +25,25 @@ def run(command, cwd, expect=0, env=None):
             f'stderr:\n{result.stderr}'
         )
     return result
+
+
+def cli_env(extra_env=None):
+    env = os.environ.copy()
+    if extra_env:
+        env.update(extra_env)
+    existing_pythonpath = env.get('PYTHONPATH', '')
+    pythonpath = os.pathsep.join([str(ROOT), str(SRC)])
+    env['PYTHONPATH'] = f'{pythonpath}{os.pathsep}{existing_pythonpath}' if existing_pythonpath else pythonpath
+    return env
+
+
+def run_server_cli(args, *, cwd=ROOT, expect=0, env=None):
+    return run(
+        [sys.executable, '-m', 'infinitas_skill.cli.main', 'server', *args],
+        cwd=cwd,
+        expect=expect,
+        env=cli_env(env),
+    )
 
 
 def assert_contains(text, needle, label):
@@ -56,17 +77,15 @@ def scenario_prune_old_backups():
         ignored = backup_root / 'manual-notes'
         ignored.mkdir()
 
-        result = run(
+        result = run_server_cli(
             [
-                sys.executable,
-                str(ROOT / 'scripts' / 'prune-hosted-backups.py'),
+                'prune-backups',
                 '--backup-root',
                 str(backup_root),
                 '--keep-last',
                 '2',
                 '--json',
             ],
-            cwd=ROOT,
         )
         payload = parse_json_or_fail(result, 'prune run')
         if payload.get('ok') is not True:
@@ -102,10 +121,9 @@ def scenario_render_prune_units():
     try:
         output_dir = tmpdir / 'rendered'
         prefix = 'infinitas-hosted'
-        result = run(
+        result = run_server_cli(
             [
-                sys.executable,
-                str(ROOT / 'scripts' / 'render-hosted-systemd.py'),
+                'render-systemd',
                 '--output-dir',
                 str(output_dir),
                 '--repo-root',
@@ -127,7 +145,6 @@ def scenario_render_prune_units():
                 '--prune-keep-last',
                 '7',
             ],
-            cwd=ROOT,
         )
         assert_contains(result.stdout, 'wrote', 'render output')
 

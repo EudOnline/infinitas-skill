@@ -29,6 +29,21 @@ def assert_exists(path: str) -> None:
         fail(f"expected required file to exist: {path}")
 
 
+def assert_missing(path: str) -> None:
+    if (ROOT / path).exists():
+        fail(f"expected obsolete file to be removed: {path}")
+
+
+RETIRED_SERVER_SHIMS = [
+    "scripts/server-healthcheck.py",
+    "scripts/backup-hosted-registry.py",
+    "scripts/inspect-hosted-state.py",
+    "scripts/render-hosted-systemd.py",
+    "scripts/prune-hosted-backups.py",
+    "scripts/run-hosted-worker.py",
+]
+
+
 REQUIRED = {
     ".planning/PROJECT.md": [
         "v20 is complete on `main`.",
@@ -49,6 +64,8 @@ REQUIRED = {
     "docs/project-closeout.md": [
         "The current `infinitas-skill` project is complete on `main`.",
         "Future work belongs to a new milestone or maintenance slice, not unfinished v20 scope.",
+        "The old `scripts/server-healthcheck.py`, `scripts/backup-hosted-registry.py`, `scripts/inspect-hosted-state.py`, `scripts/render-hosted-systemd.py`, `scripts/prune-hosted-backups.py`, and `scripts/run-hosted-worker.py` wrappers are retired.",
+        "`scripts/check-all.sh` now defaults to `focused-integration`, `hosted-ui`, and `full-regression` as the closeout gate.",
     ],
 }
 
@@ -89,6 +106,8 @@ def main() -> None:
         print("SKIP: project complete state checks (planning docs unavailable in this workspace copy)")
         return
     assert_exists("docs/adr/0002-maintained-surface-cutover.md")
+    for path in RETIRED_SERVER_SHIMS:
+        assert_missing(path)
     for path, needles in REQUIRED.items():
         for needle in needles:
             assert_contains(path, needle)

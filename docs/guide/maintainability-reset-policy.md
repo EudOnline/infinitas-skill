@@ -39,7 +39,7 @@ The current cutoff for removing maintainability-reset aliases is `2026-06-30`. A
 
 - package-owned: `src/infinitas_skill/install/...`, `src/infinitas_skill/policy/...`, `src/infinitas_skill/release/...`, and `src/infinitas_skill/server/...` are the maintained home for reusable CLI logic.
 - runtime-owned: `server/modules/...` and `server/ui/...` are the maintained home for hosted API and UI behavior; `server/app.py` should shrink toward bootstrap-only assembly.
-- compatibility-only: `scripts/*.py` wrappers and leftover helper modules exist only to bridge callers onto maintained surfaces. Do not add new maintained shared logic there.
+- compatibility-only: `scripts/*.py` wrappers and leftover helper modules exist only where a bridge is still justified for compatibility, install, policy, registry, or release. The old server-operation wrappers are retired. Do not add new maintained shared logic there.
 
 ## Bridge inventory
 
@@ -50,7 +50,7 @@ The current cutoff for removing maintainability-reset aliases is `2026-06-30`. A
 | policy | `infinitas policy check-packs`, `infinitas policy check-promotion` | maintained | `python3 scripts/check-policy-packs.py`, `python3 scripts/check-promotion-policy.py ...` | shim |
 | registry | `infinitas registry ...` | maintained | `python3 scripts/registryctl.py ...` | shim |
 | release | `infinitas release check-state` | maintained | `python3 scripts/check-release-state.py ...` | shim |
-| server | `infinitas server healthcheck`, `infinitas server backup`, `infinitas server inspect-state`, `infinitas server render-systemd`, `infinitas server prune-backups`, `infinitas server worker` | maintained | `python3 scripts/server-healthcheck.py ...`, `python3 scripts/backup-hosted-registry.py ...`, `python3 scripts/inspect-hosted-state.py ...`, `python3 scripts/render-hosted-systemd.py ...`, `python3 scripts/prune-hosted-backups.py ...`, `python3 scripts/run-hosted-worker.py ...` | shim |
+| server | `infinitas server healthcheck`, `infinitas server backup`, `infinitas server inspect-state`, `infinitas server render-systemd`, `infinitas server prune-backups`, `infinitas server worker` | maintained | none; wrapper scripts deleted after focused integration coverage | retired |
 
 Legacy-only command families should not be introduced into maintained docs. If a surface has no canonical `infinitas ...` path yet, keep it out of the maintained inventory until the cutover decision is explicit.
 
@@ -63,6 +63,6 @@ Legacy-only command families should not be introduced into maintained docs. If a
 | policy | `2026-06-30` | Add or update an ADR before extending the shim window |
 | registry | `2026-06-30` | Add or update an ADR before extending the shim window |
 | release | `2026-06-30` | Add or update an ADR before extending the shim window |
-| server | `2026-06-30` | Add or update an ADR before extending the shim window |
+| server | completed on `2026-03-30` | N/A; wrapper scripts already deleted |
 
-Temporary modules such as `scripts/release_lib.py`, `scripts/platform_contract_lib.py`, and `scripts/compatibility_policy_lib.py` remain allowed only while a shim still depends on them. Once a family is package-owned end-to-end, remove the wrapper-facing helper too.
+Temporary modules such as `scripts/release_lib.py`, `scripts/platform_contract_lib.py`, and `scripts/compatibility_policy_lib.py` remain allowed only while a still-justified shim or package bridge depends on them. Once a family is package-owned end-to-end, remove the wrapper-facing helper too.

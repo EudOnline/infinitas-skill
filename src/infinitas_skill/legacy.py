@@ -1,4 +1,4 @@
-"""Temporary bridge helpers for modules that still live under scripts/."""
+"""Temporary bridge helpers for the shrinking script-era support surface."""
 
 import os
 import sys

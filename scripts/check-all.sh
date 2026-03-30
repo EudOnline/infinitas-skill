@@ -3,11 +3,31 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+if [[ -x "$ROOT/.venv/bin/python3" ]]; then
+  if ( ( set +e; "$ROOT/.venv/bin/python3" -c 'from alembic import command; import pytest' >/dev/null 2>&1 ) >/dev/null 2>&1 ); then
+    export PATH="$ROOT/.venv/bin:$PATH"
+  fi
+fi
 
 BLOCKS=("$@")
 if [[ ${#BLOCKS[@]} -eq 0 ]]; then
   BLOCKS=(focused-integration hosted-ui full-regression)
 fi
+VALID_BLOCKS=(focused-integration hosted-ui full-regression)
+
+validate_blocks() {
+  local requested
+  local valid
+  for requested in "${BLOCKS[@]}"; do
+    for valid in "${VALID_BLOCKS[@]}"; do
+      if [[ "$requested" == "$valid" ]]; then
+        continue 2
+      fi
+    done
+    echo "FAIL: unknown check-all block '$requested' (expected one of: ${VALID_BLOCKS[*]})" >&2
+    exit 1
+  done
+}
 
 should_run() {
   local target="$1"
@@ -20,7 +40,14 @@ should_run() {
   return 1
 }
 
+validate_blocks
+
+run_block() {
+  echo "== $1 =="
+}
+
 if should_run focused-integration; then
+  run_block focused-integration
   python3 -m pytest \
     tests/integration/test_cli_release_state.py \
     tests/integration/test_cli_server_ops.py \
@@ -29,6 +56,7 @@ if should_run focused-integration; then
 fi
 
 if should_run hosted-ui; then
+  run_block hosted-ui
   if python3 - <<'PY' >/dev/null 2>&1
 import fastapi  # noqa: F401
 import httpx  # noqa: F401
@@ -59,6 +87,7 @@ PY
 fi
 
 if should_run full-regression; then
+  run_block full-regression
   python3 scripts/check-registry-sources.py
   python3 scripts/test-registry-refresh-policy.py
   python3 scripts/test-registry-snapshot-mirror.py
@@ -205,4 +234,4 @@ PY
   fi
 fi
 
-echo "OK: full registry check passed"
+echo "OK: requested registry check blocks passed (${BLOCKS[*]})"

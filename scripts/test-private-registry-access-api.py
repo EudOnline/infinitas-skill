@@ -74,7 +74,7 @@ def scenario_access_credentials_and_release_scope() -> None:
     tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-private-access-test-"))
     try:
         configure_env(tmpdir)
-        run(["uv", "run", "--active", "alembic", "upgrade", "20260329_0004"])
+        run([sys.executable, "-m", "alembic", "upgrade", "20260329_0004"])
         insert_legacy_plaintext_user(
             tmpdir / "server.db",
             username="legacy-migrated",

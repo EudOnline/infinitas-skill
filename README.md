@@ -32,7 +32,7 @@ This repository is in a breaking maintainability reset. The runtime model remain
 
 - package-owned: `src/infinitas_skill/install/...`, `src/infinitas_skill/policy/...`, `src/infinitas_skill/release/...`, and `src/infinitas_skill/server/...` own maintained CLI logic.
 - runtime-owned: `server/modules/...` and `server/ui/...` own hosted API, UI, and presentation logic, while `server/app.py` stays focused on app assembly.
-- compatibility-only: wrappers such as `scripts/check-release-state.py` may survive only as thin adapters until the default `2026-06-30` alias cutoff.
+- compatibility-only: a smaller shim surface remains for compatibility, install, policy, registry, and release flows; the old server-operation wrappers are retired and the remaining aliases still default to the `2026-06-30` cutoff.
 
 ## Maintained CLI surface
 
@@ -48,12 +48,13 @@ uv run infinitas server healthcheck --api-url http://127.0.0.1:8000 --repo-path 
 uv run infinitas server prune-backups --backup-root /srv/infinitas/backups --keep-last 7 --json
 ```
 
-Legacy wrappers such as `python3 scripts/check-release-state.py ...` remain available only as migration shims. That includes operator-facing shims like `python3 scripts/render-hosted-systemd.py ...` for the canonical `uv run infinitas server render-systemd ...` path while the maintained CLI surface is still consolidating. New command surfaces should land under `infinitas`, not as new top-level scripts.
+Legacy wrappers such as `python3 scripts/check-release-state.py ...` remain available only where rollout safety still justifies them. The old server-operation wrapper scripts were retired after the focused integration tier landed, so `uv run infinitas server ...` is now the only maintained entrypoint for hosted operator commands. New command surfaces should land under `infinitas`, not as new top-level scripts.
 
 ## Local verification
 
 ```bash
 uv sync
+uv run pytest tests/integration/test_cli_release_state.py tests/integration/test_cli_server_ops.py tests/integration/test_private_registry_ui.py -q
 uv run python3 scripts/test-platform-contracts.py
 uv run python3 scripts/test-install-manifest-compat.py
 uv run python3 scripts/test-release-invariants.py
@@ -65,6 +66,7 @@ uv run python3 scripts/test-infinitas-cli-registry.py
 uv run python3 scripts/test-infinitas-cli-server.py
 uv run python3 scripts/test-infinitas-cli-reference-docs.py
 uv run python3 scripts/test-doc-governance.py
+./scripts/check-all.sh
 ```
 
 Local runs default to `INFINITAS_SERVER_ENV=development`. Use `INFINITAS_SERVER_ENV=test` when you need fixture-safe automated behavior.
@@ -85,6 +87,7 @@ The supported runtime remains:
 Use these canonical docs for the current model:
 
 - [Private-first cutover](docs/guide/private-first-cutover.md)
+- [AI workflow drills](docs/ai/workflow-drills.md) explains when to use `scripts/recommend-skill.sh`, `scripts/search-skills.sh`, and `scripts/inspect-skill.sh` for task routing.
 - [Platform drift playbook](docs/ops/platform-drift-playbook.md)
 - [Release checklist](docs/ops/release-checklist.md)
 - [CI-native attestation](docs/ai/ci-attestation.md) documents `.github/workflows/release-attestation.yml` and `python3 scripts/verify-ci-attestation.py`

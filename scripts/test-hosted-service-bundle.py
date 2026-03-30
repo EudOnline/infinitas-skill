@@ -9,6 +9,7 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+SRC = ROOT / 'src'
 
 
 def fail(message):
@@ -25,6 +26,25 @@ def run(command, cwd, expect=0, env=None):
             f'stderr:\n{result.stderr}'
         )
     return result
+
+
+def cli_env(extra_env=None):
+    env = os.environ.copy()
+    if extra_env:
+        env.update(extra_env)
+    existing_pythonpath = env.get('PYTHONPATH', '')
+    pythonpath = os.pathsep.join([str(ROOT), str(SRC)])
+    env['PYTHONPATH'] = f'{pythonpath}{os.pathsep}{existing_pythonpath}' if existing_pythonpath else pythonpath
+    return env
+
+
+def run_server_cli(args, *, cwd=ROOT, expect=0, env=None):
+    return run(
+        [sys.executable, '-m', 'infinitas_skill.cli.main', 'server', *args],
+        cwd=cwd,
+        expect=expect,
+        env=cli_env(env),
+    )
 
 
 def assert_contains(text, needle, label):
@@ -53,10 +73,9 @@ def scenario_render_systemd_bundle():
         python_bin = '/opt/infinitas/.venv/bin/python'
         prefix = 'infinitas-hosted'
 
-        result = run(
+        result = run_server_cli(
             [
-                sys.executable,
-                str(ROOT / 'scripts' / 'render-hosted-systemd.py'),
+                'render-systemd',
                 '--output-dir',
                 str(output_dir),
                 '--repo-root',
@@ -74,7 +93,6 @@ def scenario_render_systemd_bundle():
                 '--backup-label',
                 'nightly',
             ],
-            cwd=ROOT,
         )
         assert_contains(result.stdout, 'wrote', 'render output')
 
@@ -131,7 +149,8 @@ def scenario_render_systemd_bundle():
         assert_contains(compose_file, 'python3 -m infinitas_skill.cli.main server prune-backups', 'compose file')
         assert_contains(compose_file, 'python3 -m infinitas_skill.cli.main server inspect-state', 'compose file')
         assert_contains(compose_file, 'PYTHONPATH', 'compose file')
-        assert_contains(readme, 'render-hosted-systemd.py', 'README')
+        assert_contains(readme, 'uv run infinitas server healthcheck', 'README')
+        assert_contains(readme, 'The old server-operation wrapper scripts were retired', 'README')
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -153,13 +172,11 @@ def scenario_worker_runner_once_smoke():
         env['INFINITAS_SERVER_ARTIFACT_PATH'] = str(artifact_dir)
         env['INFINITAS_SERVER_REPO_LOCK_PATH'] = str(repo_lock)
 
-        result = run(
+        result = run_server_cli(
             [
-                sys.executable,
-                str(ROOT / 'scripts' / 'run-hosted-worker.py'),
+                'worker',
                 '--once',
             ],
-            cwd=ROOT,
             env=env,
         )
         combined = result.stdout + result.stderr

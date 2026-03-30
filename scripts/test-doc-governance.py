@@ -41,6 +41,8 @@ LEGACY_CANONICAL_ENTRYPOINTS = {
     'scripts/check-promotion-policy.py': 'infinitas policy check-promotion',
     'scripts/registryctl.py': 'infinitas registry',
     'scripts/check-release-state.py': 'infinitas release check-state',
+}
+RETIRED_LEGACY_SHIMS = {
     'scripts/server-healthcheck.py': 'infinitas server healthcheck',
     'scripts/backup-hosted-registry.py': 'infinitas server backup',
     'scripts/inspect-hosted-state.py': 'infinitas server inspect-state',
@@ -174,6 +176,12 @@ def ensure_legacy_command_mentions_have_canonical_entrypoints(path: Path):
                 'maintained surface doc mentions legacy command '
                 f'{legacy_marker!r} without canonical entrypoint '
                 f'{canonical_entrypoint!r}: {path}'
+            )
+    for legacy_marker, canonical_entrypoint in RETIRED_LEGACY_SHIMS.items():
+        if legacy_marker in text:
+            fail(
+                'maintained surface doc still documents retired shim '
+                f'{legacy_marker!r}; use canonical entrypoint {canonical_entrypoint!r} only: {path}'
             )
 
 

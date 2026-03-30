@@ -50,10 +50,6 @@ def run_cli(args, *, expect=None):
     return run([sys.executable, '-m', 'infinitas_skill.cli.main', *args], expect=expect, env=env)
 
 
-def run_legacy(args, *, expect=None):
-    return run([sys.executable, str(ROOT / 'scripts' / 'inspect-hosted-state.py'), *args], expect=expect)
-
-
 def prepare_inspect_db(base: Path) -> Path:
     db_path = base / 'inspect.db'
     engine = create_engine(f'sqlite:///{db_path}', future=True, connect_args={'check_same_thread': False})
@@ -186,7 +182,7 @@ def load_json(result, *, label):
         fail(f'{label} did not emit JSON output: {exc}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}')
 
 
-def scenario_inspect_state_matches_legacy():
+def scenario_inspect_state_reports_expected_summary():
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-server-inspect-'))
     try:
         db_path = prepare_inspect_db(tmpdir)
@@ -206,12 +202,7 @@ def scenario_inspect_state_matches_legacy():
             '--json',
         ]
         cli = run_cli(['server', 'inspect-state', *args], expect=2)
-        legacy = run_legacy(args, expect=2)
-
         cli_payload = load_json(cli, label='infinitas server inspect-state')
-        legacy_payload = load_json(legacy, label='legacy inspect-hosted-state.py')
-        if cli_payload != legacy_payload:
-            fail(f'inspect payload mismatch\ncli:\n{cli.stdout}\nlegacy:\n{legacy.stdout}')
 
         counts = cli_payload.get('jobs', {}).get('counts', {})
         for key, expected in [('queued', 1), ('running', 1), ('failed', 1), ('completed', 1), ('warning', 1)]:
@@ -303,9 +294,9 @@ def scenario_inspect_state_webhook_and_fallback():
 
 
 def main():
-    scenario_inspect_state_matches_legacy()
+    scenario_inspect_state_reports_expected_summary()
     scenario_inspect_state_webhook_and_fallback()
-    print('OK: inspect-state CLI and shim behave as expected')
+    print('OK: inspect-state CLI behaves as expected')
 
 
 if __name__ == '__main__':

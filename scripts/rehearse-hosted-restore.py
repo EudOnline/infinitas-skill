@@ -18,7 +18,7 @@ def fail(message: str):
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Rehearse restoring a hosted registry backup into a staging directory')
-    parser.add_argument('--backup-dir', required=True, help='Backup directory created by backup-hosted-registry.py')
+    parser.add_argument('--backup-dir', required=True, help='Backup directory created by `infinitas server backup`')
     parser.add_argument('--output-dir', required=True, help='Staging directory for the restore rehearsal')
     parser.add_argument('--json', action='store_true', help='Emit machine-readable JSON output')
     return parser.parse_args()

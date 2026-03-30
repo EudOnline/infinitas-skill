@@ -224,7 +224,7 @@ options:
 
 ## `infinitas server`
 
-Status: `maintained` family. Shims: `python3 scripts/server-healthcheck.py ...`, `python3 scripts/backup-hosted-registry.py ...`, `python3 scripts/inspect-hosted-state.py ...`, `python3 scripts/render-hosted-systemd.py ...`, `python3 scripts/prune-hosted-backups.py ...`, and `python3 scripts/run-hosted-worker.py ...`.
+Status: `maintained` family. Legacy server-operation wrapper scripts are deleted; use the canonical `infinitas server ...` entrypoints directly.
 
 ```text
 usage: infinitas server [-h]
@@ -248,7 +248,7 @@ options:
 
 ## `infinitas server healthcheck`
 
-Status: `maintained`. Shim: `python3 scripts/server-healthcheck.py ...`.
+Status: `maintained`. Legacy shim deleted; use this canonical entrypoint directly.
 
 ```text
 usage: infinitas server healthcheck [-h] --api-url API_URL --repo-path
@@ -273,7 +273,7 @@ options:
 
 ## `infinitas server backup`
 
-Status: `maintained`. Shim: `python3 scripts/backup-hosted-registry.py ...`.
+Status: `maintained`. Legacy shim deleted; use this canonical entrypoint directly.
 
 ```text
 usage: infinitas server backup [-h] --repo-path REPO_PATH --database-url
@@ -299,7 +299,7 @@ options:
 
 ## `infinitas server inspect-state`
 
-Status: `maintained`. Shim: `python3 scripts/inspect-hosted-state.py ...`.
+Status: `maintained`. Legacy shim deleted; use this canonical entrypoint directly.
 
 ```text
 usage: infinitas server inspect-state [-h] --database-url DATABASE_URL
@@ -338,7 +338,7 @@ options:
 
 ## `infinitas server render-systemd`
 
-Status: `maintained`. Shim: `python3 scripts/render-hosted-systemd.py ...`.
+Status: `maintained`. Legacy shim deleted; use this canonical entrypoint directly.
 
 ```text
 usage: infinitas server render-systemd [-h] --output-dir OUTPUT_DIR
@@ -443,7 +443,7 @@ options:
 
 ## `infinitas server prune-backups`
 
-Status: `maintained`. Shim: `python3 scripts/prune-hosted-backups.py ...`.
+Status: `maintained`. Legacy shim deleted; use this canonical entrypoint directly.
 
 ```text
 usage: infinitas server prune-backups [-h] --backup-root BACKUP_ROOT
@@ -463,7 +463,7 @@ options:
 
 ## `infinitas server worker`
 
-Status: `maintained`. Shim: `python3 scripts/run-hosted-worker.py ...`.
+Status: `maintained`. Legacy shim deleted; use this canonical entrypoint directly.
 
 ```text
 usage: infinitas server worker [-h] [--poll-interval POLL_INTERVAL] [--once]

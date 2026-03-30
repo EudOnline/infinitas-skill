@@ -21,6 +21,7 @@ The final hardening slice is now part of steady-state project truth:
 - production startup requires an explicit secret and explicit bootstrap operators whenever `INFINITAS_SERVER_ENV=production`
 - personal token authentication resolves through hashed credential records instead of plaintext `users.token` lookups
 - the maintained regression matrix in `scripts/check-all.sh` enforces these guardrails alongside the existing hosted-registry contract
+- The old `scripts/server-healthcheck.py`, `scripts/backup-hosted-registry.py`, `scripts/inspect-hosted-state.py`, `scripts/render-hosted-systemd.py`, `scripts/prune-hosted-backups.py`, and `scripts/run-hosted-worker.py` wrappers are retired.
 
 ## Final Readiness Matrix
 
@@ -46,9 +47,11 @@ Use this operator matrix when interpreting mutation output:
 Fresh closeout verification should run these commands:
 
 ```bash
+uv run pytest tests/integration/test_cli_release_state.py tests/integration/test_cli_server_ops.py tests/integration/test_private_registry_ui.py -q
 uv run python3 scripts/test-settings-hardening.py
 uv run python3 scripts/test-private-first-cutover-schema.py
 uv run python3 scripts/test-private-registry-access-api.py
+uv run python3 scripts/test-home-kawaii-theme.py
 uv run python3 scripts/test-private-registry-ui.py
 uv run python3 scripts/test-home-auth-session-runtime.py
 python3 scripts/test-project-complete-state.py
@@ -69,7 +72,9 @@ Hosted-registry end-to-end expectations:
 - CI is authoritative for the fully supported hosted-registry path.
 - `.github/workflows/validate.yml` installs dependencies with `python3 -m pip install .`.
 - CI then runs `scripts/check-all.sh` with `INFINITAS_REQUIRE_HOSTED_E2E_TESTS=1`, so hosted e2e cannot silently skip there.
-- `scripts/check-all.sh` now also includes the settings hardening, private access cutover, and private UI regression checks from the 90+ upgrade slice.
+- `scripts/check-all.sh` now defaults to `focused-integration`, `hosted-ui`, and `full-regression` as the closeout gate.
+- That default includes the maintained fast tier plus the broader matrix.
+- `scripts/check-all.sh` also includes the settings hardening, private access cutover, and private UI regression checks from the 90+ upgrade slice.
 - `scripts/test-home-auth-session-runtime.py` remains part of the maintained matrix, but it depends on the Codex Playwright wrapper under `$CODEX_HOME`; when that wrapper is unavailable, `scripts/check-all.sh` reports a skip instead of pretending the browser runtime check passed.
 - Local minimal environments may still skip `scripts/test-hosted-registry-e2e.py` unless the same dependency set is installed explicitly.
 - Local minimal environments may also skip `scripts/test-home-auth-session-runtime.py` unless the Codex Playwright skill wrapper is installed explicitly.

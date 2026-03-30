@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 import json
+import os
 import shutil
 import sys
 import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+SRC = ROOT / 'src'
 
 from test_support.server_ops import (
     HealthServer,
@@ -28,6 +30,25 @@ def run(command, cwd, expect=0, env=None):
         fail(str(exc).removeprefix('FAIL: '))
 
 
+def cli_env(extra_env=None):
+    env = os.environ.copy()
+    if extra_env:
+        env.update(extra_env)
+    existing_pythonpath = env.get('PYTHONPATH', '')
+    pythonpath = os.pathsep.join([str(ROOT), str(SRC)])
+    env['PYTHONPATH'] = f'{pythonpath}{os.pathsep}{existing_pythonpath}' if existing_pythonpath else pythonpath
+    return env
+
+
+def run_server_cli(args, *, cwd=ROOT, expect=0, env=None):
+    return run(
+        [sys.executable, '-m', 'infinitas_skill.cli.main', 'server', *args],
+        cwd=cwd,
+        expect=expect,
+        env=cli_env(env),
+    )
+
+
 def assert_contains(text, needle, label):
     if needle not in text:
         fail(f'{label} did not include {needle!r}\n{text}')
@@ -43,10 +64,9 @@ def scenario_healthcheck_and_backup_success():
         backup_root.mkdir()
 
         with HealthServer() as base_url:
-            health = run(
+            health = run_server_cli(
                 [
-                    sys.executable,
-                    str(ROOT / 'scripts' / 'server-healthcheck.py'),
+                    'healthcheck',
                     '--api-url',
                     base_url,
                     '--repo-path',
@@ -57,7 +77,6 @@ def scenario_healthcheck_and_backup_success():
                     f'sqlite:///{db_path}',
                     '--json',
                 ],
-                cwd=ROOT,
             )
 
         payload = json.loads(health.stdout)
@@ -68,10 +87,9 @@ def scenario_healthcheck_and_backup_success():
         if payload.get('artifacts', {}).get('ai_index') is not True:
             fail(f'healthcheck did not confirm ai-index presence: {payload}')
 
-        backup = run(
+        backup = run_server_cli(
             [
-                sys.executable,
-                str(ROOT / 'scripts' / 'backup-hosted-registry.py'),
+                'backup',
                 '--repo-path',
                 str(repo),
                 '--database-url',
@@ -84,7 +102,6 @@ def scenario_healthcheck_and_backup_success():
                 'smoke',
                 '--json',
             ],
-            cwd=ROOT,
         )
         backup_payload = json.loads(backup.stdout)
         backup_dir = Path(backup_payload['backup_dir'])
@@ -110,10 +127,9 @@ def scenario_healthcheck_failures():
 
         shutil.rmtree(artifact_dir)
         with HealthServer() as base_url:
-            missing_artifacts = run(
+            missing_artifacts = run_server_cli(
                 [
-                    sys.executable,
-                    str(ROOT / 'scripts' / 'server-healthcheck.py'),
+                    'healthcheck',
                     '--api-url',
                     base_url,
                     '--repo-path',
@@ -123,7 +139,6 @@ def scenario_healthcheck_failures():
                     '--database-url',
                     f'sqlite:///{db_path}',
                 ],
-                cwd=ROOT,
                 expect=1,
             )
         assert_contains(
@@ -135,10 +150,9 @@ def scenario_healthcheck_failures():
         artifact_dir = prepare_artifacts(tmpdir)
         (artifact_dir / 'ai-index.json').unlink()
         with HealthServer() as base_url:
-            missing_ai_index = run(
+            missing_ai_index = run_server_cli(
                 [
-                    sys.executable,
-                    str(ROOT / 'scripts' / 'server-healthcheck.py'),
+                    'healthcheck',
                     '--api-url',
                     base_url,
                     '--repo-path',
@@ -148,7 +162,6 @@ def scenario_healthcheck_failures():
                     '--database-url',
                     f'sqlite:///{db_path}',
                 ],
-                cwd=ROOT,
                 expect=1,
             )
         assert_contains(missing_ai_index.stderr + missing_ai_index.stdout, 'ai-index.json', 'missing ai-index failure')
@@ -166,10 +179,9 @@ def scenario_backup_rejects_dirty_repo():
         backup_root.mkdir()
 
         (repo / 'DIRTY.txt').write_text('dirty\n', encoding='utf-8')
-        result = run(
+        result = run_server_cli(
             [
-                sys.executable,
-                str(ROOT / 'scripts' / 'backup-hosted-registry.py'),
+                'backup',
                 '--repo-path',
                 str(repo),
                 '--database-url',
@@ -179,7 +191,6 @@ def scenario_backup_rejects_dirty_repo():
                 '--output-dir',
                 str(backup_root),
             ],
-            cwd=ROOT,
             expect=1,
         )
         assert_contains(result.stderr + result.stdout, 'dirty', 'dirty repo rejection')
