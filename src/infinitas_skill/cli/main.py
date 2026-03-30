@@ -7,6 +7,7 @@ from infinitas_skill.install.planning import (
     run_check_install_target,
     run_resolve_install_plan,
 )
+from infinitas_skill.policy.cli import POLICY_PARSER_DESCRIPTION, POLICY_TOP_LEVEL_HELP, configure_policy_parser
 from infinitas_skill.registry.cli import (
     REGISTRY_PARSER_DESCRIPTION,
     REGISTRY_TOP_LEVEL_HELP,
@@ -108,6 +109,13 @@ def build_parser() -> argparse.ArgumentParser:
         description=REGISTRY_PARSER_DESCRIPTION,
     )
     configure_registry_parser(registry)
+
+    policy = top.add_parser(
+        'policy',
+        help=POLICY_TOP_LEVEL_HELP,
+        description=POLICY_PARSER_DESCRIPTION,
+    )
+    configure_policy_parser(policy)
 
     return parser
 

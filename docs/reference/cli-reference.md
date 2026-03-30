@@ -19,16 +19,17 @@ uv run python3 -m infinitas_skill.cli.reference
 ## Top-level CLI
 
 ```text
-usage: infinitas [-h] {compatibility,release,install,registry} ...
+usage: infinitas [-h] {compatibility,release,install,registry,policy} ...
 
 infinitas project CLI
 
 positional arguments:
-  {compatibility,release,install,registry}
+  {compatibility,release,install,registry,policy}
     compatibility       Compatibility tools
     release             Release tools
     install             Install planning tools
     registry            Hosted registry control-plane tools
+    policy              Policy validation and promotion tools
 
 options:
   -h, --help            show this help message and exit
@@ -100,6 +101,52 @@ options:
   --mode {install,sync}
                         Whether to check an install or sync flow
   --json                Print machine-readable plan output
+```
+
+## `infinitas policy`
+
+```text
+usage: infinitas policy [-h] {check-packs,check-promotion} ...
+
+Policy validation and promotion CLI
+
+positional arguments:
+  {check-packs,check-promotion}
+    check-packs         Validate policy-pack selector and active pack files
+    check-promotion     Check active promotion policy for one or more skills
+
+options:
+  -h, --help            show this help message and exit
+```
+
+## `infinitas policy check-packs`
+
+```text
+usage: infinitas policy check-packs [-h]
+
+Validate policy-pack selector and active pack files
+
+options:
+  -h, --help  show this help message and exit
+```
+
+## `infinitas policy check-promotion`
+
+```text
+usage: infinitas policy check-promotion [-h] [--as-active] [--json]
+                                        [--debug-policy]
+                                        [targets ...]
+
+Check active promotion policy for one or more skills
+
+positional arguments:
+  targets         Skill directory path(s) to check
+
+options:
+  -h, --help      show this help message and exit
+  --as-active     Evaluate targets as active-stage skills
+  --json          Print machine-readable output
+  --debug-policy  Print a human-readable policy trace
 ```
 
 ## `infinitas registry`
