@@ -629,10 +629,10 @@ def scenario_installed_integrity_docs_exist():
     if 'repair-installed-skill.sh' not in distribution_docs:
         fail("expected docs/reference/distribution-manifests.md to mention 'repair-installed-skill.sh'")
 
-    compatibility_docs = (ROOT / 'docs' / 'compatibility-contract.md').read_text(encoding='utf-8')
+    compatibility_docs = (ROOT / 'docs' / 'reference' / 'compatibility-contract.md').read_text(encoding='utf-8')
     for required in ['integrity_capability', 'integrity_reason', 'integrity_events']:
         if required not in compatibility_docs:
-            fail(f'expected docs/compatibility-contract.md to mention {required!r}')
+            fail(f'expected docs/reference/compatibility-contract.md to mention {required!r}')
 
     discovery_docs = (ROOT / 'docs' / 'ai' / 'discovery.md').read_text(encoding='utf-8')
     for required in ['report-installed-integrity.py', 'catalog/audit-export.json', 'target-local', '.infinitas-skill-installed-integrity.json']:

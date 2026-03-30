@@ -82,6 +82,8 @@ Use these canonical docs for the current model:
 - [CI-native attestation](docs/ai/ci-attestation.md) documents `.github/workflows/release-attestation.yml` and `python3 scripts/verify-ci-attestation.py`
 - [Hosted registry server deployment](docs/ops/server-deployment.md)
 
+Compatibility reporting now distinguishes between `declared support` from authored metadata such as `_meta.json.agent_compatible` and `verified support` backed by platform-specific evidence plus freshness checks.
+
 ## Policy trace and validation output
 
 Policy-aware commands continue to expose structured diagnostics for operators and automation:

@@ -9,6 +9,7 @@ TARGETS = [
     ROOT / 'docs' / 'reference' / 'README.md',
     ROOT / 'docs' / 'reference' / 'cli-command-map.md',
     ROOT / 'docs' / 'reference' / 'cli-reference.md',
+    ROOT / 'docs' / 'reference' / 'compatibility-contract.md',
     ROOT / 'docs' / 'reference' / 'registry-refresh-policy.md',
     ROOT / 'docs' / 'reference' / 'metadata-schema.md',
     ROOT / 'docs' / 'reference' / 'distribution-manifests.md',

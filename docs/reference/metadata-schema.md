@@ -108,7 +108,7 @@ Every registry-managed skill should include `_meta.json`.
 - unsupported future schema versions should fail clearly instead of being silently rewritten
 - when `_meta.json` evolves incompatibly, provide a migration command rather than relying on manual edits
 
-See `docs/compatibility-contract.md` for the broader compatibility guarantees.
+See `compatibility-contract.md` for the broader compatibility guarantees.
 
 Use `scripts/migrate-skill-meta.py` to add `schema_version` to older skill metadata files without editing them by hand.
 

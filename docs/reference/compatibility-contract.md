@@ -1,3 +1,11 @@
+---
+audience: contributors, integrators, reviewers
+owner: repository maintainers
+source_of_truth: compatibility contract reference
+last_reviewed: 2026-03-30
+status: maintained
+---
+
 # Compatibility Contract
 
 This document defines which parts of `infinitas-skill` are treated as compatibility promises and which parts are still implementation details that may evolve more freely.

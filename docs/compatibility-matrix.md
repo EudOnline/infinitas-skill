@@ -63,4 +63,4 @@ It does **not** guarantee:
 - install-manifest compatibility across tool versions
 - migration support for persisted state
 
-Those concerns are defined separately in `docs/compatibility-contract.md`.
+Those concerns are defined separately in `docs/reference/compatibility-contract.md`.

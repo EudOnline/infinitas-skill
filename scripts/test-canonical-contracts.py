@@ -115,7 +115,7 @@ def main():
 
         readme = (repo / 'README.md').read_text(encoding='utf-8')
         matrix = (repo / 'docs' / 'compatibility-matrix.md').read_text(encoding='utf-8')
-        contract_doc = (repo / 'docs' / 'compatibility-contract.md').read_text(encoding='utf-8')
+        contract_doc = (repo / 'docs' / 'reference' / 'compatibility-contract.md').read_text(encoding='utf-8')
         assert_contains(readme, 'declared support', 'README declared support terminology')
         assert_contains(readme, 'verified support', 'README verified support terminology')
         assert_contains(matrix, 'declared support', 'compatibility matrix declared support terminology')
