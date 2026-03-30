@@ -73,6 +73,7 @@ if [[ "${INFINITAS_SKIP_COMPAT_PIPELINE_TESTS:-0}" != "1" ]]; then
   if [[ "${INFINITAS_SKIP_RECORD_VERIFIED_SUPPORT_TESTS:-0}" != "1" ]]; then
     python3 scripts/test-record-verified-support.py
   fi
+  python3 scripts/check-platform-contracts.py --max-age-days 30 --stale-policy fail
   python3 scripts/test-platform-contracts.py
 fi
 if [[ "${INFINITAS_SKIP_RELEASE_TESTS:-0}" != "1" ]]; then

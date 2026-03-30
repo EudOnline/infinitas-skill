@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-19T03:58:07Z",
+  "generated_at": "2026-03-30T01:23:27Z",
   "count": 4,
   "skills": [
     {
@@ -101,21 +101,33 @@
           "checked_at": "2026-03-16T03:52:58Z",
           "checker": "check-claude-compat.py",
           "evidence_path": "catalog/compatibility-evidence/claude/consume-infinitas-skill/0.1.0.json",
-          "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py."
+          "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py.",
+          "contract_last_verified": "2026-03-12",
+          "fresh_until": "2026-04-15T03:52:58Z",
+          "freshness_state": "fresh",
+          "freshness_reason": "not-applicable"
         },
         "codex": {
           "state": "adapted",
           "checked_at": "2026-03-16T03:52:58Z",
           "checker": "check-codex-compat.py",
           "evidence_path": "catalog/compatibility-evidence/codex/consume-infinitas-skill/0.1.0.json",
-          "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py."
+          "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py.",
+          "contract_last_verified": "2026-03-12",
+          "fresh_until": "2026-04-15T03:52:58Z",
+          "freshness_state": "fresh",
+          "freshness_reason": "not-applicable"
         },
         "openclaw": {
           "state": "adapted",
           "checked_at": "2026-03-16T03:52:59Z",
           "checker": "check-openclaw-compat.py",
           "evidence_path": "catalog/compatibility-evidence/openclaw/consume-infinitas-skill/0.1.0.json",
-          "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py."
+          "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py.",
+          "contract_last_verified": "2026-03-12",
+          "fresh_until": "2026-04-15T03:52:59Z",
+          "freshness_state": "fresh",
+          "freshness_reason": "not-applicable"
         }
       }
     },
@@ -216,14 +228,22 @@
           "checked_at": "2026-03-16T03:53:17Z",
           "checker": "check-claude-compat.py",
           "evidence_path": "catalog/compatibility-evidence/claude/federation-registry-ops/0.1.0.json",
-          "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py."
+          "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py.",
+          "contract_last_verified": "2026-03-12",
+          "fresh_until": "2026-04-15T03:53:17Z",
+          "freshness_state": "fresh",
+          "freshness_reason": "not-applicable"
         },
         "codex": {
           "state": "adapted",
           "checked_at": "2026-03-16T03:53:17Z",
           "checker": "check-codex-compat.py",
           "evidence_path": "catalog/compatibility-evidence/codex/federation-registry-ops/0.1.0.json",
-          "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py."
+          "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py.",
+          "contract_last_verified": "2026-03-12",
+          "fresh_until": "2026-04-15T03:53:17Z",
+          "freshness_state": "fresh",
+          "freshness_reason": "not-applicable"
         }
       }
     },
@@ -327,21 +347,33 @@
           "checked_at": "2026-03-12T12:56:55Z",
           "checker": "check-claude-compat.py",
           "evidence_path": "catalog/compatibility-evidence/claude/operate-infinitas-skill/0.1.1.json",
-          "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py."
+          "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py.",
+          "contract_last_verified": "2026-03-12",
+          "fresh_until": "2026-04-11T12:56:55Z",
+          "freshness_state": "fresh",
+          "freshness_reason": "not-applicable"
         },
         "codex": {
           "state": "adapted",
           "checked_at": "2026-03-12T12:56:55Z",
           "checker": "check-codex-compat.py",
           "evidence_path": "catalog/compatibility-evidence/codex/operate-infinitas-skill/0.1.1.json",
-          "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py."
+          "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py.",
+          "contract_last_verified": "2026-03-12",
+          "fresh_until": "2026-04-11T12:56:55Z",
+          "freshness_state": "fresh",
+          "freshness_reason": "not-applicable"
         },
         "openclaw": {
           "state": "adapted",
           "checked_at": "2026-03-12T12:56:55Z",
           "checker": "check-openclaw-compat.py",
           "evidence_path": "catalog/compatibility-evidence/openclaw/operate-infinitas-skill/0.1.1.json",
-          "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py."
+          "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py.",
+          "contract_last_verified": "2026-03-12",
+          "fresh_until": "2026-04-11T12:56:55Z",
+          "freshness_state": "fresh",
+          "freshness_reason": "not-applicable"
         }
       }
     },
@@ -442,14 +474,22 @@
           "checked_at": "2026-03-16T03:52:41Z",
           "checker": "check-codex-compat.py",
           "evidence_path": "catalog/compatibility-evidence/codex/release-infinitas-skill/0.1.0.json",
-          "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py."
+          "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py.",
+          "contract_last_verified": "2026-03-12",
+          "fresh_until": "2026-04-15T03:52:41Z",
+          "freshness_state": "fresh",
+          "freshness_reason": "not-applicable"
         },
         "claude": {
           "state": "adapted",
           "checked_at": "2026-03-16T03:52:42Z",
           "checker": "check-claude-compat.py",
           "evidence_path": "catalog/compatibility-evidence/claude/release-infinitas-skill/0.1.0.json",
-          "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py."
+          "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py.",
+          "contract_last_verified": "2026-03-12",
+          "fresh_until": "2026-04-15T03:52:42Z",
+          "freshness_state": "fresh",
+          "freshness_reason": "not-applicable"
         }
       }
     }

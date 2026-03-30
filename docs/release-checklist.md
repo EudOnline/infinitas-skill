@@ -23,6 +23,7 @@ Before pushing or promoting a skill:
 
 Before creating stable release output for an active skill:
 
+- [ ] if upstream Codex / Claude Code / OpenClaw behavior changed, follow `docs/platform-drift-playbook.md` before starting release work
 - [ ] trusted signer bootstrap was completed with `python3 scripts/bootstrap-signing.py ...` or an equivalent existing-key flow from `docs/signing-bootstrap.md`
 - [ ] `config/allowed_signers` contains at least one trusted release signer entry committed in-repo
 - [ ] publisher `authorized_signers` / `authorized_releasers` policy was updated when the release uses a qualified publisher namespace
@@ -32,6 +33,7 @@ Before creating stable release output for an active skill:
 - [ ] expected tag `skill/<name>/v<version>` does not already point at the wrong commit
 - [ ] default stable tag is created with `scripts/release-skill.sh <name> --push-tag` or `scripts/release-skill-tag.sh <name> --create --push`
 - [ ] `scripts/check-release-state.py <name>` passes before writing notes, provenance, or GitHub releases
+- [ ] `python3 scripts/check-release-state.py <name> --mode preflight --json` shows `release.platform_compatibility.blocking_platforms = []` for every declared platform
 - [ ] if delegated reviewer groups, delegated publisher teams, or break-glass waivers are involved, `python3 scripts/check-release-state.py <name> --mode preflight --json` shows the expected `review.latest_decisions`, `review.ignored_decisions`, `release.delegated_teams`, and `release.exception_usage`
 - [ ] any command that writes release notes or distribution output also includes `--write-provenance` while the v9 attestation policy is enabled
 - [ ] release notes or provenance reference `refs/tags/skill/<name>/v<version>` instead of local-only `HEAD`
@@ -43,6 +45,7 @@ Before creating stable release output for an active skill:
 - [ ] `python3 scripts/doctor-signing.py <name> --provenance catalog/provenance/<name>-<version>.json` reports no blocking failures after the rehearsal
 - [ ] any optional legacy HMAC provenance signing happens after the required SSH attestation has already been verified
 - [ ] platform evidence was refreshed with `python3 scripts/record-verified-support.py <name> --platform codex --platform claude --platform openclaw --build-catalog` if verified compatibility claims changed
+- [ ] if any declared platform shows `freshness_state = stale|unknown`, refresh the evidence and rerun the playbook steps in `docs/platform-drift-playbook.md`
 
 When the hosted control plane performs the release:
 

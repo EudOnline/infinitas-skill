@@ -104,6 +104,28 @@ def scaffold_fixture(repo: Path):
     )
 
 
+def seed_fresh_platform_evidence(repo: Path):
+    fixtures = [
+        ('codex', '2026-03-12T12:00:00Z'),
+        ('claude', '2026-03-12T12:01:00Z'),
+        ('openclaw', '2026-03-12T12:02:00Z'),
+    ]
+    for platform, checked_at in fixtures:
+        path = repo / 'catalog' / 'compatibility-evidence' / platform / FIXTURE_NAME / f'{FIXTURE_VERSION}.json'
+        path.parent.mkdir(parents=True, exist_ok=True)
+        write_json(
+            path,
+            {
+                'platform': platform,
+                'skill': FIXTURE_NAME,
+                'version': FIXTURE_VERSION,
+                'state': 'adapted',
+                'checked_at': checked_at,
+                'checker': f'check-{platform}-compat.py',
+            },
+        )
+
+
 def rewrite_promotion_policy(repo: Path):
     policy_path = repo / 'policy' / 'promotion-policy.json'
     policy = json.loads(policy_path.read_text(encoding='utf-8'))
@@ -156,6 +178,7 @@ def prepare_repo():
     (repo / 'config' / 'allowed_signers').write_text('', encoding='utf-8')
     stabilize_active_skill_reviews(repo)
     scaffold_fixture(repo)
+    seed_fresh_platform_evidence(repo)
     run(['git', 'init', '--bare', str(origin)], cwd=tmpdir)
     run(['git', 'init', '-b', 'main'], cwd=repo)
     run(['git', 'config', 'user.name', 'Release Fixture'], cwd=repo)

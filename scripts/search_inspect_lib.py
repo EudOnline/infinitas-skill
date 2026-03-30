@@ -53,6 +53,16 @@ def _compatibility_summary(verified_support: dict) -> dict:
     return summary
 
 
+def _compatibility_freshness_summary(verified_support: dict) -> dict:
+    summary = {}
+    for platform, payload in (verified_support or {}).items():
+        if not isinstance(platform, str) or not platform.strip():
+            continue
+        if isinstance(payload, dict) and isinstance(payload.get('freshness_state'), str) and payload.get('freshness_state').strip():
+            summary[platform] = payload.get('freshness_state')
+    return summary
+
+
 def _dependency_summary(dependencies: dict) -> dict:
     root = dependencies.get('root') if isinstance(dependencies, dict) else {}
     steps = dependencies.get('steps') if isinstance(dependencies, dict) else []
@@ -117,6 +127,7 @@ def search_skills(root: Path, query: str | None = None, publisher: str | None = 
             'latest_version': item.get('latest_version'),
             'trust_state': item.get('trust_state'),
             'verified_support': item.get('verified_support') or {},
+            'freshness_summary': _compatibility_freshness_summary(item.get('verified_support') or {}),
             'agent_compatible': item.get('agent_compatible') or [],
             'tags': item.get('tags') or [],
             'attestation_formats': item.get('attestation_formats') or [],
@@ -186,6 +197,7 @@ def inspect_skill(root: Path, name: str, version: str | None = None) -> dict:
             'declared_support': ((skill_entry.get('compatibility') or {}).get('declared_support') or []),
             'verified_support': verified_support,
             'verified_summary': _compatibility_summary(verified_support),
+            'freshness_summary': _compatibility_freshness_summary(verified_support),
         },
         'dependencies': dependency_view,
         'provenance': {

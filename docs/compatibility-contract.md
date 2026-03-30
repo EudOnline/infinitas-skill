@@ -119,4 +119,10 @@ As the multi-platform pipeline evolves, the repository distinguishes between:
 - **declared support**: what the author says a skill intends to support
 - **verified support**: what recent platform-specific checks and evidence files have confirmed
 
+Verified support now carries additive freshness metadata so the repository can distinguish between:
+
+- recent evidence that is still considered fresh
+- older evidence that is now stale because of age or because the tracked platform contract changed after the last verification
+- missing evidence, which remains `unknown`
+
 It is **not** the same thing as registry file-format compatibility. File-format compatibility is governed by versioned schemas, migration guarantees, and regression tests.

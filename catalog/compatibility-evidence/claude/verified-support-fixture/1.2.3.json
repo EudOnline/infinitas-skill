@@ -1,0 +1,8 @@
+{
+  "platform": "claude",
+  "skill": "verified-support-fixture",
+  "version": "1.2.3",
+  "state": "adapted",
+  "checked_at": "2026-03-12T12:01:00Z",
+  "checker": "check-claude-compat.py"
+}

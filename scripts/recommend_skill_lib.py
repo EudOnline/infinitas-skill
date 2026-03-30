@@ -138,8 +138,75 @@ def _comparison_summary(winner: dict, runner_up: dict, score_gap: int) -> str:
     )
 
 
+def _compatibility_signal(item: dict, *, target_agent: str | None) -> dict:
+    if target_agent is None:
+        return {
+            'compatible': True,
+            'bonus': 500,
+            'mode': 'unscoped',
+            'state': None,
+            'freshness_state': None,
+        }
+
+    verified_support = item.get('verified_support') or {}
+    payload = verified_support.get(target_agent) if isinstance(verified_support, dict) else {}
+    payload = payload if isinstance(payload, dict) else {}
+    state = payload.get('state')
+    freshness_state = payload.get('freshness_state')
+    declared = target_agent in (item.get('agent_compatible') or [])
+
+    if state in {'blocked', 'broken', 'unsupported'}:
+        return {
+            'compatible': False,
+            'bonus': 0,
+            'mode': 'rejected',
+            'state': state,
+            'freshness_state': freshness_state,
+        }
+    if state in {'native', 'adapted', 'degraded'} and freshness_state == 'fresh':
+        return {
+            'compatible': True,
+            'bonus': 650,
+            'mode': 'fresh-verified',
+            'state': state,
+            'freshness_state': freshness_state,
+        }
+    if state in {'native', 'adapted', 'degraded'} and freshness_state == 'stale':
+        return {
+            'compatible': True,
+            'bonus': 450,
+            'mode': 'stale-verified',
+            'state': state,
+            'freshness_state': freshness_state,
+        }
+    if state in {'native', 'adapted', 'degraded'}:
+        return {
+            'compatible': True,
+            'bonus': 550,
+            'mode': 'verified',
+            'state': state,
+            'freshness_state': freshness_state,
+        }
+    if declared:
+        return {
+            'compatible': True,
+            'bonus': 350,
+            'mode': 'declared-only',
+            'state': state,
+            'freshness_state': freshness_state,
+        }
+    return {
+        'compatible': False,
+        'bonus': 0,
+        'mode': 'incompatible',
+        'state': state,
+        'freshness_state': freshness_state,
+    }
+
+
 def _score_item(item: dict, *, task_tokens: list[str], target_agent: str | None, default_registry: str) -> tuple[int, dict]:
-    compatibility = target_agent is None or target_agent in (item.get('agent_compatible') or [])
+    compatibility_signal = _compatibility_signal(item, target_agent=target_agent)
+    compatibility = compatibility_signal['compatible']
     private_preferred = item.get('source_registry') == default_registry
     match_strength = _match_strength(item, task_tokens)
     trust_score = TRUST_SCORES.get(item.get('trust_state') or 'unknown', 0)
@@ -149,7 +216,7 @@ def _score_item(item: dict, *, task_tokens: list[str], target_agent: str | None,
 
     score = (
         (1000 if private_preferred else 0)
-        + (500 if compatibility else 0)
+        + compatibility_signal['bonus']
         + (100 * match_strength)
         + (30 * trust_score)
         + (20 * maturity_score)
@@ -158,6 +225,9 @@ def _score_item(item: dict, *, task_tokens: list[str], target_agent: str | None,
     factors = {
         'private_registry': private_preferred,
         'compatibility': compatibility,
+        'compatibility_mode': compatibility_signal['mode'],
+        'compatibility_state': compatibility_signal['state'],
+        'compatibility_freshness': compatibility_signal['freshness_state'],
         'match_strength': match_strength,
         'trust': {
             'state': item.get('trust_state') or 'unknown',
@@ -176,7 +246,15 @@ def _recommendation_reason(item: dict, factors: dict) -> str:
     if factors.get('private_registry'):
         reasons.append('private registry match')
     if factors.get('compatibility'):
-        reasons.append('target-agent compatible')
+        compatibility_mode = factors.get('compatibility_mode')
+        if compatibility_mode == 'fresh-verified':
+            reasons.append('fresh verified target-agent compatibility')
+        elif compatibility_mode == 'stale-verified':
+            reasons.append('stale verified target-agent compatibility')
+        elif compatibility_mode == 'declared-only':
+            reasons.append('declared target-agent compatibility')
+        else:
+            reasons.append('target-agent compatible')
     if factors.get('match_strength'):
         reasons.append(f"matched {factors.get('match_strength')} task terms")
     trust = (factors.get('trust') or {}).get('state')

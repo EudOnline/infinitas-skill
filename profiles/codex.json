@@ -19,8 +19,9 @@
   },
   "contract": {
     "sources": [
-      "https://platform.openai.com/docs/codex/overview#agentsmd",
-      "https://platform.openai.com/docs/codex/overview#skills"
+      "https://developers.openai.com/codex/skills",
+      "https://developers.openai.com/codex/guides/agents-md",
+      "https://developers.openai.com/codex/cloud"
     ],
     "last_verified": "2026-03-12"
   }

@@ -110,6 +110,10 @@ The compatibility surface now distinguishes between two meanings:
 
 `catalog/compatibility.json` is the generated summary view that exposes both layers together.
 
+Verified support freshness now affects release readiness, not just discovery quality. If a declared platform is stale or missing verified evidence, `scripts/check-release-state.py` blocks `preflight` and `stable-release` until the evidence is refreshed.
+
+For the operator loop that handles upstream Codex / Claude Code / OpenClaw changes, see [docs/platform-drift-playbook.md](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/docs/platform-drift-playbook.md).
+
 ## Discovery and recommendation
 
 For audience-aware skill selection, start with:

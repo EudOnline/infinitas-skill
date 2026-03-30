@@ -193,13 +193,18 @@ def main():
             fail(f"expected canonical avoid_when, got {entry.get('avoid_when')!r}")
         if entry.get('runtime_assumptions') != ['A local repo checkout is available']:
             fail(f"expected canonical runtime_assumptions, got {entry.get('runtime_assumptions')!r}")
-        if entry.get('last_verified_at') is not None:
-            fail(f"expected last_verified_at None for fixture without evidence, got {entry.get('last_verified_at')!r}")
+        if entry.get('last_verified_at') != '2026-03-12T12:02:00Z':
+            fail(f"expected last_verified_at 2026-03-12T12:02:00Z for fresh fixture evidence, got {entry.get('last_verified_at')!r}")
         compatibility = entry.get('compatibility') or {}
         if not isinstance(compatibility.get('verified_support'), dict):
             fail('expected compatibility.verified_support to be an object')
         if entry.get('verified_support') != compatibility.get('verified_support'):
             fail('expected top-level verified_support to match compatibility.verified_support')
+        for platform, payload in (entry.get('verified_support') or {}).items():
+            if not isinstance(payload, dict):
+                fail(f'expected ai-index verified_support payload for {platform!r} to be an object')
+            if not isinstance(payload.get('freshness_state'), str) or not payload.get('freshness_state').strip():
+                fail(f"expected ai-index verified_support {platform} freshness_state, got {payload!r}")
         if not isinstance(entry.get('trust_state'), str) or not entry.get('trust_state').strip():
             fail(f"expected trust_state to be a non-empty string, got {entry.get('trust_state')!r}")
         versions = entry.get('versions') or {}

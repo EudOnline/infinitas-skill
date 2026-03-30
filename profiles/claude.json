@@ -19,9 +19,9 @@
   },
   "contract": {
     "sources": [
-      "https://docs.anthropic.com/en/docs/claude-code/skills",
-      "https://docs.anthropic.com/en/docs/claude-code/slash-commands#custom-slash-commands",
-      "https://docs.anthropic.com/en/docs/claude-code/sub-agents#project-subagents"
+      "https://code.claude.com/docs/en/sub-agents",
+      "https://docs.anthropic.com/en/docs/claude-code/security",
+      "https://docs.anthropic.com/en/docs/claude-code/getting-started"
     ],
     "last_verified": "2026-03-12"
   }

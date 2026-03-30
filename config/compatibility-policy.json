@@ -1,0 +1,11 @@
+{
+  "platform_contracts": {
+    "max_age_days": 30,
+    "stale_policy": "fail"
+  },
+  "verified_support": {
+    "stale_after_days": 30,
+    "contract_newer_than_evidence_policy": "stale",
+    "missing_policy": "unknown"
+  }
+}

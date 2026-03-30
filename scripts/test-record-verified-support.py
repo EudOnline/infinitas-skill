@@ -226,6 +226,14 @@ def main():
         for platform in ['codex', 'claude', 'openclaw']:
             if verified.get(platform, {}).get('state') != 'adapted':
                 fail(f"expected verified_support {platform}=adapted, got {verified.get(platform)!r}")
+            if verified.get(platform, {}).get('freshness_state') != 'fresh':
+                fail(f"expected verified_support {platform} freshness_state=fresh, got {verified.get(platform)!r}")
+            if verified.get(platform, {}).get('freshness_reason') != 'not-applicable':
+                fail(f"expected verified_support {platform} freshness_reason=not-applicable, got {verified.get(platform)!r}")
+            if verified.get(platform, {}).get('contract_last_verified') != '2026-03-12':
+                fail(f"expected verified_support {platform} contract_last_verified=2026-03-12, got {verified.get(platform)!r}")
+            if not isinstance(verified.get(platform, {}).get('fresh_until'), str) or not verified.get(platform, {}).get('fresh_until'):
+                fail(f"expected verified_support {platform} fresh_until string, got {verified.get(platform)!r}")
 
         distributions = json.loads((repo / 'catalog' / 'distributions.json').read_text(encoding='utf-8'))
         if distributions.get('count', 0) < 1:

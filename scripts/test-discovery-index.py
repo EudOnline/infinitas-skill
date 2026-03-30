@@ -58,7 +58,15 @@ def assert_discovery_payload_stable_across_roots():
                 'summary': 'Fixture skill for discovery-index tests',
                 'tags': ['fixture', 'search'],
                 'agent_compatible': ['codex'],
-                'verified_support': {'codex': {'state': 'adapted', 'checked_at': '2026-03-14T00:00:00Z'}},
+                'verified_support': {
+                    'codex': {
+                        'state': 'adapted',
+                        'checked_at': '2026-03-14T00:00:00Z',
+                        'freshness_state': 'fresh',
+                        'freshness_reason': 'not-applicable',
+                        'contract_last_verified': '2026-03-12',
+                    }
+                },
                 'trust_state': 'verified',
                 'default_install_version': FIXTURE_VERSION,
                 'latest_version': FIXTURE_VERSION,
@@ -113,7 +121,15 @@ def assert_discovery_payload_stable_across_roots():
         fail(f"expected stable tags ['fixture', 'search'], got {fixture.get('tags')!r}")
     if fixture.get('trust_state') != 'verified':
         fail(f"expected stable trust_state 'verified', got {fixture.get('trust_state')!r}")
-    if fixture.get('verified_support') != {'codex': {'state': 'adapted', 'checked_at': '2026-03-14T00:00:00Z'}}:
+    if fixture.get('verified_support') != {
+        'codex': {
+            'state': 'adapted',
+            'checked_at': '2026-03-14T00:00:00Z',
+            'freshness_state': 'fresh',
+            'freshness_reason': 'not-applicable',
+            'contract_last_verified': '2026-03-12',
+        }
+    }:
         fail(f"expected stable verified_support, got {fixture.get('verified_support')!r}")
     if fixture.get('attestation_formats') != ['ssh']:
         fail(f"expected stable attestation_formats ['ssh'], got {fixture.get('attestation_formats')!r}")
@@ -237,7 +253,15 @@ def external_ai_index_payload():
                 'avoid_when': ['Testing unrelated behavior'],
                 'runtime_assumptions': ['A trusted external registry is configured'],
                 'agent_compatible': ['openclaw', 'claude-code', 'codex'],
-                'verified_support': {'codex': {'state': 'adapted', 'checked_at': '2026-03-12T00:00:00Z'}},
+                'verified_support': {
+                    'codex': {
+                        'state': 'adapted',
+                        'checked_at': '2026-03-12T00:00:00Z',
+                        'freshness_state': 'stale',
+                        'freshness_reason': 'age-expired',
+                        'contract_last_verified': '2026-03-12',
+                    }
+                },
                 'trust_state': 'attested',
                 'default_install_version': EXTERNAL_SKILL_VERSION,
                 'latest_version': EXTERNAL_SKILL_VERSION,
@@ -435,7 +459,15 @@ def main():
             fail(f"expected external tags ['external', 'fixture'], got {external.get('tags')!r}")
         if external.get('trust_state') != 'attested':
             fail(f"expected external trust_state 'attested', got {external.get('trust_state')!r}")
-        if external.get('verified_support') != {'codex': {'state': 'adapted', 'checked_at': '2026-03-12T00:00:00Z'}}:
+        if external.get('verified_support') != {
+            'codex': {
+                'state': 'adapted',
+                'checked_at': '2026-03-12T00:00:00Z',
+                'freshness_state': 'stale',
+                'freshness_reason': 'age-expired',
+                'contract_last_verified': '2026-03-12',
+            }
+        }:
             fail(f"expected external verified_support, got {external.get('verified_support')!r}")
         if external.get('attestation_formats') != ['ssh']:
             fail(f"expected external attestation_formats ['ssh'], got {external.get('attestation_formats')!r}")

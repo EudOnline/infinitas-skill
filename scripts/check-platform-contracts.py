@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 import argparse
-import re
 import sys
 from datetime import date
 from pathlib import Path
+
+from platform_contract_lib import load_platform_profile_contract, validate_platform_contract
 
 ROOT = Path(__file__).resolve().parent.parent
 REQUIRED_DOCS = {
@@ -11,16 +12,6 @@ REQUIRED_DOCS = {
     'codex': 'Codex Platform Contract',
     'openclaw': 'OpenClaw Platform Contract',
 }
-REQUIRED_HEADINGS = [
-    '## Stable assumptions',
-    '## Volatile assumptions',
-    '## Official sources',
-    '## Last verified',
-    '## Verification steps',
-    '## Known gaps',
-]
-URL_RE = re.compile(r'https://\S+')
-DATE_RE = re.compile(r'(\d{4}-\d{2}-\d{2})')
 
 
 def fail(message):
@@ -31,68 +22,45 @@ def warn(message):
     print(f'WARN: {message}', file=sys.stderr)
 
 
-def extract_section(text: str, heading: str) -> str:
-    lines = text.splitlines()
-    capture = False
-    collected = []
-    for line in lines:
-        if line.strip() == heading:
-            capture = True
-            continue
-        if capture and line.startswith('## '):
-            break
-        if capture:
-            collected.append(line)
-    return '\n'.join(collected).strip()
-
-
-def parse_verified_date(text: str, *, path: Path) -> date | None:
-    section = extract_section(text, '## Last verified')
-    if not section:
-        fail(f'{path}: missing date value under ## Last verified')
-        return None
-    match = DATE_RE.search(section)
-    if not match:
-        fail(f'{path}: could not parse Last verified date from {section!r}')
-        return None
-    try:
-        return date.fromisoformat(match.group(1))
-    except ValueError:
-        fail(f'{path}: invalid Last verified date {match.group(1)!r}')
-        return None
-
-
-def check_doc(path: Path, title: str, *, max_age_days: int | None) -> tuple[int, int]:
+def check_doc(path: Path, title: str, *, max_age_days: int | None, stale_policy: str) -> tuple[int, int]:
     errors = 0
     warnings = 0
-    if not path.is_file():
-        fail(f'{path}: missing platform contract document')
-        return 1, 0
+    payload, validation_errors = validate_platform_contract(path, title)
+    for message in validation_errors:
+        fail(message)
+    errors += len(validation_errors)
 
-    text = path.read_text(encoding='utf-8')
-    expected_title = f'# {title}'
-    if expected_title not in text:
-        fail(f'{path}: missing required title {expected_title!r}')
+    profile_path = ROOT / 'profiles' / f'{path.stem}.json'
+    profile_payload, profile_errors = load_platform_profile_contract(profile_path, path.stem)
+    for message in profile_errors:
+        fail(message)
+    errors += len(profile_errors)
+
+    doc_sources = payload.get('official_sources') or []
+    profile_sources = profile_payload.get('sources') or []
+    if doc_sources and profile_sources and profile_sources != doc_sources:
+        fail(f'{profile_path}: contract.sources do not match {path}: {profile_sources!r} != {doc_sources!r}')
         errors += 1
 
-    for heading in REQUIRED_HEADINGS:
-        if heading not in text:
-            fail(f'{path}: missing required heading {heading!r}')
-            errors += 1
-
-    verified_date = parse_verified_date(text, path=path)
-    if verified_date is None:
+    verified_date = payload.get('last_verified')
+    profile_last_verified = profile_payload.get('last_verified')
+    if isinstance(verified_date, date) and profile_last_verified and profile_last_verified != verified_date.isoformat():
+        fail(
+            f'{profile_path}: contract.last_verified {profile_last_verified!r} does not match '
+            f'{path} {verified_date.isoformat()!r}'
+        )
         errors += 1
-    elif max_age_days is not None:
+
+    if isinstance(verified_date, date) and max_age_days is not None:
         age_days = (date.today() - verified_date).days
         if age_days > max_age_days:
-            warn(f'{path}: last verified {verified_date.isoformat()} is {age_days} days old (threshold {max_age_days})')
-            warnings += 1
-
-    urls = URL_RE.findall(text)
-    if not urls:
-        fail(f'{path}: must contain at least one HTTPS source URL')
-        errors += 1
+            message = f'{path}: last verified {verified_date.isoformat()} is {age_days} days old (threshold {max_age_days})'
+            if stale_policy == 'fail':
+                fail(message)
+                errors += 1
+            else:
+                warn(message)
+                warnings += 1
 
     return errors, warnings
 
@@ -100,13 +68,24 @@ def check_doc(path: Path, title: str, *, max_age_days: int | None) -> tuple[int,
 def main():
     parser = argparse.ArgumentParser(description='Check platform contract-watch documents.')
     parser.add_argument('--max-age-days', type=int, default=None, help='Warn when Last verified is older than this many days.')
+    parser.add_argument(
+        '--stale-policy',
+        choices=['warn', 'fail'],
+        default='warn',
+        help='Whether over-age contract docs should warn or fail.',
+    )
     args = parser.parse_args()
 
     errors = 0
     warnings = 0
     for slug, title in REQUIRED_DOCS.items():
         doc_path = ROOT / 'docs' / 'platform-contracts' / f'{slug}.md'
-        doc_errors, doc_warnings = check_doc(doc_path, title, max_age_days=args.max_age_days)
+        doc_errors, doc_warnings = check_doc(
+            doc_path,
+            title,
+            max_age_days=args.max_age_days,
+            stale_policy=args.stale_policy,
+        )
         errors += doc_errors
         warnings += doc_warnings
 

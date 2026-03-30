@@ -109,11 +109,21 @@ def write_evidence(repo: Path):
     )
 
 
+def write_platform_last_verified(repo: Path, platform: str, value: str):
+    path = repo / 'profiles' / f'{platform}.json'
+    payload = json.loads(path.read_text(encoding='utf-8'))
+    contract = payload.get('contract') if isinstance(payload.get('contract'), dict) else {}
+    contract['last_verified'] = value
+    payload['contract'] = contract
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+
 def main():
     tmpdir, repo = prepare_repo()
     try:
         scaffold_skill(repo)
         write_evidence(repo)
+        write_platform_last_verified(repo, 'codex', '2026-03-13')
         run([str(repo / 'scripts' / 'build-catalog.sh')], cwd=repo)
 
         catalog = json.loads((repo / 'catalog' / 'compatibility.json').read_text(encoding='utf-8'))
@@ -131,10 +141,30 @@ def main():
         verified = entry.get('verified_support') or {}
         if verified.get('codex', {}).get('state') != 'adapted':
             fail(f"expected codex verified_support adapted, got {verified.get('codex')!r}")
+        if verified.get('codex', {}).get('freshness_state') != 'stale':
+            fail(f"expected codex freshness_state stale, got {verified.get('codex')!r}")
+        if verified.get('codex', {}).get('freshness_reason') != 'contract-newer-than-evidence':
+            fail(f"expected codex freshness_reason contract-newer-than-evidence, got {verified.get('codex')!r}")
+        if verified.get('codex', {}).get('contract_last_verified') != '2026-03-13':
+            fail(f"expected codex contract_last_verified 2026-03-13, got {verified.get('codex')!r}")
         if verified.get('openclaw', {}).get('state') != 'adapted':
             fail(f"expected openclaw verified_support adapted, got {verified.get('openclaw')!r}")
+        if verified.get('openclaw', {}).get('freshness_state') != 'fresh':
+            fail(f"expected openclaw freshness_state fresh, got {verified.get('openclaw')!r}")
+        if verified.get('openclaw', {}).get('freshness_reason') != 'not-applicable':
+            fail(f"expected openclaw freshness_reason not-applicable, got {verified.get('openclaw')!r}")
+        if verified.get('openclaw', {}).get('contract_last_verified') != '2026-03-12':
+            fail(f"expected openclaw contract_last_verified 2026-03-12, got {verified.get('openclaw')!r}")
+        if verified.get('openclaw', {}).get('fresh_until') != '2026-04-11T12:05:00Z':
+            fail(f"expected openclaw fresh_until 2026-04-11T12:05:00Z, got {verified.get('openclaw')!r}")
         if verified.get('claude', {}).get('state') != 'unknown':
             fail(f"expected claude verified_support unknown, got {verified.get('claude')!r}")
+        if verified.get('claude', {}).get('freshness_state') != 'unknown':
+            fail(f"expected claude freshness_state unknown, got {verified.get('claude')!r}")
+        if verified.get('claude', {}).get('freshness_reason') != 'missing-evidence':
+            fail(f"expected claude freshness_reason missing-evidence, got {verified.get('claude')!r}")
+        if verified.get('claude', {}).get('contract_last_verified') != '2026-03-12':
+            fail(f"expected claude contract_last_verified 2026-03-12, got {verified.get('claude')!r}")
     finally:
         shutil.rmtree(tmpdir)
 

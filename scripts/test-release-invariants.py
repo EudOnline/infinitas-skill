@@ -102,6 +102,28 @@ def scaffold_fixture(repo: Path):
     )
 
 
+def seed_fresh_platform_evidence(repo: Path):
+    fixtures = [
+        ('codex', '2026-03-12T12:00:00Z'),
+        ('claude', '2026-03-12T12:01:00Z'),
+        ('openclaw', '2026-03-12T12:02:00Z'),
+    ]
+    for platform, checked_at in fixtures:
+        path = repo / 'catalog' / 'compatibility-evidence' / platform / FIXTURE_NAME / f'{FIXTURE_VERSION}.json'
+        path.parent.mkdir(parents=True, exist_ok=True)
+        write_json(
+            path,
+            {
+                'platform': platform,
+                'skill': FIXTURE_NAME,
+                'version': FIXTURE_VERSION,
+                'state': 'adapted',
+                'checked_at': checked_at,
+                'checker': f'check-{platform}-compat.py',
+            },
+        )
+
+
 def prepare_repo(include_signers=False):
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-release-test-'))
     repo = tmpdir / 'repo'
@@ -113,6 +135,7 @@ def prepare_repo(include_signers=False):
     )
     (repo / 'config' / 'allowed_signers').write_text('', encoding='utf-8')
     scaffold_fixture(repo)
+    seed_fresh_platform_evidence(repo)
     run(['git', 'init', '--bare', str(origin)], cwd=tmpdir)
     run(['git', 'init', '-b', 'main'], cwd=repo)
     run(['git', 'config', 'user.name', 'Release Fixture'], cwd=repo)
@@ -156,6 +179,31 @@ def write_exception_policy(repo: Path, exceptions):
             'exceptions': exceptions,
         },
     )
+
+
+def write_platform_evidence(repo: Path, platform: str, *, checked_at='2026-03-12T00:00:00Z', state='adapted'):
+    path = repo / 'catalog' / 'compatibility-evidence' / platform / FIXTURE_NAME / f'{FIXTURE_VERSION}.json'
+    path.parent.mkdir(parents=True, exist_ok=True)
+    write_json(
+        path,
+        {
+            'platform': platform,
+            'skill': FIXTURE_NAME,
+            'version': FIXTURE_VERSION,
+            'state': state,
+            'checked_at': checked_at,
+            'checker': f'check-{platform}-compat.py',
+        },
+    )
+
+
+def write_profile_last_verified(repo: Path, platform: str, value: str):
+    path = repo / 'profiles' / f'{platform}.json'
+    payload = json.loads(path.read_text(encoding='utf-8'))
+    contract = payload.get('contract') if isinstance(payload.get('contract'), dict) else {}
+    contract['last_verified'] = value
+    payload['contract'] = contract
+    write_json(path, payload)
 
 
 def configure_delegated_audit_fixture(repo: Path):
@@ -457,6 +505,49 @@ def scenario_ahead_of_upstream_is_rejected():
         shutil.rmtree(tmpdir)
 
 
+def scenario_stale_or_missing_platform_evidence_blocks_preflight():
+    tmpdir, repo, _origin, _key_path, _identity = prepare_repo(include_signers=True)
+    try:
+        fixture_meta_path = repo / 'skills' / 'active' / FIXTURE_NAME / '_meta.json'
+        meta = json.loads(fixture_meta_path.read_text(encoding='utf-8'))
+        meta['agent_compatible'] = ['codex', 'claude']
+        write_json(fixture_meta_path, meta)
+
+        write_platform_evidence(repo, 'codex', checked_at='2026-03-12T00:00:00Z')
+        write_profile_last_verified(repo, 'codex', '2026-03-13')
+        claude_evidence_path = repo / 'catalog' / 'compatibility-evidence' / 'claude' / FIXTURE_NAME / f'{FIXTURE_VERSION}.json'
+        claude_evidence_path.unlink()
+        run(['git', 'add', str(fixture_meta_path.relative_to(repo))], cwd=repo)
+        run(['git', 'add', 'catalog/compatibility-evidence/codex'], cwd=repo)
+        run(['git', 'add', 'catalog/compatibility-evidence/claude'], cwd=repo)
+        run(['git', 'add', 'profiles/codex.json'], cwd=repo)
+        run(['git', 'commit', '-m', 'add stale platform evidence fixture'], cwd=repo)
+        run(['git', 'push'], cwd=repo)
+
+        result = run(
+            [sys.executable, str(repo / 'scripts' / 'check-release-state.py'), FIXTURE_NAME, '--mode', 'preflight', '--json'],
+            cwd=repo,
+            expect=1,
+            env=make_env(),
+        )
+        payload = json.loads(result.stdout)
+        errors = '\n'.join(payload.get('errors') or [])
+        assert_contains(errors, 'platform verified support is stale or missing', 'platform freshness release error')
+
+        blocking_rules = (payload.get('policy_trace') or {}).get('blocking_rules') or []
+        if not any(item.get('id') == 'platform-verified-support' for item in blocking_rules):
+            fail(f'expected policy_trace.blocking_rules to include platform-verified-support, got {blocking_rules!r}')
+
+        platform_compatibility = ((payload.get('release') or {}).get('platform_compatibility') or {})
+        verified_support = platform_compatibility.get('verified_support') or {}
+        if verified_support.get('codex', {}).get('freshness_state') != 'stale':
+            fail(f"expected codex freshness_state stale, got {verified_support.get('codex')!r}")
+        if verified_support.get('claude', {}).get('freshness_state') != 'unknown':
+            fail(f"expected claude freshness_state unknown, got {verified_support.get('claude')!r}")
+    finally:
+        shutil.rmtree(tmpdir)
+
+
 def scenario_unsigned_tag_is_rejected():
     tmpdir, repo, _origin, _key_path, _identity = prepare_repo(include_signers=True)
     try:
@@ -606,6 +697,7 @@ def main():
     scenario_release_state_exports_delegated_audit_details()
     scenario_expired_dirty_worktree_exception_is_ignored()
     scenario_ahead_of_upstream_is_rejected()
+    scenario_stale_or_missing_platform_evidence_blocks_preflight()
     scenario_unsigned_tag_is_rejected()
     scenario_signed_tag_must_be_pushed()
     scenario_local_signed_tag_can_emit_local_provenance()

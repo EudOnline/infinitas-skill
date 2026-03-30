@@ -8,6 +8,11 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+REQUIRED_DOCS = {
+    'claude': 'Claude Platform Contract',
+    'codex': 'Codex Platform Contract',
+    'openclaw': 'OpenClaw Platform Contract',
+}
 PROFILE_PATHS = [
     Path('profiles/claude.json'),
     Path('profiles/codex.json'),
@@ -56,6 +61,9 @@ def assert_contains(text: str, pattern: str, label: str):
 def main():
     tmpdir, repo = prepare_repo()
     try:
+        sys.path.insert(0, str(repo / 'scripts'))
+        from platform_contract_lib import validate_platform_contract
+
         schema = load_json(repo / 'schemas' / 'skill-canonical.schema.json')
         if schema.get('$schema') != 'https://json-schema.org/draft/2020-12/schema':
             fail(f'unexpected skill canonical schema header: {schema.get("$schema")!r}')
@@ -91,6 +99,17 @@ def main():
                 fail(f'expected {rel} to define HTTPS contract sources, got {sources!r}')
             if not contract.get('last_verified'):
                 fail(f'expected {rel} to define contract.last_verified')
+            doc_payload, doc_errors = validate_platform_contract(repo / 'docs' / 'platform-contracts' / f'{platform}.md', REQUIRED_DOCS[platform])
+            if doc_errors:
+                fail(f'expected {platform} contract doc to validate, got {doc_errors!r}')
+            if sources != doc_payload.get('official_sources'):
+                fail(f'expected {rel} contract.sources to match docs/platform-contracts/{platform}.md, got {sources!r}')
+            expected_last_verified = doc_payload.get('last_verified').isoformat() if doc_payload.get('last_verified') else None
+            if contract.get('last_verified') != expected_last_verified:
+                fail(
+                    f"expected {rel} contract.last_verified {contract.get('last_verified')!r} "
+                    f"to match docs/platform-contracts/{platform}.md {expected_last_verified!r}"
+                )
         if seen_platforms != expected_platforms:
             fail(f'expected profile platforms {expected_platforms!r}, got {seen_platforms!r}')
 

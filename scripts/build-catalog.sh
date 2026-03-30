@@ -23,7 +23,8 @@ from distribution_lib import DistributionError, manifest_index_entry  # noqa: E4
 from transparency_log_lib import TransparencyLogError, summarize_transparency_log_state  # noqa: E402
 from ai_index_lib import build_ai_index  # noqa: E402
 from discovery_index_lib import build_discovery_index  # noqa: E402
-from compatibility_evidence_lib import load_compatibility_evidence, merge_declared_and_verified_support  # noqa: E402
+from compatibility_evidence_lib import load_compatibility_evidence, load_platform_contracts, merge_declared_and_verified_support  # noqa: E402
+from compatibility_policy_lib import load_compatibility_policy  # noqa: E402
 
 
 def expected_skill_tag(name, version):
@@ -130,6 +131,13 @@ except ValueError as exc:
     print(f'FAIL: {exc}', file=sys.stderr)
     raise SystemExit(1)
 
+try:
+    compatibility_policy = load_compatibility_policy(root)
+    platform_contracts = load_platform_contracts(root)
+except ValueError as exc:
+    print(f'FAIL: {exc}', file=sys.stderr)
+    raise SystemExit(1)
+
 entries = []
 compat_agents = {}
 stage_counts = {'incubating': 0, 'active': 0, 'archived': 0}
@@ -224,7 +232,12 @@ for stage in ['incubating', 'active', 'archived']:
                 'generated_at': dist.get('generated_at'),
                 'transparency_log': transparency_summary,
             }
-        item = merge_declared_and_verified_support(item, compatibility_evidence)
+        item = merge_declared_and_verified_support(
+            item,
+            compatibility_evidence,
+            platform_contracts=platform_contracts,
+            compatibility_policy=compatibility_policy,
+        )
         entries.append(item)
         stage_counts[item['status']] = stage_counts.get(item['status'], 0) + 1
         for agent in agent_compatible:

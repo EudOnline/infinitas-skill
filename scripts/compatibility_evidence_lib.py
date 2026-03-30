@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import json
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+from platform_contract_lib import load_platform_profile_contract
 
 EVIDENCE_ROOT = Path('catalog') / 'compatibility-evidence'
 SEMVER_RE = re.compile(r'^(\d+)\.(\d+)\.(\d+)(?:[-+]([A-Za-z0-9_.-]+))?$')
@@ -162,6 +164,27 @@ def load_compatibility_evidence(root: Path) -> list[dict]:
     return items
 
 
+def load_platform_contracts(root: Path) -> dict[str, dict]:
+    root = Path(root).resolve()
+    contracts = {}
+    profiles_dir = root / 'profiles'
+    if not profiles_dir.exists():
+        return contracts
+
+    for path in sorted(profiles_dir.glob('*.json')):
+        platform = normalize_platform_name(path.stem)
+        if not platform:
+            continue
+        payload, errors = load_platform_profile_contract(path, platform)
+        if errors:
+            raise ValueError(f'{path}: ' + '; '.join(errors))
+        contracts[platform] = {
+            'last_verified': payload.get('last_verified'),
+            'sources': payload.get('sources') or [],
+        }
+    return contracts
+
+
 def _evidence_sort_key(item):
     checked_at = item.get('checked_at')
     try:
@@ -193,10 +216,66 @@ def _skill_matches(item, evidence):
     return evidence.get('skill') in names
 
 
-def merge_declared_and_verified_support(skill_entry: dict, evidence: list[dict]) -> dict:
+def _format_iso8601(value: datetime | None) -> str | None:
+    if value is None:
+        return None
+    return value.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
+
+
+def _freshness_payload(*, platform: str, verified_item: dict | None, contract: dict | None, policy: dict, now: datetime) -> dict:
+    result = dict(verified_item or {})
+    verified_policy = (policy.get('verified_support') or {}) if isinstance(policy, dict) else {}
+    stale_after_days = verified_policy.get('stale_after_days', 30)
+    contract_policy = verified_policy.get('contract_newer_than_evidence_policy', 'stale')
+    missing_policy = verified_policy.get('missing_policy', 'unknown')
+
+    contract_last_verified = (contract or {}).get('last_verified')
+    if contract_last_verified:
+        result['contract_last_verified'] = contract_last_verified
+
+    checked_at = result.get('checked_at')
+    checked_at_dt = None
+    if isinstance(checked_at, str) and checked_at.strip():
+        try:
+            checked_at_dt = _parse_iso8601(checked_at)
+        except Exception:
+            checked_at_dt = None
+
+    if checked_at_dt is not None:
+        result['fresh_until'] = _format_iso8601(checked_at_dt + timedelta(days=stale_after_days))
+        if now > checked_at_dt + timedelta(days=stale_after_days):
+            result['freshness_state'] = 'stale'
+            result['freshness_reason'] = 'age-expired'
+            return result
+        if contract_policy == 'stale' and contract_last_verified:
+            contract_date = datetime.fromisoformat(contract_last_verified).date()
+            if contract_date > checked_at_dt.date():
+                result['freshness_state'] = 'stale'
+                result['freshness_reason'] = 'contract-newer-than-evidence'
+                return result
+        result['freshness_state'] = 'fresh'
+        result['freshness_reason'] = 'not-applicable'
+        return result
+
+    result['freshness_state'] = missing_policy
+    result['freshness_reason'] = 'missing-evidence'
+    return result
+
+
+def merge_declared_and_verified_support(
+    skill_entry: dict,
+    evidence: list[dict],
+    *,
+    platform_contracts: dict | None = None,
+    compatibility_policy: dict | None = None,
+    now: datetime | None = None,
+) -> dict:
     merged = dict(skill_entry or {})
     declared = normalize_declared_support(merged.get('declared_support') or merged.get('agent_compatible') or [])
     matched = [item for item in evidence or [] if _skill_matches(merged, item)]
+    platform_contracts = platform_contracts or {}
+    compatibility_policy = compatibility_policy or {'verified_support': {'stale_after_days': 30, 'contract_newer_than_evidence_policy': 'stale', 'missing_policy': 'unknown'}}
+    now = now or datetime.now(timezone.utc)
 
     verified = {}
     for item in sorted(matched, key=_evidence_sort_key):
@@ -219,6 +298,13 @@ def merge_declared_and_verified_support(skill_entry: dict, evidence: list[dict])
             platforms.append(platform)
     for platform in platforms:
         verified.setdefault(platform, {'state': 'unknown'})
+        verified[platform] = _freshness_payload(
+            platform=platform,
+            verified_item=verified.get(platform),
+            contract=platform_contracts.get(platform),
+            policy=compatibility_policy,
+            now=now,
+        )
 
     merged['declared_support'] = declared
     merged['verified_support'] = verified

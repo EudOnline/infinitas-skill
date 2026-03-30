@@ -196,7 +196,14 @@ def discovery_index_payload():
                 'trust_level': 'private',
                 'trust_state': 'verified',
                 'tags': ['operations', 'repo'],
-                'verified_support': {'codex': {'state': 'adapted', 'checked_at': '2026-03-15T00:00:00Z'}},
+                'verified_support': {
+                    'codex': {
+                        'state': 'adapted',
+                        'checked_at': '2026-03-15T00:00:00Z',
+                        'freshness_state': 'fresh',
+                        'freshness_reason': 'not-applicable',
+                    }
+                },
                 'attestation_formats': ['ssh'],
                 'use_when': ['Need to operate in this repo'],
                 'avoid_when': [],
@@ -222,7 +229,14 @@ def discovery_index_payload():
                 'trust_level': 'trusted',
                 'trust_state': 'attested',
                 'tags': ['operations'],
-                'verified_support': {'codex': {'state': 'adapted', 'checked_at': '2026-03-10T00:00:00Z'}},
+                'verified_support': {
+                    'codex': {
+                        'state': 'adapted',
+                        'checked_at': '2026-03-10T00:00:00Z',
+                        'freshness_state': 'stale',
+                        'freshness_reason': 'age-expired',
+                    }
+                },
                 'attestation_formats': ['ssh'],
                 'use_when': ['Need repo operations'],
                 'avoid_when': [],
@@ -329,10 +343,99 @@ def scenario_recommend_prefers_private_high_quality_match():
         shutil.rmtree(tmpdir)
 
 
+def scenario_recommend_prefers_fresh_verified_support():
+    tmpdir, repo = prepare_repo()
+    try:
+        payload_data = discovery_index_payload()
+        payload_data['skills'] = [
+            {
+                'name': 'fresh-candidate',
+                'qualified_name': 'team/fresh-candidate',
+                'publisher': 'team',
+                'summary': 'Need repo operations',
+                'source_registry': 'self',
+                'source_priority': 100,
+                'match_names': ['fresh-candidate', 'team/fresh-candidate'],
+                'default_install_version': '1.0.0',
+                'latest_version': '1.0.0',
+                'available_versions': ['1.0.0'],
+                'agent_compatible': ['codex'],
+                'install_requires_confirmation': False,
+                'trust_level': 'private',
+                'trust_state': 'verified',
+                'tags': ['operations'],
+                'verified_support': {
+                    'codex': {
+                        'state': 'adapted',
+                        'checked_at': '2026-03-15T00:00:00Z',
+                        'freshness_state': 'fresh',
+                        'freshness_reason': 'not-applicable',
+                    }
+                },
+                'attestation_formats': ['ssh'],
+                'use_when': ['Need repo operations'],
+                'avoid_when': [],
+                'runtime_assumptions': ['A checkout of this repository is available'],
+                'maturity': 'stable',
+                'quality_score': 80,
+                'last_verified_at': '2026-03-15T00:00:00Z',
+                'capabilities': ['repo-operations'],
+            },
+            {
+                'name': 'stale-candidate',
+                'qualified_name': 'team/stale-candidate',
+                'publisher': 'team',
+                'summary': 'Need repo operations',
+                'source_registry': 'self',
+                'source_priority': 100,
+                'match_names': ['stale-candidate', 'team/stale-candidate'],
+                'default_install_version': '1.0.0',
+                'latest_version': '1.0.0',
+                'available_versions': ['1.0.0'],
+                'agent_compatible': ['codex'],
+                'install_requires_confirmation': False,
+                'trust_level': 'private',
+                'trust_state': 'verified',
+                'tags': ['operations'],
+                'verified_support': {
+                    'codex': {
+                        'state': 'adapted',
+                        'checked_at': '2026-03-01T00:00:00Z',
+                        'freshness_state': 'stale',
+                        'freshness_reason': 'age-expired',
+                    }
+                },
+                'attestation_formats': ['ssh'],
+                'use_when': ['Need repo operations'],
+                'avoid_when': [],
+                'runtime_assumptions': ['A checkout of this repository is available'],
+                'maturity': 'stable',
+                'quality_score': 80,
+                'last_verified_at': '2026-03-01T00:00:00Z',
+                'capabilities': ['repo-operations'],
+            },
+        ]
+        write_json(repo / 'catalog' / 'discovery-index.json', payload_data)
+        payload = json.loads(run(['./scripts/recommend-skill.sh', 'Need repo operations', '--target-agent', 'codex'], cwd=repo).stdout)
+        results = payload.get('results') or []
+        if len(results) < 2:
+            fail(f'expected at least two results for freshness comparison, got {results!r}')
+        if results[0].get('qualified_name') != 'team/fresh-candidate':
+            fail(f"expected fresh candidate to outrank stale candidate, got {results[0].get('qualified_name')!r}")
+        stale = next((item for item in results if item.get('qualified_name') == 'team/stale-candidate'), None)
+        if stale is None:
+            fail(f'expected stale candidate in ranked results, got {results!r}')
+        if stale.get('comparative_signals', {}).get('score_gap_from_top', 0) <= 0:
+            fail(f"expected stale candidate to trail top score, got {stale.get('comparative_signals')!r}")
+    finally:
+        shutil.rmtree(tmpdir)
+
+
 def main():
     scenario_recommend_returns_ranked_fields_for_real_catalog()
     scenario_recommend_prefers_specialized_real_skills()
     scenario_recommend_prefers_private_high_quality_match()
+    scenario_recommend_prefers_fresh_verified_support()
     print('OK: recommend-skill checks passed')
 
 

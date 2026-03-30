@@ -1,0 +1,8 @@
+{
+  "platform": "codex",
+  "skill": "verified-support-fixture",
+  "version": "1.2.3",
+  "state": "adapted",
+  "checked_at": "2026-03-12T12:00:00Z",
+  "checker": "check-codex-compat.py"
+}

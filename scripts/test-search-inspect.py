@@ -46,6 +46,7 @@ def scenario_search_returns_trust_and_compatibility_fields():
         'latest_version',
         'trust_state',
         'verified_support',
+        'freshness_summary',
         'use_when',
         'avoid_when',
         'capabilities',
@@ -106,6 +107,9 @@ def scenario_inspect_returns_distribution_and_dependency_views():
     verified_summary = compatibility.get('verified_summary') or {}
     if verified_summary.get('codex') != 'adapted':
         fail(f"expected codex compatibility summary 'adapted', got {verified_summary.get('codex')!r}")
+    freshness_summary = compatibility.get('freshness_summary') or {}
+    if freshness_summary.get('codex') not in {'fresh', 'stale', 'unknown'}:
+        fail(f"expected codex freshness summary fresh/stale/unknown, got {freshness_summary.get('codex')!r}")
     dependencies = payload.get('dependencies') or {}
     summary = dependencies.get('summary') or {}
     if summary.get('root_name') != 'operate-infinitas-skill':

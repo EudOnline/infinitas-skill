@@ -20,8 +20,8 @@
   },
   "contract": {
     "sources": [
-      "https://github.com/openclaw/clawhub/blob/main/docs/skill-format.md",
-      "https://github.com/openclaw/clawhub/blob/main/README.md"
+      "https://docs.openclaw.ai/tools/skills",
+      "https://docs.openclaw.ai/tools/clawhub"
     ],
     "last_verified": "2026-03-12"
   }

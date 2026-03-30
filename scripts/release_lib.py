@@ -5,6 +5,8 @@ import re
 import subprocess
 from pathlib import Path
 
+from compatibility_evidence_lib import load_compatibility_evidence, load_platform_contracts, merge_declared_and_verified_support
+from compatibility_policy_lib import load_compatibility_policy
 from exception_policy_lib import ExceptionPolicyError, load_exception_policy, match_active_exceptions
 from policy_pack_lib import PolicyPackError, load_policy_domain_resolution
 from policy_trace_lib import build_policy_trace
@@ -15,6 +17,8 @@ from transparency_log_lib import TransparencyLogError, summarize_transparency_lo
 ROOT = Path(__file__).resolve().parent.parent
 SIGNER_RE = re.compile(r'Good "git" signature for (.+?) with ')
 SIGNATURE_MARKERS = ('BEGIN SSH SIGNATURE', 'BEGIN PGP SIGNATURE')
+BLOCKING_PLATFORM_STATES = {'unknown', 'blocked', 'broken', 'unsupported'}
+BLOCKING_FRESHNESS_STATES = {'stale', 'unknown'}
 
 
 class ReleaseError(Exception):
@@ -388,6 +392,60 @@ def remote_tag_state(root, remote_name, tag_name):
     return state
 
 
+def collect_platform_compatibility_state(root, meta, identity):
+    compatibility_policy = load_compatibility_policy(root)
+    platform_contracts = load_platform_contracts(root)
+    compatibility_evidence = load_compatibility_evidence(root)
+    merged = merge_declared_and_verified_support(
+        {
+            'name': meta.get('name'),
+            'qualified_name': identity.get('qualified_name'),
+            'version': meta.get('version'),
+            'declared_support': meta.get('agent_compatible') or [],
+            'agent_compatible': meta.get('agent_compatible') or [],
+        },
+        compatibility_evidence,
+        platform_contracts=platform_contracts,
+        compatibility_policy=compatibility_policy,
+    )
+    declared_support = merged.get('declared_support') or []
+    verified_support = merged.get('verified_support') or {}
+    blocking_platforms = []
+    for platform in declared_support:
+        item = dict(verified_support.get(platform) or {})
+        state = item.get('state') or 'unknown'
+        freshness_state = item.get('freshness_state') or 'unknown'
+        if state in BLOCKING_PLATFORM_STATES or freshness_state in BLOCKING_FRESHNESS_STATES:
+            item['platform'] = platform
+            blocking_platforms.append(item)
+
+    return {
+        'declared_support': declared_support,
+        'verified_support': verified_support,
+        'blocking_platforms': blocking_platforms,
+        'policy': (compatibility_policy.get('verified_support') or {}),
+        'evaluation_error': None,
+    }
+
+
+def _format_blocking_platform_support(item):
+    parts = []
+    state = item.get('state') or 'unknown'
+    freshness_state = item.get('freshness_state') or 'unknown'
+    parts.append(f'state={state}')
+    parts.append(f'freshness={freshness_state}')
+    freshness_reason = item.get('freshness_reason')
+    if freshness_reason:
+        parts.append(f'reason={freshness_reason}')
+    checked_at = item.get('checked_at')
+    if checked_at:
+        parts.append(f'checked_at={checked_at}')
+    contract_last_verified = item.get('contract_last_verified')
+    if contract_last_verified:
+        parts.append(f'contract_last_verified={contract_last_verified}')
+    return f"{item.get('platform') or 'unknown'} ({', '.join(parts)})"
+
+
 def collect_release_state(skill_dir, mode='stable-release', root=None):
     root = Path(root or ROOT).resolve()
     skill_dir = Path(skill_dir).resolve()
@@ -427,6 +485,14 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
     exception_usage = []
     require_clean_worktree = mode != 'local-tag'
     require_upstream_sync = mode in {'preflight', 'stable-release'}
+    require_fresh_platform_support = mode in {'preflight', 'stable-release'}
+    platform_compatibility = {
+        'declared_support': meta.get('agent_compatible') or [],
+        'verified_support': {},
+        'blocking_platforms': [],
+        'policy': {},
+        'evaluation_error': None,
+    }
     try:
         exception_policy = load_exception_policy(root)
     except ExceptionPolicyError as exc:
@@ -449,6 +515,35 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
         review_evaluation = evaluate_review_state(skill_dir, root=root)
     except (PolicyPackError, ReviewPolicyError) as exc:
         warnings.append(f'cannot evaluate review audit state: {"; ".join(exc.errors)}')
+
+    try:
+        platform_compatibility = collect_platform_compatibility_state(root, meta, identity)
+    except Exception as exc:
+        platform_message = f'cannot evaluate platform verified support: {exc}'
+        platform_compatibility['evaluation_error'] = platform_message
+        if require_fresh_platform_support and platform_compatibility.get('declared_support'):
+            issues.append(
+                _issue(
+                    'platform-verified-support',
+                    platform_message,
+                    rule='preflight and stable releases require fresh verified support for declared platforms',
+                )
+            )
+        else:
+            warnings.append(platform_message)
+    else:
+        if require_fresh_platform_support and platform_compatibility.get('blocking_platforms'):
+            details = ', '.join(
+                _format_blocking_platform_support(item) for item in platform_compatibility.get('blocking_platforms', [])
+            )
+            issues.append(
+                _issue(
+                    'platform-verified-support',
+                    'platform verified support is stale or missing, or the verified state is incompatible, '
+                    f'for declared platforms: {details}',
+                    rule='preflight and stable releases require fresh verified support for declared platforms',
+                )
+            )
 
     if not releaser_identity:
         warnings.append('cannot determine releaser identity; set INFINITAS_SKILL_RELEASER or git config user.name/user.email')
@@ -628,6 +723,16 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
                     'behind': behind,
                 },
             },
+            {
+                'id': 'platform-verified-support',
+                'rule': 'preflight and stable releases require fresh verified support for declared platforms',
+                'value': {
+                    'enforced': require_fresh_platform_support,
+                    'declared_support': platform_compatibility.get('declared_support', []),
+                    'blocking_platforms': platform_compatibility.get('blocking_platforms', []),
+                    'evaluation_error': platform_compatibility.get('evaluation_error'),
+                },
+            },
             {'id': 'local-tag', 'rule': 'stable releases require a signed verified local tag', 'value': expected_tag},
             {'id': 'remote-tag', 'rule': 'stable releases require remote tag verification in stable-release mode', 'value': mode == 'stable-release'},
             {'id': 'signing-tag-format', 'rule': 'release signing config defines tag_format', 'value': signing['tag_format']},
@@ -700,6 +805,7 @@ def collect_release_state(skill_dir, mode='stable-release', root=None):
             'exception_usage': exception_usage,
             'reproducibility': reproducibility,
             'transparency_log': transparency_log,
+            'platform_compatibility': platform_compatibility,
         },
         'signing': {
             'tag_format': signing['tag_format'],

@@ -8,6 +8,7 @@ The registry now exports a machine-readable compatibility view at:
 
 - declared support exported from author metadata such as `_meta.json.agent_compatible`
 - verified support derived from compatibility evidence and platform-specific checks
+- verified support freshness metadata such as `freshness_state`, `freshness_reason`, `contract_last_verified`, and `fresh_until`
 - stage counts for `incubating`, `active`, and `archived`
 - version + path data for quick lookup
 
@@ -27,6 +28,7 @@ During the migration window, compatibility has two sources of truth with differe
 
 - **declared support** is still read from author metadata such as `_meta.json.agent_compatible`
 - **verified support** is produced by platform-specific compatibility checks and evidence files
+- verified support freshness is derived from compatibility evidence recency plus the current platform contract `last_verified` marker from `profiles/*.json`
 - `python3 scripts/record-verified-support.py <skill> --platform ... --build-catalog` is the canonical way to refresh verified support evidence after a real release/export check
 
 Compatibility is still declared manually in each skill's `_meta.json`:
@@ -46,6 +48,14 @@ scripts/build-catalog.sh
 ## What this does not guarantee
 
 `catalog/compatibility.json` currently reflects declared support from `_meta.json.agent_compatible`, and will increasingly add verified support from compatibility evidence as the new pipeline lands.
+
+Verified support freshness is additive:
+
+- `fresh`: recent evidence is still within policy and is not older than the current platform contract
+- `stale`: evidence exists, but it is too old or predates a newer platform contract review
+- `unknown`: no evidence has been recorded for that declared platform yet
+
+When freshness turns `stale` or `unknown`, discovery can still show the skill, but release readiness now blocks until the evidence is refreshed. The maintenance loop for that workflow lives in [docs/platform-drift-playbook.md](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/docs/platform-drift-playbook.md).
 
 It does **not** guarantee:
 

@@ -59,6 +59,11 @@ def copy_repo(prefix):
         repo,
         ignore=shutil.ignore_patterns('.git', '.worktrees', '.planning', '__pycache__', '.cache', 'catalog', 'scripts/__pycache__'),
     )
+    compatibility_root = ROOT / 'catalog' / 'compatibility-evidence'
+    if compatibility_root.is_dir():
+        shutil.copytree(compatibility_root, repo / 'catalog' / 'compatibility-evidence')
+    else:
+        (repo / 'catalog' / 'compatibility-evidence').mkdir(parents=True, exist_ok=True)
     return tmpdir, repo
 
 
