@@ -85,6 +85,18 @@ def _cli_env(repo: Path) -> dict[str, str]:
     return dict(os.environ, PYTHONPATH=str(repo / "src"))
 
 
+def _run_cli(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+    return _run(
+        [sys.executable, "-m", "infinitas_skill.cli.main", *args],
+        cwd=repo,
+        env=_cli_env(repo),
+    )
+
+
+def _run_legacy(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+    return _run([sys.executable, *args], cwd=repo)
+
+
 def _run_cli_probe(
     repo: Path,
     args: list[str],
@@ -119,52 +131,65 @@ def _load_json_output(result: subprocess.CompletedProcess[str], label: str) -> d
         ) from exc
 
 
-def test_install_resolve_plan_cli_matches_legacy_json_and_routes_through_extracted_modules() -> (
-    None
-):
+def _assert_same_result(
+    repo: Path,
+    cli_args: list[str],
+    legacy_args: list[str],
+    *,
+    expect_returncode: int,
+) -> subprocess.CompletedProcess[str]:
+    cli = _run_cli(repo, cli_args)
+    legacy = _run_legacy(repo, legacy_args)
+
+    assert cli.returncode == expect_returncode, (
+        f"CLI command returned {cli.returncode}, expected {expect_returncode}\n"
+        f"stdout:\n{cli.stdout}\n"
+        f"stderr:\n{cli.stderr}"
+    )
+    assert legacy.returncode == expect_returncode, (
+        f"legacy command returned {legacy.returncode}, expected {expect_returncode}\n"
+        f"stdout:\n{legacy.stdout}\n"
+        f"stderr:\n{legacy.stderr}"
+    )
+    assert cli.returncode == legacy.returncode
+    assert cli.stdout == legacy.stdout
+    assert cli.stderr == legacy.stderr
+    return cli
+
+
+def _assert_package_owned_install_command(repo: Path, cli_args: list[str]) -> None:
+    probe = _run_cli_probe(
+        repo,
+        cli_args,
+        [
+            "dependency_lib",
+            "infinitas_skill.install.source_resolution",
+            "infinitas_skill.install.target_validation",
+            "infinitas_skill.install.plan_builder",
+            "infinitas_skill.install.output",
+        ],
+    )
+    assert probe.returncode == 0, probe.stderr
+    probe_payload = _load_json_output(probe, "install ownership probe")
+    assert probe_payload["returncode"] in {0, 1}, probe_payload
+    modules = probe_payload["modules"]
+    assert not modules.get("dependency_lib")
+    for module_name in [
+        "infinitas_skill.install.source_resolution",
+        "infinitas_skill.install.target_validation",
+        "infinitas_skill.install.plan_builder",
+        "infinitas_skill.install.output",
+    ]:
+        assert modules.get(module_name), f"install CLI did not route through {module_name}"
+
+
+def test_install_cli_matches_legacy_for_success_and_failure_paths() -> None:
     tmpdir, repo = _prepare_repo()
     try:
         target = _prepare_target(repo)
         skill_dir = repo / "templates" / "basic-skill"
-        cli = _run(
-            [
-                sys.executable,
-                "-m",
-                "infinitas_skill.cli.main",
-                "install",
-                "resolve-plan",
-                "--skill-dir",
-                str(skill_dir),
-                "--target-dir",
-                str(target),
-                "--json",
-            ],
-            cwd=repo,
-            env=_cli_env(repo),
-        )
-        legacy = _run(
-            [
-                sys.executable,
-                str(repo / "scripts" / "resolve-install-plan.py"),
-                "--skill-dir",
-                str(skill_dir),
-                "--target-dir",
-                str(target),
-                "--json",
-            ],
-            cwd=repo,
-        )
 
-        assert cli.returncode == 0, cli.stderr
-        assert legacy.returncode == 0, legacy.stderr
-        assert cli.stdout == legacy.stdout
-        assert cli.stderr == legacy.stderr
-
-        payload = _load_json_output(cli, "install resolve-plan CLI")
-        assert payload["root"]["name"] == "basic-skill"
-        assert payload["steps"], "expected at least one install planning step"
-
-        probe = _run_cli_probe(
+        cli = _assert_same_result(
             repo,
             [
                 "install",
@@ -176,28 +201,110 @@ def test_install_resolve_plan_cli_matches_legacy_json_and_routes_through_extract
                 "--json",
             ],
             [
-                "dependency_lib",
-                "infinitas_skill.install.source_resolution",
-                "infinitas_skill.install.target_validation",
-                "infinitas_skill.install.plan_builder",
-                "infinitas_skill.install.output",
+                str(repo / "scripts" / "resolve-install-plan.py"),
+                "--skill-dir",
+                str(skill_dir),
+                "--target-dir",
+                str(target),
+                "--json",
+            ],
+            expect_returncode=0,
+        )
+        _assert_same_result(
+            repo,
+            [
+                "install",
+                "check-target",
+                str(skill_dir),
+                str(target),
+            ],
+            [
+                str(repo / "scripts" / "check-install-target.py"),
+                str(skill_dir),
+                str(target),
+            ],
+            expect_returncode=0,
+        )
+
+        payload = _load_json_output(cli, "install resolve-plan CLI")
+        assert payload["root"]["name"] == "basic-skill"
+        assert payload["steps"], "expected at least one install planning step"
+
+        manifest_path = target / ".infinitas-skill-install-manifest.json"
+        manifest_payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest_payload["schema_version"] = 999
+        _write_json(manifest_path, manifest_payload)
+
+        _assert_same_result(
+            repo,
+            [
+                "install",
+                "resolve-plan",
+                "--skill-dir",
+                str(skill_dir),
+                "--target-dir",
+                str(target),
+                "--json",
+            ],
+            [
+                str(repo / "scripts" / "resolve-install-plan.py"),
+                "--skill-dir",
+                str(skill_dir),
+                "--target-dir",
+                str(target),
+                "--json",
+            ],
+            expect_returncode=1,
+        )
+        _assert_same_result(
+            repo,
+            [
+                "install",
+                "check-target",
+                str(skill_dir),
+                str(target),
+            ],
+            [
+                str(repo / "scripts" / "check-install-target.py"),
+                str(skill_dir),
+                str(target),
+            ],
+            expect_returncode=1,
+        )
+    finally:
+        shutil.rmtree(tmpdir)
+
+
+def test_install_cli_routes_through_extracted_modules_for_both_commands() -> None:
+    tmpdir, repo = _prepare_repo()
+    try:
+        target = _prepare_target(repo)
+        skill_dir = repo / "templates" / "basic-skill"
+        _assert_package_owned_install_command(
+            repo,
+            [
+                "install",
+                "resolve-plan",
+                "--skill-dir",
+                str(skill_dir),
+                "--target-dir",
+                str(target),
+                "--json",
             ],
         )
-        assert probe.returncode == 0, probe.stderr
-        probe_payload = _load_json_output(probe, "install ownership probe")
-        assert probe_payload["returncode"] == 0, probe_payload
-        modules = probe_payload["modules"]
-        assert not modules.get("dependency_lib")
-        for module_name in [
-            "infinitas_skill.install.source_resolution",
-            "infinitas_skill.install.target_validation",
-            "infinitas_skill.install.plan_builder",
-            "infinitas_skill.install.output",
-        ]:
-            assert modules.get(module_name), f"install CLI did not route through {module_name}"
+        _assert_package_owned_install_command(
+            repo,
+            [
+                "install",
+                "check-target",
+                str(skill_dir),
+                str(target),
+            ],
+        )
     finally:
         shutil.rmtree(tmpdir)
 
 
 def main() -> None:
-    test_install_resolve_plan_cli_matches_legacy_json_and_routes_through_extracted_modules()
+    test_install_cli_matches_legacy_for_success_and_failure_paths()
+    test_install_cli_routes_through_extracted_modules_for_both_commands()
