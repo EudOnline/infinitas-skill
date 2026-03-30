@@ -11,7 +11,9 @@ def plan_to_text(plan):
     lines = []
     root = plan.get("root") or {}
     root_display = root.get("qualified_name") or root.get("name")
-    lines.append(f"resolution plan: {root_display}@{root.get('version')} from {root.get('registry')}")
+    lines.append(
+        f"resolution plan: {root_display}@{root.get('version')} from {root.get('registry')}"
+    )
     for step in plan.get("steps", []):
         action = step.get("action")
         stage = step.get("stage")
@@ -27,8 +29,12 @@ def plan_to_text(plan):
         lines.append(head)
         for requester in step.get("requested_by", []):
             requester_name = requester.get("by_qualified_name") or requester.get("by")
+            requester_line = (
+                f"    requested by {requester_name}@{requester.get('version')}"
+                f" -> {requester.get('constraint')}"
+            )
             lines.append(
-                f"    requested by {requester_name}@{requester.get('version')} -> {requester.get('constraint')}"
+                requester_line
                 + (f" [{requester.get('registry')}]" if requester.get("registry") else "")
                 + (" +incubating" if requester.get("allow_incubating") else "")
             )

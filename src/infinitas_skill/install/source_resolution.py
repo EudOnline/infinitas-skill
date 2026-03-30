@@ -7,11 +7,8 @@ from pathlib import Path
 
 from infinitas_skill.legacy import ROOT, ensure_legacy_scripts_on_path
 
-
 SKILL_NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
-LEGACY_REF_RE = re.compile(
-    r"^[a-z0-9]+(?:-[a-z0-9]+)*(?:@\d+\.\d+\.\d+(?:[-+][A-Za-z0-9_.-]+)?)?$"
-)
+LEGACY_REF_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*(?:@\d+\.\d+\.\d+(?:[-+][A-Za-z0-9_.-]+)?)?$")
 SEMVER_RE = re.compile(
     r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z.-]+))?(?:\+([0-9A-Za-z.-]+))?$"
 )
@@ -218,7 +215,8 @@ def _normalize_entry(entry, field, owner_name=None):
         unknown = sorted(set(entry) - allowed_keys)
         if unknown:
             raise DependencyError(
-                f'{field} entry for {entry.get("name") or "<unknown>"} has unsupported keys: {", ".join(unknown)}'
+                f"{field} entry for {entry.get('name') or '<unknown>'} "
+                f"has unsupported keys: {', '.join(unknown)}"
             )
         name = entry.get("name")
         if not isinstance(name, str):
@@ -227,22 +225,25 @@ def _normalize_entry(entry, field, owner_name=None):
         version = entry.get("version", "*")
         if not isinstance(version, str):
             raise DependencyError(
-                f'{field} entry for {identity["identity_key"]} has non-string version constraint'
+                f"{field} entry for {identity['identity_key']} has non-string version constraint"
             )
         registry = entry.get("registry")
         if registry is not None and (not isinstance(registry, str) or not registry.strip()):
             raise DependencyError(
-                f'{field} entry for {identity["identity_key"]} has invalid registry hint {registry!r}'
+                f"{field} entry for {identity['identity_key']} "
+                f"has invalid registry hint {registry!r}"
             )
         allow_incubating = entry.get("allow_incubating", False)
         if not isinstance(allow_incubating, bool):
             raise DependencyError(
-                f'{field} entry for {identity["identity_key"]} has non-boolean allow_incubating'
+                f"{field} entry for {identity['identity_key']} has non-boolean allow_incubating"
             )
         normalized = {
             **identity,
             "version": canonicalize_constraint(version),
-            "registry": registry.strip() if isinstance(registry, str) and registry.strip() else None,
+            "registry": registry.strip()
+            if isinstance(registry, str) and registry.strip()
+            else None,
             "allow_incubating": allow_incubating,
             "format": "object",
             "raw": entry,
@@ -251,7 +252,7 @@ def _normalize_entry(entry, field, owner_name=None):
         raise DependencyError(f"{field} entries must be strings or objects")
 
     if owner_name and normalized["identity_key"] == owner_name:
-        raise DependencyError(f'{field} cannot reference itself ({normalized["identity_key"]})')
+        raise DependencyError(f"{field} cannot reference itself ({normalized['identity_key']})")
     return normalized
 
 
@@ -271,10 +272,10 @@ def normalize_meta_dependencies(meta, owner_name=None):
 
 
 def constraint_display(entry):
-    registry = f' [{entry["registry"]}]' if entry.get("registry") else ""
+    registry = f" [{entry['registry']}]" if entry.get("registry") else ""
     version = entry.get("version") or "*"
     incubating = " +incubating" if entry.get("allow_incubating") else ""
-    return f'{display_identity(entry) or entry["name"]}{registry} {version}{incubating}'.strip()
+    return f"{display_identity(entry) or entry['name']}{registry} {version}{incubating}".strip()
 
 
 def load_meta(path):
@@ -318,7 +319,9 @@ def scan_enabled_registry_skills(root):
             if not stage_dir.exists():
                 continue
             for skill_dir in sorted(
-                path for path in stage_dir.iterdir() if path.is_dir() and (path / "_meta.json").exists()
+                path
+                for path in stage_dir.iterdir()
+                if path.is_dir() and (path / "_meta.json").exists()
             ):
                 meta = load_meta(skill_dir / "_meta.json")
                 normalized = normalize_meta_dependencies(meta)
@@ -361,8 +364,12 @@ def scan_enabled_registry_skills(root):
                         "conflicts_with": normalized["conflicts_with"],
                         "meta": meta,
                         "source_type": "distribution-manifest" if distribution else "working-tree",
-                        "distribution_manifest": distribution.get("manifest_path") if distribution else None,
-                        "distribution_bundle": distribution.get("bundle_path") if distribution else None,
+                        "distribution_manifest": distribution.get("manifest_path")
+                        if distribution
+                        else None,
+                        "distribution_bundle": distribution.get("bundle_path")
+                        if distribution
+                        else None,
                         "distribution_bundle_sha256": (
                             distribution.get("bundle_sha256") if distribution else None
                         ),
@@ -406,10 +413,16 @@ def scan_enabled_registry_skills(root):
                 )
                 if distribution:
                     matched_distribution.add(
-                        (skill_identity.get("qualified_name") or meta.get("name"), meta.get("version"))
+                        (
+                            skill_identity.get("qualified_name") or meta.get("name"),
+                            meta.get("version"),
+                        )
                     )
         for distribution in distribution_index:
-            key = (distribution.get("qualified_name") or distribution.get("name"), distribution.get("version"))
+            key = (
+                distribution.get("qualified_name") or distribution.get("name"),
+                distribution.get("version"),
+            )
             if key in matched_distribution:
                 continue
             candidates.append(
@@ -432,13 +445,18 @@ def scan_enabled_registry_skills(root):
                     "snapshot_created_at": distribution.get("generated_at"),
                     "depends_on": distribution.get("depends_on", []),
                     "conflicts_with": distribution.get("conflicts_with", []),
-                    "meta": {"name": distribution.get("name"), "version": distribution.get("version")},
+                    "meta": {
+                        "name": distribution.get("name"),
+                        "version": distribution.get("version"),
+                    },
                     "source_type": "distribution-manifest",
                     "distribution_manifest": distribution.get("manifest_path"),
                     "distribution_bundle": distribution.get("bundle_path"),
                     "distribution_bundle_sha256": distribution.get("bundle_sha256"),
                     "distribution_attestation": distribution.get("attestation_path"),
-                    "distribution_attestation_signature": distribution.get("attestation_signature_path"),
+                    "distribution_attestation_signature": distribution.get(
+                        "attestation_signature_path"
+                    ),
                     "source_snapshot_kind": distribution.get("source_snapshot_kind"),
                     "source_snapshot_tag": distribution.get("source_snapshot_tag"),
                     "source_snapshot_ref": distribution.get("source_snapshot_ref"),
@@ -458,7 +476,9 @@ def scan_enabled_registry_skills(root):
     by_identity = {}
     for candidate in candidates:
         by_name.setdefault(candidate.get("name"), []).append(candidate)
-        by_identity.setdefault(candidate.get("identity_key") or candidate.get("name"), []).append(candidate)
+        by_identity.setdefault(candidate.get("identity_key") or candidate.get("name"), []).append(
+            candidate
+        )
     for name in list(by_name):
         by_name[name] = sorted(by_name[name], key=cmp_to_key(_candidate_catalog_compare))
     for key in list(by_identity):
@@ -495,7 +515,11 @@ def _candidate_catalog_compare(left, right):
     if left_snapshot != right_snapshot:
         return -1 if left_snapshot > right_snapshot else 1
     left_key = (left.get("registry_name") or "", left.get("dir_name") or "", left.get("path") or "")
-    right_key = (right.get("registry_name") or "", right.get("dir_name") or "", right.get("path") or "")
+    right_key = (
+        right.get("registry_name") or "",
+        right.get("dir_name") or "",
+        right.get("path") or "",
+    )
     if left_key == right_key:
         return 0
     return -1 if left_key < right_key else 1
@@ -531,7 +555,10 @@ def candidate_from_skill_dir(skill_dir, source_registry=None, source_info=None):
         "depends_on": normalized["depends_on"],
         "conflicts_with": normalized["conflicts_with"],
         "meta": meta,
-        "registry_name": source_registry or info.get("registry_name") or info.get("source_registry") or "self",
+        "registry_name": source_registry
+        or info.get("registry_name")
+        or info.get("source_registry")
+        or "self",
         "registry_priority": int(info.get("registry_priority", 0) or 0),
         "source_type": info.get("source_type") or "working-tree",
         "distribution_manifest": info.get("distribution_manifest"),

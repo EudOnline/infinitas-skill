@@ -3,8 +3,6 @@ from __future__ import annotations
 from functools import cmp_to_key
 from pathlib import Path
 
-from infinitas_skill.legacy import ROOT, ensure_legacy_scripts_on_path
-
 from infinitas_skill.install.source_resolution import (
     DependencyError,
     compare_versions,
@@ -17,6 +15,7 @@ from infinitas_skill.install.source_resolution import (
     unique,
     version_satisfies,
 )
+from infinitas_skill.legacy import ROOT, ensure_legacy_scripts_on_path
 
 
 def load_installed_state(target_dir):
@@ -32,7 +31,9 @@ def load_installed_state(target_dir):
     installed = {}
     manifest_skills = manifest.get("skills") or {}
     if target.exists():
-        for child in sorted(path for path in target.iterdir() if path.is_dir() and (path / "_meta.json").exists()):
+        for child in sorted(
+            path for path in target.iterdir() if path.is_dir() and (path / "_meta.json").exists()
+        ):
             meta = load_meta(child / "_meta.json")
             normalized = normalize_meta_dependencies(meta)
             identity = normalize_skill_identity(meta)
@@ -99,15 +100,19 @@ def entry_matches_skill(entry, skill):
 def constraints_compatible(constraints):
     registries = unique([entry.get("registry") for entry in constraints if entry.get("registry")])
     if len(registries) > 1:
-        return False, f'conflicting registry hints: {", ".join(registries)}'
+        return False, f"conflicting registry hints: {', '.join(registries)}"
     return True, None
 
 
 def installed_identity_matches(candidate, installed):
     if not installed:
         return False
-    candidate_identity = candidate.get("identity_key") or candidate.get("qualified_name") or candidate.get("name")
-    installed_identity = installed.get("identity_key") or installed.get("qualified_name") or installed.get("name")
+    candidate_identity = (
+        candidate.get("identity_key") or candidate.get("qualified_name") or candidate.get("name")
+    )
+    installed_identity = (
+        installed.get("identity_key") or installed.get("qualified_name") or installed.get("name")
+    )
     if candidate_identity and installed_identity and candidate_identity != installed_identity:
         return False
     installed_version = installed.get("version") or installed.get("locked_version")
@@ -125,7 +130,9 @@ def candidate_satisfies_all(candidate, constraints):
             return False
         if candidate.get("stage") == "incubating" and not entry.get("allow_incubating"):
             return False
-        if candidate.get("stage") == "archived" and not constraint_is_exact(entry.get("version") or "*"):
+        if candidate.get("stage") == "archived" and not constraint_is_exact(
+            entry.get("version") or "*"
+        ):
             return False
         if not version_satisfies(candidate.get("version") or "0.0.0", entry.get("version") or "*"):
             return False
@@ -147,7 +154,9 @@ def matching_candidates(requirement, constraints, installed_item, catalog):
     preferred = preferred_registries(constraints, catalog)
     candidates = []
     identity_key = requirement.get("identity_key") or requirement.get("name")
-    candidate_pool = catalog["by_identity"].get(identity_key, catalog["by_name"].get(requirement.get("name"), []))
+    candidate_pool = catalog["by_identity"].get(
+        identity_key, catalog["by_name"].get(requirement.get("name"), [])
+    )
     for candidate in candidate_pool:
         if candidate_satisfies_all(candidate, constraints):
             candidates.append(candidate)
@@ -184,15 +193,25 @@ def matching_candidates(requirement, constraints, installed_item, catalog):
         right_stage = stage_order.get(right.get("stage"), 9)
         if left_stage != right_stage:
             return -1 if left_stage < right_stage else 1
-        version_cmp = compare_versions(right.get("version") or "0.0.0", left.get("version") or "0.0.0")
+        version_cmp = compare_versions(
+            right.get("version") or "0.0.0", left.get("version") or "0.0.0"
+        )
         if version_cmp:
             return version_cmp
         left_snapshot = left.get("snapshot_created_at") or ""
         right_snapshot = right.get("snapshot_created_at") or ""
         if left_snapshot != right_snapshot:
             return -1 if left_snapshot > right_snapshot else 1
-        left_key = (left.get("registry_name") or "", left.get("dir_name") or "", left.get("path") or "")
-        right_key = (right.get("registry_name") or "", right.get("dir_name") or "", right.get("path") or "")
+        left_key = (
+            left.get("registry_name") or "",
+            left.get("dir_name") or "",
+            left.get("path") or "",
+        )
+        right_key = (
+            right.get("registry_name") or "",
+            right.get("dir_name") or "",
+            right.get("path") or "",
+        )
         if left_key == right_key:
             return 0
         return -1 if left_key < right_key else 1
@@ -207,19 +226,19 @@ def selected_conflict_reason(candidate, selected):
             continue
         if other.get("name") == candidate.get("name"):
             return (
-                f'cannot select both {display_identity(other)} and {display_identity(candidate)} '
+                f"cannot select both {display_identity(other)} and {display_identity(candidate)} "
                 "because installed skill state is still keyed by bare skill name"
             )
         for conflict in candidate.get("conflicts_with", []):
             if entry_matches_skill(conflict, other):
                 return (
-                    f'{candidate.get("name")} conflicts with selected {other.get("name")} '
+                    f"{candidate.get('name')} conflicts with selected {other.get('name')} "
                     f"({constraint_display(conflict)})"
                 )
         for conflict in other.get("conflicts_with", []):
             if entry_matches_skill(conflict, candidate):
                 return (
-                    f'selected {other.get("name")} conflicts with {candidate.get("name")} '
+                    f"selected {other.get('name')} conflicts with {candidate.get('name')} "
                     f"({constraint_display(conflict)})"
                 )
     return None
@@ -235,8 +254,12 @@ def validate_final_state(root_candidate, selected, installed, mode):
                 continue
             for conflict in candidate.get("conflicts_with", []):
                 if entry_matches_skill(conflict, installed_item):
+                    message = (
+                        f"{candidate.get('name')} conflicts with already installed "
+                        f"{installed_item.get('name')}"
+                    )
                     raise DependencyError(
-                        f'{candidate.get("name")} conflicts with already installed {installed_item.get("name")}',
+                        message,
                         {
                             "skill": candidate.get("name"),
                             "selected": candidate_view(candidate),
@@ -246,8 +269,12 @@ def validate_final_state(root_candidate, selected, installed, mode):
                     )
             for conflict in installed_item.get("conflicts_with", []):
                 if entry_matches_skill(conflict, candidate):
+                    message = (
+                        f"already installed {installed_item.get('name')} "
+                        f"conflicts with {candidate.get('name')}"
+                    )
                     raise DependencyError(
-                        f'already installed {installed_item.get("name")} conflicts with {candidate.get("name")}',
+                        message,
                         {
                             "skill": candidate.get("name"),
                             "selected": candidate_view(candidate),
@@ -265,7 +292,7 @@ def validate_final_state(root_candidate, selected, installed, mode):
         locked_version = installed_item.get("locked_version")
         if locked_version and candidate.get("version") != locked_version:
             raise DependencyError(
-                f'unsafe upgrade plan for {display_identity(candidate) or identity_key}: '
+                f"unsafe upgrade plan for {display_identity(candidate) or identity_key}: "
                 f"installed copy is locked to {locked_version}",
                 {
                     "skill": display_identity(candidate) or identity_key,

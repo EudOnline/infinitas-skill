@@ -108,8 +108,7 @@ class DependencyPlanner:
         )
         if not candidate_matches:
             available = [
-                candidate_view(item)
-                for item in self.catalog["by_identity"].get(identity_key, [])
+                candidate_view(item) for item in self.catalog["by_identity"].get(identity_key, [])
             ]
             raise DependencyError(
                 f"no registry candidate satisfies dependency {display_name}",

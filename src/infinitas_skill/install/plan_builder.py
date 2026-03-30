@@ -36,9 +36,9 @@ def plan_action(identity_key, candidate, installed_item, root_candidate, mode):
     same_version = installed_item.get("version") == candidate.get("version") or installed_item.get(
         "locked_version"
     ) == candidate.get("version")
-    same_registry = not installed_item.get("source_registry") or installed_item.get("source_registry") == candidate.get(
-        "registry_name"
-    )
+    same_registry = not installed_item.get("source_registry") or installed_item.get(
+        "source_registry"
+    ) == candidate.get("registry_name")
     if identity_key == root_identity and mode == "sync":
         return "sync" if not (same_version and same_registry) else "keep"
     if same_version and same_registry:
@@ -109,7 +109,9 @@ def build_plan(root_candidate, selected, installed, catalog, mode):
                 "distribution_bundle": candidate.get("distribution_bundle"),
                 "distribution_bundle_sha256": candidate.get("distribution_bundle_sha256"),
                 "distribution_attestation": candidate.get("distribution_attestation"),
-                "distribution_attestation_signature": candidate.get("distribution_attestation_signature"),
+                "distribution_attestation_signature": candidate.get(
+                    "distribution_attestation_signature"
+                ),
                 "action": action,
                 "needs_apply": action not in {"keep"},
                 "requested_by": requesters.get(identity_key, []),

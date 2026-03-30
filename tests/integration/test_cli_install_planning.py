@@ -119,8 +119,9 @@ def _load_json_output(result: subprocess.CompletedProcess[str], label: str) -> d
         ) from exc
 
 
-def test_install_resolve_plan_cli_matches_legacy_json_and_routes_through_extracted_modules(
-) -> None:
+def test_install_resolve_plan_cli_matches_legacy_json_and_routes_through_extracted_modules() -> (
+    None
+):
     tmpdir, repo = _prepare_repo()
     try:
         target = _prepare_target(repo)
