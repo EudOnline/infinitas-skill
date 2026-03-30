@@ -20,7 +20,7 @@ This runbook covers the minimum backup set for a hosted `infinitas-skill` server
 For the current SQLite-first hosted deployment, create a point-in-time backup set with:
 
 ```bash
-python scripts/backup-hosted-registry.py \
+uv run infinitas server backup \
   --repo-path /srv/infinitas/repo \
   --database-url sqlite:////srv/infinitas/data/server.db \
   --artifact-path /srv/infinitas/artifacts \
@@ -50,7 +50,7 @@ sudo systemctl list-timers infinitas-hosted-backup.timer
 For a small single-node deployment, a reasonable starting retention policy is to keep the newest 7 hosted backup snapshots:
 
 ```bash
-python scripts/prune-hosted-backups.py \
+uv run infinitas server prune-backups \
   --backup-root /srv/infinitas/backups \
   --keep-last 7 \
   --json

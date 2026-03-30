@@ -47,7 +47,7 @@ services:
       test:
         - CMD-SHELL
         - >-
-          python3 "$$INFINITAS_SERVER_REPO_PATH/scripts/server-healthcheck.py"
+          env PYTHONPATH="$$INFINITAS_SERVER_REPO_PATH/src$${PYTHONPATH:+:$$PYTHONPATH}" python3 -m infinitas_skill.cli.main server healthcheck
           --api-url http://127.0.0.1:8000
           --repo-path "$$INFINITAS_SERVER_REPO_PATH"
           --artifact-path "$$INFINITAS_SERVER_ARTIFACT_PATH"
@@ -65,7 +65,7 @@ services:
       - /bin/bash
       - -lc
       - >-
-          exec python3 "$$INFINITAS_SERVER_REPO_PATH/scripts/run-hosted-worker.py"
+          exec env PYTHONPATH="$$INFINITAS_SERVER_REPO_PATH/src$${PYTHONPATH:+:$$PYTHONPATH}" python3 -m infinitas_skill.cli.main server worker
           --poll-interval "$$INFINITAS_WORKER_POLL_INTERVAL"
     depends_on:
       init-repo:
@@ -83,7 +83,7 @@ services:
       - /bin/bash
       - -lc
       - >-
-          exec python3 "$$INFINITAS_SERVER_REPO_PATH/scripts/backup-hosted-registry.py"
+          exec env PYTHONPATH="$$INFINITAS_SERVER_REPO_PATH/src$${PYTHONPATH:+:$$PYTHONPATH}" python3 -m infinitas_skill.cli.main server backup
           --repo-path "$$INFINITAS_SERVER_REPO_PATH"
           --database-url "$$INFINITAS_SERVER_DATABASE_URL"
           --artifact-path "$$INFINITAS_SERVER_ARTIFACT_PATH"
@@ -103,7 +103,7 @@ services:
       - /bin/bash
       - -lc
       - >-
-          exec python3 "$$INFINITAS_SERVER_REPO_PATH/scripts/prune-hosted-backups.py"
+          exec env PYTHONPATH="$$INFINITAS_SERVER_REPO_PATH/src$${PYTHONPATH:+:$$PYTHONPATH}" python3 -m infinitas_skill.cli.main server prune-backups
           --backup-root "$$INFINITAS_BACKUP_OUTPUT_DIR"
           --keep-last "$$INFINITAS_PRUNE_KEEP_LAST"
           --json

@@ -353,7 +353,8 @@ Type=oneshot
 User={args.service_user}
 WorkingDirectory={args.repo_root}
 EnvironmentFile={args.env_file}
-ExecStart={args.python_bin} {args.repo_root}/scripts/backup-hosted-registry.py --repo-path {args.repo_root} --database-url {database_url} --artifact-path {artifact_path} --output-dir {args.backup_output_dir} --label {args.backup_label}
+Environment=PYTHONPATH={args.repo_root.rstrip("/")}/src
+ExecStart={args.python_bin} -m infinitas_skill.cli.main server backup --repo-path {args.repo_root} --database-url {database_url} --artifact-path {artifact_path} --output-dir {args.backup_output_dir} --label {args.backup_label}
 """
 
 
@@ -380,7 +381,8 @@ After=network-online.target
 Type=oneshot
 User={args.service_user}
 WorkingDirectory={args.repo_root}
-ExecStart={args.python_bin} {args.repo_root}/scripts/prune-hosted-backups.py --backup-root {args.backup_output_dir} --keep-last {args.prune_keep_last} --json
+Environment=PYTHONPATH={args.repo_root.rstrip("/")}/src
+ExecStart={args.python_bin} -m infinitas_skill.cli.main server prune-backups --backup-root {args.backup_output_dir} --keep-last {args.prune_keep_last} --json
 """
 
 

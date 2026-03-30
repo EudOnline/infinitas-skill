@@ -125,7 +125,7 @@ After the stack is up, validate with:
 docker compose --env-file .env.compose ps
 docker compose --env-file .env.compose logs --tail=100 app worker
 docker compose --env-file .env.compose --profile ops run --rm inspect
-python scripts/server-healthcheck.py \
+uv run infinitas server healthcheck \
   --api-url http://127.0.0.1:8000 \
   --repo-path .deploy/repo \
   --artifact-path .deploy/artifacts \
@@ -149,7 +149,7 @@ These services intentionally run on demand. If you want scheduled backups, prune
 Use the hosted ops health check to verify the minimum single-node deployment contract:
 
 ```bash
-python scripts/server-healthcheck.py \
+uv run infinitas server healthcheck \
   --api-url http://127.0.0.1:8000 \
   --repo-path /srv/infinitas/repo \
   --artifact-path /srv/infinitas/artifacts \
@@ -179,7 +179,7 @@ python scripts/registryctl.py --base-url https://skills.example.com --token <mai
 
 ## State inspection
 
-Use the hosted state inspector alongside `server-healthcheck.py` when you need queue depth and failed-job visibility:
+Use the hosted state inspector alongside `infinitas server healthcheck` when you need queue depth and failed-job visibility:
 
 ```bash
 uv run infinitas server inspect-state \
@@ -286,7 +286,7 @@ If mirror automation is enabled in the rendered bundle, also run:
 
 - `sudo systemctl enable --now infinitas-hosted-mirror.timer`
 
-The API service starts `uvicorn`, the worker service runs `python -m infinitas_skill.cli.main server worker` with `PYTHONPATH` pointed at `<repo>/src`, the backup timer schedules `scripts/backup-hosted-registry.py`, the prune timer runs `scripts/prune-hosted-backups.py` against the backup root, and the inspect timer runs `python -m infinitas_skill.cli.main server inspect-state` with `PYTHONPATH` pointed at `<repo>/src` plus the configured alert thresholds.
+The API service starts `uvicorn`, and the worker, backup, prune, and inspect units all run `python -m infinitas_skill.cli.main server ...` with `PYTHONPATH` pointed at `<repo>/src`. The backup timer runs `server backup`, the prune timer runs `server prune-backups` against the backup root, and the inspect timer runs `server inspect-state` with the configured alert thresholds.
 When configured, the mirror timer runs `scripts/mirror-registry.sh` for one-way outward mirroring only.
 If `INFINITAS_SERVER_MIRROR_REMOTE` is set in the worker environment, each successful publish also attempts an immediate best-effort one-way mirror push after artifact sync and the primary `origin` push complete.
 Published artifacts remain filesystem-backed under `INFINITAS_SERVER_ARTIFACT_PATH`, and the hosted app serves that synchronized artifact root read-only from `/registry/*`.

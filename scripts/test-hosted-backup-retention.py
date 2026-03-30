@@ -140,7 +140,8 @@ def scenario_render_prune_units():
 
         prune_service_text = prune_service.read_text(encoding='utf-8')
         prune_timer_text = prune_timer.read_text(encoding='utf-8')
-        assert_contains(prune_service_text, 'prune-hosted-backups.py', 'prune service')
+        assert_contains(prune_service_text, 'Environment=PYTHONPATH=/srv/infinitas/repo/src', 'prune service')
+        assert_contains(prune_service_text, '-m infinitas_skill.cli.main server prune-backups', 'prune service')
         assert_contains(prune_service_text, '--backup-root /srv/infinitas/backups', 'prune service')
         assert_contains(prune_service_text, '--keep-last 7', 'prune service')
         assert_contains(prune_timer_text, 'OnCalendar=daily', 'prune timer')
