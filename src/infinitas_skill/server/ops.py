@@ -11,9 +11,14 @@ import subprocess
 import sys
 import tarfile
 import time
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 from urllib import error, request
+
+from sqlalchemy import create_engine, func, select
+from sqlalchemy.orm import Session
 
 SERVER_TOP_LEVEL_HELP = 'Hosted server operations tools'
 SERVER_PARSER_DESCRIPTION = 'Hosted server operations CLI'
@@ -450,7 +455,8 @@ Type=oneshot
 User={args.service_user}
 WorkingDirectory={args.repo_root}
 EnvironmentFile={args.env_file}
-ExecStart={args.python_bin} {args.repo_root}/scripts/inspect-hosted-state.py --database-url {database_url} --limit {args.inspect_limit} --json{extra_flags}
+Environment=PYTHONPATH={args.repo_root.rstrip("/")}/src
+ExecStart={args.python_bin} -m infinitas_skill.cli.main server inspect-state --database-url {database_url} --limit {args.inspect_limit} --json{extra_flags}
 """
 
 
@@ -502,6 +508,228 @@ def emit_prune_summary(summary: dict, as_json: bool):
     print(f"OK: deleted {len(summary['deleted'])} recognized backup directories")
     if summary['ignored']:
         print(f"OK: ignored {len(summary['ignored'])} non-hosted entries")
+
+
+def server_engine_kwargs(database_url: str) -> dict[str, Any]:
+    if database_url.startswith('sqlite:///'):
+        return {'connect_args': {'check_same_thread': False}}
+    return {}
+
+
+def isoformat_or_none(value: Any) -> str | None:
+    if value is None:
+        return None
+    return value.isoformat().replace('+00:00', 'Z')
+
+
+def serialize_job(job: Any) -> dict[str, Any]:
+    from server.jobs import load_job_payload
+
+    payload = load_job_payload(job)
+    return {
+        'id': job.id,
+        'kind': job.kind,
+        'status': job.status,
+        'release_id': job.release_id or payload.get('release_id'),
+        'note': job.note or '',
+        'error_message': job.error_message or '',
+        'created_at': isoformat_or_none(job.created_at),
+        'started_at': isoformat_or_none(job.started_at),
+        'finished_at': isoformat_or_none(job.finished_at),
+    }
+
+
+def load_latest_review_state_by_exposure(session: Session) -> dict[int, str]:
+    from server.modules.review.models import ReviewCase
+
+    latest: dict[int, str] = {}
+    rows = session.execute(select(ReviewCase).order_by(ReviewCase.id.asc())).scalars()
+    for item in rows:
+        latest[item.exposure_id] = item.state or 'none'
+    return latest
+
+
+def build_release_inspection_summary(session: Session) -> dict[str, Any]:
+    from server.modules.exposure.models import Exposure
+
+    latest_review_state = load_latest_review_state_by_exposure(session)
+    audience_counts: Counter[str] = Counter()
+    audience_review_state: defaultdict[str, Counter[str]] = defaultdict(Counter)
+
+    exposures = session.execute(select(Exposure).order_by(Exposure.id.asc())).scalars()
+    for exposure in exposures:
+        audience = exposure.audience_type or 'unknown'
+        review_state = latest_review_state.get(exposure.id, 'none')
+        audience_counts[audience] += 1
+        audience_review_state[audience][review_state] += 1
+
+    return {
+        'by_audience': dict(sorted(audience_counts.items())),
+        'by_audience_review_state': {
+            audience: dict(sorted(states.items())) for audience, states in sorted(audience_review_state.items())
+        },
+    }
+
+
+def build_jobs_inspection_summary(session: Session, *, limit: int) -> dict[str, Any]:
+    from server.models import Job
+
+    status_counts = {
+        status: count
+        for status, count in session.execute(select(Job.status, func.count()).group_by(Job.status)).all()
+    }
+    warning_count = session.execute(select(func.count()).select_from(Job).where(Job.log.contains('WARNING:'))).scalar_one()
+
+    recent_failed = session.execute(
+        select(Job).where(Job.status == 'failed').order_by(Job.id.desc()).limit(limit)
+    ).scalars()
+    recent_active = session.execute(
+        select(Job).where(Job.status.in_(('queued', 'running'))).order_by(Job.id.desc()).limit(limit)
+    ).scalars()
+    recent_warning = session.execute(
+        select(Job).where(Job.log.contains('WARNING:')).order_by(Job.id.desc()).limit(limit)
+    ).scalars()
+
+    return {
+        'counts': {
+            'queued': int(status_counts.get('queued', 0)),
+            'running': int(status_counts.get('running', 0)),
+            'failed': int(status_counts.get('failed', 0)),
+            'completed': int(status_counts.get('completed', 0)),
+            'warning': int(warning_count or 0),
+        },
+        'by_status': dict(sorted((str(key), int(value)) for key, value in status_counts.items())),
+        'recent_failed': [serialize_job(item) for item in recent_failed],
+        'recent_queued_or_running': [serialize_job(item) for item in recent_active],
+        'recent_warning': [serialize_job(item) for item in recent_warning],
+    }
+
+
+def maybe_add_alert(alerts: list[dict[str, Any]], *, kind: str, label: str, actual: int, maximum: int | None):
+    if maximum is None:
+        return
+    if actual <= maximum:
+        return
+    alerts.append(
+        {
+            'kind': kind,
+            'label': label,
+            'actual': actual,
+            'max': maximum,
+            'message': f'{label} exceeded threshold: {actual} > {maximum}',
+        }
+    )
+
+
+def deliver_inspect_webhook(summary: dict[str, Any], url: str):
+    notification = summary['notification']['webhook']
+    notification['attempted'] = True
+    notification['url'] = url
+    payload = json.dumps(summary, ensure_ascii=False).encode('utf-8')
+    req = request.Request(url, data=payload, headers={'Content-Type': 'application/json'}, method='POST')
+    try:
+        with request.urlopen(req, timeout=10) as response:
+            notification['status_code'] = response.status
+            notification['delivered'] = 200 <= response.status < 300
+    except error.HTTPError as exc:
+        notification['status_code'] = exc.code
+        notification['error'] = f'HTTP {exc.code}'
+    except error.URLError as exc:
+        notification['error'] = str(exc.reason)
+    except Exception as exc:  # pragma: no cover - defensive fallback
+        notification['error'] = str(exc)
+
+
+def write_inspect_fallback(summary: dict[str, Any], path_text: str):
+    notification = summary['notification']['fallback']
+    path = Path(path_text)
+    notification['attempted'] = True
+    notification['path'] = str(path)
+    notification['wrote'] = True
+    notification['error'] = ''
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    except Exception as exc:
+        notification['wrote'] = False
+        notification['error'] = str(exc)
+
+
+def build_inspection_summary(
+    *,
+    database_url: str,
+    limit: int,
+    max_queued_jobs: int | None = None,
+    max_running_jobs: int | None = None,
+    max_failed_jobs: int | None = None,
+    max_warning_jobs: int | None = None,
+    alert_webhook_url: str = '',
+    alert_fallback_file: str = '',
+) -> dict[str, Any]:
+    require_sqlite_db(database_url)
+    engine = create_engine(database_url, future=True, **server_engine_kwargs(database_url))
+    try:
+        with Session(engine) as session:
+            jobs = build_jobs_inspection_summary(session, limit=limit)
+            releases = build_release_inspection_summary(session)
+    finally:
+        engine.dispose()
+
+    alerts: list[dict[str, Any]] = []
+    maybe_add_alert(alerts, kind='queued_jobs', label='queued jobs', actual=jobs['counts']['queued'], maximum=max_queued_jobs)
+    maybe_add_alert(alerts, kind='running_jobs', label='running jobs', actual=jobs['counts']['running'], maximum=max_running_jobs)
+    maybe_add_alert(alerts, kind='failed_jobs', label='failed jobs', actual=jobs['counts']['failed'], maximum=max_failed_jobs)
+    maybe_add_alert(alerts, kind='warning_jobs', label='warning jobs', actual=jobs['counts']['warning'], maximum=max_warning_jobs)
+
+    summary = {
+        'ok': not alerts,
+        'database': {
+            'kind': 'sqlite',
+            'path': str(sqlite_path_from_url(database_url)),
+        },
+        'jobs': jobs,
+        'releases': releases,
+        'alerts': alerts,
+        'notification': {
+            'webhook': {
+                'attempted': False,
+                'delivered': False,
+                'url': alert_webhook_url or '',
+                'status_code': None,
+                'error': '',
+            },
+            'fallback': {
+                'attempted': False,
+                'wrote': False,
+                'path': alert_fallback_file or '',
+                'error': '',
+            },
+        },
+    }
+
+    if alerts and alert_webhook_url:
+        deliver_inspect_webhook(summary, alert_webhook_url)
+    if alerts and alert_fallback_file and not summary['notification']['webhook']['delivered']:
+        write_inspect_fallback(summary, alert_fallback_file)
+
+    return summary
+
+
+def emit_inspection_summary(summary: dict[str, Any], as_json: bool):
+    if as_json:
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return
+    counts = summary['jobs']['counts']
+    print(f"OK: database {summary['database']['path']}")
+    print(
+        'OK: jobs '
+        f"queued={counts['queued']} running={counts['running']} failed={counts['failed']} warning={counts['warning']}"
+    )
+    if summary['alerts']:
+        for alert in summary['alerts']:
+            print(f"ALERT: {alert['message']}")
+        return
+    print('OK: no inspection thresholds exceeded')
 
 
 def configure_server_healthcheck_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
@@ -570,6 +798,19 @@ def configure_server_worker_parser(parser: argparse.ArgumentParser) -> argparse.
     return parser
 
 
+def configure_server_inspect_state_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    parser.add_argument('--database-url', required=True, help='Database URL, currently sqlite:///... only')
+    parser.add_argument('--limit', type=int, default=10, help='Number of recent jobs to include in detail lists')
+    parser.add_argument('--max-queued-jobs', type=int, default=None, help='Alert when queued job count exceeds this threshold')
+    parser.add_argument('--max-running-jobs', type=int, default=None, help='Alert when running job count exceeds this threshold')
+    parser.add_argument('--max-failed-jobs', type=int, default=None, help='Alert when failed job count exceeds this threshold')
+    parser.add_argument('--max-warning-jobs', type=int, default=None, help='Alert when jobs with WARNING log entries exceed this threshold')
+    parser.add_argument('--alert-webhook-url', default='', help='Optional webhook URL for alert summary delivery')
+    parser.add_argument('--alert-fallback-file', default='', help='Optional file path for storing the latest alert summary JSON')
+    parser.add_argument('--json', action='store_true', help='Emit machine-readable JSON output')
+    return parser
+
+
 def build_server_healthcheck_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description='Hosted registry server health check', prog=prog)
     return configure_server_healthcheck_parser(parser)
@@ -593,6 +834,11 @@ def build_server_prune_backups_parser(*, prog: str | None = None) -> argparse.Ar
 def build_server_worker_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description='Run the hosted registry worker loop', prog=prog)
     return configure_server_worker_parser(parser)
+
+
+def build_server_inspect_state_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description='Inspect hosted registry queue and release state', prog=prog)
+    return configure_server_inspect_state_parser(parser)
 
 
 def run_server_healthcheck(
@@ -720,8 +966,37 @@ def run_server_worker(*, poll_interval: float = 5.0, once: bool = False, limit: 
         return 0
 
 
+def run_server_inspect_state(
+    *,
+    database_url: str,
+    limit: int,
+    max_queued_jobs: int | None = None,
+    max_running_jobs: int | None = None,
+    max_failed_jobs: int | None = None,
+    max_warning_jobs: int | None = None,
+    alert_webhook_url: str = '',
+    alert_fallback_file: str = '',
+    as_json: bool = False,
+) -> int:
+    summary = build_inspection_summary(
+        database_url=database_url,
+        limit=limit,
+        max_queued_jobs=max_queued_jobs,
+        max_running_jobs=max_running_jobs,
+        max_failed_jobs=max_failed_jobs,
+        max_warning_jobs=max_warning_jobs,
+        alert_webhook_url=alert_webhook_url,
+        alert_fallback_file=alert_fallback_file,
+    )
+    emit_inspection_summary(summary, as_json=as_json)
+    return 2 if summary['alerts'] else 0
+
+
 def configure_server_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
-    subparsers = parser.add_subparsers(dest='server_command', metavar='{healthcheck,backup,render-systemd,prune-backups,worker}')
+    subparsers = parser.add_subparsers(
+        dest='server_command',
+        metavar='{healthcheck,backup,render-systemd,prune-backups,worker,inspect-state}',
+    )
 
     healthcheck = subparsers.add_parser(
         'healthcheck',
@@ -792,6 +1067,26 @@ def configure_server_parser(parser: argparse.ArgumentParser) -> argparse.Argumen
             limit=args.limit,
         )
     )
+
+    inspect_state = subparsers.add_parser(
+        'inspect-state',
+        help='Inspect hosted registry queue and release state',
+        description='Inspect hosted registry queue and release state',
+    )
+    configure_server_inspect_state_parser(inspect_state)
+    inspect_state.set_defaults(
+        _handler=lambda args: run_server_inspect_state(
+            database_url=args.database_url,
+            limit=args.limit,
+            max_queued_jobs=args.max_queued_jobs,
+            max_running_jobs=args.max_running_jobs,
+            max_failed_jobs=args.max_failed_jobs,
+            max_warning_jobs=args.max_warning_jobs,
+            alert_webhook_url=args.alert_webhook_url,
+            alert_fallback_file=args.alert_fallback_file,
+            as_json=args.json,
+        )
+    )
     return parser
 
 
@@ -815,18 +1110,21 @@ __all__ = [
     'SERVER_TOP_LEVEL_HELP',
     'build_server_backup_parser',
     'build_server_healthcheck_parser',
+    'build_server_inspect_state_parser',
     'build_server_parser',
     'build_server_prune_backups_parser',
     'build_server_render_systemd_parser',
     'build_server_worker_parser',
     'configure_server_backup_parser',
     'configure_server_healthcheck_parser',
+    'configure_server_inspect_state_parser',
     'configure_server_parser',
     'configure_server_prune_backups_parser',
     'configure_server_render_systemd_parser',
     'configure_server_worker_parser',
     'run_server_backup',
     'run_server_healthcheck',
+    'run_server_inspect_state',
     'run_server_prune_backups',
     'run_server_render_systemd',
     'run_server_worker',

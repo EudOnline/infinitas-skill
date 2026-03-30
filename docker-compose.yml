@@ -144,7 +144,8 @@ services:
           if [[ -n "$${INFINITAS_INSPECT_ALERT_FALLBACK_FILE:-}" ]]; then
             args+=(--alert-fallback-file "$$INFINITAS_INSPECT_ALERT_FALLBACK_FILE")
           fi
-          exec python3 "$$INFINITAS_SERVER_REPO_PATH/scripts/inspect-hosted-state.py" "$${args[@]}"
+          export PYTHONPATH="$$INFINITAS_SERVER_REPO_PATH/src$${PYTHONPATH:+:$$PYTHONPATH}"
+          exec python3 -m infinitas_skill.cli.main server inspect-state "$${args[@]}"
     depends_on:
       init-repo:
         condition: service_completed_successfully

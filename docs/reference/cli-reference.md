@@ -202,18 +202,19 @@ options:
 
 ```text
 usage: infinitas server [-h]
-                        {healthcheck,backup,render-systemd,prune-backups,worker}
+                        {healthcheck,backup,render-systemd,prune-backups,worker,inspect-state}
                         ...
 
 Hosted server operations CLI
 
 positional arguments:
-  {healthcheck,backup,render-systemd,prune-backups,worker}
+  {healthcheck,backup,render-systemd,prune-backups,worker,inspect-state}
     healthcheck         Run hosted server health checks
     backup              Create a hosted registry backup set
     render-systemd      Render a hosted registry systemd deployment bundle
     prune-backups       Prune older hosted registry backup snapshots
     worker              Run the hosted registry worker loop
+    inspect-state       Inspect hosted registry queue and release state
 
 options:
   -h, --help            show this help message and exit
@@ -263,6 +264,43 @@ options:
   --output-dir OUTPUT_DIR
                         Directory where backup snapshots should be created
   --label LABEL         Optional label appended to the backup directory name
+  --json                Emit machine-readable JSON output
+```
+
+## `infinitas server inspect-state`
+
+```text
+usage: infinitas server inspect-state [-h] --database-url DATABASE_URL
+                                      [--limit LIMIT]
+                                      [--max-queued-jobs MAX_QUEUED_JOBS]
+                                      [--max-running-jobs MAX_RUNNING_JOBS]
+                                      [--max-failed-jobs MAX_FAILED_JOBS]
+                                      [--max-warning-jobs MAX_WARNING_JOBS]
+                                      [--alert-webhook-url ALERT_WEBHOOK_URL]
+                                      [--alert-fallback-file ALERT_FALLBACK_FILE]
+                                      [--json]
+
+Inspect hosted registry queue and release state
+
+options:
+  -h, --help            show this help message and exit
+  --database-url DATABASE_URL
+                        Database URL, currently sqlite:///... only
+  --limit LIMIT         Number of recent jobs to include in detail lists
+  --max-queued-jobs MAX_QUEUED_JOBS
+                        Alert when queued job count exceeds this threshold
+  --max-running-jobs MAX_RUNNING_JOBS
+                        Alert when running job count exceeds this threshold
+  --max-failed-jobs MAX_FAILED_JOBS
+                        Alert when failed job count exceeds this threshold
+  --max-warning-jobs MAX_WARNING_JOBS
+                        Alert when jobs with WARNING log entries exceed this
+                        threshold
+  --alert-webhook-url ALERT_WEBHOOK_URL
+                        Optional webhook URL for alert summary delivery
+  --alert-fallback-file ALERT_FALLBACK_FILE
+                        Optional file path for storing the latest alert
+                        summary JSON
   --json                Emit machine-readable JSON output
 ```
 

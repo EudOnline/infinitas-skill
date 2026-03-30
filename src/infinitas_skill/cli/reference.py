@@ -13,6 +13,7 @@ from infinitas_skill.release.state import build_release_check_state_parser
 from infinitas_skill.server.ops import (
     build_server_backup_parser,
     build_server_healthcheck_parser,
+    build_server_inspect_state_parser,
     build_server_parser,
     build_server_prune_backups_parser,
     build_server_render_systemd_parser,
@@ -41,6 +42,7 @@ def render_cli_reference() -> str:
     server_help = build_server_parser(prog='infinitas server').format_help()
     server_healthcheck_help = build_server_healthcheck_parser(prog='infinitas server healthcheck').format_help()
     server_backup_help = build_server_backup_parser(prog='infinitas server backup').format_help()
+    server_inspect_state_help = build_server_inspect_state_parser(prog='infinitas server inspect-state').format_help()
     server_render_systemd_help = build_server_render_systemd_parser(prog='infinitas server render-systemd').format_help()
     server_prune_backups_help = build_server_prune_backups_parser(prog='infinitas server prune-backups').format_help()
     server_worker_help = build_server_worker_parser(prog='infinitas server worker').format_help()
@@ -110,6 +112,10 @@ def render_cli_reference() -> str:
         '## `infinitas server backup`',
         '',
         _render_help_block(server_backup_help).rstrip(),
+        '',
+        '## `infinitas server inspect-state`',
+        '',
+        _render_help_block(server_inspect_state_help).rstrip(),
         '',
         '## `infinitas server render-systemd`',
         '',

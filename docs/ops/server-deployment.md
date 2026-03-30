@@ -182,7 +182,7 @@ python scripts/registryctl.py --base-url https://skills.example.com --token <mai
 Use the hosted state inspector alongside `server-healthcheck.py` when you need queue depth and failed-job visibility:
 
 ```bash
-python scripts/inspect-hosted-state.py \
+uv run infinitas server inspect-state \
   --database-url sqlite:////srv/infinitas/data/server.db \
   --limit 10 \
   --max-queued-jobs 10 \
@@ -286,7 +286,7 @@ If mirror automation is enabled in the rendered bundle, also run:
 
 - `sudo systemctl enable --now infinitas-hosted-mirror.timer`
 
-The API service starts `uvicorn`, the worker service runs `python -m infinitas_skill.cli.main server worker` with `PYTHONPATH` pointed at `<repo>/src`, the backup timer schedules `scripts/backup-hosted-registry.py`, the prune timer runs `scripts/prune-hosted-backups.py` against the backup root, and the inspect timer runs `scripts/inspect-hosted-state.py` with configured alert thresholds.
+The API service starts `uvicorn`, the worker service runs `python -m infinitas_skill.cli.main server worker` with `PYTHONPATH` pointed at `<repo>/src`, the backup timer schedules `scripts/backup-hosted-registry.py`, the prune timer runs `scripts/prune-hosted-backups.py` against the backup root, and the inspect timer runs `python -m infinitas_skill.cli.main server inspect-state` with `PYTHONPATH` pointed at `<repo>/src` plus the configured alert thresholds.
 When configured, the mirror timer runs `scripts/mirror-registry.sh` for one-way outward mirroring only.
 If `INFINITAS_SERVER_MIRROR_REMOTE` is set in the worker environment, each successful publish also attempts an immediate best-effort one-way mirror push after artifact sync and the primary `origin` push complete.
 Published artifacts remain filesystem-backed under `INFINITAS_SERVER_ARTIFACT_PATH`, and the hosted app serves that synchronized artifact root read-only from `/registry/*`.

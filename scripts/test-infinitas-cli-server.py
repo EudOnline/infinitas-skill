@@ -124,7 +124,7 @@ def load_json_output(result, *, label):
 def scenario_server_cli_surface():
     result = run_cli(['server', '--help'], expect=0)
     help_text = result.stdout + result.stderr
-    for command in ['healthcheck', 'backup', 'render-systemd', 'prune-backups', 'worker']:
+    for command in ['healthcheck', 'backup', 'render-systemd', 'prune-backups', 'worker', 'inspect-state']:
         if command not in help_text:
             fail(f'expected {command!r} in infinitas server help')
 
