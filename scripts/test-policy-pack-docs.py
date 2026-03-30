@@ -22,7 +22,7 @@ def main():
     assert_contains(ROOT / 'docs' / 'reference' / 'policy-packs.md', 'policy/packs/')
     assert_contains(ROOT / 'docs' / 'reference' / 'promotion-policy.md', 'policy/policy-packs.json')
     assert_contains(ROOT / 'docs' / 'ops' / 'signing-bootstrap.md', 'policy/policy-packs.json')
-    assert_contains(ROOT / 'docs' / 'multi-registry.md', 'policy/policy-packs.json')
+    assert_contains(ROOT / 'docs' / 'reference' / 'multi-registry.md', 'policy/policy-packs.json')
     assert_contains(ROOT / 'scripts' / 'check-all.sh', 'python3 scripts/check-policy-packs.py')
     print('OK: policy-pack docs checks passed')
 

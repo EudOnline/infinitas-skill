@@ -24,6 +24,7 @@ Reference docs describe exact behavior, contracts, schemas, and migration mappin
 
 ## Policy reference
 
+- [Multi-registry sources](multi-registry.md)
 - [Promotion policy](promotion-policy.md)
 - [Policy packs](policy-packs.md)
 - [Registry refresh policy](registry-refresh-policy.md)
