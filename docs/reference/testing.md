@@ -16,6 +16,7 @@ Raw `uv` and script commands remain available below as fallback detail.
 ```bash
 uv sync
 uv run pytest tests/integration/test_cli_release_state.py tests/integration/test_cli_server_ops.py tests/integration/test_private_registry_ui.py -q
+uv run pytest tests/integration/test_cli_policy.py tests/integration/test_signing_bootstrap.py tests/integration/test_installed_integrity.py -q
 uv run ruff check src/infinitas_skill server/ui server/app.py tests/integration tests/unit
 ./scripts/check-all.sh
 ```
@@ -34,6 +35,14 @@ uv run pytest tests/integration/test_cli_release_state.py tests/integration/test
 
 These files cover the maintained release CLI, the maintained server CLI surface, and the private-registry HTML route assembly without booting the full compatibility matrix.
 
+Promoted high-value regression flows now live in first-class pytest modules as well:
+
+```bash
+uv run pytest tests/integration/test_cli_policy.py tests/integration/test_signing_bootstrap.py tests/integration/test_installed_integrity.py -q
+```
+
+These cover the maintained policy CLI parity surface, signing bootstrap rehearsal, and installed-integrity guardrails.
+
 ## Legacy script wrappers
 
 The historical script entrypoints remain available, but they now delegate to the focused `tests/integration/` checks:
@@ -42,9 +51,13 @@ The historical script entrypoints remain available, but they now delegate to the
 uv run python3 scripts/test-infinitas-cli-release-state.py
 uv run python3 scripts/test-infinitas-cli-server.py
 uv run python3 scripts/test-private-registry-ui.py
+uv run python3 scripts/test-infinitas-cli-policy.py
+uv run python3 scripts/test-signing-bootstrap.py
+uv run python3 scripts/test-installed-skill-integrity.py
 ```
 
 Use these when following older docs or existing contributor workflows that still reference `scripts/test-*.py`.
+The wrappers above now delegate to the matching `tests/integration/` modules or their shared assertion helpers.
 
 ## Named `check-all` blocks
 
