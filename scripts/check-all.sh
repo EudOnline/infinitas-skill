@@ -51,6 +51,7 @@ if should_run focused-integration; then
   python3 -m pytest \
     tests/integration/test_cli_release_state.py \
     tests/integration/test_cli_server_ops.py \
+    tests/integration/test_maintainability_budgets.py \
     tests/integration/test_private_registry_ui.py \
     -q
 fi

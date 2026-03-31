@@ -1,0 +1,9 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.13
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+        files: ^(src/infinitas_skill/|server/ui/|server/app\.py|tests/integration/|tests/unit/)
+      - id: ruff-format
+        files: ^(src/infinitas_skill/|server/ui/|server/app\.py|tests/integration/|tests/unit/)

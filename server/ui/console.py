@@ -12,8 +12,8 @@ from server.ui.formatting import (
     humanize_status,
     humanize_timestamp,
 )
-from server.ui.home import build_site_nav
 from server.ui.i18n import pick_lang, resolve_language, with_lang
+from server.ui.navigation import build_site_nav
 
 
 def build_console_context(
@@ -72,7 +72,10 @@ def build_console_forbidden_context(
         content=pick_lang(
             lang,
             f"当前账号角色是{humanize_role(user.role, lang)}，此页面仅允许{allowed_text}访问。",
-            f"Your current role is {humanize_role(user.role, lang)}. This page is limited to {allowed_text}.",
+            (
+                f"Your current role is {humanize_role(user.role, lang)}. "
+                f"This page is limited to {allowed_text}."
+            ),
         ),
         limit=0,
         items=[],
@@ -89,7 +92,10 @@ def build_console_forbidden_context(
             "denied_body": pick_lang(
                 lang,
                 f"需要{allowed_text}权限才能继续访问维护台。你可以先返回首页，或者切换到有权限的账号。",
-                f"Maintainer role required before you can continue into the console. Head back home or switch to an authorized account.",
+                (
+                    "Maintainer role required before you can continue into the console. "
+                    "Head back home or switch to an authorized account."
+                ),
             ),
             "denied_home_href": with_lang("/", lang),
             "denied_home_label": pick_lang(lang, "返回首页", "Back home"),

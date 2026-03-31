@@ -44,7 +44,16 @@ Use this operator matrix when interpreting mutation output:
 
 ## Verification Matrix
 
-Fresh closeout verification should run these commands:
+Fresh closeout verification should start with the maintained shortcuts:
+
+```bash
+make bootstrap
+make test-fast
+make test-full
+make lint-maintained
+```
+
+When you need the exact closeout fallback detail, run this fuller matrix:
 
 ```bash
 uv run pytest tests/integration/test_cli_release_state.py tests/integration/test_cli_server_ops.py tests/integration/test_private_registry_ui.py -q

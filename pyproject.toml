@@ -22,6 +22,7 @@ infinitas = "infinitas_skill.cli.main:main"
 [dependency-groups]
 dev = [
   "pytest>=8,<9",
+  "ruff>=0.11,<1",
 ]
 
 [tool.setuptools.packages.find]
@@ -30,3 +31,34 @@ include = ["server*", "infinitas_skill*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+"server/app.py" = ["E501"]
+"server/ui/formatting.py" = ["E501"]
+"server/ui/home.py" = ["E501"]
+"server/ui/lifecycle.py" = ["E501"]
+"server/ui/routes.py" = ["E501"]
+"src/infinitas_skill/cli/reference.py" = ["E501"]
+"src/infinitas_skill/compatibility/checks.py" = ["E501"]
+"src/infinitas_skill/compatibility/contracts.py" = ["E501"]
+"src/infinitas_skill/compatibility/policy.py" = ["E501"]
+"src/infinitas_skill/install/planning.py" = ["E501"]
+"src/infinitas_skill/install/service.py" = ["E402", "E501"]
+"src/infinitas_skill/policy/cli.py" = ["E501"]
+"src/infinitas_skill/policy/service.py" = ["E402", "E501"]
+"src/infinitas_skill/registry/cli.py" = ["E501"]
+"src/infinitas_skill/release/service.py" = ["E402", "E501"]
+"src/infinitas_skill/release/state.py" = ["E501"]
+"src/infinitas_skill/server/backup.py" = ["E501"]
+"src/infinitas_skill/server/ops.py" = ["E501"]
+"src/infinitas_skill/server/systemd.py" = ["E501"]
+"tests/integration/test_cli_release_state.py" = ["E501"]
+"tests/integration/test_cli_server_ops.py" = ["E501"]
+"tests/integration/test_private_registry_ui.py" = ["E501"]

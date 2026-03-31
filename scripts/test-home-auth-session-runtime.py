@@ -237,7 +237,9 @@ def scenario_home_waits_for_explicit_auth_before_probng_session():
                         'icon: document.getElementById("user-trigger-icon")?.textContent?.trim() || null,'
                         'loginHidden: document.getElementById("user-panel-login")?.hidden ?? null,'
                         'loggedHidden: document.getElementById("user-panel-logged")?.hidden ?? null,'
-                        'cookieReady: document.cookie.includes("infinitas_auth_token=")'
+                        'cookieReady: document.cookie.includes("infinitas_auth_token="),'
+                        'cookieHint: window.APP_SESSION?.has_auth_cookie_hint ?? null,'
+                        'bootstrappedUser: window.APP_SESSION?.current_user?.username || null'
                         '})'
                     ),
                 )
@@ -248,6 +250,8 @@ def scenario_home_waits_for_explicit_auth_before_probng_session():
                 fail(f'expected anonymous home load to keep the locked icon, got {anonymous_state}')
             if anonymous_state.get('loginHidden') is not False or anonymous_state.get('loggedHidden') is not True:
                 fail(f'expected anonymous home load to keep the login panel visible, got {anonymous_state}')
+            if anonymous_state.get('cookieHint') is not False or anonymous_state.get('bootstrappedUser') is not None:
+                fail(f'expected anonymous APP_SESSION bootstrap to stay empty, got {anonymous_state}')
     finally:
         stop_playwright_session(session)
         shutil.rmtree(tmpdir, ignore_errors=True)
@@ -292,7 +296,9 @@ def scenario_http_only_session_survives_missing_local_storage():
                     'localToken: localStorage.getItem("infinitas_auth_token"),'
                     'localExpiry: localStorage.getItem("infinitas_auth_expiry"),'
                     'authenticated: payload.authenticated === true,'
-                    'username: payload.username || null'
+                    'username: payload.username || null,'
+                    'cookieHint: window.APP_SESSION?.has_auth_cookie_hint ?? null,'
+                    'bootstrappedUser: window.APP_SESSION?.current_user?.username || null'
                     '});'
                     '}'
                 ),
@@ -303,6 +309,8 @@ def scenario_http_only_session_survives_missing_local_storage():
                 fail(f'expected browser auth cookie to stay HttpOnly after login, got {login_state}')
             if login_state.get('localToken') is not None:
                 fail(f'expected login flow to avoid storing raw auth token in localStorage, got {login_state}')
+            if login_state.get('cookieHint') is not True or login_state.get('bootstrappedUser') != 'fixture-maintainer':
+                fail(f'expected login redirect to hydrate APP_SESSION with current user, got {login_state}')
 
             cleared = parse_eval_result(
                 run_playwright(
@@ -334,7 +342,9 @@ def scenario_http_only_session_survives_missing_local_storage():
                     'icon: document.getElementById("user-trigger-icon")?.textContent?.trim() || null,'
                     'loginHidden: document.getElementById("user-panel-login")?.hidden ?? null,'
                     'loggedHidden: document.getElementById("user-panel-logged")?.hidden ?? null,'
-                    'cookieVisible: document.cookie.includes("infinitas_auth_token=")'
+                    'cookieVisible: document.cookie.includes("infinitas_auth_token="),'
+                    'cookieHint: window.APP_SESSION?.has_auth_cookie_hint ?? null,'
+                    'bootstrappedUser: window.APP_SESSION?.current_user?.username || null'
                     '})'
                 ),
                 lambda result: (
@@ -342,6 +352,8 @@ def scenario_http_only_session_survives_missing_local_storage():
                     and result.get('icon') == '👤'
                     and result.get('loginHidden') is True
                     and result.get('loggedHidden') is False
+                    and result.get('cookieHint') is True
+                    and result.get('bootstrappedUser') == 'fixture-maintainer'
                 ),
                 'cookie-only home auth state',
             )

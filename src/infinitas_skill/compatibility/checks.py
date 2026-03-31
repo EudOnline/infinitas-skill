@@ -5,7 +5,10 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from infinitas_skill.compatibility.contracts import load_platform_profile_contract, validate_platform_contract
+from infinitas_skill.compatibility.contracts import (
+    load_platform_profile_contract,
+    validate_platform_contract,
+)
 from infinitas_skill.legacy import ROOT
 
 REQUIRED_PLATFORM_DOCS = {

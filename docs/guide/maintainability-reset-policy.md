@@ -25,6 +25,7 @@ The reset is converging on these primary homes:
 ## Temporary contributor rules
 
 - Treat `scripts/` as a legacy surface. Do not add a new top-level script there unless architecture review explicitly approves it.
+- Prefer `make bootstrap`, `make test-fast`, `make test-full`, and `make lint-maintained` in contributor docs; keep raw commands as fallback detail, not the default onboarding path.
 - Put new shared Python logic under `src/infinitas_skill/`.
 - Put new long-lived docs only under `docs/guide/`, `docs/reference/`, `docs/ops/`, `docs/archive/`, or `docs/adr/`.
 - If a top-level legacy doc is still needed, link it from one of the maintained landing pages instead of creating a parallel new entrypoint.
@@ -40,6 +41,21 @@ The current cutoff for removing maintainability-reset aliases is `2026-06-30`. A
 - package-owned: `src/infinitas_skill/install/...`, `src/infinitas_skill/policy/...`, `src/infinitas_skill/release/...`, and `src/infinitas_skill/server/...` are the maintained home for reusable CLI logic.
 - runtime-owned: `server/modules/...` and `server/ui/...` are the maintained home for hosted API and UI behavior; `server/app.py` should shrink toward bootstrap-only assembly.
 - compatibility-only: `scripts/*.py` wrappers and leftover helper modules exist only where a bridge is still justified for compatibility, install, policy, registry, or release. The old server-operation wrappers are retired. Do not add new maintained shared logic there.
+
+## Hard budgets
+
+The reset now has enforced maintainability ceilings. The current agreed budgets are:
+
+- `server/app.py`: 80 lines
+- `src/infinitas_skill/server/ops.py`: 550 lines
+- `src/infinitas_skill/install/service.py`: 650 lines
+- `src/infinitas_skill/release/service.py`: 650 lines
+- `server/ui/lifecycle.py`: 500 lines
+- top-level files under `scripts/`: 231
+
+`tests/integration/test_maintainability_budgets.py` is the source-of-truth enforcement layer for these ceilings, and `scripts/check-all.sh focused-integration` must continue to run it.
+
+Any change that raises a budget or the script ceiling must update this document, the budget test, and the contributor-facing verification docs in the same commit.
 
 ## Bridge inventory
 

@@ -10,6 +10,10 @@ status: maintained
 
 The maintainability reset is consolidating maintained commands behind one CLI: `infinitas`.
 
+For contributor verification, prefer the repo-native `make bootstrap`, `make test-fast`, `make test-full`,
+and `make lint-maintained` entrypoints before dropping to raw `uv run infinitas ...` or `python3 scripts/...`
+commands.
+
 Status terms in this map:
 
 - `maintained`: canonical `infinitas ...` entrypoint

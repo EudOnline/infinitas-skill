@@ -11,9 +11,16 @@ from sqlalchemy.orm import Session
 from server.auth import maybe_get_current_user
 from server.db import get_db
 from server.models import User
+from server.ui.auth_state import (
+    is_owner,
+    require_draft_bundle_or_404,
+    require_lifecycle_actor,
+    require_release_bundle_or_404,
+    require_skill_or_404,
+)
 from server.ui.console import build_console_forbidden_context
 from server.ui.formatting import build_kawaii_ui_context
-from server.ui.home import build_home_context, build_site_nav
+from server.ui.home import build_home_context
 from server.ui.i18n import pick_lang, resolve_language
 from server.ui.lifecycle import (
     build_access_tokens_page_context,
@@ -23,12 +30,9 @@ from server.ui.lifecycle import (
     build_review_cases_page_context,
     build_skill_detail_page_context,
     build_skills_page_context,
-    is_owner,
-    require_draft_bundle_or_404,
-    require_lifecycle_actor,
-    require_release_bundle_or_404,
-    require_skill_or_404,
 )
+from server.ui.navigation import build_site_nav
+from server.ui.session_bootstrap import build_session_bootstrap
 
 
 def _blocked_actor_response(
@@ -88,7 +92,9 @@ def _build_login_context(request: Request) -> dict[str, Any]:
             {
                 "value": "/skills",
                 "label": pick_lang(lang, "维护入口", "Maintainer entry"),
-                "detail": pick_lang(lang, "进入技能生命周期控制台", "Enter the skill lifecycle console"),
+                "detail": pick_lang(
+                    lang, "进入技能生命周期控制台", "Enter the skill lifecycle console"
+                ),
             },
         ],
         **build_kawaii_ui_context(request, lang, page_kicker, page_eyebrow),
@@ -106,12 +112,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
             "user_count": db.scalar(select(func.count()).select_from(User)) or 0,
         }
         context.update(build_home_context(settings=settings, db=db, request=request))
-        if session_user is not None:
-            context.setdefault("session_ui", {})
-            context["session_ui"]["current_user"] = {
-                "username": session_user.username,
-                "role": session_user.role,
-            }
+        context["session_ui"] = build_session_bootstrap(context.get("session_ui"), session_user)
         return templates.TemplateResponse("index-kawaii.html", context)
 
     @app.get("/v2")

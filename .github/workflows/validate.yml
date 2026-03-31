@@ -26,7 +26,7 @@ jobs:
           python3 -m pip install .
           python3 -m pip install "pytest>=8,<9"
 
-      - name: Run closeout verification matrix
+      - name: Run maintainability-aware closeout verification matrix
         env:
           INFINITAS_REQUIRE_HOSTED_E2E_TESTS: 1
           INFINITAS_REQUIRE_PRIVATE_REGISTRY_TESTS: 1
