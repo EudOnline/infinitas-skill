@@ -51,6 +51,13 @@ def scenario_home_uses_kawaii_theme_with_live_context():
             fail(f'expected GET / to return 200, got {response.status_code}: {response.text}')
 
         html = response.text
+        session_match = re.search(r'window\.APP_SESSION\s*=\s*(\{.*?\});', html, re.S)
+        if not session_match:
+            fail('home page should embed the APP_SESSION bootstrap payload')
+        try:
+            session_bootstrap = json.loads(session_match.group(1))
+        except json.JSONDecodeError as exc:
+            fail(f'failed to parse APP_SESSION bootstrap payload: {exc}')
         checks = [
             ('kawaii theme root attribute', 'data-theme="kawaii"' in html),
             ('kawaii layout topbar present', 'class="topbar animate-in"' in html),
@@ -66,6 +73,8 @@ def scenario_home_uses_kawaii_theme_with_live_context():
             ('status chip mode present', '🔒 模式' in html),
             ('status chip sync present', '📅 同步' in html),
             ('status chip flow present', '⚡ 流转' in html),
+            ('anonymous app session exposes cookie hint flag', session_bootstrap.get('has_auth_cookie_hint') is False),
+            ('anonymous app session omits current user bootstrap', 'current_user' not in session_bootstrap),
         ]
         if '/v2' in html:
             fail('home page should not reference /v2 after kawaii cutover')

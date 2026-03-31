@@ -12,8 +12,8 @@ from server.ui.formatting import (
     humanize_status,
     humanize_timestamp,
 )
-from server.ui.home import build_site_nav
 from server.ui.i18n import pick_lang, resolve_language, with_lang
+from server.ui.navigation import build_site_nav
 
 
 def build_console_context(

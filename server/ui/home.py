@@ -20,6 +20,7 @@ from server.models import (
 )
 from server.ui.formatting import build_kawaii_ui_context, localized_stamp
 from server.ui.i18n import pick_lang, resolve_language, with_lang
+from server.ui.navigation import build_site_nav
 
 
 def _read_json(path: Path) -> dict:
@@ -68,24 +69,6 @@ def _calculate_skill_rating(skill: dict[str, Any]) -> float | None:
     return None
 
 
-def build_site_nav(*, home: bool, lang: str) -> list[dict[str, str]]:
-    if home:
-        return [
-            {"href": "#start", "label": pick_lang(lang, "开始", "Home base")},
-            {"href": "#handoff", "label": pick_lang(lang, "交接", "Handoff")},
-            {"href": "#console", "label": pick_lang(lang, "维护台", "Console")},
-        ]
-    return [
-        {"href": with_lang("/", lang), "label": pick_lang(lang, "首页", "Home")},
-        {"href": with_lang("/skills", lang), "label": pick_lang(lang, "技能", "Skills")},
-        {"href": with_lang("/skills#drafts", lang), "label": pick_lang(lang, "草稿", "Drafts")},
-        {"href": with_lang("/skills#releases", lang), "label": pick_lang(lang, "发布", "Releases")},
-        {"href": with_lang("/skills#share", lang), "label": pick_lang(lang, "分享", "Share")},
-        {"href": with_lang("/access/tokens", lang), "label": pick_lang(lang, "访问", "Access")},
-        {"href": with_lang("/review-cases", lang), "label": pick_lang(lang, "审核", "Review")},
-    ]
-
-
 def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[str, Any]:
     lang = resolve_language(request)
     discovery_payload = _catalog_payload(settings, "discovery-index.json")
@@ -110,7 +93,9 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
                 "summary": summary,
                 "icon": _get_skill_icon(skill),
                 "rating": _calculate_skill_rating(skill),
-                "inspect_command": f"scripts/inspect-skill.sh {qualified_name}" if qualified_name else "",
+                "inspect_command": f"scripts/inspect-skill.sh {qualified_name}"
+                if qualified_name
+                else "",
             }
         )
 
@@ -122,10 +107,15 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
         db.scalar(select(func.count()).select_from(AccessGrant)) or 0
     )
     pending_reviews = int(
-        db.scalar(select(func.count()).select_from(ReviewCase).where(ReviewCase.state == "open")) or 0
+        db.scalar(select(func.count()).select_from(ReviewCase).where(ReviewCase.state == "open"))
+        or 0
     )
-    queued_jobs = int(db.scalar(select(func.count()).select_from(Job).where(Job.status == "queued")) or 0)
-    running_jobs = int(db.scalar(select(func.count()).select_from(Job).where(Job.status == "running")) or 0)
+    queued_jobs = int(
+        db.scalar(select(func.count()).select_from(Job).where(Job.status == "queued")) or 0
+    )
+    running_jobs = int(
+        db.scalar(select(func.count()).select_from(Job).where(Job.status == "running")) or 0
+    )
 
     lifecycle_mode = pick_lang(lang, "私人优先", "Private-first")
     operating_states = [
@@ -133,7 +123,9 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
             "icon": "🔒",
             "label": pick_lang(lang, "模式", "Mode"),
             "value": lifecycle_mode,
-            "detail": pick_lang(lang, "私人直达，公开必须审核", "Private flows directly, public requires review"),
+            "detail": pick_lang(
+                lang, "私人直达，公开必须审核", "Private flows directly, public requires review"
+            ),
         },
         {
             "icon": "📅",
@@ -188,7 +180,9 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
             ),
         },
     ]
-    human_input_fields = ["目标", "安装位置", "风险偏好"] if lang == "zh" else ["Goal", "Install path", "Risk level"]
+    human_input_fields = (
+        ["目标", "安装位置", "风险偏好"] if lang == "zh" else ["Goal", "Install path", "Risk level"]
+    )
     console_links = [
         {
             "href": with_lang("/skills", lang),
@@ -257,8 +251,14 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
             "你只要说明目标、位置和风险，它会沿着技能生命周期继续推进。",
             "You only need to name the goal, location, and risk level, then it moves through the skill lifecycle.",
         ),
-        "hero_primary_link": {"href": "#handoff", "label": pick_lang(lang, "复制任务提示", "Copy task prompt")},
-        "hero_secondary_link": {"href": "#console", "label": pick_lang(lang, "查看维护台", "Open console")},
+        "hero_primary_link": {
+            "href": "#handoff",
+            "label": pick_lang(lang, "复制任务提示", "Copy task prompt"),
+        },
+        "hero_secondary_link": {
+            "href": "#console",
+            "label": pick_lang(lang, "查看维护台", "Open console"),
+        },
         "hero_primary_copy": human_prompts[0]["prompt"] if human_prompts else "",
         "operating_states": operating_states,
         "human_input_fields": human_input_fields,
@@ -266,7 +266,10 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
         "command_examples": command_examples,
         "console_links": console_links,
         "featured_skills": featured_skills,
-        "maintainer_primary_link": {"href": with_lang("/skills", lang), "label": pick_lang(lang, "打开维护台", "Open console")},
+        "maintainer_primary_link": {
+            "href": with_lang("/skills", lang),
+            "label": pick_lang(lang, "打开维护台", "Open console"),
+        },
         "maintainer_body": pick_lang(
             lang,
             "维护台现在完全围绕技能、草稿、发布、分享、访问和审核，不再经过旧的 submission 队列。",

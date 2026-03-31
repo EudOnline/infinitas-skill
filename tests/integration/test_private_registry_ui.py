@@ -11,7 +11,10 @@ from sqlalchemy import select
 
 ROOT = Path(__file__).resolve().parents[2]
 APP_PATH = ROOT / "server" / "app.py"
+ROUTES_PATH = ROOT / "server" / "ui" / "routes.py"
+LIFECYCLE_PATH = ROOT / "server" / "ui" / "lifecycle.py"
 APP_LINE_BUDGET = 220
+LIFECYCLE_LINE_BUDGET = 500
 
 
 def configure_env(tmpdir: Path) -> None:
@@ -39,15 +42,90 @@ def assert_ui_route_registration_boundary() -> None:
         if isinstance(node, ast.ImportFrom) and node.module == "server.ui.routes":
             if any(alias.name == "register_ui_routes" for alias in node.names):
                 imported = True
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "register_ui_routes":
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "register_ui_routes"
+        ):
             delegated = True
-    assert imported and delegated, "expected server.app to import and call register_ui_routes from server.ui.routes"
+    assert imported and delegated, (
+        "expected server.app to import and call register_ui_routes from server.ui.routes"
+    )
 
 
 def assert_app_size_budget() -> None:
     line_count = len(APP_PATH.read_text(encoding="utf-8").splitlines())
     assert line_count <= APP_LINE_BUDGET, (
         f"expected server/app.py to stay within {APP_LINE_BUDGET} lines after UI extraction, got {line_count}"
+    )
+
+
+def assert_route_and_lifecycle_composition_boundaries() -> None:
+    routes_source = ROUTES_PATH.read_text(encoding="utf-8")
+    routes_module = ast.parse(routes_source, filename=str(ROUTES_PATH))
+    lifecycle_module = ast.parse(
+        LIFECYCLE_PATH.read_text(encoding="utf-8"), filename=str(LIFECYCLE_PATH)
+    )
+
+    imported_session_bootstrap = False
+    imported_navigation = False
+    imported_auth_state = False
+    called_session_bootstrap = False
+    for node in ast.walk(routes_module):
+        if isinstance(node, ast.ImportFrom) and node.module == "server.ui.session_bootstrap":
+            if any(alias.name == "build_session_bootstrap" for alias in node.names):
+                imported_session_bootstrap = True
+        if isinstance(node, ast.ImportFrom) and node.module == "server.ui.navigation":
+            if any(alias.name == "build_site_nav" for alias in node.names):
+                imported_navigation = True
+        if isinstance(node, ast.ImportFrom) and node.module == "server.ui.auth_state":
+            auth_aliases = {
+                "is_owner",
+                "require_draft_bundle_or_404",
+                "require_lifecycle_actor",
+                "require_release_bundle_or_404",
+                "require_skill_or_404",
+            }
+            if any(alias.name in auth_aliases for alias in node.names):
+                imported_auth_state = True
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "build_session_bootstrap"
+        ):
+            called_session_bootstrap = True
+
+    lifecycle_imports = {
+        node.module
+        for node in ast.walk(lifecycle_module)
+        if isinstance(node, ast.ImportFrom) and node.module is not None
+    }
+
+    assert imported_session_bootstrap and called_session_bootstrap, (
+        "expected server.ui.routes to import and call build_session_bootstrap"
+    )
+    assert imported_navigation, (
+        "expected server.ui.routes to import build_site_nav from server.ui.navigation"
+    )
+    assert imported_auth_state, (
+        "expected server.ui.routes to import auth helpers from server.ui.auth_state"
+    )
+    assert 'context["session_ui"]["current_user"]' not in routes_source, (
+        "expected server.ui.routes to avoid manually mutating session_ui.current_user"
+    )
+    assert "server.ui.navigation" in lifecycle_imports, (
+        "expected server.ui.lifecycle to compose navigation helpers"
+    )
+    assert "server.ui.notifications" in lifecycle_imports, (
+        "expected server.ui.lifecycle to compose notification helpers"
+    )
+
+
+def assert_lifecycle_size_budget() -> None:
+    line_count = len(LIFECYCLE_PATH.read_text(encoding="utf-8").splitlines())
+    assert line_count <= LIFECYCLE_LINE_BUDGET, (
+        "expected server/ui/lifecycle.py to stay within "
+        f"{LIFECYCLE_LINE_BUDGET} lines after UI extraction, got {line_count}"
     )
 
 
@@ -123,11 +201,15 @@ def create_exposure(
     return response.json()
 
 
-def approve_exposure_review(client, session_factory, headers: dict[str, str], exposure_id: int) -> None:
+def approve_exposure_review(
+    client, session_factory, headers: dict[str, str], exposure_id: int
+) -> None:
     from server.models import ReviewCase
 
     with session_factory() as session:
-        review_case = session.scalar(select(ReviewCase).where(ReviewCase.exposure_id == exposure_id))
+        review_case = session.scalar(
+            select(ReviewCase).where(ReviewCase.exposure_id == exposure_id)
+        )
         assert review_case is not None, f"expected review case for exposure {exposure_id}"
         review_case_id = review_case.id
 
@@ -209,6 +291,8 @@ def assert_private_first_console_ui_round_trip() -> None:
 def test_server_app_delegates_html_routes_and_respects_size_budget() -> None:
     assert_ui_route_registration_boundary()
     assert_app_size_budget()
+    assert_route_and_lifecycle_composition_boundaries()
+    assert_lifecycle_size_budget()
 
 
 def test_private_first_console_ui_round_trip() -> None:
@@ -218,4 +302,6 @@ def test_private_first_console_ui_round_trip() -> None:
 def main() -> None:
     assert_ui_route_registration_boundary()
     assert_app_size_budget()
+    assert_route_and_lifecycle_composition_boundaries()
+    assert_lifecycle_size_budget()
     assert_private_first_console_ui_round_trip()
