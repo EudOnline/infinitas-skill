@@ -16,6 +16,7 @@ Raw `uv` and script commands remain available below as fallback detail.
 ```bash
 uv sync
 uv run pytest tests/integration/test_cli_release_state.py tests/integration/test_cli_server_ops.py tests/integration/test_private_registry_ui.py -q
+uv run pytest tests/integration/test_maintainability_budgets.py -q
 uv run pytest tests/integration/test_cli_policy.py tests/integration/test_signing_bootstrap.py tests/integration/test_installed_integrity.py -q
 uv run ruff check src/infinitas_skill server/ui server/app.py tests/integration tests/unit
 ./scripts/check-all.sh
@@ -31,9 +32,12 @@ Run the fast `pytest` tier first when touching the maintained CLI or hosted UI s
 
 ```bash
 uv run pytest tests/integration/test_cli_release_state.py tests/integration/test_cli_server_ops.py tests/integration/test_private_registry_ui.py -q
+uv run pytest tests/integration/test_maintainability_budgets.py -q
 ```
 
 These files cover the maintained release CLI, the maintained server CLI surface, and the private-registry HTML route assembly without booting the full compatibility matrix.
+
+`tests/integration/test_maintainability_budgets.py` now enforces the hard line budgets for maintained modules plus the temporary ceiling on top-level `scripts/` files.
 
 Promoted high-value regression flows now live in first-class pytest modules as well:
 
@@ -72,7 +76,7 @@ scripts/check-all.sh focused-integration hosted-ui full-regression
 
 Block intent:
 
-- `focused-integration`: the fast maintained-surface `pytest` tier under `tests/integration/`
+- `focused-integration`: the fast maintained-surface `pytest` tier under `tests/integration/`, including hard maintainability budgets
 - `hosted-ui`: homepage/private-registry HTML coverage plus optional browser runtime checks
 - `full-regression`: the broader compatibility, policy, catalog, install, and hosted-e2e matrix
 

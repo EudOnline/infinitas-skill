@@ -41,6 +41,21 @@ The current cutoff for removing maintainability-reset aliases is `2026-06-30`. A
 - runtime-owned: `server/modules/...` and `server/ui/...` are the maintained home for hosted API and UI behavior; `server/app.py` should shrink toward bootstrap-only assembly.
 - compatibility-only: `scripts/*.py` wrappers and leftover helper modules exist only where a bridge is still justified for compatibility, install, policy, registry, or release. The old server-operation wrappers are retired. Do not add new maintained shared logic there.
 
+## Hard budgets
+
+The reset now has enforced maintainability ceilings. The current agreed budgets are:
+
+- `server/app.py`: 80 lines
+- `src/infinitas_skill/server/ops.py`: 550 lines
+- `src/infinitas_skill/install/service.py`: 650 lines
+- `src/infinitas_skill/release/service.py`: 650 lines
+- `server/ui/lifecycle.py`: 500 lines
+- top-level files under `scripts/`: 231
+
+`tests/integration/test_maintainability_budgets.py` is the source-of-truth enforcement layer for these ceilings, and `scripts/check-all.sh focused-integration` must continue to run it.
+
+Any change that raises a budget or the script ceiling must update this document, the budget test, and the contributor-facing verification docs in the same commit.
+
 ## Bridge inventory
 
 | Family | Canonical entrypoint | Canonical status | Compatibility shim | Shim status |

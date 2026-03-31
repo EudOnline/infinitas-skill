@@ -85,11 +85,23 @@ uv run python3 scripts/test-doc-governance.py
 `E501` only in the current debt-heavy maintained files, plus a few legacy path-bootstrap `E402` cases, until the
 planned module splits land.
 
+Hard maintainability budgets now backstop the maintained reset:
+
+- `server/app.py` must stay at or below 80 lines
+- `src/infinitas_skill/server/ops.py` must stay at or below 550 lines
+- `src/infinitas_skill/install/service.py` must stay at or below 650 lines
+- `src/infinitas_skill/release/service.py` must stay at or below 650 lines
+- `server/ui/lifecycle.py` must stay at or below 500 lines
+- top-level files under `scripts/` must stay at or below 231 until a deliberate cleanup changes the ceiling
+
+`tests/integration/test_maintainability_budgets.py` and `scripts/check-all.sh focused-integration` enforce these limits.
+
 Local runs default to `INFINITAS_SERVER_ENV=development`. Use `INFINITAS_SERVER_ENV=test` when you need fixture-safe automated behavior.
 
 ## Maintainability reset rules
 
 - No new top-level script may be added under `scripts/` without explicit architecture approval.
+- Do not raise maintained-module line budgets or the top-level script ceiling without updating docs and the budget test in the same change.
 - No new long-lived doc may be added outside `docs/guide/`, `docs/reference/`, `docs/ops/`, `docs/archive/`, or `docs/adr/`.
 - New shared Python logic should land under `src/infinitas_skill/`.
 - Compatibility aliases introduced during this reset expire on `2026-06-30` unless a later ADR extends them.
