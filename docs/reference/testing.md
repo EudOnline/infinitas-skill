@@ -11,6 +11,9 @@ make test-full
 make lint-maintained
 ```
 
+`make test-fast` is the preferred everyday verification entrypoint. It should stay aligned with the maintained
+fast pytest tier, promoted regression flows, and maintainability budget enforcement.
+
 Raw `uv` and script commands remain available below as fallback detail.
 
 ```bash

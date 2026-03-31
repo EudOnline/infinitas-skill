@@ -2,7 +2,7 @@
 audience: contributors, operators, integrators
 owner: repository maintainers
 source_of_truth: repo entry page
-last_reviewed: 2026-03-30
+last_reviewed: 2026-03-31
 status: maintained
 ---
 
@@ -60,6 +60,10 @@ make test-fast
 make test-full
 make lint-maintained
 ```
+
+`make test-fast` is now the default fast path for maintained work. It covers the focused integration tier,
+the promoted high-value pytest regressions, and the maintainability budget gate before you drop to raw
+fallback commands.
 
 Raw commands remain available as fallback detail:
 

@@ -25,6 +25,7 @@ The reset is converging on these primary homes:
 ## Temporary contributor rules
 
 - Treat `scripts/` as a legacy surface. Do not add a new top-level script there unless architecture review explicitly approves it.
+- Prefer `make bootstrap`, `make test-fast`, `make test-full`, and `make lint-maintained` in contributor docs; keep raw commands as fallback detail, not the default onboarding path.
 - Put new shared Python logic under `src/infinitas_skill/`.
 - Put new long-lived docs only under `docs/guide/`, `docs/reference/`, `docs/ops/`, `docs/archive/`, or `docs/adr/`.
 - If a top-level legacy doc is still needed, link it from one of the maintained landing pages instead of creating a parallel new entrypoint.
