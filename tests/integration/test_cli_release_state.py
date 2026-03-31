@@ -15,7 +15,9 @@ def _cli_env() -> dict[str, str]:
     return dict(os.environ, PYTHONPATH=str(ROOT / "src"))
 
 
-def _run_release_state(command: list[str], *, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+def _run_release_state(
+    command: list[str], *, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
     result = subprocess.run(command, cwd=ROOT, text=True, capture_output=True, env=env)
     assert result.returncode in {0, 1}, (
         f"command {command!r} exited {result.returncode}, expected 0 or 1\n"
@@ -25,7 +27,9 @@ def _run_release_state(command: list[str], *, env: dict[str, str] | None = None)
     return result
 
 
-def _run_release_probe(args: list[str], probe_modules: list[str]) -> subprocess.CompletedProcess[str]:
+def _run_release_probe(
+    args: list[str], probe_modules: list[str]
+) -> subprocess.CompletedProcess[str]:
     script = (
         "import contextlib, io, json, sys\n"
         "from infinitas_skill.cli.main import main\n"
@@ -37,7 +41,9 @@ def _run_release_probe(args: list[str], probe_modules: list[str]) -> subprocess.
         "print(json.dumps(payload))\n"
     )
     env = dict(os.environ, PYTHONPATH=str(ROOT / "src"))
-    return subprocess.run([sys.executable, "-c", script], cwd=ROOT, text=True, capture_output=True, env=env)
+    return subprocess.run(
+        [sys.executable, "-c", script], cwd=ROOT, text=True, capture_output=True, env=env
+    )
 
 
 def _load_payload(result: subprocess.CompletedProcess[str], label: str) -> dict:
@@ -81,7 +87,9 @@ def assert_release_state_matches_legacy_json() -> None:
     for field in ["mode", "release_ready"]:
         assert cli_payload.get(field) == legacy_payload.get(field)
 
-    assert (cli_payload.get("skill") or {}).get("name") == (legacy_payload.get("skill") or {}).get("name")
+    assert (cli_payload.get("skill") or {}).get("name") == (legacy_payload.get("skill") or {}).get(
+        "name"
+    )
     assert ((cli_payload.get("git") or {}).get("expected_tag")) == (
         (legacy_payload.get("git") or {}).get("expected_tag")
     )
@@ -90,7 +98,15 @@ def assert_release_state_matches_legacy_json() -> None:
 def assert_release_state_routes_through_package_modules() -> None:
     probe = _run_release_probe(
         ["release", "check-state", SKILL_NAME, "--mode", MODE, "--json"],
-        ["policy_trace_lib", "infinitas_skill.release.service", "infinitas_skill.release.formatting"],
+        [
+            "policy_trace_lib",
+            "infinitas_skill.release.service",
+            "infinitas_skill.release.formatting",
+            "infinitas_skill.release.git_state",
+            "infinitas_skill.release.policy_state",
+            "infinitas_skill.release.platform_state",
+            "infinitas_skill.release.attestation_state",
+        ],
     )
     assert probe.returncode == 0, (
         f"release ownership probe failed\nstdout:\n{probe.stdout}\nstderr:\n{probe.stderr}"
@@ -103,7 +119,14 @@ def assert_release_state_routes_through_package_modules() -> None:
     )
     modules = probe_payload.get("modules") or {}
     assert not modules.get("policy_trace_lib")
-    for module_name in ["infinitas_skill.release.service", "infinitas_skill.release.formatting"]:
+    for module_name in [
+        "infinitas_skill.release.service",
+        "infinitas_skill.release.formatting",
+        "infinitas_skill.release.git_state",
+        "infinitas_skill.release.policy_state",
+        "infinitas_skill.release.platform_state",
+        "infinitas_skill.release.attestation_state",
+    ]:
         assert modules.get(module_name), f"release CLI did not route through {module_name}"
 
 
