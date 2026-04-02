@@ -21,26 +21,24 @@ from server.modules.access.authn import AccessContext
 from server.ui.auth_state import principal_label
 from server.ui.console import build_lifecycle_console_context
 from server.ui.formatting import load_json_object
-from server.ui.i18n import resolve_language, with_lang
+from server.ui.i18n import resolve_language
+from server.ui.lifecycle_actions import (
+    build_access_tokens_rows_bundle,
+    build_release_detail_rows_bundle,
+    build_release_share_rows_bundle,
+    build_review_cases_rows_bundle,
+    build_skill_detail_rows_bundle,
+    build_skills_overview_actions,
+)
+from server.ui.lifecycle_state import (
+    build_access_tokens_state,
+    build_draft_detail_state,
+    build_release_detail_state,
+    build_release_share_state,
+    build_review_cases_state,
+    build_skill_detail_state,
+)
 from server.ui.navigation import (
-    build_access_grant_rows,
-    build_credential_rows,
-    build_draft_detail_payload,
-    build_draft_items,
-    build_release_artifact_rows,
-    build_release_detail_payload,
-    build_release_exposure_rows,
-    build_release_items,
-    build_release_share_payload,
-    build_review_case_rows,
-    build_review_items,
-    build_share_items,
-    build_share_rows,
-    build_skill_detail_payload,
-    build_skill_draft_rows,
-    build_skill_items,
-    build_skill_release_rows,
-    build_skill_version_rows,
     first_by_id,
     group_by,
     load_registry_scope,
@@ -89,39 +87,21 @@ def build_skills_page_context(
     versions_by_id = first_by_id(versions)
     skills_by_id = first_by_id(skills)
 
-    skill_items = build_skill_items(
+    overview_actions = build_skills_overview_actions(
         skills=skills,
+        drafts=drafts,
+        versions=versions,
+        releases=releases,
+        exposures=exposures,
+        review_cases=review_cases,
         principals_by_id=principals_by_id,
         drafts_by_skill=drafts_by_skill,
         versions_by_skill=versions_by_skill,
+        releases_by_id=releases_by_id,
         releases_by_version=releases_by_version,
-        lang=lang,
-        limit=limit,
-    )
-    draft_items = build_draft_items(
-        drafts=drafts, skills_by_id=skills_by_id, lang=lang, limit=limit
-    )
-    release_items = build_release_items(
-        releases=releases,
-        versions_by_id=versions_by_id,
-        skills_by_id=skills_by_id,
-        exposures_by_release=exposures_by_release,
-        lang=lang,
-        limit=limit,
-    )
-    share_items = build_share_items(
-        exposures=exposures,
-        releases_by_id=releases_by_id,
-        versions_by_id=versions_by_id,
-        skills_by_id=skills_by_id,
-        review_cases_by_exposure=review_cases_by_exposure,
-        lang=lang,
-        limit=limit,
-    )
-    review_items = build_review_items(
-        review_cases=review_cases,
         exposures_by_id=exposures_by_id,
-        releases_by_id=releases_by_id,
+        exposures_by_release=exposures_by_release,
+        review_cases_by_exposure=review_cases_by_exposure,
         versions_by_id=versions_by_id,
         skills_by_id=skills_by_id,
         lang=lang,
@@ -142,21 +122,11 @@ def build_skills_page_context(
         title=descriptor["title"],
         content=descriptor["content"],
         limit=limit,
-        items=skill_items,
+        items=overview_actions["skill_items"],
         cli_command=descriptor["cli_command"],
         stats=descriptor["stats"],
     )
-    context.update(
-        {
-            "skill_items": skill_items,
-            "draft_items": draft_items,
-            "release_items": release_items,
-            "share_items": share_items,
-            "review_items": review_items,
-            "access_href": with_lang("/access/tokens", lang),
-            "review_cases_href": with_lang("/review-cases", lang),
-        }
-    )
+    context.update(overview_actions)
     return context
 
 
@@ -191,14 +161,13 @@ def build_skill_detail_page_context(
     versions_by_id = first_by_id(versions)
     principal_name = principal_label(principal)
 
-    draft_rows = build_skill_draft_rows(drafts=drafts, lang=lang)
-    version_rows = build_skill_version_rows(
+    row_bundle = build_skill_detail_rows_bundle(
+        drafts=drafts,
         versions=versions,
+        releases=releases,
         releases_by_version=releases_by_version,
+        versions_by_id=versions_by_id,
         lang=lang,
-    )
-    release_rows = build_skill_release_rows(
-        releases=releases, versions_by_id=versions_by_id, lang=lang
     )
 
     descriptor = describe_skill_detail_page(
@@ -213,17 +182,17 @@ def build_skill_detail_page_context(
         title=descriptor["title"],
         content=descriptor["content"],
         limit=max(len(drafts), len(releases), 1),
-        items=release_rows,
+        items=row_bundle["release_rows"],
         cli_command=descriptor["cli_command"],
         stats=descriptor["stats"],
     )
     context.update(
-        build_skill_detail_payload(
+        build_skill_detail_state(
             skill=skill,
             principal_name=principal_name,
-            draft_rows=draft_rows,
-            version_rows=version_rows,
-            release_rows=release_rows,
+            draft_rows=row_bundle["draft_rows"],
+            version_rows=row_bundle["version_rows"],
+            release_rows=row_bundle["release_rows"],
             lang=lang,
         )
     )
@@ -257,7 +226,7 @@ def build_draft_detail_page_context(
         stats=descriptor["stats"],
     )
     context.update(
-        build_draft_detail_payload(
+        build_draft_detail_state(
             draft=draft,
             skill=skill,
             base_version=base_version,
@@ -286,9 +255,11 @@ def build_release_detail_page_context(
         select(Exposure).where(Exposure.release_id == release.id).order_by(Exposure.id.desc())
     ).all()
 
-    artifact_rows = build_release_artifact_rows(artifacts=artifacts)
-    exposure_rows = build_release_exposure_rows(
-        exposures=exposures, release_id=release.id, lang=lang
+    row_bundle = build_release_detail_rows_bundle(
+        artifacts=artifacts,
+        exposures=exposures,
+        release_id=release.id,
+        lang=lang,
     )
     descriptor = describe_release_detail_page(
         lang,
@@ -303,17 +274,17 @@ def build_release_detail_page_context(
         title=descriptor["title"],
         content=descriptor["content"],
         limit=max(len(artifacts), len(exposures), 1),
-        items=artifact_rows,
+        items=row_bundle["artifact_rows"],
         cli_command=descriptor["cli_command"],
         stats=descriptor["stats"],
     )
     context.update(
-        build_release_detail_payload(
+        build_release_detail_state(
             release=release,
             version=version,
             skill=skill,
-            artifact_rows=artifact_rows,
-            exposure_rows=exposure_rows,
+            artifact_rows=row_bundle["artifact_rows"],
+            exposure_rows=row_bundle["exposure_rows"],
             lang=lang,
         )
     )
@@ -347,7 +318,7 @@ def build_release_share_page_context(
             .order_by(AccessGrant.id.desc())
         ).all()
 
-    share_rows = build_share_rows(
+    row_bundle = build_release_share_rows_bundle(
         exposures=exposures,
         review_cases_by_exposure=group_by(review_cases, "exposure_id"),
         grants_by_exposure=group_by(grants, "exposure_id"),
@@ -364,17 +335,17 @@ def build_release_share_page_context(
         request=request,
         title=descriptor["title"],
         content=descriptor["content"],
-        limit=max(len(share_rows), 1),
-        items=share_rows,
+        limit=max(len(row_bundle["share_rows"]), 1),
+        items=row_bundle["share_rows"],
         cli_command=descriptor["cli_command"],
         stats=descriptor["stats"],
     )
     context.update(
-        build_release_share_payload(
+        build_release_share_state(
             release=release,
             version=version,
             skill=skill,
-            share_rows=share_rows,
+            share_rows=row_bundle["share_rows"],
             lang=lang,
         )
     )
@@ -403,19 +374,11 @@ def build_access_tokens_page_context(
     versions_by_id = first_by_id(scope["versions"])
     skills_by_id = first_by_id(scope["skills"])
 
-    credential_rows = build_credential_rows(
+    row_bundle = build_access_tokens_rows_bundle(
         credentials=scope["credentials"],
+        grants=scope["grants"],
         principals_by_id=principals_by_id,
         grants_by_id=grants_by_id,
-        exposures_by_id=exposures_by_id,
-        releases_by_id=releases_by_id,
-        versions_by_id=versions_by_id,
-        skills_by_id=skills_by_id,
-        lang=lang,
-        limit=limit,
-    )
-    grant_rows = build_access_grant_rows(
-        grants=scope["grants"],
         exposures_by_id=exposures_by_id,
         releases_by_id=releases_by_id,
         versions_by_id=versions_by_id,
@@ -434,11 +397,16 @@ def build_access_tokens_page_context(
         title=descriptor["title"],
         content=descriptor["content"],
         limit=limit,
-        items=credential_rows,
+        items=row_bundle["credential_rows"],
         cli_command=descriptor["cli_command"],
         stats=descriptor["stats"],
     )
-    context.update({"credential_rows": credential_rows, "grant_rows": grant_rows})
+    context.update(
+        build_access_tokens_state(
+            credential_rows=row_bundle["credential_rows"],
+            grant_rows=row_bundle["grant_rows"],
+        )
+    )
     return context
 
 
@@ -457,7 +425,7 @@ def build_review_cases_page_context(
         principal_id=principal_id,
         include_all=user.role == "maintainer",
     )
-    review_rows = build_review_case_rows(
+    row_bundle = build_review_cases_rows_bundle(
         review_cases=scope["review_cases"],
         exposures_by_id=first_by_id(scope["exposures"]),
         releases_by_id=first_by_id(scope["releases"]),
@@ -473,11 +441,11 @@ def build_review_cases_page_context(
         title=descriptor["title"],
         content=descriptor["content"],
         limit=limit,
-        items=review_rows,
+        items=row_bundle["review_rows"],
         cli_command=descriptor["cli_command"],
         stats=descriptor["stats"],
     )
-    context.update({"review_rows": review_rows})
+    context.update(build_review_cases_state(review_rows=row_bundle["review_rows"]))
     return context
 
 
