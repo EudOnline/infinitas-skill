@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import cmp_to_key
 from pathlib import Path
 
+from infinitas_skill.install.install_manifest import InstallManifestError, load_install_manifest
 from infinitas_skill.install.source_resolution import (
     DependencyError,
     compare_versions,
@@ -15,14 +16,10 @@ from infinitas_skill.install.source_resolution import (
     unique,
     version_satisfies,
 )
-from infinitas_skill.legacy import ROOT, ensure_legacy_scripts_on_path
+from infinitas_skill.policy.skill_identity import normalize_skill_identity
 
 
 def load_installed_state(target_dir):
-    ensure_legacy_scripts_on_path(ROOT)
-    from install_manifest_lib import InstallManifestError, load_install_manifest
-    from skill_identity_lib import normalize_skill_identity
-
     target = Path(target_dir)
     try:
         manifest = load_install_manifest(target, allow_missing=True)

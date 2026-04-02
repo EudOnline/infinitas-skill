@@ -9,6 +9,12 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from infinitas_skill.testing.env import build_regression_test_env
+
 FIXTURE_NAME = 'release-fixture'
 V1 = '1.2.3'
 V2 = '1.2.4'
@@ -39,17 +45,7 @@ def iso_hours_ago(hours: int):
 
 
 def make_env(extra=None):
-    env = os.environ.copy()
-    env['INFINITAS_SKIP_RELEASE_TESTS'] = '1'
-    env['INFINITAS_SKIP_ATTESTATION_TESTS'] = '1'
-    env['INFINITAS_SKIP_DISTRIBUTION_TESTS'] = '1'
-    env['INFINITAS_SKIP_BOOTSTRAP_TESTS'] = '1'
-    env['INFINITAS_SKIP_AI_WRAPPER_TESTS'] = '1'
-    env['INFINITAS_SKIP_COMPAT_PIPELINE_TESTS'] = '1'
-    env['INFINITAS_SKIP_INSTALLED_INTEGRITY_TESTS'] = '1'
-    if extra:
-        env.update(extra)
-    return env
+    return build_regression_test_env(ROOT, extra=extra, env=os.environ.copy())
 
 
 def scaffold_fixture(repo: Path, version: str):

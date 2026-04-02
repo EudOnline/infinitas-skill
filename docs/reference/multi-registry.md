@@ -286,7 +286,7 @@ Dependency planning now follows a deterministic registry-aware order:
 5. `archived` candidates are only considered for exact version requests, while `incubating` candidates require `allow_incubating: true`.
 6. If the final plan would violate an installed dependency lock or leave an unresolved conflict, install/sync fails before mutating the target directory.
 
-`scripts/resolve-install-plan.py` exposes the same planner that `install-skill.sh`, `sync-skill.sh`, `check-install-target.py`, and `check-registry-integrity.py` now use.
+`uv run infinitas install resolve-plan` exposes the same planner that `install-skill.sh`, `sync-skill.sh`, `infinitas install check-target`, and `check-registry-integrity.py` now use.
 
 ## Catalog output
 

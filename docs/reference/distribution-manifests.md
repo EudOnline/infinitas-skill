@@ -149,13 +149,13 @@ scripts/repair-installed-skill.sh my-skill ~/.openclaw/skills
 Machine-readable verification now exposes the same reproducibility contract on every layer:
 
 - `python3 scripts/verify-attestation.py <attestation.json> --json` includes `distribution.file_manifest_count` plus the signed `distribution.build` summary
-- `python3 scripts/check-release-state.py <name> --mode local-tag --json` includes `release.reproducibility`, so local provenance flows can inspect the generated release metadata even though repo-managed artifacts make the worktree dirty
+- `uv run infinitas release check-state <name> --mode local-tag --json` includes `release.reproducibility`, so local provenance flows can inspect the generated release metadata even though repo-managed artifacts make the worktree dirty
 - `catalog/catalog.json` mirrors a compact downstream summary under `verified_distribution.file_manifest_count` and `verified_distribution.build_archive_format`
 
 When transparency publication is enabled:
 
 - `python3 scripts/verify-attestation.py <attestation.json> --json` also includes `transparency_log`
-- `python3 scripts/check-release-state.py <name> --json` mirrors the same summary under `release.transparency_log`
+- `uv run infinitas release check-state <name> --json` mirrors the same summary under `release.transparency_log`
 - `catalog/catalog.json` preserves a downstream-facing copy under `verified_distribution.transparency_log`
 
 ## Install / sync behavior

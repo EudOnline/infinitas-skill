@@ -22,7 +22,7 @@ from infinitas_skill.install.target_validation import (
     selected_conflict_reason,
     validate_final_state,
 )
-from infinitas_skill.legacy import ROOT
+from infinitas_skill.root import ROOT
 
 
 class DependencyPlanner:

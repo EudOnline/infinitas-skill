@@ -5,7 +5,17 @@ import re
 from functools import cmp_to_key
 from pathlib import Path
 
-from infinitas_skill.legacy import ROOT, ensure_legacy_scripts_on_path
+from infinitas_skill.install.distribution_index import load_distribution_index
+from infinitas_skill.install.registry_sources import (
+    load_registry_config,
+    registry_identity,
+    resolve_registry_root,
+)
+from infinitas_skill.policy.skill_identity import (
+    derive_qualified_name,
+    normalize_skill_identity,
+    parse_requested_skill,
+)
 
 SKILL_NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 LEGACY_REF_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*(?:@\d+\.\d+\.\d+(?:[-+][A-Za-z0-9_.-]+)?)?$")
@@ -46,9 +56,6 @@ def display_identity(payload):
 
 
 def parse_dependency_identity(value, field):
-    ensure_legacy_scripts_on_path(ROOT)
-    from skill_identity_lib import derive_qualified_name, parse_requested_skill
-
     publisher, name = parse_requested_skill(value)
     if publisher is not None and not SKILL_NAME_RE.match(publisher):
         raise DependencyError(f"{field} entry has invalid publisher {publisher!r}")
@@ -257,9 +264,6 @@ def _normalize_entry(entry, field, owner_name=None):
 
 
 def normalize_meta_dependencies(meta, owner_name=None):
-    ensure_legacy_scripts_on_path(ROOT)
-    from skill_identity_lib import normalize_skill_identity
-
     owner_identity = normalize_skill_identity(meta)
     owner = owner_name or identity_key_for(owner_identity) or meta.get("name")
     normalized = {}
@@ -283,11 +287,6 @@ def load_meta(path):
 
 
 def scan_enabled_registry_skills(root):
-    ensure_legacy_scripts_on_path(ROOT)
-    from distribution_lib import load_distribution_index
-    from registry_source_lib import load_registry_config, registry_identity, resolve_registry_root
-    from skill_identity_lib import normalize_skill_identity
-
     cfg = load_registry_config(root)
     enabled = [reg for reg in cfg.get("registries", []) if reg.get("enabled", True)]
     sorted_registries = sorted(
@@ -526,9 +525,6 @@ def _candidate_catalog_compare(left, right):
 
 
 def candidate_from_skill_dir(skill_dir, source_registry=None, source_info=None):
-    ensure_legacy_scripts_on_path(ROOT)
-    from skill_identity_lib import normalize_skill_identity
-
     skill_path = Path(skill_dir).resolve()
     meta = load_meta(skill_path / "_meta.json")
     normalized = normalize_meta_dependencies(meta)

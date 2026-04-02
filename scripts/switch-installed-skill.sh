@@ -241,7 +241,7 @@ PY
 )"
 
 "$ROOT/scripts/check-skill.sh" "$SRC" >/dev/null
-"$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR" --source-registry "$SOURCE_REGISTRY" --source-json "$SOURCE_JSON" >/dev/null 2>&1 || { echo "switch target failed dependency/conflict checks" >&2; "$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR" --source-registry "$SOURCE_REGISTRY" --source-json "$SOURCE_JSON"; exit 1; }
+env PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}" python3 -m infinitas_skill.cli.main install check-target "$SRC" "$TARGET_DIR" --source-registry "$SOURCE_REGISTRY" --source-json "$SOURCE_JSON" >/dev/null 2>&1 || { echo "switch target failed dependency/conflict checks" >&2; env PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}" python3 -m infinitas_skill.cli.main install check-target "$SRC" "$TARGET_DIR" --source-registry "$SOURCE_REGISTRY" --source-json "$SOURCE_JSON"; exit 1; }
 rm -rf "$DEST"
 cp -R "$SRC" "$DEST"
 python3 "$ROOT/scripts/update-install-manifest.py" "$TARGET_DIR" "$SRC" "$DEST" switch "$LOCK_VERSION" "$SOURCE_JSON" >/dev/null

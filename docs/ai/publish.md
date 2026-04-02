@@ -15,24 +15,24 @@ The supported flow is:
 
 ## CLI entrypoint
 
-Use `scripts/registryctl.py` against the hosted API.
+Use `uv run infinitas registry` against the hosted API.
 
 Examples:
 
 ```bash
-python3 scripts/registryctl.py skills create \
+uv run infinitas registry skills create \
   --slug demo-skill \
   --display-name "Demo Skill" \
   --summary "Private-first demo skill"
 
-python3 scripts/registryctl.py drafts create 1 \
+uv run infinitas registry drafts create 1 \
   --content-ref 'git+https://example.com/demo-skill.git#<commit>' \
   --metadata-json '{"entrypoint":"SKILL.md","manifest":{"name":"demo-skill","version":"0.1.0"}}'
 
-python3 scripts/registryctl.py drafts seal 1 --version 0.1.0
-python3 scripts/registryctl.py releases create 1
+uv run infinitas registry drafts seal 1 --version 0.1.0
+uv run infinitas registry releases create 1
 
-python3 scripts/registryctl.py exposures create 1 \
+uv run infinitas registry exposures create 1 \
   --audience-type public \
   --listing-mode listed \
   --install-mode enabled \

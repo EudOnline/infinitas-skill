@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -15,7 +16,9 @@ def fail(message):
 
 
 def run(command, cwd, expect=0):
-    result = subprocess.run(command, cwd=cwd, text=True, capture_output=True)
+    env = os.environ.copy()
+    env['PYTHONPATH'] = str(Path(cwd) / 'src')
+    result = subprocess.run(command, cwd=cwd, text=True, capture_output=True, env=env)
     if result.returncode != expect:
         fail(
             f'command {command!r} exited {result.returncode}, expected {expect}\n'
@@ -113,7 +116,10 @@ def main():
         result = run(
             [
                 sys.executable,
-                str(repo / 'scripts' / 'resolve-install-plan.py'),
+                '-m',
+                'infinitas_skill.cli.main',
+                'install',
+                'resolve-plan',
                 '--skill-dir',
                 str(repo / 'templates' / 'basic-skill'),
                 '--target-dir',

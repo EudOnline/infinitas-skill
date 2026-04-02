@@ -156,7 +156,7 @@ print(summary)
 PY
 
 mkdir -p "$TARGET_DIR"
-PLAN_JSON="$(python3 "$ROOT/scripts/resolve-install-plan.py" --skill-dir "$SRC" --target-dir "$TARGET_DIR" --source-registry "$RESOLVED_REGISTRY" --source-json "$MATERIALIZED_JSON" --mode install --json)"
+PLAN_JSON="$(env PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}" python3 -m infinitas_skill.cli.main install resolve-plan --skill-dir "$SRC" --target-dir "$TARGET_DIR" --source-registry "$RESOLVED_REGISTRY" --source-json "$MATERIALIZED_JSON" --mode install --json)"
 
 python3 - <<'PY' "$PLAN_JSON"
 import json, sys
@@ -276,7 +276,7 @@ for step in plan.get('steps', []):
 PY
 )
 
-python3 "$ROOT/scripts/check-install-target.py" "$SRC" "$TARGET_DIR" --source-registry "$RESOLVED_REGISTRY" --source-json "$MATERIALIZED_JSON" --mode install >/dev/null
+env PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}" python3 -m infinitas_skill.cli.main install check-target "$SRC" "$TARGET_DIR" --source-registry "$RESOLVED_REGISTRY" --source-json "$MATERIALIZED_JSON" --mode install >/dev/null
 
 if [[ $APPLIED -eq 0 ]]; then
   echo "already satisfied: $DEST"

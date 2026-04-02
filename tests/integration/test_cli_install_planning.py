@@ -93,10 +93,6 @@ def _run_cli(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
     )
 
 
-def _run_legacy(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
-    return _run([sys.executable, *args], cwd=repo)
-
-
 def _run_cli_probe(
     repo: Path,
     args: list[str],
@@ -131,29 +127,19 @@ def _load_json_output(result: subprocess.CompletedProcess[str], label: str) -> d
         ) from exc
 
 
-def _assert_same_result(
+def _assert_cli_result(
     repo: Path,
     cli_args: list[str],
-    legacy_args: list[str],
     *,
     expect_returncode: int,
 ) -> subprocess.CompletedProcess[str]:
     cli = _run_cli(repo, cli_args)
-    legacy = _run_legacy(repo, legacy_args)
 
     assert cli.returncode == expect_returncode, (
         f"CLI command returned {cli.returncode}, expected {expect_returncode}\n"
         f"stdout:\n{cli.stdout}\n"
         f"stderr:\n{cli.stderr}"
     )
-    assert legacy.returncode == expect_returncode, (
-        f"legacy command returned {legacy.returncode}, expected {expect_returncode}\n"
-        f"stdout:\n{legacy.stdout}\n"
-        f"stderr:\n{legacy.stderr}"
-    )
-    assert cli.returncode == legacy.returncode
-    assert cli.stdout == legacy.stdout
-    assert cli.stderr == legacy.stderr
     return cli
 
 
@@ -183,13 +169,13 @@ def _assert_package_owned_install_command(repo: Path, cli_args: list[str]) -> No
         assert modules.get(module_name), f"install CLI did not route through {module_name}"
 
 
-def test_install_cli_matches_legacy_for_success_and_failure_paths() -> None:
+def test_install_cli_handles_success_and_failure_paths() -> None:
     tmpdir, repo = _prepare_repo()
     try:
         target = _prepare_target(repo)
         skill_dir = repo / "templates" / "basic-skill"
 
-        cli = _assert_same_result(
+        cli = _assert_cli_result(
             repo,
             [
                 "install",
@@ -200,26 +186,13 @@ def test_install_cli_matches_legacy_for_success_and_failure_paths() -> None:
                 str(target),
                 "--json",
             ],
-            [
-                str(repo / "scripts" / "resolve-install-plan.py"),
-                "--skill-dir",
-                str(skill_dir),
-                "--target-dir",
-                str(target),
-                "--json",
-            ],
             expect_returncode=0,
         )
-        _assert_same_result(
+        check_target = _assert_cli_result(
             repo,
             [
                 "install",
                 "check-target",
-                str(skill_dir),
-                str(target),
-            ],
-            [
-                str(repo / "scripts" / "check-install-target.py"),
                 str(skill_dir),
                 str(target),
             ],
@@ -229,13 +202,14 @@ def test_install_cli_matches_legacy_for_success_and_failure_paths() -> None:
         payload = _load_json_output(cli, "install resolve-plan CLI")
         assert payload["root"]["name"] == "basic-skill"
         assert payload["steps"], "expected at least one install planning step"
+        assert "OK: install target check passed for basic-skill" in check_target.stdout
 
         manifest_path = target / ".infinitas-skill-install-manifest.json"
         manifest_payload = json.loads(manifest_path.read_text(encoding="utf-8"))
         manifest_payload["schema_version"] = 999
         _write_json(manifest_path, manifest_payload)
 
-        _assert_same_result(
+        _assert_cli_result(
             repo,
             [
                 "install",
@@ -246,26 +220,13 @@ def test_install_cli_matches_legacy_for_success_and_failure_paths() -> None:
                 str(target),
                 "--json",
             ],
-            [
-                str(repo / "scripts" / "resolve-install-plan.py"),
-                "--skill-dir",
-                str(skill_dir),
-                "--target-dir",
-                str(target),
-                "--json",
-            ],
             expect_returncode=1,
         )
-        _assert_same_result(
+        _assert_cli_result(
             repo,
             [
                 "install",
                 "check-target",
-                str(skill_dir),
-                str(target),
-            ],
-            [
-                str(repo / "scripts" / "check-install-target.py"),
                 str(skill_dir),
                 str(target),
             ],
@@ -306,5 +267,5 @@ def test_install_cli_routes_through_extracted_modules_for_both_commands() -> Non
 
 
 def main() -> None:
-    test_install_cli_matches_legacy_for_success_and_failure_paths()
+    test_install_cli_handles_success_and_failure_paths()
     test_install_cli_routes_through_extracted_modules_for_both_commands()
