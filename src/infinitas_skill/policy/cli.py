@@ -4,6 +4,12 @@ from __future__ import annotations
 
 import argparse
 
+from infinitas_skill.policy.review_commands import (
+    build_recommend_reviewers_parser,
+    build_review_status_parser,
+    recommend_reviewers_main,
+    review_status_main,
+)
 from infinitas_skill.policy.service import run_check_policy_packs, run_check_promotion
 
 POLICY_TOP_LEVEL_HELP = 'Policy validation and promotion tools'
@@ -33,7 +39,10 @@ def build_check_promotion_parser(*, prog: str | None = None) -> argparse.Argumen
 
 
 def configure_policy_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
-    subparsers = parser.add_subparsers(dest='policy_command', metavar='{check-packs,check-promotion}')
+    subparsers = parser.add_subparsers(
+        dest='policy_command',
+        metavar='{check-packs,check-promotion,recommend-reviewers,review-status}',
+    )
 
     check_packs = subparsers.add_parser('check-packs', parents=[build_check_policy_packs_parser()], add_help=False)
     check_packs.description = 'Validate policy-pack selector and active pack files'
@@ -51,7 +60,44 @@ def configure_policy_parser(parser: argparse.ArgumentParser) -> argparse.Argumen
             debug_policy=args.debug_policy,
         )
     )
+
+    recommend_reviewers = subparsers.add_parser(
+        'recommend-reviewers',
+        parents=[build_recommend_reviewers_parser()],
+        add_help=False,
+    )
+    recommend_reviewers.description = 'Recommend reviewers and escalation paths for one skill'
+    recommend_reviewers.help = 'Recommend reviewers and escalation paths for one skill'
+    recommend_reviewers.set_defaults(_handler=lambda args: recommend_reviewers_main(_argv_from_namespace(args)))
+
+    review_status = subparsers.add_parser(
+        'review-status',
+        parents=[build_review_status_parser()],
+        add_help=False,
+    )
+    review_status.description = 'Show review gate status for one skill'
+    review_status.help = 'Show review gate status for one skill'
+    review_status.set_defaults(_handler=lambda args: review_status_main(_argv_from_namespace(args)))
     return parser
+
+
+def _argv_from_namespace(args: argparse.Namespace) -> list[str]:
+    argv: list[str] = []
+    skill = getattr(args, 'skill', None)
+    if skill:
+        argv.append(skill)
+    for name, flag in [
+        ('require_pass', '--require-pass'),
+        ('as_active', '--as-active'),
+        ('json', '--json'),
+        ('show_recommendations', '--show-recommendations'),
+    ]:
+        if getattr(args, name, False):
+            argv.append(flag)
+    stage = getattr(args, 'stage', None)
+    if stage is not None:
+        argv.extend(['--stage', stage])
+    return argv
 
 
 def build_policy_parser(*, prog: str | None = None) -> argparse.ArgumentParser:

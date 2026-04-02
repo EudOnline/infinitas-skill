@@ -173,9 +173,9 @@ if [[ $CREATE -eq 1 || $PUSH -eq 1 ]]; then
     exit 1
   fi
   if [[ $LOCAL -eq 1 ]]; then
-    python3 "$ROOT/scripts/check-release-state.py" "$DIR" --mode local-preflight >/dev/null
+    env PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}" python3 -m infinitas_skill.cli.main release check-state "$DIR" --mode local-preflight >/dev/null
   else
-    python3 "$ROOT/scripts/check-release-state.py" "$DIR" --mode preflight >/dev/null
+    env PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}" python3 -m infinitas_skill.cli.main release check-state "$DIR" --mode preflight >/dev/null
   fi
 fi
 
@@ -203,7 +203,7 @@ if [[ $CREATE -eq 1 ]]; then
     fi
     "${GIT_TAG_CMD[@]}" tag -s "$TAG" -m "$TAG"
     if [[ "$VERSION" == "$META_VERSION" ]]; then
-      python3 "$ROOT/scripts/check-release-state.py" "$DIR" --mode local-tag >/dev/null
+      env PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}" python3 -m infinitas_skill.cli.main release check-state "$DIR" --mode local-tag >/dev/null
       echo "created and verified signed tag: $TAG"
     else
       echo "created signed tag: $TAG"
@@ -218,7 +218,7 @@ if [[ $PUSH -eq 1 ]]; then
   if [[ $UNSIGNED -eq 1 || "$VERSION" != "$META_VERSION" ]]; then
     echo "pushed tag: $TAG"
   else
-    python3 "$ROOT/scripts/check-release-state.py" "$DIR" --mode stable-release >/dev/null
+    env PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}" python3 -m infinitas_skill.cli.main release check-state "$DIR" --mode stable-release >/dev/null
     echo "pushed and verified remote tag: $TAG"
   fi
 fi

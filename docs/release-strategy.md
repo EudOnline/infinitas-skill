@@ -47,13 +47,13 @@ Stable release tooling enforces all of the following before it will write releas
 4. that same tag is already pushed to the tracked remote
 5. the skill's publisher / namespace claim is valid under `policy/namespace-policy.json`
 
-If any of those invariants fail, `scripts/release-skill.sh` and `scripts/check-release-state.py` exit with actionable errors.
+If any of those invariants fail, `scripts/release-skill.sh` and `uv run infinitas release check-state` exit with actionable errors.
 
 ## Delegated audit metadata
 
 11-05 keeps the audit surface on the existing release-state and provenance path instead of adding a separate export product.
 
-- `python3 scripts/check-release-state.py <name> --json` now exports richer review audit context, including `effective_review_state`, quorum counters, `latest_decisions`, `ignored_decisions`, and `configured_groups`.
+- `uv run infinitas release check-state <name> --json` now exports richer review audit context, including `effective_review_state`, quorum counters, `latest_decisions`, `ignored_decisions`, and `configured_groups`.
 - That same JSON now records delegated release authority via `release.delegated_teams` and mirrors applied break-glass overrides into `release.exception_usage` while preserving the existing top-level `exception_usage`.
 - Generated provenance carries the same stable audit metadata so later reviewers can reconstruct delegated approvals plus release exceptions without depending on debug-only `policy_trace` output.
 
@@ -98,7 +98,7 @@ The `distribution` section now carries more than just top-level bundle identity:
 
 Downstream audit surfaces now preserve the same additive reproducibility evidence:
 
-- `scripts/check-release-state.py <name> --json` includes `release.reproducibility`
+- `uv run infinitas release check-state <name> --json` includes `release.reproducibility`
 - `catalog/catalog.json` mirrors `verified_distribution.file_manifest_count` and `verified_distribution.build_archive_format`
 - `scripts/verify-distribution-manifest.py` validates both the manifest-vs-attestation contract and the actual archived bundle contents against the signed file inventory
 
@@ -127,7 +127,7 @@ Then commit and push that change before creating the tag. A comment-only or empt
 This repository already has a committed `lvxiaoer` signer entry, so the usual operator path is to confirm current state with:
 
 ```bash
-python3 scripts/report-signing-readiness.py --skill operate-infinitas-skill --json
+uv run infinitas release signing-readiness --skill operate-infinitas-skill --json
 ```
 
 For the steady-state playbook after bootstrap, see `docs/ops/signing-operations.md`.
@@ -157,7 +157,7 @@ Typical flow:
 2. Update `_meta.json.version`
 3. Add or update `CHANGELOG.md`
 4. Run `scripts/check-all.sh`
-5. Ensure `scripts/review-status.py <name> --as-active --require-pass` succeeds
+5. Ensure `uv run infinitas policy review-status <name> --as-active --require-pass` succeeds
 6. Promote to `skills/active/`
 7. Populate or review `config/allowed_signers` if this is the first signed release for the signer set
 8. Create and push the signed release tag
@@ -197,11 +197,11 @@ Fresh repositories may start with comments only in `config/allowed_signers`, so 
 Use the bootstrap helper to:
 
 ```bash
-python3 scripts/bootstrap-signing.py init-key --identity lvxiaoer --output ~/.ssh/infinitas-skill-release-signing
-python3 scripts/bootstrap-signing.py add-allowed-signer --identity lvxiaoer --key ~/.ssh/infinitas-skill-release-signing
-python3 scripts/bootstrap-signing.py configure-git --key ~/.ssh/infinitas-skill-release-signing
-python3 scripts/bootstrap-signing.py authorize-publisher --publisher lvxiaoer --signer lvxiaoer --releaser lvxiaoer
-python3 scripts/doctor-signing.py repo-audit
+uv run infinitas release bootstrap-signing init-key --identity lvxiaoer --output ~/.ssh/infinitas-skill-release-signing
+uv run infinitas release bootstrap-signing add-allowed-signer --identity lvxiaoer --key ~/.ssh/infinitas-skill-release-signing
+uv run infinitas release bootstrap-signing configure-git --key ~/.ssh/infinitas-skill-release-signing
+uv run infinitas release bootstrap-signing authorize-publisher --publisher lvxiaoer --signer lvxiaoer --releaser lvxiaoer
+uv run infinitas release doctor-signing repo-audit
 ```
 
 For a full walkthrough, see `docs/ops/signing-bootstrap.md`.
@@ -218,17 +218,17 @@ scripts/release-skill.sh repo-audit --preview
 scripts/release-skill.sh repo-audit --push-tag
 
 # verify the repo is fully release-ready
-scripts/check-release-state.py repo-audit
+uv run infinitas release check-state repo-audit
 
 # inspect local provenance output, including reproducibility summary
-scripts/check-release-state.py repo-audit --mode local-tag --json
+uv run infinitas release check-state repo-audit --mode local-tag --json
 
 # write release notes and provenance from the pushed signed tag
 scripts/release-skill.sh repo-audit --notes-out /tmp/repo-audit-release.md --write-provenance --releaser lvxiaoer
 
 # verify the resulting attestation bundle
 scripts/verify-attestation.py catalog/provenance/repo-audit-0.3.0.json
-python3 scripts/doctor-signing.py repo-audit --provenance catalog/provenance/repo-audit-0.3.0.json
+uv run infinitas release doctor-signing repo-audit --provenance catalog/provenance/repo-audit-0.3.0.json
 
 # inspect transparency proof state when configured
 python3 scripts/verify-attestation.py catalog/provenance/repo-audit-0.3.0.json --json

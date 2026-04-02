@@ -2,7 +2,7 @@
 audience: operators and release maintainers
 owner: repository maintainers
 source_of_truth: operations landing page
-last_reviewed: 2026-03-30
+last_reviewed: 2026-04-01
 status: maintained
 ---
 
@@ -17,6 +17,7 @@ Use the ops section for procedures that keep the hosted control plane, release f
 - [Signing bootstrap](signing-bootstrap.md)
 - [Signing operations](signing-operations.md)
 - [Release checklist](release-checklist.md)
+- [2026-04-01 release-readiness scorecard](2026-04-01-release-readiness-scorecard.md)
 
 ## Drift and freshness management
 

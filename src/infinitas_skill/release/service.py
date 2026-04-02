@@ -5,7 +5,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from infinitas_skill.legacy import ROOT, ensure_legacy_scripts_on_path
+from infinitas_skill.policy.exception_policy import (
+    ExceptionPolicyError,
+    load_exception_policy,
+    match_active_exceptions,
+)
 from infinitas_skill.policy.trace import build_policy_trace
 from infinitas_skill.release.attestation_state import (
     collect_reproducibility_state,
@@ -33,14 +37,7 @@ from infinitas_skill.release.policy_state import (
     signer_entries,
     signing_key_path,
 )
-
-ensure_legacy_scripts_on_path(ROOT)
-
-import exception_policy_lib
-
-ExceptionPolicyError = exception_policy_lib.ExceptionPolicyError
-load_exception_policy = exception_policy_lib.load_exception_policy
-match_active_exceptions = exception_policy_lib.match_active_exceptions
+from infinitas_skill.root import ROOT
 
 RELEASE_STATE_MODES = ("preflight", "local-preflight", "local-tag", "stable-release")
 

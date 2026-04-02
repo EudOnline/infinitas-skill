@@ -2,7 +2,7 @@
 audience: operators and release maintainers
 owner: repository maintainers
 source_of_truth: release checklist
-last_reviewed: 2026-03-30
+last_reviewed: 2026-04-01
 status: maintained
 ---
 
@@ -16,7 +16,7 @@ Before pushing or promoting a skill:
 - [ ] `_meta.json` exists and passes `scripts/check-skill.sh`
 - [ ] full registry validation passes via `scripts/check-all.sh`
 - [ ] `_meta.json.status` matches the parent directory
-- [ ] computed review quorum passes for the target stage via `scripts/review-status.py <name> --as-active --require-pass`
+- [ ] computed review quorum passes for the target stage via `uv run infinitas policy review-status <name> --as-active --require-pass`
 - [ ] if this is a solo-maintainer repo, confirm `policy/promotion-policy.json` intentionally enables `reviews.allow_owner_when_no_distinct_reviewer` before relying on owner approval fallback
 - [ ] `_meta.json.version` was bumped appropriately for behavioral changes
 - [ ] `CHANGELOG.md` was updated
@@ -32,10 +32,10 @@ Before pushing or promoting a skill:
 Before creating stable release output for an active skill:
 
 - [ ] if upstream Codex / Claude Code / OpenClaw behavior changed, follow `docs/ops/platform-drift-playbook.md` before starting release work
-- [ ] trusted signer bootstrap was completed with `python3 scripts/bootstrap-signing.py ...` or an equivalent existing-key flow from `docs/ops/signing-bootstrap.md`
+- [ ] trusted signer bootstrap was completed with `uv run infinitas release bootstrap-signing ...` or an equivalent existing-key flow from `docs/ops/signing-bootstrap.md`
 - [ ] `config/allowed_signers` contains at least one trusted release signer entry committed in-repo
 - [ ] publisher `authorized_signers` / `authorized_releasers` policy was updated when the release uses a qualified publisher namespace
-- [ ] `python3 scripts/doctor-signing.py <name>` has no `FAIL` items before the first stable tag
+- [ ] `uv run infinitas release doctor-signing <name>` has no `FAIL` items before the first stable tag
 - [ ] `git status --short` is empty for the repository worktree
 - [ ] current branch tracks its upstream and is neither ahead nor behind it
 - [ ] expected tag `skill/<name>/v<version>` does not already point at the wrong commit
@@ -50,7 +50,7 @@ Before creating stable release output for an active skill:
 - [ ] `scripts/verify-attestation.py catalog/provenance/<name>-<version>.json` passes against repo-managed allowed signers
 - [ ] if CI attestation / CI-native attestation is enabled, `catalog/provenance/<name>-<version>.ci.json` was generated and `python3 scripts/verify-ci-attestation.py ...` passes
 - [ ] `config/signing.json` `attestation.policy.release_trust_mode` matches the intended rollout mode; the key `release_trust_mode` is set to `ssh`, `ci`, or `both`
-- [ ] `python3 scripts/doctor-signing.py <name> --provenance catalog/provenance/<name>-<version>.json` reports no blocking failures after the rehearsal
+- [ ] `uv run infinitas release doctor-signing <name> --provenance catalog/provenance/<name>-<version>.json` reports no blocking failures after the rehearsal
 - [ ] any optional legacy HMAC provenance signing happens after the required SSH attestation has already been verified
 - [ ] platform evidence was refreshed with `python3 scripts/record-verified-support.py <name> --platform codex --platform claude --platform openclaw --build-catalog` if verified compatibility claims changed
 - [ ] if any declared platform shows `freshness_state = stale|unknown`, refresh the evidence and rerun the playbook steps in `docs/ops/platform-drift-playbook.md`

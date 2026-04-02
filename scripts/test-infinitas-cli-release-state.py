@@ -22,7 +22,7 @@ def main() -> None:
         run_focused_release_state_checks()
     except AssertionError as exc:
         fail(str(exc))
-    print("OK: infinitas release check-state CLI mirrors legacy script output")
+    print("OK: infinitas release CLI checks passed")
 
 
 if __name__ == "__main__":

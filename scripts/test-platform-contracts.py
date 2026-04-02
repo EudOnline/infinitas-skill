@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -20,7 +21,9 @@ def fail(message):
 
 
 def run(command, cwd, expect=0):
-    result = subprocess.run(command, cwd=cwd, text=True, capture_output=True)
+    env = os.environ.copy()
+    env['PYTHONPATH'] = str(Path(cwd) / 'src')
+    result = subprocess.run(command, cwd=cwd, text=True, capture_output=True, env=env)
     if result.returncode != expect:
         fail(
             f'command {command!r} exited {result.returncode}, expected {expect}\n'
@@ -88,28 +91,21 @@ def write_valid_docs(repo: Path):
 def main():
     tmpdir, repo = prepare_repo()
     try:
-        checker = repo / 'scripts' / 'check-platform-contracts.py'
+        checker = [sys.executable, '-m', 'infinitas_skill.cli.main', 'compatibility', 'check-platform-contracts']
 
         write_valid_docs(repo)
-        run([sys.executable, str(checker), '--max-age-days', '30'], cwd=repo)
+        run([*checker, '--max-age-days', '30'], cwd=repo)
 
         stale_age_repo = tmpdir / 'stale-age-repo'
         shutil.copytree(repo, stale_age_repo)
         write_contract(stale_age_repo, 'claude', REQUIRED_DOCS['claude'], date='2025-01-01', url='https://docs.example.com/claude')
         write_profile_contract(stale_age_repo, 'claude', date='2025-01-01', urls=['https://docs.example.com/claude'])
         run(
-            [sys.executable, str(stale_age_repo / 'scripts' / 'check-platform-contracts.py'), '--max-age-days', '30'],
+            [*checker, '--max-age-days', '30'],
             cwd=stale_age_repo,
         )
         run(
-            [
-                sys.executable,
-                str(stale_age_repo / 'scripts' / 'check-platform-contracts.py'),
-                '--max-age-days',
-                '30',
-                '--stale-policy',
-                'fail',
-            ],
+            [*checker, '--max-age-days', '30', '--stale-policy', 'fail'],
             cwd=stale_age_repo,
             expect=1,
         )
@@ -117,24 +113,24 @@ def main():
         mismatch_repo = tmpdir / 'mismatch-repo'
         shutil.copytree(repo, mismatch_repo)
         write_profile_contract(mismatch_repo, 'codex', date='2026-03-11', urls=['https://docs.example.com/codex'])
-        run([sys.executable, str(mismatch_repo / 'scripts' / 'check-platform-contracts.py')], cwd=mismatch_repo, expect=1)
+        run([*checker], cwd=mismatch_repo, expect=1)
 
         missing_repo = tmpdir / 'missing-repo'
         shutil.copytree(repo, missing_repo)
         (missing_repo / 'docs' / 'platform-contracts' / 'codex.md').unlink()
-        run([sys.executable, str(missing_repo / 'scripts' / 'check-platform-contracts.py')], cwd=missing_repo, expect=1)
+        run([*checker], cwd=missing_repo, expect=1)
 
         invalid_date_repo = tmpdir / 'invalid-date-repo'
         shutil.copytree(repo, invalid_date_repo)
         write_contract(invalid_date_repo, 'claude', REQUIRED_DOCS['claude'], date='not-a-date', url='https://docs.example.com/claude')
         write_profile_contract(invalid_date_repo, 'claude', date='not-a-date', urls=['https://docs.example.com/claude'])
-        run([sys.executable, str(invalid_date_repo / 'scripts' / 'check-platform-contracts.py')], cwd=invalid_date_repo, expect=1)
+        run([*checker], cwd=invalid_date_repo, expect=1)
 
         source_repo = tmpdir / 'source-repo'
         shutil.copytree(repo, source_repo)
         write_contract(source_repo, 'openclaw', REQUIRED_DOCS['openclaw'], url='not-a-url')
         write_profile_contract(source_repo, 'openclaw', urls=['not-a-url'])
-        run([sys.executable, str(source_repo / 'scripts' / 'check-platform-contracts.py')], cwd=source_repo, expect=1)
+        run([*checker], cwd=source_repo, expect=1)
     finally:
         shutil.rmtree(tmpdir)
 

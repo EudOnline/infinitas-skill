@@ -20,9 +20,10 @@ from infinitas_skill.registry.cli import (
     REGISTRY_TOP_LEVEL_HELP,
     configure_registry_parser,
 )
-from infinitas_skill.release.state import (
-    configure_release_check_state_parser,
-    run_release_check_state,
+from infinitas_skill.release.cli import (
+    RELEASE_PARSER_DESCRIPTION,
+    RELEASE_TOP_LEVEL_HELP,
+    configure_release_parser,
 )
 from infinitas_skill.server.ops import (
     SERVER_PARSER_DESCRIPTION,
@@ -42,23 +43,6 @@ def _build_compatibility_check_platform_contracts_parser(subparsers):
         _handler=lambda args: run_check_platform_contracts(
             max_age_days=args.max_age_days,
             stale_policy=args.stale_policy,
-        )
-    )
-
-
-def _build_release_check_state_parser(subparsers):
-    parser = subparsers.add_parser(
-        'check-state',
-        help='Check stable release invariants for a skill',
-        description='Check stable release invariants for a skill',
-    )
-    configure_release_check_state_parser(parser)
-    parser.set_defaults(
-        _handler=lambda args: run_release_check_state(
-            args.skill,
-            mode=args.mode,
-            as_json=args.json,
-            debug_policy=args.debug_policy,
         )
     )
 
@@ -109,9 +93,12 @@ def build_parser() -> argparse.ArgumentParser:
     compatibility_sub = compatibility.add_subparsers(dest='compatibility_command')
     _build_compatibility_check_platform_contracts_parser(compatibility_sub)
 
-    release = top.add_parser('release', help='Release tools')
-    release_sub = release.add_subparsers(dest='release_command')
-    _build_release_check_state_parser(release_sub)
+    release = top.add_parser(
+        'release',
+        help=RELEASE_TOP_LEVEL_HELP,
+        description=RELEASE_PARSER_DESCRIPTION,
+    )
+    configure_release_parser(release)
 
     install = top.add_parser('install', help='Install planning tools')
     install_sub = install.add_subparsers(dest='install_command')

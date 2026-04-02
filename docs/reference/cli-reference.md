@@ -2,7 +2,7 @@
 audience: contributors, integrators, operators
 owner: repository maintainers
 source_of_truth: generated from argparse definitions in src/infinitas_skill
-last_reviewed: 2026-03-30
+last_reviewed: 2026-04-01
 status: maintained
 ---
 
@@ -16,15 +16,7 @@ Regenerate and review it with:
 uv run python3 -m infinitas_skill.cli.reference
 ```
 
-Status labels used in this reference:
-
-- `maintained`: canonical `infinitas ...` entrypoint defined in `src/infinitas_skill/`
-- `shim`: temporary script wrapper still available during the reset
-- `legacy-only`: intentionally omitted from this maintained reference; use [CLI Command Map](cli-command-map.md) for bridge inventory details
-
 ## Top-level CLI
-
-Status: `maintained` umbrella CLI. `legacy-only` surfaces should migrate behind one of the documented families below.
 
 ```text
 usage: infinitas [-h]
@@ -35,7 +27,7 @@ infinitas project CLI
 positional arguments:
   {compatibility,release,install,registry,policy,server}
     compatibility       Compatibility tools
-    release             Release tools
+    release             Release readiness, signing, and verification tools
     install             Install planning tools
     registry            Hosted registry control-plane tools
     policy              Policy validation and promotion tools
@@ -46,8 +38,6 @@ options:
 ```
 
 ## `infinitas compatibility check-platform-contracts`
-
-Status: `maintained`. Shim: `python3 scripts/check-platform-contracts.py ...`.
 
 ```text
 usage: infinitas compatibility check-platform-contracts [-h]
@@ -65,8 +55,6 @@ options:
 ```
 
 ## `infinitas install resolve-plan`
-
-Status: `maintained`. Shim: `python3 scripts/resolve-install-plan.py ...`.
 
 ```text
 usage: infinitas install resolve-plan [-h] --skill-dir SKILL_DIR
@@ -94,8 +82,6 @@ options:
 
 ## `infinitas install check-target`
 
-Status: `maintained`. Shim: `python3 scripts/check-install-target.py ...`.
-
 ```text
 usage: infinitas install check-target [-h] [--source-registry SOURCE_REGISTRY]
                                       [--source-json SOURCE_JSON]
@@ -121,25 +107,21 @@ options:
 
 ## `infinitas policy`
 
-Status: `maintained` family. Shims: `python3 scripts/check-policy-packs.py` and `python3 scripts/check-promotion-policy.py ...`.
-
 ```text
-usage: infinitas policy [-h] {check-packs,check-promotion} ...
+usage: infinitas policy [-h]
+                        {check-packs,check-promotion,recommend-reviewers,review-status}
+                        ...
 
 Policy validation and promotion CLI
 
 positional arguments:
-  {check-packs,check-promotion}
-    check-packs         Validate policy-pack selector and active pack files
-    check-promotion     Check active promotion policy for one or more skills
+  {check-packs,check-promotion,recommend-reviewers,review-status}
 
 options:
   -h, --help            show this help message and exit
 ```
 
 ## `infinitas policy check-packs`
-
-Status: `maintained`. Shim: `python3 scripts/check-policy-packs.py`.
 
 ```text
 usage: infinitas policy check-packs [-h]
@@ -151,8 +133,6 @@ options:
 ```
 
 ## `infinitas policy check-promotion`
-
-Status: `maintained`. Shim: `python3 scripts/check-promotion-policy.py ...`.
 
 ```text
 usage: infinitas policy check-promotion [-h] [--as-active] [--json]
@@ -171,9 +151,45 @@ options:
   --debug-policy  Print a human-readable policy trace
 ```
 
-## `infinitas registry`
+## `infinitas policy recommend-reviewers`
 
-Status: `maintained`. Shim: `python3 scripts/registryctl.py ...`.
+```text
+usage: infinitas policy recommend-reviewers [-h] [--as-active] [--stage STAGE]
+                                            [--json]
+                                            skill
+
+Recommend reviewers and escalation paths for one skill
+
+positional arguments:
+  skill
+
+options:
+  -h, --help     show this help message and exit
+  --as-active
+  --stage STAGE
+  --json
+```
+
+## `infinitas policy review-status`
+
+```text
+usage: infinitas policy review-status <skill-name-or-path> [--require-pass] [--as-active] [--stage STAGE] [--json] [--show-recommendations]
+
+Show review gate status for one skill
+
+positional arguments:
+  skill
+
+options:
+  -h, --help            show this help message and exit
+  --require-pass
+  --as-active
+  --stage STAGE
+  --json
+  --show-recommendations
+```
+
+## `infinitas registry`
 
 ```text
 usage: infinitas registry [-h] [--base-url BASE_URL] [--token TOKEN]
@@ -199,9 +215,23 @@ options:
   --token TOKEN         Bearer token for hosted registry API
 ```
 
-## `infinitas release check-state`
+## `infinitas release`
 
-Status: `maintained`. Shim: `python3 scripts/check-release-state.py ...`.
+```text
+usage: infinitas release [-h]
+                         {check-state,signing-readiness,doctor-signing,bootstrap-signing}
+                         ...
+
+Release CLI
+
+positional arguments:
+  {check-state,signing-readiness,doctor-signing,bootstrap-signing}
+
+options:
+  -h, --help            show this help message and exit
+```
+
+## `infinitas release check-state`
 
 ```text
 usage: infinitas release check-state [-h]
@@ -222,9 +252,64 @@ options:
   --debug-policy        Print a human-readable policy trace
 ```
 
-## `infinitas server`
+## `infinitas release signing-readiness`
 
-Status: `maintained` family. Legacy server-operation wrapper scripts are deleted; use the canonical `infinitas server ...` entrypoints directly.
+```text
+usage: infinitas release signing-readiness [-h] [--skill SKILL] [--json]
+
+Report repository-level SSH signing readiness
+
+options:
+  -h, --help     show this help message and exit
+  --skill SKILL  Skill name or path to inspect (repeatable, defaults to all
+                 active skills)
+  --json         Print machine-readable output
+```
+
+## `infinitas release doctor-signing`
+
+```text
+usage: infinitas release doctor-signing [-h] [--identity IDENTITY]
+                                        [--provenance PROVENANCE] [--json]
+                                        [skill]
+
+Diagnose SSH signing bootstrap, release-tag readiness, and attestation
+prerequisites
+
+positional arguments:
+  skill                 Skill name or path to diagnose
+
+options:
+  -h, --help            show this help message and exit
+  --identity IDENTITY   Expected signer identity to use in fix suggestions
+  --provenance PROVENANCE
+                        Existing provenance JSON to verify
+  --json                Print machine-readable doctor output
+```
+
+## `infinitas release bootstrap-signing`
+
+```text
+usage: infinitas release bootstrap-signing [-h]
+                                           {init-key,add-allowed-signer,configure-git,authorize-publisher}
+                                           ...
+
+Bootstrap SSH signing and repository signer policy
+
+positional arguments:
+  {init-key,add-allowed-signer,configure-git,authorize-publisher}
+    init-key            Generate a new SSH signing key pair
+    add-allowed-signer  Add or update a trusted signer entry
+    configure-git       Configure git to use SSH signing with a key path
+    authorize-publisher
+                        Authorize signer or releaser identities for a
+                        publisher
+
+options:
+  -h, --help            show this help message and exit
+```
+
+## `infinitas server`
 
 ```text
 usage: infinitas server [-h]
@@ -247,8 +332,6 @@ options:
 ```
 
 ## `infinitas server healthcheck`
-
-Status: `maintained`. Legacy shim deleted; use this canonical entrypoint directly.
 
 ```text
 usage: infinitas server healthcheck [-h] --api-url API_URL --repo-path
@@ -273,8 +356,6 @@ options:
 
 ## `infinitas server backup`
 
-Status: `maintained`. Legacy shim deleted; use this canonical entrypoint directly.
-
 ```text
 usage: infinitas server backup [-h] --repo-path REPO_PATH --database-url
                                DATABASE_URL --artifact-path ARTIFACT_PATH
@@ -298,8 +379,6 @@ options:
 ```
 
 ## `infinitas server inspect-state`
-
-Status: `maintained`. Legacy shim deleted; use this canonical entrypoint directly.
 
 ```text
 usage: infinitas server inspect-state [-h] --database-url DATABASE_URL
@@ -337,8 +416,6 @@ options:
 ```
 
 ## `infinitas server render-systemd`
-
-Status: `maintained`. Legacy shim deleted; use this canonical entrypoint directly.
 
 ```text
 usage: infinitas server render-systemd [-h] --output-dir OUTPUT_DIR
@@ -443,8 +520,6 @@ options:
 
 ## `infinitas server prune-backups`
 
-Status: `maintained`. Legacy shim deleted; use this canonical entrypoint directly.
-
 ```text
 usage: infinitas server prune-backups [-h] --backup-root BACKUP_ROOT
                                       --keep-last KEEP_LAST [--json]
@@ -462,8 +537,6 @@ options:
 ```
 
 ## `infinitas server worker`
-
-Status: `maintained`. Legacy shim deleted; use this canonical entrypoint directly.
 
 ```text
 usage: infinitas server worker [-h] [--poll-interval POLL_INTERVAL] [--once]

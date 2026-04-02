@@ -13,7 +13,7 @@ BLOCKS=("$@")
 if [[ ${#BLOCKS[@]} -eq 0 ]]; then
   BLOCKS=(focused-integration hosted-ui full-regression)
 fi
-VALID_BLOCKS=(focused-integration hosted-ui full-regression)
+VALID_BLOCKS=(focused-integration hosted-ui release-long full-regression)
 
 validate_blocks() {
   local requested
@@ -87,13 +87,19 @@ PY
   fi
 fi
 
+if should_run release-long; then
+  run_block release-long
+  python3 scripts/test-transparency-log.py
+  python3 scripts/test-release-invariants.py
+fi
+
 if should_run full-regression; then
   run_block full-regression
   python3 scripts/check-registry-sources.py
   python3 scripts/test-registry-refresh-policy.py
   python3 scripts/test-registry-snapshot-mirror.py
   python3 scripts/test-hosted-registry-source.py
-  python3 scripts/check-policy-packs.py
+  env PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}" python3 -m infinitas_skill.cli.main policy check-packs
   python3 scripts/test-policy-pack-loading.py
   python3 scripts/test-policy-evaluation-traces.py
   python3 scripts/test-break-glass-exceptions.py
@@ -103,7 +109,7 @@ if should_run full-regression; then
   python3 scripts/test-policy-trace-docs.py
   python3 scripts/test-namespace-identity.py
   python3 scripts/check-registry-integrity.py
-  python3 scripts/check-promotion-policy.py
+  env PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}" python3 -m infinitas_skill.cli.main policy check-promotion
   python3 scripts/test-review-governance.py
   python3 scripts/test-compat-regression.py
   python3 scripts/test-hosted-e2e-ci-contract.py
@@ -146,7 +152,7 @@ PY
   if [[ "${INFINITAS_SKIP_RECORD_VERIFIED_SUPPORT_TESTS:-0}" != "1" ]]; then
     python3 scripts/test-record-verified-support.py
   fi
-  python3 scripts/check-platform-contracts.py --max-age-days 30 --stale-policy fail
+  env PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}" python3 -m infinitas_skill.cli.main compatibility check-platform-contracts --max-age-days 30 --stale-policy fail
   python3 scripts/test-platform-contracts.py
   fi
   if [[ "${INFINITAS_SKIP_RELEASE_TESTS:-0}" != "1" ]]; then

@@ -7,7 +7,6 @@ ROOT = Path(__file__).resolve().parent.parent
 REQUIRED_FIELDS = ['audience', 'owner', 'source_of_truth', 'last_reviewed', 'status']
 TARGETS = [
     ROOT / 'docs' / 'reference' / 'README.md',
-    ROOT / 'docs' / 'reference' / 'cli-command-map.md',
     ROOT / 'docs' / 'reference' / 'cli-reference.md',
     ROOT / 'docs' / 'reference' / 'compatibility-contract.md',
     ROOT / 'docs' / 'reference' / 'compatibility-matrix.md',

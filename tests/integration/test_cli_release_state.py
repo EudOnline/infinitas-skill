@@ -55,7 +55,7 @@ def _load_payload(result: subprocess.CompletedProcess[str], label: str) -> dict:
         ) from exc
 
 
-def assert_release_state_matches_legacy_json() -> None:
+def assert_release_state_returns_expected_json() -> None:
     cli = _run_release_state(
         [
             sys.executable,
@@ -70,29 +70,83 @@ def assert_release_state_matches_legacy_json() -> None:
         ],
         env=_cli_env(),
     )
-    legacy = _run_release_state(
+    cli_payload = _load_payload(cli, "infinitas CLI")
+    assert cli_payload.get("mode") == MODE
+    assert isinstance(cli_payload.get("release_ready"), bool)
+    assert (cli_payload.get("skill") or {}).get("name") == SKILL_NAME
+    assert ((cli_payload.get("git") or {}).get("expected_tag")) == f"skill/{SKILL_NAME}/v0.1.1"
+
+
+def assert_release_cli_help_lists_maintained_subcommands() -> None:
+    cli = _run_release_state(
         [
             sys.executable,
-            str(ROOT / "scripts" / "check-release-state.py"),
+            "-m",
+            "infinitas_skill.cli.main",
+            "release",
+            "--help",
+        ],
+        env=_cli_env(),
+    )
+    help_text = cli.stdout + cli.stderr
+    for command in ["check-state", "signing-readiness", "doctor-signing", "bootstrap-signing"]:
+        assert command in help_text, f"expected {command!r} in infinitas release help"
+
+
+def assert_release_signing_readiness_returns_expected_json() -> None:
+    cli = _run_release_state(
+        [
+            sys.executable,
+            "-m",
+            "infinitas_skill.cli.main",
+            "release",
+            "signing-readiness",
+            "--skill",
             SKILL_NAME,
-            "--mode",
-            MODE,
             "--json",
-        ]
+        ],
+        env=_cli_env(),
     )
-    cli_payload = _load_payload(cli, "infinitas CLI")
-    legacy_payload = _load_payload(legacy, "legacy check-release-state.py")
+    cli_payload = _load_payload(cli, "infinitas release signing-readiness")
+    assert cli_payload.get("overall_status") in {"ok", "warn", "fail"}
+    assert isinstance(cli_payload.get("skills"), list)
+    assert (cli_payload.get("skills") or [{}])[0].get("name") == SKILL_NAME
 
-    assert cli.returncode == legacy.returncode
-    for field in ["mode", "release_ready"]:
-        assert cli_payload.get(field) == legacy_payload.get(field)
 
-    assert (cli_payload.get("skill") or {}).get("name") == (legacy_payload.get("skill") or {}).get(
-        "name"
+def assert_release_doctor_signing_returns_expected_json() -> None:
+    cli = _run_release_state(
+        [
+            sys.executable,
+            "-m",
+            "infinitas_skill.cli.main",
+            "release",
+            "doctor-signing",
+            SKILL_NAME,
+            "--json",
+        ],
+        env=_cli_env(),
     )
-    assert ((cli_payload.get("git") or {}).get("expected_tag")) == (
-        (legacy_payload.get("git") or {}).get("expected_tag")
+    cli_payload = _load_payload(cli, "infinitas release doctor-signing")
+    assert cli_payload.get("overall_status") in {"ok", "warn", "fail"}
+    assert isinstance(cli_payload.get("checks"), list)
+    assert cli_payload.get("skill") in {f"skills/active/{SKILL_NAME}", None}
+
+
+def assert_release_bootstrap_signing_help_is_available() -> None:
+    cli = _run_release_state(
+        [
+            sys.executable,
+            "-m",
+            "infinitas_skill.cli.main",
+            "release",
+            "bootstrap-signing",
+            "--help",
+        ],
+        env=_cli_env(),
     )
+    help_text = cli.stdout + cli.stderr
+    for command in ["init-key", "add-allowed-signer", "configure-git", "authorize-publisher"]:
+        assert command in help_text, f"expected {command!r} in bootstrap-signing help"
 
 
 def assert_release_state_routes_through_package_modules() -> None:
@@ -130,14 +184,72 @@ def assert_release_state_routes_through_package_modules() -> None:
         assert modules.get(module_name), f"release CLI did not route through {module_name}"
 
 
-def test_release_check_state_cli_matches_expected_json() -> None:
-    assert_release_state_matches_legacy_json()
+def assert_release_signing_commands_route_through_package_modules() -> None:
+    probe = _run_release_probe(
+        ["release", "doctor-signing", SKILL_NAME, "--json"],
+        [
+            "signing_bootstrap_lib",
+            "provenance_payload_lib",
+            "infinitas_skill.release.signing_doctor",
+            "infinitas_skill.release.signing_bootstrap",
+            "infinitas_skill.release.attestation",
+        ],
+    )
+    assert probe.returncode == 0, (
+        f"release signing ownership probe failed\nstdout:\n{probe.stdout}\nstderr:\n{probe.stderr}"
+    )
+    probe_payload = _load_payload(probe, "release signing ownership probe")
+    assert probe_payload.get("returncode") in {0, 1}, (
+        f"release signing ownership probe command returned {probe_payload.get('returncode')}, expected 0 or 1\n"
+        f"stdout:\n{probe_payload.get('stdout')}\n"
+        f"stderr:\n{probe_payload.get('stderr')}"
+    )
+    modules = probe_payload.get("modules") or {}
+    for legacy_module in ["signing_bootstrap_lib", "provenance_payload_lib"]:
+        assert not modules.get(legacy_module), (
+            f"release signing CLI still imports legacy {legacy_module} directly from scripts/"
+        )
+    for module_name in [
+        "infinitas_skill.release.signing_doctor",
+        "infinitas_skill.release.signing_bootstrap",
+        "infinitas_skill.release.attestation",
+    ]:
+        assert modules.get(module_name), f"release signing CLI did not route through {module_name}"
+
+
+def test_release_check_state_cli_returns_expected_json() -> None:
+    assert_release_state_returns_expected_json()
+
+
+def test_release_cli_help_lists_maintained_subcommands() -> None:
+    assert_release_cli_help_lists_maintained_subcommands()
 
 
 def test_release_check_state_cli_routes_through_package_modules() -> None:
     assert_release_state_routes_through_package_modules()
 
 
+def test_release_signing_readiness_returns_expected_json() -> None:
+    assert_release_signing_readiness_returns_expected_json()
+
+
+def test_release_doctor_signing_returns_expected_json() -> None:
+    assert_release_doctor_signing_returns_expected_json()
+
+
+def test_release_bootstrap_signing_help_is_available() -> None:
+    assert_release_bootstrap_signing_help_is_available()
+
+
+def test_release_signing_commands_route_through_package_modules() -> None:
+    assert_release_signing_commands_route_through_package_modules()
+
+
 def main() -> None:
-    assert_release_state_matches_legacy_json()
+    assert_release_state_returns_expected_json()
+    assert_release_cli_help_lists_maintained_subcommands()
     assert_release_state_routes_through_package_modules()
+    assert_release_signing_readiness_returns_expected_json()
+    assert_release_doctor_signing_returns_expected_json()
+    assert_release_bootstrap_signing_help_is_available()
+    assert_release_signing_commands_route_through_package_modules()

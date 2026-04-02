@@ -1,23 +1,16 @@
 from __future__ import annotations
 
 import os
+import sys
+from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[2]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
 
-_SKIP_TEST_FLAGS = (
-    "INFINITAS_SKIP_RELEASE_TESTS",
-    "INFINITAS_SKIP_ATTESTATION_TESTS",
-    "INFINITAS_SKIP_DISTRIBUTION_TESTS",
-    "INFINITAS_SKIP_BOOTSTRAP_TESTS",
-    "INFINITAS_SKIP_AI_WRAPPER_TESTS",
-    "INFINITAS_SKIP_COMPAT_PIPELINE_TESTS",
-    "INFINITAS_SKIP_INSTALLED_INTEGRITY_TESTS",
-)
+from infinitas_skill.testing.env import build_regression_test_env
 
 
 def make_test_env(extra: dict[str, str] | None = None) -> dict[str, str]:
-    env = os.environ.copy()
-    for key in _SKIP_TEST_FLAGS:
-        env[key] = "1"
-    if extra:
-        env.update(extra)
-    return env
+    return build_regression_test_env(ROOT, extra=extra, env=os.environ.copy())

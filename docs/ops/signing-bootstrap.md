@@ -2,7 +2,7 @@
 audience: operators and release maintainers
 owner: repository maintainers
 source_of_truth: signing bootstrap runbook
-last_reviewed: 2026-03-30
+last_reviewed: 2026-04-01
 status: maintained
 ---
 
@@ -17,7 +17,7 @@ This guide covers the bootstrap flow for that first trusted stable release.
 For the current repository state, check the live status first:
 
 ```bash
-python3 scripts/report-signing-readiness.py --skill my-skill --json
+uv run infinitas release signing-readiness --skill my-skill --json
 ```
 
 If you need the steady-state operator playbook after bootstrap is already complete, see `signing-operations.md`.
@@ -29,7 +29,7 @@ Signing defaults may now be seeded from ordered packs declared in `policy/policy
 Create a dedicated SSH signing key:
 
 ```bash
-python3 scripts/bootstrap-signing.py init-key \
+uv run infinitas release bootstrap-signing init-key \
   --identity lvxiaoer \
   --output ~/.ssh/infinitas-skill-release-signing
 ```
@@ -41,7 +41,7 @@ If you already have an SSH signing key, skip straight to the next step and pass 
 Add or update the committed allowed signer entry:
 
 ```bash
-python3 scripts/bootstrap-signing.py add-allowed-signer \
+uv run infinitas release bootstrap-signing add-allowed-signer \
   --identity lvxiaoer \
   --key ~/.ssh/infinitas-skill-release-signing
 ```
@@ -53,7 +53,7 @@ That updates `config/allowed_signers` with the public key only. Never commit the
 Configure the local repository to use SSH tag signing:
 
 ```bash
-python3 scripts/bootstrap-signing.py configure-git \
+uv run infinitas release bootstrap-signing configure-git \
   --key ~/.ssh/infinitas-skill-release-signing
 ```
 
@@ -69,7 +69,7 @@ You can also keep using `INFINITAS_SKILL_GIT_SIGNING_KEY`, but local git config 
 If the skill uses a publisher namespace, authorize the identities that will sign and release it:
 
 ```bash
-python3 scripts/bootstrap-signing.py authorize-publisher \
+uv run infinitas release bootstrap-signing authorize-publisher \
   --publisher lvxiaoer \
   --signer lvxiaoer \
   --releaser lvxiaoer
@@ -96,7 +96,7 @@ If the repository uses policy packs, keep any long-lived shared defaults in `pol
 Check signer readiness before the first stable tag:
 
 ```bash
-python3 scripts/doctor-signing.py my-skill
+uv run infinitas release doctor-signing my-skill
 ```
 
 Use `--json` for machine-readable output.
@@ -115,7 +115,7 @@ Resolve every `FAIL` item before creating the first stable tag.
 For repository-level status beyond a single skill, use:
 
 ```bash
-python3 scripts/report-signing-readiness.py --skill my-skill --json
+uv run infinitas release signing-readiness --skill my-skill --json
 ```
 
 ## 7. Rehearse the first stable release
@@ -128,7 +128,7 @@ scripts/release-skill.sh my-skill \
   --notes-out /tmp/my-skill-release.md \
   --write-provenance \
   --releaser lvxiaoer
-python3 scripts/doctor-signing.py \
+uv run infinitas release doctor-signing \
   my-skill \
   --provenance catalog/provenance/my-skill-1.2.3.json
 ```
@@ -144,10 +144,10 @@ The final doctor run confirms that the current attestation verifies and tells yo
 If you already have a signer key, the minimal bootstrap is:
 
 ```bash
-python3 scripts/bootstrap-signing.py add-allowed-signer --identity lvxiaoer --key ~/.ssh/id_ed25519
-python3 scripts/bootstrap-signing.py configure-git --key ~/.ssh/id_ed25519
-python3 scripts/bootstrap-signing.py authorize-publisher --publisher lvxiaoer --signer lvxiaoer --releaser lvxiaoer
-python3 scripts/doctor-signing.py my-skill
+uv run infinitas release bootstrap-signing add-allowed-signer --identity lvxiaoer --key ~/.ssh/id_ed25519
+uv run infinitas release bootstrap-signing configure-git --key ~/.ssh/id_ed25519
+uv run infinitas release bootstrap-signing authorize-publisher --publisher lvxiaoer --signer lvxiaoer --releaser lvxiaoer
+uv run infinitas release doctor-signing my-skill
 ```
 
 That is enough to wire an existing signer into repository policy without generating new key material.

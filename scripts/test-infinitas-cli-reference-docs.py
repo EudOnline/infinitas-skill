@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import difflib
+import subprocess
 import sys
 from pathlib import Path
 
@@ -7,8 +8,6 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / 'src'
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
-
-from infinitas_skill.cli.reference import render_cli_reference
 
 
 def fail(message):
@@ -21,7 +20,20 @@ def main():
     if not target.exists():
         fail(f'missing CLI reference doc: {target}')
 
-    expected = render_cli_reference()
+    result = subprocess.run(
+        ['uv', 'run', 'python3', '-m', 'infinitas_skill.cli.reference'],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        fail(
+            'could not generate CLI reference from maintained toolchain\n'
+            f'stdout:\n{result.stdout}\n'
+            f'stderr:\n{result.stderr}'
+        )
+
+    expected = result.stdout
     actual = target.read_text(encoding='utf-8')
     if actual != expected:
         diff = ''.join(

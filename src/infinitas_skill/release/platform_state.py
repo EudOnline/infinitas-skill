@@ -1,17 +1,11 @@
 from __future__ import annotations
 
-import importlib
-
+from infinitas_skill.compatibility.evidence import (
+    load_compatibility_evidence,
+    load_platform_contracts,
+    merge_declared_and_verified_support,
+)
 from infinitas_skill.compatibility.policy import load_compatibility_policy
-from infinitas_skill.legacy import ROOT, ensure_legacy_scripts_on_path
-
-ensure_legacy_scripts_on_path(ROOT)
-
-compatibility_evidence_lib = importlib.import_module("compatibility_evidence_lib")
-
-load_compatibility_evidence = compatibility_evidence_lib.load_compatibility_evidence
-load_platform_contracts = compatibility_evidence_lib.load_platform_contracts
-merge_declared_and_verified_support = compatibility_evidence_lib.merge_declared_and_verified_support
 
 BLOCKING_PLATFORM_STATES = {"unknown", "blocked", "broken", "unsupported"}
 BLOCKING_FRESHNESS_STATES = {"stale", "unknown"}

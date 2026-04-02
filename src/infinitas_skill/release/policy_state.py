@@ -2,35 +2,27 @@
 
 from __future__ import annotations
 
-import importlib
 import os
 from pathlib import Path
 
-from infinitas_skill.legacy import ROOT, ensure_legacy_scripts_on_path
+from infinitas_skill.policy.exception_policy import (
+    ExceptionPolicyError,
+    load_exception_policy,
+    match_active_exceptions,
+)
+from infinitas_skill.policy.policy_pack import PolicyPackError, load_policy_domain_resolution
+from infinitas_skill.policy.reviews import (
+    ReviewPolicyError,
+    evaluate_review_state,
+    review_decision_entries,
+)
+from infinitas_skill.policy.skill_identity import (
+    NamespacePolicyError,
+    load_namespace_policy,
+    namespace_policy_report,
+    normalize_skill_identity,
+)
 from infinitas_skill.release.git_state import ReleaseError, git_config_value
-
-ensure_legacy_scripts_on_path(ROOT)
-
-exception_policy_lib = importlib.import_module("exception_policy_lib")
-policy_pack_lib = importlib.import_module("policy_pack_lib")
-review_lib = importlib.import_module("review_lib")
-skill_identity_lib = importlib.import_module("skill_identity_lib")
-
-ExceptionPolicyError = exception_policy_lib.ExceptionPolicyError
-load_exception_policy = exception_policy_lib.load_exception_policy
-match_active_exceptions = exception_policy_lib.match_active_exceptions
-
-NamespacePolicyError = skill_identity_lib.NamespacePolicyError
-load_namespace_policy = skill_identity_lib.load_namespace_policy
-namespace_policy_report = skill_identity_lib.namespace_policy_report
-normalize_skill_identity = skill_identity_lib.normalize_skill_identity
-
-PolicyPackError = policy_pack_lib.PolicyPackError
-load_policy_domain_resolution = policy_pack_lib.load_policy_domain_resolution
-
-ReviewPolicyError = review_lib.ReviewPolicyError
-evaluate_review_state = review_lib.evaluate_review_state
-review_decision_entries = review_lib.review_decision_entries
 
 
 def load_signing_config(root):

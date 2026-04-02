@@ -21,7 +21,9 @@ def fail(message):
 
 
 def run(command, cwd):
-    return subprocess.run(command, cwd=cwd, text=True, capture_output=True)
+    env = os.environ.copy()
+    env['PYTHONPATH'] = str(Path(cwd) / 'src')
+    return subprocess.run(command, cwd=cwd, text=True, capture_output=True, env=env)
 
 
 def prepare_repo():
@@ -79,17 +81,11 @@ def write_valid_docs(repo: Path):
         write_profile_contract(repo, platform, urls=[url])
 
 
-def assert_same_result(repo: Path, args: list[str], expect_returncode: int):
-    cli_env = os.environ.copy()
-    cli_env['PYTHONPATH'] = str(repo / 'src')
-    cli = subprocess.run(
+def assert_expected_result(repo: Path, args: list[str], expect_returncode: int):
+    cli = run(
         [sys.executable, '-m', 'infinitas_skill.cli.main', 'compatibility', 'check-platform-contracts', *args],
         cwd=repo,
-        text=True,
-        capture_output=True,
-        env=cli_env,
     )
-    legacy = run([sys.executable, str(repo / 'scripts' / 'check-platform-contracts.py'), *args], cwd=repo)
 
     if cli.returncode != expect_returncode:
         fail(
@@ -97,32 +93,20 @@ def assert_same_result(repo: Path, args: list[str], expect_returncode: int):
             f'stdout:\n{cli.stdout}\n'
             f'stderr:\n{cli.stderr}'
         )
-    if legacy.returncode != expect_returncode:
-        fail(
-            f'legacy command returned {legacy.returncode}, expected {expect_returncode}\n'
-            f'stdout:\n{legacy.stdout}\n'
-            f'stderr:\n{legacy.stderr}'
-        )
-    if cli.returncode != legacy.returncode:
-        fail(f'CLI exit code {cli.returncode} != legacy exit code {legacy.returncode}')
-    if cli.stdout != legacy.stdout:
-        fail(f'CLI stdout != legacy stdout\ncli:\n{cli.stdout}\nlegacy:\n{legacy.stdout}')
-    if cli.stderr != legacy.stderr:
-        fail(f'CLI stderr != legacy stderr\ncli:\n{cli.stderr}\nlegacy:\n{legacy.stderr}')
 
 
 def main():
     tmpdir, repo = prepare_repo()
     try:
         write_valid_docs(repo)
-        assert_same_result(repo, ['--max-age-days', '30', '--stale-policy', 'fail'], expect_returncode=0)
+        assert_expected_result(repo, ['--max-age-days', '30', '--stale-policy', 'fail'], expect_returncode=0)
 
         write_profile_contract(repo, 'codex', date='2026-03-11', urls=['https://docs.example.com/codex'])
-        assert_same_result(repo, [], expect_returncode=1)
+        assert_expected_result(repo, [], expect_returncode=1)
     finally:
         shutil.rmtree(tmpdir)
 
-    print('OK: infinitas compatibility check-platform-contracts CLI mirrors legacy script output')
+    print('OK: infinitas compatibility check-platform-contracts CLI checks passed')
 
 
 if __name__ == '__main__':

@@ -11,7 +11,15 @@ from infinitas_skill.policy.cli import (
     build_check_promotion_parser,
     build_policy_parser,
 )
+from infinitas_skill.policy.review_commands import (
+    build_recommend_reviewers_parser,
+    build_review_status_parser,
+)
 from infinitas_skill.registry.cli import build_registry_parser
+from infinitas_skill.release.cli import build_release_parser
+from infinitas_skill.release.signing_bootstrap_cli import build_signing_bootstrap_parser
+from infinitas_skill.release.signing_doctor import build_signing_doctor_parser
+from infinitas_skill.release.signing_readiness import build_signing_readiness_parser
 from infinitas_skill.release.state import build_release_check_state_parser
 from infinitas_skill.server.ops import (
     build_server_backup_parser,
@@ -23,7 +31,7 @@ from infinitas_skill.server.ops import (
     build_server_worker_parser,
 )
 
-GENERATED_CLI_REFERENCE_LAST_REVIEWED = '2026-03-30'
+GENERATED_CLI_REFERENCE_LAST_REVIEWED = '2026-04-01'
 
 
 def _render_help_block(text: str) -> str:
@@ -40,8 +48,22 @@ def render_cli_reference() -> str:
     policy_help = build_policy_parser(prog='infinitas policy').format_help()
     policy_check_packs_help = build_check_policy_packs_parser(prog='infinitas policy check-packs').format_help()
     policy_check_promotion_help = build_check_promotion_parser(prog='infinitas policy check-promotion').format_help()
+    policy_recommend_reviewers_help = build_recommend_reviewers_parser(
+        prog='infinitas policy recommend-reviewers'
+    ).format_help()
+    policy_review_status_help = build_review_status_parser(prog='infinitas policy review-status').format_help()
     registry_help = build_registry_parser(prog='infinitas registry').format_help()
-    release_help = build_release_check_state_parser(prog='infinitas release check-state').format_help()
+    release_help = build_release_parser(prog='infinitas release').format_help()
+    release_check_state_help = build_release_check_state_parser(prog='infinitas release check-state').format_help()
+    release_signing_readiness_help = build_signing_readiness_parser(
+        prog='infinitas release signing-readiness'
+    ).format_help()
+    release_doctor_signing_help = build_signing_doctor_parser(
+        prog='infinitas release doctor-signing'
+    ).format_help()
+    release_bootstrap_signing_help = build_signing_bootstrap_parser(
+        prog='infinitas release bootstrap-signing'
+    ).format_help()
     server_help = build_server_parser(prog='infinitas server').format_help()
     server_healthcheck_help = build_server_healthcheck_parser(prog='infinitas server healthcheck').format_help()
     server_backup_help = build_server_backup_parser(prog='infinitas server backup').format_help()
@@ -96,13 +118,37 @@ def render_cli_reference() -> str:
         '',
         _render_help_block(policy_check_promotion_help).rstrip(),
         '',
+        '## `infinitas policy recommend-reviewers`',
+        '',
+        _render_help_block(policy_recommend_reviewers_help).rstrip(),
+        '',
+        '## `infinitas policy review-status`',
+        '',
+        _render_help_block(policy_review_status_help).rstrip(),
+        '',
         '## `infinitas registry`',
         '',
         _render_help_block(registry_help).rstrip(),
         '',
-        '## `infinitas release check-state`',
+        '## `infinitas release`',
         '',
         _render_help_block(release_help).rstrip(),
+        '',
+        '## `infinitas release check-state`',
+        '',
+        _render_help_block(release_check_state_help).rstrip(),
+        '',
+        '## `infinitas release signing-readiness`',
+        '',
+        _render_help_block(release_signing_readiness_help).rstrip(),
+        '',
+        '## `infinitas release doctor-signing`',
+        '',
+        _render_help_block(release_doctor_signing_help).rstrip(),
+        '',
+        '## `infinitas release bootstrap-signing`',
+        '',
+        _render_help_block(release_bootstrap_signing_help).rstrip(),
         '',
         '## `infinitas server`',
         '',

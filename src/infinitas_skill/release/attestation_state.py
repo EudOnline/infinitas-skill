@@ -2,21 +2,14 @@
 
 from __future__ import annotations
 
-import importlib
 import json
 from pathlib import Path
 
-from infinitas_skill.legacy import ROOT, ensure_legacy_scripts_on_path
-
-ensure_legacy_scripts_on_path(ROOT)
-
-skill_identity_lib = importlib.import_module("skill_identity_lib")
-transparency_log_lib = importlib.import_module("transparency_log_lib")
-
-normalize_skill_identity = skill_identity_lib.normalize_skill_identity
-
-TransparencyLogError = transparency_log_lib.TransparencyLogError
-summarize_transparency_log_state = transparency_log_lib.summarize_transparency_log_state
+from infinitas_skill.policy.skill_identity import normalize_skill_identity
+from infinitas_skill.release.transparency_log import (
+    TransparencyLogError,
+    summarize_transparency_log_state,
+)
 
 
 def load_json(path):

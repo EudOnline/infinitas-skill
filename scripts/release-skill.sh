@@ -155,13 +155,22 @@ fi
 DIR="$(resolve_skill "$TARGET")" || { echo "cannot resolve skill: $TARGET" >&2; exit 1; }
 "$ROOT/scripts/check-skill.sh" "$DIR" >/dev/null
 CHECK_ALL_ENV=()
+CHECK_ALL_BLOCKS_RAW="${INFINITAS_RELEASE_HELPER_CHECK_ALL_BLOCKS:-}"
+CHECK_ALL_ARGS=()
+if [[ -n "$CHECK_ALL_BLOCKS_RAW" ]]; then
+  read -r -a CHECK_ALL_ARGS <<<"$CHECK_ALL_BLOCKS_RAW"
+fi
 if [[ -z "${INFINITAS_SKIP_BROWSER_RUNTIME_TESTS:-}" && -z "${INFINITAS_REQUIRE_BROWSER_RUNTIME_TESTS:-}" ]]; then
   CHECK_ALL_ENV=("INFINITAS_SKIP_BROWSER_RUNTIME_TESTS=1")
 fi
 if [[ -z "${INFINITAS_SKIP_HOSTED_E2E_TESTS:-}" && -z "${INFINITAS_REQUIRE_HOSTED_E2E_TESTS:-}" ]]; then
   CHECK_ALL_ENV+=("INFINITAS_SKIP_HOSTED_E2E_TESTS=1")
 fi
-env "${CHECK_ALL_ENV[@]}" "$ROOT/scripts/check-all.sh" >/dev/null
+if [[ ${#CHECK_ALL_ENV[@]} -gt 0 ]]; then
+  env "${CHECK_ALL_ENV[@]}" "$ROOT/scripts/check-all.sh" "${CHECK_ALL_ARGS[@]}" >/dev/null
+else
+  "$ROOT/scripts/check-all.sh" "${CHECK_ALL_ARGS[@]}" >/dev/null
+fi
 
 META_JSON="$(mktemp)"
 python3 - "$DIR" "$META_JSON" <<'PY'
@@ -312,8 +321,8 @@ fi
 
 STATE_JSON="$(mktemp)"
 if [[ $FULL_RELEASE -eq 1 ]]; then
-  if ! python3 "$ROOT/scripts/check-release-state.py" "$DIR" --mode "$RELEASE_STATE_MODE" --json > "$STATE_JSON"; then
-    python3 "$ROOT/scripts/check-release-state.py" "$DIR" --mode "$RELEASE_STATE_MODE" || true
+  if ! env PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}" python3 -m infinitas_skill.cli.main release check-state "$DIR" --mode "$RELEASE_STATE_MODE" --json > "$STATE_JSON"; then
+    env PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}" python3 -m infinitas_skill.cli.main release check-state "$DIR" --mode "$RELEASE_STATE_MODE" || true
     rm -f "$META_JSON" "$STATE_JSON"
     exit 1
   fi

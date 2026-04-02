@@ -8,6 +8,12 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from infinitas_skill.testing.env import build_regression_test_env
+
 FIXTURE_NAME = 'bootstrap-fixture'
 FIXTURE_VERSION = '1.2.3'
 
@@ -33,17 +39,7 @@ def write_json(path: Path, payload):
 
 
 def make_env(extra=None):
-    env = os.environ.copy()
-    env['INFINITAS_SKIP_RELEASE_TESTS'] = '1'
-    env['INFINITAS_SKIP_ATTESTATION_TESTS'] = '1'
-    env['INFINITAS_SKIP_DISTRIBUTION_TESTS'] = '1'
-    env['INFINITAS_SKIP_BOOTSTRAP_TESTS'] = '1'
-    env['INFINITAS_SKIP_AI_WRAPPER_TESTS'] = '1'
-    env['INFINITAS_SKIP_COMPAT_PIPELINE_TESTS'] = '1'
-    env['INFINITAS_SKIP_INSTALLED_INTEGRITY_TESTS'] = '1'
-    if extra:
-        env.update(extra)
-    return env
+    return build_regression_test_env(ROOT, extra=extra, env=os.environ.copy())
 
 
 def scaffold_fixture(repo: Path):
@@ -297,12 +293,12 @@ def assert_signing_docs_synced(repo: Path):
     }
     required_phrases = {
         'docs/ops/signing-bootstrap.md': [
-            'python3 scripts/report-signing-readiness.py --skill my-skill --json',
+            'uv run infinitas release signing-readiness --skill my-skill --json',
             'This repository is already bootstrapped with a committed `lvxiaoer` signer entry',
         ],
         'docs/ops/signing-operations.md': [
             '# Signing Operations',
-            'python3 scripts/report-signing-readiness.py --skill operate-infinitas-skill --json',
+            'uv run infinitas release signing-readiness --skill operate-infinitas-skill --json',
         ],
         '.planning/PROJECT.md': [
             '`config/allowed_signers` now contains a committed `lvxiaoer` trusted signer entry.',

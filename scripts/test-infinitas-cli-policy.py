@@ -15,7 +15,7 @@ def main():
     except AssertionError as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc
-    print("OK: infinitas policy CLI mirrors legacy policy scripts")
+    print("OK: infinitas policy CLI checks passed")
 
 
 if __name__ == "__main__":
