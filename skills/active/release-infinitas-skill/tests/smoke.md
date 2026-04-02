@@ -6,7 +6,7 @@ Scenario:
 
 Expected guidance:
 
-- use `scripts/registryctl.py` or hosted API endpoints
+- use `uv run infinitas registry` or hosted API endpoints
 - seal the draft before creating the release
 - create the public exposure and approve its review case
 - confirm the release has immutable manifest, bundle, provenance, and signature artifacts

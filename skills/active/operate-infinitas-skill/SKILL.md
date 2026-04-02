@@ -33,7 +33,7 @@ Use `--mode confirm` first when the request could mutate the repo, write into a 
 
 ## Command Map
 
-- `scripts/registryctl.py`: the primary operator CLI for skills, drafts, releases, exposures, grants, tokens, and review cases
+- `uv run infinitas registry`: the primary operator CLI for skills, drafts, releases, exposures, grants, tokens, and review cases
 - `/api/v1/skills`, `/api/v1/drafts/*`, `/api/v1/releases/*`: authoring and release lifecycle
 - `/api/v1/exposures/*`, `/api/v1/review-cases/*`: exposure and review lifecycle
 - `/api/v1/catalog/*`, `/api/v1/install/*`, `/registry/*`: discovery and install surfaces
@@ -52,7 +52,7 @@ Use `--mode confirm` first when the request could mutate the repo, write into a 
 Use this section when the caller is working from an OpenClaw prototype or wants an OpenClaw runtime install.
 
 - Author content into the hosted private-first registry instead of relying on source-folder promotion
-- Use `scripts/registryctl.py` or the hosted UI to create drafts, releases, and exposures
+- Use `uv run infinitas registry` or the hosted UI to create drafts, releases, and exposures
 - Treat `/api/v1/install/*` and `/registry/*` as the hosted download contract
 
 Hard rules for OpenClaw:
@@ -66,7 +66,7 @@ Hard rules for OpenClaw:
 Use this section when Codex is acting as the repository operator.
 
 - Treat this repository as a hosted private-first registry, not as a source-folder promotion workflow
-- Use `scripts/registryctl.py` and the hosted API surface before reaching for low-level DB edits
+- Use `uv run infinitas registry` and the hosted API surface before reaching for low-level DB edits
 - Prefer qualified names when resolving install targets
 
 ## Claude Code

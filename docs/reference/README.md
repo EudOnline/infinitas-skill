@@ -8,11 +8,10 @@ status: maintained
 
 # Reference
 
-Reference docs describe exact behavior, contracts, schemas, and migration mappings. Use this section when precision matters more than narrative.
+Reference docs describe exact behavior, contracts, schemas, and maintained command surfaces. Use this section when precision matters more than narrative.
 
 ## CLI and command surfaces
 
-- [CLI command map](cli-command-map.md)
 - [CLI reference](cli-reference.md)
 - [Release checklist](../ops/release-checklist.md)
 

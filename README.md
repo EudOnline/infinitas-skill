@@ -2,7 +2,7 @@
 audience: contributors, operators, integrators
 owner: repository maintainers
 source_of_truth: repo entry page
-last_reviewed: 2026-03-31
+last_reviewed: 2026-04-01
 status: maintained
 ---
 
@@ -10,21 +10,21 @@ status: maintained
 
 Private-first skill registry and hosted control plane.
 
-This repository is in a breaking maintainability reset. The runtime model remains private-first, while the code and docs are being reorganized around one Python package, one maintained CLI, and one role-based documentation tree.
+This repository is production-oriented and in an active maintainability hardening phase. The runtime model remains private-first, while the code and docs continue consolidating around one Python package, one maintained CLI, and one role-based documentation tree.
 
 ## Start here
 
 - [Documentation map](docs/README.md)
-- [Maintainability reset policy](docs/guide/maintainability-reset-policy.md)
 - [Reference docs](docs/reference/README.md)
 - [Operator runbooks](docs/ops/README.md)
+- [2026-04-01 release-readiness scorecard](docs/ops/2026-04-01-release-readiness-scorecard.md)
 - [Architecture decision 0001: Maintainability reset](docs/adr/0001-maintainability-reset.md)
 - [Architecture decision 0002: Maintained surface cutover](docs/adr/0002-maintained-surface-cutover.md)
 
 ## Repository shape
 
 - `src/infinitas_skill/`: maintained Python package and future home for shared runtime logic
-- `scripts/`: legacy command and library surface; keep only temporary shims or not-yet-migrated tools here
+- `scripts/`: repository automation, validation, packaging, and compatibility-era helpers that are being actively reduced
 - `server/`: hosted control-plane runtime
 - `docs/`: role-based documentation during the reset
 
@@ -32,7 +32,7 @@ This repository is in a breaking maintainability reset. The runtime model remain
 
 - package-owned: `src/infinitas_skill/install/...`, `src/infinitas_skill/policy/...`, `src/infinitas_skill/release/...`, and `src/infinitas_skill/server/...` own maintained CLI logic.
 - runtime-owned: `server/modules/...` and `server/ui/...` own hosted API, UI, and presentation logic, while `server/app.py` stays focused on app assembly.
-- compatibility-only: a smaller shim surface remains for compatibility, install, policy, registry, and release flows; the old server-operation wrappers are retired and the remaining aliases still default to the `2026-06-30` cutoff.
+- automation-owned: remaining top-level scripts exist for repository automation, catalog generation, release packaging, and targeted regression coverage; canonical user-facing command surfaces live under `infinitas`.
 
 ## Maintained CLI surface
 
@@ -42,13 +42,18 @@ Maintained entrypoints introduced so far:
 uv run infinitas compatibility check-platform-contracts --max-age-days 30 --stale-policy fail
 uv run infinitas install resolve-plan --skill-dir templates/basic-skill --target-dir .tmp-installed-skills --json
 uv run infinitas policy check-packs
+uv run infinitas policy recommend-reviewers <skill> --as-active --json
+uv run infinitas policy review-status <skill> --as-active --require-pass --json
 uv run infinitas registry --help
 uv run infinitas release check-state <skill> --mode local-preflight --json
+uv run infinitas release signing-readiness --skill <skill> --json
+uv run infinitas release doctor-signing <skill> --json
+uv run infinitas release bootstrap-signing --help
 uv run infinitas server healthcheck --api-url http://127.0.0.1:8000 --repo-path /srv/infinitas/repo --artifact-path /srv/infinitas/artifacts --database-url sqlite:////srv/infinitas/data/server.db --json
 uv run infinitas server prune-backups --backup-root /srv/infinitas/backups --keep-last 7 --json
 ```
 
-Legacy wrappers such as `python3 scripts/check-release-state.py ...` remain available only where rollout safety still justifies them. The old server-operation wrapper scripts were retired after the focused integration tier landed, so `uv run infinitas server ...` is now the only maintained entrypoint for hosted operator commands. New command surfaces should land under `infinitas`, not as new top-level scripts.
+`uv run infinitas ...` is the maintained CLI surface. New command surfaces should land under `infinitas`, not as new top-level scripts.
 
 ## Local verification
 
@@ -83,7 +88,11 @@ uv run python3 scripts/test-infinitas-cli-server.py
 uv run python3 scripts/test-infinitas-cli-reference-docs.py
 uv run python3 scripts/test-doc-governance.py
 ./scripts/check-all.sh
+./scripts/check-all.sh release-long
 ```
+
+Use `./scripts/check-all.sh release-long` as the canonical opt-in long-running pre-release gate. It is the
+smallest named block that proves the transparency-log and release-invariant flows end to end.
 
 `make lint-maintained` currently enforces the maintained-surface `E/F/I` baseline while temporarily deferring
 `E501` only in the current debt-heavy maintained files, plus a few legacy path-bootstrap `E402` cases, until the
@@ -108,7 +117,7 @@ Local runs default to `INFINITAS_SERVER_ENV=development`. Use `INFINITAS_SERVER_
 - Do not raise maintained-module line budgets or the top-level script ceiling without updating docs and the budget test in the same change.
 - No new long-lived doc may be added outside `docs/guide/`, `docs/reference/`, `docs/ops/`, `docs/archive/`, or `docs/adr/`.
 - New shared Python logic should land under `src/infinitas_skill/`.
-- Compatibility aliases introduced during this reset expire on `2026-06-30` unless a later ADR extends them.
+- Do not add or restore compatibility wrapper entrypoints once a canonical `infinitas ...` command exists.
 
 ## Product and policy context
 
@@ -122,6 +131,7 @@ Use these canonical docs for the current model:
 - [AI workflow drills](docs/ai/workflow-drills.md) explains when to use `scripts/recommend-skill.sh`, `scripts/search-skills.sh`, and `scripts/inspect-skill.sh` for task routing.
 - [Platform drift playbook](docs/ops/platform-drift-playbook.md)
 - [Release checklist](docs/ops/release-checklist.md)
+- [Release-readiness scorecard](docs/ops/2026-04-01-release-readiness-scorecard.md)
 - [CI-native attestation](docs/ai/ci-attestation.md) documents `.github/workflows/release-attestation.yml` and `python3 scripts/verify-ci-attestation.py`
 - [Hosted registry server deployment](docs/ops/server-deployment.md)
 
@@ -132,6 +142,8 @@ Compatibility reporting now distinguishes between `declared support` from author
 Policy-aware commands continue to expose structured diagnostics for operators and automation:
 
 - `uv run infinitas policy check-promotion <skill> --json` returns a `policy_trace` payload for promotion decisions.
+- `uv run infinitas policy review-status <skill> --as-active --show-recommendations --json` returns review gate status plus reviewer guidance.
+- `uv run infinitas release signing-readiness --skill operate-infinitas-skill --json` summarizes repo signing trust and per-skill readiness.
 - `uv run infinitas release check-state operate-infinitas-skill --json` returns the release decision plus `policy_trace` details.
 - `scripts/validate-registry.py --json` returns `validation_errors` alongside namespace-level `policy_trace` data.
 - `policy/policy-packs.json` selects ordered shared defaults from `policy/packs/*.json`, while repository-local policy files remain the last override layer.

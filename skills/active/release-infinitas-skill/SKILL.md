@@ -34,13 +34,13 @@ Default to confirm-first reasoning when a command could seal a draft, create a r
 
 ## Command Map
 
-- `scripts/registryctl.py skills create`
-- `scripts/registryctl.py drafts create`
-- `scripts/registryctl.py drafts update`
-- `scripts/registryctl.py drafts seal`
-- `scripts/registryctl.py releases create`
-- `scripts/registryctl.py exposures create`
-- `scripts/registryctl.py reviews decide`
+- `uv run infinitas registry skills create`
+- `uv run infinitas registry drafts create`
+- `uv run infinitas registry drafts update`
+- `uv run infinitas registry drafts seal`
+- `uv run infinitas registry releases create`
+- `uv run infinitas registry exposures create`
+- `uv run infinitas registry reviews decide`
 
 ## Hard Rules
 

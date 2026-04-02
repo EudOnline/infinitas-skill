@@ -86,7 +86,7 @@ def main() -> None:
 
     for phrase in [
         "private-first lifecycle stages",
-        "scripts/registryctl.py",
+        "uv run infinitas registry",
         "/api/v1/install/*",
         "/registry/*",
     ]:
