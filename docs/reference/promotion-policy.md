@@ -2,7 +2,7 @@
 audience: contributors, integrators, reviewers
 owner: repository maintainers
 source_of_truth: promotion policy reference
-last_reviewed: 2026-03-30
+last_reviewed: 2026-04-01
 status: maintained
 ---
 
@@ -57,9 +57,9 @@ Imported evidence must stay file-backed and auditable. Each entry carries `sourc
 
 That merged evidence set is what powers:
 
-- `scripts/review-status.py --json`
-- `scripts/check-promotion-policy.py --json`
-- `scripts/check-release-state.py --json`
+- `uv run infinitas policy review-status --json`
+- `uv run infinitas policy check-promotion --json`
+- `uv run infinitas release check-state --json`
 - `scripts/build-catalog.sh`
 
 If imported evidence is malformed, or if the same reviewer is duplicated inside `review-evidence.json`, validation fails explicitly.
@@ -68,7 +68,7 @@ If imported evidence is malformed, or if the same reviewer is duplicated inside 
 
 Promotion policy still defines the rules; reviewer recommendation tooling only reads them.
 
-- `python3 scripts/recommend-reviewers.py <skill> --as-active --json` evaluates the effective quorum rule for the target stage
+- `uv run infinitas policy recommend-reviewers <skill> --as-active --json` evaluates the effective quorum rule for the target stage
 - recommendations are grouped by required reviewer group, with missing groups prioritized first
 - exclusions include policy-driven reasons such as owner conflicts or reviewers whose current latest decision is already counted
 - when no eligible reviewer exists for a required group, the tooling emits escalation guidance instead of silently guessing
@@ -84,8 +84,8 @@ Additional checks for `high` risk active skills:
 
 The policy is enforced by:
 
-- `scripts/check-policy-packs.py`
-- `scripts/check-promotion-policy.py`
+- `uv run infinitas policy check-packs`
+- `uv run infinitas policy check-promotion`
 - `scripts/check-all.sh`
 
 and is intended to be called before promotion as the registry evolves further.

@@ -101,8 +101,8 @@ That keeps delegated ownership and delegated review scopes additive: direct acto
 Version 11-04 adds a shared `exception_policy` domain for time-bounded promotion or release waivers.
 
 - `policy/exception-policy.json` stores exception records with stable `id`, `scope`, exact `skills`, stable blocking `rules`, approvers, justification, and expiration.
-- `scripts/check-promotion-policy.py --json --as-active <skill>` now emits top-level `exception_usage` plus `policy_trace.exceptions` when an active promotion exception waives a blocker.
-- `scripts/check-release-state.py <skill> --mode preflight --json` emits the same `exception_usage` and trace details for release preflight waivers such as `dirty-worktree`.
+- `uv run infinitas policy check-promotion --json --as-active <skill>` now emits top-level `exception_usage` plus `policy_trace.exceptions` when an active promotion exception waives a blocker.
+- `uv run infinitas release check-state <skill> --mode preflight --json` emits the same `exception_usage` and trace details for release preflight waivers such as `dirty-worktree`.
 
 Exceptions stay additive: promotion and release still fail exactly as before unless a matching, currently active exception record applies.
 
@@ -111,7 +111,7 @@ Exceptions stay additive: promotion and release still fail exactly as before unl
 Use the focused checker to validate the selector and every referenced pack:
 
 ```bash
-python3 scripts/check-policy-packs.py
+uv run infinitas policy check-packs
 ```
 
 `scripts/check-all.sh` now runs the same validation as part of the standard repository checks.
@@ -120,8 +120,8 @@ python3 scripts/check-policy-packs.py
 
 Version 11-02 adds additive policy-evaluation traces to the main governance entrypoints:
 
-- `python3 scripts/check-promotion-policy.py --json --as-active <skill>`
-- `python3 scripts/check-release-state.py <skill> --json`
+- `uv run infinitas policy check-promotion --json --as-active <skill>`
+- `uv run infinitas release check-state <skill> --json`
 - `python3 scripts/validate-registry.py --json`
 
 Each command now emits `policy_trace` or `policy_traces` data that includes:

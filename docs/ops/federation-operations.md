@@ -88,7 +88,7 @@ Interpretation:
 
 Recovery:
 
-1. Run `python3 scripts/check-policy-packs.py`.
+1. Run `uv run infinitas policy check-packs`.
 2. Run `python3 scripts/check-registry-sources.py`.
 3. Inspect the effective registry config with `python3 scripts/list-registry-sources.py`.
 4. If the upstream should still federate, fix the policy file or pack override rather than patching exports by hand.
@@ -160,7 +160,7 @@ Recovery:
 When you are unsure where the failure starts, use this order:
 
 1. Validate policy:
-   - `python3 scripts/check-policy-packs.py`
+   - `uv run infinitas policy check-packs`
    - `python3 scripts/check-registry-sources.py`
 2. Inspect registry visibility and authority:
    - `python3 scripts/list-registry-sources.py`
