@@ -1,7 +1,14 @@
-.PHONY: bootstrap test-fast test-full lint-maintained fmt-maintained doctor
+.PHONY: bootstrap clean-local test-fast test-full lint-maintained fmt-maintained doctor
 
 bootstrap:
 	uv sync
+
+clean-local:
+	find . \( -path './.venv' -o -path './.worktrees' \) -prune -o -type d -name '__pycache__' -exec rm -rf {} +
+	find . \( -path './.venv' -o -path './.worktrees' \) -prune -o -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
+	rm -rf .pytest_cache .ruff_cache .mypy_cache .hypothesis .tox .nox output/playwright
+	find . \( -path './.worktrees' -o -path './.venv' \) -prune -o -maxdepth 2 -type d -name '*.egg-info' -exec rm -rf {} +
+	find build -mindepth 1 ! -name '.gitkeep' -exec rm -rf {} + 2>/dev/null || true
 
 test-fast:
 	uv run pytest tests/integration/test_cli_release_state.py tests/integration/test_cli_server_ops.py tests/integration/test_private_registry_ui.py -q

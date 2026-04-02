@@ -61,10 +61,15 @@ Preferred maintained-surface entrypoints:
 
 ```bash
 make bootstrap
+make clean-local
 make test-fast
 make test-full
 make lint-maintained
 ```
+
+`make clean-local` is the supported local hygiene path for generated artifacts (`__pycache__`,
+`*.pyc`, test/lint caches, and local `*.egg-info` metadata). It intentionally preserves tracked
+placeholders such as `build/.gitkeep`.
 
 `make test-fast` is now the default fast path for maintained work. It covers the focused integration tier,
 the promoted high-value pytest regressions, and the maintainability budget gate before you drop to raw
