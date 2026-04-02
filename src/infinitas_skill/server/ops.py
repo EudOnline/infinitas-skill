@@ -5,14 +5,22 @@ from __future__ import annotations
 import argparse
 import json
 import time
-from collections import Counter, defaultdict
 from typing import Any
 
-from sqlalchemy import create_engine, func, select
+from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from infinitas_skill.server.backup import run_server_backup, run_server_prune_backups
 from infinitas_skill.server.health import run_server_healthcheck
+from infinitas_skill.server.inspection_notifications import (
+    deliver_inspect_webhook,
+    write_inspect_fallback,
+)
+from infinitas_skill.server.inspection_summary import (
+    build_jobs_inspection_summary,
+    build_release_inspection_summary,
+    maybe_add_alert,
+)
 from infinitas_skill.server.repo_checks import require_sqlite_db, sqlite_path_from_url
 from infinitas_skill.server.systemd import run_server_render_systemd
 
@@ -24,149 +32,6 @@ def server_engine_kwargs(database_url: str) -> dict[str, Any]:
     if database_url.startswith('sqlite:///'):
         return {'connect_args': {'check_same_thread': False}}
     return {}
-
-
-def isoformat_or_none(value: Any) -> str | None:
-    if value is None:
-        return None
-    return value.isoformat().replace('+00:00', 'Z')
-
-
-def serialize_job(job: Any) -> dict[str, Any]:
-    from server.jobs import load_job_payload
-
-    payload = load_job_payload(job)
-    return {
-        'id': job.id,
-        'kind': job.kind,
-        'status': job.status,
-        'release_id': job.release_id or payload.get('release_id'),
-        'note': job.note or '',
-        'error_message': job.error_message or '',
-        'created_at': isoformat_or_none(job.created_at),
-        'started_at': isoformat_or_none(job.started_at),
-        'finished_at': isoformat_or_none(job.finished_at),
-    }
-
-
-def load_latest_review_state_by_exposure(session: Session) -> dict[int, str]:
-    from server.modules.review.models import ReviewCase
-
-    latest: dict[int, str] = {}
-    rows = session.execute(select(ReviewCase).order_by(ReviewCase.id.asc())).scalars()
-    for item in rows:
-        latest[item.exposure_id] = item.state or 'none'
-    return latest
-
-
-def build_release_inspection_summary(session: Session) -> dict[str, Any]:
-    from server.modules.exposure.models import Exposure
-
-    latest_review_state = load_latest_review_state_by_exposure(session)
-    audience_counts: Counter[str] = Counter()
-    audience_review_state: defaultdict[str, Counter[str]] = defaultdict(Counter)
-
-    exposures = session.execute(select(Exposure).order_by(Exposure.id.asc())).scalars()
-    for exposure in exposures:
-        audience = exposure.audience_type or 'unknown'
-        review_state = latest_review_state.get(exposure.id, 'none')
-        audience_counts[audience] += 1
-        audience_review_state[audience][review_state] += 1
-
-    return {
-        'by_audience': dict(sorted(audience_counts.items())),
-        'by_audience_review_state': {
-            audience: dict(sorted(states.items())) for audience, states in sorted(audience_review_state.items())
-        },
-    }
-
-
-def build_jobs_inspection_summary(session: Session, *, limit: int) -> dict[str, Any]:
-    from server.models import Job
-
-    status_counts = {
-        status: count
-        for status, count in session.execute(select(Job.status, func.count()).group_by(Job.status)).all()
-    }
-    warning_count = session.execute(select(func.count()).select_from(Job).where(Job.log.contains('WARNING:'))).scalar_one()
-
-    recent_failed = session.execute(
-        select(Job).where(Job.status == 'failed').order_by(Job.id.desc()).limit(limit)
-    ).scalars()
-    recent_active = session.execute(
-        select(Job).where(Job.status.in_(('queued', 'running'))).order_by(Job.id.desc()).limit(limit)
-    ).scalars()
-    recent_warning = session.execute(
-        select(Job).where(Job.log.contains('WARNING:')).order_by(Job.id.desc()).limit(limit)
-    ).scalars()
-
-    return {
-        'counts': {
-            'queued': int(status_counts.get('queued', 0)),
-            'running': int(status_counts.get('running', 0)),
-            'failed': int(status_counts.get('failed', 0)),
-            'completed': int(status_counts.get('completed', 0)),
-            'warning': int(warning_count or 0),
-        },
-        'by_status': dict(sorted((str(key), int(value)) for key, value in status_counts.items())),
-        'recent_failed': [serialize_job(item) for item in recent_failed],
-        'recent_queued_or_running': [serialize_job(item) for item in recent_active],
-        'recent_warning': [serialize_job(item) for item in recent_warning],
-    }
-
-
-def maybe_add_alert(alerts: list[dict[str, Any]], *, kind: str, label: str, actual: int, maximum: int | None):
-    if maximum is None:
-        return
-    if actual <= maximum:
-        return
-    alerts.append(
-        {
-            'kind': kind,
-            'label': label,
-            'actual': actual,
-            'max': maximum,
-            'message': f'{label} exceeded threshold: {actual} > {maximum}',
-        }
-    )
-
-
-def deliver_inspect_webhook(summary: dict[str, Any], url: str):
-    from urllib import error, request
-
-    notification = summary['notification']['webhook']
-    notification['attempted'] = True
-    notification['url'] = url
-    payload = json.dumps(summary, ensure_ascii=False).encode('utf-8')
-    req = request.Request(url, data=payload, headers={'Content-Type': 'application/json'}, method='POST')
-    try:
-        with request.urlopen(req, timeout=10) as response:
-            notification['status_code'] = response.status
-            notification['delivered'] = 200 <= response.status < 300
-    except error.HTTPError as exc:
-        notification['status_code'] = exc.code
-        notification['error'] = f'HTTP {exc.code}'
-    except error.URLError as exc:
-        notification['error'] = str(exc.reason)
-    except Exception as exc:  # pragma: no cover - defensive fallback
-        notification['error'] = str(exc)
-
-
-def write_inspect_fallback(summary: dict[str, Any], path_text: str):
-    from pathlib import Path
-
-    notification = summary['notification']['fallback']
-    path = Path(path_text)
-    notification['attempted'] = True
-    notification['path'] = str(path)
-    notification['wrote'] = True
-    notification['error'] = ''
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-    except Exception as exc:
-        notification['wrote'] = False
-        notification['error'] = str(exc)
 
 
 def build_inspection_summary(

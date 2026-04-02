@@ -54,8 +54,8 @@ def assert_server_ops_split_into_modules() -> None:
 
     ops_path = ROOT / "src" / "infinitas_skill" / "server" / "ops.py"
     line_count = len(ops_path.read_text(encoding="utf-8").splitlines())
-    assert line_count <= 650, (
-        f"expected src/infinitas_skill/server/ops.py to stay within 650 lines after extraction, got {line_count}"
+    assert line_count <= 550, (
+        f"expected src/infinitas_skill/server/ops.py to stay within 550 lines after extraction, got {line_count}"
     )
     assert ops.run_server_healthcheck.__module__ == "infinitas_skill.server.health"
     assert ops.run_server_prune_backups.__module__ == "infinitas_skill.server.backup"
