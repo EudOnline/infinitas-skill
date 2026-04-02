@@ -1,4 +1,4 @@
-.PHONY: bootstrap clean-local test-fast test-full lint-maintained fmt-maintained doctor
+.PHONY: bootstrap clean-local ci-fast test-fast test-full lint-maintained fmt-maintained doctor
 
 bootstrap:
 	uv sync
@@ -9,6 +9,8 @@ clean-local:
 	rm -rf .pytest_cache .ruff_cache .mypy_cache .hypothesis .tox .nox output/playwright
 	find . \( -path './.worktrees' -o -path './.venv' \) -prune -o -maxdepth 2 -type d -name '*.egg-info' -exec rm -rf {} +
 	git clean -fdX -- build 2>/dev/null || true
+
+ci-fast: lint-maintained test-fast
 
 test-fast:
 	uv run pytest tests/integration/test_cli_release_state.py tests/integration/test_cli_server_ops.py tests/integration/test_private_registry_ui.py -q

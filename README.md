@@ -62,6 +62,7 @@ Preferred maintained-surface entrypoints:
 ```bash
 make bootstrap
 make clean-local
+make ci-fast
 make test-fast
 make test-full
 make lint-maintained
@@ -71,6 +72,9 @@ make lint-maintained
 output (`__pycache__`, `*.pyc`, test/lint caches, local `*.egg-info` metadata, and
 `output/playwright`). It intentionally preserves tracked files, including placeholders such as
 `build/.gitkeep`.
+
+`make ci-fast` mirrors the maintained CI fast gate by running `make lint-maintained` and then
+`make test-fast` before the repository drops to the broader closeout matrix.
 
 `make test-fast` is now the default fast path for maintained work. It covers the focused integration tier,
 the promoted high-value pytest regressions, and the maintainability budget gate before you drop to raw
