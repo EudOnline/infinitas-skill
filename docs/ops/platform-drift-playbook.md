@@ -33,7 +33,7 @@ For the affected platform contract document:
 Then run:
 
 ```bash
-uv run python3 scripts/check-platform-contracts.py --max-age-days 30 --stale-policy fail
+uv run infinitas compatibility check-platform-contracts --max-age-days 30 --stale-policy fail
 ```
 
 That command now fails if a platform contract is too old or if the machine-readable profile mirror has drifted.
@@ -52,7 +52,7 @@ Then rerun:
 
 ```bash
 uv run python3 scripts/test-canonical-contracts.py
-uv run python3 scripts/check-platform-contracts.py --max-age-days 30 --stale-policy fail
+uv run infinitas compatibility check-platform-contracts --max-age-days 30 --stale-policy fail
 ```
 
 ## 4. Refresh verified platform evidence
@@ -77,7 +77,7 @@ Operational meaning:
 
 - Discovery and recommendation surfaces can still show stale evidence, but they rank fresh verified support higher than stale or declared-only claims.
 - Release readiness blocks when a declared platform is `stale`, `unknown`, `blocked`, `broken`, or `unsupported`.
-- `python3 scripts/check-release-state.py <name> --mode preflight --json` exposes the blocking details in `release.platform_compatibility`.
+- `uv run infinitas release check-state <name> --mode preflight --json` exposes the blocking details in `release.platform_compatibility`.
 
 ## 6. Steady-state maintenance loop
 
@@ -88,4 +88,4 @@ Use this loop whenever upstream platform behavior changes or when release readin
 3. Sync `profiles/*.json`.
 4. Rerun `python3 scripts/record-verified-support.py <skill> --platform ... --build-catalog` for impacted skills.
 5. Run `uv run bash scripts/check-all.sh`.
-6. Ship only after `python3 scripts/check-release-state.py <skill> --mode preflight` is clean.
+6. Ship only after `uv run infinitas release check-state <skill> --mode preflight` is clean.

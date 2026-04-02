@@ -37,12 +37,13 @@ from server.ui.session_bootstrap import build_session_bootstrap
 
 def _blocked_actor_response(
     templates: Jinja2Templates,
+    request: Request,
     actor: object,
 ):
     if isinstance(actor, RedirectResponse):
         return actor
     if isinstance(actor, dict):
-        return templates.TemplateResponse("console-forbidden.html", actor, status_code=403)
+        return templates.TemplateResponse(request, "console-forbidden.html", actor, status_code=403)
     return None
 
 
@@ -56,7 +57,7 @@ def _forbidden_owner_response(
         user=user,
         allowed_roles=("maintainer", "contributor"),
     )
-    return templates.TemplateResponse("console-forbidden.html", context, status_code=403)
+    return templates.TemplateResponse(request, "console-forbidden.html", context, status_code=403)
 
 
 def _build_login_context(request: Request) -> dict[str, Any]:
@@ -113,7 +114,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         }
         context.update(build_home_context(settings=settings, db=db, request=request))
         context["session_ui"] = build_session_bootstrap(context.get("session_ui"), session_user)
-        return templates.TemplateResponse("index-kawaii.html", context)
+        return templates.TemplateResponse(request, "index-kawaii.html", context)
 
     @app.get("/v2")
     def index_v2_redirect():
@@ -126,11 +127,11 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         db: Session = Depends(get_db),
     ):
         actor = require_lifecycle_actor(request, db, "maintainer", "contributor")
-        blocked = _blocked_actor_response(templates, actor)
+        blocked = _blocked_actor_response(templates, request, actor)
         if blocked is not None:
             return blocked
         context = build_skills_page_context(request=request, db=db, actor=actor, limit=limit)
-        return templates.TemplateResponse("skills.html", context)
+        return templates.TemplateResponse(request, "skills.html", context)
 
     @app.get("/skills/{skill_id}", response_class=HTMLResponse)
     def skill_detail_page(
@@ -139,7 +140,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         db: Session = Depends(get_db),
     ):
         actor = require_lifecycle_actor(request, db, "maintainer", "contributor")
-        blocked = _blocked_actor_response(templates, actor)
+        blocked = _blocked_actor_response(templates, request, actor)
         if blocked is not None:
             return blocked
         skill = require_skill_or_404(db, skill_id)
@@ -147,7 +148,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         if not is_owner(actor.user, principal_id, skill.namespace_id):
             return _forbidden_owner_response(templates, request, actor.user)
         context = build_skill_detail_page_context(request=request, db=db, skill=skill)
-        return templates.TemplateResponse("skill-detail.html", context)
+        return templates.TemplateResponse(request, "skill-detail.html", context)
 
     @app.get("/drafts/{draft_id}", response_class=HTMLResponse)
     def draft_detail_page(
@@ -156,7 +157,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         db: Session = Depends(get_db),
     ):
         actor = require_lifecycle_actor(request, db, "maintainer", "contributor")
-        blocked = _blocked_actor_response(templates, actor)
+        blocked = _blocked_actor_response(templates, request, actor)
         if blocked is not None:
             return blocked
         draft, skill = require_draft_bundle_or_404(db, draft_id)
@@ -164,7 +165,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         if not is_owner(actor.user, principal_id, skill.namespace_id):
             return _forbidden_owner_response(templates, request, actor.user)
         context = build_draft_detail_page_context(request=request, db=db, draft=draft, skill=skill)
-        return templates.TemplateResponse("draft-detail.html", context)
+        return templates.TemplateResponse(request, "draft-detail.html", context)
 
     @app.get("/releases/{release_id}", response_class=HTMLResponse)
     def release_detail_page(
@@ -173,7 +174,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         db: Session = Depends(get_db),
     ):
         actor = require_lifecycle_actor(request, db, "maintainer", "contributor")
-        blocked = _blocked_actor_response(templates, actor)
+        blocked = _blocked_actor_response(templates, request, actor)
         if blocked is not None:
             return blocked
         release, version, skill = require_release_bundle_or_404(db, release_id)
@@ -187,7 +188,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
             version=version,
             skill=skill,
         )
-        return templates.TemplateResponse("release-detail.html", context)
+        return templates.TemplateResponse(request, "release-detail.html", context)
 
     @app.get("/releases/{release_id}/share", response_class=HTMLResponse)
     def release_share_page(
@@ -196,7 +197,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         db: Session = Depends(get_db),
     ):
         actor = require_lifecycle_actor(request, db, "maintainer", "contributor")
-        blocked = _blocked_actor_response(templates, actor)
+        blocked = _blocked_actor_response(templates, request, actor)
         if blocked is not None:
             return blocked
         release, version, skill = require_release_bundle_or_404(db, release_id)
@@ -210,7 +211,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
             version=version,
             skill=skill,
         )
-        return templates.TemplateResponse("share-detail.html", context)
+        return templates.TemplateResponse(request, "share-detail.html", context)
 
     @app.get("/access/tokens", response_class=HTMLResponse)
     def access_tokens_page(
@@ -219,11 +220,11 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         db: Session = Depends(get_db),
     ):
         actor = require_lifecycle_actor(request, db, "maintainer", "contributor")
-        blocked = _blocked_actor_response(templates, actor)
+        blocked = _blocked_actor_response(templates, request, actor)
         if blocked is not None:
             return blocked
         context = build_access_tokens_page_context(request=request, db=db, actor=actor, limit=limit)
-        return templates.TemplateResponse("access-tokens.html", context)
+        return templates.TemplateResponse(request, "access-tokens.html", context)
 
     @app.get("/review-cases", response_class=HTMLResponse)
     def review_cases_page(
@@ -232,15 +233,15 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         db: Session = Depends(get_db),
     ):
         actor = require_lifecycle_actor(request, db, "maintainer", "contributor")
-        blocked = _blocked_actor_response(templates, actor)
+        blocked = _blocked_actor_response(templates, request, actor)
         if blocked is not None:
             return blocked
         context = build_review_cases_page_context(request=request, db=db, actor=actor, limit=limit)
-        return templates.TemplateResponse("review-cases.html", context)
+        return templates.TemplateResponse(request, "review-cases.html", context)
 
     @app.get("/login", response_class=HTMLResponse)
     def login(request: Request):
-        return templates.TemplateResponse("login-kawaii.html", _build_login_context(request))
+        return templates.TemplateResponse(request, "login-kawaii.html", _build_login_context(request))
 
 
 __all__ = ["register_ui_routes"]

@@ -22,8 +22,6 @@ SECTION_LANDINGS = {
 GLOBAL_INDEXES = [ROOT / 'README.md', DOCS_ROOT / 'README.md']
 MAINTAINED_SURFACE_DOCS = {
     ROOT / 'README.md',
-    DOCS_ROOT / 'guide' / 'maintainability-reset-policy.md',
-    DOCS_ROOT / 'reference' / 'cli-command-map.md',
     DOCS_ROOT / 'reference' / 'cli-reference.md',
     DOCS_ROOT / 'ops' / 'release-checklist.md',
 }
@@ -31,7 +29,7 @@ REQUIRED_MAINTAINED_SURFACE_MARKERS = [
     '## Maintained surfaces',
     'package-owned:',
     'runtime-owned:',
-    'compatibility-only:',
+    'automation-owned:',
 ]
 LEGACY_CANONICAL_ENTRYPOINTS = {
     'scripts/check-platform-contracts.py': 'infinitas compatibility check-platform-contracts',

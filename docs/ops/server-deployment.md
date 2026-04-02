@@ -180,9 +180,9 @@ If the hosted registry requires bearer auth, set the registry source `auth.mode`
 For operators inspecting queue state manually, the hosted app now exposes private-first maintainer HTML views at `/skills`, `/access/tokens`, and `/review-cases`, and the matching CLI surface is available through:
 
 ```bash
-python scripts/registryctl.py --base-url https://skills.example.com --token <maintainer-token> skills get <skill-id>
-python scripts/registryctl.py --base-url https://skills.example.com --token <maintainer-token> reviews get-case <review-case-id>
-python scripts/registryctl.py --base-url https://skills.example.com --token <maintainer-token> jobs list
+uv run infinitas registry --base-url https://skills.example.com --token <maintainer-token> skills get <skill-id>
+uv run infinitas registry --base-url https://skills.example.com --token <maintainer-token> reviews get-case <review-case-id>
+uv run infinitas registry --base-url https://skills.example.com --token <maintainer-token> jobs list
 ```
 
 ## State inspection

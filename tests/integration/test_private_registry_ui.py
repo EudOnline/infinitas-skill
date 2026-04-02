@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 APP_PATH = ROOT / "server" / "app.py"
 ROUTES_PATH = ROOT / "server" / "ui" / "routes.py"
 LIFECYCLE_PATH = ROOT / "server" / "ui" / "lifecycle.py"
+ALEMBIC_CONFIG_PATH = ROOT / "alembic.ini"
 APP_LINE_BUDGET = 220
 LIFECYCLE_LINE_BUDGET = 500
 
@@ -126,6 +127,33 @@ def assert_lifecycle_size_budget() -> None:
     assert line_count <= LIFECYCLE_LINE_BUDGET, (
         "expected server/ui/lifecycle.py to stay within "
         f"{LIFECYCLE_LINE_BUDGET} lines after UI extraction, got {line_count}"
+    )
+
+
+def assert_template_response_request_first() -> None:
+    module = ast.parse(ROUTES_PATH.read_text(encoding="utf-8"), filename=str(ROUTES_PATH))
+    invalid_calls: list[int] = []
+    for node in ast.walk(module):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Attribute) or node.func.attr != "TemplateResponse":
+            continue
+        if not node.args:
+            continue
+        first_arg = node.args[0]
+        if isinstance(first_arg, ast.Constant) and isinstance(first_arg.value, str):
+            invalid_calls.append(node.lineno)
+    assert not invalid_calls, (
+        "expected all TemplateResponse calls in server.ui.routes to pass request as the "
+        f"first positional argument; found legacy calls on lines {invalid_calls}"
+    )
+
+
+def assert_alembic_config_declares_path_separator() -> None:
+    config_text = ALEMBIC_CONFIG_PATH.read_text(encoding="utf-8")
+    assert "path_separator = os" in config_text, (
+        "expected alembic.ini to declare path_separator = os so prepend_sys_path avoids "
+        "legacy splitting deprecation warnings"
     )
 
 
@@ -293,6 +321,8 @@ def test_server_app_delegates_html_routes_and_respects_size_budget() -> None:
     assert_app_size_budget()
     assert_route_and_lifecycle_composition_boundaries()
     assert_lifecycle_size_budget()
+    assert_template_response_request_first()
+    assert_alembic_config_declares_path_separator()
 
 
 def test_private_first_console_ui_round_trip() -> None:
@@ -304,4 +334,6 @@ def main() -> None:
     assert_app_size_budget()
     assert_route_and_lifecycle_composition_boundaries()
     assert_lifecycle_size_budget()
+    assert_template_response_request_first()
+    assert_alembic_config_declares_path_separator()
     assert_private_first_console_ui_round_trip()

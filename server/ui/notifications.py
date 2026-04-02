@@ -30,7 +30,7 @@ def describe_skills_page(
             ),
         ),
         "cli_command": (
-            "python scripts/registryctl.py --base-url https://skills.example.com "
+            "python -m infinitas_skill.cli.main registry --base-url https://skills.example.com "
             "--token <token> skills get <skill-id>"
         ),
         "stats": [
@@ -84,7 +84,7 @@ def describe_skill_detail_page(
             "This skill detail view tracks drafts, versions, and releases inside one namespace.",
         ),
         "cli_command": (
-            "python scripts/registryctl.py --base-url https://skills.example.com "
+            "python -m infinitas_skill.cli.main registry --base-url https://skills.example.com "
             f"--token <token> skills get {skill.id}"
         ),
         "stats": [
@@ -125,7 +125,7 @@ def describe_draft_detail_page(
             ),
         ),
         "cli_command": (
-            "python scripts/registryctl.py --base-url https://skills.example.com "
+            "python -m infinitas_skill.cli.main registry --base-url https://skills.example.com "
             f"--token <token> drafts update {draft.id} --metadata-json '{{}}'"
         ),
         "stats": [
@@ -168,7 +168,7 @@ def describe_release_detail_page(
             ),
         ),
         "cli_command": (
-            "python scripts/registryctl.py --base-url https://skills.example.com "
+            "python -m infinitas_skill.cli.main registry --base-url https://skills.example.com "
             f"--token <token> releases get {release.id}"
         ),
         "stats": [
@@ -221,7 +221,7 @@ def describe_release_share_page(
             ),
         ),
         "cli_command": (
-            "python scripts/registryctl.py --base-url https://skills.example.com "
+            "python -m infinitas_skill.cli.main registry --base-url https://skills.example.com "
             f"--token <token> exposures create {release.id} --audience-type public"
         ),
         "stats": [
@@ -270,7 +270,7 @@ def describe_access_tokens_page(
             ),
         ),
         "cli_command": (
-            "python scripts/registryctl.py --base-url https://skills.example.com "
+            "python -m infinitas_skill.cli.main registry --base-url https://skills.example.com "
             "--token <token> tokens me"
         ),
         "stats": [
@@ -310,7 +310,7 @@ def describe_review_cases_page(lang: str, *, review_cases: list[object]) -> dict
             ),
         ),
         "cli_command": (
-            "python scripts/registryctl.py --base-url https://skills.example.com "
+            "python -m infinitas_skill.cli.main registry --base-url https://skills.example.com "
             "--token <token> reviews get-case <review-case-id>"
         ),
         "stats": [
