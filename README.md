@@ -2,7 +2,7 @@
 audience: contributors, operators, integrators
 owner: repository maintainers
 source_of_truth: repo entry page
-last_reviewed: 2026-04-01
+last_reviewed: 2026-04-02
 status: maintained
 ---
 
@@ -17,7 +17,7 @@ This repository is production-oriented and in an active maintainability hardenin
 - [Documentation map](docs/README.md)
 - [Reference docs](docs/reference/README.md)
 - [Operator runbooks](docs/ops/README.md)
-- [2026-04-01 release-readiness scorecard](docs/ops/2026-04-01-release-readiness-scorecard.md)
+- [2026-04-02 project health scorecard](docs/ops/2026-04-02-project-health-scorecard.md)
 - [Architecture decision 0001: Maintainability reset](docs/adr/0001-maintainability-reset.md)
 - [Architecture decision 0002: Maintained surface cutover](docs/adr/0002-maintained-surface-cutover.md)
 
@@ -131,7 +131,7 @@ Use these canonical docs for the current model:
 - [AI workflow drills](docs/ai/workflow-drills.md) explains when to use `scripts/recommend-skill.sh`, `scripts/search-skills.sh`, and `scripts/inspect-skill.sh` for task routing.
 - [Platform drift playbook](docs/ops/platform-drift-playbook.md)
 - [Release checklist](docs/ops/release-checklist.md)
-- [Release-readiness scorecard](docs/ops/2026-04-01-release-readiness-scorecard.md)
+- [Project health scorecard](docs/ops/2026-04-02-project-health-scorecard.md)
 - [CI-native attestation](docs/ai/ci-attestation.md) documents `.github/workflows/release-attestation.yml` and `python3 scripts/verify-ci-attestation.py`
 - [Hosted registry server deployment](docs/ops/server-deployment.md)
 
