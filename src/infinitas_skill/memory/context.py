@@ -3,10 +3,18 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .contracts import MemoryRecord
+from .policy import DAY_SECONDS
 from .scopes import dedupe_scope_refs, scope_ref, task_scope_ref
 
 DEFAULT_RECOMMENDATION_MEMORY_TYPES = ["user_preference", "task_context", "experience"]
 DEFAULT_INSPECT_MEMORY_TYPES = ["task_context", "experience"]
+DEFAULT_MEMORY_CONFIDENCE = 0.6
+MAX_MEMORY_TTL_SECONDS = DAY_SECONDS * 90
+MEMORY_TYPE_QUALITY_WEIGHTS = {
+    "user_preference": 0.08,
+    "experience": 0.07,
+    "task_context": 0.03,
+}
 
 
 @dataclass(frozen=True)
@@ -16,6 +24,36 @@ class MemoryContextQuery:
     provider_scope: dict[str, str] = field(default_factory=dict)
     memory_types: list[str] = field(default_factory=list)
     max_results: int = 5
+
+
+def _clamp_float(value: object, *, default: float) -> float:
+    if isinstance(value, (int, float)):
+        numeric = float(value)
+    else:
+        return default
+    if numeric < 0.0:
+        return 0.0
+    if numeric > 1.0:
+        return 1.0
+    return numeric
+
+
+def _ttl_factor(value: object) -> float:
+    if not isinstance(value, int) or value <= 0:
+        return 0.0
+    return min(value, MAX_MEMORY_TTL_SECONDS) / MAX_MEMORY_TTL_SECONDS
+
+
+def effective_memory_score(record: MemoryRecord) -> float:
+    metadata = record.metadata if isinstance(record.metadata, dict) else {}
+    provider_score = _clamp_float(record.score, default=0.5)
+    confidence = _clamp_float(
+        metadata.get("confidence"),
+        default=DEFAULT_MEMORY_CONFIDENCE,
+    )
+    ttl_factor = _ttl_factor(metadata.get("ttl_seconds"))
+    type_weight = MEMORY_TYPE_QUALITY_WEIGHTS.get(record.memory_type, 0.02)
+    return (provider_score * 0.65) + (confidence * 0.25) + (ttl_factor * 0.10) + type_weight
 
 
 def _normalize_memory_types(
@@ -172,7 +210,7 @@ def trim_memory_records(
         unique.append(record)
     unique.sort(
         key=lambda item: (
-            -(item.score if isinstance(item.score, (int, float)) else -1.0),
+            -effective_memory_score(item),
             item.memory_type,
             item.memory,
         )
@@ -204,10 +242,14 @@ def render_memory_snippets(
 
 __all__ = [
     "DEFAULT_INSPECT_MEMORY_TYPES",
+    "DEFAULT_MEMORY_CONFIDENCE",
     "DEFAULT_RECOMMENDATION_MEMORY_TYPES",
+    "MAX_MEMORY_TTL_SECONDS",
+    "MEMORY_TYPE_QUALITY_WEIGHTS",
     "MemoryContextQuery",
     "build_inspect_memory_query",
     "build_recommendation_memory_query",
+    "effective_memory_score",
     "render_memory_snippets",
     "trim_memory_records",
 ]

@@ -168,6 +168,30 @@ class NegativeMemoryProvider:
         )
 
 
+class WeightedPreferenceProvider:
+    backend_name = "fake"
+    capabilities = {"read": True, "write": True}
+
+    def search(self, *, query, limit, scope=None, memory_types=None):  # noqa: ARG002
+        return MemorySearchResult(
+            backend=self.backend_name,
+            records=[
+                MemoryRecord(
+                    memory="Prefer saturn workflows for codex helper choices.",
+                    memory_type="user_preference",
+                    score=0.94,
+                    metadata={"confidence": 0.3, "ttl_seconds": 60 * 60 * 24 * 7},
+                ),
+                MemoryRecord(
+                    memory="Prefer neptune workflows for codex helper choices.",
+                    memory_type="user_preference",
+                    score=0.74,
+                    metadata={"confidence": 0.95, "ttl_seconds": 60 * 60 * 24 * 90},
+                ),
+            ],
+        )
+
+
 def _prepare_repo(tmp_path: Path) -> Path:
     _write_json(tmp_path / "config" / "registry-sources.json", {"registries": []})
     _write_json(tmp_path / "catalog" / "discovery-index.json", _build_discovery_index())
@@ -252,3 +276,20 @@ def test_memory_summary_surfaces_provider_failure_when_memory_enabled(tmp_path: 
     assert summary["matched_count"] == 0
     assert summary["backend"] == "fake"
     assert "provider offline" in summary["error"]
+
+
+def test_recommendation_prefers_higher_quality_matched_memory_when_base_scores_tie(tmp_path: Path):
+    repo = _prepare_repo(tmp_path)
+    payload = recommend_skills(
+        repo,
+        task="Need codex helper for workflows",
+        target_agent="codex",
+        limit=3,
+        memory_provider=WeightedPreferenceProvider(),
+        memory_scope={"user_ref": "maintainer"},
+        memory_context_enabled=True,
+    )
+    assert payload["results"][0]["qualified_name"] == "team/beta-preferred"
+    assert payload["results"][0]["memory_signals"]["applied_boost"] > payload["results"][1][
+        "memory_signals"
+    ]["applied_boost"]

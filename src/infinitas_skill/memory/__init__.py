@@ -3,24 +3,34 @@ from __future__ import annotations
 from .config import MemoryConfig, load_memory_config, normalize_memory_backend
 from .context import (
     DEFAULT_INSPECT_MEMORY_TYPES,
+    DEFAULT_MEMORY_CONFIDENCE,
     DEFAULT_RECOMMENDATION_MEMORY_TYPES,
+    MAX_MEMORY_TTL_SECONDS,
+    MEMORY_TYPE_QUALITY_WEIGHTS,
     MemoryContextQuery,
     build_inspect_memory_query,
     build_recommendation_memory_query,
+    effective_memory_score,
     render_memory_snippets,
     trim_memory_records,
 )
 from .contracts import MemoryProvider, MemoryRecord, MemorySearchResult, MemoryWriteResult
 from .experience import ExperienceMemoryRecord, build_experience_memory
+from .policy import DAY_SECONDS, MemoryPolicy, resolve_memory_policy
 from .provider import NoopMemoryProvider, build_memory_provider
 from .scopes import dedupe_scope_refs, scope_ref, task_scope_ref
 
 __all__ = [
     "DEFAULT_INSPECT_MEMORY_TYPES",
+    "DEFAULT_MEMORY_CONFIDENCE",
     "DEFAULT_RECOMMENDATION_MEMORY_TYPES",
+    "DAY_SECONDS",
+    "MAX_MEMORY_TTL_SECONDS",
+    "MEMORY_TYPE_QUALITY_WEIGHTS",
     "MemoryConfig",
     "MemoryContextQuery",
     "ExperienceMemoryRecord",
+    "MemoryPolicy",
     "MemoryProvider",
     "MemoryRecord",
     "MemorySearchResult",
@@ -31,8 +41,10 @@ __all__ = [
     "build_inspect_memory_query",
     "build_recommendation_memory_query",
     "dedupe_scope_refs",
+    "effective_memory_score",
     "load_memory_config",
     "normalize_memory_backend",
+    "resolve_memory_policy",
     "render_memory_snippets",
     "scope_ref",
     "task_scope_ref",

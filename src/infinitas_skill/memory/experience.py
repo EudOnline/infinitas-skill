@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .contracts import MemoryRecord
+from .policy import resolve_memory_policy
 
 SENSITIVE_KEY_PARTS = {"token", "secret", "credential", "grant", "password", "api_key", "apikey"}
 PATH_KEY_PARTS = {"path", "dir", "directory"}
@@ -69,15 +70,6 @@ def _sanitize_mapping(payload: dict[str, Any] | None) -> dict[str, str]:
     return sanitized
 
 
-def _classify_memory_type(event_type: str) -> str:
-    normalized = str(event_type or "").strip().lower()
-    if normalized.startswith("preference."):
-        return "user_preference"
-    if normalized.startswith("task."):
-        return "task_context"
-    return "experience"
-
-
 def _render_content(event_type: str, payload: dict[str, Any] | None, *, max_chars: int) -> str:
     normalized_event = str(event_type or "").strip()
     rendered_parts = [normalized_event] if normalized_event else []
@@ -119,27 +111,27 @@ def build_experience_memory(
     event_type: str,
     aggregate_ref: str,
     payload: dict[str, Any] | None = None,
-    confidence: float = 0.7,
-    ttl_seconds: int = 60 * 60 * 24 * 30,
+    confidence: float | None = None,
+    ttl_seconds: int | None = None,
     provider_metadata: dict[str, Any] | None = None,
     max_content_chars: int = 220,
 ) -> ExperienceMemoryRecord:
     source_ref = str(aggregate_ref or "").strip()
-    default_ttl_seconds = 60 * 60 * 24 * 30
+    policy = resolve_memory_policy(event_type)
     normalized_ttl = (
         ttl_seconds
         if isinstance(ttl_seconds, int) and ttl_seconds > 0
-        else default_ttl_seconds
+        else policy.ttl_seconds
     )
     return ExperienceMemoryRecord(
-        memory_type=_classify_memory_type(event_type),
+        memory_type=policy.memory_type,
         content=_render_content(
             event_type,
             payload,
             max_chars=max_content_chars if max_content_chars > 0 else 220,
         ),
         source_refs=[source_ref] if source_ref else [],
-        confidence=confidence if isinstance(confidence, (int, float)) else 0.7,
+        confidence=confidence if isinstance(confidence, (int, float)) else policy.confidence,
         ttl_seconds=normalized_ttl,
         provider_metadata=_sanitize_mapping(provider_metadata),
     )

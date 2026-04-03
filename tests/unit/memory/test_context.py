@@ -3,6 +3,7 @@ from __future__ import annotations
 from infinitas_skill.memory.context import (
     build_inspect_memory_query,
     build_recommendation_memory_query,
+    effective_memory_score,
     render_memory_snippets,
 )
 from infinitas_skill.memory.contracts import MemoryRecord
@@ -65,3 +66,19 @@ def test_render_memory_snippets_is_deterministic_and_trimmed():
     ]
     snippets = render_memory_snippets(records, max_items=2, max_chars=18)
     assert snippets == ["task_context: A item with hig...", "experience: Z item with low..."]
+
+
+def test_effective_memory_score_prefers_confident_reusable_memories():
+    stronger = MemoryRecord(
+        memory="Release-ready installs usually succeed for neptune workflows.",
+        memory_type="experience",
+        score=0.75,
+        metadata={"confidence": 0.9, "ttl_seconds": 60 * 60 * 24 * 90},
+    )
+    weaker = MemoryRecord(
+        memory="Temporary install note for neptune workflows.",
+        memory_type="task_context",
+        score=0.82,
+        metadata={"confidence": 0.35, "ttl_seconds": 60 * 60 * 24 * 3},
+    )
+    assert effective_memory_score(stronger) > effective_memory_score(weaker)

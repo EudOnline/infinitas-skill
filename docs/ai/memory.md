@@ -52,6 +52,33 @@ Memory stays advisory only.
 
 - still lives in the local database and release artifacts, not in Memo0
 
+## Lifecycle Policy Defaults
+
+Lifecycle writeback now applies explicit policy defaults before storing memory:
+
+- `task.authoring.create_draft`
+  - `memory_type=task_context`
+  - lower confidence
+  - short TTL
+- `task.authoring.seal_draft`
+  - `memory_type=experience`
+  - medium confidence
+  - medium TTL
+- `task.release.ready`
+  - `memory_type=experience`
+  - high confidence
+  - long TTL
+- `task.review.approve`
+  - `memory_type=experience`
+  - high confidence
+  - medium-long TTL
+- `task.review.reject`
+  - `memory_type=experience`
+  - high confidence
+  - shorter TTL so stale negative outcomes decay faster
+
+This keeps ephemeral workflow context separate from reusable operational lessons.
+
 ## Environment Flags
 
 Memory is disabled by default.
@@ -111,12 +138,14 @@ Recommendation reads:
 - `src/infinitas_skill/discovery/recommendation.py`
 - memory types: `user_preference`, `task_context`, `experience`
 - effect: bounded soft boost after compatibility gating
+- ordering: provider score, policy confidence, memory type, and TTL now combine into one advisory quality score
 
 Inspect reads:
 
 - `src/infinitas_skill/discovery/inspect.py`
 - memory types: `task_context`, `experience`
 - effect: compact advisory hints only
+- ordering: hints are trimmed and sorted by the same advisory quality score as recommendation
 
 ## Write Paths
 

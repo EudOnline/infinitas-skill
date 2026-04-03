@@ -88,6 +88,13 @@ This memory layer is advisory only:
 - inspect trust fields remain authoritative even when memory hints are present
 - inspect may also return `disabled`, `unavailable`, `no-match`, or `error` in `memory_hints.status` without changing the trust decision
 
+When multiple hints are available, inspect now orders them by advisory quality using the same score inputs as recommendation:
+
+- provider score
+- policy confidence
+- memory type weighting
+- TTL weighting
+
 ## Installed integrity follow-up
 
 After a skill is installed into a target-local runtime, verify that concrete copy with `python3 scripts/report-installed-integrity.py <target-local> --json`.

@@ -33,6 +33,49 @@ def test_build_experience_memory_classifies_preference_and_task_context():
     assert task.memory_type == "task_context"
 
 
+def test_build_experience_memory_uses_lifecycle_policy_defaults():
+    release_ready = build_experience_memory(
+        event_type="task.release.ready",
+        aggregate_ref="release:5",
+        payload={"qualified_name": "lvxiaoer/release-infinitas-skill"},
+    )
+    review_reject = build_experience_memory(
+        event_type="task.review.reject",
+        aggregate_ref="review_case:9",
+        payload={"qualified_name": "lvxiaoer/release-infinitas-skill"},
+    )
+    create_draft = build_experience_memory(
+        event_type="task.authoring.create_draft",
+        aggregate_ref="skill_draft:3",
+        payload={"skill_slug": "release-infinitas-skill"},
+    )
+
+    assert release_ready.memory_type == "experience"
+    assert release_ready.confidence == 0.9
+    assert release_ready.ttl_seconds == 60 * 60 * 24 * 90
+
+    assert review_reject.memory_type == "experience"
+    assert review_reject.confidence == 0.85
+    assert review_reject.ttl_seconds == 60 * 60 * 24 * 21
+
+    assert create_draft.memory_type == "task_context"
+    assert create_draft.confidence == 0.45
+    assert create_draft.ttl_seconds == 60 * 60 * 24 * 7
+
+
+def test_build_experience_memory_explicit_values_override_policy_defaults():
+    memory = build_experience_memory(
+        event_type="task.release.ready",
+        aggregate_ref="release:7",
+        payload={"qualified_name": "lvxiaoer/release-infinitas-skill"},
+        confidence=0.61,
+        ttl_seconds=60,
+    )
+    assert memory.memory_type == "experience"
+    assert memory.confidence == 0.61
+    assert memory.ttl_seconds == 60
+
+
 def test_build_experience_memory_filters_secrets_paths_and_grants():
     memory = build_experience_memory(
         event_type="review.approved",

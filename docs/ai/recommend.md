@@ -74,6 +74,15 @@ When memory-aware recommendation is enabled, also read:
 
 `memory_summary` reports whether memory was used, which backend supplied memory, and how many retrieved memories were considered. This layer is advisory only and does not replace compatibility, trust, or immutable install policy checks.
 
+When multiple memories match, recommendation now prefers higher-quality advisory memories by combining:
+
+- provider score
+- policy confidence
+- memory type weighting
+- TTL weighting
+
+This quality ranking only changes bounded advisory boosts between already-eligible candidates.
+
 `memory_summary.used` means at least one candidate received a non-zero memory boost. Retrieved memories alone do not set `used=true`.
 
 `memory_summary.status` distinguishes memory states:

@@ -117,6 +117,11 @@ class FakeMemoryProvider:
                 memory=item["memory"],
                 memory_type=item.get("memory_type", "generic"),
                 score=item.get("score"),
+                metadata={
+                    key: item[key]
+                    for key in ("confidence", "ttl_seconds")
+                    if key in item
+                },
             )
             for item in records
         ]
@@ -148,3 +153,35 @@ def test_inspect_returns_experience_hints_as_advisory_context(tmp_path: Path):
     assert payload["memory_hints"]["items"][0]["memory_type"] == "experience"
     assert payload["trust_state"] == "verified"
     assert payload["trust"]["state"] == "verified"
+
+
+def test_inspect_orders_memory_hints_by_effective_quality(tmp_path: Path):
+    repo = _prepare_repo(tmp_path)
+    payload = inspect_skill(
+        repo,
+        name="lvxiaoer/consume-infinitas-skill",
+        memory_provider=FakeMemoryProvider(
+            [
+                {
+                    "memory": "Short-lived install note for OpenClaw.",
+                    "memory_type": "task_context",
+                    "score": 0.88,
+                    "confidence": 0.25,
+                    "ttl_seconds": 60 * 60 * 24 * 2,
+                },
+                {
+                    "memory": (
+                        "OpenClaw installs usually succeed when the release "
+                        "is already materialized."
+                    ),
+                    "memory_type": "experience",
+                    "score": 0.78,
+                    "confidence": 0.92,
+                    "ttl_seconds": 60 * 60 * 24 * 90,
+                },
+            ]
+        ),
+        memory_scope={"user_ref": "maintainer"},
+    )
+    items = payload["memory_hints"]["items"]
+    assert items[0]["memory_type"] == "experience"

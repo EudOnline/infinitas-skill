@@ -1,7 +1,11 @@
 from pathlib import Path
 from typing import Any
 
-from infinitas_skill.memory import build_recommendation_memory_query, trim_memory_records
+from infinitas_skill.memory import (
+    build_recommendation_memory_query,
+    effective_memory_score,
+    trim_memory_records,
+)
 from infinitas_skill.memory.contracts import MemoryRecord, MemorySearchResult
 
 from .decision_metadata import canonical_decision_metadata
@@ -425,6 +429,8 @@ def _memory_signals(item: dict, *, factors: dict, records: list[MemoryRecord]) -
             if not _is_negative_experience(record):
                 boostable.append(record)
 
+    boostable.sort(key=effective_memory_score, reverse=True)
+
     memory_types = []
     for record in boostable:
         memory_type = record.memory_type if isinstance(record.memory_type, str) else "generic"
@@ -433,8 +439,10 @@ def _memory_signals(item: dict, *, factors: dict, records: list[MemoryRecord]) -
 
     boost = 0
     if factors.get("compatibility"):
-        for memory_type in memory_types:
-            boost += MEMORY_TYPE_BOOSTS.get(memory_type, 8)
+        for record in boostable:
+            memory_type = record.memory_type if isinstance(record.memory_type, str) else "generic"
+            quality_ratio = min(max(effective_memory_score(record), 0.25), 1.0)
+            boost += int(round(MEMORY_TYPE_BOOSTS.get(memory_type, 8) * quality_ratio))
         boost = min(boost, MEMORY_MAX_BOOST)
 
     return {
