@@ -33,6 +33,7 @@ def test_record_memory_retrieval_audit_persists_recommendation_summary() -> None
                     "retrieved_count": 3,
                     "status": "matched",
                 },
+                "effect": "helpful",
                 "results": {
                     "count": 3,
                     "top_qualified_name": "team/beta-preferred",
@@ -51,6 +52,7 @@ def test_record_memory_retrieval_audit_persists_recommendation_summary() -> None
         assert stored.event_type == "memory.retrieval.recommend"
         payload = json.loads(stored.payload_json)
         assert payload["operation"] == "recommend"
+        assert payload["effect"] == "helpful"
         assert payload["memory"]["backend"] == "memo0"
         assert payload["results"]["top_qualified_name"] == "team/beta-preferred"
     finally:

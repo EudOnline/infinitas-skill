@@ -153,6 +153,7 @@ Optional retrieval audit:
 
 - set `INFINITAS_DISCOVERY_AUDIT_DATABASE_URL=sqlite:////path/to/server.db` when running `scripts/recommend-skill.sh` or `scripts/inspect-skill.sh`
 - those entrypoints will append local `memory_retrieval` audit events summarizing whether memory was used, matched, disabled, or errored
+- retrieval audit now also stores a coarse `effect` classification such as `helpful`, `restrained`, `no_signal`, `disabled`, or `error`
 - this keeps retrieval-side usefulness traceable from local history without making Memo0 the source of truth
 
 ## Evaluation Matrix

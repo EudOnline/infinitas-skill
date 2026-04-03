@@ -167,7 +167,7 @@ The optional memory layer is additive only:
 - the evaluation matrix now also publishes deterministic usefulness summary metrics for helpful use vs correct restraint
 - operator-facing curation planning, guarded archive/prune execution, queue-driven enqueue, and server-policy scheduled runs now live behind `uv run infinitas server memory-curation ...`
 - operator-facing writeback diagnostics now live behind `uv run infinitas server memory-health ...`
-- operator-facing memory operations summary plus rolling drift context now lives behind `uv run infinitas server memory-observability ...`, including retrieval-side `memory_retrieval` audit visibility
+- operator-facing memory operations summary plus rolling drift context now lives behind `uv run infinitas server memory-observability ...`, including retrieval-side `memory_retrieval` status and effect visibility
 - operator-facing rolling memory baselines now live behind `uv run infinitas server memory-baselines ...`, including retrieval-side drift
 - release, review, access, and install truth still comes from the local database, immutable artifacts, and current policy checks
 

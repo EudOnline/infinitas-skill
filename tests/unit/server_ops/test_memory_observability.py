@@ -112,6 +112,7 @@ def test_summarize_memory_observability_groups_writeback_curation_and_jobs() -> 
                                     "used": False,
                                     "matched_count": 0,
                                 },
+                                "effect": "error",
                             }
                         ),
                     ),
@@ -131,6 +132,7 @@ def test_summarize_memory_observability_groups_writeback_curation_and_jobs() -> 
                                     "used": True,
                                     "matched_count": 2,
                                 },
+                                "effect": "helpful",
                                 "results": {
                                     "top_qualified_name": "team/beta-preferred",
                                 },
@@ -158,9 +160,12 @@ def test_summarize_memory_observability_groups_writeback_curation_and_jobs() -> 
         assert payload["jobs"]["recent"][0]["kind"] == "memory_curation"
         assert payload["retrieval"]["status_counts"]["matched"] == 1
         assert payload["retrieval"]["status_counts"]["error"] == 1
+        assert payload["retrieval"]["effect_counts"]["helpful"] == 1
+        assert payload["retrieval"]["effect_counts"]["error"] == 1
         assert payload["retrieval"]["operation_counts"]["recommend"] == 1
         assert payload["retrieval"]["operation_counts"]["inspect"] == 1
         assert payload["retrieval"]["recent"][0]["operation"] == "recommend"
+        assert payload["retrieval"]["recent"][0]["effect"] == "helpful"
         assert payload["baselines"]["window_hours"] == 24
         assert payload["baselines"]["writeback"]["recent"]["totals"]["count"] == 2
         assert payload["baselines"]["writeback"]["previous"]["totals"]["count"] == 1
@@ -169,5 +174,6 @@ def test_summarize_memory_observability_groups_writeback_curation_and_jobs() -> 
         assert payload["baselines"]["curation"]["delta"]["archived_rate"] == 1.0
         assert payload["baselines"]["jobs"]["delta"]["completed_rate"] == 1.0
         assert payload["baselines"]["retrieval"]["delta"]["matched_rate"] == 1.0
+        assert payload["baselines"]["retrieval"]["delta"]["helpful_rate"] == 1.0
     finally:
         engine.dispose()

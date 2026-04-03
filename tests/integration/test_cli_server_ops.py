@@ -362,12 +362,13 @@ def test_server_memory_observability_command_summarizes_memory_ops(tmp_path: Pat
                         actor_ref="system:discovery:inspect-script",
                         occurred_at=datetime(2026, 4, 2, 11, 0, tzinfo=timezone.utc),
                         payload_json=json.dumps(
-                            {
-                                "operation": "inspect",
-                                "memory": {"status": "error", "used": False, "matched_count": 0},
-                            }
+                                {
+                                    "operation": "inspect",
+                                    "memory": {"status": "error", "used": False, "matched_count": 0},
+                                    "effect": "error",
+                                }
+                            ),
                         ),
-                    ),
                     AuditEvent(
                         aggregate_type="memory_retrieval",
                         aggregate_id="mr:1",
@@ -375,12 +376,13 @@ def test_server_memory_observability_command_summarizes_memory_ops(tmp_path: Pat
                         actor_ref="system:discovery:recommend-script",
                         occurred_at=datetime(2026, 4, 3, 11, 0, tzinfo=timezone.utc),
                         payload_json=json.dumps(
-                            {
-                                "operation": "recommend",
-                                "memory": {"status": "matched", "used": True, "matched_count": 2},
-                            }
+                                {
+                                    "operation": "recommend",
+                                    "memory": {"status": "matched", "used": True, "matched_count": 2},
+                                    "effect": "helpful",
+                                }
+                            ),
                         ),
-                    ),
                 ]
             )
             session.commit()
@@ -411,12 +413,14 @@ def test_server_memory_observability_command_summarizes_memory_ops(tmp_path: Pat
     assert payload["jobs"]["status_counts"]["failed"] == 1
     assert payload["retrieval"]["status_counts"]["matched"] == 1
     assert payload["retrieval"]["status_counts"]["error"] == 1
+    assert payload["retrieval"]["effect_counts"]["helpful"] == 1
     assert payload["retrieval"]["operation_counts"]["recommend"] == 1
     assert payload["baselines"]["window_hours"] == 24
     assert payload["baselines"]["writeback"]["delta"]["stored_rate"] == 1.0
     assert payload["baselines"]["curation"]["delta"]["archived_rate"] == 1.0
     assert payload["baselines"]["jobs"]["delta"]["completed_rate"] == 1.0
     assert payload["baselines"]["retrieval"]["delta"]["matched_rate"] == 1.0
+    assert payload["baselines"]["retrieval"]["delta"]["helpful_rate"] == 1.0
 
 
 def test_server_memory_baselines_command_returns_windowed_summary(tmp_path: Path) -> None:
@@ -460,12 +464,13 @@ def test_server_memory_baselines_command_returns_windowed_summary(tmp_path: Path
                         actor_ref="system:discovery:recommend-script",
                         occurred_at=datetime(2026, 4, 3, 7, 0, tzinfo=timezone.utc),
                         payload_json=json.dumps(
-                            {
-                                "operation": "recommend",
-                                "memory": {"status": "matched", "used": True, "matched_count": 2},
-                            }
+                                {
+                                    "operation": "recommend",
+                                    "memory": {"status": "matched", "used": True, "matched_count": 2},
+                                    "effect": "helpful",
+                                }
+                            ),
                         ),
-                    ),
                 ]
             )
             session.commit()

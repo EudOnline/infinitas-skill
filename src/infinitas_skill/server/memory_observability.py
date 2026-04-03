@@ -35,6 +35,11 @@ def _retrieval_status(payload: dict[str, Any]) -> str:
     return status or "unknown"
 
 
+def _retrieval_effect(payload: dict[str, Any]) -> str:
+    effect = str(payload.get("effect") or "").strip().lower()
+    return effect or "unknown"
+
+
 def summarize_memory_observability(
     session: Session,
     *,
@@ -105,18 +110,22 @@ def summarize_memory_observability(
     ).all()
     retrieval_status_counts: Counter[str] = Counter()
     retrieval_operation_counts: Counter[str] = Counter()
+    retrieval_effect_counts: Counter[str] = Counter()
     recent_retrieval = []
     for event in retrieval_events:
         payload = _payload(event.payload_json)
         status = _retrieval_status(payload)
         operation = str(payload.get("operation") or "").strip().lower() or "unknown"
+        effect = _retrieval_effect(payload)
         retrieval_status_counts[status] += 1
         retrieval_operation_counts[operation] += 1
+        retrieval_effect_counts[effect] += 1
         recent_retrieval.append(
             {
                 "id": int(event.id),
                 "operation": operation,
                 "status": status,
+                "effect": effect,
                 "actor_ref": str(event.actor_ref or ""),
                 "occurred_at": str(event.occurred_at),
                 "aggregate_id": str(event.aggregate_id or ""),
@@ -140,6 +149,7 @@ def summarize_memory_observability(
         "retrieval": {
             "status_counts": dict(retrieval_status_counts),
             "operation_counts": dict(retrieval_operation_counts),
+            "effect_counts": dict(retrieval_effect_counts),
             "recent": recent_retrieval[:5],
         },
         "baselines": baselines,

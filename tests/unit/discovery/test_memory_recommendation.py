@@ -319,6 +319,7 @@ def test_recommendation_can_emit_memory_usage_audit_entry(tmp_path: Path):
 
     assert len(events) == 1
     assert events[0]["operation"] == "recommend"
+    assert events[0]["effect"] == "helpful"
     assert events[0]["target_agent"] == "codex"
     assert events[0]["memory"]["backend"] == "fake"
     assert events[0]["memory"]["matched_count"] == 2

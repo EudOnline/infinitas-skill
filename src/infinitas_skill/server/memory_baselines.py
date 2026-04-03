@@ -82,6 +82,11 @@ def _retrieval_used(payload: dict[str, Any]) -> bool:
     return bool(memory.get("used"))
 
 
+def _retrieval_effect(payload: dict[str, Any]) -> str:
+    effect = str(payload.get("effect") or "").strip().lower()
+    return effect or "unknown"
+
+
 def summarize_memory_baselines(
     session: Session,
     *,
@@ -164,6 +169,7 @@ def summarize_memory_baselines(
         select(AuditEvent).where(AuditEvent.aggregate_type == "memory_retrieval")
     ).all()
     retrieval_used_windows = {"recent": [], "previous": []}
+    retrieval_effect_windows = {"recent": [], "previous": []}
     for event in retrieval_events:
         payload = _payload(event.payload_json)
         bucket = _event_window(
@@ -175,11 +181,14 @@ def summarize_memory_baselines(
             continue
         windows["retrieval"][bucket].append(_retrieval_status(payload))
         retrieval_used_windows[bucket].append("used" if _retrieval_used(payload) else "unused")
+        retrieval_effect_windows[bucket].append(_retrieval_effect(payload))
 
     retrieval_recent = summarize_status_window(windows["retrieval"]["recent"])
     retrieval_previous = summarize_status_window(windows["retrieval"]["previous"])
     retrieval_used_recent = summarize_status_window(retrieval_used_windows["recent"])
     retrieval_used_previous = summarize_status_window(retrieval_used_windows["previous"])
+    retrieval_effect_recent = summarize_status_window(retrieval_effect_windows["recent"])
+    retrieval_effect_previous = summarize_status_window(retrieval_effect_windows["previous"])
 
     return {
         "ok": True,
@@ -246,6 +255,10 @@ def summarize_memory_baselines(
                 "used_rate": _delta(
                     retrieval_used_recent["status_rates"].get("used", 0.0),
                     retrieval_used_previous["status_rates"].get("used", 0.0),
+                ),
+                "helpful_rate": _delta(
+                    retrieval_effect_recent["status_rates"].get("helpful", 0.0),
+                    retrieval_effect_previous["status_rates"].get("helpful", 0.0),
                 ),
             },
         },

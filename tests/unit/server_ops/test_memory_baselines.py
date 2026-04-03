@@ -104,6 +104,7 @@ def test_summarize_memory_baselines_compares_recent_window_to_previous_window() 
                                     "used": True,
                                     "matched_count": 2,
                                 },
+                                "effect": "helpful",
                             }
                         ),
                     ),
@@ -121,6 +122,7 @@ def test_summarize_memory_baselines_compares_recent_window_to_previous_window() 
                                     "used": False,
                                     "matched_count": 0,
                                 },
+                                "effect": "error",
                             }
                         ),
                     ),
@@ -146,5 +148,6 @@ def test_summarize_memory_baselines_compares_recent_window_to_previous_window() 
         assert payload["retrieval"]["previous"]["status_rates"]["error"] == 1.0
         assert payload["retrieval"]["delta"]["matched_rate"] == 1.0
         assert payload["retrieval"]["delta"]["error_rate"] == -1.0
+        assert payload["retrieval"]["delta"]["helpful_rate"] == 1.0
     finally:
         engine.dispose()

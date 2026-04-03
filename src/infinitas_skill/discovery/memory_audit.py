@@ -32,6 +32,37 @@ def _memory_summary(summary: Any) -> dict[str, Any]:
     return payload
 
 
+def _effect_from_status(status: str) -> str | None:
+    normalized = str(status or "").strip().lower()
+    if normalized in {"disabled", "error", "unavailable", "unknown"}:
+        return normalized
+    return None
+
+
+def _recommendation_effect(memory: dict[str, Any], results: dict[str, Any]) -> str:
+    status = str(memory.get("status") or "")
+    direct = _effect_from_status(status)
+    if direct is not None:
+        return direct
+    if bool(memory.get("used")) and int(results.get("top_memory_boost") or 0) > 0:
+        return "helpful"
+    if int(memory.get("matched_count") or 0) > 0:
+        return "restrained"
+    return "no_signal"
+
+
+def _inspect_effect(memory: dict[str, Any], results: dict[str, Any]) -> str:
+    status = str(memory.get("status") or "")
+    direct = _effect_from_status(status)
+    if direct is not None:
+        return direct
+    if bool(memory.get("used")) and int(results.get("count") or 0) > 0:
+        return "helpful"
+    if int(memory.get("matched_count") or 0) > 0:
+        return "restrained"
+    return "no_signal"
+
+
 def emit_recommendation_memory_audit(
     *,
     audit_recorder: MemoryAuditRecorder | None,
@@ -59,6 +90,7 @@ def emit_recommendation_memory_audit(
             ),
         },
     }
+    entry["effect"] = _recommendation_effect(entry["memory"], entry["results"])
     try:
         audit_recorder(entry)
     except Exception:
@@ -87,6 +119,7 @@ def emit_inspect_memory_audit(
             "trust_state": str(payload.get("trust_state") or ""),
         },
     }
+    entry["effect"] = _inspect_effect(entry["memory"], entry["results"])
     try:
         audit_recorder(entry)
     except Exception:
