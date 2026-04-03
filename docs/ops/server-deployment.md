@@ -319,6 +319,7 @@ uv run infinitas server memory-observability \
   --database-url sqlite:////srv/infinitas/data/server.db \
   --limit 20 \
   --job-limit 10 \
+  --window-hours 24 \
   --json
 ```
 
@@ -327,6 +328,7 @@ This command summarizes:
 - recent writeback status counts and failures
 - recent `memory_curation` outcomes such as `archived`, `pruned`, `skipped`, or `failed`
 - recent `memory_curation` jobs and their queue status
+- nested rolling recent-vs-previous drift so operators can see whether failure or completion rates are moving
 
 Like the other memory ops commands, this is local-audit truth first. It is intended for operator visibility, not as a replacement for direct provider inspection.
 

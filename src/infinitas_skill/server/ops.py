@@ -463,6 +463,8 @@ def configure_server_parser(parser: argparse.ArgumentParser) -> argparse.Argumen
             database_url=args.database_url,
             limit=args.limit,
             job_limit=args.job_limit,
+            window_hours=args.window_hours,
+            now=args.now,
             as_json=args.json,
         )
     )

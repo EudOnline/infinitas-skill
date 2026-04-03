@@ -273,6 +273,19 @@ When `--use-server-policy` is used, the command reads these server settings:
 - `INFINITAS_SERVER_MEMORY_CURATION_MAX_ACTIONS`
 - `INFINITAS_SERVER_MEMORY_CURATION_ACTOR_REF`
 
+Operators can also use the unified observability surface when they want both current status and rolling drift in one response:
+
+```bash
+uv run infinitas server memory-observability \
+  --database-url sqlite:////srv/infinitas/data/server.db \
+  --limit 20 \
+  --job-limit 10 \
+  --window-hours 24 \
+  --json
+```
+
+`memory-observability` still reports current writeback, curation, and job health from local state, and now includes a nested `baselines` block that compares the most recent window against the previous one.
+
 ## Recommendation Example
 
 ```json

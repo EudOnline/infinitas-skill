@@ -56,7 +56,7 @@ uv run infinitas server memory-curation --database-url sqlite:////srv/infinitas/
 uv run infinitas server memory-curation --database-url sqlite:////srv/infinitas/data/server.db --action archive --apply --max-actions 10 --enqueue --json
 uv run infinitas server memory-curation --database-url sqlite:////srv/infinitas/data/server.db --use-server-policy --enqueue --json
 uv run infinitas server memory-health --database-url sqlite:////srv/infinitas/data/server.db --limit 20 --json
-uv run infinitas server memory-observability --database-url sqlite:////srv/infinitas/data/server.db --limit 20 --job-limit 10 --json
+uv run infinitas server memory-observability --database-url sqlite:////srv/infinitas/data/server.db --limit 20 --job-limit 10 --window-hours 24 --json
 uv run infinitas server memory-baselines --database-url sqlite:////srv/infinitas/data/server.db --window-hours 24 --json
 uv run infinitas server prune-backups --backup-root /srv/infinitas/backups --keep-last 7 --json
 ```
@@ -166,7 +166,7 @@ The optional memory layer is additive only:
 - the evaluation matrix now also publishes deterministic usefulness summary metrics for helpful use vs correct restraint
 - operator-facing curation planning, guarded archive/prune execution, queue-driven enqueue, and server-policy scheduled runs now live behind `uv run infinitas server memory-curation ...`
 - operator-facing writeback diagnostics now live behind `uv run infinitas server memory-health ...`
-- operator-facing memory operations summary now lives behind `uv run infinitas server memory-observability ...`
+- operator-facing memory operations summary plus rolling drift context now lives behind `uv run infinitas server memory-observability ...`
 - operator-facing rolling memory baselines now live behind `uv run infinitas server memory-baselines ...`
 - release, review, access, and install truth still comes from the local database, immutable artifacts, and current policy checks
 

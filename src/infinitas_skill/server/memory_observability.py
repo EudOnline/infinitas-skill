@@ -7,6 +7,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from infinitas_skill.server.memory_baselines import summarize_memory_baselines
 from infinitas_skill.server.memory_health import summarize_memory_writeback
 from server.models import AuditEvent, Job
 
@@ -31,10 +32,13 @@ def summarize_memory_observability(
     *,
     limit: int = 20,
     job_limit: int = 10,
+    now: str | None = None,
+    window_hours: int = 24,
 ) -> dict[str, Any]:
     normalized_limit = limit if isinstance(limit, int) and limit > 0 else 20
     normalized_job_limit = job_limit if isinstance(job_limit, int) and job_limit > 0 else 10
     writeback = summarize_memory_writeback(session, limit=normalized_limit)
+    baselines = summarize_memory_baselines(session, now=now, window_hours=window_hours)
 
     curation_events = session.scalars(
         select(AuditEvent)
@@ -99,6 +103,7 @@ def summarize_memory_observability(
             "status_counts": dict(job_status_counts),
             "recent": recent_jobs[:5],
         },
+        "baselines": baselines,
     }
 
 

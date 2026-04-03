@@ -37,6 +37,17 @@ def configure_server_memory_observability_parser(
         default=10,
         help='Number of recent memory curation jobs to inspect',
     )
+    parser.add_argument(
+        '--window-hours',
+        type=int,
+        default=24,
+        help='Hours per rolling baseline window used for drift calculations',
+    )
+    parser.add_argument(
+        '--now',
+        default='',
+        help='Optional ISO timestamp used as the rolling baseline anchor',
+    )
     parser.add_argument('--json', action='store_true', help='Emit machine-readable JSON output')
     return parser
 
@@ -54,13 +65,21 @@ def run_server_memory_observability(
     database_url: str,
     limit: int,
     job_limit: int,
+    window_hours: int,
+    now: str = '',
     as_json: bool = False,
 ) -> int:
     require_sqlite_db(database_url)
     engine = create_engine(database_url, future=True, **server_engine_kwargs(database_url))
     try:
         with Session(engine) as session:
-            summary = summarize_memory_observability(session, limit=limit, job_limit=job_limit)
+            summary = summarize_memory_observability(
+                session,
+                limit=limit,
+                job_limit=job_limit,
+                now=now or None,
+                window_hours=window_hours,
+            )
     finally:
         engine.dispose()
 
@@ -71,7 +90,10 @@ def run_server_memory_observability(
             "OK: memory observability "
             f"writeback_statuses={summary['writeback']['writeback_status_counts']} "
             f"curation_statuses={summary['curation']['status_counts']} "
-            f"job_statuses={summary['jobs']['status_counts']}"
+            f"job_statuses={summary['jobs']['status_counts']} "
+            f"drift_writeback={summary['baselines']['writeback']['delta']} "
+            f"drift_curation={summary['baselines']['curation']['delta']} "
+            f"drift_jobs={summary['baselines']['jobs']['delta']}"
         )
     return 0
 
