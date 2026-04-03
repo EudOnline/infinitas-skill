@@ -155,6 +155,12 @@ Memory behavior is now regression-tested with fixture-backed evaluation cases un
 - `tests/fixtures/memory_eval/inspect_cases.json`
 - `tests/integration/test_memory_evaluation_matrix.py`
 
+Replay the maintained matrix with:
+
+```bash
+uv run pytest tests/integration/test_memory_evaluation_matrix.py -q
+```
+
 This matrix is intended to lock in advisory behaviors such as:
 
 - baseline winner without memory
@@ -163,6 +169,7 @@ This matrix is intended to lock in advisory behaviors such as:
 - negative experience memory does not create positive recommendation lift
 - inspect trust state remains authoritative when memory is present
 - higher-quality experience memory outranks weaker short-lived hints
+- provider-backed memory never becomes release, review, compatibility, or access truth
 
 ## Write Paths
 
@@ -176,6 +183,17 @@ Lifecycle writeback is best-effort and post-commit.
 - review approved or rejected
 
 Writeback emits `memory_writeback` audit events so operators can see what happened even when the provider is disabled or failing.
+
+Operators can inspect recent writeback health with:
+
+```bash
+uv run infinitas server memory-health \
+  --database-url sqlite:////srv/infinitas/data/server.db \
+  --limit 20 \
+  --json
+```
+
+This command is deliberately backed by local audit history rather than Memo0 state. It answers "what did the registry attempt and record?" instead of "what does the provider currently believe?".
 
 ## Recommendation Example
 
@@ -267,6 +285,12 @@ Interpretation:
 - the review decision still committed
 - sensitive values and raw paths were not written into memory or the audit payload
 - operators still have a traceable failure record
+
+For operations triage:
+
+- `failed` means writeback attempted and fell back to an audit-only trace
+- `disabled` means writes were off by configuration, so no provider truth was consulted
+- the audit summary is the supported source for health checks because it is available even when Memo0 is absent
 
 ## Hard Guarantees
 

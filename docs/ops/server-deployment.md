@@ -2,7 +2,7 @@
 audience: operators and release maintainers
 owner: repository maintainers
 source_of_truth: hosted deployment runbook
-last_reviewed: 2026-03-30
+last_reviewed: 2026-04-03
 status: maintained
 ---
 
@@ -216,6 +216,34 @@ When `--alert-webhook-url` is provided, alerting runs also POST the full JSON su
 When `--alert-fallback-file` is provided, alerting runs write the same JSON summary to that file whenever webhook delivery is unavailable, including webhook failures or runs with no webhook configured. The returned `notification.fallback` block records whether the fallback write was attempted, whether it succeeded, the target path, and any write error.
 
 This is intentionally SQLite-first for the current single-node deployment shape.
+
+## Memory writeback health
+
+Use the hosted memory health command when you need a read-only summary of recent memory writeback attempts:
+
+```bash
+uv run infinitas server memory-health \
+  --database-url sqlite:////srv/infinitas/data/server.db \
+  --limit 20 \
+  --json
+```
+
+This command reads only local `audit_events` rows whose `aggregate_type` is `memory_writeback` and summarizes:
+
+- counts by writeback status such as `stored`, `skipped`, `disabled`, `failed`, or `deduped`
+- backend names seen in recent attempts
+- top failing lifecycle events
+- the most recent failure records without exposing raw provider errors or secrets
+
+Interpretation guidance:
+
+- `failed` means the core workflow committed, but the best-effort memory writeback attempt did not finish successfully
+- `disabled` means writes were intentionally off, so there was no provider write attempt
+- `skipped` usually means policy or capability gates decided not to write
+- `deduped` means a repeated event was intentionally collapsed
+- `stored` means the advisory memory layer accepted the writeback
+
+This command is intentionally local-audit truth, not provider truth. Operators should trust it as the supported view of what the registry attempted and recorded locally, even if Memo0 is unreachable, unhealthy, or later diverges from local history.
 
 ## `systemd` bundle
 

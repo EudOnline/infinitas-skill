@@ -7,9 +7,12 @@ import sys
 import tempfile
 from pathlib import Path
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 from test_support.server_ops import HealthServer
 from test_support.server_ops import run_command as shared_run_command
 
+from server.models import AuditEvent, Base
 from tests.fixtures.repo_state import create_repo_state
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -45,7 +48,15 @@ def _load_json_output(result, *, label: str) -> dict:
 def assert_server_cli_help_lists_maintained_subcommands() -> None:
     result = _run_cli(["server", "--help"], expect=0)
     help_text = result.stdout + result.stderr
-    for command in ["healthcheck", "backup", "render-systemd", "prune-backups", "worker", "inspect-state"]:
+    for command in [
+        "healthcheck",
+        "backup",
+        "render-systemd",
+        "prune-backups",
+        "worker",
+        "inspect-state",
+        "memory-health",
+    ]:
         assert command in help_text, f"expected {command!r} in infinitas server help"
 
 
@@ -100,6 +111,58 @@ def test_server_ops_split_into_smaller_modules() -> None:
 
 def test_server_healthcheck_reports_expected_summary() -> None:
     assert_server_healthcheck_reports_expected_summary()
+
+
+def test_server_memory_health_command_returns_status_counts(tmp_path: Path) -> None:
+    db_path = tmp_path / "memory-health.db"
+    database_url = f"sqlite:///{db_path}"
+    engine = create_engine(database_url, future=True)
+    try:
+        Base.metadata.create_all(engine)
+        with Session(engine) as session:
+            session.add_all(
+                [
+                    AuditEvent(
+                        aggregate_type="memory_writeback",
+                        aggregate_id="mw:1",
+                        event_type="memory.writeback.failed",
+                        actor_ref="principal:1",
+                        payload_json=json.dumps(
+                            {
+                                "status": "failed",
+                                "backend": "memo0",
+                                "lifecycle_event": "task.review.approve",
+                            }
+                        ),
+                    ),
+                    AuditEvent(
+                        aggregate_type="memory_writeback",
+                        aggregate_id="mw:2",
+                        event_type="memory.writeback.stored",
+                        actor_ref="principal:1",
+                        payload_json=json.dumps(
+                            {
+                                "status": "stored",
+                                "backend": "memo0",
+                                "lifecycle_event": "task.release.ready",
+                            }
+                        ),
+                    ),
+                ]
+            )
+            session.commit()
+    finally:
+        engine.dispose()
+
+    result = _run_cli(
+        ["server", "memory-health", "--database-url", database_url, "--json"],
+        expect=0,
+    )
+    payload = _load_json_output(result, label="infinitas server memory-health")
+    assert payload["ok"] is True
+    assert payload["writeback_status_counts"]["failed"] == 1
+    assert payload["writeback_status_counts"]["stored"] == 1
+    assert payload["backend_names"] == ["memo0"]
 
 
 def main() -> None:
