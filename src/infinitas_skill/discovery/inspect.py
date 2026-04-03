@@ -235,7 +235,11 @@ def _load_memory_hints(
         value = memory_scope.get(key)
         if isinstance(value, str) and value.strip():
             provider_scope[key] = value.strip()
-    limit = memory_top_k if isinstance(memory_top_k, int) and memory_top_k > 0 else query.max_results
+    limit = (
+        memory_top_k
+        if isinstance(memory_top_k, int) and memory_top_k > 0
+        else query.max_results
+    )
     try:
         payload = memory_provider.search(
             query=query.query,

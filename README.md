@@ -2,7 +2,7 @@
 audience: contributors, operators, integrators
 owner: repository maintainers
 source_of_truth: repo entry page
-last_reviewed: 2026-04-02
+last_reviewed: 2026-04-03
 status: maintained
 ---
 
@@ -138,6 +138,7 @@ The supported runtime remains:
 Use these canonical docs for the current model:
 
 - [Private-first cutover](docs/guide/private-first-cutover.md)
+- [Memory operating model](docs/ai/memory.md)
 - [AI workflow drills](docs/ai/workflow-drills.md) explains when to use `scripts/recommend-skill.sh`, `scripts/search-skills.sh`, and `scripts/inspect-skill.sh` for task routing.
 - [Platform drift playbook](docs/ops/platform-drift-playbook.md)
 - [Release checklist](docs/ops/release-checklist.md)
@@ -146,6 +147,12 @@ Use these canonical docs for the current model:
 - [Hosted registry server deployment](docs/ops/server-deployment.md)
 
 Compatibility reporting now distinguishes between `declared support` from authored metadata such as `_meta.json.agent_compatible` and `verified support` backed by platform-specific evidence plus freshness checks.
+
+The optional memory layer is additive only:
+
+- recommendation and inspect may include advisory memory fields
+- lifecycle events may emit best-effort memory writeback attempts plus traceable audit events
+- release, review, access, and install truth still comes from the local database, immutable artifacts, and current policy checks
 
 ## Policy trace and validation output
 

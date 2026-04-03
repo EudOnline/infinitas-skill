@@ -2,7 +2,7 @@
 audience: contributors, operators, integrators
 owner: repository maintainers
 source_of_truth: private-first cutover guide
-last_reviewed: 2026-03-30
+last_reviewed: 2026-04-03
 status: maintained
 ---
 
@@ -18,6 +18,13 @@ The hosted registry now uses the private-first domain model end to end:
 - `exposures`, `review_cases`, `review_decisions`
 - `access_grants`, `credentials`
 - `audit_events`, `jobs`
+
+An optional advisory memory layer now sits beside that model:
+
+- recommend and inspect may read cognitive memory when explicitly enabled
+- lifecycle hooks may write best-effort experience memory after core transactions commit
+- `audit_events` remain the durable trace for those writeback attempts
+- releases, reviews, exposures, grants, and credentials still remain local source-of-truth state
 
 The legacy product workflow is removed:
 
@@ -57,3 +64,4 @@ The legacy product workflow is removed:
 - release worker
 - private-first CLI surface
 - hosted UI rendering
+- advisory memory retrieval and auditable lifecycle writeback without policy bypass

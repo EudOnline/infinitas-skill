@@ -55,13 +55,38 @@ Use the API response as the source of truth for artifact download. Do not infer 
 - `memory_hints.used`
 - `memory_hints.backend`
 - `memory_hints.matched_count`
+- `memory_hints.status`
 - `memory_hints.items[]` (`memory_type`, `memory`, optional `score`)
+
+Example:
+
+```json
+{
+  "qualified_name": "lvxiaoer/consume-infinitas-skill",
+  "trust_state": "verified",
+  "memory_hints": {
+    "used": true,
+    "backend": "memo0",
+    "matched_count": 1,
+    "advisory_only": true,
+    "status": "matched",
+    "items": [
+      {
+        "memory_type": "experience",
+        "memory": "OpenClaw installs usually succeed when the release is already materialized.",
+        "score": 0.94
+      }
+    ]
+  }
+}
+```
 
 This memory layer is advisory only:
 
 - trust derivation still comes from manifest, attestation, and signature evidence
 - memory hints cannot mark a skill as verified, trusted, or installable
 - inspect trust fields remain authoritative even when memory hints are present
+- inspect may also return `disabled`, `unavailable`, `no-match`, or `error` in `memory_hints.status` without changing the trust decision
 
 ## Installed integrity follow-up
 

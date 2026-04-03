@@ -84,6 +84,39 @@ When memory-aware recommendation is enabled, also read:
 - `matched`: memory retrieval succeeded with usable memories
 - `error`: memory retrieval failed; see optional `memory_summary.error`
 
+Example:
+
+```json
+{
+  "explanation": {
+    "memory_summary": {
+      "used": true,
+      "backend": "memo0",
+      "matched_count": 2,
+      "advisory_only": true,
+      "status": "matched"
+    }
+  },
+  "results": [
+    {
+      "qualified_name": "lvxiaoer/consume-infinitas-skill",
+      "memory_signals": {
+        "matched_memory_count": 2,
+        "applied_boost": 35,
+        "memory_types": ["user_preference", "experience"]
+      }
+    }
+  ]
+}
+```
+
+Interpret the example this way:
+
+- memory retrieval found relevant advisory context
+- only compatible candidates received a boost
+- the boost remained bounded and explainable
+- the normal compatibility, trust, and install policy chain still decided what was eligible
+
 `_meta.json` is the canonical source of authored decision metadata. Generated indexes and AI wrappers mirror those same fields so recommend, search, and inspect can stay in sync without inventing separate copies of `use_when`, `avoid_when`, `capabilities`, `runtime_assumptions`, `maturity`, or `quality_score`.
 
 The surfaced decision metadata is the canonical author-owned guidance from `_meta.json`. Use it to explain why a skill fits the task without reopening raw catalogs.
@@ -95,3 +128,4 @@ The surfaced decision metadata is the canonical author-owned guidance from `_met
 - high recommendation confidence does not replace inspect-before-install when provenance, trust state, or compatibility matter
 - recommendation is advisory; inspect the skill before install when provenance, trust state, or compatibility matters
 - memory boost is bounded and cannot lift incompatible candidates above compatible ones
+- if memory retrieval fails, recommendation still returns deterministic results and reports the advisory error in `explanation.memory_summary`

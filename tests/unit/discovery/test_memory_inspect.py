@@ -28,7 +28,9 @@ def _prepare_repo(tmp_path: Path) -> Path:
                     "latest_version": "1.0.0",
                     "versions": {
                         "1.0.0": {
-                            "distribution_manifest_path": "catalog/distributions/consume/manifest.json",
+                            "distribution_manifest_path": (
+                                "catalog/distributions/consume/manifest.json"
+                            ),
                             "attestation_path": "catalog/provenance/consume.json",
                             "attestation_signature_path": "catalog/provenance/consume.json.ssig",
                             "attestation_formats": ["ssh"],
@@ -131,7 +133,10 @@ def test_inspect_returns_experience_hints_as_advisory_context(tmp_path: Path):
         memory_provider=FakeMemoryProvider(
             [
                 {
-                    "memory": "OpenClaw installs usually succeed when the release is already materialized.",
+                    "memory": (
+                        "OpenClaw installs usually succeed when the release "
+                        "is already materialized."
+                    ),
                     "memory_type": "experience",
                     "score": 0.94,
                 }
