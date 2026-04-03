@@ -29,12 +29,35 @@ done
 
 python3 - <<'PY' "$ROOT" "$NAME" "$VERSION"
 import json
+import os
 import sys
 from pathlib import Path
 
 root = Path(sys.argv[1]).resolve()
 sys.path.insert(0, str(root / 'scripts'))
 from search_inspect_lib import inspect_skill  # noqa: E402
+from infinitas_skill.server.memory_retrieval_audit import build_memory_retrieval_audit_recorder  # noqa: E402
 
-print(json.dumps(inspect_skill(root, name=sys.argv[2], version=sys.argv[3] or None), ensure_ascii=False))
+database_url = os.environ.get("INFINITAS_DISCOVERY_AUDIT_DATABASE_URL", "").strip()
+actor_ref = os.environ.get(
+    "INFINITAS_DISCOVERY_AUDIT_ACTOR_REF",
+    "system:discovery:inspect-script",
+).strip()
+audit_recorder = (
+    build_memory_retrieval_audit_recorder(database_url=database_url, actor_ref=actor_ref)
+    if database_url
+    else None
+)
+
+print(
+    json.dumps(
+        inspect_skill(
+            root,
+            name=sys.argv[2],
+            version=sys.argv[3] or None,
+            audit_recorder=audit_recorder,
+        ),
+        ensure_ascii=False,
+    )
+)
 PY

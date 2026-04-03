@@ -300,3 +300,27 @@ def test_recommendation_prefers_higher_quality_matched_memory_when_base_scores_t
     assert payload["results"][0]["memory_signals"]["applied_boost"] > payload["results"][1][
         "memory_signals"
     ]["applied_boost"]
+
+
+def test_recommendation_can_emit_memory_usage_audit_entry(tmp_path: Path):
+    repo = _prepare_repo(tmp_path)
+    events: list[dict] = []
+
+    recommend_skills(
+        repo,
+        task="Need codex helper for workflows",
+        target_agent="codex",
+        limit=3,
+        memory_provider=FakeMemoryProvider(),
+        memory_scope={"user_ref": "maintainer"},
+        memory_context_enabled=True,
+        audit_recorder=events.append,
+    )
+
+    assert len(events) == 1
+    assert events[0]["operation"] == "recommend"
+    assert events[0]["target_agent"] == "codex"
+    assert events[0]["memory"]["backend"] == "fake"
+    assert events[0]["memory"]["matched_count"] == 2
+    assert events[0]["results"]["count"] == 3
+    assert events[0]["results"]["top_qualified_name"] == "team/beta-preferred"

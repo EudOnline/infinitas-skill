@@ -8,6 +8,7 @@ from typing import Any
 
 from .inspect_memory import load_inspect_memory_hints
 from .inspect_view import build_inspect_payload, dependency_summary, derive_trust_state
+from .memory_audit import MemoryAuditRecorder, emit_inspect_memory_audit
 
 
 def _load_json(path: Path):
@@ -54,6 +55,7 @@ def inspect_skill(
     memory_context_enabled: bool = True,
     memory_top_k: int = 3,
     target_agent: str | None = None,
+    audit_recorder: MemoryAuditRecorder | None = None,
 ) -> dict[str, Any]:
     root = Path(root).resolve()
     ai_index = _load_ai_index(root)
@@ -166,7 +168,7 @@ def inspect_skill(
         ),
         "required_attestation_formats": required_formats,
     }
-    return build_inspect_payload(
+    payload = build_inspect_payload(
         skill_entry=skill_entry,
         resolved_version=resolved_version,
         trust_state=trust_state,
@@ -177,6 +179,14 @@ def inspect_skill(
         trust_view=trust_view,
         memory_hints=memory_hints,
     )
+    emit_inspect_memory_audit(
+        audit_recorder=audit_recorder,
+        skill_ref=skill_entry.get("qualified_name") or skill_entry.get("name") or name,
+        version=resolved_version,
+        target_agent=target_agent,
+        payload=payload,
+    )
+    return payload
 
 
 __all__ = ["inspect_skill"]

@@ -149,6 +149,12 @@ Inspect reads:
 - ordering: hints are trimmed and sorted by the same advisory quality score as recommendation
 - the payload now includes a `curation_summary` block so operators and tests can see how many memories were kept or suppressed
 
+Optional retrieval audit:
+
+- set `INFINITAS_DISCOVERY_AUDIT_DATABASE_URL=sqlite:////path/to/server.db` when running `scripts/recommend-skill.sh` or `scripts/inspect-skill.sh`
+- those entrypoints will append local `memory_retrieval` audit events summarizing whether memory was used, matched, disabled, or errored
+- this keeps retrieval-side usefulness traceable from local history without making Memo0 the source of truth
+
 ## Evaluation Matrix
 
 Memory behavior is now regression-tested with fixture-backed evaluation cases under:

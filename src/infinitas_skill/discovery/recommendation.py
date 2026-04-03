@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from .decision_metadata import canonical_decision_metadata
+from .memory_audit import MemoryAuditRecorder, emit_recommendation_memory_audit
 from .recommendation_explanation import (
     annotate_ranked_recommendations,
     build_recommendation_explanation,
@@ -27,6 +28,7 @@ def recommend_skills(
     memory_scope: dict | None = None,
     memory_context_enabled: bool = False,
     memory_top_k: int = 3,
+    audit_recorder: MemoryAuditRecorder | None = None,
 ) -> dict[str, Any]:
     root = Path(root).resolve()
     payload = load_discovery_index(root)
@@ -101,13 +103,20 @@ def recommend_skills(
         memory_records_count=len(memory_records),
         memory_context_enabled=memory_context_enabled,
     )
-    return {
+    payload = {
         "ok": True,
         "task": task,
         "target_agent": target_agent,
         "results": visible,
         "explanation": explanation,
     }
+    emit_recommendation_memory_audit(
+        audit_recorder=audit_recorder,
+        task=task,
+        target_agent=target_agent,
+        payload=payload,
+    )
+    return payload
 
 
 __all__ = ["recommend_skills"]

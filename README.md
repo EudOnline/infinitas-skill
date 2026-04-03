@@ -160,6 +160,7 @@ Compatibility reporting now distinguishes between `declared support` from author
 The optional memory layer is additive only:
 
 - recommendation and inspect may include advisory memory fields
+- recommendation and inspect can now emit local `memory_retrieval` audit events when `INFINITAS_DISCOVERY_AUDIT_DATABASE_URL` is configured
 - lifecycle events may emit best-effort memory writeback attempts plus traceable audit events
 - fixture-backed memory evaluation now lives in `tests/integration/test_memory_evaluation_matrix.py`
 - the evaluation matrix now checks duplicate suppression and noisy recall stability

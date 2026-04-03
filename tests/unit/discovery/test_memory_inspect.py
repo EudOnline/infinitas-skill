@@ -185,3 +185,34 @@ def test_inspect_orders_memory_hints_by_effective_quality(tmp_path: Path):
     )
     items = payload["memory_hints"]["items"]
     assert items[0]["memory_type"] == "experience"
+
+
+def test_inspect_can_emit_memory_usage_audit_entry(tmp_path: Path):
+    repo = _prepare_repo(tmp_path)
+    events: list[dict] = []
+
+    inspect_skill(
+        repo,
+        name="lvxiaoer/consume-infinitas-skill",
+        memory_provider=FakeMemoryProvider(
+            [
+                {
+                    "memory": (
+                        "OpenClaw installs usually succeed when the release "
+                        "is already materialized."
+                    ),
+                    "memory_type": "experience",
+                    "score": 0.94,
+                }
+            ]
+        ),
+        memory_scope={"user_ref": "maintainer"},
+        audit_recorder=events.append,
+    )
+
+    assert len(events) == 1
+    assert events[0]["operation"] == "inspect"
+    assert events[0]["skill_ref"] == "lvxiaoer/consume-infinitas-skill"
+    assert events[0]["memory"]["backend"] == "fake"
+    assert events[0]["memory"]["matched_count"] == 1
+    assert events[0]["results"]["trust_state"] == "verified"
