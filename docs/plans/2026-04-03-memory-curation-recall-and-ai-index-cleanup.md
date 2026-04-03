@@ -205,3 +205,36 @@ git status --short
 git add src/infinitas_skill/discovery/ai_index.py src/infinitas_skill/discovery/ai_index_builder.py src/infinitas_skill/discovery/ai_index_validation.py tests/unit/discovery/test_ai_index_builder.py tests/unit/discovery/test_ai_index_validation.py tests/integration/test_dev_workflow.py docs/ops/2026-04-02-project-health-scorecard.md docs/plans/2026-04-03-memory-curation-recall-and-ai-index-cleanup.md
 git commit -m "refactor: split ai index orchestration"
 ```
+
+## Execution Outcomes
+
+Completed on 2026-04-03 in the `codex/memo0-memory` worktree.
+
+Delivered commits before the final `ai_index` closeout:
+
+- `dc093b3` `feat: add memory curation planning`
+- `ff37b50` `test: expand memory recall evaluation`
+
+Structural outcome:
+
+- `src/infinitas_skill/discovery/ai_index.py`: `534 -> 12` lines
+- `src/infinitas_skill/discovery/ai_index_builder.py`: `269` lines
+- `src/infinitas_skill/discovery/ai_index_validation.py`: `167` lines
+
+Verification outcome before the final commit:
+
+- Task 1 focused curation slice: `14 passed in 1.69s`
+- Task 2 recall evaluation slice: `13 passed in 0.28s`
+- Task 3 focused `ai_index` slice: `15 passed in 0.28s`
+- expanded closeout pytest matrix: `58 passed in 2.39s`
+- `python3 scripts/test-ai-index.py`: PASS
+- `python3 scripts/test-recommend-skill.py`: PASS
+- `python3 scripts/test-search-inspect.py`: PASS
+- `make doctor`: PASS
+- `make ci-fast`: PASS (`14 passed in 23.43s`)
+
+Follow-on optimization direction:
+
+- turn local curation planning into optional provider-side prune/archive execution with explicit safeguards
+- expand recall-quality evaluation from discovery ranking into longer-horizon usefulness and decay metrics
+- keep attacking large maintained modules in install and policy surfaces with the same seam-first extraction style
