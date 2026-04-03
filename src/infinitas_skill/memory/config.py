@@ -12,9 +12,9 @@ DEFAULT_MEM0_API_KEY_ENV = "MEM0_API_KEY"
 
 def normalize_memory_backend(value: str | None) -> str:
     normalized = str(value or "").strip().lower()
-    if normalized in {"memo0", "disabled"}:
-        return normalized
-    return DEFAULT_MEMORY_BACKEND
+    if not normalized:
+        return DEFAULT_MEMORY_BACKEND
+    return normalized
 
 
 def _env_flag(value: str | None) -> bool:
@@ -55,4 +55,3 @@ def load_memory_config(env: Mapping[str, str] | None = None) -> MemoryConfig:
             or DEFAULT_MEM0_API_KEY_ENV
         ),
     )
-

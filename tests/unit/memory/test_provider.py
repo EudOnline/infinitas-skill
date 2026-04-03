@@ -20,6 +20,22 @@ def test_memo0_backend_without_sdk_falls_back_to_noop(monkeypatch):
     assert provider.capabilities["write"] is False
 
 
+def test_unsupported_backend_reports_specific_noop_reason(monkeypatch):
+    monkeypatch.setenv("INFINITAS_MEMORY_BACKEND", "future-backend")
+    provider = build_memory_provider()
+    assert provider.backend_name == "noop"
+    assert provider.reason == "unsupported memory backend: future-backend"
+
+
+def test_memo0_init_runtime_failure_keeps_noop_with_detailed_reason(monkeypatch):
+    monkeypatch.setenv("INFINITAS_MEMORY_BACKEND", "memo0")
+    provider = build_memory_provider(
+        importer=lambda: (_ for _ in ()).throw(RuntimeError("network unavailable"))
+    )
+    assert provider.backend_name == "noop"
+    assert provider.reason == "memo0 provider initialization failed: network unavailable"
+
+
 def test_settings_read_memory_flags(monkeypatch):
     monkeypatch.setenv("INFINITAS_MEMORY_BACKEND", "memo0")
     monkeypatch.setenv("INFINITAS_MEMORY_CONTEXT_ENABLED", "1")

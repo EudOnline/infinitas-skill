@@ -46,8 +46,10 @@ def build_memory_provider(
     resolved_config = config or load_memory_config()
     backend_name = normalize_memory_backend(backend or resolved_config.backend)
 
-    if backend_name != "memo0":
+    if backend_name == "disabled":
         return NoopMemoryProvider(reason="memory backend disabled")
+    if backend_name != "memo0":
+        return NoopMemoryProvider(reason=f"unsupported memory backend: {backend_name}")
 
     from .memo0_provider import Memo0MemoryProvider
 
@@ -58,6 +60,5 @@ def build_memory_provider(
         )
     except ImportError:
         return NoopMemoryProvider(reason="memo0 sdk unavailable")
-    except Exception:
-        return NoopMemoryProvider(reason="memo0 provider initialization failed")
-
+    except Exception as exc:
+        return NoopMemoryProvider(reason=f"memo0 provider initialization failed: {exc}")
