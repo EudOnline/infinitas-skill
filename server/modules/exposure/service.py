@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from server.models import Exposure, Release, utcnow
 from server.modules.exposure.schemas import ExposureCreateRequest, ExposurePatchRequest
+from server.modules.memory.service import record_lifecycle_memory_event_best_effort
 from server.modules.release import service as release_service
 from server.modules.review import service as review_service
 from server.modules.review.policy import evaluate_exposure_policy
@@ -101,6 +102,32 @@ def create_exposure(
     db.add(exposure)
     db.commit()
     db.refresh(exposure)
+    record_lifecycle_memory_event_best_effort(
+        db,
+        lifecycle_event="task.exposure.create",
+        aggregate_type="exposure",
+        aggregate_id=str(exposure.id),
+        actor_ref=f"principal:{actor_principal_id}",
+        payload={
+            "release_id": str(exposure.release_id),
+            "audience_type": exposure.audience_type,
+            "review_requirement": exposure.review_requirement,
+            "state": exposure.state,
+        },
+    )
+    if exposure.state == "active":
+        record_lifecycle_memory_event_best_effort(
+            db,
+            lifecycle_event="task.exposure.activate",
+            aggregate_type="exposure",
+            aggregate_id=str(exposure.id),
+            actor_ref=f"principal:{actor_principal_id}",
+            payload={
+                "release_id": str(exposure.release_id),
+                "audience_type": exposure.audience_type,
+                "activation_source": "create_exposure",
+            },
+        )
     return exposure
 
 
@@ -151,6 +178,18 @@ def activate_exposure(db: Session, *, exposure_id: int, actor_principal_id: int)
     db.add(exposure)
     db.commit()
     db.refresh(exposure)
+    record_lifecycle_memory_event_best_effort(
+        db,
+        lifecycle_event="task.exposure.activate",
+        aggregate_type="exposure",
+        aggregate_id=str(exposure.id),
+        actor_ref=f"principal:{actor_principal_id}",
+        payload={
+            "release_id": str(exposure.release_id),
+            "audience_type": exposure.audience_type,
+            "activation_source": "manual_activate",
+        },
+    )
     return exposure
 
 

@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from server.models import Exposure, ReviewCase, ReviewDecision, ReviewPolicy, utcnow
+from server.modules.memory.service import record_lifecycle_memory_event_best_effort
 from server.modules.review import default_policy
 
 
@@ -35,7 +36,11 @@ def ensure_default_policy(db: Session) -> ReviewPolicy:
         name=default_policy.DEFAULT_POLICY_NAME,
         version=default_policy.DEFAULT_POLICY_VERSION,
         is_active=True,
-        rules_json=json.dumps(default_policy.DEFAULT_POLICY_RULES, ensure_ascii=False, sort_keys=True),
+        rules_json=json.dumps(
+            default_policy.DEFAULT_POLICY_RULES,
+            ensure_ascii=False,
+            sort_keys=True,
+        ),
     )
     db.add(policy)
     db.flush()
@@ -148,4 +153,39 @@ def record_decision(
     db.commit()
     db.refresh(review_case)
     db.refresh(exposure)
+    if normalized_decision in {"approve", "reject"}:
+        record_lifecycle_memory_event_best_effort(
+            db,
+            lifecycle_event=(
+                "task.review.approve"
+                if normalized_decision == "approve"
+                else "task.review.reject"
+            ),
+            aggregate_type="review_case",
+            aggregate_id=str(review_case.id),
+            actor_ref=f"principal:{reviewer_principal_id}",
+            payload={
+                "exposure_id": str(exposure.id),
+                "decision": normalized_decision,
+                "mode": review_case.mode,
+                "state": review_case.state,
+            },
+        )
+    if (
+        normalized_decision == "approve"
+        and review_case.mode == "blocking"
+        and exposure.state == "active"
+    ):
+        record_lifecycle_memory_event_best_effort(
+            db,
+            lifecycle_event="task.exposure.activate",
+            aggregate_type="exposure",
+            aggregate_id=str(exposure.id),
+            actor_ref=f"principal:{reviewer_principal_id}",
+            payload={
+                "release_id": str(exposure.release_id),
+                "audience_type": exposure.audience_type,
+                "activation_source": "review_approve",
+            },
+        )
     return review_case, exposure

@@ -8,7 +8,12 @@ from sqlalchemy.orm import Session
 
 from server.modules.authoring import repository
 from server.modules.authoring.models import Skill, SkillDraft, SkillVersion
-from server.modules.authoring.schemas import SkillCreateRequest, SkillDraftCreateRequest, SkillDraftPatchRequest
+from server.modules.authoring.schemas import (
+    SkillCreateRequest,
+    SkillDraftCreateRequest,
+    SkillDraftPatchRequest,
+)
+from server.modules.memory.service import record_lifecycle_memory_event_best_effort
 
 
 class AuthoringError(Exception):
@@ -72,7 +77,11 @@ def create_skill(
     actor_principal_id: int,
     payload: SkillCreateRequest,
 ) -> Skill:
-    existing = repository.get_skill_by_namespace_and_slug(db, namespace_id=namespace_id, slug=payload.slug)
+    existing = repository.get_skill_by_namespace_and_slug(
+        db,
+        namespace_id=namespace_id,
+        slug=payload.slug,
+    )
     if existing is not None:
         raise ConflictError("skill slug already exists in namespace")
     skill = repository.create_skill(
@@ -128,6 +137,18 @@ def create_draft(
     )
     db.commit()
     db.refresh(draft)
+    record_lifecycle_memory_event_best_effort(
+        db,
+        lifecycle_event="task.authoring.create_draft",
+        aggregate_type="skill_draft",
+        aggregate_id=str(draft.id),
+        actor_ref=f"principal:{actor_principal_id}",
+        payload={
+            "skill_id": str(skill.id),
+            "skill_slug": skill.slug,
+            "draft_state": draft.state,
+        },
+    )
     return draft
 
 
@@ -176,7 +197,11 @@ def seal_draft(
     if skill is None:
         raise NotFoundError("skill not found")
     assert_namespace_owner(skill, principal_id=actor_principal_id)
-    existing_version = repository.get_skill_version_by_skill_and_version(db, skill_id=skill.id, version=version)
+    existing_version = repository.get_skill_version_by_skill_and_version(
+        db,
+        skill_id=skill.id,
+        version=version,
+    )
     if existing_version is not None:
         raise ConflictError("skill version already exists")
 
@@ -202,4 +227,17 @@ def seal_draft(
     db.commit()
     db.refresh(draft)
     db.refresh(skill_version)
+    record_lifecycle_memory_event_best_effort(
+        db,
+        lifecycle_event="task.authoring.seal_draft",
+        aggregate_type="skill_draft",
+        aggregate_id=str(draft.id),
+        actor_ref=f"principal:{actor_principal_id}",
+        payload={
+            "skill_id": str(skill.id),
+            "skill_slug": skill.slug,
+            "version": skill_version.version,
+            "skill_version_id": str(skill_version.id),
+        },
+    )
     return draft, skill_version
