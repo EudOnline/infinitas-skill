@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
+from infinitas_skill.memory.config import load_memory_config
+
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SERVER_ENV = 'development'
 DEFAULT_SECRET_KEY = 'change-me'
@@ -40,6 +42,13 @@ class Settings:
     repo_lock_path: Path
     mirror_remote: str
     mirror_branch: str
+    memory_backend: str
+    memory_context_enabled: bool
+    memory_write_enabled: bool
+    memory_namespace: str
+    memory_top_k: int
+    memory_mem0_base_url: str | None
+    memory_mem0_api_key_env: str
 
 
 def _normalize_bootstrap_users(payload: object) -> list[dict]:
@@ -139,6 +148,7 @@ def get_settings() -> Settings:
     repo_lock_path = Path(os.environ.get('INFINITAS_SERVER_REPO_LOCK_PATH') or (ROOT / '.state' / 'repo.lock')).expanduser().resolve()
     mirror_remote = str(os.environ.get('INFINITAS_SERVER_MIRROR_REMOTE') or '').strip()
     mirror_branch = str(os.environ.get('INFINITAS_SERVER_MIRROR_BRANCH') or '').strip()
+    memory = load_memory_config()
 
     return Settings(
         app_name='infinitas-hosted-registry',
@@ -153,4 +163,11 @@ def get_settings() -> Settings:
         repo_lock_path=repo_lock_path,
         mirror_remote=mirror_remote,
         mirror_branch=mirror_branch,
+        memory_backend=memory.backend,
+        memory_context_enabled=memory.context_enabled,
+        memory_write_enabled=memory.write_enabled,
+        memory_namespace=memory.namespace,
+        memory_top_k=memory.top_k,
+        memory_mem0_base_url=memory.mem0_base_url,
+        memory_mem0_api_key_env=memory.mem0_api_key_env,
     )
