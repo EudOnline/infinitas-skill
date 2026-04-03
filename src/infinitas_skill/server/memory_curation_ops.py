@@ -14,6 +14,7 @@ from infinitas_skill.server.memory_curation import (
 from infinitas_skill.server.memory_curation_queue import (
     build_memory_curation_job_summary,
     enqueue_memory_curation_job,
+    resolve_memory_curation_job_options,
 )
 from infinitas_skill.server.repo_checks import require_sqlite_db
 
@@ -65,6 +66,11 @@ def configure_server_memory_curation_parser(
         action='store_true',
         help='Queue the curation action for the hosted worker instead of running immediately',
     )
+    parser.add_argument(
+        '--use-server-policy',
+        action='store_true',
+        help='Load action and guardrails from server memory curation settings',
+    )
     parser.add_argument('--json', action='store_true', help='Emit machine-readable JSON output')
     return parser
 
@@ -86,38 +92,53 @@ def run_server_memory_curation(
     max_actions: int = 20,
     actor_ref: str = 'system:memory-curation',
     enqueue: bool = False,
+    use_server_policy: bool = False,
     as_json: bool = False,
 ) -> int:
     require_sqlite_db(database_url)
     engine = create_engine(database_url, future=True, **server_engine_kwargs(database_url))
     try:
         with Session(engine) as session:
+            resolved = resolve_memory_curation_job_options(
+                action=action,
+                apply=apply,
+                limit=limit,
+                max_actions=max_actions,
+                actor_ref=actor_ref,
+                use_server_policy=use_server_policy,
+            )
             if enqueue:
                 job = enqueue_memory_curation_job(
                     session,
-                    action=action,
-                    apply=apply,
-                    limit=limit,
-                    max_actions=max_actions,
-                    actor_ref=actor_ref,
+                    action=str(resolved['action']),
+                    apply=bool(resolved['apply']),
+                    limit=int(resolved['limit']),
+                    max_actions=int(resolved['max_actions']),
+                    actor_ref=str(resolved['actor_ref']),
                 )
                 summary = {
                     'ok': True,
                     'queued': True,
                     'job': build_memory_curation_job_summary(job),
                 }
-            elif action == 'plan':
-                summary = summarize_memory_curation_plan(session, limit=limit)
+            elif str(resolved['action']) == 'plan':
+                summary = summarize_memory_curation_plan(session, limit=int(resolved['limit']))
             else:
-                provider = build_memory_provider() if action == 'prune' and apply else None
+                resolved_action = str(resolved['action'])
+                resolved_apply = bool(resolved['apply'])
+                provider = (
+                    build_memory_provider()
+                    if resolved_action == 'prune' and resolved_apply
+                    else None
+                )
                 summary = execute_memory_curation(
                     session,
-                    action=action,
-                    apply=apply,
+                    action=resolved_action,
+                    apply=resolved_apply,
                     provider=provider,
-                    limit=limit,
-                    max_actions=max_actions,
-                    actor_ref=actor_ref,
+                    limit=int(resolved['limit']),
+                    max_actions=int(resolved['max_actions']),
+                    actor_ref=str(resolved['actor_ref']),
                 )
                 if summary['apply']:
                     session.commit()

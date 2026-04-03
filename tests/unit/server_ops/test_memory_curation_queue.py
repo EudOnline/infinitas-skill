@@ -73,3 +73,24 @@ def test_process_job_executes_memory_curation_archive_job(monkeypatch, tmp_path)
             .where(AuditEvent.event_type == "memory.curation.archived")
         )
         assert event is not None
+
+
+def test_resolve_memory_curation_job_options_uses_server_policy(monkeypatch) -> None:
+    monkeypatch.setenv("INFINITAS_SERVER_ENV", "test")
+    monkeypatch.setenv("INFINITAS_SERVER_SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("INFINITAS_SERVER_BOOTSTRAP_USERS", "[]")
+    monkeypatch.setenv("INFINITAS_SERVER_MEMORY_CURATION_ACTION", "prune")
+    monkeypatch.setenv("INFINITAS_SERVER_MEMORY_CURATION_APPLY", "1")
+    monkeypatch.setenv("INFINITAS_SERVER_MEMORY_CURATION_LIMIT", "33")
+    monkeypatch.setenv("INFINITAS_SERVER_MEMORY_CURATION_MAX_ACTIONS", "7")
+    monkeypatch.setenv("INFINITAS_SERVER_MEMORY_CURATION_ACTOR_REF", "system:scheduled-curation")
+
+    from infinitas_skill.server.memory_curation_queue import resolve_memory_curation_job_options
+
+    options = resolve_memory_curation_job_options(use_server_policy=True)
+
+    assert options["action"] == "prune"
+    assert options["apply"] is True
+    assert options["limit"] == 33
+    assert options["max_actions"] == 7
+    assert options["actor_ref"] == "system:scheduled-curation"

@@ -340,6 +340,66 @@ def test_server_memory_observability_command_summarizes_memory_ops(tmp_path: Pat
     assert payload["jobs"]["status_counts"]["queued"] == 1
 
 
+def test_server_memory_baselines_command_returns_windowed_summary(tmp_path: Path) -> None:
+    db_path = tmp_path / "memory-baselines.db"
+    database_url = f"sqlite:///{db_path}"
+    engine = create_engine(database_url, future=True)
+    try:
+        Base.metadata.create_all(engine)
+        with Session(engine) as session:
+            session.add_all(
+                [
+                    AuditEvent(
+                        aggregate_type="memory_writeback",
+                        aggregate_id="mw:1",
+                        event_type="memory.writeback.stored",
+                        actor_ref="principal:1",
+                        occurred_at=datetime(2026, 4, 3, 10, 0, tzinfo=timezone.utc),
+                        payload_json=json.dumps(
+                            {"status": "stored", "backend": "memo0", "lifecycle_event": "task.release.ready"}
+                        ),
+                    ),
+                    AuditEvent(
+                        aggregate_type="memory_curation",
+                        aggregate_id="memory_writeback:1",
+                        event_type="memory.curation.archived",
+                        actor_ref="system:memory-curation",
+                        occurred_at=datetime(2026, 4, 3, 9, 0, tzinfo=timezone.utc),
+                        payload_json=json.dumps({"action": "archive", "status": "archived"}),
+                    ),
+                    Job(
+                        kind="memory_curation",
+                        status="completed",
+                        created_at=datetime(2026, 4, 3, 8, 0, tzinfo=timezone.utc),
+                        payload_json=json.dumps({"action": "archive"}),
+                        note="completed archive",
+                    ),
+                ]
+            )
+            session.commit()
+    finally:
+        engine.dispose()
+
+    result = _run_cli(
+        [
+            "server",
+            "memory-baselines",
+            "--database-url",
+            database_url,
+            "--window-hours",
+            "24",
+            "--json",
+        ],
+        expect=0,
+    )
+    payload = _load_json_output(result, label="infinitas server memory-baselines")
+    assert payload["ok"] is True
+    assert payload["window_hours"] == 24
+    assert payload["writeback"]["recent"]["totals"]["count"] == 1
+    assert payload["curation"]["recent"]["totals"]["count"] == 1
+    assert payload["jobs"]["recent"]["totals"]["count"] == 1
+
+
 def test_server_memory_curation_command_can_enqueue_job(tmp_path: Path) -> None:
     db_path = tmp_path / "memory-curation-queue.db"
     database_url = f"sqlite:///{db_path}"
@@ -382,6 +442,47 @@ def test_server_memory_curation_command_can_enqueue_job(tmp_path: Path) -> None:
             assert '"action": "archive"' in queued_job[1]
     finally:
         engine.dispose()
+
+
+def test_server_memory_curation_command_can_enqueue_using_server_policy(tmp_path: Path) -> None:
+    db_path = tmp_path / "memory-curation-policy-queue.db"
+    database_url = f"sqlite:///{db_path}"
+    engine = create_engine(database_url, future=True)
+    try:
+        Base.metadata.create_all(engine)
+    finally:
+        engine.dispose()
+
+    result = _run_cli(
+        [
+            "server",
+            "memory-curation",
+            "--database-url",
+            database_url,
+            "--use-server-policy",
+            "--enqueue",
+            "--json",
+        ],
+        expect=0,
+        env={
+            "INFINITAS_SERVER_ENV": "test",
+            "INFINITAS_SERVER_SECRET_KEY": "test-secret-key",
+            "INFINITAS_SERVER_BOOTSTRAP_USERS": "[]",
+            "INFINITAS_SERVER_MEMORY_CURATION_ACTION": "prune",
+            "INFINITAS_SERVER_MEMORY_CURATION_APPLY": "1",
+            "INFINITAS_SERVER_MEMORY_CURATION_LIMIT": "41",
+            "INFINITAS_SERVER_MEMORY_CURATION_MAX_ACTIONS": "6",
+            "INFINITAS_SERVER_MEMORY_CURATION_ACTOR_REF": "system:scheduled-curation",
+        },
+    )
+    payload = _load_json_output(result, label="infinitas server memory-curation policy enqueue")
+    assert payload["ok"] is True
+    assert payload["queued"] is True
+    assert payload["job"]["payload"]["action"] == "prune"
+    assert payload["job"]["payload"]["apply"] is True
+    assert payload["job"]["payload"]["limit"] == 41
+    assert payload["job"]["payload"]["max_actions"] == 6
+    assert payload["job"]["payload"]["actor_ref"] == "system:scheduled-curation"
 
 
 def main() -> None:

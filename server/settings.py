@@ -49,6 +49,11 @@ class Settings:
     memory_top_k: int
     memory_mem0_base_url: str | None
     memory_mem0_api_key_env: str
+    memory_curation_action: str
+    memory_curation_apply: bool
+    memory_curation_limit: int
+    memory_curation_max_actions: int
+    memory_curation_actor_ref: str
 
 
 def _normalize_bootstrap_users(payload: object) -> list[dict]:
@@ -109,6 +114,19 @@ def _normalize_string_list(payload: object) -> list[str]:
     return normalized
 
 
+def _normalize_memory_curation_action(raw: str | None) -> str:
+    action = str(raw or '').strip().lower()
+    return action if action in {'archive', 'prune'} else 'archive'
+
+
+def _positive_int_env(name: str, *, default: int) -> int:
+    try:
+        value = int(str(os.environ.get(name) or '').strip() or default)
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     environment = _normalize_environment(os.environ.get('INFINITAS_SERVER_ENV'))
@@ -149,6 +167,24 @@ def get_settings() -> Settings:
     mirror_remote = str(os.environ.get('INFINITAS_SERVER_MIRROR_REMOTE') or '').strip()
     mirror_branch = str(os.environ.get('INFINITAS_SERVER_MIRROR_BRANCH') or '').strip()
     memory = load_memory_config()
+    memory_curation_action = _normalize_memory_curation_action(
+        os.environ.get('INFINITAS_SERVER_MEMORY_CURATION_ACTION')
+    )
+    memory_curation_apply = _env_flag('INFINITAS_SERVER_MEMORY_CURATION_APPLY')
+    if 'INFINITAS_SERVER_MEMORY_CURATION_APPLY' not in os.environ:
+        memory_curation_apply = True
+    memory_curation_limit = _positive_int_env(
+        'INFINITAS_SERVER_MEMORY_CURATION_LIMIT',
+        default=50,
+    )
+    memory_curation_max_actions = _positive_int_env(
+        'INFINITAS_SERVER_MEMORY_CURATION_MAX_ACTIONS',
+        default=20,
+    )
+    memory_curation_actor_ref = (
+        str(os.environ.get('INFINITAS_SERVER_MEMORY_CURATION_ACTOR_REF') or '').strip()
+        or 'system:memory-curation:schedule'
+    )
 
     return Settings(
         app_name='infinitas-hosted-registry',
@@ -170,4 +206,9 @@ def get_settings() -> Settings:
         memory_top_k=memory.top_k,
         memory_mem0_base_url=memory.mem0_base_url,
         memory_mem0_api_key_env=memory.mem0_api_key_env,
+        memory_curation_action=memory_curation_action,
+        memory_curation_apply=memory_curation_apply,
+        memory_curation_limit=memory_curation_limit,
+        memory_curation_max_actions=memory_curation_max_actions,
+        memory_curation_actor_ref=memory_curation_actor_ref,
     )

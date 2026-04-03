@@ -33,6 +33,11 @@ The recommended single-node deployment shape now includes a generated `systemd` 
 - optional `INFINITAS_SERVER_REPO_LOCK_PATH`
 - optional `INFINITAS_SERVER_MIRROR_REMOTE`
 - optional `INFINITAS_SERVER_MIRROR_BRANCH`
+- optional `INFINITAS_SERVER_MEMORY_CURATION_ACTION`
+- optional `INFINITAS_SERVER_MEMORY_CURATION_APPLY`
+- optional `INFINITAS_SERVER_MEMORY_CURATION_LIMIT`
+- optional `INFINITAS_SERVER_MEMORY_CURATION_MAX_ACTIONS`
+- optional `INFINITAS_SERVER_MEMORY_CURATION_ACTOR_REF`
 
 Production safety rails:
 
@@ -273,6 +278,7 @@ Interpretation guidance:
 - omitting `--apply` keeps `archive` and `prune` in dry-run mode
 - `--max-actions` bounds how many actionable candidates are touched in one run
 - `--enqueue` places the curation request into the hosted `jobs` queue so the always-on worker can execute it asynchronously
+- `--use-server-policy` loads action and guardrails from the deployed environment file so scheduled services do not need to be re-rendered for routine policy changes
 
 Example execution flow:
 
@@ -294,6 +300,16 @@ uv run infinitas server memory-curation \
 
 This keeps the private-first boundary intact: local audit is still authoritative, while Memo0 or any future provider remains an optional advisory store that is only pruned through explicit operator intent.
 
+Recommended scheduled policy variables in the environment file:
+
+```bash
+INFINITAS_SERVER_MEMORY_CURATION_ACTION=archive
+INFINITAS_SERVER_MEMORY_CURATION_APPLY=1
+INFINITAS_SERVER_MEMORY_CURATION_LIMIT=50
+INFINITAS_SERVER_MEMORY_CURATION_MAX_ACTIONS=20
+INFINITAS_SERVER_MEMORY_CURATION_ACTOR_REF=system:memory-curation:schedule
+```
+
 ## Memory operations observability
 
 Use the hosted memory observability command when you want one local-first summary for writeback health, curation outcomes, and queued/running memory jobs:
@@ -313,6 +329,25 @@ This command summarizes:
 - recent `memory_curation` jobs and their queue status
 
 Like the other memory ops commands, this is local-audit truth first. It is intended for operator visibility, not as a replacement for direct provider inspection.
+
+## Memory rolling baselines
+
+Use the hosted memory baselines command when you want rolling recent-vs-previous window comparisons from local history:
+
+```bash
+uv run infinitas server memory-baselines \
+  --database-url sqlite:////srv/infinitas/data/server.db \
+  --window-hours 24 \
+  --json
+```
+
+This command compares two adjacent windows and summarizes:
+
+- writeback stored and failed rate changes
+- curation archived, pruned, and failed rate changes
+- memory curation job completed and failed rate changes
+
+It is meant to answer "are memory operations drifting compared with the immediately previous window?" using only local audit and job history.
 
 ## `systemd` bundle
 

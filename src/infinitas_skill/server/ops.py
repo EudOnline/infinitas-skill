@@ -21,6 +21,11 @@ from infinitas_skill.server.inspection_summary import (
     build_release_inspection_summary,
     maybe_add_alert,
 )
+from infinitas_skill.server.memory_baselines_ops import (
+    build_server_memory_baselines_parser,
+    configure_server_memory_baselines_parser,
+    run_server_memory_baselines,
+)
 from infinitas_skill.server.memory_curation_ops import (
     build_server_memory_curation_parser,
     configure_server_memory_curation_parser,
@@ -320,7 +325,7 @@ def run_server_memory_health(
 def configure_server_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(
         dest='server_command',
-        metavar='{healthcheck,backup,render-systemd,prune-backups,worker,inspect-state,memory-health,memory-curation,memory-observability}',
+        metavar='{healthcheck,backup,render-systemd,prune-backups,worker,inspect-state,memory-health,memory-curation,memory-observability,memory-baselines}',
     )
 
     healthcheck = subparsers.add_parser(
@@ -442,6 +447,7 @@ def configure_server_parser(parser: argparse.ArgumentParser) -> argparse.Argumen
             max_actions=args.max_actions,
             actor_ref=args.actor_ref,
             enqueue=args.enqueue,
+            use_server_policy=args.use_server_policy,
             as_json=args.json,
         )
     )
@@ -457,6 +463,21 @@ def configure_server_parser(parser: argparse.ArgumentParser) -> argparse.Argumen
             database_url=args.database_url,
             limit=args.limit,
             job_limit=args.job_limit,
+            as_json=args.json,
+        )
+    )
+
+    memory_baselines = subparsers.add_parser(
+        'memory-baselines',
+        help='Inspect rolling memory baselines',
+        description='Inspect rolling memory baselines',
+    )
+    configure_server_memory_baselines_parser(memory_baselines)
+    memory_baselines.set_defaults(
+        _handler=lambda args: run_server_memory_baselines(
+            database_url=args.database_url,
+            window_hours=args.window_hours,
+            now=args.now,
             as_json=args.json,
         )
     )
@@ -485,6 +506,7 @@ __all__ = [
     'build_server_healthcheck_parser',
     'build_server_inspect_state_parser',
     'build_server_memory_curation_parser',
+    'build_server_memory_baselines_parser',
     'build_server_memory_health_parser',
     'build_server_memory_observability_parser',
     'build_server_parser',
@@ -495,6 +517,7 @@ __all__ = [
     'configure_server_healthcheck_parser',
     'configure_server_inspect_state_parser',
     'configure_server_memory_curation_parser',
+    'configure_server_memory_baselines_parser',
     'configure_server_memory_health_parser',
     'configure_server_memory_observability_parser',
     'configure_server_parser',
@@ -505,6 +528,7 @@ __all__ = [
     'run_server_healthcheck',
     'run_server_inspect_state',
     'run_server_memory_curation',
+    'run_server_memory_baselines',
     'run_server_memory_health',
     'run_server_memory_observability',
     'run_server_prune_backups',

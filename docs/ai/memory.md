@@ -229,6 +229,7 @@ Execution modes:
 - `--action prune --apply` attempts provider-side deletion only for guarded candidates that came from `stored` writebacks with a non-empty `memory_id`
 - `--max-actions` bounds how many actionable candidates are touched in one execution
 - `--enqueue` stores the requested curation action in the hosted `jobs` queue so the worker can execute it asynchronously
+- `--use-server-policy` loads scheduled curation defaults from server environment settings instead of CLI flags
 
 Examples:
 
@@ -254,9 +255,23 @@ uv run infinitas server memory-curation \
   --max-actions 10 \
   --enqueue \
   --json
+
+uv run infinitas server memory-curation \
+  --database-url sqlite:////srv/infinitas/data/server.db \
+  --use-server-policy \
+  --enqueue \
+  --json
 ```
 
 Like `memory-health`, local audit remains the supported truth. Memo0 is advisory memory only, so cleanup decisions are selected from local history first and provider mutation is optional, explicit, and guarded.
+
+When `--use-server-policy` is used, the command reads these server settings:
+
+- `INFINITAS_SERVER_MEMORY_CURATION_ACTION`
+- `INFINITAS_SERVER_MEMORY_CURATION_APPLY`
+- `INFINITAS_SERVER_MEMORY_CURATION_LIMIT`
+- `INFINITAS_SERVER_MEMORY_CURATION_MAX_ACTIONS`
+- `INFINITAS_SERVER_MEMORY_CURATION_ACTOR_REF`
 
 ## Recommendation Example
 

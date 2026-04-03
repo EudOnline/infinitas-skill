@@ -27,6 +27,12 @@ def render_env_example(args: argparse.Namespace) -> str:
             '# Optional immediate post-publish mirror hook; leave blank to disable.',
             'INFINITAS_SERVER_MIRROR_REMOTE=',
             'INFINITAS_SERVER_MIRROR_BRANCH=',
+            '# Optional scheduled memory curation policy.',
+            f'INFINITAS_SERVER_MEMORY_CURATION_ACTION={args.curation_action}',
+            'INFINITAS_SERVER_MEMORY_CURATION_APPLY=1',
+            'INFINITAS_SERVER_MEMORY_CURATION_LIMIT=50',
+            f'INFINITAS_SERVER_MEMORY_CURATION_MAX_ACTIONS={args.curation_max_actions}',
+            'INFINITAS_SERVER_MEMORY_CURATION_ACTOR_REF=system:memory-curation:schedule',
             '',
         ]
     )
@@ -220,7 +226,7 @@ User={args.service_user}
 WorkingDirectory={args.repo_root}
 EnvironmentFile={args.env_file}
 Environment=PYTHONPATH={args.repo_root.rstrip("/")}/src
-ExecStart={args.python_bin} -m infinitas_skill.cli.main server memory-curation --database-url {database_url} --action {args.curation_action} --apply --max-actions {args.curation_max_actions} --actor-ref system:memory-curation:schedule --enqueue --json
+ExecStart={args.python_bin} -m infinitas_skill.cli.main server memory-curation --database-url {database_url} --use-server-policy --enqueue --json
 """
 
 

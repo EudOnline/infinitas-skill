@@ -25,8 +25,8 @@ provider cleanup still depends on explicit operator policy even though it can no
 | --- | --- | --- |
 | Release readiness | 9.8/10 | `make ci-fast` passed on 2026-04-03 after queue-driven curation, usefulness evaluation, and memory observability landed. |
 | Maintainability | 9.6/10 | `recommendation.py` is 113 lines, `inspect.py` is 182 lines, and `ai_index.py` is now only 12 lines after the builder/validation extraction. |
-| Operational clarity | 9.8/10 | Operators now have direct run, queued execution, scheduled enqueue, and a unified `memory-observability` summary while preserving local audit truth. |
-| CI clarity | 9.7/10 | The repository now has the maintained fast gate plus fixture-backed usefulness metrics that distinguish helpful memory use from correct restraint. |
+| Operational clarity | 9.8/10 | Operators now have direct run, queued execution, env-driven scheduled policy, unified observability, and rolling memory baselines while preserving local audit truth. |
+| CI clarity | 9.7/10 | The repository now has the maintained fast gate plus fixture-backed usefulness metrics and rolling local-history baselines for memory operations. |
 
 ## Evidence Matrix
 
@@ -50,6 +50,7 @@ provider cleanup still depends on explicit operator policy even though it can no
 - Discovery memory seams now have dedicated unit coverage plus a fixture-backed evaluation matrix.
 - Operators can inspect memory writeback health and run bounded curation flows through maintained CLI commands without giving up local-audit truth.
 - Operators can also inspect queued memory jobs and recent curation outcomes through one maintained observability command.
+- Operators can compare recent memory behavior against the previous window through a maintained baseline command.
 - The first six high-pressure maintained files or orchestration surfaces now have visibly better headroom:
   - `src/infinitas_skill/server/ops.py`: `542 -> 461`
   - `src/infinitas_skill/release/service.py`: `553 -> 333`
@@ -89,6 +90,7 @@ The current worktree completed these optimization steps by 2026-04-03:
 15. Added queue-driven and schedulable memory curation execution on top of the hosted jobs worker.
 16. Added fixture-backed memory usefulness summaries that track beneficial use versus correct restraint.
 17. Added a maintained `infinitas server memory-observability` command for writeback, curation, and queue visibility.
+18. Added env-driven scheduled curation policy and a maintained `infinitas server memory-baselines` command for rolling local-history comparisons.
 
 ## Recommended Next Steps
 

@@ -35,7 +35,7 @@ def test_render_memory_curation_service_and_timer_include_queue_command() -> Non
 
     assert "server memory-curation" in service
     assert "--enqueue" in service
-    assert "--action archive" in service
-    assert "--apply" in service
-    assert "--max-actions 12" in service
+    assert "--use-server-policy" in service
+    assert "--action archive" not in service
+    assert "--max-actions 12" not in service
     assert "OnCalendar=daily" in timer
