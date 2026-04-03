@@ -8,6 +8,13 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
+SRC = ROOT / 'src'
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from infinitas_skill.discovery.recommendation import recommend_skills  # noqa: E402
+from infinitas_skill.memory.contracts import MemoryRecord, MemorySearchResult  # noqa: E402
+
 QUALIFIED_NAME = 'lvxiaoer/operate-infinitas-skill'
 RELEASE_QUALIFIED_NAME = 'lvxiaoer/release-infinitas-skill'
 CONSUME_QUALIFIED_NAME = 'lvxiaoer/consume-infinitas-skill'
@@ -139,6 +146,16 @@ def scenario_recommend_returns_ranked_fields_for_real_catalog():
     if explanation.get('winner') != QUALIFIED_NAME:
         fail(f"expected explanation winner {QUALIFIED_NAME!r}, got {explanation.get('winner')!r}")
     assert_confidence(explanation.get('winner_confidence'), label='top-level explanation')
+    memory_summary = explanation.get('memory_summary')
+    if not isinstance(memory_summary, dict):
+        fail(f'expected explanation.memory_summary object, got {memory_summary!r}')
+    if memory_summary.get('used') is not False:
+        fail(f"expected memory_summary.used False by default, got {memory_summary.get('used')!r}")
+    if memory_summary.get('advisory_only') is not True:
+        fail(
+            'expected memory_summary.advisory_only true, '
+            f"got {memory_summary.get('advisory_only')!r}"
+        )
     if contains_absolute_path(payload):
         fail(f'expected recommendation payload to avoid raw filesystem paths\n{json.dumps(payload, ensure_ascii=False, indent=2)}')
 
@@ -431,11 +448,184 @@ def scenario_recommend_prefers_fresh_verified_support():
         shutil.rmtree(tmpdir)
 
 
+class FakeMemoryProvider:
+    backend_name = 'fake'
+    capabilities = {'read': True, 'write': True}
+
+    def search(self, *, query, limit, scope=None, memory_types=None):  # noqa: ARG002
+        return MemorySearchResult(
+            backend=self.backend_name,
+            records=[
+                MemoryRecord(
+                    memory='User prefers neptune workflows for codex helper choices.',
+                    memory_type='user_preference',
+                    score=0.96,
+                ),
+                MemoryRecord(
+                    memory='Pluto workflow often fails due to unsupported runtime.',
+                    memory_type='experience',
+                    score=0.91,
+                ),
+            ],
+        )
+
+
+def scenario_recommend_memory_signals_and_guardrails():
+    tmpdir, repo = prepare_repo()
+    try:
+        payload_data = discovery_index_payload()
+        payload_data['skills'] = [
+            {
+                'name': 'alpha-safe',
+                'qualified_name': 'team/alpha-safe',
+                'publisher': 'team',
+                'summary': 'Codex helper for saturn workflows',
+                'source_registry': 'self',
+                'source_priority': 100,
+                'match_names': ['alpha-safe', 'team/alpha-safe'],
+                'default_install_version': '1.0.0',
+                'latest_version': '1.0.0',
+                'available_versions': ['1.0.0'],
+                'agent_compatible': ['codex'],
+                'install_requires_confirmation': False,
+                'trust_level': 'private',
+                'trust_state': 'verified',
+                'tags': ['helper', 'ops'],
+                'verified_support': {},
+                'attestation_formats': ['ssh'],
+                'use_when': ['Need codex helper'],
+                'avoid_when': [],
+                'runtime_assumptions': ['Repo is available'],
+                'maturity': 'stable',
+                'quality_score': 70,
+                'last_verified_at': '2026-04-03T00:00:00Z',
+                'capabilities': ['repo-operations'],
+            },
+            {
+                'name': 'beta-preferred',
+                'qualified_name': 'team/beta-preferred',
+                'publisher': 'team',
+                'summary': 'Codex helper for neptune workflows',
+                'source_registry': 'self',
+                'source_priority': 100,
+                'match_names': ['beta-preferred', 'team/beta-preferred'],
+                'default_install_version': '1.0.0',
+                'latest_version': '1.0.0',
+                'available_versions': ['1.0.0'],
+                'agent_compatible': ['codex'],
+                'install_requires_confirmation': False,
+                'trust_level': 'private',
+                'trust_state': 'verified',
+                'tags': ['helper', 'ops'],
+                'verified_support': {},
+                'attestation_formats': ['ssh'],
+                'use_when': ['Need codex helper'],
+                'avoid_when': [],
+                'runtime_assumptions': ['Repo is available'],
+                'maturity': 'stable',
+                'quality_score': 70,
+                'last_verified_at': '2026-04-03T00:00:00Z',
+                'capabilities': ['repo-operations'],
+            },
+            {
+                'name': 'gamma-unsafe',
+                'qualified_name': 'team/gamma-unsafe',
+                'publisher': 'team',
+                'summary': 'Codex helper for pluto workflows',
+                'source_registry': 'self',
+                'source_priority': 100,
+                'match_names': ['gamma-unsafe', 'team/gamma-unsafe'],
+                'default_install_version': '1.0.0',
+                'latest_version': '1.0.0',
+                'available_versions': ['1.0.0'],
+                'agent_compatible': ['codex'],
+                'install_requires_confirmation': False,
+                'trust_level': 'private',
+                'trust_state': 'verified',
+                'tags': ['helper', 'ops'],
+                'verified_support': {
+                    'codex': {
+                        'state': 'unsupported',
+                        'checked_at': '2026-04-03T00:00:00Z',
+                        'freshness_state': 'fresh',
+                    }
+                },
+                'attestation_formats': ['ssh'],
+                'use_when': ['Need codex helper'],
+                'avoid_when': [],
+                'runtime_assumptions': ['Repo is available'],
+                'maturity': 'stable',
+                'quality_score': 390,
+                'last_verified_at': '2026-04-03T00:00:00Z',
+                'capabilities': ['repo-operations'],
+            },
+        ]
+        write_json(repo / 'catalog' / 'discovery-index.json', payload_data)
+        baseline = recommend_skills(
+            repo,
+            task='Need codex helper for workflows',
+            target_agent='codex',
+            limit=3,
+        )
+        if baseline.get('results', [{}])[0].get('qualified_name') != 'team/alpha-safe':
+            fail(f'expected deterministic baseline winner team/alpha-safe, got {baseline!r}')
+
+        payload = recommend_skills(
+            repo,
+            task='Need codex helper for workflows',
+            target_agent='codex',
+            limit=3,
+            memory_provider=FakeMemoryProvider(),
+            memory_scope={'user_ref': 'maintainer'},
+            memory_context_enabled=True,
+        )
+        results = payload.get('results') or []
+        if len(results) < 3:
+            fail(f'expected at least three recommendation results, got {results!r}')
+        if results[0].get('qualified_name') != 'team/beta-preferred':
+            fail(f"expected memory to break close tie toward team/beta-preferred, got {results[0].get('qualified_name')!r}")
+        top_memory = results[0].get('memory_signals') or {}
+        if top_memory.get('matched_memory_count') != 1:
+            fail(f"expected top matched_memory_count 1, got {top_memory.get('matched_memory_count')!r}")
+        if not isinstance(top_memory.get('applied_boost'), int) or top_memory.get('applied_boost') <= 0:
+            fail(f"expected top applied memory boost > 0, got {top_memory.get('applied_boost')!r}")
+        if top_memory.get('memory_types') != ['user_preference']:
+            fail(f"expected top memory_types ['user_preference'], got {top_memory.get('memory_types')!r}")
+
+        explanation = payload.get('explanation') or {}
+        memory_summary = explanation.get('memory_summary') or {}
+        expected_summary = {
+            'used': True,
+            'backend': 'fake',
+            'matched_count': 2,
+            'advisory_only': True,
+            'status': 'matched',
+        }
+        if memory_summary != expected_summary:
+            fail(f'expected memory_summary {expected_summary!r}, got {memory_summary!r}')
+
+        unsafe = next((item for item in results if item.get('qualified_name') == 'team/gamma-unsafe'), None)
+        if unsafe is None:
+            fail(f'expected gamma-unsafe result to remain visible, got {results!r}')
+        if unsafe.get('ranking_factors', {}).get('compatibility') is not False:
+            fail(f"expected gamma-unsafe compatibility false, got {unsafe.get('ranking_factors')!r}")
+        if (unsafe.get('memory_signals') or {}).get('applied_boost') != 0:
+            fail(
+                'expected incompatible candidate memory boost 0, '
+                f"got {(unsafe.get('memory_signals') or {}).get('applied_boost')!r}"
+            )
+        if results[0].get('qualified_name') == 'team/gamma-unsafe':
+            fail('memory should not lift incompatible candidate above compatible candidates')
+    finally:
+        shutil.rmtree(tmpdir)
+
+
 def main():
     scenario_recommend_returns_ranked_fields_for_real_catalog()
     scenario_recommend_prefers_specialized_real_skills()
     scenario_recommend_prefers_private_high_quality_match()
     scenario_recommend_prefers_fresh_verified_support()
+    scenario_recommend_memory_signals_and_guardrails()
     print('OK: recommend-skill checks passed')
 
 

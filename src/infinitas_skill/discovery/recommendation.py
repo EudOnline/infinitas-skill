@@ -1,4 +1,8 @@
 from pathlib import Path
+from typing import Any
+
+from infinitas_skill.memory import build_recommendation_memory_query, trim_memory_records
+from infinitas_skill.memory.contracts import MemoryRecord, MemorySearchResult
 
 from .decision_metadata import canonical_decision_metadata
 from .resolver import load_discovery_index
@@ -15,6 +19,53 @@ MATURITY_SCORES = {
     "beta": 2,
     "experimental": 1,
     "unknown": 0,
+}
+
+MEMORY_TYPE_BOOSTS = {
+    "user_preference": 22,
+    "task_context": 16,
+    "experience": 12,
+}
+MEMORY_MAX_BOOST = 35
+MEMORY_MIN_TOKEN_LENGTH = 4
+MEMORY_TOKEN_STOPWORDS = {
+    "and",
+    "artifact",
+    "artifacts",
+    "codex",
+    "for",
+    "helper",
+    "helpers",
+    "install",
+    "need",
+    "ready",
+    "release",
+    "released",
+    "skill",
+    "skills",
+    "stable",
+    "task",
+    "the",
+    "workflow",
+    "workflows",
+}
+NEGATIVE_EXPERIENCE_TERMS = {
+    "blocked",
+    "break",
+    "broken",
+    "crash",
+    "crashes",
+    "denied",
+    "error",
+    "errors",
+    "fail",
+    "failed",
+    "failing",
+    "fails",
+    "rejected",
+    "rejects",
+    "unsafe",
+    "unsupported",
 }
 
 
@@ -211,6 +262,188 @@ def _compatibility_signal(item: dict, *, target_agent: str | None) -> dict:
     }
 
 
+def _coerce_memory_search_result(
+    payload: Any,
+    *,
+    fallback_backend: str,
+) -> MemorySearchResult:
+    if isinstance(payload, MemorySearchResult):
+        return payload
+
+    records = []
+    backend = fallback_backend
+
+    if isinstance(payload, dict):
+        if isinstance(payload.get("backend"), str) and payload.get("backend", "").strip():
+            backend = payload.get("backend", "").strip()
+        raw_records = payload.get("records")
+        if isinstance(raw_records, list):
+            for item in raw_records:
+                if isinstance(item, MemoryRecord):
+                    records.append(item)
+                elif isinstance(item, dict):
+                    memory = item.get("memory")
+                    if not isinstance(memory, str) or not memory.strip():
+                        continue
+                    records.append(
+                        MemoryRecord(
+                            memory=memory.strip(),
+                            memory_type=(
+                                item.get("memory_type")
+                                if isinstance(item.get("memory_type"), str)
+                                and item.get("memory_type", "").strip()
+                                else "generic"
+                            ),
+                            score=(
+                                float(item.get("score"))
+                                if isinstance(item.get("score"), (int, float))
+                                else None
+                            ),
+                            source=(
+                                item.get("source")
+                                if isinstance(item.get("source"), str)
+                                and item.get("source", "").strip()
+                                else None
+                            ),
+                            metadata=(
+                                item.get("metadata")
+                                if isinstance(item.get("metadata"), dict)
+                                else {}
+                            ),
+                        )
+                    )
+    return MemorySearchResult(records=records, backend=backend)
+
+
+def _load_memory_context(
+    *,
+    task: str,
+    target_agent: str | None,
+    memory_provider: Any | None,
+    memory_scope: dict | None,
+    memory_context_enabled: bool,
+    memory_top_k: int,
+) -> dict:
+    backend = getattr(memory_provider, "backend_name", "disabled")
+    memory_scope = memory_scope if isinstance(memory_scope, dict) else {}
+    if not memory_context_enabled or memory_provider is None:
+        return {
+            "records": [],
+            "backend": backend if memory_provider else "disabled",
+            "status": "disabled",
+            "error": None,
+        }
+
+    capabilities = getattr(memory_provider, "capabilities", {})
+    if not isinstance(capabilities, dict) or not capabilities.get("read"):
+        return {
+            "records": [],
+            "backend": backend,
+            "status": "unavailable",
+            "error": "memory provider does not support read",
+        }
+
+    context_query = build_recommendation_memory_query(
+        task=task,
+        target_agent=target_agent,
+        user_ref=memory_scope.get("user_ref"),
+        principal_ref=memory_scope.get("principal_ref"),
+        skill_ref=memory_scope.get("skill_ref"),
+    )
+    provider_scope = dict(context_query.provider_scope)
+    for key in ["user_id", "agent_id", "run_id", "namespace"]:
+        value = memory_scope.get(key)
+        if isinstance(value, str) and value.strip():
+            provider_scope[key] = value.strip()
+    limit = memory_top_k if isinstance(memory_top_k, int) and memory_top_k > 0 else 3
+    try:
+        payload = memory_provider.search(
+            query=context_query.query,
+            limit=limit,
+            scope=provider_scope,
+            memory_types=context_query.memory_types,
+        )
+    except Exception as exc:
+        return {
+            "records": [],
+            "backend": backend,
+            "status": "error",
+            "error": f"memory retrieval failed: {exc}",
+        }
+
+    normalized = _coerce_memory_search_result(payload, fallback_backend=backend)
+    records = trim_memory_records(normalized.records, max_items=limit, max_chars=220)
+    return {
+        "records": records,
+        "backend": normalized.backend,
+        "status": "matched" if records else "no-match",
+        "error": None,
+    }
+
+
+def _candidate_text_blob(item: dict) -> str:
+    parts = []
+    for field in ["name", "qualified_name", "summary"]:
+        value = item.get(field)
+        if isinstance(value, str):
+            parts.append(value.lower())
+    for field in ["tags", "use_when", "capabilities"]:
+        for value in item.get(field) or []:
+            if isinstance(value, str):
+                parts.append(value.lower())
+    return " ".join(parts)
+
+
+def _memory_tokens(value: str) -> list[str]:
+    tokens = []
+    for token in _tokenize(value):
+        if len(token) < MEMORY_MIN_TOKEN_LENGTH:
+            continue
+        if token in MEMORY_TOKEN_STOPWORDS:
+            continue
+        tokens.append(token)
+    return tokens
+
+
+def _is_negative_experience(record: MemoryRecord) -> bool:
+    if record.memory_type != "experience":
+        return False
+    tokens = _tokenize(record.memory)
+    return any(token in NEGATIVE_EXPERIENCE_TERMS for token in tokens)
+
+
+def _memory_signals(item: dict, *, factors: dict, records: list[MemoryRecord]) -> dict:
+    candidate_blob = _candidate_text_blob(item)
+    matched = []
+    boostable = []
+    for record in records:
+        tokens = _memory_tokens(record.memory)
+        if not tokens:
+            continue
+        if any(token in candidate_blob for token in tokens):
+            matched.append(record)
+            if not _is_negative_experience(record):
+                boostable.append(record)
+
+    memory_types = []
+    for record in boostable:
+        memory_type = record.memory_type if isinstance(record.memory_type, str) else "generic"
+        if memory_type not in memory_types:
+            memory_types.append(memory_type)
+
+    boost = 0
+    if factors.get("compatibility"):
+        for memory_type in memory_types:
+            boost += MEMORY_TYPE_BOOSTS.get(memory_type, 8)
+        boost = min(boost, MEMORY_MAX_BOOST)
+
+    return {
+        "matched_memory_count": len(matched),
+        "applied_boost": boost,
+        "memory_types": memory_types,
+    }
+
+
 def _score_item(
     item: dict,
     *,
@@ -284,11 +517,26 @@ def recommend_skills(
     task: str,
     target_agent: str | None = None,
     limit: int = 5,
+    memory_provider: Any | None = None,
+    memory_scope: dict | None = None,
+    memory_context_enabled: bool = False,
+    memory_top_k: int = 3,
 ) -> dict:
     root = Path(root).resolve()
     payload = load_discovery_index(root)
     default_registry = payload.get("default_registry")
     task_tokens = _tokenize(task)
+    memory_context = _load_memory_context(
+        task=task,
+        target_agent=target_agent,
+        memory_provider=memory_provider,
+        memory_scope=memory_scope,
+        memory_context_enabled=memory_context_enabled,
+        memory_top_k=memory_top_k,
+    )
+    memory_records = memory_context.get("records") if isinstance(memory_context, dict) else []
+    if not isinstance(memory_records, list):
+        memory_records = []
 
     scored = []
     for item in payload.get("skills") or []:
@@ -300,6 +548,13 @@ def recommend_skills(
             target_agent=target_agent,
             default_registry=default_registry,
         )
+        memory_signals = _memory_signals(
+            item,
+            factors=factors,
+            records=memory_records,
+        )
+        score += memory_signals["applied_boost"]
+        factors["memory_boost"] = memory_signals["applied_boost"]
         decision_metadata = canonical_decision_metadata(item)
         scored.append(
             (
@@ -325,13 +580,40 @@ def recommend_skills(
                     "score": score,
                     "recommendation_reason": _recommendation_reason(item, factors),
                     "ranking_factors": factors,
+                    "memory_signals": memory_signals,
                 },
             )
         )
 
     scored.sort(key=lambda entry: (-entry[0], entry[1], entry[2]))
     visible = [entry[3] for entry in scored[: max(limit, 0)]]
-    explanation = {}
+    any_applied_memory_boost = any(
+        isinstance(entry[3].get("memory_signals"), dict)
+        and isinstance(entry[3]["memory_signals"].get("applied_boost"), int)
+        and entry[3]["memory_signals"]["applied_boost"] > 0
+        for entry in scored
+    )
+    explanation = {
+        "memory_summary": {
+            "used": bool(memory_context_enabled and any_applied_memory_boost),
+            "backend": (
+                memory_context.get("backend")
+                if isinstance(memory_context, dict)
+                else "disabled"
+            ),
+            "matched_count": len(memory_records),
+            "advisory_only": True,
+            "status": (
+                memory_context.get("status")
+                if isinstance(memory_context, dict)
+                else "disabled"
+            ),
+        }
+    }
+    if isinstance(memory_context, dict):
+        memory_error = memory_context.get("error")
+        if isinstance(memory_error, str) and memory_error.strip():
+            explanation["memory_summary"]["error"] = memory_error
     if scored:
         winner = scored[0][3]
         top_score = scored[0][0]
@@ -417,7 +699,8 @@ def recommend_skills(
                 f"{winner_reason}; outranked {runner_up.get('qualified_name')} via "
                 f"private-first and deterministic ranking factors"
             )
-        explanation = {
+        explanation.update(
+            {
             "winner": winner.get("qualified_name"),
             "winner_reason": winner_reason,
             "runner_up": runner_up.get("qualified_name") if runner_up else None,
@@ -428,7 +711,8 @@ def recommend_skills(
                 if runner_up and isinstance(score_gap_to_runner_up, int)
                 else "only one eligible recommendation was available for comparison"
             ),
-        }
+            }
+        )
     return {
         "ok": True,
         "task": task,

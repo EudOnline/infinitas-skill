@@ -28,6 +28,7 @@ Recommendation ranking is deterministic and should consider:
 - maturity
 - quality score
 - verification freshness
+- optional memory signals (advisory only)
 
 ## Reading the output
 
@@ -45,6 +46,7 @@ Look at these keys first:
 - `runtime_assumptions`
 - `maturity`
 - `quality_score`
+- `memory_signals`
 
 `ranking_factors` should make it clear how compatibility, maturity, trust state, quality, and verification freshness affected the result.
 
@@ -63,6 +65,25 @@ Look at these keys first:
 
 At the top level, `explanation.comparison_summary` and `explanation.winner_confidence` explain why the winner outranked the closest visible alternative.
 
+When memory-aware recommendation is enabled, also read:
+
+- `explanation.memory_summary`
+- `memory_signals.matched_memory_count`
+- `memory_signals.applied_boost`
+- `memory_signals.memory_types`
+
+`memory_summary` reports whether memory was used, which backend supplied memory, and how many retrieved memories were considered. This layer is advisory only and does not replace compatibility, trust, or immutable install policy checks.
+
+`memory_summary.used` means at least one candidate received a non-zero memory boost. Retrieved memories alone do not set `used=true`.
+
+`memory_summary.status` distinguishes memory states:
+
+- `disabled`: memory layer was not enabled for this recommendation
+- `unavailable`: provider has no read capability
+- `no-match`: memory retrieval succeeded but returned no usable memories
+- `matched`: memory retrieval succeeded with usable memories
+- `error`: memory retrieval failed; see optional `memory_summary.error`
+
 `_meta.json` is the canonical source of authored decision metadata. Generated indexes and AI wrappers mirror those same fields so recommend, search, and inspect can stay in sync without inventing separate copies of `use_when`, `avoid_when`, `capabilities`, `runtime_assumptions`, `maturity`, or `quality_score`.
 
 The surfaced decision metadata is the canonical author-owned guidance from `_meta.json`. Use it to explain why a skill fits the task without reopening raw catalogs.
@@ -73,3 +94,4 @@ The surfaced decision metadata is the canonical author-owned guidance from `_met
 - external recommendations still require confirmation before installation
 - high recommendation confidence does not replace inspect-before-install when provenance, trust state, or compatibility matter
 - recommendation is advisory; inspect the skill before install when provenance, trust state, or compatibility matters
+- memory boost is bounded and cannot lift incompatible candidates above compatible ones
