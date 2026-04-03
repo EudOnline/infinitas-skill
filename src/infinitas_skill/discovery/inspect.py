@@ -4,8 +4,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
+
+from infinitas_skill.memory import build_inspect_memory_query, trim_memory_records
+from infinitas_skill.memory.contracts import MemoryRecord, MemorySearchResult
 
 from .decision_metadata import canonical_decision_metadata
+
+INSPECT_MEMORY_TYPES = {"experience", "task_context"}
 
 
 def _load_json(path: Path):
@@ -124,7 +130,150 @@ def _derive_trust_state(
     return version_entry.get("trust_state") or "unknown"
 
 
-def inspect_skill(root: Path, name: str, version: str | None = None) -> dict:
+def _coerce_memory_search_result(
+    payload: Any,
+    *,
+    fallback_backend: str,
+) -> MemorySearchResult:
+    if isinstance(payload, MemorySearchResult):
+        return payload
+    if not isinstance(payload, dict):
+        return MemorySearchResult(records=[], backend=fallback_backend)
+
+    backend = fallback_backend
+    backend_value = payload.get("backend")
+    if isinstance(backend_value, str) and backend_value.strip():
+        backend = backend_value.strip()
+
+    records = []
+    raw_records = payload.get("records")
+    if isinstance(raw_records, list):
+        for item in raw_records:
+            if isinstance(item, MemoryRecord):
+                records.append(item)
+                continue
+            if not isinstance(item, dict):
+                continue
+            memory = item.get("memory")
+            if not isinstance(memory, str) or not memory.strip():
+                continue
+            records.append(
+                MemoryRecord(
+                    memory=memory.strip(),
+                    memory_type=(
+                        item.get("memory_type")
+                        if isinstance(item.get("memory_type"), str)
+                        and item.get("memory_type", "").strip()
+                        else "generic"
+                    ),
+                    score=(
+                        float(item.get("score"))
+                        if isinstance(item.get("score"), (int, float))
+                        else None
+                    ),
+                    source=(
+                        item.get("source")
+                        if isinstance(item.get("source"), str) and item.get("source", "").strip()
+                        else None
+                    ),
+                    metadata=(
+                        item.get("metadata")
+                        if isinstance(item.get("metadata"), dict)
+                        else {}
+                    ),
+                )
+            )
+    return MemorySearchResult(records=records, backend=backend)
+
+
+def _memory_hint_item(record: MemoryRecord) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "memory_type": record.memory_type,
+        "memory": record.memory,
+    }
+    if isinstance(record.score, (int, float)):
+        payload["score"] = float(record.score)
+    return payload
+
+
+def _load_memory_hints(
+    *,
+    skill_ref: str,
+    target_agent: str | None,
+    memory_provider: Any | None,
+    memory_scope: dict | None,
+    memory_context_enabled: bool,
+    memory_top_k: int,
+) -> dict[str, Any]:
+    backend = getattr(memory_provider, "backend_name", "disabled")
+    base = {
+        "used": False,
+        "backend": backend if memory_provider is not None else "disabled",
+        "matched_count": 0,
+        "items": [],
+        "advisory_only": True,
+    }
+    if memory_provider is None or not memory_context_enabled:
+        base["status"] = "disabled"
+        return base
+
+    capabilities = getattr(memory_provider, "capabilities", {})
+    if not isinstance(capabilities, dict) or not capabilities.get("read"):
+        base["status"] = "unavailable"
+        return base
+
+    memory_scope = memory_scope if isinstance(memory_scope, dict) else {}
+    query = build_inspect_memory_query(
+        skill_ref=skill_ref,
+        target_agent=target_agent,
+        user_ref=memory_scope.get("user_ref"),
+        principal_ref=memory_scope.get("principal_ref"),
+        task=memory_scope.get("task_ref") or "inspect",
+    )
+    provider_scope = dict(query.provider_scope)
+    for key in ["user_id", "agent_id", "run_id", "namespace"]:
+        value = memory_scope.get(key)
+        if isinstance(value, str) and value.strip():
+            provider_scope[key] = value.strip()
+    limit = memory_top_k if isinstance(memory_top_k, int) and memory_top_k > 0 else query.max_results
+    try:
+        payload = memory_provider.search(
+            query=query.query,
+            limit=limit,
+            scope=provider_scope,
+            memory_types=query.memory_types,
+        )
+    except Exception as exc:
+        base["status"] = "error"
+        base["error"] = f"memory retrieval failed: {exc}"
+        return base
+
+    normalized = _coerce_memory_search_result(payload, fallback_backend=backend)
+    filtered = [
+        record
+        for record in normalized.records
+        if isinstance(record.memory_type, str) and record.memory_type in INSPECT_MEMORY_TYPES
+    ]
+    trimmed = trim_memory_records(filtered, max_items=limit, max_chars=180)
+    base["backend"] = normalized.backend
+    base["matched_count"] = len(filtered)
+    base["items"] = [_memory_hint_item(record) for record in trimmed]
+    base["used"] = bool(base["items"])
+    base["status"] = "matched" if filtered else "no-match"
+    return base
+
+
+def inspect_skill(
+    root: Path,
+    name: str,
+    version: str | None = None,
+    *,
+    memory_provider: Any | None = None,
+    memory_scope: dict | None = None,
+    memory_context_enabled: bool = True,
+    memory_top_k: int = 3,
+    target_agent: str | None = None,
+) -> dict:
     root = Path(root).resolve()
     ai_index = _load_ai_index(root)
     distributions = _distribution_lookup(root)
@@ -179,6 +328,14 @@ def inspect_skill(root: Path, name: str, version: str | None = None) -> dict:
     ]
     trust_state = _derive_trust_state(
         version_entry, manifest_payload, provenance_payload, distribution
+    )
+    memory_hints = _load_memory_hints(
+        skill_ref=skill_entry.get("qualified_name") or skill_entry.get("name") or name,
+        target_agent=target_agent,
+        memory_provider=memory_provider,
+        memory_scope=memory_scope,
+        memory_context_enabled=memory_context_enabled,
+        memory_top_k=memory_top_k,
     )
     return {
         "ok": True,
@@ -244,6 +401,7 @@ def inspect_skill(root: Path, name: str, version: str | None = None) -> dict:
             ),
             "required_attestation_formats": required_formats,
         },
+        "memory_hints": memory_hints,
     }
 
 

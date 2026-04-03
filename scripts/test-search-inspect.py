@@ -6,6 +6,13 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
+SRC = ROOT / 'src'
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from infinitas_skill.discovery.inspect import inspect_skill  # noqa: E402
+from infinitas_skill.memory.contracts import MemoryRecord, MemorySearchResult  # noqa: E402
+
 QUALIFIED_NAME = 'lvxiaoer/operate-infinitas-skill'
 RELEASE_QUALIFIED_NAME = 'lvxiaoer/release-infinitas-skill'
 CONSUME_QUALIFIED_NAME = 'lvxiaoer/consume-infinitas-skill'
@@ -158,10 +165,50 @@ def scenario_inspect_returns_distribution_and_dependency_views():
         fail(f"expected inspect decision_metadata.quality_score 90, got {decision_metadata.get('quality_score')!r}")
 
 
+class FakeMemoryProvider:
+    backend_name = 'fake'
+    capabilities = {'read': True, 'write': True}
+
+    def search(self, *, query, limit, scope=None, memory_types=None):  # noqa: ARG002
+        return MemorySearchResult(
+            backend=self.backend_name,
+            records=[
+                MemoryRecord(
+                    memory='OpenClaw installs usually succeed when the release is already materialized.',
+                    memory_type='experience',
+                    score=0.94,
+                )
+            ],
+        )
+
+
+def scenario_inspect_returns_memory_hints_without_changing_trust():
+    payload = inspect_skill(
+        ROOT,
+        name=CONSUME_QUALIFIED_NAME,
+        memory_provider=FakeMemoryProvider(),
+        memory_scope={'user_ref': 'maintainer'},
+    )
+    memory_hints = payload.get('memory_hints') or {}
+    if memory_hints.get('used') is not True:
+        fail(f"expected memory_hints.used true, got {memory_hints.get('used')!r}")
+    if memory_hints.get('backend') != 'fake':
+        fail(f"expected memory_hints.backend 'fake', got {memory_hints.get('backend')!r}")
+    if memory_hints.get('matched_count') != 1:
+        fail(f"expected memory_hints.matched_count 1, got {memory_hints.get('matched_count')!r}")
+    items = memory_hints.get('items') or []
+    if not items or items[0].get('memory_type') != 'experience':
+        fail(f'expected first memory hint type experience, got {items!r}')
+    trust = payload.get('trust') or {}
+    if payload.get('trust_state') != 'verified' or trust.get('state') != 'verified':
+        fail(f"expected trust_state and trust.state to remain 'verified', got {payload.get('trust_state')!r} and {trust.get('state')!r}")
+
+
 def main():
     scenario_search_returns_trust_and_compatibility_fields()
     scenario_search_filters_by_publisher_and_agent()
     scenario_inspect_returns_distribution_and_dependency_views()
+    scenario_inspect_returns_memory_hints_without_changing_trust()
     print('OK: search and inspect checks passed')
 
 

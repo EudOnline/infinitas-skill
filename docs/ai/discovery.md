@@ -48,6 +48,21 @@ An install response contains:
 
 Use the API response as the source of truth for artifact download. Do not infer installability from repository source folders.
 
+## Inspect advisory memory hints
+
+`scripts/inspect-skill.sh` and inspect helpers can surface a memory-assisted advisory block:
+
+- `memory_hints.used`
+- `memory_hints.backend`
+- `memory_hints.matched_count`
+- `memory_hints.items[]` (`memory_type`, `memory`, optional `score`)
+
+This memory layer is advisory only:
+
+- trust derivation still comes from manifest, attestation, and signature evidence
+- memory hints cannot mark a skill as verified, trusted, or installable
+- inspect trust fields remain authoritative even when memory hints are present
+
 ## Installed integrity follow-up
 
 After a skill is installed into a target-local runtime, verify that concrete copy with `python3 scripts/report-installed-integrity.py <target-local> --json`.
