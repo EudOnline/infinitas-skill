@@ -272,6 +272,7 @@ Interpretation guidance:
 - `--action prune --apply` is the only mode that may delete provider-side memory, and it only targets selected candidates with a recorded `memory_id`
 - omitting `--apply` keeps `archive` and `prune` in dry-run mode
 - `--max-actions` bounds how many actionable candidates are touched in one run
+- `--enqueue` places the curation request into the hosted `jobs` queue so the always-on worker can execute it asynchronously
 
 Example execution flow:
 
@@ -292,6 +293,26 @@ uv run infinitas server memory-curation \
 ```
 
 This keeps the private-first boundary intact: local audit is still authoritative, while Memo0 or any future provider remains an optional advisory store that is only pruned through explicit operator intent.
+
+## Memory operations observability
+
+Use the hosted memory observability command when you want one local-first summary for writeback health, curation outcomes, and queued/running memory jobs:
+
+```bash
+uv run infinitas server memory-observability \
+  --database-url sqlite:////srv/infinitas/data/server.db \
+  --limit 20 \
+  --job-limit 10 \
+  --json
+```
+
+This command summarizes:
+
+- recent writeback status counts and failures
+- recent `memory_curation` outcomes such as `archived`, `pruned`, `skipped`, or `failed`
+- recent `memory_curation` jobs and their queue status
+
+Like the other memory ops commands, this is local-audit truth first. It is intended for operator visibility, not as a replacement for direct provider inspection.
 
 ## `systemd` bundle
 
@@ -352,6 +373,11 @@ When `--mirror-remote` is provided, it also contains:
 
 - `infinitas-hosted-mirror.service`
 - `infinitas-hosted-mirror.timer`
+
+When `--curation-on-calendar` is provided, it also contains:
+
+- `infinitas-hosted-memory-curation.service`
+- `infinitas-hosted-memory-curation.timer`
 
 Suggested install flow:
 

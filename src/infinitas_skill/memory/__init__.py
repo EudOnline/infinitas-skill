@@ -16,6 +16,11 @@ from .context import (
 )
 from .contracts import MemoryProvider, MemoryRecord, MemorySearchResult, MemoryWriteResult
 from .curation import CuratedMemoryRecords, curate_memory_records, memory_record_fingerprint
+from .evaluation import (
+    build_inspect_usefulness_outcome,
+    build_recommendation_usefulness_outcome,
+    summarize_memory_usefulness,
+)
 from .experience import ExperienceMemoryRecord, build_experience_memory
 from .policy import DAY_SECONDS, MemoryPolicy, resolve_memory_policy
 from .provider import NoopMemoryProvider, build_memory_provider
@@ -37,9 +42,11 @@ __all__ = [
     "MemorySearchResult",
     "MemoryWriteResult",
     "NoopMemoryProvider",
+    "build_inspect_usefulness_outcome",
     "build_memory_provider",
     "build_experience_memory",
     "build_inspect_memory_query",
+    "build_recommendation_usefulness_outcome",
     "build_recommendation_memory_query",
     "curate_memory_records",
     "dedupe_scope_refs",
@@ -50,6 +57,7 @@ __all__ = [
     "resolve_memory_policy",
     "render_memory_snippets",
     "scope_ref",
+    "summarize_memory_usefulness",
     "task_scope_ref",
     "trim_memory_records",
     "CuratedMemoryRecords",

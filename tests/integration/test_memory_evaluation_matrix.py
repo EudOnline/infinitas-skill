@@ -6,6 +6,11 @@ from pathlib import Path
 from infinitas_skill.discovery.inspect import inspect_skill
 from infinitas_skill.discovery.recommendation import recommend_skills
 from infinitas_skill.memory.contracts import MemoryRecord, MemorySearchResult
+from infinitas_skill.memory.evaluation import (
+    build_inspect_usefulness_outcome,
+    build_recommendation_usefulness_outcome,
+    summarize_memory_usefulness,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -255,6 +260,7 @@ def _build_inspect_repo(tmp_path: Path) -> Path:
 def test_recommendation_memory_evaluation_matrix(tmp_path: Path):
     repo = _build_recommendation_repo(tmp_path / "recommend")
     cases = _load_fixture("recommendation_cases.json")
+    outcomes = []
 
     for case in cases:
         payload = recommend_skills(
@@ -276,11 +282,19 @@ def test_recommendation_memory_evaluation_matrix(tmp_path: Path):
         forbidden = case.get("forbidden_top_result")
         if forbidden:
             assert payload["results"][0]["qualified_name"] != forbidden
+        outcomes.append(build_recommendation_usefulness_outcome(case, payload))
+
+    usefulness = summarize_memory_usefulness(
+        recommendation_outcomes=outcomes,
+        inspect_outcomes=[],
+    )
+    assert usefulness["recommendation"] == _load_fixture("usefulness_cases.json")["recommendation"]
 
 
 def test_inspect_memory_evaluation_matrix(tmp_path: Path):
     repo = _build_inspect_repo(tmp_path / "inspect")
     cases = _load_fixture("inspect_cases.json")
+    outcomes = []
 
     for case in cases:
         payload = inspect_skill(
@@ -299,3 +313,47 @@ def test_inspect_memory_evaluation_matrix(tmp_path: Path):
         curation_summary = case.get("expected_curation_summary")
         if curation_summary:
             assert payload["memory_hints"]["curation_summary"] == curation_summary, case["name"]
+        outcomes.append(build_inspect_usefulness_outcome(case, payload))
+
+    usefulness = summarize_memory_usefulness(
+        recommendation_outcomes=[],
+        inspect_outcomes=outcomes,
+    )
+    assert usefulness["inspect"] == _load_fixture("usefulness_cases.json")["inspect"]
+
+
+def test_memory_usefulness_summary_across_matrix(tmp_path: Path):
+    recommend_repo = _build_recommendation_repo(tmp_path / "recommend-all")
+    inspect_repo = _build_inspect_repo(tmp_path / "inspect-all")
+    recommendation_cases = _load_fixture("recommendation_cases.json")
+    inspect_cases = _load_fixture("inspect_cases.json")
+
+    recommendation_outcomes = []
+    for case in recommendation_cases:
+        payload = recommend_skills(
+            recommend_repo,
+            task=case["task"],
+            target_agent=case["target_agent"],
+            limit=3,
+            memory_provider=FixtureMemoryProvider(case["memory_records"]),
+            memory_scope=case.get("memory_scope"),
+            memory_context_enabled=case["memory_context_enabled"],
+        )
+        recommendation_outcomes.append(build_recommendation_usefulness_outcome(case, payload))
+
+    inspect_outcomes = []
+    for case in inspect_cases:
+        payload = inspect_skill(
+            inspect_repo,
+            name="lvxiaoer/consume-infinitas-skill",
+            memory_provider=FixtureMemoryProvider(case["memory_records"]),
+            memory_scope=case.get("memory_scope"),
+            memory_context_enabled=case["memory_context_enabled"],
+        )
+        inspect_outcomes.append(build_inspect_usefulness_outcome(case, payload))
+
+    usefulness = summarize_memory_usefulness(
+        recommendation_outcomes=recommendation_outcomes,
+        inspect_outcomes=inspect_outcomes,
+    )
+    assert usefulness == _load_fixture("usefulness_cases.json")

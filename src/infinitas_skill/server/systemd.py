@@ -208,6 +208,36 @@ WantedBy=timers.target
 """
 
 
+def render_memory_curation_service(args: argparse.Namespace) -> str:
+    database_url = args.database_url or f'sqlite:///{args.repo_root.rstrip("/")}/data/server.db'
+    return f"""[Unit]
+Description=Infinitas Hosted Registry Memory Curation Enqueue
+After=network-online.target
+
+[Service]
+Type=oneshot
+User={args.service_user}
+WorkingDirectory={args.repo_root}
+EnvironmentFile={args.env_file}
+Environment=PYTHONPATH={args.repo_root.rstrip("/")}/src
+ExecStart={args.python_bin} -m infinitas_skill.cli.main server memory-curation --database-url {database_url} --action {args.curation_action} --apply --max-actions {args.curation_max_actions} --actor-ref system:memory-curation:schedule --enqueue --json
+"""
+
+
+def render_memory_curation_timer(args: argparse.Namespace) -> str:
+    return f"""[Unit]
+Description=Schedule Infinitas Hosted Registry memory curation
+
+[Timer]
+OnCalendar={args.curation_on_calendar}
+Persistent=true
+Unit={args.service_prefix}-memory-curation.service
+
+[Install]
+WantedBy=timers.target
+"""
+
+
 def write_file(path: Path, content: str):
     path.write_text(content, encoding='utf-8')
     print(f'wrote {path}')
@@ -229,6 +259,15 @@ def run_server_render_systemd(args: argparse.Namespace) -> int:
     write_file(output_dir / f'{args.service_prefix}-prune.timer', render_prune_timer(args))
     write_file(output_dir / f'{args.service_prefix}-inspect.service', render_inspect_service(args))
     write_file(output_dir / f'{args.service_prefix}-inspect.timer', render_inspect_timer(args))
+    if args.curation_on_calendar:
+        write_file(
+            output_dir / f'{args.service_prefix}-memory-curation.service',
+            render_memory_curation_service(args),
+        )
+        write_file(
+            output_dir / f'{args.service_prefix}-memory-curation.timer',
+            render_memory_curation_timer(args),
+        )
     return 0
 
 
@@ -239,6 +278,8 @@ __all__ = [
     'render_env_example',
     'render_inspect_service',
     'render_inspect_timer',
+    'render_memory_curation_service',
+    'render_memory_curation_timer',
     'render_mirror_service',
     'render_mirror_timer',
     'render_prune_service',

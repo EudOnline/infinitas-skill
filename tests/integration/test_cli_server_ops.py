@@ -8,12 +8,12 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 from test_support.server_ops import HealthServer
 from test_support.server_ops import run_command as shared_run_command
 
-from server.models import AuditEvent, Base
+from server.models import AuditEvent, Base, Job
 from tests.fixtures.repo_state import create_repo_state
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -57,6 +57,8 @@ def assert_server_cli_help_lists_maintained_subcommands() -> None:
         "worker",
         "inspect-state",
         "memory-health",
+        "memory-curation",
+        "memory-observability",
     ]:
         assert command in help_text, f"expected {command!r} in infinitas server help"
 
@@ -284,6 +286,102 @@ def test_server_memory_curation_command_accepts_execution_flags(tmp_path: Path) 
     assert payload["action"] == "prune"
     assert payload["apply"] is False
     assert payload["execution"]["selected_candidates"] == 1
+
+
+def test_server_memory_observability_command_summarizes_memory_ops(tmp_path: Path) -> None:
+    db_path = tmp_path / "memory-observability.db"
+    database_url = f"sqlite:///{db_path}"
+    engine = create_engine(database_url, future=True)
+    try:
+        Base.metadata.create_all(engine)
+        with Session(engine) as session:
+            session.add_all(
+                [
+                    AuditEvent(
+                        aggregate_type="memory_writeback",
+                        aggregate_id="mw:1",
+                        event_type="memory.writeback.failed",
+                        actor_ref="principal:1",
+                        payload_json=json.dumps(
+                            {
+                                "status": "failed",
+                                "backend": "memo0",
+                                "lifecycle_event": "task.review.approve",
+                            }
+                        ),
+                    ),
+                    AuditEvent(
+                        aggregate_type="memory_curation",
+                        aggregate_id="memory_writeback:1",
+                        event_type="memory.curation.archived",
+                        actor_ref="system:memory-curation",
+                        payload_json=json.dumps({"action": "archive", "status": "archived"}),
+                    ),
+                    Job(
+                        kind="memory_curation",
+                        status="queued",
+                        payload_json=json.dumps({"action": "archive", "apply": True}),
+                        note="queued archive",
+                    ),
+                ]
+            )
+            session.commit()
+    finally:
+        engine.dispose()
+
+    result = _run_cli(
+        ["server", "memory-observability", "--database-url", database_url, "--json"],
+        expect=0,
+    )
+    payload = _load_json_output(result, label="infinitas server memory-observability")
+    assert payload["ok"] is True
+    assert payload["writeback"]["writeback_status_counts"]["failed"] == 1
+    assert payload["curation"]["status_counts"]["archived"] == 1
+    assert payload["jobs"]["status_counts"]["queued"] == 1
+
+
+def test_server_memory_curation_command_can_enqueue_job(tmp_path: Path) -> None:
+    db_path = tmp_path / "memory-curation-queue.db"
+    database_url = f"sqlite:///{db_path}"
+    engine = create_engine(database_url, future=True)
+    try:
+        Base.metadata.create_all(engine)
+    finally:
+        engine.dispose()
+
+    result = _run_cli(
+        [
+            "server",
+            "memory-curation",
+            "--database-url",
+            database_url,
+            "--action",
+            "archive",
+            "--apply",
+            "--max-actions",
+            "3",
+            "--enqueue",
+            "--json",
+        ],
+        expect=0,
+    )
+    payload = _load_json_output(result, label="infinitas server memory-curation enqueue")
+    assert payload["ok"] is True
+    assert payload["queued"] is True
+    assert payload["job"]["kind"] == "memory_curation"
+    assert payload["job"]["status"] == "queued"
+
+    engine = create_engine(database_url, future=True)
+    try:
+        with Session(engine) as session:
+            job = session.scalar(select(AuditEvent.id).where(AuditEvent.aggregate_type == "memory_curation"))
+            assert job is None
+            queued_job = session.execute(select(Job.kind, Job.payload_json).where(Job.kind == "memory_curation")).first()
+            assert queued_job is not None
+            assert queued_job[0] == "memory_curation"
+            assert '"action": "archive"' in queued_job[1]
+    finally:
+        engine.dispose()
 
 
 def main() -> None:

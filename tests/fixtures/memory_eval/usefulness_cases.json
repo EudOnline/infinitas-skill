@@ -1,0 +1,29 @@
+{
+  "recommendation": {
+    "cases": 4,
+    "memory_enabled_cases": 3,
+    "beneficial_use_cases": 2,
+    "correct_restraint_cases": 1,
+    "quality_success_cases": 3,
+    "quality_success_rate": 1.0,
+    "curation_keep_rate": 1.0
+  },
+  "inspect": {
+    "cases": 3,
+    "memory_enabled_cases": 3,
+    "beneficial_use_cases": 3,
+    "correct_restraint_cases": 0,
+    "quality_success_cases": 3,
+    "quality_success_rate": 1.0,
+    "curation_keep_rate": 1.0
+  },
+  "overall": {
+    "cases": 7,
+    "memory_enabled_cases": 6,
+    "beneficial_use_cases": 5,
+    "correct_restraint_cases": 1,
+    "quality_success_cases": 6,
+    "quality_success_rate": 1.0,
+    "curation_keep_rate": 1.0
+  }
+}

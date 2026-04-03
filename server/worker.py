@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from infinitas_skill.memory import build_memory_provider
+from infinitas_skill.server.memory_curation import execute_memory_curation
 from server.db import get_session_factory
 from server.jobs import append_job_log, claim_next_job, load_job_payload
 from server.models import Job, utcnow
@@ -36,6 +38,43 @@ def _process_materialize_release_job(session, job: Job, settings):
     return release
 
 
+def _process_memory_curation_job(session, job: Job):
+    payload = load_job_payload(job)
+    action = str(payload.get("action") or "plan").strip().lower() or "plan"
+    apply = bool(payload.get("apply"))
+    try:
+        limit = int(payload.get("limit") or 50)
+    except (TypeError, ValueError):
+        limit = 50
+    try:
+        max_actions = int(payload.get("max_actions") or 20)
+    except (TypeError, ValueError):
+        max_actions = 20
+    actor_ref = str(payload.get("actor_ref") or "system:memory-curation").strip()
+    provider = build_memory_provider() if action == "prune" and apply else None
+    summary = execute_memory_curation(
+        session,
+        action=action,
+        apply=apply,
+        provider=provider,
+        limit=limit,
+        max_actions=max_actions,
+        actor_ref=actor_ref or "system:memory-curation",
+    )
+    execution = summary.get("execution") if isinstance(summary.get("execution"), dict) else {}
+    append_job_log(
+        job,
+        "memory curation "
+        f"action={summary.get('action')} apply={summary.get('apply')} "
+        f"selected={execution.get('selected_candidates', 0)} "
+        f"archived={execution.get('archived', 0)} "
+        f"pruned={execution.get('pruned', 0)} "
+        f"skipped={execution.get('skipped', 0)} "
+        f"failed={execution.get('failed', 0)}",
+    )
+    return summary
+
+
 def process_job(job_id: int):
     settings = get_settings()
     factory = get_session_factory()
@@ -46,6 +85,8 @@ def process_job(job_id: int):
         try:
             if job.kind == 'materialize_release':
                 release = _process_materialize_release_job(session, job, settings)
+            elif job.kind == 'memory_curation':
+                _process_memory_curation_job(session, job)
             else:
                 raise RepoOpError(f'unsupported job kind: {job.kind}')
             job.status = 'completed'

@@ -155,6 +155,7 @@ Memory behavior is now regression-tested with fixture-backed evaluation cases un
 
 - `tests/fixtures/memory_eval/recommendation_cases.json`
 - `tests/fixtures/memory_eval/inspect_cases.json`
+- `tests/fixtures/memory_eval/usefulness_cases.json`
 - `tests/integration/test_memory_evaluation_matrix.py`
 
 Replay the maintained matrix with:
@@ -174,6 +175,12 @@ This matrix is intended to lock in advisory behaviors such as:
 - higher-quality experience memory outranks weaker short-lived hints
 - retrieval curation reports how many records were kept versus suppressed
 - provider-backed memory never becomes release, review, compatibility, or access truth
+
+The evaluation layer now also computes deterministic usefulness summary metrics from those fixtures:
+
+- beneficial use, where memory helps produce the intended recommendation or inspect hint
+- correct restraint, where memory is present but correctly does not take over the decision
+- quality success, which combines the two so we do not reward over-aggressive memory use
 
 ## Write Paths
 
@@ -221,6 +228,7 @@ Execution modes:
 - `--action archive --apply` records local `memory_curation` audit events for selected candidates but does not delete provider-side memory
 - `--action prune --apply` attempts provider-side deletion only for guarded candidates that came from `stored` writebacks with a non-empty `memory_id`
 - `--max-actions` bounds how many actionable candidates are touched in one execution
+- `--enqueue` stores the requested curation action in the hosted `jobs` queue so the worker can execute it asynchronously
 
 Examples:
 
@@ -237,6 +245,14 @@ uv run infinitas server memory-curation \
   --action prune \
   --apply \
   --max-actions 5 \
+  --json
+
+uv run infinitas server memory-curation \
+  --database-url sqlite:////srv/infinitas/data/server.db \
+  --action archive \
+  --apply \
+  --max-actions 10 \
+  --enqueue \
   --json
 ```
 

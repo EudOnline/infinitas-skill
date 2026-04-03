@@ -15,18 +15,18 @@ Go for controlled release handling with a materially healthier maintained surfac
 Compared with the 2026-04-01 scorecard and the earlier 2026-04-02 baseline snapshot, the repository
 now has a stronger inner-loop path, clearer CI signaling, safer headroom in the heaviest maintained
 orchestration files, a materially better story for discovery-memory regression coverage, and a new
-operator-visible memory curation execution surface. The main remaining risks are the slower
-legacy/full-regression path, the still-large maintained package surface outside the just-reduced
-modules, and the fact that provider cleanup is still manual, bounded, and unscheduled by design.
+operator-visible memory operations surface. The main remaining risks are the slower legacy/full-regression
+path, the still-large maintained package surface outside the just-reduced modules, and the fact that
+provider cleanup still depends on explicit operator policy even though it can now be queued and scheduled.
 
 ## Scores
 
 | Category | Score | Evidence |
 | --- | --- | --- |
-| Release readiness | 9.8/10 | `make ci-fast` passed on 2026-04-03 (`15 passed in 23.51s`) after guarded memory curation execution landed. |
+| Release readiness | 9.8/10 | `make ci-fast` passed on 2026-04-03 after queue-driven curation, usefulness evaluation, and memory observability landed. |
 | Maintainability | 9.6/10 | `recommendation.py` is 113 lines, `inspect.py` is 182 lines, and `ai_index.py` is now only 12 lines after the builder/validation extraction. |
-| Operational clarity | 9.7/10 | `make doctor` passed on 2026-04-03 and operators now have `infinitas server memory-curation` plan/archive/prune flows while keeping local audit as the source of truth. |
-| CI clarity | 9.6/10 | The repository now has the maintained fast gate plus a richer memory evaluation matrix that checks duplicate suppression and noisy recall stability. |
+| Operational clarity | 9.8/10 | Operators now have direct run, queued execution, scheduled enqueue, and a unified `memory-observability` summary while preserving local audit truth. |
+| CI clarity | 9.7/10 | The repository now has the maintained fast gate plus fixture-backed usefulness metrics that distinguish helpful memory use from correct restraint. |
 
 ## Evidence Matrix
 
@@ -49,6 +49,7 @@ modules, and the fact that provider cleanup is still manual, bounded, and unsche
 - Maintained lint signal is green, which is better than the 2026-04-01 baseline.
 - Discovery memory seams now have dedicated unit coverage plus a fixture-backed evaluation matrix.
 - Operators can inspect memory writeback health and run bounded curation flows through maintained CLI commands without giving up local-audit truth.
+- Operators can also inspect queued memory jobs and recent curation outcomes through one maintained observability command.
 - The first six high-pressure maintained files or orchestration surfaces now have visibly better headroom:
   - `src/infinitas_skill/server/ops.py`: `542 -> 461`
   - `src/infinitas_skill/release/service.py`: `553 -> 333`
@@ -64,7 +65,7 @@ modules, and the fact that provider cleanup is still manual, bounded, and unsche
 - `server/ui/lifecycle.py` is no longer at the edge, but it is still one of the larger maintained UI composition files.
 - Long-running release verification remains script-heavy and slower than the maintained fast path.
 - The repository still relies on a broader closeout matrix (`scripts/check-all.sh`) for highest-confidence regression coverage.
-- Memory quality is now regression-tested and locally observable, but provider cleanup is still operator-invoked only and there is no scheduled compaction job yet.
+- Memory quality is now regression-tested with usefulness metrics and locally observable, but provider cleanup still depends on explicit bounded policy rather than autonomous deletion.
 - The maintained package surface outside the just-optimized modules still deserves future cleanup attention.
 
 ## Optimization Delta
@@ -85,11 +86,14 @@ The current worktree completed these optimization steps by 2026-04-03:
 12. Expanded the memory evaluation matrix to cover duplicate suppression and noisy recall stability.
 13. Split `src/infinitas_skill/discovery/ai_index.py` into dedicated builder and validation modules.
 14. Upgraded `infinitas server memory-curation` from planning-only to guarded `plan` / `archive` / `prune` execution with optional Memo0 deletion.
+15. Added queue-driven and schedulable memory curation execution on top of the hosted jobs worker.
+16. Added fixture-backed memory usefulness summaries that track beneficial use versus correct restraint.
+17. Added a maintained `infinitas server memory-observability` command for writeback, curation, and queue visibility.
 
 ## Recommended Next Steps
 
 1. Keep `make ci-fast`, `make lint-maintained`, and `make test-fast` as the default contributor gate.
-2. Add scheduled or queue-driven curation orchestration on top of the new manual `plan` / `archive` / `prune` flow.
-3. Continue expanding recall-quality evaluation beyond discovery into longer-horizon memory usefulness metrics.
+2. Add policy-driven automation around scheduled curation so different environments can choose archive vs prune without editing service files.
+3. Expand usefulness evaluation from fixtures into rolling production baselines derived from local audit history.
 4. Continue reducing high-cost legacy/full-regression paths by moving more reusable logic into package-owned modules.
 5. Revisit the remaining larger maintained files before they drift back toward budget ceilings.

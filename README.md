@@ -53,7 +53,9 @@ uv run infinitas server healthcheck --api-url http://127.0.0.1:8000 --repo-path 
 uv run infinitas server memory-curation --database-url sqlite:////srv/infinitas/data/server.db --action plan --limit 50 --json
 uv run infinitas server memory-curation --database-url sqlite:////srv/infinitas/data/server.db --action archive --apply --max-actions 10 --json
 uv run infinitas server memory-curation --database-url sqlite:////srv/infinitas/data/server.db --action prune --apply --max-actions 5 --json
+uv run infinitas server memory-curation --database-url sqlite:////srv/infinitas/data/server.db --action archive --apply --max-actions 10 --enqueue --json
 uv run infinitas server memory-health --database-url sqlite:////srv/infinitas/data/server.db --limit 20 --json
+uv run infinitas server memory-observability --database-url sqlite:////srv/infinitas/data/server.db --limit 20 --job-limit 10 --json
 uv run infinitas server prune-backups --backup-root /srv/infinitas/backups --keep-last 7 --json
 ```
 
@@ -159,8 +161,10 @@ The optional memory layer is additive only:
 - lifecycle events may emit best-effort memory writeback attempts plus traceable audit events
 - fixture-backed memory evaluation now lives in `tests/integration/test_memory_evaluation_matrix.py`
 - the evaluation matrix now checks duplicate suppression and noisy recall stability
-- operator-facing curation planning and guarded archive/prune execution now live behind `uv run infinitas server memory-curation ...`
+- the evaluation matrix now also publishes deterministic usefulness summary metrics for helpful use vs correct restraint
+- operator-facing curation planning, guarded archive/prune execution, and queue-driven enqueue now live behind `uv run infinitas server memory-curation ...`
 - operator-facing writeback diagnostics now live behind `uv run infinitas server memory-health ...`
+- operator-facing memory operations summary now lives behind `uv run infinitas server memory-observability ...`
 - release, review, access, and install truth still comes from the local database, immutable artifacts, and current policy checks
 
 ## Policy trace and validation output

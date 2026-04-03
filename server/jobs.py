@@ -44,7 +44,7 @@ def enqueue_job(
     *,
     kind: str,
     payload: dict | None,
-    requested_by: User,
+    requested_by: User | None,
     release_id: int | None = None,
     note: str = '',
     commit: bool = True,
@@ -55,7 +55,7 @@ def enqueue_job(
         status='queued',
         payload_json=json.dumps(normalized_payload, ensure_ascii=False),
         release_id=release_id or _optional_positive_int(normalized_payload.get('release_id')),
-        requested_by_user_id=requested_by.id,
+        requested_by_user_id=(requested_by.id if requested_by is not None else None),
         note=note or '',
     )
     append_job_log(job, f'queued job {kind}', f'payload={json.dumps(normalized_payload, ensure_ascii=False, sort_keys=True)}')
