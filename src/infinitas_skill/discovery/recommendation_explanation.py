@@ -182,9 +182,24 @@ def build_recommendation_explanation(
                 memory_context.get("backend") if isinstance(memory_context, dict) else "disabled"
             ),
             "matched_count": memory_records_count,
+            "retrieved_count": (
+                (memory_context.get("curation_summary") or {}).get("input_count")
+                if isinstance(memory_context, dict)
+                else 0
+            ),
             "advisory_only": True,
             "status": (
                 memory_context.get("status") if isinstance(memory_context, dict) else "disabled"
+            ),
+            "curation_summary": (
+                dict(memory_context.get("curation_summary") or {})
+                if isinstance(memory_context, dict)
+                else {
+                    "input_count": 0,
+                    "kept_count": 0,
+                    "suppressed_duplicates": 0,
+                    "suppressed_low_signal": 0,
+                }
             ),
         }
     }

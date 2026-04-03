@@ -268,6 +268,11 @@ def test_recommendation_memory_evaluation_matrix(tmp_path: Path):
         )
         assert payload["results"][0]["qualified_name"] == case["expected_winner"], case["name"]
         assert payload["explanation"]["memory_summary"]["used"] is case["expected_memory_used"]
+        curation_summary = case.get("expected_curation_summary")
+        if curation_summary:
+            assert (
+                payload["explanation"]["memory_summary"]["curation_summary"] == curation_summary
+            ), case["name"]
         forbidden = case.get("forbidden_top_result")
         if forbidden:
             assert payload["results"][0]["qualified_name"] != forbidden
@@ -291,3 +296,6 @@ def test_inspect_memory_evaluation_matrix(tmp_path: Path):
             payload["memory_hints"]["items"][0]["memory_type"]
             == case["expected_first_memory_type"]
         )
+        curation_summary = case.get("expected_curation_summary")
+        if curation_summary:
+            assert payload["memory_hints"]["curation_summary"] == curation_summary, case["name"]

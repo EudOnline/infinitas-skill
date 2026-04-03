@@ -227,8 +227,15 @@ def test_recommendation_applies_soft_memory_boost_without_bypassing_compatibilit
         "used": True,
         "backend": "fake",
         "matched_count": 2,
+        "retrieved_count": 2,
         "advisory_only": True,
         "status": "matched",
+        "curation_summary": {
+            "input_count": 2,
+            "kept_count": 2,
+            "suppressed_duplicates": 0,
+            "suppressed_low_signal": 0,
+        },
     }
 
     incompatible = next(

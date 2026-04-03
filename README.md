@@ -50,6 +50,7 @@ uv run infinitas release signing-readiness --skill <skill> --json
 uv run infinitas release doctor-signing <skill> --json
 uv run infinitas release bootstrap-signing --help
 uv run infinitas server healthcheck --api-url http://127.0.0.1:8000 --repo-path /srv/infinitas/repo --artifact-path /srv/infinitas/artifacts --database-url sqlite:////srv/infinitas/data/server.db --json
+uv run infinitas server memory-curation --database-url sqlite:////srv/infinitas/data/server.db --limit 50 --json
 uv run infinitas server memory-health --database-url sqlite:////srv/infinitas/data/server.db --limit 20 --json
 uv run infinitas server prune-backups --backup-root /srv/infinitas/backups --keep-last 7 --json
 ```
@@ -155,6 +156,8 @@ The optional memory layer is additive only:
 - recommendation and inspect may include advisory memory fields
 - lifecycle events may emit best-effort memory writeback attempts plus traceable audit events
 - fixture-backed memory evaluation now lives in `tests/integration/test_memory_evaluation_matrix.py`
+- the evaluation matrix now checks duplicate suppression and noisy recall stability
+- operator-facing curation planning now lives behind `uv run infinitas server memory-curation ...`
 - operator-facing writeback diagnostics now live behind `uv run infinitas server memory-health ...`
 - release, review, access, and install truth still comes from the local database, immutable artifacts, and current policy checks
 

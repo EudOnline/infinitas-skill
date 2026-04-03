@@ -59,6 +59,7 @@ uv run pytest tests/integration/test_memory_evaluation_matrix.py -q
 
 These cover the maintained policy CLI parity surface, signing bootstrap rehearsal, and installed-integrity guardrails.
 `tests/integration/test_memory_evaluation_matrix.py` adds a fixture-backed recommendation/inspect quality gate for the advisory memory layer.
+The matrix now also checks retrieval curation behavior, including duplicate suppression, short-lived low-signal noise suppression, and winner stability under noisy memory input.
 
 ## Script-Level Regression Checks
 

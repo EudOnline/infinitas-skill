@@ -598,8 +598,15 @@ def scenario_recommend_memory_signals_and_guardrails():
             'used': True,
             'backend': 'fake',
             'matched_count': 2,
+            'retrieved_count': 2,
             'advisory_only': True,
             'status': 'matched',
+            'curation_summary': {
+                'input_count': 2,
+                'kept_count': 2,
+                'suppressed_duplicates': 0,
+                'suppressed_low_signal': 0,
+            },
         }
         if memory_summary != expected_summary:
             fail(f'expected memory_summary {expected_summary!r}, got {memory_summary!r}')

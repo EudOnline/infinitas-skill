@@ -167,10 +167,12 @@ This matrix is intended to lock in advisory behaviors such as:
 
 - baseline winner without memory
 - close-tie winner changes when memory is relevant
+- duplicate noisy memories do not swamp a stronger relevant memory
 - incompatible candidates never bypass compatibility gating
 - negative experience memory does not create positive recommendation lift
 - inspect trust state remains authoritative when memory is present
 - higher-quality experience memory outranks weaker short-lived hints
+- retrieval curation reports how many records were kept versus suppressed
 - provider-backed memory never becomes release, review, compatibility, or access truth
 
 ## Write Paths

@@ -82,3 +82,19 @@ def test_effective_memory_score_prefers_confident_reusable_memories():
         metadata={"confidence": 0.35, "ttl_seconds": 60 * 60 * 24 * 3},
     )
     assert effective_memory_score(stronger) > effective_memory_score(weaker)
+
+
+def test_effective_memory_score_penalizes_short_lived_low_confidence_noise():
+    durable = MemoryRecord(
+        memory="Release-ready installs remain reliable for neptune workflows.",
+        memory_type="experience",
+        score=0.62,
+        metadata={"confidence": 0.86, "ttl_seconds": 60 * 60 * 24 * 45},
+    )
+    noisy = MemoryRecord(
+        memory="Temporary neptune note.",
+        memory_type="task_context",
+        score=0.65,
+        metadata={"confidence": 0.08, "ttl_seconds": 60 * 15},
+    )
+    assert effective_memory_score(durable) > effective_memory_score(noisy)

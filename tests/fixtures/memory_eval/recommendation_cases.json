@@ -27,7 +27,51 @@
       }
     ],
     "expected_winner": "team/beta-preferred",
-    "expected_memory_used": true
+    "expected_memory_used": true,
+    "expected_curation_summary": {
+      "input_count": 2,
+      "kept_count": 2,
+      "suppressed_duplicates": 0,
+      "suppressed_low_signal": 0
+    }
+  },
+  {
+    "name": "duplicate_noise_does_not_swamp_beta_signal",
+    "task": "Need codex helper for workflows",
+    "target_agent": "codex",
+    "memory_context_enabled": true,
+    "memory_scope": {"user_ref": "maintainer"},
+    "memory_records": [
+      {
+        "memory": "Neptune workflows are preferred for codex helper choices.",
+        "memory_type": "user_preference",
+        "score": 0.84,
+        "confidence": 0.95,
+        "ttl_seconds": 7776000
+      },
+      {
+        "memory": "neptune workflows are preferred for codex helper choices",
+        "memory_type": "user_preference",
+        "score": 0.2,
+        "confidence": 0.2,
+        "ttl_seconds": 86400
+      },
+      {
+        "memory": "Temporary note for neptune.",
+        "memory_type": "task_context",
+        "score": 0.05,
+        "confidence": 0.05,
+        "ttl_seconds": 1800
+      }
+    ],
+    "expected_winner": "team/beta-preferred",
+    "expected_memory_used": true,
+    "expected_curation_summary": {
+      "input_count": 3,
+      "kept_count": 1,
+      "suppressed_duplicates": 1,
+      "suppressed_low_signal": 1
+    }
   },
   {
     "name": "negative_experience_does_not_lift_unsafe_candidate",
@@ -44,6 +88,12 @@
     ],
     "expected_winner": "team/alpha-safe",
     "expected_memory_used": false,
+    "expected_curation_summary": {
+      "input_count": 1,
+      "kept_count": 1,
+      "suppressed_duplicates": 0,
+      "suppressed_low_signal": 0
+    },
     "forbidden_top_result": "team/gamma-unsafe"
   }
 ]

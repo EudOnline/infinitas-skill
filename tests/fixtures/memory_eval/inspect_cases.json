@@ -11,7 +11,13 @@
       }
     ],
     "expected_trust_state": "verified",
-    "expected_first_memory_type": "experience"
+    "expected_first_memory_type": "experience",
+    "expected_curation_summary": {
+      "input_count": 1,
+      "kept_count": 1,
+      "suppressed_duplicates": 0,
+      "suppressed_low_signal": 0
+    }
   },
   {
     "name": "inspect_prefers_higher_quality_experience_memory",
@@ -34,6 +40,48 @@
       }
     ],
     "expected_trust_state": "verified",
-    "expected_first_memory_type": "experience"
+    "expected_first_memory_type": "experience",
+    "expected_curation_summary": {
+      "input_count": 2,
+      "kept_count": 2,
+      "suppressed_duplicates": 0,
+      "suppressed_low_signal": 0
+    }
+  },
+  {
+    "name": "inspect_curation_keeps_strongest_representative",
+    "memory_context_enabled": true,
+    "memory_scope": {"user_ref": "maintainer"},
+    "memory_records": [
+      {
+        "memory": "OpenClaw installs usually succeed when the release is already materialized.",
+        "memory_type": "experience",
+        "score": 0.79,
+        "confidence": 0.9,
+        "ttl_seconds": 7776000
+      },
+      {
+        "memory": "openclaw installs usually succeed when the release is already materialized",
+        "memory_type": "experience",
+        "score": 0.2,
+        "confidence": 0.2,
+        "ttl_seconds": 86400
+      },
+      {
+        "memory": "Temporary note.",
+        "memory_type": "task_context",
+        "score": 0.05,
+        "confidence": 0.05,
+        "ttl_seconds": 1800
+      }
+    ],
+    "expected_trust_state": "verified",
+    "expected_first_memory_type": "experience",
+    "expected_curation_summary": {
+      "input_count": 3,
+      "kept_count": 1,
+      "suppressed_duplicates": 1,
+      "suppressed_low_signal": 1
+    }
   }
 ]
