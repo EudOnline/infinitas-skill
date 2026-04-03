@@ -147,6 +147,23 @@ Inspect reads:
 - effect: compact advisory hints only
 - ordering: hints are trimmed and sorted by the same advisory quality score as recommendation
 
+## Evaluation Matrix
+
+Memory behavior is now regression-tested with fixture-backed evaluation cases under:
+
+- `tests/fixtures/memory_eval/recommendation_cases.json`
+- `tests/fixtures/memory_eval/inspect_cases.json`
+- `tests/integration/test_memory_evaluation_matrix.py`
+
+This matrix is intended to lock in advisory behaviors such as:
+
+- baseline winner without memory
+- close-tie winner changes when memory is relevant
+- incompatible candidates never bypass compatibility gating
+- negative experience memory does not create positive recommendation lift
+- inspect trust state remains authoritative when memory is present
+- higher-quality experience memory outranks weaker short-lived hints
+
 ## Write Paths
 
 Lifecycle writeback is best-effort and post-commit.

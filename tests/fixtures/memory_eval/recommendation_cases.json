@@ -1,0 +1,49 @@
+[
+  {
+    "name": "baseline_without_memory_prefers_alpha_safe",
+    "task": "Need codex helper for workflows",
+    "target_agent": "codex",
+    "memory_context_enabled": false,
+    "memory_records": [],
+    "expected_winner": "team/alpha-safe",
+    "expected_memory_used": false
+  },
+  {
+    "name": "memory_prefers_beta_for_neptune",
+    "task": "Need codex helper for workflows",
+    "target_agent": "codex",
+    "memory_context_enabled": true,
+    "memory_scope": {"user_ref": "maintainer"},
+    "memory_records": [
+      {
+        "memory": "User prefers neptune workflows for codex helper choices.",
+        "memory_type": "user_preference",
+        "score": 0.96
+      },
+      {
+        "memory": "Pluto workflow often fails due to unsupported runtime.",
+        "memory_type": "experience",
+        "score": 0.91
+      }
+    ],
+    "expected_winner": "team/beta-preferred",
+    "expected_memory_used": true
+  },
+  {
+    "name": "negative_experience_does_not_lift_unsafe_candidate",
+    "task": "Need codex helper for workflows",
+    "target_agent": "codex",
+    "memory_context_enabled": true,
+    "memory_scope": {"user_ref": "maintainer"},
+    "memory_records": [
+      {
+        "memory": "Neptune workflow fails and is broken for codex helper choices.",
+        "memory_type": "experience",
+        "score": 0.99
+      }
+    ],
+    "expected_winner": "team/alpha-safe",
+    "expected_memory_used": false,
+    "forbidden_top_result": "team/gamma-unsafe"
+  }
+]

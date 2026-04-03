@@ -54,9 +54,11 @@ Promoted high-value regression flows now live in first-class pytest modules as w
 
 ```bash
 uv run pytest tests/integration/test_cli_policy.py tests/integration/test_signing_bootstrap.py tests/integration/test_installed_integrity.py -q
+uv run pytest tests/integration/test_memory_evaluation_matrix.py -q
 ```
 
 These cover the maintained policy CLI parity surface, signing bootstrap rehearsal, and installed-integrity guardrails.
+`tests/integration/test_memory_evaluation_matrix.py` adds a fixture-backed recommendation/inspect quality gate for the advisory memory layer.
 
 ## Script-Level Regression Checks
 
