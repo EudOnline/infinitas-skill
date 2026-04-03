@@ -113,12 +113,14 @@ class Memo0MemoryProvider:
             memory = _string_or_none(item.get("memory")) or _string_or_none(item.get("text"))
             if memory is None:
                 continue
+            metadata = _as_mapping(item.get("metadata"))
             records.append(
                 MemoryRecord(
                     memory=memory,
                     memory_type=(
                         _string_or_none(item.get("memory_type"))
                         or _string_or_none(item.get("type"))
+                        or _string_or_none(metadata.get("memory_type"))
                         or "generic"
                     ),
                     score=(
@@ -127,7 +129,7 @@ class Memo0MemoryProvider:
                         else None
                     ),
                     source=_string_or_none(item.get("id")),
-                    metadata=_as_mapping(item.get("metadata")),
+                    metadata=metadata,
                 )
             )
         return MemorySearchResult(records=records, backend=self.backend_name)
@@ -139,9 +141,14 @@ class Memo0MemoryProvider:
         scope: Mapping[str, Any] | None = None,
     ) -> MemoryWriteResult:
         filters = normalize_scope_filters(scope, [record.memory_type])
+        metadata = dict(record.metadata or {})
+        metadata.setdefault("memory_type", record.memory_type)
+        for key, value in _as_mapping(filters.get("metadata")).items():
+            if isinstance(value, str) and value:
+                metadata.setdefault(key, value)
         payload = {
             "memory": record.memory,
-            "metadata": dict(record.metadata or {}),
+            "metadata": metadata,
             "namespace": self._namespace,
             "filters": filters or None,
         }
