@@ -5,7 +5,7 @@ from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from .config import MemoryConfig
-from .contracts import MemoryRecord, MemorySearchResult, MemoryWriteResult
+from .contracts import MemoryDeleteResult, MemoryRecord, MemorySearchResult, MemoryWriteResult
 
 
 def _as_mapping(value: Any) -> dict[str, Any]:
@@ -65,7 +65,7 @@ def normalize_scope_filters(
 
 class Memo0MemoryProvider:
     backend_name = "memo0"
-    capabilities = {"read": True, "write": True}
+    capabilities = {"read": True, "write": True, "delete": True}
 
     def __init__(
         self,
@@ -164,6 +164,29 @@ class Memo0MemoryProvider:
             memory_id=memory_id,
         )
 
+    def delete(
+        self,
+        *,
+        memory_id: str,
+    ) -> MemoryDeleteResult:
+        normalized_memory_id = _string_or_none(memory_id)
+        if normalized_memory_id is None:
+            return MemoryDeleteResult(
+                status="skipped",
+                backend=self.backend_name,
+                error="memory_id required",
+            )
+        _delete_memory(
+            self._client,
+            memory_id=normalized_memory_id,
+            namespace=self._namespace,
+        )
+        return MemoryDeleteResult(
+            status="deleted",
+            backend=self.backend_name,
+            memory_id=normalized_memory_id,
+        )
+
 
 def _default_importer():
     import mem0  # type: ignore
@@ -219,3 +242,15 @@ def _add_memory(client: Any, payload: Mapping[str, Any]) -> Any:
     if hasattr(client, "add_memory"):
         return client.add_memory(**payload)
     raise RuntimeError("memo0 client does not support add operation")
+
+
+def _delete_memory(client: Any, *, memory_id: str, namespace: str) -> Any:
+    payload = {
+        "memory_id": memory_id,
+        "namespace": namespace,
+    }
+    if hasattr(client, "delete"):
+        return client.delete(**payload)
+    if hasattr(client, "delete_memory"):
+        return client.delete_memory(**payload)
+    raise RuntimeError("memo0 client does not support delete operation")

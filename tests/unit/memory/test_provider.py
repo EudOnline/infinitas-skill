@@ -3,7 +3,7 @@ from __future__ import annotations
 from infinitas_skill.memory.config import MemoryConfig
 from infinitas_skill.memory.contracts import MemoryRecord
 from infinitas_skill.memory.memo0_provider import Memo0MemoryProvider
-from infinitas_skill.memory.provider import build_memory_provider
+from infinitas_skill.memory.provider import NoopMemoryProvider, build_memory_provider
 from server.settings import get_settings
 
 
@@ -49,6 +49,7 @@ def test_settings_read_memory_flags(monkeypatch):
 class _FakeMemo0Client:
     def __init__(self):
         self.add_calls = []
+        self.delete_calls = []
 
     def add(self, **payload):
         self.add_calls.append(payload)
@@ -64,6 +65,10 @@ class _FakeMemo0Client:
                 }
             ]
         }
+
+    def delete(self, **payload):
+        self.delete_calls.append(payload)
+        return {"id": payload.get("memory_id")}
 
 
 class _FakeMemo0Module:
@@ -105,3 +110,35 @@ def test_memo0_provider_persists_and_recovers_memory_type():
         memory_types=["experience"],
     )
     assert search_result.records[0].memory_type == "experience"
+
+
+def test_noop_provider_delete_is_skipped() -> None:
+    provider = NoopMemoryProvider(reason="memory backend disabled")
+
+    result = provider.delete(memory_id="memory-1")
+
+    assert result.status == "skipped"
+    assert result.backend == "noop"
+    assert result.error == "memory backend disabled"
+
+
+def test_memo0_provider_deletes_memory_by_id() -> None:
+    client = _FakeMemo0Client()
+    provider = Memo0MemoryProvider.from_config(
+        config=MemoryConfig(
+            backend="memo0",
+            context_enabled=True,
+            write_enabled=True,
+            namespace="infinitas",
+            top_k=5,
+            mem0_base_url=None,
+            mem0_api_key_env="MEM0_API_KEY",
+        ),
+        importer=lambda: _FakeMemo0Module(client),
+    )
+
+    result = provider.delete(memory_id="memory-1")
+
+    assert result.status == "deleted"
+    assert result.memory_id == "memory-1"
+    assert client.delete_calls == [{"memory_id": "memory-1", "namespace": "infinitas"}]

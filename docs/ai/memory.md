@@ -199,11 +199,12 @@ uv run infinitas server memory-health \
 
 This command is deliberately backed by local audit history rather than Memo0 state. It answers "what did the registry attempt and record?" instead of "what does the provider currently believe?".
 
-Operators can also inspect read-only curation candidates with:
+Operators can inspect or execute guarded curation workflows with:
 
 ```bash
 uv run infinitas server memory-curation \
   --database-url sqlite:////srv/infinitas/data/server.db \
+  --action plan \
   --limit 50 \
   --json
 ```
@@ -214,7 +215,32 @@ This command uses local audit history plus lifecycle memory policy to surface:
 - writebacks whose policy TTL has already expired and are good archive or pruning candidates
 - lifecycle events most likely to benefit from future curation work
 
-Like `memory-health`, this remains local-audit truth. It does not mutate provider state and does not assume Memo0 is the authority for cleanup decisions.
+Execution modes:
+
+- `--action plan` is the default and stays read-only
+- `--action archive --apply` records local `memory_curation` audit events for selected candidates but does not delete provider-side memory
+- `--action prune --apply` attempts provider-side deletion only for guarded candidates that came from `stored` writebacks with a non-empty `memory_id`
+- `--max-actions` bounds how many actionable candidates are touched in one execution
+
+Examples:
+
+```bash
+uv run infinitas server memory-curation \
+  --database-url sqlite:////srv/infinitas/data/server.db \
+  --action archive \
+  --apply \
+  --max-actions 10 \
+  --json
+
+uv run infinitas server memory-curation \
+  --database-url sqlite:////srv/infinitas/data/server.db \
+  --action prune \
+  --apply \
+  --max-actions 5 \
+  --json
+```
+
+Like `memory-health`, local audit remains the supported truth. Memo0 is advisory memory only, so cleanup decisions are selected from local history first and provider mutation is optional, explicit, and guarded.
 
 ## Recommendation Example
 

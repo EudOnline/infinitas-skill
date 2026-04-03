@@ -232,8 +232,58 @@ def test_server_memory_curation_command_returns_candidate_counts(tmp_path: Path)
     )
     payload = _load_json_output(result, label="infinitas server memory-curation")
     assert payload["ok"] is True
+    assert payload["action"] == "plan"
     assert payload["candidate_counts"]["duplicate_groups"] == 1
     assert payload["candidate_counts"]["expired_by_policy"] == 1
+
+
+def test_server_memory_curation_command_accepts_execution_flags(tmp_path: Path) -> None:
+    db_path = tmp_path / "memory-curation-flags.db"
+    database_url = f"sqlite:///{db_path}"
+    engine = create_engine(database_url, future=True)
+    try:
+        Base.metadata.create_all(engine)
+        with Session(engine) as session:
+            session.add(
+                AuditEvent(
+                    aggregate_type="memory_writeback",
+                    aggregate_id="mw:1",
+                    event_type="memory.writeback.stored",
+                    actor_ref="principal:1",
+                    occurred_at=datetime(2026, 3, 1, 9, 0, tzinfo=timezone.utc),
+                    payload_json=json.dumps(
+                        {
+                            "status": "stored",
+                            "backend": "memo0",
+                            "memory_id": "memory-1",
+                            "lifecycle_event": "task.authoring.create_draft",
+                            "payload": {"qualified_name": "team/demo", "state": "draft"},
+                        }
+                    ),
+                )
+            )
+            session.commit()
+    finally:
+        engine.dispose()
+
+    result = _run_cli(
+        [
+            "server",
+            "memory-curation",
+            "--database-url",
+            database_url,
+            "--action",
+            "prune",
+            "--max-actions",
+            "1",
+            "--json",
+        ],
+        expect=0,
+    )
+    payload = _load_json_output(result, label="infinitas server memory-curation flags")
+    assert payload["action"] == "prune"
+    assert payload["apply"] is False
+    assert payload["execution"]["selected_candidates"] == 1
 
 
 def main() -> None:

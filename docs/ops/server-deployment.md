@@ -247,11 +247,12 @@ This command is intentionally local-audit truth, not provider truth. Operators s
 
 ## Memory curation candidates
 
-Use the hosted memory curation command when you want a read-only cleanup plan before adding provider-side deletion or archival workflows:
+Use the hosted memory curation command when you want either a read-only cleanup plan or a guarded execution pass:
 
 ```bash
 uv run infinitas server memory-curation \
   --database-url sqlite:////srv/infinitas/data/server.db \
+  --action plan \
   --limit 50 \
   --json
 ```
@@ -266,9 +267,31 @@ Interpretation guidance:
 
 - duplicate groups are grouped by lifecycle event plus sanitized payload shape, not by provider state
 - expired-by-policy means "old enough to review for pruning", not "already deleted from Memo0"
-- this is intentionally a planning surface only, so the command never mutates provider data
+- `--action plan` is always read-only, even without `--apply`
+- `--action archive --apply` records local `memory_curation` audit events and does not mutate provider state
+- `--action prune --apply` is the only mode that may delete provider-side memory, and it only targets selected candidates with a recorded `memory_id`
+- omitting `--apply` keeps `archive` and `prune` in dry-run mode
+- `--max-actions` bounds how many actionable candidates are touched in one run
 
-This gives operators a safe local signal for future memory cleanup work without violating the private-first source-of-truth boundary.
+Example execution flow:
+
+```bash
+uv run infinitas server memory-curation \
+  --database-url sqlite:////srv/infinitas/data/server.db \
+  --action archive \
+  --apply \
+  --max-actions 20 \
+  --json
+
+uv run infinitas server memory-curation \
+  --database-url sqlite:////srv/infinitas/data/server.db \
+  --action prune \
+  --apply \
+  --max-actions 5 \
+  --json
+```
+
+This keeps the private-first boundary intact: local audit is still authoritative, while Memo0 or any future provider remains an optional advisory store that is only pruned through explicit operator intent.
 
 ## `systemd` bundle
 

@@ -4,12 +4,18 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from .config import MemoryConfig, load_memory_config, normalize_memory_backend
-from .contracts import MemoryProvider, MemoryRecord, MemorySearchResult, MemoryWriteResult
+from .contracts import (
+    MemoryDeleteResult,
+    MemoryProvider,
+    MemoryRecord,
+    MemorySearchResult,
+    MemoryWriteResult,
+)
 
 
 class NoopMemoryProvider:
     backend_name = "noop"
-    capabilities = {"read": False, "write": False}
+    capabilities = {"read": False, "write": False, "delete": False}
 
     def __init__(self, *, reason: str = "disabled") -> None:
         self.reason = reason
@@ -31,6 +37,17 @@ class NoopMemoryProvider:
         scope: Mapping[str, Any] | None = None,
     ) -> MemoryWriteResult:
         return MemoryWriteResult(
+            status="skipped",
+            backend=self.backend_name,
+            error=self.reason,
+        )
+
+    def delete(
+        self,
+        *,
+        memory_id: str,  # noqa: ARG002
+    ) -> MemoryDeleteResult:
+        return MemoryDeleteResult(
             status="skipped",
             backend=self.backend_name,
             error=self.reason,

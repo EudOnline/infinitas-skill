@@ -27,6 +27,14 @@ class MemoryWriteResult:
     error: str | None = None
 
 
+@dataclass(frozen=True)
+class MemoryDeleteResult:
+    status: str
+    backend: str
+    memory_id: str | None = None
+    error: str | None = None
+
+
 class MemoryProvider(Protocol):
     backend_name: str
     capabilities: Mapping[str, bool]
@@ -47,3 +55,8 @@ class MemoryProvider(Protocol):
         scope: Mapping[str, Any] | None = None,
     ) -> MemoryWriteResult: ...
 
+    def delete(
+        self,
+        *,
+        memory_id: str,
+    ) -> MemoryDeleteResult: ...
