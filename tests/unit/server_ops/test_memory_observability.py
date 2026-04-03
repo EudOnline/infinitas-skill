@@ -97,6 +97,46 @@ def test_summarize_memory_observability_groups_writeback_curation_and_jobs() -> 
                             }
                         ),
                     ),
+                    AuditEvent(
+                        aggregate_type="memory_retrieval",
+                        aggregate_id="mr:0",
+                        event_type="memory.retrieval.inspect",
+                        actor_ref="system:discovery:inspect-script",
+                        occurred_at=datetime(2026, 4, 2, 11, 0, tzinfo=timezone.utc),
+                        payload_json=json.dumps(
+                            {
+                                "operation": "inspect",
+                                "skill_ref": "team/alpha-safe",
+                                "memory": {
+                                    "status": "error",
+                                    "used": False,
+                                    "matched_count": 0,
+                                },
+                            }
+                        ),
+                    ),
+                    AuditEvent(
+                        aggregate_type="memory_retrieval",
+                        aggregate_id="mr:1",
+                        event_type="memory.retrieval.recommend",
+                        actor_ref="system:discovery:recommend-script",
+                        occurred_at=datetime(2026, 4, 3, 11, 45, tzinfo=timezone.utc),
+                        payload_json=json.dumps(
+                            {
+                                "operation": "recommend",
+                                "task": "Need codex helper",
+                                "target_agent": "codex",
+                                "memory": {
+                                    "status": "matched",
+                                    "used": True,
+                                    "matched_count": 2,
+                                },
+                                "results": {
+                                    "top_qualified_name": "team/beta-preferred",
+                                },
+                            }
+                        ),
+                    ),
                 ]
             )
             session.commit()
@@ -116,6 +156,11 @@ def test_summarize_memory_observability_groups_writeback_curation_and_jobs() -> 
         assert payload["jobs"]["status_counts"]["completed"] == 1
         assert payload["jobs"]["status_counts"]["failed"] == 1
         assert payload["jobs"]["recent"][0]["kind"] == "memory_curation"
+        assert payload["retrieval"]["status_counts"]["matched"] == 1
+        assert payload["retrieval"]["status_counts"]["error"] == 1
+        assert payload["retrieval"]["operation_counts"]["recommend"] == 1
+        assert payload["retrieval"]["operation_counts"]["inspect"] == 1
+        assert payload["retrieval"]["recent"][0]["operation"] == "recommend"
         assert payload["baselines"]["window_hours"] == 24
         assert payload["baselines"]["writeback"]["recent"]["totals"]["count"] == 2
         assert payload["baselines"]["writeback"]["previous"]["totals"]["count"] == 1
@@ -123,5 +168,6 @@ def test_summarize_memory_observability_groups_writeback_curation_and_jobs() -> 
         assert payload["baselines"]["writeback"]["delta"]["failed_rate"] == -0.5
         assert payload["baselines"]["curation"]["delta"]["archived_rate"] == 1.0
         assert payload["baselines"]["jobs"]["delta"]["completed_rate"] == 1.0
+        assert payload["baselines"]["retrieval"]["delta"]["matched_rate"] == 1.0
     finally:
         engine.dispose()

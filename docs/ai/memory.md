@@ -290,7 +290,7 @@ uv run infinitas server memory-observability \
   --json
 ```
 
-`memory-observability` still reports current writeback, curation, and job health from local state, and now includes a nested `baselines` block that compares the most recent window against the previous one.
+`memory-observability` still reports current writeback, curation, and job health from local state, and now also surfaces recent `memory_retrieval` status plus a nested `baselines` block that compares the most recent window against the previous one.
 
 ## Recommendation Example
 

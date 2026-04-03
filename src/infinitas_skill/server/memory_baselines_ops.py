@@ -72,7 +72,8 @@ def run_server_memory_baselines(
             f"window_hours={summary['window_hours']} "
             f"writeback_recent={summary['writeback']['recent']['totals']['count']} "
             f"curation_recent={summary['curation']['recent']['totals']['count']} "
-            f"jobs_recent={summary['jobs']['recent']['totals']['count']}"
+            f"jobs_recent={summary['jobs']['recent']['totals']['count']} "
+            f"retrieval_recent={summary['retrieval']['recent']['totals']['count']}"
         )
     return 0
 

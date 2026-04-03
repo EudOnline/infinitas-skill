@@ -90,6 +90,40 @@ def test_summarize_memory_baselines_compares_recent_window_to_previous_window() 
                         payload_json=json.dumps({"action": "prune"}),
                         note="failed prune",
                     ),
+                    AuditEvent(
+                        aggregate_type="memory_retrieval",
+                        aggregate_id="mr:1",
+                        event_type="memory.retrieval.recommend",
+                        actor_ref="system:discovery:recommend-script",
+                        occurred_at=now - timedelta(hours=1),
+                        payload_json=json.dumps(
+                            {
+                                "operation": "recommend",
+                                "memory": {
+                                    "status": "matched",
+                                    "used": True,
+                                    "matched_count": 2,
+                                },
+                            }
+                        ),
+                    ),
+                    AuditEvent(
+                        aggregate_type="memory_retrieval",
+                        aggregate_id="mr:2",
+                        event_type="memory.retrieval.inspect",
+                        actor_ref="system:discovery:inspect-script",
+                        occurred_at=now - timedelta(hours=27),
+                        payload_json=json.dumps(
+                            {
+                                "operation": "inspect",
+                                "memory": {
+                                    "status": "error",
+                                    "used": False,
+                                    "matched_count": 0,
+                                },
+                            }
+                        ),
+                    ),
                 ]
             )
             session.commit()
@@ -107,5 +141,10 @@ def test_summarize_memory_baselines_compares_recent_window_to_previous_window() 
         assert payload["curation"]["recent"]["status_rates"]["archived"] == 1.0
         assert payload["jobs"]["recent"]["status_rates"]["completed"] == 1.0
         assert payload["jobs"]["delta"]["failed_rate"] == -1.0
+        assert payload["retrieval"]["recent"]["totals"]["count"] == 1
+        assert payload["retrieval"]["recent"]["status_rates"]["matched"] == 1.0
+        assert payload["retrieval"]["previous"]["status_rates"]["error"] == 1.0
+        assert payload["retrieval"]["delta"]["matched_rate"] == 1.0
+        assert payload["retrieval"]["delta"]["error_rate"] == -1.0
     finally:
         engine.dispose()

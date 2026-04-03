@@ -312,7 +312,7 @@ INFINITAS_SERVER_MEMORY_CURATION_ACTOR_REF=system:memory-curation:schedule
 
 ## Memory operations observability
 
-Use the hosted memory observability command when you want one local-first summary for writeback health, curation outcomes, and queued/running memory jobs:
+Use the hosted memory observability command when you want one local-first summary for writeback health, retrieval usage, curation outcomes, and queued/running memory jobs:
 
 ```bash
 uv run infinitas server memory-observability \
@@ -326,6 +326,7 @@ uv run infinitas server memory-observability \
 This command summarizes:
 
 - recent writeback status counts and failures
+- recent retrieval-side `memory_retrieval` outcomes such as `matched`, `disabled`, or `error`
 - recent `memory_curation` outcomes such as `archived`, `pruned`, `skipped`, or `failed`
 - recent `memory_curation` jobs and their queue status
 - nested rolling recent-vs-previous drift so operators can see whether failure or completion rates are moving
@@ -346,6 +347,7 @@ uv run infinitas server memory-baselines \
 This command compares two adjacent windows and summarizes:
 
 - writeback stored and failed rate changes
+- retrieval matched and error rate changes
 - curation archived, pruned, and failed rate changes
 - memory curation job completed and failed rate changes
 

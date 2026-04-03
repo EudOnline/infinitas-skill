@@ -67,6 +67,21 @@ def _event_window(
     return None
 
 
+def _retrieval_status(payload: dict[str, Any]) -> str:
+    memory = payload.get("memory")
+    if not isinstance(memory, dict):
+        return "unknown"
+    status = str(memory.get("status") or "").strip().lower()
+    return status or "unknown"
+
+
+def _retrieval_used(payload: dict[str, Any]) -> bool:
+    memory = payload.get("memory")
+    if not isinstance(memory, dict):
+        return False
+    return bool(memory.get("used"))
+
+
 def summarize_memory_baselines(
     session: Session,
     *,
@@ -83,6 +98,7 @@ def summarize_memory_baselines(
         "writeback": {"recent": [], "previous": []},
         "curation": {"recent": [], "previous": []},
         "jobs": {"recent": [], "previous": []},
+        "retrieval": {"recent": [], "previous": []},
     }
 
     writeback_events = session.scalars(
@@ -144,6 +160,27 @@ def summarize_memory_baselines(
     jobs_recent = summarize_status_window(windows["jobs"]["recent"])
     jobs_previous = summarize_status_window(windows["jobs"]["previous"])
 
+    retrieval_events = session.scalars(
+        select(AuditEvent).where(AuditEvent.aggregate_type == "memory_retrieval")
+    ).all()
+    retrieval_used_windows = {"recent": [], "previous": []}
+    for event in retrieval_events:
+        payload = _payload(event.payload_json)
+        bucket = _event_window(
+            event.occurred_at,
+            recent_start=recent_start,
+            previous_start=previous_start,
+        )
+        if bucket is None:
+            continue
+        windows["retrieval"][bucket].append(_retrieval_status(payload))
+        retrieval_used_windows[bucket].append("used" if _retrieval_used(payload) else "unused")
+
+    retrieval_recent = summarize_status_window(windows["retrieval"]["recent"])
+    retrieval_previous = summarize_status_window(windows["retrieval"]["previous"])
+    retrieval_used_recent = summarize_status_window(retrieval_used_windows["recent"])
+    retrieval_used_previous = summarize_status_window(retrieval_used_windows["previous"])
+
     return {
         "ok": True,
         "window_hours": normalized_window_hours,
@@ -191,6 +228,24 @@ def summarize_memory_baselines(
                 "failed_rate": _delta(
                     jobs_recent["status_rates"].get("failed", 0.0),
                     jobs_previous["status_rates"].get("failed", 0.0),
+                ),
+            },
+        },
+        "retrieval": {
+            "recent": retrieval_recent,
+            "previous": retrieval_previous,
+            "delta": {
+                "matched_rate": _delta(
+                    retrieval_recent["status_rates"].get("matched", 0.0),
+                    retrieval_previous["status_rates"].get("matched", 0.0),
+                ),
+                "error_rate": _delta(
+                    retrieval_recent["status_rates"].get("error", 0.0),
+                    retrieval_previous["status_rates"].get("error", 0.0),
+                ),
+                "used_rate": _delta(
+                    retrieval_used_recent["status_rates"].get("used", 0.0),
+                    retrieval_used_previous["status_rates"].get("used", 0.0),
                 ),
             },
         },

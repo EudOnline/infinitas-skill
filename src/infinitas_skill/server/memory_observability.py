@@ -27,6 +27,14 @@ def _curation_status(event: AuditEvent) -> str:
     return "unknown"
 
 
+def _retrieval_status(payload: dict[str, Any]) -> str:
+    memory = payload.get("memory")
+    if not isinstance(memory, dict):
+        return "unknown"
+    status = str(memory.get("status") or "").strip().lower()
+    return status or "unknown"
+
+
 def summarize_memory_observability(
     session: Session,
     *,
@@ -89,6 +97,32 @@ def summarize_memory_observability(
             }
         )
 
+    retrieval_events = session.scalars(
+        select(AuditEvent)
+        .where(AuditEvent.aggregate_type == "memory_retrieval")
+        .order_by(AuditEvent.occurred_at.desc(), AuditEvent.id.desc())
+        .limit(normalized_limit)
+    ).all()
+    retrieval_status_counts: Counter[str] = Counter()
+    retrieval_operation_counts: Counter[str] = Counter()
+    recent_retrieval = []
+    for event in retrieval_events:
+        payload = _payload(event.payload_json)
+        status = _retrieval_status(payload)
+        operation = str(payload.get("operation") or "").strip().lower() or "unknown"
+        retrieval_status_counts[status] += 1
+        retrieval_operation_counts[operation] += 1
+        recent_retrieval.append(
+            {
+                "id": int(event.id),
+                "operation": operation,
+                "status": status,
+                "actor_ref": str(event.actor_ref or ""),
+                "occurred_at": str(event.occurred_at),
+                "aggregate_id": str(event.aggregate_id or ""),
+            }
+        )
+
     return {
         "ok": True,
         "limit": normalized_limit,
@@ -102,6 +136,11 @@ def summarize_memory_observability(
         "jobs": {
             "status_counts": dict(job_status_counts),
             "recent": recent_jobs[:5],
+        },
+        "retrieval": {
+            "status_counts": dict(retrieval_status_counts),
+            "operation_counts": dict(retrieval_operation_counts),
+            "recent": recent_retrieval[:5],
         },
         "baselines": baselines,
     }

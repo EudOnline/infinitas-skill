@@ -355,6 +355,32 @@ def test_server_memory_observability_command_summarizes_memory_ops(tmp_path: Pat
                         payload_json=json.dumps({"action": "archive", "apply": True}),
                         note="completed archive",
                     ),
+                    AuditEvent(
+                        aggregate_type="memory_retrieval",
+                        aggregate_id="mr:0",
+                        event_type="memory.retrieval.inspect",
+                        actor_ref="system:discovery:inspect-script",
+                        occurred_at=datetime(2026, 4, 2, 11, 0, tzinfo=timezone.utc),
+                        payload_json=json.dumps(
+                            {
+                                "operation": "inspect",
+                                "memory": {"status": "error", "used": False, "matched_count": 0},
+                            }
+                        ),
+                    ),
+                    AuditEvent(
+                        aggregate_type="memory_retrieval",
+                        aggregate_id="mr:1",
+                        event_type="memory.retrieval.recommend",
+                        actor_ref="system:discovery:recommend-script",
+                        occurred_at=datetime(2026, 4, 3, 11, 0, tzinfo=timezone.utc),
+                        payload_json=json.dumps(
+                            {
+                                "operation": "recommend",
+                                "memory": {"status": "matched", "used": True, "matched_count": 2},
+                            }
+                        ),
+                    ),
                 ]
             )
             session.commit()
@@ -383,10 +409,14 @@ def test_server_memory_observability_command_summarizes_memory_ops(tmp_path: Pat
     assert payload["curation"]["status_counts"]["failed"] == 1
     assert payload["jobs"]["status_counts"]["completed"] == 1
     assert payload["jobs"]["status_counts"]["failed"] == 1
+    assert payload["retrieval"]["status_counts"]["matched"] == 1
+    assert payload["retrieval"]["status_counts"]["error"] == 1
+    assert payload["retrieval"]["operation_counts"]["recommend"] == 1
     assert payload["baselines"]["window_hours"] == 24
     assert payload["baselines"]["writeback"]["delta"]["stored_rate"] == 1.0
     assert payload["baselines"]["curation"]["delta"]["archived_rate"] == 1.0
     assert payload["baselines"]["jobs"]["delta"]["completed_rate"] == 1.0
+    assert payload["baselines"]["retrieval"]["delta"]["matched_rate"] == 1.0
 
 
 def test_server_memory_baselines_command_returns_windowed_summary(tmp_path: Path) -> None:
@@ -423,6 +453,19 @@ def test_server_memory_baselines_command_returns_windowed_summary(tmp_path: Path
                         payload_json=json.dumps({"action": "archive"}),
                         note="completed archive",
                     ),
+                    AuditEvent(
+                        aggregate_type="memory_retrieval",
+                        aggregate_id="mr:1",
+                        event_type="memory.retrieval.recommend",
+                        actor_ref="system:discovery:recommend-script",
+                        occurred_at=datetime(2026, 4, 3, 7, 0, tzinfo=timezone.utc),
+                        payload_json=json.dumps(
+                            {
+                                "operation": "recommend",
+                                "memory": {"status": "matched", "used": True, "matched_count": 2},
+                            }
+                        ),
+                    ),
                 ]
             )
             session.commit()
@@ -447,6 +490,7 @@ def test_server_memory_baselines_command_returns_windowed_summary(tmp_path: Path
     assert payload["writeback"]["recent"]["totals"]["count"] == 1
     assert payload["curation"]["recent"]["totals"]["count"] == 1
     assert payload["jobs"]["recent"]["totals"]["count"] == 1
+    assert payload["retrieval"]["recent"]["totals"]["count"] == 1
 
 
 def test_server_memory_curation_command_can_enqueue_job(tmp_path: Path) -> None:

@@ -91,9 +91,11 @@ def run_server_memory_observability(
             f"writeback_statuses={summary['writeback']['writeback_status_counts']} "
             f"curation_statuses={summary['curation']['status_counts']} "
             f"job_statuses={summary['jobs']['status_counts']} "
+            f"retrieval_statuses={summary['retrieval']['status_counts']} "
             f"drift_writeback={summary['baselines']['writeback']['delta']} "
             f"drift_curation={summary['baselines']['curation']['delta']} "
-            f"drift_jobs={summary['baselines']['jobs']['delta']}"
+            f"drift_jobs={summary['baselines']['jobs']['delta']} "
+            f"drift_retrieval={summary['baselines']['retrieval']['delta']}"
         )
     return 0
 
