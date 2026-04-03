@@ -139,6 +139,7 @@ Recommendation reads:
 - memory types: `user_preference`, `task_context`, `experience`
 - effect: bounded soft boost after compatibility gating
 - ordering: provider score, policy confidence, memory type, and TTL now combine into one advisory quality score
+- retrieval-time curation now suppresses duplicate and very low-signal short-lived memories before ranking
 
 Inspect reads:
 
@@ -146,6 +147,7 @@ Inspect reads:
 - memory types: `task_context`, `experience`
 - effect: compact advisory hints only
 - ordering: hints are trimmed and sorted by the same advisory quality score as recommendation
+- the payload now includes a `curation_summary` block so operators and tests can see how many memories were kept or suppressed
 
 ## Evaluation Matrix
 
@@ -195,6 +197,23 @@ uv run infinitas server memory-health \
 
 This command is deliberately backed by local audit history rather than Memo0 state. It answers "what did the registry attempt and record?" instead of "what does the provider currently believe?".
 
+Operators can also inspect read-only curation candidates with:
+
+```bash
+uv run infinitas server memory-curation \
+  --database-url sqlite:////srv/infinitas/data/server.db \
+  --limit 50 \
+  --json
+```
+
+This command uses local audit history plus lifecycle memory policy to surface:
+
+- duplicate writeback groups that likely produce redundant memories
+- writebacks whose policy TTL has already expired and are good archive or pruning candidates
+- lifecycle events most likely to benefit from future curation work
+
+Like `memory-health`, this remains local-audit truth. It does not mutate provider state and does not assume Memo0 is the authority for cleanup decisions.
+
 ## Recommendation Example
 
 ```json
@@ -214,7 +233,7 @@ This command is deliberately backed by local audit history rather than Memo0 sta
       "memory_signals": {
         "matched_memory_count": 2,
         "applied_boost": 35,
-        "memory_types": ["user_preference", "experience"]
+      "memory_types": ["user_preference", "experience"]
       }
     }
   ]
@@ -225,6 +244,7 @@ Interpretation:
 
 - memory helped rank already-compatible candidates
 - the boost stayed bounded
+- duplicate or low-signal retrieved memories were suppressed before ranking
 - compatibility and trust still came from the normal discovery chain
 
 ## Inspect Example
@@ -239,6 +259,12 @@ Interpretation:
     "matched_count": 1,
     "advisory_only": true,
     "status": "matched",
+    "curation_summary": {
+      "input_count": 2,
+      "kept_count": 1,
+      "suppressed_duplicates": 1,
+      "suppressed_low_signal": 0
+    },
     "items": [
       {
         "memory_type": "experience",
@@ -254,6 +280,7 @@ Interpretation:
 
 - trust remains `verified`
 - memory adds context, not trust semantics
+- curation keeps the strongest representative when retrieval returns duplicate hints
 
 ## Writeback Failure Example
 

@@ -5,6 +5,7 @@ import os
 import shutil
 import sys
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 from sqlalchemy import create_engine
@@ -163,6 +164,76 @@ def test_server_memory_health_command_returns_status_counts(tmp_path: Path) -> N
     assert payload["writeback_status_counts"]["failed"] == 1
     assert payload["writeback_status_counts"]["stored"] == 1
     assert payload["backend_names"] == ["memo0"]
+
+
+def test_server_memory_curation_command_returns_candidate_counts(tmp_path: Path) -> None:
+    db_path = tmp_path / "memory-curation.db"
+    database_url = f"sqlite:///{db_path}"
+    engine = create_engine(database_url, future=True)
+    try:
+        Base.metadata.create_all(engine)
+        with Session(engine) as session:
+            session.add_all(
+                [
+                    AuditEvent(
+                        aggregate_type="memory_writeback",
+                        aggregate_id="mw:1",
+                        event_type="memory.writeback.stored",
+                        actor_ref="principal:1",
+                        occurred_at=datetime(2026, 4, 3, 8, 0, tzinfo=timezone.utc),
+                        payload_json=json.dumps(
+                            {
+                                "status": "stored",
+                                "backend": "memo0",
+                                "lifecycle_event": "task.review.approve",
+                                "payload": {"qualified_name": "team/demo", "decision": "approve"},
+                            }
+                        ),
+                    ),
+                    AuditEvent(
+                        aggregate_type="memory_writeback",
+                        aggregate_id="mw:2",
+                        event_type="memory.writeback.stored",
+                        actor_ref="principal:1",
+                        occurred_at=datetime(2026, 4, 3, 9, 0, tzinfo=timezone.utc),
+                        payload_json=json.dumps(
+                            {
+                                "status": "stored",
+                                "backend": "memo0",
+                                "lifecycle_event": "task.review.approve",
+                                "payload": {"qualified_name": "team/demo", "decision": "approve"},
+                            }
+                        ),
+                    ),
+                    AuditEvent(
+                        aggregate_type="memory_writeback",
+                        aggregate_id="mw:3",
+                        event_type="memory.writeback.stored",
+                        actor_ref="principal:1",
+                        occurred_at=datetime(2026, 3, 1, 9, 0, tzinfo=timezone.utc),
+                        payload_json=json.dumps(
+                            {
+                                "status": "stored",
+                                "backend": "memo0",
+                                "lifecycle_event": "task.authoring.create_draft",
+                                "payload": {"qualified_name": "team/demo", "state": "draft"},
+                            }
+                        ),
+                    ),
+                ]
+            )
+            session.commit()
+    finally:
+        engine.dispose()
+
+    result = _run_cli(
+        ["server", "memory-curation", "--database-url", database_url, "--json"],
+        expect=0,
+    )
+    payload = _load_json_output(result, label="infinitas server memory-curation")
+    assert payload["ok"] is True
+    assert payload["candidate_counts"]["duplicate_groups"] == 1
+    assert payload["candidate_counts"]["expired_by_policy"] == 1
 
 
 def main() -> None:

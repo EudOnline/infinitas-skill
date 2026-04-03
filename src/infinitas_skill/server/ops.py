@@ -21,6 +21,7 @@ from infinitas_skill.server.inspection_summary import (
     build_release_inspection_summary,
     maybe_add_alert,
 )
+from infinitas_skill.server.memory_curation import summarize_memory_curation_plan
 from infinitas_skill.server.memory_health import summarize_memory_writeback
 from infinitas_skill.server.repo_checks import require_sqlite_db, sqlite_path_from_url
 from infinitas_skill.server.systemd import run_server_render_systemd
@@ -198,6 +199,13 @@ def configure_server_memory_health_parser(parser: argparse.ArgumentParser) -> ar
     return parser
 
 
+def configure_server_memory_curation_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    parser.add_argument('--database-url', required=True, help='Database URL, currently sqlite:///... only')
+    parser.add_argument('--limit', type=int, default=50, help='Number of recent memory writeback audit events to inspect')
+    parser.add_argument('--json', action='store_true', help='Emit machine-readable JSON output')
+    return parser
+
+
 def build_server_healthcheck_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description='Hosted registry server health check', prog=prog)
     return configure_server_healthcheck_parser(parser)
@@ -231,6 +239,11 @@ def build_server_inspect_state_parser(*, prog: str | None = None) -> argparse.Ar
 def build_server_memory_health_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description='Inspect hosted registry memory writeback health', prog=prog)
     return configure_server_memory_health_parser(parser)
+
+
+def build_server_memory_curation_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description='Inspect hosted registry memory curation candidates', prog=prog)
+    return configure_server_memory_curation_parser(parser)
 
 
 def run_server_worker(*, poll_interval: float = 5.0, once: bool = False, limit: int | None = None) -> int:
@@ -304,10 +317,35 @@ def run_server_memory_health(
     return 0
 
 
+def run_server_memory_curation(
+    *,
+    database_url: str,
+    limit: int,
+    as_json: bool = False,
+) -> int:
+    require_sqlite_db(database_url)
+    engine = create_engine(database_url, future=True, **server_engine_kwargs(database_url))
+    try:
+        with Session(engine) as session:
+            summary = summarize_memory_curation_plan(session, limit=limit)
+    finally:
+        engine.dispose()
+
+    if as_json:
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+    else:
+        print(
+            "OK: memory curation "
+            f"duplicate_groups={summary['candidate_counts']['duplicate_groups']} "
+            f"expired_by_policy={summary['candidate_counts']['expired_by_policy']}"
+        )
+    return 0
+
+
 def configure_server_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(
         dest='server_command',
-        metavar='{healthcheck,backup,render-systemd,prune-backups,worker,inspect-state,memory-health}',
+        metavar='{healthcheck,backup,render-systemd,prune-backups,worker,inspect-state,memory-health,memory-curation}',
     )
 
     healthcheck = subparsers.add_parser(
@@ -413,6 +451,20 @@ def configure_server_parser(parser: argparse.ArgumentParser) -> argparse.Argumen
             as_json=args.json,
         )
     )
+
+    memory_curation = subparsers.add_parser(
+        'memory-curation',
+        help='Inspect hosted registry memory curation candidates',
+        description='Inspect hosted registry memory curation candidates',
+    )
+    configure_server_memory_curation_parser(memory_curation)
+    memory_curation.set_defaults(
+        _handler=lambda args: run_server_memory_curation(
+            database_url=args.database_url,
+            limit=args.limit,
+            as_json=args.json,
+        )
+    )
     return parser
 
 
@@ -437,6 +489,7 @@ __all__ = [
     'build_server_backup_parser',
     'build_server_healthcheck_parser',
     'build_server_inspect_state_parser',
+    'build_server_memory_curation_parser',
     'build_server_memory_health_parser',
     'build_server_parser',
     'build_server_prune_backups_parser',
@@ -445,6 +498,7 @@ __all__ = [
     'configure_server_backup_parser',
     'configure_server_healthcheck_parser',
     'configure_server_inspect_state_parser',
+    'configure_server_memory_curation_parser',
     'configure_server_memory_health_parser',
     'configure_server_parser',
     'configure_server_prune_backups_parser',
@@ -453,6 +507,7 @@ __all__ = [
     'run_server_backup',
     'run_server_healthcheck',
     'run_server_inspect_state',
+    'run_server_memory_curation',
     'run_server_memory_health',
     'run_server_prune_backups',
     'run_server_render_systemd',

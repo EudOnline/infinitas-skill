@@ -245,6 +245,31 @@ Interpretation guidance:
 
 This command is intentionally local-audit truth, not provider truth. Operators should trust it as the supported view of what the registry attempted and recorded locally, even if Memo0 is unreachable, unhealthy, or later diverges from local history.
 
+## Memory curation candidates
+
+Use the hosted memory curation command when you want a read-only cleanup plan before adding provider-side deletion or archival workflows:
+
+```bash
+uv run infinitas server memory-curation \
+  --database-url sqlite:////srv/infinitas/data/server.db \
+  --limit 50 \
+  --json
+```
+
+This command reads the same local `memory_writeback` audit rows and reports:
+
+- duplicate writeback groups that are likely creating redundant memories
+- writebacks whose lifecycle policy TTL has already expired
+- lifecycle events that are generating the most likely archive/prune candidates
+
+Interpretation guidance:
+
+- duplicate groups are grouped by lifecycle event plus sanitized payload shape, not by provider state
+- expired-by-policy means "old enough to review for pruning", not "already deleted from Memo0"
+- this is intentionally a planning surface only, so the command never mutates provider data
+
+This gives operators a safe local signal for future memory cleanup work without violating the private-first source-of-truth boundary.
+
 ## `systemd` bundle
 
 Generate a ready-to-install deployment bundle with:

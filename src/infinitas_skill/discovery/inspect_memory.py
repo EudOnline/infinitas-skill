@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from infinitas_skill.memory import build_inspect_memory_query, trim_memory_records
+from infinitas_skill.memory import build_inspect_memory_query, curate_memory_records
 from infinitas_skill.memory.contracts import MemoryRecord, MemorySearchResult
 
 INSPECT_MEMORY_TYPES = {"experience", "task_context"}
@@ -90,6 +90,12 @@ def load_inspect_memory_hints(
         "matched_count": 0,
         "items": [],
         "advisory_only": True,
+        "curation_summary": {
+            "input_count": 0,
+            "kept_count": 0,
+            "suppressed_duplicates": 0,
+            "suppressed_low_signal": 0,
+        },
     }
     if memory_provider is None or not memory_context_enabled:
         base["status"] = "disabled"
@@ -136,10 +142,11 @@ def load_inspect_memory_hints(
         for record in normalized.records
         if isinstance(record.memory_type, str) and record.memory_type in INSPECT_MEMORY_TYPES
     ]
-    trimmed = trim_memory_records(filtered, max_items=limit, max_chars=180)
+    curated = curate_memory_records(filtered, max_items=limit, max_chars=180)
     base["backend"] = normalized.backend
     base["matched_count"] = len(filtered)
-    base["items"] = [memory_hint_item(record) for record in trimmed]
+    base["items"] = [memory_hint_item(record) for record in curated.records]
+    base["curation_summary"] = curated.summary
     base["used"] = bool(base["items"])
     base["status"] = "matched" if filtered else "no-match"
     return base

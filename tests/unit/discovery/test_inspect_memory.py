@@ -37,6 +37,7 @@ def test_load_inspect_memory_hints_returns_advisory_error_state():
     assert payload["backend"] == "fake"
     assert payload["status"] == "error"
     assert "provider offline" in payload["error"]
+    assert payload["curation_summary"]["input_count"] == 0
 
 
 def test_load_inspect_memory_hints_orders_items_by_effective_quality():
@@ -69,3 +70,41 @@ def test_load_inspect_memory_hints_orders_items_by_effective_quality():
 
     assert payload["status"] == "matched"
     assert payload["items"][0]["memory_type"] == "experience"
+    assert payload["curation_summary"]["suppressed_duplicates"] == 0
+
+
+def test_load_inspect_memory_hints_suppresses_duplicate_and_low_signal_items():
+    payload = load_inspect_memory_hints(
+        skill_ref="lvxiaoer/consume-infinitas-skill",
+        target_agent="openclaw",
+        memory_provider=FakeMemoryProvider(
+            [
+                MemoryRecord(
+                    memory="OpenClaw installs usually succeed after release readiness checks.",
+                    memory_type="experience",
+                    score=0.79,
+                    metadata={"confidence": 0.9, "ttl_seconds": 60 * 60 * 24 * 90},
+                ),
+                MemoryRecord(
+                    memory="openclaw installs usually succeed after release readiness checks",
+                    memory_type="experience",
+                    score=0.22,
+                    metadata={"confidence": 0.25, "ttl_seconds": 60 * 60 * 24},
+                ),
+                MemoryRecord(
+                    memory="Temporary note.",
+                    memory_type="task_context",
+                    score=0.05,
+                    metadata={"confidence": 0.05, "ttl_seconds": 60 * 30},
+                ),
+            ]
+        ),
+        memory_scope={"user_ref": "maintainer"},
+        memory_context_enabled=True,
+        memory_top_k=5,
+    )
+
+    assert payload["status"] == "matched"
+    assert len(payload["items"]) == 1
+    assert payload["curation_summary"]["suppressed_duplicates"] == 1
+    assert payload["curation_summary"]["suppressed_low_signal"] == 1

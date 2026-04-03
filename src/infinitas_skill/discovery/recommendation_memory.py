@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from infinitas_skill.memory import build_recommendation_memory_query, trim_memory_records
+from infinitas_skill.memory import build_recommendation_memory_query, curate_memory_records
 from infinitas_skill.memory.contracts import MemoryRecord, MemorySearchResult
 
 
@@ -78,6 +78,12 @@ def load_recommendation_memory_context(
             "backend": backend if memory_provider else "disabled",
             "status": "disabled",
             "error": None,
+            "curation_summary": {
+                "input_count": 0,
+                "kept_count": 0,
+                "suppressed_duplicates": 0,
+                "suppressed_low_signal": 0,
+            },
         }
 
     capabilities = getattr(memory_provider, "capabilities", {})
@@ -87,6 +93,12 @@ def load_recommendation_memory_context(
             "backend": backend,
             "status": "unavailable",
             "error": "memory provider does not support read",
+            "curation_summary": {
+                "input_count": 0,
+                "kept_count": 0,
+                "suppressed_duplicates": 0,
+                "suppressed_low_signal": 0,
+            },
         }
 
     context_query = build_recommendation_memory_query(
@@ -115,15 +127,22 @@ def load_recommendation_memory_context(
             "backend": backend,
             "status": "error",
             "error": f"memory retrieval failed: {exc}",
+            "curation_summary": {
+                "input_count": 0,
+                "kept_count": 0,
+                "suppressed_duplicates": 0,
+                "suppressed_low_signal": 0,
+            },
         }
 
     normalized = coerce_memory_search_result(payload, fallback_backend=backend)
-    records = trim_memory_records(normalized.records, max_items=limit, max_chars=220)
+    curated = curate_memory_records(normalized.records, max_items=limit, max_chars=220)
     return {
-        "records": records,
+        "records": curated.records,
         "backend": normalized.backend,
-        "status": "matched" if records else "no-match",
+        "status": "matched" if curated.records else "no-match",
         "error": None,
+        "curation_summary": curated.summary,
     }
 
 
