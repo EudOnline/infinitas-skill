@@ -13,7 +13,7 @@ MAX_LINES = {
     "src/infinitas_skill/release/service.py": 650,
     "server/ui/lifecycle.py": 500,
 }
-MAX_TOP_LEVEL_SCRIPT_FILES = 231
+MAX_TOP_LEVEL_SCRIPT_FILES = 221
 
 
 def test_maintained_modules_stay_under_line_budgets() -> None:

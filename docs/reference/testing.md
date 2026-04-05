@@ -66,10 +66,12 @@ The matrix now also checks retrieval curation behavior, including duplicate supp
 Some focused regression checks still live under `scripts/test-*.py` for repository-specific flows:
 
 ```bash
-uv run python3 scripts/test-infinitas-cli-release-state.py
+uv run pytest tests/integration/test_cli_release_state.py -q
+uv run pytest tests/integration/test_cli_policy.py -q
+uv run pytest tests/integration/test_cli_install_planning.py -q
+uv run pytest tests/integration/test_cli_server_ops.py -q
 uv run python3 scripts/test-infinitas-cli-server.py
 uv run python3 scripts/test-private-registry-ui.py
-uv run python3 scripts/test-infinitas-cli-policy.py
 uv run python3 scripts/test-signing-bootstrap.py
 uv run python3 scripts/test-installed-skill-integrity.py
 uv run python3 -m pytest tests/integration/test_long_release_script_selection.py -q
@@ -78,6 +80,7 @@ python3 scripts/test-release-invariants.py scenario_missing_signers_blocks_tag_c
 ```
 
 Use these when you need repo-native regression coverage beyond the fast `tests/integration/` tier.
+The maintained CLI parity checks now live directly under `tests/integration/` rather than wrapper scripts in `scripts/`.
 `scenario_selector_smoke_test` only verifies named-scenario selection for the transparency-log script; it is not a substitute for the full transparency release flow.
 
 ## Named `check-all` blocks
