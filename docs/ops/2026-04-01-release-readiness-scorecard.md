@@ -28,7 +28,7 @@ unqualified production 10.
 
 | Category | Score | Evidence |
 | --- | --- | --- |
-| Release readiness | 9.4/10 | `./scripts/check-all.sh release-long`, `make test-fast`, `python3 scripts/test-signing-bootstrap.py`, `python3 scripts/test-signing-readiness-report.py`, `python3 scripts/test-infinitas-cli-release-state.py`, `python3 scripts/test-infinitas-cli-policy.py` |
+| Release readiness | 9.4/10 | `./scripts/check-all.sh release-long`, `make test-fast`, `python3 scripts/test-signing-bootstrap.py`, `python3 scripts/test-signing-readiness-report.py`, `uv run python3 -m pytest tests/integration/test_cli_release_state.py -q`, `uv run python3 -m pytest tests/integration/test_cli_policy.py -q` |
 | Maintainability | 8.5/10 | package-owned CLI and shared logic now live under `src/infinitas_skill/...`, but `make lint-maintained` still fails on broad pre-existing F403/E501 debt outside the just-collapsed command surface |
 | Cleanup completion | 9.8/10 | deleted legacy shim surface, reusable script-lib clusters migrated into `src/`, signing/review commands folded into `infinitas`, temp-repo interpreter and nested release-helper verification centralized |
 
@@ -40,8 +40,8 @@ unqualified production 10.
 | `make lint-maintained` | FAIL | Fresh evidence on 2026-04-01 shows broad pre-existing maintained-surface F403/E501 debt in `src/infinitas_skill/discovery/...`, `src/infinitas_skill/skills/...`, `src/infinitas_skill/release/attestation.py`, and `tests/integration/test_dev_workflow.py`; this is a maintainability risk, not a release-path regression introduced by the CLI collapse. |
 | `uv run python3 -m pytest tests/integration/test_dev_workflow.py tests/integration/test_cli_policy.py tests/integration/test_cli_release_state.py tests/integration/test_cli_install_planning.py -q` | PASS | Fresh CLI/integration matrix on 2026-04-01 after the current cleanup round. |
 | `uv run python3 -m pytest tests/integration/test_dev_workflow.py -q` | PASS | Confirms wrapper guards and development workflow invariants remain green after the discovery, skills, registry, and signing/review moves. |
-| `python3 scripts/test-infinitas-cli-policy.py` | PASS | Confirms `infinitas policy` now owns `check-packs`, `check-promotion`, `recommend-reviewers`, and `review-status`. |
-| `python3 scripts/test-infinitas-cli-release-state.py` | PASS | Confirms `infinitas release` now owns `check-state`, `signing-readiness`, `doctor-signing`, and `bootstrap-signing`. |
+| `uv run python3 -m pytest tests/integration/test_cli_policy.py -q` | PASS | Confirms `infinitas policy` now owns `check-packs`, `check-promotion`, `recommend-reviewers`, and `review-status`. |
+| `uv run python3 -m pytest tests/integration/test_cli_release_state.py -q` | PASS | Confirms `infinitas release` now owns `check-state`, `signing-readiness`, `doctor-signing`, and `bootstrap-signing`. |
 | `python3 scripts/test-infinitas-cli-reference-docs.py` | PASS | Confirms the generated CLI reference matches the maintained argparse surface under the project toolchain. |
 | `python3 scripts/test-doc-governance.py` | PASS | Confirms updated docs are linked from the maintained section landing pages after the command-surface collapse. |
 | `python3 scripts/test-ai-index.py` | PASS | Confirms package-owned AI index generation still matches expected output. |

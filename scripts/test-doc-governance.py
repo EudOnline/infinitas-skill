@@ -20,11 +20,6 @@ SECTION_LANDINGS = {
     'archive': DOCS_ROOT / 'archive' / 'README.md',
 }
 GLOBAL_INDEXES = [ROOT / 'README.md', DOCS_ROOT / 'README.md']
-MAINTAINED_SURFACE_DOCS = {
-    ROOT / 'README.md',
-    DOCS_ROOT / 'reference' / 'cli-reference.md',
-    DOCS_ROOT / 'ops' / 'release-checklist.md',
-}
 REQUIRED_MAINTAINED_SURFACE_MARKERS = [
     '## Maintained surfaces',
     'package-owned:',
@@ -47,6 +42,12 @@ RETIRED_LEGACY_SHIMS = {
     'scripts/render-hosted-systemd.py': 'infinitas server render-systemd',
     'scripts/prune-hosted-backups.py': 'infinitas server prune-backups',
     'scripts/run-hosted-worker.py': 'infinitas server worker',
+}
+RETIRED_CLI_WRAPPER_TESTS = {
+    'scripts/test-infinitas-cli-policy.py': 'tests/integration/test_cli_policy.py',
+    'scripts/test-infinitas-cli-install-planning.py': 'tests/integration/test_cli_install_planning.py',
+    'scripts/test-infinitas-cli-release-state.py': 'tests/integration/test_cli_release_state.py',
+    'scripts/test-infinitas-cli-server-inspect.py': 'tests/integration/test_cli_server_ops.py',
 }
 
 
@@ -164,9 +165,6 @@ def ensure_readme_has_maintained_surface_inventory():
 
 
 def ensure_legacy_command_mentions_have_canonical_entrypoints(path: Path):
-    if path not in MAINTAINED_SURFACE_DOCS:
-        return
-
     text = path.read_text(encoding='utf-8')
     for legacy_marker, canonical_entrypoint in LEGACY_CANONICAL_ENTRYPOINTS.items():
         if legacy_marker in text and canonical_entrypoint not in text:
@@ -180,6 +178,13 @@ def ensure_legacy_command_mentions_have_canonical_entrypoints(path: Path):
             fail(
                 'maintained surface doc still documents retired shim '
                 f'{legacy_marker!r}; use canonical entrypoint {canonical_entrypoint!r} only: {path}'
+            )
+    for legacy_marker, canonical_entrypoint in RETIRED_CLI_WRAPPER_TESTS.items():
+        if legacy_marker in text:
+            fail(
+                'maintained doc still documents retired CLI wrapper test '
+                f'{legacy_marker!r}; use maintained test entrypoint '
+                f'{canonical_entrypoint!r} instead: {path}'
             )
 
 
