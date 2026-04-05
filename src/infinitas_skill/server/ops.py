@@ -115,10 +115,17 @@ def emit_inspection_summary(summary: dict[str, Any], as_json: bool):
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         return
     counts = summary['jobs']['counts']
+    ages = summary['jobs'].get('ages') or {}
     print(f"OK: database {summary['database']['path']}")
     print(
         'OK: jobs '
-        f"queued={counts['queued']} running={counts['running']} failed={counts['failed']} warning={counts['warning']}"
+        f"queued={counts['queued']} running={counts['running']} stale_running={counts.get('stale_running', 0)} "
+        f"failed={counts['failed']} warning={counts['warning']}"
+    )
+    print(
+        'OK: queue health '
+        f"oldest_queued_seconds={ages.get('oldest_queued_seconds')} "
+        f"longest_running_seconds={ages.get('longest_running_seconds')}"
     )
     if summary['alerts']:
         for alert in summary['alerts']:

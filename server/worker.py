@@ -3,8 +3,15 @@ from __future__ import annotations
 from infinitas_skill.memory import build_memory_provider
 from infinitas_skill.server.memory_curation import execute_memory_curation
 from server.db import get_session_factory
-from server.jobs import append_job_log, claim_next_job, load_job_payload
-from server.models import Job, utcnow
+from server.jobs import (
+    append_job_log,
+    claim_next_job,
+    complete_job,
+    fail_job,
+    heartbeat_job,
+    load_job_payload,
+)
+from server.models import Job
 from server.modules.discovery.projections import refresh_projection_snapshot
 from server.modules.memory.service import record_lifecycle_memory_event_best_effort
 from server.modules.release.materializer import materialize_release
@@ -32,6 +39,7 @@ def _process_materialize_release_job(session, job: Job, settings):
         session,
         release_id=release_id,
         artifact_root=settings.artifact_path,
+        repo_root=settings.repo_path,
     )
     refresh_projection_snapshot(session, settings.artifact_path)
     append_job_log(job, f'materialized release {release.id} with {len(artifacts)} artifacts')
@@ -83,17 +91,14 @@ def process_job(job_id: int):
         if job is None:
             raise RepoOpError(f'job {job_id} not found')
         try:
+            heartbeat_job(session, job, commit=False)
             if job.kind == 'materialize_release':
                 release = _process_materialize_release_job(session, job, settings)
             elif job.kind == 'memory_curation':
                 _process_memory_curation_job(session, job)
             else:
                 raise RepoOpError(f'unsupported job kind: {job.kind}')
-            job.status = 'completed'
-            job.finished_at = utcnow()
-            finished_at = job.finished_at.isoformat().replace("+00:00", "Z")
-            append_job_log(job, f"completed at {finished_at}")
-            session.add(job)
+            complete_job(session, job, commit=False)
             session.commit()
             if job.kind == 'materialize_release':
                 snapshot = get_release_snapshot(session, release.id)
@@ -111,11 +116,7 @@ def process_job(job_id: int):
                     },
                 )
         except Exception as exc:
-            job.status = 'failed'
-            job.finished_at = utcnow()
-            job.error_message = str(exc)
-            append_job_log(job, f'ERROR: {exc}')
-            session.add(job)
+            fail_job(session, job, error_message=str(exc), commit=False)
             session.commit()
             raise
 

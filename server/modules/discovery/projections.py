@@ -45,6 +45,32 @@ def _artifact_paths(*, publisher: str, name: str, version: str) -> dict[str, str
     }
 
 
+def _artifact_exists(artifact_root: Path, relative_path: str) -> bool:
+    if not isinstance(relative_path, str) or not relative_path.strip():
+        return False
+    root = Path(artifact_root).resolve()
+    candidate = (root / relative_path).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError:
+        return False
+    return candidate.is_file()
+
+
+def projection_has_materialized_artifacts(entry: DiscoveryProjection, artifact_root: Path) -> bool:
+    if not isinstance(entry.bundle_sha256, str) or not entry.bundle_sha256.strip():
+        return False
+    return all(
+        _artifact_exists(artifact_root, path)
+        for path in (
+            entry.manifest_path,
+            entry.bundle_path,
+            entry.provenance_path,
+            entry.signature_path,
+        )
+    )
+
+
 def build_release_projections(db: Session) -> list[DiscoveryProjection]:
     rows = db.execute(
         select(
@@ -70,14 +96,21 @@ def build_release_projections(db: Session) -> list[DiscoveryProjection]:
         .where(Release.state == "ready")
         .where(Exposure.state == "active")
         .where(Exposure.install_mode == "enabled")
-        .order_by(Principal.slug.asc(), Skill.slug.asc(), SkillVersion.version.desc(), Exposure.id.desc())
+        .order_by(
+            Principal.slug.asc(),
+            Skill.slug.asc(),
+            SkillVersion.version.desc(),
+            Exposure.id.desc(),
+        )
     ).all()
 
     release_ids = {int(row.release_id) for row in rows}
     bundle_sha_by_release: dict[int, str] = {}
     if release_ids:
         artifact_rows = db.execute(
-            select(Artifact.release_id, Artifact.kind, Artifact.sha256).where(Artifact.release_id.in_(release_ids))
+            select(Artifact.release_id, Artifact.kind, Artifact.sha256).where(
+                Artifact.release_id.in_(release_ids)
+            )
         ).all()
         for artifact_row in artifact_rows:
             if artifact_row.kind == "bundle":
@@ -125,5 +158,8 @@ def refresh_projection_snapshot(db: Session, artifact_root: Path) -> Path:
         "generated_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
         "items": [asdict(item) for item in build_release_projections(db)],
     }
-    output.write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=str) + "\n", encoding="utf-8")
+    output.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2, default=str) + "\n",
+        encoding="utf-8",
+    )
     return output

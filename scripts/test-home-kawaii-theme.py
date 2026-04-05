@@ -20,6 +20,12 @@ def fail(message: str):
 
 
 def configure_env(tmpdir: Path):
+    from server.db import get_engine, get_session_factory
+    from server.settings import get_settings
+
+    get_settings.cache_clear()
+    get_engine.cache_clear()
+    get_session_factory.cache_clear()
     os.environ['INFINITAS_SERVER_DATABASE_URL'] = f'sqlite:///{tmpdir / "server.db"}'
     os.environ['INFINITAS_SERVER_SECRET_KEY'] = 'test-secret-key'
     os.environ['INFINITAS_SERVER_ARTIFACT_PATH'] = str(tmpdir / 'artifacts')

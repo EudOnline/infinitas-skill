@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -10,7 +11,12 @@ from sqlalchemy.orm import Session
 from server.auth import AUTH_COOKIE_NAME
 from server.modules.access.authn import AccessContext, resolve_access_context
 from server.modules.access.authz import can_access_release
-from server.modules.discovery.projections import DiscoveryProjection, build_release_projections
+from server.modules.discovery.projections import (
+    DiscoveryProjection,
+    build_release_projections,
+    projection_has_materialized_artifacts,
+)
+from server.settings import get_settings
 
 INSTALL_POLICY = {
     "mode": "immutable-only",
@@ -80,15 +86,33 @@ def _extract_bearer_token(authorization: str | None) -> str | None:
 
 
 def _resolve_request_token(request: Request) -> str | None:
-    return _extract_bearer_token(request.headers.get("authorization")) or request.cookies.get(AUTH_COOKIE_NAME)
+    return _extract_bearer_token(
+        request.headers.get("authorization")
+    ) or request.cookies.get(AUTH_COOKIE_NAME)
+
+
+def _matches_registry_reader_token(token: str, allowed_tokens: list[str]) -> bool:
+    candidate = str(token or "").strip()
+    if not candidate:
+        return False
+    return any(hmac.compare_digest(candidate, allowed) for allowed in allowed_tokens if allowed)
 
 
 def _resolve_registry_audience(db: Session, request: Request) -> RegistryAudience:
+    settings = get_settings()
+    allowed_reader_tokens = list(settings.registry_read_tokens)
     token = _resolve_request_token(request)
+    if not token and not allowed_reader_tokens:
+        return RegistryAudience(mode="public", context=None)
     if not token:
+        raise UnauthorizedError("missing registry bearer token")
+
+    if allowed_reader_tokens and _matches_registry_reader_token(token, allowed_reader_tokens):
         return RegistryAudience(mode="public", context=None)
 
     context = resolve_access_context(db, token, allow_user_bridge=True)
+    if context is None and not allowed_reader_tokens:
+        return RegistryAudience(mode="public", context=None)
     if context is None:
         raise UnauthorizedError("invalid registry bearer token")
     if context.credential.grant_id is not None:
@@ -131,7 +155,9 @@ def _dedupe_entries(entries: list[DiscoveryProjection]) -> list[DiscoveryProject
     by_release: dict[int, DiscoveryProjection] = {}
     for entry in entries:
         current = by_release.get(entry.release_id)
-        if current is None or _audience_rank(entry.audience_type) > _audience_rank(current.audience_type):
+        if current is None or (
+            _audience_rank(entry.audience_type) > _audience_rank(current.audience_type)
+        ):
             by_release[entry.release_id] = entry
     return sorted(
         by_release.values(),
@@ -145,20 +171,14 @@ def _dedupe_entries(entries: list[DiscoveryProjection]) -> list[DiscoveryProject
     )
 
 
-def _entry_is_materialized(entry: DiscoveryProjection) -> bool:
-    required = [
-        entry.manifest_path,
-        entry.bundle_path,
-        entry.provenance_path,
-        entry.signature_path,
-        entry.bundle_sha256,
-    ]
-    return all(isinstance(value, str) and value.strip() for value in required)
-
-
 def _all_accessible_entries(db: Session, request: Request) -> list[DiscoveryProjection]:
     audience = _resolve_registry_audience(db, request)
-    entries = [entry for entry in build_release_projections(db) if _entry_is_materialized(entry)]
+    artifact_root = get_settings().artifact_path
+    entries = [
+        entry
+        for entry in build_release_projections(db)
+        if projection_has_materialized_artifacts(entry, artifact_root)
+    ]
 
     if audience.mode == "public":
         return _dedupe_entries([entry for entry in entries if entry.audience_type == "public"])
@@ -187,7 +207,11 @@ def _all_accessible_entries(db: Session, request: Request) -> list[DiscoveryProj
 
 
 def _listed_entries(db: Session, request: Request) -> list[DiscoveryProjection]:
-    return [entry for entry in _all_accessible_entries(db, request) if entry.listing_mode == "listed"]
+    return [
+        entry
+        for entry in _all_accessible_entries(db, request)
+        if entry.listing_mode == "listed"
+    ]
 
 
 def _distribution_entry(entry: DiscoveryProjection) -> dict:
@@ -294,7 +318,9 @@ def _build_ai_index_from_entries(entries: list[dict]) -> dict:
                         "bundle_path": version_map[version]["bundle_path"],
                         "bundle_sha256": version_map[version]["bundle_sha256"],
                         "attestation_path": version_map[version]["attestation_path"],
-                        "attestation_signature_path": version_map[version]["attestation_signature_path"],
+                        "attestation_signature_path": version_map[version][
+                            "attestation_signature_path"
+                        ],
                         "published_at": version_map[version]["published_at"],
                         "stability": "stable",
                         "installable": True,
@@ -346,7 +372,12 @@ def build_registry_discovery_payload(_settings, db: Session, request: Request) -
         name = skill.get("name")
         publisher = skill.get("publisher")
         match_names: list[str] = []
-        for candidate in [name, qualified_name, f"{publisher}/{name}" if publisher and name else None]:
+        candidates = [
+            name,
+            qualified_name,
+            f"{publisher}/{name}" if publisher and name else None,
+        ]
+        for candidate in candidates:
             if isinstance(candidate, str) and candidate and candidate not in match_names:
                 match_names.append(candidate)
         latest_version = skill.get("latest_version") or skill.get("default_install_version")
@@ -373,7 +404,9 @@ def build_registry_discovery_payload(_settings, db: Session, request: Request) -
                 "last_verified_at": skill.get("last_verified_at"),
                 "capabilities": list(skill.get("capabilities") or []),
                 "verified_support": dict(skill.get("verified_support") or {}),
-                "attestation_formats": list(latest_version_payload.get("attestation_formats") or ["private-first"]),
+                "attestation_formats": list(
+                    latest_version_payload.get("attestation_formats") or ["private-first"]
+                ),
                 "use_when": list(skill.get("use_when") or []),
                 "avoid_when": list(skill.get("avoid_when") or []),
                 "runtime_assumptions": list(skill.get("runtime_assumptions") or []),
@@ -429,8 +462,12 @@ def _entry_registry_paths(entry: DiscoveryProjection) -> dict[str, str]:
         entry.bundle_path: entry.bundle_path,
         entry.provenance_path: entry.provenance_path,
         entry.signature_path: entry.signature_path,
-        f"catalog/distributions/{entry.publisher}/{entry.name}/{entry.version}/manifest.json": entry.manifest_path,
-        f"catalog/distributions/{entry.publisher}/{entry.name}/{entry.version}/skill.tar.gz": entry.bundle_path,
+        (
+            f"catalog/distributions/{entry.publisher}/{entry.name}/{entry.version}/manifest.json"
+        ): entry.manifest_path,
+        (
+            f"catalog/distributions/{entry.publisher}/{entry.name}/{entry.version}/skill.tar.gz"
+        ): entry.bundle_path,
         f"catalog/provenance/{provenance_filename}": entry.provenance_path,
         f"catalog/provenance/{signature_filename}": entry.signature_path,
         f"provenance/{provenance_filename}": entry.provenance_path,
@@ -438,7 +475,12 @@ def _entry_registry_paths(entry: DiscoveryProjection) -> dict[str, str]:
     }
 
 
-def resolve_registry_artifact_relative_path(_settings, db: Session, request: Request, registry_path: str) -> str:
+def resolve_registry_artifact_relative_path(
+    _settings,
+    db: Session,
+    request: Request,
+    registry_path: str,
+) -> str:
     normalized = str(registry_path or "").strip().strip("/")
     if not normalized or normalized in TOP_LEVEL_METADATA_PATHS:
         raise NotFoundError("registry artifact not found")

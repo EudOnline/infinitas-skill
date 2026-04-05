@@ -54,7 +54,6 @@ def _catalog_search_roots() -> list[Path]:
     return [
         settings.artifact_path,
         settings.artifact_path / "catalog",
-        settings.root_dir / "catalog",
     ]
 
 
@@ -130,7 +129,9 @@ def search_registry(
     scope: str = Query(default="public", pattern="^(public|me)$"),
     db: Session = Depends(get_db),
 ):
-    token = _extract_bearer_token(request.headers.get("authorization")) or request.cookies.get(AUTH_COOKIE_NAME)
+    token = _extract_bearer_token(request.headers.get("authorization")) or request.cookies.get(
+        AUTH_COOKIE_NAME
+    )
     if scope == "me":
         if not token:
             raise HTTPException(status_code=401, detail="search requires authentication")

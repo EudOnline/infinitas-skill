@@ -192,7 +192,7 @@ uv run infinitas registry --base-url https://skills.example.com --token <maintai
 
 ## State inspection
 
-Use the hosted state inspector alongside `infinitas server healthcheck` when you need queue depth and failed-job visibility:
+Use the hosted state inspector alongside `infinitas server healthcheck` when you need queue depth, lease health, and failed-job visibility:
 
 ```bash
 uv run infinitas server inspect-state \
@@ -210,10 +210,15 @@ uv run infinitas server inspect-state \
 This summarizes:
 
 - jobs by status
+- stale `running` jobs whose lease expired or was never recorded
+- longest-running and oldest-queued age in seconds
 - recent failed jobs with error messages
 - recent queued/running jobs
+- recent reclaimed jobs whose logs show stale-lease recovery
 - recent jobs whose logs contain `WARNING:`
 - releases grouped by exposure audience and review state
+
+Hosted workers now claim jobs with a lease, refresh that lease immediately before doing work, and clear lease metadata on success or failure. A `running` job is considered healthy only while `lease_expires_at` is still in the future. If a worker crashes after claiming a job, the next worker or repeated release request can recover it after lease expiry without duplicating healthy queued or healthy running work.
 
 When any configured threshold is exceeded, the script still emits its summary but exits with status code `2`. That makes it suitable for `systemd` oneshot health/alert runs.
 This is especially useful for best-effort publish mirror hooks: a publish may still complete successfully while leaving a warning that operators should inspect.

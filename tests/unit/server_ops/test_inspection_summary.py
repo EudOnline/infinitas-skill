@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 from infinitas_skill.server.inspection_summary import (
@@ -77,10 +78,29 @@ def test_build_jobs_inspection_summary_reports_counts_and_recent_lists(monkeypat
         lambda job: {"id": job.id, "status": job.status},
     )
 
-    queued = SimpleNamespace(id=10, status="queued")
-    running = SimpleNamespace(id=11, status="running")
+    now = datetime(2026, 4, 5, 8, 0, tzinfo=timezone.utc)
+    queued = SimpleNamespace(
+        id=10,
+        status="queued",
+        created_at=now - timedelta(minutes=45),
+    )
+    running = SimpleNamespace(
+        id=11,
+        status="running",
+        created_at=now - timedelta(minutes=35),
+        started_at=now - timedelta(minutes=30),
+        lease_expires_at=now + timedelta(minutes=5),
+    )
+    stale_running = SimpleNamespace(
+        id=14,
+        status="running",
+        created_at=now - timedelta(hours=2, minutes=5),
+        started_at=now - timedelta(hours=2),
+        lease_expires_at=now - timedelta(minutes=10),
+    )
     failed = SimpleNamespace(id=12, status="failed")
     warning = SimpleNamespace(id=13, status="completed")
+    reclaimed = SimpleNamespace(id=15, status="completed")
 
     session = _FakeSession(
         [
@@ -89,24 +109,35 @@ def test_build_jobs_inspection_summary_reports_counts_and_recent_lists(monkeypat
             ),
             _FakeResult(scalar_one_value=5),
             _FakeResult(scalar_values=[failed]),
-            _FakeResult(scalar_values=[running, queued]),
+            _FakeResult(scalar_values=[stale_running, running, queued]),
             _FakeResult(scalar_values=[warning]),
+            _FakeResult(scalar_values=[stale_running, running]),
+            _FakeResult(scalar_values=[queued]),
+            _FakeResult(scalar_values=[reclaimed]),
         ]
     )
 
-    summary = build_jobs_inspection_summary(session, limit=10)
+    summary = build_jobs_inspection_summary(session, limit=10, now=now)
 
     assert summary["counts"] == {
         "queued": 1,
         "running": 2,
+        "stale_running": 1,
         "failed": 3,
         "completed": 4,
         "warning": 5,
     }
     assert summary["by_status"] == {"completed": 4, "failed": 3, "queued": 1, "running": 2}
+    assert summary["ages"] == {
+        "longest_running_seconds": 7200,
+        "oldest_queued_seconds": 2700,
+    }
     assert summary["recent_failed"] == [{"id": 12, "status": "failed"}]
     assert summary["recent_queued_or_running"] == [
+        {"id": 14, "status": "running"},
         {"id": 11, "status": "running"},
         {"id": 10, "status": "queued"},
     ]
+    assert summary["recent_stale_running"] == [{"id": 14, "status": "running"}]
+    assert summary["recent_reclaimed"] == [{"id": 15, "status": "completed"}]
     assert summary["recent_warning"] == [{"id": 13, "status": "completed"}]

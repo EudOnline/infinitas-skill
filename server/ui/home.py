@@ -31,7 +31,7 @@ def _read_json(path: Path) -> dict:
 
 
 def _catalog_payload(settings: Any, name: str) -> dict:
-    for root in (settings.artifact_path, settings.root_dir / "catalog"):
+    for root in (settings.artifact_path,):
         payload = _read_json(root / name)
         if payload:
             return payload
@@ -144,6 +144,7 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
             "detail": f"{running_jobs} 物化中" if lang == "zh" else f"{running_jobs} materializing",
         },
     ]
+    inspect_example_target = featured_skills[0]["qualified_name"] if featured_skills else "<publisher>/<skill>"
     command_examples = [
         {
             "label": pick_lang(lang, "执行命令", "Run command"),
@@ -155,7 +156,7 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
             "label": pick_lang(lang, "执行命令", "Run command"),
             "title": pick_lang(lang, "检查细节", "Inspect details"),
             "short_label": pick_lang(lang, "检查", "Inspect"),
-            "command": "scripts/inspect-skill.sh lvxiaoer/operate-infinitas-skill",
+            "command": f"scripts/inspect-skill.sh {inspect_example_target}",
         },
     ]
     human_prompts = [

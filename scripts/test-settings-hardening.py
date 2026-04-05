@@ -147,9 +147,37 @@ def scenario_test_mode_can_use_fixture_defaults() -> None:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
+def scenario_production_rejects_invalid_registry_read_tokens() -> None:
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-settings-registry-tokens-"))
+    try:
+        env = build_env(tmpdir)
+        env["INFINITAS_SERVER_ENV"] = "production"
+        env["INFINITAS_SERVER_SECRET_KEY"] = "prod-secret-key"
+        env["INFINITAS_SERVER_BOOTSTRAP_USERS"] = json.dumps(FIXTURE_BOOTSTRAP_USERS)
+
+        env["INFINITAS_REGISTRY_READ_TOKENS"] = "not-json"
+        malformed = run_settings_probe(env, expect=1)
+        assert_contains(
+            malformed.stderr + malformed.stdout,
+            "INFINITAS_REGISTRY_READ_TOKENS",
+            "malformed registry read tokens failure",
+        )
+
+        env["INFINITAS_REGISTRY_READ_TOKENS"] = json.dumps({"bad": True})
+        non_array = run_settings_probe(env, expect=1)
+        assert_contains(
+            non_array.stderr + non_array.stdout,
+            "INFINITAS_REGISTRY_READ_TOKENS",
+            "non-array registry read tokens failure",
+        )
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 def main() -> None:
     scenario_production_requires_explicit_secret()
     scenario_production_requires_explicit_bootstrap_users()
+    scenario_production_rejects_invalid_registry_read_tokens()
     scenario_test_mode_can_use_fixture_defaults()
     print("OK: settings hardening checks passed")
 

@@ -40,6 +40,7 @@ class Settings:
     repo_path: Path
     artifact_path: Path
     repo_lock_path: Path
+    registry_read_tokens: list[str]
     mirror_remote: str
     mirror_branch: str
     memory_backend: str
@@ -114,6 +115,23 @@ def _normalize_string_list(payload: object) -> list[str]:
     return normalized
 
 
+def _load_string_list_env(name: str, *, strict: bool) -> list[str]:
+    raw = os.environ.get(name)
+    if not raw:
+        return []
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        if strict:
+            raise RuntimeError(f'{name} must be a JSON array of strings') from exc
+        return []
+    if not isinstance(payload, list):
+        if strict:
+            raise RuntimeError(f'{name} must be a JSON array of strings')
+        return []
+    return _normalize_string_list(payload)
+
+
 def _normalize_memory_curation_action(raw: str | None) -> str:
     action = str(raw or '').strip().lower()
     return action if action in {'archive', 'prune'} else 'archive'
@@ -160,10 +178,29 @@ def get_settings() -> Settings:
         bootstrap_users = list(DEFAULT_BOOTSTRAP_USERS)
 
     default_db_path = ROOT / '.state' / 'server.db'
-    database_url = os.environ.get('INFINITAS_SERVER_DATABASE_URL') or f'sqlite:///{default_db_path}'
+    database_url = (
+        os.environ.get('INFINITAS_SERVER_DATABASE_URL') or f'sqlite:///{default_db_path}'
+    )
     repo_path = Path(os.environ.get('INFINITAS_SERVER_REPO_PATH') or ROOT).expanduser().resolve()
-    artifact_path = Path(os.environ.get('INFINITAS_SERVER_ARTIFACT_PATH') or (ROOT / '.state' / 'artifacts')).expanduser().resolve()
-    repo_lock_path = Path(os.environ.get('INFINITAS_SERVER_REPO_LOCK_PATH') or (ROOT / '.state' / 'repo.lock')).expanduser().resolve()
+    artifact_path = (
+        Path(
+            os.environ.get('INFINITAS_SERVER_ARTIFACT_PATH')
+            or (ROOT / '.state' / 'artifacts')
+        )
+        .expanduser()
+        .resolve()
+    )
+    repo_lock_path = (
+        Path(
+            os.environ.get('INFINITAS_SERVER_REPO_LOCK_PATH') or (ROOT / '.state' / 'repo.lock')
+        )
+        .expanduser()
+        .resolve()
+    )
+    registry_read_tokens = _load_string_list_env(
+        'INFINITAS_REGISTRY_READ_TOKENS',
+        strict=environment == 'production',
+    )
     mirror_remote = str(os.environ.get('INFINITAS_SERVER_MIRROR_REMOTE') or '').strip()
     mirror_branch = str(os.environ.get('INFINITAS_SERVER_MIRROR_BRANCH') or '').strip()
     memory = load_memory_config()
@@ -197,6 +234,7 @@ def get_settings() -> Settings:
         repo_path=repo_path,
         artifact_path=artifact_path,
         repo_lock_path=repo_lock_path,
+        registry_read_tokens=registry_read_tokens,
         mirror_remote=mirror_remote,
         mirror_branch=mirror_branch,
         memory_backend=memory.backend,

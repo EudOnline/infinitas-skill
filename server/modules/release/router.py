@@ -5,24 +5,36 @@ from sqlalchemy.orm import Session
 
 from server.auth import get_current_access_context
 from server.db import get_db
-from server.jobs import enqueue_job
+from server.jobs import enqueue_job, has_active_job
 from server.modules.access.authn import AccessContext
 from server.modules.access.authz import require_any_scope
 from server.modules.release import service
+from server.modules.release.materializer import release_requires_materialization
 from server.modules.release.schemas import ArtifactListView, ArtifactView, ReleaseView
+from server.settings import get_settings
 
 router = APIRouter(prefix="/api/v1", tags=["release"])
 
 
 def _require_release_context(context: AccessContext) -> tuple[int, object]:
     if context.principal is None or context.user is None:
-        raise HTTPException(status_code=403, detail="release actor must resolve to a user principal")
-    if not require_any_scope(context, {"api:user", "release:write", "authoring:write", "skill:write"}):
+        raise HTTPException(
+            status_code=403,
+            detail="release actor must resolve to a user principal",
+        )
+    if not require_any_scope(
+        context,
+        {"api:user", "release:write", "authoring:write", "skill:write"},
+    ):
         raise HTTPException(status_code=403, detail="insufficient scope")
     return context.principal.id, context.user
 
 
-@router.post("/versions/{version_id}/releases", response_model=ReleaseView, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/versions/{version_id}/releases",
+    response_model=ReleaseView,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_release(
     version_id: int,
     response: Response,
@@ -59,6 +71,28 @@ def create_release(
             db.rollback()
             raise
     else:
+        settings = get_settings()
+        if release_requires_materialization(
+            db,
+            release_id=release.id,
+            artifact_root=settings.artifact_path,
+            repo_root=settings.repo_path,
+        ) and not has_active_job(
+            db,
+            kind="materialize_release",
+            release_id=release.id,
+            statuses=("queued", "running"),
+        ):
+            enqueue_job(
+                db,
+                kind="materialize_release",
+                payload={"release_id": release.id},
+                requested_by=user,
+                note=f"rematerialize release {release.id}",
+                commit=False,
+            )
+            db.commit()
+            db.refresh(release)
         response.status_code = status.HTTP_200_OK
     return ReleaseView.from_model(release)
 

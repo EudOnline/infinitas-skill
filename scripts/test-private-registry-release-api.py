@@ -20,6 +20,12 @@ def fail(message: str) -> None:
 
 
 def configure_env(tmpdir: Path) -> None:
+    from server.db import get_engine, get_session_factory
+    from server.settings import get_settings
+
+    get_settings.cache_clear()
+    get_engine.cache_clear()
+    get_session_factory.cache_clear()
     os.environ["INFINITAS_SERVER_DATABASE_URL"] = f"sqlite:///{tmpdir / 'server.db'}"
     os.environ["INFINITAS_SERVER_SECRET_KEY"] = "test-secret-key"
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(tmpdir / "artifacts")
@@ -130,14 +136,20 @@ def scenario_release_api_round_trip() -> None:
         if get_release_response.json().get("state") != "preparing":
             fail(f"expected fetched release state=preparing, got {get_release_response.json()}")
 
-        list_artifacts_response = client.get(f"/api/v1/releases/{release_id}/artifacts", headers=headers)
+        list_artifacts_response = client.get(
+            f"/api/v1/releases/{release_id}/artifacts",
+            headers=headers,
+        )
         if list_artifacts_response.status_code != 200:
             fail(
                 "expected artifact listing to return 200, "
                 f"got {list_artifacts_response.status_code}: {list_artifacts_response.text}"
             )
         if list_artifacts_response.json().get("items") != []:
-            fail(f"expected empty artifacts before materialization, got {list_artifacts_response.json()}")
+            fail(
+                "expected empty artifacts before materialization, "
+                f"got {list_artifacts_response.json()}"
+            )
 
         processed = run_worker_loop(limit=1)
         if processed != 1:
@@ -153,7 +165,10 @@ def scenario_release_api_round_trip() -> None:
         if finished_release.get("state") != "ready":
             fail(f"expected finished release state=ready, got {finished_release}")
 
-        list_artifacts_response = client.get(f"/api/v1/releases/{release_id}/artifacts", headers=headers)
+        list_artifacts_response = client.get(
+            f"/api/v1/releases/{release_id}/artifacts",
+            headers=headers,
+        )
         if list_artifacts_response.status_code != 200:
             fail(
                 "expected finished artifact listing to return 200, "
@@ -179,8 +194,87 @@ def scenario_release_api_round_trip() -> None:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
+def scenario_repeat_release_request_rematerializes_legacy_ready_release() -> None:
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-private-release-rematerialize-test-"))
+    try:
+        configure_env(tmpdir)
+
+        from fastapi.testclient import TestClient
+
+        from infinitas_skill.install.distribution import verify_distribution_manifest
+        from server.app import create_app
+        from server.worker import run_worker_loop
+
+        client = TestClient(create_app())
+        headers = {"Authorization": "Bearer fixture-maintainer-token"}
+        _, version_id = create_sealed_version(client, headers)
+
+        create_release_response = client.post(
+            f"/api/v1/versions/{version_id}/releases",
+            headers=headers,
+        )
+        if create_release_response.status_code != 201:
+            fail(
+                "expected release creation to return 201, "
+                f"got {create_release_response.status_code}: {create_release_response.text}"
+            )
+        release_id = int(create_release_response.json()["id"])
+
+        processed = run_worker_loop(limit=1)
+        if processed != 1:
+            fail(f"expected worker to process 1 job, got {processed}")
+
+        manifest_path = (
+            tmpdir
+            / "artifacts"
+            / "skills"
+            / "fixture-maintainer"
+            / "private-first-release"
+            / "0.1.0"
+            / "manifest.json"
+        )
+        manifest_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "kind": "private-skill-release-manifest",
+                    "release_id": release_id,
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        retry_response = client.post(
+            f"/api/v1/versions/{version_id}/releases",
+            headers=headers,
+        )
+        if retry_response.status_code != 200:
+            fail(
+                "expected repeat legacy release request to return 200, "
+                f"got {retry_response.status_code}: {retry_response.text}"
+            )
+
+        processed = run_worker_loop(limit=1)
+        if processed != 1:
+            fail(f"expected rematerialization worker to process 1 job, got {processed}")
+
+        verified = verify_distribution_manifest(
+            manifest_path,
+            root=tmpdir / "artifacts",
+            attestation_root=ROOT,
+        )
+        if verified.get("verified") is not True:
+            fail(f"expected rematerialized manifest to verify, got {verified!r}")
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 def main() -> None:
     scenario_release_api_round_trip()
+    scenario_repeat_release_request_rematerializes_legacy_ready_release()
     print("OK: private registry release api checks passed")
 
 
