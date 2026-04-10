@@ -1,4 +1,8 @@
-"""OpenClaw bridge helpers."""
+"""OpenClaw migration tooling and export-validation helpers.
+
+This module intentionally owns bridge flows (import/export/validation) only.
+Canonical OpenClaw runtime semantics live under ``infinitas_skill.openclaw``.
+"""
 
 from __future__ import annotations
 
@@ -10,6 +14,7 @@ from typing import Dict, Optional, Tuple
 
 from infinitas_skill.discovery.ai_index import validate_ai_index_payload
 from infinitas_skill.install.distribution import materialize_distribution_source
+from infinitas_skill.openclaw import load_openclaw_skill_contract
 
 from .canonical import load_skill_source
 from .render import load_platform_profile, render_skill
@@ -37,6 +42,9 @@ _FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n?", re.DOTALL)
 
 class OpenClawBridgeError(Exception):
     pass
+
+
+OPENCLAW_BRIDGE_ROLE = "migration tooling"
 
 
 def slugify(value: str) -> str:
@@ -314,6 +322,7 @@ def export_release_to_directory(
     force: bool = False,
     public_ready: bool = False,
 ) -> Dict[str, object]:
+    # Keep release export behavior for migration compatibility.
     export_dir = export_dir.resolve()
     if export_dir.exists():
         if not force:
@@ -333,6 +342,7 @@ def export_release_to_directory(
     try:
         profile = load_platform_profile(Path(root).resolve(), "openclaw")
         source = load_skill_source(source_dir)
+        openclaw_contract = load_openclaw_skill_contract(source_dir)
         rendered = render_skill(
             source=source,
             platform="openclaw",
@@ -347,12 +357,14 @@ def export_release_to_directory(
     return {
         "export_dir": str(export_dir),
         "files": rendered["files"],
+        "migration_contract_source_mode": openclaw_contract["source_mode"],
         "public_ready": validation["public_ready"],
         "validation_errors": validation["errors"],
     }
 
 
 __all__ = [
+    "OPENCLAW_BRIDGE_ROLE",
     "OpenClawBridgeError",
     "slugify",
     "resolve_skill_dir",

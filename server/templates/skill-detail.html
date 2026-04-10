@@ -2,42 +2,72 @@
 {% from "macros.html" import console_table_shell %}
 
 {% block body %}
-<section class="kawaii-card animate-in detail-hero">
-  <div class="section-kicker">{{ '技能详情' if page_language == 'zh' else 'Skill detail' }}</div>
-  <div class="detail-grid">
+<section class="kawaii-card animate-in">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_skill_detail'] }}</div>
+  <div class="detail-grid detail-grid--skill">
     <div>
-      <h2 class="detail-title">{{ skill.display_name }}</h2>
-      <p class="detail-copy">{{ skill.summary }}</p>
+      <h2 class="font-display text-[clamp(1.25rem,3vw,1.65rem)] font-bold text-kawaii-ink mb-2">{{ skill.display_name }}</h2>
+      <p class="text-kawaii-ink-soft leading-relaxed max-w-prose mb-4">{{ skill.summary }}</p>
     </div>
     <dl class="detail-meta">
-      <div><dt>{{ 'Slug' if page_language == 'en' else '标识' }}</dt><dd>{{ skill.slug }}</dd></div>
-      <div><dt>{{ 'Namespace' if page_language == 'en' else '命名空间' }}</dt><dd>{{ skill.namespace }}</dd></div>
-      <div><dt>{{ 'Status' if page_language == 'en' else '状态' }}</dt><dd>{{ skill.status }}</dd></div>
-      <div><dt>{{ 'Visibility' if page_language == 'en' else '默认可见性' }}</dt><dd>{{ skill.default_visibility_profile }}</dd></div>
-      <div><dt>{{ 'Updated' if page_language == 'en' else '更新时间' }}</dt><dd>{{ skill.updated_at }}</dd></div>
+      <div><dt>{{ ui['label_slug'] }}</dt><dd>{{ skill.slug }}</dd></div>
+      <div><dt>{{ ui['table_col_namespace'] }}</dt><dd>{{ skill.namespace }}</dd></div>
+      <div><dt>{{ ui['label_status'] }}</dt><dd>{{ skill.status }}</dd></div>
+      <div><dt>{{ ui['label_visibility'] }}</dt><dd>{{ skill.default_visibility_profile }}</dd></div>
+      <div><dt>{{ ui['table_col_updated'] }}</dt><dd>{{ skill.updated_at }}</dd></div>
     </dl>
   </div>
 </section>
 
+<section class="kawaii-card animate-in">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_create_draft'] }}</div>
+  <form id="create-draft-form" class="lifecycle-form" data-skill-id="{{ skill.id }}">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <label>
+        <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['table_col_content_ref'] }}</span>
+        <input class="kawaii-input" type="text" name="content_ref" required placeholder="git+https://example.com/repo.git#commit" />
+      </label>
+      <label>
+        <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['label_base_version'] }}</span>
+        <select class="kawaii-input" name="base_version_id">
+          <option value="">-</option>
+          {% for v in version_rows %}
+          <option value="{{ v.id }}">{{ v.version }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <label>
+        <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['label_metadata_json'] }}</span>
+        <textarea class="kawaii-input" name="metadata_json" rows="3" placeholder='{"entrypoint":"SKILL.md"}'>{"entrypoint":"SKILL.md"}</textarea>
+      </label>
+    </div>
+    <div class="flex flex-wrap items-center gap-2 mt-4">
+      <button class="kawaii-button kawaii-button--primary" type="submit">{{ ui['badge_create_draft'] }}</button>
+    </div>
+  </form>
+</section>
+
 {% call console_table_shell(
-  '草稿' if page_language == 'zh' else 'Drafts',
-  '没有草稿。' if page_language == 'zh' else 'No drafts.',
+  ui['section_drafts'],
+  ui['empty_no_drafts'],
   draft_rows,
   page_language
 ) %}
 <table>
   <thead>
     <tr>
-      <th>ID</th>
-      <th>{{ '状态' if page_language == 'zh' else 'State' }}</th>
-      <th>{{ '内容引用' if page_language == 'zh' else 'Content ref' }}</th>
-      <th>{{ '更新时间' if page_language == 'zh' else 'Updated' }}</th>
+      <th scope="col">ID</th>
+      <th scope="col">{{ ui['table_col_state'] }}</th>
+      <th scope="col">{{ ui['table_col_content_ref'] }}</th>
+      <th scope="col">{{ ui['table_col_updated'] }}</th>
     </tr>
   </thead>
   <tbody>
     {% for item in draft_rows %}
     <tr>
-      <td><a class="entity-link" href="{{ item.detail_href }}">#{{ item.id }}</a></td>
+      <td><a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.detail_href }}">#{{ item.id }}</a></td>
       <td>{{ item.state }}</td>
       <td><code class="table-code">{{ item.content_ref }}</code></td>
       <td>{{ item.updated_at }}</td>
@@ -48,18 +78,18 @@
 {% endcall %}
 
 {% call console_table_shell(
-  '版本' if page_language == 'zh' else 'Versions',
-  '没有封版记录。' if page_language == 'zh' else 'No sealed versions.',
+  ui['section_versions'],
+  ui['empty_no_sealed'],
   version_rows,
   page_language
 ) %}
 <table>
   <thead>
     <tr>
-      <th>ID</th>
-      <th>{{ '版本号' if page_language == 'zh' else 'Version' }}</th>
-      <th>{{ '创建时间' if page_language == 'zh' else 'Created' }}</th>
-      <th>{{ '发布' if page_language == 'zh' else 'Release' }}</th>
+      <th scope="col">ID</th>
+      <th scope="col">{{ ui['table_col_version'] }}</th>
+      <th scope="col">{{ ui['table_col_created'] }}</th>
+      <th scope="col">{{ ui['label_release_short'] }}</th>
     </tr>
   </thead>
   <tbody>
@@ -70,9 +100,9 @@
       <td>{{ item.created_at }}</td>
       <td>
         {% if item.release_href %}
-        <a class="entity-link" href="{{ item.release_href }}">{{ '查看发布' if page_language == 'zh' else 'Open release' }}</a>
+        <a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.release_href }}">{{ ui['action_open_release'] }}</a>
         {% else %}
-        -
+        <button class="kawaii-button kawaii-button--secondary" type="button" data-action="create-release" data-version-id="{{ item.id }}">{{ ui['action_create_release'] }}</button>
         {% endif %}
       </td>
     </tr>
@@ -82,19 +112,19 @@
 {% endcall %}
 
 {% call console_table_shell(
-  '发布' if page_language == 'zh' else 'Releases',
-  '没有发布记录。' if page_language == 'zh' else 'No releases.',
+  ui['section_releases'],
+  ui['empty_no_releases'],
   release_rows,
   page_language
 ) %}
 <table>
   <thead>
     <tr>
-      <th>ID</th>
-      <th>{{ '版本' if page_language == 'zh' else 'Version' }}</th>
-      <th>{{ '状态' if page_language == 'zh' else 'State' }}</th>
-      <th>{{ '就绪时间' if page_language == 'zh' else 'Ready' }}</th>
-      <th>{{ '操作' if page_language == 'zh' else 'Actions' }}</th>
+      <th scope="col">ID</th>
+      <th scope="col">{{ ui['table_col_version_short'] }}</th>
+      <th scope="col">{{ ui['table_col_state'] }}</th>
+      <th scope="col">{{ ui['table_col_ready'] }}</th>
+      <th scope="col">{{ ui['table_col_actions'] }}</th>
     </tr>
   </thead>
   <tbody>
@@ -104,9 +134,11 @@
       <td>{{ item.version }}</td>
       <td>{{ item.state }}</td>
       <td>{{ item.ready_at }}</td>
-      <td class="table-actions">
-        <a class="entity-link" href="{{ item.detail_href }}">{{ '详情' if page_language == 'zh' else 'Detail' }}</a>
-        <a class="entity-link" href="{{ item.share_href }}">{{ '分享' if page_language == 'zh' else 'Share' }}</a>
+      <td>
+        <div class="flex flex-wrap items-center gap-2">
+          <a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.detail_href }}">{{ ui['action_detail'] }}</a>
+          <a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.share_href }}">{{ ui['action_share'] }}</a>
+        </div>
       </td>
     </tr>
     {% endfor %}
@@ -114,62 +146,5 @@
 </table>
 {% endcall %}
 
-<style>
-  .detail-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1.3fr) minmax(18rem, 0.8fr);
-    gap: 1.25rem;
-  }
 
-  .detail-title {
-    margin: 0 0 0.4rem;
-  }
-
-  .detail-copy {
-    margin: 0;
-    color: var(--kawaii-ink-soft);
-  }
-
-  .detail-meta {
-    display: grid;
-    gap: 0.85rem;
-    margin: 0;
-  }
-
-  .detail-meta dt {
-    font-size: 0.82rem;
-    color: var(--kawaii-ink-muted);
-  }
-
-  .detail-meta dd {
-    margin: 0.2rem 0 0;
-    font-weight: 700;
-  }
-
-  .entity-link {
-    font-weight: 700;
-    color: var(--kawaii-primary-deep);
-    text-decoration: none;
-  }
-
-  .table-actions {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-  }
-
-  .table-code {
-    display: inline-block;
-    max-width: 34rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  @media (max-width: 860px) {
-    .detail-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-</style>
 {% endblock %}

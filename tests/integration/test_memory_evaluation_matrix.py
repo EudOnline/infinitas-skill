@@ -20,21 +20,26 @@ class FixtureMemoryProvider:
     capabilities = {"read": True, "write": True}
 
     def __init__(self, records: list[dict]):
+        self.calls: list[dict] = []
         self._records = [
             MemoryRecord(
                 memory=item["memory"],
                 memory_type=item.get("memory_type", "generic"),
                 score=item.get("score"),
-                metadata={
-                    key: item[key]
-                    for key in ("confidence", "ttl_seconds")
-                    if key in item
-                },
+                metadata={key: item[key] for key in ("confidence", "ttl_seconds") if key in item},
             )
             for item in records
         ]
 
     def search(self, *, query, limit, scope=None, memory_types=None):  # noqa: ARG002
+        self.calls.append(
+            {
+                "query": query,
+                "limit": limit,
+                "scope": dict(scope or {}),
+                "memory_types": list(memory_types or []),
+            }
+        )
         return MemorySearchResult(backend=self.backend_name, records=self._records)
 
 
@@ -263,17 +268,38 @@ def test_recommendation_memory_evaluation_matrix(tmp_path: Path):
     outcomes = []
 
     for case in cases:
+        provider = FixtureMemoryProvider(case["memory_records"])
         payload = recommend_skills(
             repo,
             task=case["task"],
             target_agent=case["target_agent"],
             limit=3,
-            memory_provider=FixtureMemoryProvider(case["memory_records"]),
-            memory_scope=case.get("memory_scope"),
+            memory_provider=provider,
+            memory_scope={
+                **(case.get("memory_scope") or {}),
+                "runtime_platform": "openclaw",
+                "workspace_root": "/srv/workspaces/recommend",
+                "session_ref": f"recommend::{case['name']}",
+                "task_capabilities": ["background-task", "workspace-state"],
+                "runtime_capabilities": ["supports_background_tasks", "supports_subagents"],
+            },
             memory_context_enabled=case["memory_context_enabled"],
         )
         assert payload["results"][0]["qualified_name"] == case["expected_winner"], case["name"]
         assert payload["explanation"]["memory_summary"]["used"] is case["expected_memory_used"]
+        if case["memory_context_enabled"]:
+            assert provider.calls, case["name"]
+            scope = provider.calls[0]["scope"]
+            assert scope["runtime_platform"] == "openclaw", case["name"]
+            assert scope["workspace_root"] == "/srv/workspaces/recommend", case["name"]
+            assert scope["session_ref"] == f"recommend::{case['name']}", case["name"]
+            assert scope["task_capabilities"] == ["background-task", "workspace-state"], case[
+                "name"
+            ]
+            assert scope["runtime_capabilities"] == [
+                "supports_background_tasks",
+                "supports_subagents",
+            ], case["name"]
         curation_summary = case.get("expected_curation_summary")
         if curation_summary:
             assert (
@@ -297,18 +323,33 @@ def test_inspect_memory_evaluation_matrix(tmp_path: Path):
     outcomes = []
 
     for case in cases:
+        provider = FixtureMemoryProvider(case["memory_records"])
         payload = inspect_skill(
             repo,
             name="lvxiaoer/consume-infinitas-skill",
-            memory_provider=FixtureMemoryProvider(case["memory_records"]),
-            memory_scope=case.get("memory_scope"),
+            memory_provider=provider,
+            memory_scope={
+                **(case.get("memory_scope") or {}),
+                "runtime_platform": "openclaw",
+                "workspace_root": "/srv/workspaces/inspect",
+                "session_ref": f"inspect::{case['name']}",
+                "task_capabilities": ["workspace-state"],
+                "runtime_capabilities": ["supports_plugins"],
+            },
             memory_context_enabled=case["memory_context_enabled"],
         )
         assert payload["trust_state"] == case["expected_trust_state"], case["name"]
         assert payload["trust"]["state"] == case["expected_trust_state"], case["name"]
+        if case["memory_context_enabled"]:
+            assert provider.calls, case["name"]
+            scope = provider.calls[0]["scope"]
+            assert scope["runtime_platform"] == "openclaw", case["name"]
+            assert scope["workspace_root"] == "/srv/workspaces/inspect", case["name"]
+            assert scope["session_ref"] == f"inspect::{case['name']}", case["name"]
+            assert scope["task_capabilities"] == ["workspace-state"], case["name"]
+            assert scope["runtime_capabilities"] == ["supports_plugins"], case["name"]
         assert (
-            payload["memory_hints"]["items"][0]["memory_type"]
-            == case["expected_first_memory_type"]
+            payload["memory_hints"]["items"][0]["memory_type"] == case["expected_first_memory_type"]
         )
         curation_summary = case.get("expected_curation_summary")
         if curation_summary:

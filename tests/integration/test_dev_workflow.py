@@ -329,6 +329,21 @@ def test_skill_surface_script_libs_stay_thin_wrappers() -> None:
             )
 
 
+def test_openclaw_skill_surface_is_explicitly_migration_scoped() -> None:
+    openclaw_bridge = _read("src/infinitas_skill/skills/openclaw.py")
+    render_helpers = _read("src/infinitas_skill/skills/render.py")
+
+    assert "migration tooling" in openclaw_bridge, (
+        "skills/openclaw.py should be explicitly described as migration tooling"
+    )
+    assert "migration/export support" in render_helpers, (
+        "skills/render.py should explicitly describe OpenClaw rendering as migration/export support"
+    )
+    assert "legacy-migration" in render_helpers, (
+        "skills/render.py should handle legacy-migration sources coherently"
+    )
+
+
 def test_registry_script_libs_stay_thin_wrappers() -> None:
     expected_wrapper_markers = {
         "scripts/registry_refresh_state_lib.py": [

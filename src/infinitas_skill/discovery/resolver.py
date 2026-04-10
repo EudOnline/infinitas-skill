@@ -3,6 +3,7 @@ from pathlib import Path
 
 from infinitas_skill.install.registry_sources import load_registry_config
 
+from .agent_support import supports_target_agent
 from .ai_index import validate_ai_index_payload
 from .index import build_discovery_index, validate_discovery_index_payload
 
@@ -50,11 +51,7 @@ def filter_candidates(skills: list, query: str) -> list:
 def filter_by_agent(candidates: list, target_agent: str | None) -> list:
     if not target_agent:
         return list(candidates)
-    return [
-        candidate
-        for candidate in candidates
-        if target_agent in (candidate.get("agent_compatible") or [])
-    ]
+    return [candidate for candidate in candidates if supports_target_agent(candidate, target_agent)]
 
 
 def rank_candidates(
@@ -70,7 +67,7 @@ def rank_candidates(
         key=lambda item: (
             item.get("source_registry") != default_registry,
             exact_query not in {item.get("name"), item.get("qualified_name")},
-            target_agent is not None and target_agent not in (item.get("agent_compatible") or []),
+            target_agent is not None and not supports_target_agent(item, target_agent),
             -(item.get("source_priority") or 0),
             item.get("qualified_name") or "",
         ),

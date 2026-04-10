@@ -6,6 +6,13 @@ from infinitas_skill.install.planning import (
     build_check_install_target_parser,
     build_resolve_install_plan_parser,
 )
+from infinitas_skill.openclaw.cli import (
+    build_openclaw_parser,
+    build_openclaw_plugin_inspect_parser,
+    build_openclaw_profile_parser,
+    build_openclaw_skill_validate_parser,
+    build_openclaw_workspace_resolve_parser,
+)
 from infinitas_skill.policy.cli import (
     build_check_policy_packs_parser,
     build_check_promotion_parser,
@@ -31,7 +38,7 @@ from infinitas_skill.server.ops import (
     build_server_worker_parser,
 )
 
-GENERATED_CLI_REFERENCE_LAST_REVIEWED = '2026-04-01'
+GENERATED_CLI_REFERENCE_LAST_REVIEWED = '2026-04-07'
 
 
 def _render_help_block(text: str) -> str:
@@ -45,6 +52,17 @@ def render_cli_reference() -> str:
     ).format_help()
     install_resolve_plan_help = build_resolve_install_plan_parser(prog='infinitas install resolve-plan').format_help()
     install_check_target_help = build_check_install_target_parser(prog='infinitas install check-target').format_help()
+    openclaw_help = build_openclaw_parser(prog='infinitas openclaw').format_help()
+    openclaw_profile_help = build_openclaw_profile_parser(prog='infinitas openclaw profile').format_help()
+    openclaw_workspace_resolve_help = build_openclaw_workspace_resolve_parser(
+        prog='infinitas openclaw workspace resolve'
+    ).format_help()
+    openclaw_skill_validate_help = build_openclaw_skill_validate_parser(
+        prog='infinitas openclaw skill validate'
+    ).format_help()
+    openclaw_plugin_inspect_help = build_openclaw_plugin_inspect_parser(
+        prog='infinitas openclaw plugin inspect'
+    ).format_help()
     policy_help = build_policy_parser(prog='infinitas policy').format_help()
     policy_check_packs_help = build_check_policy_packs_parser(prog='infinitas policy check-packs').format_help()
     policy_check_promotion_help = build_check_promotion_parser(prog='infinitas policy check-promotion').format_help()
@@ -105,6 +123,26 @@ def render_cli_reference() -> str:
         '## `infinitas install check-target`',
         '',
         _render_help_block(install_check_target_help).rstrip(),
+        '',
+        '## `infinitas openclaw`',
+        '',
+        _render_help_block(openclaw_help).rstrip(),
+        '',
+        '## `infinitas openclaw profile`',
+        '',
+        _render_help_block(openclaw_profile_help).rstrip(),
+        '',
+        '## `infinitas openclaw workspace resolve`',
+        '',
+        _render_help_block(openclaw_workspace_resolve_help).rstrip(),
+        '',
+        '## `infinitas openclaw skill validate`',
+        '',
+        _render_help_block(openclaw_skill_validate_help).rstrip(),
+        '',
+        '## `infinitas openclaw plugin inspect`',
+        '',
+        _render_help_block(openclaw_plugin_inspect_help).rstrip(),
         '',
         '## `infinitas policy`',
         '',

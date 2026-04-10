@@ -1,6 +1,13 @@
 from __future__ import annotations
 
-from .ai_index_builder import OPENCLAW_INTEROP, _relative_repo_path
+from .ai_index_builder import _relative_repo_path
+
+OPENCLAW_RUNTIME_TARGETS = [
+    "skills",
+    ".agents/skills",
+    "~/.agents/skills",
+    "~/.openclaw/skills",
+]
 
 
 def validate_ai_index_payload(payload: dict) -> list:
@@ -56,7 +63,6 @@ def validate_ai_index_payload(payload: dict) -> list:
             "use_when",
             "avoid_when",
             "runtime_assumptions",
-            "agent_compatible",
             "available_versions",
             "tags",
             "capabilities",
@@ -81,45 +87,23 @@ def validate_ai_index_payload(payload: dict) -> list:
         if not isinstance(skill.get("verified_support"), dict):
             errors.append(f"{prefix}.verified_support must be an object")
 
-        compatibility = skill.get("compatibility")
-        if compatibility is not None:
-            if not isinstance(compatibility, dict):
-                errors.append(f"{prefix}.compatibility must be an object when present")
-            else:
-                declared_support = compatibility.get("declared_support")
-                if not isinstance(declared_support, list) or not all(
-                    isinstance(item, str) for item in declared_support
-                ):
+        for platform, support_payload in (skill.get("verified_support") or {}).items():
+            platform_prefix = f"{prefix}.verified_support.{platform}"
+            if not isinstance(platform, str) or not platform.strip():
+                errors.append(f"{prefix}.verified_support keys must be non-empty strings")
+                continue
+            if not isinstance(support_payload, dict):
+                errors.append(f"{platform_prefix} must be an object")
+                continue
+            state = support_payload.get("state")
+            if not isinstance(state, str) or not state.strip():
+                errors.append(f"{platform_prefix}.state must be a non-empty string")
+            for field in ["checked_at", "checker", "evidence_path", "note"]:
+                value = support_payload.get(field)
+                if value is not None and (not isinstance(value, str) or not value.strip()):
                     errors.append(
-                        f"{prefix}.compatibility.declared_support must be an array of strings"
+                        f"{platform_prefix}.{field} must be a non-empty string when present"
                     )
-                verified_support = compatibility.get("verified_support")
-                if not isinstance(verified_support, dict):
-                    errors.append(f"{prefix}.compatibility.verified_support must be an object")
-                else:
-                    for platform, support_payload in verified_support.items():
-                        platform_prefix = f"{prefix}.compatibility.verified_support.{platform}"
-                        if not isinstance(platform, str) or not platform.strip():
-                            errors.append(
-                                f"{prefix}.compatibility.verified_support "
-                                "keys must be non-empty strings"
-                            )
-                            continue
-                        if not isinstance(support_payload, dict):
-                            errors.append(f"{platform_prefix} must be an object")
-                            continue
-                        state = support_payload.get("state")
-                        if not isinstance(state, str) or not state.strip():
-                            errors.append(f"{platform_prefix}.state must be a non-empty string")
-                        for field in ["checked_at", "checker", "evidence_path", "note"]:
-                            value = support_payload.get(field)
-                            if value is not None and (
-                                not isinstance(value, str) or not value.strip()
-                            ):
-                                errors.append(
-                                    f"{platform_prefix}.{field} must be a "
-                                    "non-empty string when present"
-                                )
 
         entrypoints = skill.get("entrypoints")
         if not isinstance(entrypoints, dict):
@@ -140,44 +124,73 @@ def validate_ai_index_payload(payload: dict) -> list:
                 if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
                     errors.append(f"{prefix}.requires.{field} must be an array of strings")
 
-        interop = skill.get("interop")
-        if not isinstance(interop, dict):
-            errors.append(f"{prefix}.interop must be an object")
+        runtime = skill.get("runtime")
+        if not isinstance(runtime, dict):
+            errors.append(f"{prefix}.runtime must be an object")
         else:
-            openclaw = interop.get("openclaw")
-            if not isinstance(openclaw, dict):
-                errors.append(f"{prefix}.interop.openclaw must be an object")
+            if runtime.get("platform") != "openclaw":
+                errors.append(f"{prefix}.runtime.platform must equal openclaw")
+            source_mode = runtime.get("source_mode")
+            if not isinstance(source_mode, str) or not source_mode.strip():
+                errors.append(f"{prefix}.runtime.source_mode must be a non-empty string")
+            workspace_scope = runtime.get("workspace_scope")
+            if workspace_scope not in {"workspace", "user"}:
+                errors.append(f"{prefix}.runtime.workspace_scope must be workspace or user")
+            workspace_targets = runtime.get("workspace_targets")
+            if workspace_targets != OPENCLAW_RUNTIME_TARGETS:
+                errors.append(
+                    f"{prefix}.runtime.workspace_targets must equal the documented OpenClaw targets"
+                )
+            skill_precedence = runtime.get("skill_precedence")
+            if not isinstance(skill_precedence, list) or not all(
+                isinstance(item, str) for item in skill_precedence
+            ):
+                errors.append(f"{prefix}.runtime.skill_precedence must be an array of strings")
+            install_targets = runtime.get("install_targets")
+            if not isinstance(install_targets, dict):
+                errors.append(f"{prefix}.runtime.install_targets must be an object")
             else:
-                runtime_targets = openclaw.get("runtime_targets")
-                if runtime_targets != OPENCLAW_INTEROP["runtime_targets"]:
-                    errors.append(
-                        f"{prefix}.interop.openclaw.runtime_targets must equal "
-                        "the documented OpenClaw targets"
-                    )
-                if openclaw.get("import_supported") is not True:
-                    errors.append(f"{prefix}.interop.openclaw.import_supported must be true")
-                if openclaw.get("export_supported") is not True:
-                    errors.append(f"{prefix}.interop.openclaw.export_supported must be true")
-                public_publish = openclaw.get("public_publish")
-                if not isinstance(public_publish, dict):
-                    errors.append(f"{prefix}.interop.openclaw.public_publish must be an object")
-                else:
-                    clawhub = public_publish.get("clawhub")
-                    if not isinstance(clawhub, dict):
+                for field in ["workspace", "shared"]:
+                    value = install_targets.get(field)
+                    if not isinstance(value, list) or not all(
+                        isinstance(item, str) for item in value
+                    ):
                         errors.append(
-                            f"{prefix}.interop.openclaw.public_publish.clawhub must be an object"
+                            f"{prefix}.runtime.install_targets.{field} must be an array of strings"
                         )
-                    else:
-                        if clawhub.get("supported") is not True:
-                            errors.append(
-                                f"{prefix}.interop.openclaw.public_publish."
-                                "clawhub.supported must be true"
-                            )
-                        if clawhub.get("default") is not False:
-                            errors.append(
-                                f"{prefix}.interop.openclaw.public_publish."
-                                "clawhub.default must be false"
-                            )
+            requires = runtime.get("requires")
+            if not isinstance(requires, dict):
+                errors.append(f"{prefix}.runtime.requires must be an object")
+            else:
+                for field in ["tools", "bins", "env", "config"]:
+                    value = requires.get(field)
+                    if not isinstance(value, list) or not all(
+                        isinstance(item, str) for item in value
+                    ):
+                        errors.append(
+                            f"{prefix}.runtime.requires.{field} must be an array of strings"
+                        )
+            plugin_capabilities = runtime.get("plugin_capabilities")
+            if not isinstance(plugin_capabilities, dict):
+                errors.append(f"{prefix}.runtime.plugin_capabilities must be an object")
+            for field in ["background_tasks", "subagents", "legacy_compatibility"]:
+                if not isinstance(runtime.get(field), dict):
+                    errors.append(f"{prefix}.runtime.{field} must be an object")
+            readiness = runtime.get("readiness")
+            if not isinstance(readiness, dict):
+                errors.append(f"{prefix}.runtime.readiness must be an object")
+            else:
+                status = readiness.get("status")
+                if not isinstance(status, str) or not status.strip():
+                    errors.append(f"{prefix}.runtime.readiness.status must be a non-empty string")
+                for field in [
+                    "ready",
+                    "supports_background_tasks",
+                    "supports_plugins",
+                    "supports_subagents",
+                ]:
+                    if not isinstance(readiness.get(field), bool):
+                        errors.append(f"{prefix}.runtime.readiness.{field} must be a boolean")
 
         available_versions = (
             skill.get("available_versions")
@@ -271,9 +284,7 @@ def validate_ai_index_payload(payload: dict) -> list:
                             "must be a non-empty string"
                         )
                     if resolution.get("fallback_allowed") is not False:
-                        errors.append(
-                            f"{version_prefix}.resolution.fallback_allowed must be false"
-                        )
+                        errors.append(f"{version_prefix}.resolution.fallback_allowed must be false")
 
     return errors
 

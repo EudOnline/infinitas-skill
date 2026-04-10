@@ -16,7 +16,63 @@ from infinitas_skill.install.source_resolution import (
     unique,
     version_satisfies,
 )
+from infinitas_skill.openclaw.workspace import resolve_openclaw_skill_dirs
 from infinitas_skill.policy.skill_identity import normalize_skill_identity
+from infinitas_skill.root import ROOT
+
+
+def _is_relative_to(path: Path, base: Path) -> bool:
+    try:
+        path.relative_to(base)
+        return True
+    except ValueError:
+        return False
+
+
+def resolve_openclaw_install_target(
+    *,
+    workspace_root: Path,
+    target_dir: str | Path | None = None,
+    workspace_scope: str = "workspace",
+) -> dict:
+    workspace_root = Path(workspace_root).resolve()
+    candidates = [
+        Path(path).resolve() for path in resolve_openclaw_skill_dirs(workspace_root, root=ROOT)
+    ]
+    if not candidates:
+        fallback = (workspace_root / "skills").resolve()
+        candidates = [fallback]
+
+    workspace_targets = [path for path in candidates if _is_relative_to(path, workspace_root)]
+    shared_targets = [path for path in candidates if path not in workspace_targets]
+
+    if target_dir is not None:
+        selected = Path(target_dir).resolve()
+        selected_scope = "workspace" if _is_relative_to(selected, workspace_root) else "shared"
+        selected_from = "explicit-target"
+    else:
+        if workspace_scope == "user" and shared_targets:
+            selected = shared_targets[0]
+            selected_scope = "shared"
+        elif workspace_targets:
+            selected = workspace_targets[0]
+            selected_scope = "workspace"
+        elif shared_targets:
+            selected = shared_targets[0]
+            selected_scope = "shared"
+        else:
+            selected = candidates[0]
+            selected_scope = "workspace"
+        selected_from = "runtime-default"
+
+    return {
+        "scope": selected_scope,
+        "path": str(selected),
+        "selected_from": selected_from,
+        "workspace_targets": [str(path) for path in workspace_targets],
+        "shared_targets": [str(path) for path in shared_targets],
+        "candidates": [str(path) for path in candidates],
+    }
 
 
 def load_installed_state(target_dir):

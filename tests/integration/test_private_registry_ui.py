@@ -11,6 +11,7 @@ from sqlalchemy import select
 
 ROOT = Path(__file__).resolve().parents[2]
 APP_PATH = ROOT / "server" / "app.py"
+APP_JS_PATH = ROOT / "server" / "static" / "js" / "app.js"
 ROUTES_PATH = ROOT / "server" / "ui" / "routes.py"
 LIFECYCLE_PATH = ROOT / "server" / "ui" / "lifecycle.py"
 ALEMBIC_CONFIG_PATH = ROOT / "alembic.ini"
@@ -157,6 +158,121 @@ def assert_alembic_config_declares_path_separator() -> None:
     )
 
 
+def _slice_source(source: str, start_marker: str, end_marker: str) -> str:
+    start = source.index(start_marker)
+    end = source.index(end_marker, start)
+    return source[start:end]
+
+
+def assert_private_registry_ui_js_contracts() -> None:
+    source = APP_JS_PATH.read_text(encoding="utf-8")
+    create_draft_source = _slice_source(
+        source,
+        "async function createDraft(form) {",
+        "\n}\n\nasync function saveDraft(form) {",
+    )
+    install_panel_source = _slice_source(
+        source,
+        "  renderInstallPanel(data, skill) {",
+        "\n\n  selectNext()",
+    )
+    access_check_source = _slice_source(
+        source,
+        "async function checkReleaseAccess(releaseId) {",
+        "\n}\n\n// ============================================",
+    )
+    review_detail_source = _slice_source(
+        source,
+        "async function toggleReviewDetail(reviewCaseId, button) {",
+        "\n}\n\nfunction renderReviewDetail(container, data) {",
+    )
+    exposure_policy_source = _slice_source(
+        source,
+        "function syncExposureReviewModePolicy() {",
+        "\n}\n\nfunction initReviewCases() {",
+    )
+    release_poll_source = _slice_source(
+        source,
+        "async function pollReleaseReady(releaseId, intervalMs = 3000) {",
+        "\n}\n\nasync function createExposure(form) {",
+    )
+
+    assert "/api/v1/releases/${releaseId}/artifacts" in source, (
+        "expected release detail polling to refresh artifact rows from the release artifacts API"
+    )
+    for marker in [
+        "toast.error(uiText('invalid_json', 'JSON 格式错误'));",
+        "setButtonLoading(button, false);",
+        "return;",
+    ]:
+        assert marker in create_draft_source, (
+            "expected create-draft flow to block invalid metadata JSON instead of silently "
+            f"submitting an empty payload; missing marker {marker!r}"
+        )
+    for marker in [
+        "const policy = release.exposure_policy[audienceType] || null;",
+        "reviewModeSelect.disabled = false;",
+        "reviewModeSelect.value = policy.effective_requested_review_mode;",
+        "publicWarning.hidden = audienceType !== 'public';",
+    ]:
+        assert marker in exposure_policy_source, (
+            "expected share detail UI to sync requested review mode with backend-provided "
+            f"audience policy; missing marker {marker!r}"
+        )
+    for marker in [
+        "data.publisher || '-'",
+        "formatInstallScope(skill.install_scope || data.install_scope)",
+        "formatListingMode(skill.listing_mode || data.listing_mode)",
+        "data.bundle_sha256 || '-'",
+    ]:
+        assert marker in install_panel_source, (
+            "expected install panel to expose publisher, install scope, listing mode, "
+            f"and bundle sha fields; missing marker {marker!r}"
+        )
+    for marker in [
+        "me: { zh: '仅自己', en: 'Only me' }",
+        "grant: { zh: '授权', en: 'Grant' }",
+        "direct_only: { zh: '仅直链', en: 'Direct only' }",
+    ]:
+        assert marker in source, (
+            "expected install panel formatters to humanize install scope and listing mode; "
+            f"missing marker {marker!r}"
+        )
+    for marker in [
+        "data.ok",
+        "data.credential_type",
+        "data.principal_id",
+        "data.scope_granted",
+        "access_denied",
+    ]:
+        assert marker in access_check_source, (
+            "expected release access check UI to render the backend response fields and "
+            f"retain denied-state handling; missing marker {marker!r}"
+        )
+    for marker in [
+        "opened = true",
+        "review_detail_history",
+        "review_detail_hide",
+    ]:
+        assert marker in review_detail_source, (
+            "expected review detail toggle flow to keep localized History/Hide labels in sync; "
+            f"missing marker {marker!r}"
+        )
+    for marker in [
+        "const artifactCount = await updateArtifactsTable(releaseId);",
+        ".page-stats .stat",
+        "valueEl.textContent = readyText;",
+        "valueEl.textContent = String(artifactCount || 0);",
+        "const data = await apiGet(`/api/v1/releases/${releaseId}`, controller.signal);",
+        "if (err.status === 403 || err.status === 404) {",
+        "data.items || []",
+    ]:
+        assert marker in source if marker == "data.items || []" else marker in release_poll_source, (
+            "expected release polling UI to update summary stats and recover from empty-state "
+            f"artifact sections; missing marker {marker!r}"
+        )
+
+
 def create_ready_release(client, headers: dict[str, str], *, slug: str, display_name: str) -> int:
     from server.worker import run_worker_loop
 
@@ -258,18 +374,125 @@ def assert_private_first_console_ui_round_trip() -> None:
 
         from server.app import create_app
         from server.db import get_session_factory
+        from server.worker import run_worker_loop
 
         client = TestClient(create_app())
         session_factory = get_session_factory()
         headers = {"Authorization": "Bearer fixture-maintainer-token"}
 
-        release_id = create_ready_release(
-            client,
-            headers,
-            slug="console-ui-skill",
-            display_name="Console UI Skill",
+        # 1) Create skill through API (UI will verify forms exist)
+        create_skill_response = client.post(
+            "/api/v1/skills",
+            headers=headers,
+            json={
+                "slug": "console-ui-skill",
+                "display_name": "Console UI Skill",
+                "summary": "A skill for UI testing",
+            },
         )
+        assert create_skill_response.status_code == 201, create_skill_response.text
+        skill_id = int(create_skill_response.json()["id"])
 
+        # 2) Verify skills page has create-skill form
+        skills_response = client.get("/skills?lang=en", headers=headers)
+        assert skills_response.status_code == 200, skills_response.text
+        skills_html = skills_response.text
+        for label in ["Skills", "Drafts", "Releases", "Share", "Access", "Review"]:
+            assert label in skills_html
+        assert 'id="create-skill-form"' in skills_html
+
+        # 3) Create draft and verify skill detail has create-draft form
+        create_draft_response = client.post(
+            f"/api/v1/skills/{skill_id}/drafts",
+            headers=headers,
+            json={
+                "content_ref": "git+https://example.com/repo.git#0123456789abcdef0123456789abcdef01234567",
+                "metadata": {"entrypoint": "SKILL.md"},
+            },
+        )
+        assert create_draft_response.status_code == 201, create_draft_response.text
+        draft_id = int(create_draft_response.json()["id"])
+
+        skill_detail_response = client.get(f"/skills/{skill_id}?lang=en", headers=headers)
+        assert skill_detail_response.status_code == 200, skill_detail_response.text
+        skill_detail_html = skill_detail_response.text
+        assert 'id="create-draft-form"' in skill_detail_html
+
+        # 4) Verify draft detail has edit and seal forms while open
+        draft_detail_response = client.get(f"/drafts/{draft_id}?lang=en", headers=headers)
+        assert draft_detail_response.status_code == 200, draft_detail_response.text
+        draft_detail_html = draft_detail_response.text
+        assert 'id="save-draft-form"' in draft_detail_html
+        assert 'id="seal-draft-form"' in draft_detail_html
+
+        # 5) Seal draft
+        seal_response = client.post(
+            f"/api/v1/drafts/{draft_id}/seal",
+            headers=headers,
+            json={"version": "0.1.0"},
+        )
+        assert seal_response.status_code == 201, seal_response.text
+        version_id = int((seal_response.json().get("skill_version") or {})["id"])
+
+        # 6) Verify sealed draft is read-only and skill detail has create-release buttons
+        sealed_draft_response = client.get(f"/drafts/{draft_id}?lang=en", headers=headers)
+        assert sealed_draft_response.status_code == 200, sealed_draft_response.text
+        sealed_draft_html = sealed_draft_response.text
+        assert 'id="save-draft-form"' not in sealed_draft_html
+        assert 'id="seal-draft-form"' not in sealed_draft_html
+
+        skill_detail_after_seal = client.get(f"/skills/{skill_id}?lang=en", headers=headers)
+        skill_detail_after_seal_html = skill_detail_after_seal.text
+        assert 'data-action="create-release"' in skill_detail_after_seal_html
+
+        # 7) Create release and verify preparing state on detail page
+        create_release_response = client.post(
+            f"/api/v1/versions/{version_id}/releases",
+            headers=headers,
+        )
+        assert create_release_response.status_code == 201, create_release_response.text
+        release_id = int(create_release_response.json()["id"])
+
+        release_detail_response = client.get(f"/releases/{release_id}?lang=en", headers=headers)
+        assert release_detail_response.status_code == 200, release_detail_response.text
+        release_detail_html = release_detail_response.text
+        assert "preparing" in release_detail_html or "Pending" in release_detail_html or "pending" in release_detail_html.lower()
+        assert 'id="release-status"' in release_detail_html
+        assert 'id="artifact-section"' in release_detail_html
+
+        # 8) Run worker to materialize release
+        processed = run_worker_loop(limit=1)
+        assert processed == 1, f"expected worker to process 1 release job, got {processed}"
+
+        # 9) Verify ready state
+        release_ready_response = client.get(f"/releases/{release_id}?lang=en", headers=headers)
+        assert release_ready_response.status_code == 200, release_ready_response.text
+        release_ready_html = release_ready_response.text
+        assert "ready" in release_ready_html.lower() or "Ready" in release_ready_html or "success" in release_ready_html.lower()
+        for label in ["Manifest", "Bundle", "Provenance", "Signature"]:
+            assert label in release_ready_html
+
+        access_response = client.get("/access/tokens?lang=en", headers=headers)
+        assert access_response.status_code == 200, access_response.text
+        access_html = access_response.text
+        for label in [
+            "Current identity",
+            "Release access check",
+            "Release ID",
+            "Principal",
+            "Scopes",
+        ]:
+            assert label in access_html
+
+        # 10) Verify share page has exposure creation form
+        share_response = client.get(f"/releases/{release_id}/share?lang=en", headers=headers)
+        assert share_response.status_code == 200, share_response.text
+        share_html = share_response.text
+        assert 'id="create-exposure-form"' in share_html
+        for label in ["Private", "Shared by token", "Public"]:
+            assert label in share_html
+
+        # 11) Create exposures via API and verify UI actions
         create_exposure(
             client,
             headers,
@@ -294,24 +517,47 @@ def assert_private_first_console_ui_round_trip() -> None:
             listing_mode="listed",
             requested_review_mode="none",
         )
+
+        # Verify share page shows exposure actions
+        share_with_exposures = client.get(f"/releases/{release_id}/share?lang=en", headers=headers)
+        share_with_html = share_with_exposures.text
+        public_exposure_id = int(public_exposure["id"])
+        public_exposure_row = None
+        for row in share_with_html.split("<tr>"):
+            if f"<td>#{public_exposure_id}</td>" in row:
+                public_exposure_row = row
+                break
+        assert public_exposure_row is not None, "public exposure row not found in share page"
+        assert 'data-action="activate-exposure"' not in public_exposure_row
+        assert (
+            "Activation blocked: review must be approved first" in public_exposure_row
+            or "需要审核通过后才能激活" in public_exposure_row
+        )
+        assert 'data-action="revoke-exposure"' in share_with_html
+        assert 'data-action="patch-exposure"' in share_with_html
+
+        # 12) Verify review cases page shows actionable controls including comment
+        review_response = client.get("/review-cases?lang=en", headers=headers)
+        assert review_response.status_code == 200, review_response.text
+        review_html = review_response.text
+        assert 'data-action="review-approve"' in review_html
+        assert 'data-action="review-reject"' in review_html
+        assert 'data-action="review-comment"' in review_html
+        assert 'data-action="review-detail"' in review_html
+        assert "review-detail-row" in review_html
+        assert 'id="review-detail-content-' in review_html
+
+        # 13) Approve review and verify exposure becomes active
         approve_exposure_review(client, session_factory, headers, int(public_exposure["id"]))
+
+        share_after_approval = client.get(f"/releases/{release_id}/share?lang=en", headers=headers)
+        share_after_html = share_after_approval.text
+        assert "active" in share_after_html.lower() or "Active" in share_after_html
 
         home_html = client.get("/").text
         assert "私人技能库" in home_html
         for marker in ['id="user-panel-login"', 'id="open-auth-modal-btn"']:
             assert marker in home_html
-
-        skills_response = client.get("/skills?lang=en", headers=headers)
-        assert skills_response.status_code == 200, skills_response.text
-        skills_html = skills_response.text
-        for label in ["Skills", "Drafts", "Releases", "Share", "Access", "Review"]:
-            assert label in skills_html
-
-        share_response = client.get(f"/releases/{release_id}/share?lang=en", headers=headers)
-        assert share_response.status_code == 200, share_response.text
-        share_html = share_response.text
-        for label in ["Private", "Shared by token", "Public"]:
-            assert label in share_html
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -329,6 +575,10 @@ def test_private_first_console_ui_round_trip() -> None:
     assert_private_first_console_ui_round_trip()
 
 
+def test_private_registry_ui_js_contracts_cover_access_and_install_panels() -> None:
+    assert_private_registry_ui_js_contracts()
+
+
 def main() -> None:
     assert_ui_route_registration_boundary()
     assert_app_size_budget()
@@ -337,3 +587,4 @@ def main() -> None:
     assert_template_response_request_first()
     assert_alembic_config_declares_path_separator()
     assert_private_first_console_ui_round_trip()
+    assert_private_registry_ui_js_contracts()

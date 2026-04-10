@@ -113,6 +113,11 @@ def load_inspect_memory_hints(
         user_ref=memory_scope.get("user_ref"),
         principal_ref=memory_scope.get("principal_ref"),
         task=memory_scope.get("task_ref") or "inspect",
+        runtime_platform=memory_scope.get("runtime_platform"),
+        workspace_root=memory_scope.get("workspace_root"),
+        session_ref=memory_scope.get("session_ref"),
+        task_capabilities=memory_scope.get("task_capabilities"),
+        runtime_capabilities=memory_scope.get("runtime_capabilities"),
     )
     provider_scope = dict(query.provider_scope)
     for key in ["user_id", "agent_id", "run_id", "namespace"]:

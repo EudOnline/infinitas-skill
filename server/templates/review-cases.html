@@ -2,27 +2,27 @@
 {% from "macros.html" import console_table_shell %}
 
 {% block body %}
-<section class="kawaii-card animate-in detail-shell">
-  <div class="section-kicker">{{ '审核收件箱' if page_language == 'zh' else 'Review inbox' }}</div>
-  <p class="detail-copy">{{ '公开 exposure 会自动打开审核单。这样作者仍然可以自由发布私人版本，而公开版本必须通过额外 gate。' if page_language == 'zh' else 'Public exposures automatically open review cases. Authors can still ship private versions freely, while public versions pass through an extra gate.' }}</p>
+<section class="kawaii-card animate-in">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_review_inbox'] }}</div>
+  <p class="text-kawaii-ink-soft leading-relaxed max-w-prose mb-4">{{ ui['hint_review_cases'] }}</p>
 </section>
 
 {% call console_table_shell(
-  '审核单' if page_language == 'zh' else 'Review cases',
-  '还没有审核单。' if page_language == 'zh' else 'No review cases yet.',
+  ui['section_review_cases'],
+  ui['empty_review_cases'],
   review_rows,
   page_language
 ) %}
 <table>
   <thead>
     <tr>
-      <th>ID</th>
-      <th>{{ '技能' if page_language == 'zh' else 'Skill' }}</th>
-      <th>{{ 'Audience' if page_language == 'en' else '可见范围' }}</th>
-      <th>{{ '模式' if page_language == 'zh' else 'Mode' }}</th>
-      <th>{{ '状态' if page_language == 'zh' else 'State' }}</th>
-      <th>{{ '打开时间' if page_language == 'zh' else 'Opened' }}</th>
-      <th>{{ '关闭时间' if page_language == 'zh' else 'Closed' }}</th>
+      <th scope="col">ID</th>
+      <th scope="col">{{ ui['table_col_skill'] }}</th>
+      <th scope="col">{{ ui['table_col_audience'] }}</th>
+      <th scope="col">{{ ui['table_col_mode'] }}</th>
+      <th scope="col">{{ ui['table_col_state'] }}</th>
+      <th scope="col">{{ ui['table_col_opened'] }}</th>
+      <th scope="col">{{ ui['table_col_actions'] }}</th>
     </tr>
   </thead>
   <tbody>
@@ -32,19 +32,40 @@
       <td>{{ item.skill_name }}</td>
       <td>{{ item.audience }}</td>
       <td>{{ item.mode }}</td>
-      <td>{{ item.state }}</td>
+      <td>
+        <span class="status-badge inline-flex items-center gap-1.5 rounded-full text-[0.76rem] font-bold py-1 px-[0.65rem] border border-kawaii-line bg-kawaii-panel-muted" data-status="{{ item.state_raw }}">{{ item.state }}</span>
+      </td>
       <td>{{ item.opened_at }}</td>
-      <td>{{ item.closed_at }}</td>
+      <td>
+        <div class="flex flex-wrap items-center gap-2 mt-3">
+          {% if item.share_href %}
+          <a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.share_href }}">{{ ui['action_share_page'] }}</a>
+          {% endif %}
+          <button class="kawaii-button kawaii-button--secondary text-sm font-bold hover:underline cursor-pointer" type="button" data-action="review-detail" data-review-case-id="{{ item.id }}">{{ ui['action_history'] }}</button>
+          {% if item.state_raw == 'open' %}
+          <div class="p-3 bg-kawaii-panel-soft rounded-kawaii-md border border-kawaii-line">
+            <input class="kawaii-input text-xs text-kawaii-ink-muted mt-1" type="text" id="review-note-{{ item.id }}" aria-label="{{ ui['aria_review_note'] }}" placeholder="{{ ui['placeholder_review_note'] }}" />
+            <div class="flex flex-wrap items-center gap-2">
+              <button class="kawaii-button kawaii-button--primary" type="button" data-action="review-approve" data-review-case-id="{{ item.id }}">{{ ui['action_approve'] }}</button>
+              <button class="kawaii-button kawaii-button--ghost" type="button" data-action="review-reject" data-review-case-id="{{ item.id }}">{{ ui['action_reject'] }}</button>
+              <button class="kawaii-button kawaii-button--secondary" type="button" data-action="review-comment" data-review-case-id="{{ item.id }}">{{ ui['action_comment'] }}</button>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </td>
+    </tr>
+    <tr class="review-detail-row" id="review-detail-row-{{ item.id }}" hidden>
+      <td colspan="7" class="py-2 border-b border-kawaii-line/50 last:border-0">
+        <div class="mt-3 p-4 bg-kawaii-panel-soft rounded-kawaii-lg border border-kawaii-line" data-review-case-id="{{ item.id }}">
+          <div id="review-detail-content-{{ item.id }}"></div>
+        </div>
+      </td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
 {% endcall %}
 
-<style>
-  .detail-copy {
-    margin: 0;
-    color: var(--kawaii-ink-soft);
-  }
-</style>
+
 {% endblock %}

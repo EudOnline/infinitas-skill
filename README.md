@@ -2,7 +2,7 @@
 audience: contributors, operators, integrators
 owner: repository maintainers
 source_of_truth: repo entry page
-last_reviewed: 2026-04-03
+last_reviewed: 2026-04-08
 status: maintained
 ---
 
@@ -10,7 +10,8 @@ status: maintained
 
 Private-first skill registry and hosted control plane.
 
-This repository is production-oriented and in an active maintainability hardening phase. The runtime model remains private-first, while the code and docs continue consolidating around one Python package, one maintained CLI, and one role-based documentation tree.
+This repository is production-oriented and in an active maintainability hardening phase. The hosted backend remains private-first, while the maintained agent runtime model now follows OpenClaw-first semantics and the code and docs continue consolidating around one Python package, one maintained CLI, and one role-based documentation tree.
+The registry/release/install backend remains the durable control plane.
 
 ## Start here
 
@@ -20,6 +21,7 @@ This repository is production-oriented and in an active maintainability hardenin
 - [2026-04-02 project health scorecard](docs/ops/2026-04-02-project-health-scorecard.md)
 - [Architecture decision 0001: Maintainability reset](docs/adr/0001-maintainability-reset.md)
 - [Architecture decision 0002: Maintained surface cutover](docs/adr/0002-maintained-surface-cutover.md)
+- [Architecture decision 0003: OpenClaw runtime canonicalization](docs/adr/0003-openclaw-runtime-canonical.md)
 
 ## Repository shape
 
@@ -77,6 +79,12 @@ make lint-maintained
 uv run pytest tests/integration/test_memory_evaluation_matrix.py -q
 ```
 
+Treat verification as three layers:
+
+- maintained runtime and backend truth: `make lint-maintained`, `make test-fast`
+- migration-focused OpenClaw runtime matrix: `uv run pytest tests/unit/openclaw tests/integration/test_openclaw_runtime_index.py tests/integration/test_openclaw_install_planning.py tests/integration/test_cli_openclaw_runtime.py tests/integration/test_cli_release_state.py tests/integration/test_memory_evaluation_matrix.py -q`
+- broader repository sweeps: `./scripts/check-all.sh focused-integration`, then opt into `release-long` when release packaging or attestation flows changed
+
 `make clean-local` is the supported local hygiene path for generated artifacts and local automation
 output (`__pycache__`, `*.pyc`, test/lint caches, local `*.egg-info` metadata, and
 `output/playwright`). It intentionally preserves tracked files, including placeholders such as
@@ -112,6 +120,8 @@ uv run python3 scripts/test-doc-governance.py
 Use `./scripts/check-all.sh release-long` as the canonical opt-in long-running pre-release gate. It is the
 smallest named block that proves the transparency-log and release-invariant flows end to end.
 
+Legacy compatibility coverage still matters, but it is now regression and audit coverage rather than the maintained runtime gate. Release blocking follows canonical OpenClaw runtime freshness.
+
 `make lint-maintained` currently enforces the maintained-surface `E/F/I` baseline while temporarily deferring
 `E501` only in the current debt-heavy maintained files, plus a few legacy path-bootstrap `E402` cases, until the
 planned module splits land.
@@ -139,7 +149,9 @@ Local runs default to `INFINITAS_SERVER_ENV=development`. Use `INFINITAS_SERVER_
 
 ## Product and policy context
 
-The supported runtime remains:
+OpenClaw is now the canonical agent runtime.
+
+The supported backend lifecycle remains:
 
 `skill -> draft -> sealed version -> release -> exposure -> review case -> grant/credential -> discovery/install`
 
@@ -147,6 +159,7 @@ Use these canonical docs for the current model:
 
 - [Private-first cutover](docs/guide/private-first-cutover.md)
 - [Memory operating model](docs/ai/memory.md)
+- [OpenClaw runtime contract](docs/reference/openclaw-runtime-contract.md)
 - [AI workflow drills](docs/ai/workflow-drills.md) explains when to use `scripts/recommend-skill.sh`, `scripts/search-skills.sh`, and `scripts/inspect-skill.sh` for task routing.
 - [Platform drift playbook](docs/ops/platform-drift-playbook.md)
 - [Release checklist](docs/ops/release-checklist.md)
@@ -154,7 +167,7 @@ Use these canonical docs for the current model:
 - [CI-native attestation](docs/ai/ci-attestation.md) documents `.github/workflows/release-attestation.yml` and `python3 scripts/verify-ci-attestation.py`
 - [Hosted registry server deployment](docs/ops/server-deployment.md)
 
-Compatibility reporting now distinguishes between `declared support` from authored metadata such as `_meta.json.agent_compatible` and `verified support` backed by platform-specific evidence plus freshness checks.
+Compatibility reporting still distinguishes between legacy `declared support` metadata such as `_meta.json.agent_compatible` and historical `verified support` evidence. Those fields remain useful for migration and audit context, but they are no longer the maintained runtime source of truth.
 
 The optional memory layer is additive only:
 

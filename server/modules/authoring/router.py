@@ -56,9 +56,14 @@ def get_skill(
     db: Session = Depends(get_db),
 ):
     principal_id = _require_authoring_principal(context)
+    is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
         skill = service.get_skill_or_404(db, skill_id)
-        service.assert_namespace_owner(skill, principal_id=principal_id)
+        service.assert_namespace_owner(
+            skill,
+            principal_id=principal_id,
+            is_maintainer=is_maintainer,
+        )
     except service.NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except service.ForbiddenError as exc:
@@ -66,7 +71,11 @@ def get_skill(
     return SkillView.from_model(skill)
 
 
-@router.post("/skills/{skill_id}/drafts", response_model=SkillDraftView, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/skills/{skill_id}/drafts",
+    response_model=SkillDraftView,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_draft(
     skill_id: int,
     payload: SkillDraftCreateRequest,
@@ -74,11 +83,13 @@ def create_draft(
     db: Session = Depends(get_db),
 ):
     principal_id = _require_authoring_principal(context)
+    is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
         draft = service.create_draft(
             db,
             skill_id=skill_id,
             actor_principal_id=principal_id,
+            is_maintainer=is_maintainer,
             payload=payload,
         )
     except service.NotFoundError as exc:
@@ -98,11 +109,13 @@ def patch_draft(
     db: Session = Depends(get_db),
 ):
     principal_id = _require_authoring_principal(context)
+    is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
         draft = service.patch_draft(
             db,
             draft_id=draft_id,
             actor_principal_id=principal_id,
+            is_maintainer=is_maintainer,
             payload=payload,
         )
     except service.NotFoundError as exc:
@@ -114,7 +127,11 @@ def patch_draft(
     return SkillDraftView.from_model(draft)
 
 
-@router.post("/drafts/{draft_id}/seal", response_model=SkillDraftSealResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/drafts/{draft_id}/seal",
+    response_model=SkillDraftSealResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 def seal_draft(
     draft_id: int,
     payload: SkillDraftSealRequest,
@@ -122,11 +139,13 @@ def seal_draft(
     db: Session = Depends(get_db),
 ):
     principal_id = _require_authoring_principal(context)
+    is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
         draft, skill_version = service.seal_draft(
             db,
             draft_id=draft_id,
             actor_principal_id=principal_id,
+            is_maintainer=is_maintainer,
             version=payload.version,
         )
     except service.NotFoundError as exc:

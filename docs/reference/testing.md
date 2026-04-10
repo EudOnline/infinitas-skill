@@ -14,6 +14,14 @@ make lint-maintained
 `make test-fast` is the preferred everyday verification entrypoint. It should stay aligned with the maintained
 fast pytest tier, promoted regression flows, and maintainability budget enforcement.
 
+Use the verification layers in this order:
+
+1. Maintained runtime and backend truth checks: `make lint-maintained`, `make test-fast`
+2. Migration-focused OpenClaw matrix: `uv run pytest tests/unit/openclaw tests/integration/test_openclaw_runtime_index.py tests/integration/test_openclaw_install_planning.py tests/integration/test_cli_openclaw_runtime.py tests/integration/test_cli_release_state.py tests/integration/test_memory_evaluation_matrix.py -q`
+3. Broader release and hosted-surface sweeps: named `scripts/check-all.sh` blocks
+
+OpenClaw is the maintained runtime contract. Legacy Codex and Claude compatibility checks remain useful regression and audit coverage, but they are no longer the primary release gate.
+
 Raw `uv` and script commands remain available below as fallback detail.
 
 ```bash
@@ -60,6 +68,19 @@ uv run pytest tests/integration/test_memory_evaluation_matrix.py -q
 These cover the maintained policy CLI parity surface, signing bootstrap rehearsal, and installed-integrity guardrails.
 `tests/integration/test_memory_evaluation_matrix.py` adds a fixture-backed recommendation/inspect quality gate for the advisory memory layer.
 The matrix now also checks retrieval curation behavior, including duplicate suppression, short-lived low-signal noise suppression, and winner stability under noisy memory input.
+
+When a change touches the canonical runtime model, discovery/install planning, or release gating, run the migration-focused OpenClaw matrix as a distinct layer:
+
+```bash
+uv run pytest tests/unit/openclaw tests/integration/test_openclaw_runtime_index.py tests/integration/test_openclaw_install_planning.py tests/integration/test_cli_openclaw_runtime.py tests/integration/test_cli_release_state.py tests/integration/test_memory_evaluation_matrix.py -q
+```
+
+That matrix proves the maintained runtime path end to end:
+
+- OpenClaw runtime contracts and workspace assumptions
+- discovery/install/index behavior driven by the OpenClaw-native model
+- release gating tied to canonical OpenClaw freshness rather than triple-runtime parity
+- memory and recommendation flows aligned with the maintained runtime context
 
 ## Script-Level Regression Checks
 
@@ -129,5 +150,5 @@ When these pass together, the repository has covered:
 
 - maintained CLI and workflow guards
 - package-owned discovery, skills, registry, and signing/review migrations
-- temp-repo release fixtures, provenance, and OpenClaw export/import flows
-- long-running release invariants and transparency-log verification
+- canonical OpenClaw runtime verification plus legacy compatibility regression coverage
+- temp-repo release fixtures, provenance, and long-running transparency-log verification

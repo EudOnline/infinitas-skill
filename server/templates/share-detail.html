@@ -2,36 +2,115 @@
 {% from "macros.html" import console_table_shell %}
 
 {% block body %}
-<section class="kawaii-card animate-in detail-shell">
-  <div class="section-kicker">{{ '分享详情' if page_language == 'zh' else 'Share detail' }}</div>
+<section class="kawaii-card animate-in">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_share_detail'] }}</div>
   <div class="detail-grid">
     <article>
       <h2>{{ release.skill_name }} {{ release.version }}</h2>
-      <p>{{ '同一个 release 可以同时保留私人、令牌共享和公开三种出口，彼此不互相覆盖。' if page_language == 'zh' else 'One release can keep private, token-shared, and public audiences side by side without one replacing another.' }}</p>
-      <div class="detail-actions">
-        <a class="entity-link" href="{{ release.detail_href }}">{{ '返回发布' if page_language == 'zh' else 'Back to release' }}</a>
+      <p>{{ ui['hint_release_runtime'] }}</p>
+      <div class="flex flex-wrap items-center gap-2 mt-4">
+        <a class="text-kawaii-primary-deep font-bold no-underline" href="{{ release.detail_href }}">{{ ui['action_back_to_release'] }}</a>
       </div>
     </article>
   </div>
 </section>
 
+<section class="kawaii-card animate-in">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_release_runtime_readiness'] }}</div>
+  <div class="detail-meta">
+    <div><dt>{{ ui['label_runtime_platform'] }}</dt><dd>{{ release.canonical_runtime_platform }}</dd></div>
+    <div><dt>{{ ui['label_runtime_readiness'] }}</dt>
+      <dd>
+        {% if release.canonical_runtime and release.canonical_runtime.freshness_state %}
+          <span class="kawaii-badge {% if release.canonical_runtime.freshness_state == 'fresh' %}kawaii-badge--success{% elif release.canonical_runtime.freshness_state == 'stale' %}kawaii-badge--pending{% else %}kawaii-badge--running{% endif %}">
+            {{ release.canonical_runtime.freshness_state }}
+          </span>
+        {% else %}
+          <span class="kawaii-badge kawaii-badge--running">-</span>
+        {% endif %}
+      </dd>
+    </div>
+    <div><dt>{{ ui['label_blocking_platforms'] }}</dt>
+      <dd>
+        {% if release.blocking_platforms %}
+          {% for item in release.blocking_platforms %}
+            <span class="kawaii-badge kawaii-badge--pending">{{ item.platform or item.name or 'unknown' }}</span>
+          {% endfor %}
+        {% else %}
+          <span class="kawaii-badge kawaii-badge--success">{{ ui['text_none'] }}</span>
+        {% endif %}
+      </dd>
+    </div>
+  </div>
+</section>
+
+<section class="kawaii-card animate-in">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_create_exposure'] }}</div>
+  <form id="create-exposure-form"
+        class="lifecycle-form"
+        data-release-id="{{ release.id }}">
+  <div hidden id="exposure-policy-data" data-json="{{ release.exposure_policy | tojson }}"></div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <label>
+        <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['table_col_audience'] }}</span>
+        <select class="kawaii-input" name="audience_type" id="exposure-audience-type">
+          <option value="private">{{ ui['option_private'] }}</option>
+          <option value="authenticated">{{ ui['option_authenticated'] }}</option>
+          <option value="grant">{{ ui['option_grant'] }}</option>
+          <option value="public">{{ ui['option_public'] }}</option>
+        </select>
+      </label>
+      <label>
+        <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['label_listing_mode'] }}</span>
+        <select class="kawaii-input" name="listing_mode">
+          <option value="listed">{{ ui['option_listed'] }}</option>
+          <option value="direct_only">{{ ui['option_direct_only'] }}</option>
+        </select>
+      </label>
+      <label>
+        <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['label_install_mode'] }}</span>
+        <select class="kawaii-input" name="install_mode">
+          <option value="enabled">{{ ui['option_install_enabled'] }}</option>
+          <option value="disabled">{{ ui['option_install_disabled'] }}</option>
+        </select>
+      </label>
+      <label>
+        <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['label_review_mode'] }}</span>
+        <select class="kawaii-input" name="requested_review_mode">
+          <option value="none">{{ ui['option_no_review'] }}</option>
+          <option value="advisory">{{ ui['option_advisory'] }}</option>
+          <option value="blocking">{{ ui['option_blocking'] }}</option>
+        </select>
+      </label>
+    </div>
+    <div id="public-exposure-warning" class="mt-1" hidden>
+      <span class="kawaii-badge kawaii-badge--pending"><span aria-hidden="true">⚠️</span> {{ ui['hint_public_review_required'] }}</span>
+    </div>
+    <div id="exposure-review-policy-hint" class="mb-2" hidden></div>
+    <div class="flex flex-wrap items-center gap-2 mt-4">
+      <button class="kawaii-button kawaii-button--primary" type="submit">{{ ui['badge_create_exposure'] }}</button>
+    </div>
+  </form>
+</section>
+
 {% call console_table_shell(
-  '可见性出口' if page_language == 'zh' else 'Audience exits',
-  '还没有可见性出口。' if page_language == 'zh' else 'No audience exits.',
+  ui['section_audience_exits'],
+  ui['empty_audience_exits'],
   share_rows,
   page_language
 ) %}
 <table>
   <thead>
     <tr>
-      <th>ID</th>
-      <th>{{ 'Audience' if page_language == 'en' else '可见范围' }}</th>
-      <th>{{ '列出策略' if page_language == 'zh' else 'Listing' }}</th>
-      <th>{{ '安装' if page_language == 'zh' else 'Install' }}</th>
-      <th>{{ '审核要求' if page_language == 'zh' else 'Review requirement' }}</th>
-      <th>{{ '审核状态' if page_language == 'zh' else 'Review state' }}</th>
-      <th>{{ 'Grant' if page_language == 'en' else '授权数' }}</th>
-      <th>{{ '状态' if page_language == 'zh' else 'State' }}</th>
+      <th scope="col">ID</th>
+      <th scope="col">{{ ui['table_col_audience'] }}</th>
+      <th scope="col">{{ ui['table_col_listing'] }}</th>
+      <th scope="col">{{ ui['table_col_install'] }}</th>
+      <th scope="col">{{ ui['table_col_review_requirement'] }}</th>
+      <th scope="col">{{ ui['table_col_review_state'] }}</th>
+      <th scope="col">{{ ui['label_grant_count'] }}</th>
+      <th scope="col">{{ ui['table_col_state'] }}</th>
+      <th scope="col">{{ ui['table_col_actions'] }}</th>
     </tr>
   </thead>
   <tbody>
@@ -44,27 +123,52 @@
       <td>{{ item.review_requirement }}</td>
       <td>{{ item.review_case_state }}</td>
       <td>{{ item.grant_count }}</td>
-      <td>{{ item.state }}</td>
+      <td>
+        <span class="status-badge inline-flex items-center gap-1.5 rounded-full text-[0.76rem] font-bold py-1 px-[0.65rem] border border-kawaii-line bg-kawaii-panel-muted" data-status="{{ item.state_raw }}">{{ item.state }}</span>
+      </td>
+      <td>
+        <div class="flex flex-wrap items-center gap-2 mt-3">
+          {% if item.can_activate %}
+          <button class="kawaii-button kawaii-button--primary" type="button" data-action="activate-exposure" data-exposure-id="{{ item.id }}">{{ ui['action_activate'] }}</button>
+          {% endif %}
+          {% if item.can_revoke %}
+          <button class="kawaii-button kawaii-button--ghost" type="button" data-action="revoke-exposure" data-exposure-id="{{ item.id }}">{{ ui['action_revoke'] }}</button>
+          {% endif %}
+        </div>
+        {% if not item.can_activate and item.activation_block_reason %}
+        <div class="mb-2">
+          {% if item.activation_block_reason == 'blocking_review_open' %}
+          <span class="kawaii-badge kawaii-badge--pending">{{ ui['hint_activation_blocked_review_required'] }}</span>
+          {% elif item.activation_block_reason == 'blocking_review_rejected' %}
+          <span class="kawaii-badge kawaii-badge--pending">{{ ui['hint_activation_blocked_rejected'] }}</span>
+          {% elif item.activation_block_reason == 'blocking_review_unapproved' %}
+          <span class="kawaii-badge kawaii-badge--pending">{{ ui['hint_activation_blocked_not_approved'] }}</span>
+          {% else %}
+          <span class="kawaii-badge kawaii-badge--pending">{{ ui['hint_activation_blocked'] }}</span>
+          {% endif %}
+        </div>
+        {% endif %}
+        {% if item.can_patch %}
+        <form class="patch-form" data-action="patch-exposure" data-exposure-id="{{ item.id }}">
+          <div class="flex flex-wrap items-center gap-2 mb-2">
+            <select class="kawaii-input" name="listing_mode">
+              <option value="listed" {% if item.listing_mode_raw == 'listed' %}selected{% endif %}>{{ ui['option_listed'] }}</option>
+              <option value="direct_only" {% if item.listing_mode_raw == 'direct_only' %}selected{% endif %}>{{ ui['option_direct_only'] }}</option>
+            </select>
+            <select class="kawaii-input" name="install_mode">
+              <option value="enabled" {% if item.install_mode_raw == 'enabled' %}selected{% endif %}>{{ ui['option_enabled'] }}</option>
+              <option value="disabled" {% if item.install_mode_raw == 'disabled' %}selected{% endif %}>{{ ui['option_disabled'] }}</option>
+            </select>
+            <button class="kawaii-button kawaii-button--secondary" type="submit">{{ ui['action_update'] }}</button>
+          </div>
+        </form>
+        {% endif %}
+      </td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
 {% endcall %}
 
-<style>
-  .detail-grid p {
-    margin: 0.4rem 0 0;
-    color: var(--kawaii-ink-soft);
-  }
 
-  .detail-actions {
-    margin-top: 1rem;
-  }
-
-  .entity-link {
-    color: var(--kawaii-primary-deep);
-    text-decoration: none;
-    font-weight: 700;
-  }
-</style>
 {% endblock %}

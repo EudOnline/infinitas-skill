@@ -2,7 +2,7 @@
 audience: contributors, integrators, operators
 owner: repository maintainers
 source_of_truth: generated from argparse definitions in src/infinitas_skill
-last_reviewed: 2026-04-01
+last_reviewed: 2026-04-07
 status: maintained
 ---
 
@@ -20,15 +20,17 @@ uv run python3 -m infinitas_skill.cli.reference
 
 ```text
 usage: infinitas [-h]
-                 {compatibility,release,install,registry,policy,server} ...
+                 {compatibility,release,install,openclaw,registry,policy,server}
+                 ...
 
 infinitas project CLI
 
 positional arguments:
-  {compatibility,release,install,registry,policy,server}
+  {compatibility,release,install,openclaw,registry,policy,server}
     compatibility       Compatibility tools
     release             Release readiness, signing, and verification tools
     install             Install planning tools
+    openclaw            OpenClaw runtime tools
     registry            Hosted registry control-plane tools
     policy              Policy validation and promotion tools
     server              Hosted server operations tools
@@ -103,6 +105,83 @@ options:
   --mode {install,sync}
                         Whether to check an install or sync flow
   --json                Print machine-readable plan output
+```
+
+## `infinitas openclaw`
+
+```text
+usage: infinitas openclaw [-h] {profile,workspace,skill,plugin} ...
+
+Inspect and validate the maintained OpenClaw runtime contract
+
+positional arguments:
+  {profile,workspace,skill,plugin}
+    profile             Inspect the canonical OpenClaw runtime profile
+    workspace           OpenClaw workspace resolution tools
+    skill               OpenClaw skill validation tools
+    plugin              OpenClaw plugin capability tools
+
+options:
+  -h, --help            show this help message and exit
+```
+
+## `infinitas openclaw profile`
+
+```text
+usage: infinitas openclaw profile [-h] [--json]
+
+Inspect the canonical OpenClaw runtime profile
+
+options:
+  -h, --help  show this help message and exit
+  --json      Print machine-readable output
+```
+
+## `infinitas openclaw workspace resolve`
+
+```text
+usage: infinitas openclaw workspace resolve [-h] [--home HOME] [--json]
+                                            workspace_root
+
+Resolve OpenClaw skill-directory precedence for one workspace
+
+positional arguments:
+  workspace_root  Workspace root to resolve skill directories for
+
+options:
+  -h, --help      show this help message and exit
+  --home HOME     Override the home directory used for ~/ expansion
+  --json          Print machine-readable output
+```
+
+## `infinitas openclaw skill validate`
+
+```text
+usage: infinitas openclaw skill validate [-h] [--json] skill_dir
+
+Validate one skill directory against the OpenClaw runtime contract
+
+positional arguments:
+  skill_dir   Skill directory to validate against the OpenClaw contract
+
+options:
+  -h, --help  show this help message and exit
+  --json      Print machine-readable output
+```
+
+## `infinitas openclaw plugin inspect`
+
+```text
+usage: infinitas openclaw plugin inspect [-h] [--json] plugin_path
+
+Inspect and normalize declared OpenClaw plugin capabilities
+
+positional arguments:
+  plugin_path  Plugin JSON payload to inspect
+
+options:
+  -h, --help   show this help message and exit
+  --json       Print machine-readable output
 ```
 
 ## `infinitas policy`
@@ -313,19 +392,24 @@ options:
 
 ```text
 usage: infinitas server [-h]
-                        {healthcheck,backup,render-systemd,prune-backups,worker,inspect-state}
+                        {healthcheck,backup,render-systemd,prune-backups,worker,inspect-state,memory-health,memory-curation,memory-observability,memory-baselines}
                         ...
 
 Hosted server operations CLI
 
 positional arguments:
-  {healthcheck,backup,render-systemd,prune-backups,worker,inspect-state}
+  {healthcheck,backup,render-systemd,prune-backups,worker,inspect-state,memory-health,memory-curation,memory-observability,memory-baselines}
     healthcheck         Run hosted server health checks
     backup              Create a hosted registry backup set
     render-systemd      Render a hosted registry systemd deployment bundle
     prune-backups       Prune older hosted registry backup snapshots
     worker              Run the hosted registry worker loop
     inspect-state       Inspect hosted registry queue and release state
+    memory-health       Inspect hosted registry memory writeback health
+    memory-curation     Inspect hosted registry memory curation candidates
+    memory-observability
+                        Inspect hosted registry memory operations health
+    memory-baselines    Inspect rolling memory baselines
 
 options:
   -h, --help            show this help message and exit
@@ -435,6 +519,9 @@ usage: infinitas server render-systemd [-h] --output-dir OUTPUT_DIR
                                        [--prune-on-calendar PRUNE_ON_CALENDAR]
                                        [--prune-keep-last PRUNE_KEEP_LAST]
                                        [--inspect-on-calendar INSPECT_ON_CALENDAR]
+                                       [--curation-on-calendar CURATION_ON_CALENDAR]
+                                       [--curation-action {archive,prune}]
+                                       [--curation-max-actions CURATION_MAX_ACTIONS]
                                        [--inspect-limit INSPECT_LIMIT]
                                        [--inspect-max-queued-jobs INSPECT_MAX_QUEUED_JOBS]
                                        [--inspect-max-running-jobs INSPECT_MAX_RUNNING_JOBS]
@@ -491,6 +578,14 @@ options:
   --inspect-on-calendar INSPECT_ON_CALENDAR
                         systemd OnCalendar expression for queue inspection
                         runs
+  --curation-on-calendar CURATION_ON_CALENDAR
+                        Optional systemd OnCalendar expression for scheduled
+                        memory curation enqueue
+  --curation-action {archive,prune}
+                        Action scheduled memory curation should enqueue
+  --curation-max-actions CURATION_MAX_ACTIONS
+                        Maximum candidates each scheduled memory curation run
+                        should touch
   --inspect-limit INSPECT_LIMIT
                         Number of recent rows included in each inspection run
   --inspect-max-queued-jobs INSPECT_MAX_QUEUED_JOBS

@@ -29,6 +29,7 @@ KNOWN_STATES = {
     "broken",
     "unknown",
 }
+CANONICAL_RUNTIME_PLATFORM = "openclaw"
 
 
 def compatibility_evidence_root(root: Path) -> Path:
@@ -334,3 +335,57 @@ def merge_declared_and_verified_support(
     merged["declared_support"] = declared
     merged["verified_support"] = verified
     return merged
+
+
+def collect_canonical_runtime_support(
+    skill_entry: dict,
+    evidence: list[dict],
+    *,
+    platform_contracts: dict | None = None,
+    compatibility_policy: dict | None = None,
+    now: datetime | None = None,
+    platform: str = CANONICAL_RUNTIME_PLATFORM,
+) -> dict:
+    platform = normalize_platform_name(platform) or CANONICAL_RUNTIME_PLATFORM
+    platform_contracts = platform_contracts or {}
+    compatibility_policy = compatibility_policy or {
+        "verified_support": {
+            "stale_after_days": 30,
+            "contract_newer_than_evidence_policy": "stale",
+            "missing_policy": "unknown",
+        }
+    }
+    now = now or datetime.now(timezone.utc)
+
+    matched = [
+        item
+        for item in evidence or []
+        if _skill_matches(skill_entry, item)
+        and normalize_platform_name(item.get("platform")) == platform
+    ]
+
+    verified_item = None
+    if matched:
+        latest = sorted(matched, key=_evidence_sort_key)[-1]
+        verified_item = {
+            "state": latest.get("state"),
+            "checked_at": latest.get("checked_at"),
+            "checker": latest.get("checker"),
+            "evidence_path": latest.get("evidence_path"),
+        }
+        note = latest.get("note")
+        if isinstance(note, str) and note:
+            verified_item["note"] = note
+
+    result = _freshness_payload(
+        platform=platform,
+        verified_item=verified_item or {"state": "unknown"},
+        contract=platform_contracts.get(platform),
+        policy=compatibility_policy,
+        now=now,
+    )
+    result["platform"] = platform
+    result["declared"] = platform in normalize_declared_support(
+        skill_entry.get("declared_support") or skill_entry.get("agent_compatible") or []
+    )
+    return result

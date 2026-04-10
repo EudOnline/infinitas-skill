@@ -6,6 +6,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+from infinitas_skill.release.service import collect_release_state
+from tests.helpers.signing_bootstrap import FIXTURE_NAME, prepare_repo, seed_platform_evidence
+
 ROOT = Path(__file__).resolve().parents[2]
 SKILL_NAME = "operate-infinitas-skill"
 MODE = "local-preflight"
@@ -215,6 +218,77 @@ def assert_release_signing_commands_route_through_package_modules() -> None:
         "infinitas_skill.release.attestation",
     ]:
         assert modules.get(module_name), f"release signing CLI did not route through {module_name}"
+
+
+def test_release_preflight_uses_openclaw_as_canonical_platform_gate() -> None:
+    tmpdir, repo = prepare_repo()
+    try:
+        seed_platform_evidence(
+            repo,
+            [
+                ("openclaw", "2026-04-08T12:00:00Z", "native"),
+                ("claude", "2026-01-01T00:00:00Z", "adapted"),
+                ("codex", "2026-01-01T00:00:00Z", "adapted"),
+            ],
+        )
+        state = collect_release_state(
+            repo / "skills" / "active" / FIXTURE_NAME,
+            mode="preflight",
+            root=repo,
+        )
+    finally:
+        if tmpdir.exists():
+            import shutil
+
+            shutil.rmtree(tmpdir)
+
+    platform_compatibility = (state.get("release") or {}).get("platform_compatibility") or {}
+    assert platform_compatibility.get("canonical_runtime_platform") == "openclaw"
+    assert platform_compatibility.get("blocking_platforms") == []
+    assert (
+        platform_compatibility.get("verified_support", {})
+        .get("openclaw", {})
+        .get("freshness_state")
+        == "fresh"
+    )
+    assert (
+        platform_compatibility.get("verified_support", {}).get("claude", {}).get("freshness_state")
+        == "stale"
+    )
+    assert (
+        platform_compatibility.get("verified_support", {}).get("codex", {}).get("freshness_state")
+        == "stale"
+    )
+    assert not any("platform verified support" in item for item in state.get("errors", []))
+
+
+def test_release_preflight_blocks_when_openclaw_runtime_is_stale() -> None:
+    tmpdir, repo = prepare_repo()
+    try:
+        seed_platform_evidence(
+            repo,
+            [
+                ("openclaw", "2026-03-12T12:02:00Z", "adapted"),
+                ("claude", "2026-04-08T12:01:00Z", "adapted"),
+                ("codex", "2026-04-08T12:00:00Z", "adapted"),
+            ],
+        )
+        state = collect_release_state(
+            repo / "skills" / "active" / FIXTURE_NAME,
+            mode="preflight",
+            root=repo,
+        )
+    finally:
+        if tmpdir.exists():
+            import shutil
+
+            shutil.rmtree(tmpdir)
+
+    platform_compatibility = (state.get("release") or {}).get("platform_compatibility") or {}
+    blocking_platforms = platform_compatibility.get("blocking_platforms") or []
+    assert platform_compatibility.get("canonical_runtime_platform") == "openclaw"
+    assert [item.get("platform") for item in blocking_platforms] == ["openclaw"]
+    assert any("platform verified support" in item for item in state.get("errors", []))
 
 
 def test_release_check_state_cli_returns_expected_json() -> None:

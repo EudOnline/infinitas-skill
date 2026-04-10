@@ -8,7 +8,11 @@ from server.db import get_db
 from server.modules.access.authn import AccessContext
 from server.modules.access.authz import require_any_scope
 from server.modules.exposure import service
-from server.modules.exposure.schemas import ExposureCreateRequest, ExposurePatchRequest, ExposureView
+from server.modules.exposure.schemas import (
+    ExposureCreateRequest,
+    ExposurePatchRequest,
+    ExposureView,
+)
 
 router = APIRouter(prefix="/api/v1", tags=["exposure"])
 
@@ -16,12 +20,18 @@ router = APIRouter(prefix="/api/v1", tags=["exposure"])
 def _require_exposure_principal(context: AccessContext) -> int:
     if context.principal is None:
         raise HTTPException(status_code=403, detail="exposure principal required")
-    if not require_any_scope(context, {"api:user", "exposure:write", "release:write", "authoring:write"}):
+    if not require_any_scope(
+        context, {"api:user", "exposure:write", "release:write", "authoring:write"}
+    ):
         raise HTTPException(status_code=403, detail="insufficient scope")
     return context.principal.id
 
 
-@router.post("/releases/{release_id}/exposures", response_model=ExposureView, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/releases/{release_id}/exposures",
+    response_model=ExposureView,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_exposure(
     release_id: int,
     payload: ExposureCreateRequest,
@@ -29,11 +39,13 @@ def create_exposure(
     db: Session = Depends(get_db),
 ):
     principal_id = _require_exposure_principal(context)
+    is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
         exposure = service.create_exposure(
             db,
             release_id=release_id,
             actor_principal_id=principal_id,
+            is_maintainer=is_maintainer,
             payload=payload,
         )
     except service.NotFoundError as exc:
@@ -53,11 +65,13 @@ def patch_exposure(
     db: Session = Depends(get_db),
 ):
     principal_id = _require_exposure_principal(context)
+    is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
         exposure = service.patch_exposure(
             db,
             exposure_id=exposure_id,
             actor_principal_id=principal_id,
+            is_maintainer=is_maintainer,
             payload=payload,
         )
     except service.NotFoundError as exc:
@@ -76,11 +90,13 @@ def activate_exposure(
     db: Session = Depends(get_db),
 ):
     principal_id = _require_exposure_principal(context)
+    is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
         exposure = service.activate_exposure(
             db,
             exposure_id=exposure_id,
             actor_principal_id=principal_id,
+            is_maintainer=is_maintainer,
         )
     except service.NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -98,11 +114,13 @@ def revoke_exposure(
     db: Session = Depends(get_db),
 ):
     principal_id = _require_exposure_principal(context)
+    is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
         exposure = service.revoke_exposure(
             db,
             exposure_id=exposure_id,
             actor_principal_id=principal_id,
+            is_maintainer=is_maintainer,
         )
     except service.NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

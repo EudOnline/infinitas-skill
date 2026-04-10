@@ -2,7 +2,7 @@
 audience: contributors, integrators, reviewers
 owner: repository maintainers
 source_of_truth: reference landing page
-last_reviewed: 2026-03-30
+last_reviewed: 2026-04-07
 status: maintained
 ---
 
@@ -17,6 +17,7 @@ Reference docs describe exact behavior, contracts, schemas, and maintained comma
 
 ## Contracts and schemas
 
+- [OpenClaw runtime contract](openclaw-runtime-contract.md)
 - [Compatibility contract](compatibility-contract.md)
 - [Compatibility matrix](compatibility-matrix.md)
 - [Installed skill integrity](installed-skill-integrity.md)

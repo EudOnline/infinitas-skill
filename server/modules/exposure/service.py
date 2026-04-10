@@ -35,9 +35,20 @@ def get_exposure_or_404(db: Session, exposure_id: int) -> Exposure:
     return exposure
 
 
-def _assert_release_owner(db: Session, release: Release, *, principal_id: int) -> None:
+def _assert_release_owner(
+    db: Session,
+    release: Release,
+    *,
+    principal_id: int,
+    is_maintainer: bool = False,
+) -> None:
     try:
-        release_service.assert_release_owner(db, release, principal_id=principal_id)
+        release_service.assert_release_owner(
+            db,
+            release,
+            principal_id=principal_id,
+            is_maintainer=is_maintainer,
+        )
     except release_service.NotFoundError as exc:
         raise NotFoundError(str(exc)) from exc
     except release_service.ForbiddenError as exc:
@@ -49,13 +60,19 @@ def create_exposure(
     *,
     release_id: int,
     actor_principal_id: int,
+    is_maintainer: bool = False,
     payload: ExposureCreateRequest,
 ) -> Exposure:
     try:
         release = release_service.get_release_or_404(db, release_id)
     except release_service.NotFoundError as exc:
         raise NotFoundError(str(exc)) from exc
-    _assert_release_owner(db, release, principal_id=actor_principal_id)
+    _assert_release_owner(
+        db,
+        release,
+        principal_id=actor_principal_id,
+        is_maintainer=is_maintainer,
+    )
     if release.state != "ready":
         raise ConflictError("only ready releases can be exposed")
 
@@ -136,11 +153,17 @@ def patch_exposure(
     *,
     exposure_id: int,
     actor_principal_id: int,
+    is_maintainer: bool = False,
     payload: ExposurePatchRequest,
 ) -> Exposure:
     exposure = get_exposure_or_404(db, exposure_id)
     release = release_service.get_release_or_404(db, exposure.release_id)
-    _assert_release_owner(db, release, principal_id=actor_principal_id)
+    _assert_release_owner(
+        db,
+        release,
+        principal_id=actor_principal_id,
+        is_maintainer=is_maintainer,
+    )
     if exposure.state in {"revoked", "rejected"}:
         raise ConflictError("closed exposure cannot be patched")
 
@@ -150,8 +173,14 @@ def patch_exposure(
     if payload.install_mode is not None:
         exposure.install_mode = payload.install_mode
     if payload.requested_review_mode is not None:
-        snapshot["requested_review_mode"] = payload.requested_review_mode
-        exposure.policy_snapshot_json = json.dumps(snapshot, ensure_ascii=False, sort_keys=True)
+        current_requested_review_mode = str(
+            snapshot.get("requested_review_mode") or "none"
+        ).strip().lower()
+        next_requested_review_mode = str(payload.requested_review_mode or "none").strip().lower()
+        if next_requested_review_mode != current_requested_review_mode:
+            raise ConflictError(
+                "requested_review_mode cannot be changed after exposure creation"
+            )
 
     db.add(exposure)
     db.commit()
@@ -159,10 +188,21 @@ def patch_exposure(
     return exposure
 
 
-def activate_exposure(db: Session, *, exposure_id: int, actor_principal_id: int) -> Exposure:
+def activate_exposure(
+    db: Session,
+    *,
+    exposure_id: int,
+    actor_principal_id: int,
+    is_maintainer: bool = False,
+) -> Exposure:
     exposure = get_exposure_or_404(db, exposure_id)
     release = release_service.get_release_or_404(db, exposure.release_id)
-    _assert_release_owner(db, release, principal_id=actor_principal_id)
+    _assert_release_owner(
+        db,
+        release,
+        principal_id=actor_principal_id,
+        is_maintainer=is_maintainer,
+    )
     if exposure.state == "active":
         return exposure
     if exposure.review_requirement == "blocking":
@@ -193,10 +233,21 @@ def activate_exposure(db: Session, *, exposure_id: int, actor_principal_id: int)
     return exposure
 
 
-def revoke_exposure(db: Session, *, exposure_id: int, actor_principal_id: int) -> Exposure:
+def revoke_exposure(
+    db: Session,
+    *,
+    exposure_id: int,
+    actor_principal_id: int,
+    is_maintainer: bool = False,
+) -> Exposure:
     exposure = get_exposure_or_404(db, exposure_id)
     release = release_service.get_release_or_404(db, exposure.release_id)
-    _assert_release_owner(db, release, principal_id=actor_principal_id)
+    _assert_release_owner(
+        db,
+        release,
+        principal_id=actor_principal_id,
+        is_maintainer=is_maintainer,
+    )
     if exposure.state == "revoked":
         return exposure
     exposure.state = "revoked"

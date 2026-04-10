@@ -1,4 +1,4 @@
-"""Platform compatibility checks and CLI helpers."""
+"""Platform contract freshness checks and CLI helpers."""
 
 import argparse
 import sys
@@ -138,7 +138,11 @@ def configure_platform_contracts_parser(parser: argparse.ArgumentParser) -> argp
 
 def build_platform_contracts_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog=prog, description="Check platform contract-watch documents."
+        prog=prog,
+        description=(
+            "Check platform contract-watch documents. OpenClaw is the maintained runtime gate; "
+            "other platform documents remain for migration and historical verification."
+        ),
     )
     return configure_platform_contracts_parser(parser)
 

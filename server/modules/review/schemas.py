@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -25,7 +26,7 @@ def _load_evidence(raw: str | None) -> dict:
 
 
 class ReviewCaseCreateRequest(BaseModel):
-    mode: str | None = None
+    mode: Literal["advisory", "blocking"] | None = None
 
 
 class ReviewDecisionCreateRequest(BaseModel):
@@ -68,7 +69,12 @@ class ReviewCaseView(BaseModel):
     decisions: list[ReviewDecisionView] = Field(default_factory=list)
 
     @classmethod
-    def from_model(cls, review_case: ReviewCase, *, decisions: list[ReviewDecisionView] | None = None) -> "ReviewCaseView":
+    def from_model(
+        cls,
+        review_case: ReviewCase,
+        *,
+        decisions: list[ReviewDecisionView] | None = None,
+    ) -> "ReviewCaseView":
         return cls(
             id=review_case.id,
             exposure_id=review_case.exposure_id,

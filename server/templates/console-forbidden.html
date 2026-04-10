@@ -2,12 +2,12 @@
 
 {% block body %}
 <section class="kawaii-card animate-in">
-  <div class="section-kicker">{{ '访问受限' if page_language == 'zh' else 'Access denied' }}</div>
-  <h2 class="page-title" style="margin-top: 0.45rem;">{{ denied_title }}</h2>
-  <p class="page-copy" style="max-width: 42rem; margin-top: 0.85rem;">{{ denied_body }}</p>
-  <div style="margin-top: 1rem;">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_access_denied'] }}</div>
+  <h2 class="font-display text-[clamp(1.5rem,3.5vw,2.2rem)] font-extrabold leading-tight text-kawaii-ink mb-2 mt-2">{{ denied_title }}</h2>
+  <p class="text-kawaii-ink-soft leading-relaxed max-w-prose max-w-[42rem] mt-3">{{ denied_body }}</p>
+  <div class="mt-4">
     <a class="kawaii-button kawaii-button--primary" href="{{ denied_home_href }}">
-      <span>🏠</span>
+      <span><span aria-hidden="true">🏠</span></span>
       <span>{{ denied_home_label }}</span>
     </a>
   </div>

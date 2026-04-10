@@ -73,13 +73,12 @@
           "use_when",
           "avoid_when",
           "runtime_assumptions",
-          "agent_compatible",
+          "runtime",
           "default_install_version",
           "latest_version",
           "available_versions",
           "entrypoints",
           "requires",
-          "interop",
           "versions"
         ],
         "properties": {
@@ -118,11 +117,212 @@
               "type": "string"
             }
           },
+          "runtime": {
+            "type": "object",
+            "required": [
+              "platform",
+              "source_mode",
+              "workspace_scope",
+              "workspace_targets",
+              "requires",
+              "plugin_capabilities",
+              "readiness"
+            ],
+            "properties": {
+              "platform": {
+                "type": "string",
+                "const": "openclaw"
+              },
+              "source_mode": {
+                "type": "string",
+                "minLength": 1
+              },
+              "workspace_scope": {
+                "type": "string",
+                "enum": [
+                  "workspace",
+                  "user"
+                ]
+              },
+              "workspace_targets": {
+                "type": "array",
+                "const": [
+                  "skills",
+                  ".agents/skills",
+                  "~/.agents/skills",
+                  "~/.openclaw/skills"
+                ]
+              },
+              "skill_precedence": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "install_targets": {
+                "type": "object",
+                "properties": {
+                  "workspace": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "shared": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "additionalProperties": true
+              },
+              "requires": {
+                "type": "object",
+                "properties": {
+                  "tools": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "bins": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "env": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "config": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "additionalProperties": true
+              },
+              "requires_tokens": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "requires_detail": {
+                "type": "object",
+                "properties": {
+                  "tools": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "bins": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "env": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "config": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "additionalProperties": true
+              },
+              "plugin_capabilities": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "background_tasks": {
+                "type": "object",
+                "properties": {
+                  "required": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": true
+              },
+              "subagents": {
+                "type": "object",
+                "properties": {
+                  "required": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": true
+              },
+              "readiness": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "ready",
+                  "supports_background_tasks",
+                  "supports_plugins",
+                  "supports_subagents"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "ready": {
+                    "type": "boolean"
+                  },
+                  "supports_background_tasks": {
+                    "type": "boolean"
+                  },
+                  "supports_plugins": {
+                    "type": "boolean"
+                  },
+                  "supports_subagents": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": true
+              },
+              "legacy_compatibility": {
+                "type": "object",
+                "properties": {
+                  "agent_compatible": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "agent_compatible_deprecated": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": true
+              }
+            },
+            "additionalProperties": true
+          },
           "agent_compatible": {
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "deprecated": true
           },
           "default_install_version": {
             "type": "string",
@@ -169,68 +369,6 @@
                 "items": {
                   "type": "string"
                 }
-              }
-            },
-            "additionalProperties": true
-          },
-          "interop": {
-            "type": "object",
-            "required": [
-              "openclaw"
-            ],
-            "properties": {
-              "openclaw": {
-                "type": "object",
-                "required": [
-                  "runtime_targets",
-                  "import_supported",
-                  "export_supported",
-                  "public_publish"
-                ],
-                "properties": {
-                  "runtime_targets": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "import_supported": {
-                    "type": "boolean",
-                    "const": true
-                  },
-                  "export_supported": {
-                    "type": "boolean",
-                    "const": true
-                  },
-                  "public_publish": {
-                    "type": "object",
-                    "required": [
-                      "clawhub"
-                    ],
-                    "properties": {
-                      "clawhub": {
-                        "type": "object",
-                        "required": [
-                          "supported",
-                          "default"
-                        ],
-                        "properties": {
-                          "supported": {
-                            "type": "boolean",
-                            "const": true
-                          },
-                          "default": {
-                            "type": "boolean",
-                            "const": false
-                          }
-                        },
-                        "additionalProperties": true
-                      }
-                    },
-                    "additionalProperties": true
-                  }
-                },
-                "additionalProperties": true
               }
             },
             "additionalProperties": true

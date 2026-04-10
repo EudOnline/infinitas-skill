@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from .agent_support import supports_target_agent
 from .decision_metadata import canonical_decision_metadata
 
 
@@ -48,14 +49,12 @@ def search_skills(
             haystacks = [item.get("name") or "", item.get("qualified_name") or ""]
             haystacks.extend(item.get("match_names") or [])
             if not any(
-                lowered_query in value.lower()
-                for value in haystacks
-                if isinstance(value, str)
+                lowered_query in value.lower() for value in haystacks if isinstance(value, str)
             ):
                 continue
         if publisher and item.get("publisher") != publisher:
             continue
-        if agent and agent not in (item.get("agent_compatible") or []):
+        if agent and not supports_target_agent(item, agent):
             continue
         if tag and tag not in (item.get("tags") or []):
             continue

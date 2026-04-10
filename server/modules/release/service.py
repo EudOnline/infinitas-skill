@@ -57,6 +57,26 @@ def get_artifacts_for_release(db: Session, release_id: int) -> list[Artifact]:
     ).all()
 
 
+def get_current_artifacts_for_release(db: Session, release: Release) -> list[Artifact]:
+    artifact_ids = {
+        int(artifact_id)
+        for artifact_id in (
+            release.bundle_artifact_id,
+            release.manifest_artifact_id,
+            release.provenance_artifact_id,
+            release.signature_artifact_id,
+        )
+        if artifact_id is not None
+    }
+    if not artifact_ids:
+        return []
+    return db.scalars(
+        select(Artifact)
+        .where(Artifact.id.in_(sorted(artifact_ids)))
+        .order_by(Artifact.kind.asc(), Artifact.id.asc())
+    ).all()
+
+
 def _get_skill_or_404(db: Session, skill_id: int) -> Skill:
     skill = db.get(Skill, skill_id)
     if skill is None:
@@ -82,7 +102,9 @@ def _get_sealed_draft_or_404(db: Session, draft_id: int | None) -> SkillDraft:
     return draft
 
 
-def assert_skill_owner(skill: Skill, *, principal_id: int) -> None:
+def assert_skill_owner(skill: Skill, *, principal_id: int, is_maintainer: bool = False) -> None:
+    if is_maintainer:
+        return
     if skill.namespace_id != principal_id:
         raise ForbiddenError("release namespace access denied")
 
@@ -92,10 +114,15 @@ def create_or_get_release(
     *,
     version_id: int,
     actor_principal_id: int,
+    is_maintainer: bool = False,
 ) -> tuple[Release, bool]:
     skill_version = get_skill_version_or_404(db, version_id)
     skill = _get_skill_or_404(db, skill_version.skill_id)
-    assert_skill_owner(skill, principal_id=actor_principal_id)
+    assert_skill_owner(
+        skill,
+        principal_id=actor_principal_id,
+        is_maintainer=is_maintainer,
+    )
     _get_sealed_draft_or_404(db, skill_version.created_from_draft_id)
 
     existing = db.scalar(
@@ -143,9 +170,19 @@ def get_release_snapshot(db: Session, release_id: int) -> ReleaseSnapshot:
     )
 
 
-def assert_release_owner(db: Session, release: Release, *, principal_id: int) -> None:
+def assert_release_owner(
+    db: Session,
+    release: Release,
+    *,
+    principal_id: int,
+    is_maintainer: bool = False,
+) -> None:
     snapshot = get_release_snapshot(db, release.id)
-    assert_skill_owner(snapshot.skill, principal_id=principal_id)
+    assert_skill_owner(
+        snapshot.skill,
+        principal_id=principal_id,
+        is_maintainer=is_maintainer,
+    )
 
 
 def upsert_artifact(

@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 
 from server.models import (
     AccessGrant,
-    Artifact,
     Exposure,
     Principal,
     Release,
@@ -18,6 +17,7 @@ from server.models import (
     SkillVersion,
 )
 from server.modules.access.authn import AccessContext
+from server.modules.release import service as release_service
 from server.ui.auth_state import principal_label
 from server.ui.console import build_lifecycle_console_context
 from server.ui.formatting import load_json_object
@@ -246,11 +246,7 @@ def build_release_detail_page_context(
     skill: Skill,
 ) -> dict[str, Any]:
     lang = resolve_language(request)
-    artifacts = db.scalars(
-        select(Artifact)
-        .where(Artifact.release_id == release.id)
-        .order_by(Artifact.kind.asc(), Artifact.id.asc())
-    ).all()
+    artifacts = release_service.get_current_artifacts_for_release(db, release)
     exposures = db.scalars(
         select(Exposure).where(Exposure.release_id == release.id).order_by(Exposure.id.desc())
     ).all()

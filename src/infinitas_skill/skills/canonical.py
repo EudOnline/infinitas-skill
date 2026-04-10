@@ -57,6 +57,65 @@ def parse_skill_frontmatter(skill_md_path: Path) -> dict:
     return fields
 
 
+def _split_frontmatter_list(value: object) -> list[str]:
+    if not isinstance(value, str) or not value.strip():
+        return []
+    result = []
+    for item in value.split(","):
+        token = item.strip()
+        if token and token not in result:
+            result.append(token)
+    return result
+
+
+def _legacy_openclaw_runtime(frontmatter: dict) -> dict:
+    runtime = {
+        "requires": _split_frontmatter_list(frontmatter.get("metadata.openclaw.requires")),
+        "license": frontmatter.get("metadata.openclaw.license"),
+    }
+    if runtime["requires"] or runtime["license"]:
+        return runtime
+    return {}
+
+
+def _runtime_verification_alias(verification: dict) -> dict:
+    verification = verification if isinstance(verification, dict) else {}
+    required_platforms = verification.get("required_platforms")
+    smoke_prompts = verification.get("smoke_prompts")
+    return {
+        "required_runtimes": list(required_platforms or [])
+        if isinstance(required_platforms, list)
+        else [],
+        "smoke_prompts": list(smoke_prompts or []) if isinstance(smoke_prompts, list) else [],
+        "required_platforms_legacy": list(required_platforms or [])
+        if isinstance(required_platforms, list)
+        else [],
+        "required_platforms_deprecated": True,
+    }
+
+
+def _normalized_verification_payload(verification: dict) -> dict:
+    verification = dict(verification or {}) if isinstance(verification, dict) else {}
+    required_runtimes = verification.get("required_runtimes")
+    required_platforms = verification.get("required_platforms")
+    if isinstance(required_runtimes, list):
+        normalized_required = list(required_runtimes)
+    elif isinstance(required_platforms, list):
+        normalized_required = list(required_platforms)
+    else:
+        normalized_required = []
+
+    smoke_prompts = verification.get("smoke_prompts")
+    normalized_smoke_prompts = list(smoke_prompts) if isinstance(smoke_prompts, list) else []
+
+    return {
+        "required_platforms": normalized_required,
+        "required_runtimes": list(normalized_required),
+        "smoke_prompts": normalized_smoke_prompts,
+        "required_platforms_deprecated": "required_platforms" in verification,
+    }
+
+
 def validate_canonical_payload(payload: dict) -> list[str]:
     errors = []
     _schema_version, schema_errors = validate_schema_version(payload)
@@ -85,11 +144,18 @@ def validate_canonical_payload(payload: dict) -> list[str]:
     if not isinstance(verification, dict):
         errors.append("verification must be an object")
     else:
+        required_runtimes = verification.get("required_runtimes")
         required_platforms = verification.get("required_platforms")
-        if not isinstance(required_platforms, list) or not all(
-            isinstance(item, str) for item in required_platforms
+        if isinstance(required_runtimes, list):
+            required_runtime_values = required_runtimes
+            required_runtime_field = "verification.required_runtimes"
+        else:
+            required_runtime_values = required_platforms
+            required_runtime_field = "verification.required_platforms"
+        if not isinstance(required_runtime_values, list) or not all(
+            isinstance(item, str) for item in required_runtime_values
         ):
-            errors.append("verification.required_platforms must be an array of strings")
+            errors.append(f"{required_runtime_field} must be an array of strings")
         smoke_prompts = verification.get("smoke_prompts")
         if smoke_prompts is not None and (
             not isinstance(smoke_prompts, list)
@@ -102,6 +168,9 @@ def validate_canonical_payload(payload: dict) -> list[str]:
     degrades_to = payload.get("degrades_to")
     if degrades_to is not None and not isinstance(degrades_to, dict):
         errors.append("degrades_to must be an object when present")
+    openclaw_runtime = payload.get("openclaw_runtime")
+    if openclaw_runtime is not None and not isinstance(openclaw_runtime, dict):
+        errors.append("openclaw_runtime must be an object when present")
     return errors
 
 
@@ -147,8 +216,12 @@ def load_canonical_skill(path: Path) -> dict:
         },
         "platform_overrides": _load_platform_overrides(skill_dir),
         "distribution": dict(payload.get("distribution") or {}),
-        "verification": dict(payload.get("verification") or {}),
+        "verification": _normalized_verification_payload(payload.get("verification") or {}),
+        "runtime_verification": _runtime_verification_alias(
+            _normalized_verification_payload(payload.get("verification") or {})
+        ),
         "degrades_to": dict(payload.get("degrades_to") or {}),
+        "openclaw_runtime": dict(payload.get("openclaw_runtime") or {}),
         "source_mode": "canonical",
         "source_dir": str(skill_dir),
         "payload_path": str(payload_path),
@@ -172,6 +245,16 @@ def load_legacy_skill(path: Path) -> dict:
     name = meta.get("name")
     if not isinstance(name, str) or not name.strip():
         raise CanonicalSkillError("legacy skill metadata must define name")
+    openclaw_runtime = _legacy_openclaw_runtime(frontmatter)
+    source_mode = "legacy-migration" if openclaw_runtime else "legacy"
+    verification = _normalized_verification_payload(
+        {
+            "required_platforms": list(meta.get("agent_compatible") or []),
+            "smoke_prompts": [((meta.get("tests") or {}).get("smoke"))]
+            if ((meta.get("tests") or {}).get("smoke"))
+            else [],
+        }
+    )
     return {
         "schema_version": meta.get("schema_version", 1),
         "name": name,
@@ -186,14 +269,11 @@ def load_legacy_skill(path: Path) -> dict:
         },
         "platform_overrides": {},
         "distribution": dict(meta.get("distribution") or {}),
-        "verification": {
-            "required_platforms": list(meta.get("agent_compatible") or []),
-            "smoke_prompts": [((meta.get("tests") or {}).get("smoke"))]
-            if ((meta.get("tests") or {}).get("smoke"))
-            else [],
-        },
+        "verification": verification,
+        "runtime_verification": _runtime_verification_alias(verification),
         "degrades_to": {},
-        "source_mode": "legacy",
+        "openclaw_runtime": openclaw_runtime,
+        "source_mode": source_mode,
         "source_dir": str(skill_dir),
         "payload_path": str(meta_path),
     }

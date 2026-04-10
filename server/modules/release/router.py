@@ -42,11 +42,13 @@ def create_release(
     db: Session = Depends(get_db),
 ):
     principal_id, user = _require_release_context(context)
+    is_maintainer = user.role == "maintainer"
     try:
         release, created = service.create_or_get_release(
             db,
             version_id=version_id,
             actor_principal_id=principal_id,
+            is_maintainer=is_maintainer,
         )
     except service.NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -104,9 +106,15 @@ def get_release(
     db: Session = Depends(get_db),
 ):
     principal_id, _ = _require_release_context(context)
+    is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
         release = service.get_release_or_404(db, release_id)
-        service.assert_release_owner(db, release, principal_id=principal_id)
+        service.assert_release_owner(
+            db,
+            release,
+            principal_id=principal_id,
+            is_maintainer=is_maintainer,
+        )
     except service.NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except service.ForbiddenError as exc:
@@ -121,15 +129,21 @@ def list_release_artifacts(
     db: Session = Depends(get_db),
 ):
     principal_id, _ = _require_release_context(context)
+    is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
         release = service.get_release_or_404(db, release_id)
-        service.assert_release_owner(db, release, principal_id=principal_id)
+        service.assert_release_owner(
+            db,
+            release,
+            principal_id=principal_id,
+            is_maintainer=is_maintainer,
+        )
     except service.NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except service.ForbiddenError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
 
-    artifacts = service.get_artifacts_for_release(db, release_id)
+    artifacts = service.get_current_artifacts_for_release(db, release)
     return ArtifactListView(
         items=[ArtifactView.from_model(artifact) for artifact in artifacts],
         total=len(artifacts),

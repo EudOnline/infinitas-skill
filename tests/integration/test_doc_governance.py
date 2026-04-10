@@ -34,11 +34,7 @@ def test_doc_governance_rejects_retired_cli_wrappers_in_maintained_ops_docs(
 
     _write(
         fake_root / "README.md",
-        "# repo\n\n"
-        "## Maintained surfaces\n\n"
-        "package-owned:\n"
-        "runtime-owned:\n"
-        "automation-owned:\n",
+        "# repo\n\n## Maintained surfaces\n\npackage-owned:\nruntime-owned:\nautomation-owned:\n",
     )
     _write(
         fake_docs / "README.md",
@@ -80,7 +76,9 @@ def test_doc_governance_rejects_retired_cli_wrappers_in_maintained_ops_docs(
     monkeypatch.setattr(module, "ROOT", fake_root)
     monkeypatch.setattr(module, "DOCS_ROOT", fake_docs)
     monkeypatch.setattr(module, "SECTION_LANDINGS", {"ops": fake_ops / "README.md"})
-    monkeypatch.setattr(module, "GLOBAL_INDEXES", [fake_root / "README.md", fake_docs / "README.md"])
+    monkeypatch.setattr(
+        module, "GLOBAL_INDEXES", [fake_root / "README.md", fake_docs / "README.md"]
+    )
     monkeypatch.setattr(module, "LEGACY_ROOT_ALLOWLIST", {"README.md"})
 
     with pytest.raises(SystemExit):
@@ -88,3 +86,37 @@ def test_doc_governance_rejects_retired_cli_wrappers_in_maintained_ops_docs(
 
     captured = capsys.readouterr()
     assert "scripts/test-infinitas-cli-policy.py" in captured.err
+
+
+def test_openclaw_runtime_docs_are_canonical_entrypoints() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    compatibility_contract = (ROOT / "docs" / "reference" / "compatibility-contract.md").read_text(
+        encoding="utf-8"
+    )
+    compatibility_matrix = (ROOT / "docs" / "reference" / "compatibility-matrix.md").read_text(
+        encoding="utf-8"
+    )
+
+    adr_path = ROOT / "docs" / "adr" / "0003-openclaw-runtime-canonical.md"
+    runtime_contract_path = ROOT / "docs" / "reference" / "openclaw-runtime-contract.md"
+
+    assert adr_path.exists()
+    assert runtime_contract_path.exists()
+    assert "OpenClaw is now the canonical agent runtime" in readme
+    assert "`agent_compatible` as legacy migration metadata" in compatibility_contract
+    assert "legacy and transitional" in compatibility_matrix
+
+
+def test_openclaw_canonical_runtime_docs_preserve_backend_control_plane_boundary() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    docs_readme = (ROOT / "docs" / "README.md").read_text(encoding="utf-8")
+    reference_readme = (ROOT / "docs" / "reference" / "README.md").read_text(encoding="utf-8")
+    compatibility_matrix = (ROOT / "docs" / "reference" / "compatibility-matrix.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "registry/release/install backend remains the durable control plane" in readme
+    assert "adr/0003-openclaw-runtime-canonical.md" in docs_readme
+    assert "reference/openclaw-runtime-contract.md" in docs_readme
+    assert "openclaw-runtime-contract.md" in reference_readme
+    assert "legacy and transitional" in compatibility_matrix

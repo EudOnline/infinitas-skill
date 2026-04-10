@@ -28,7 +28,14 @@ Memory stays advisory only.
 - inspect may show memory hints about likely pitfalls or successful patterns
 - lifecycle hooks may write experience summaries after successful core transactions
 - memory cannot auto-approve, auto-publish, auto-activate, or auto-install anything
-- memory cannot override compatibility, access control, review policy, or immutable release rules
+- memory cannot override OpenClaw runtime readiness, install target selection, access control, review policy, or immutable release rules
+
+Maintained memory language is now framed around OpenClaw runtime state:
+
+- workspace context such as the active workspace root and workspace-scoped skill target
+- session context such as the current OpenClaw session or background task run
+- task capability context such as background-task, plugin, sub-agent, or workspace-state needs
+- advisory boundaries against release, review, access, and install truth owned by the control plane
 
 ## Data Types
 
@@ -38,7 +45,7 @@ Memory stays advisory only.
 
 `task_context`
 
-- short-lived task or workflow context such as install intent, inspect intent, or a repeated operator goal
+- short-lived OpenClaw task or workflow context such as install intent, inspect intent, workspace target intent, or a repeated operator goal tied to one runtime session
 
 `experience`
 
@@ -138,6 +145,7 @@ Recommendation reads:
 - `src/infinitas_skill/discovery/recommendation.py`
 - memory types: `user_preference`, `task_context`, `experience`
 - effect: bounded soft boost after compatibility gating
+- query framing: OpenClaw workspace root, session ref, task capability hints, and runtime capability hints are passed as advisory context when available
 - ordering: provider score, policy confidence, memory type, and TTL now combine into one advisory quality score
 - retrieval-time curation now suppresses duplicate and very low-signal short-lived memories before ranking
 
@@ -146,6 +154,7 @@ Inspect reads:
 - `src/infinitas_skill/discovery/inspect.py`
 - memory types: `task_context`, `experience`
 - effect: compact advisory hints only
+- query framing: OpenClaw workspace root, session ref, skill ref, and runtime capability hints are passed as advisory context when available
 - ordering: hints are trimmed and sorted by the same advisory quality score as recommendation
 - the payload now includes a `curation_summary` block so operators and tests can see how many memories were kept or suppressed
 
@@ -155,6 +164,12 @@ Optional retrieval audit:
 - those entrypoints will append local `memory_retrieval` audit events summarizing whether memory was used, matched, disabled, or errored
 - retrieval audit now also stores a coarse `effect` classification such as `helpful`, `restrained`, `no_signal`, `disabled`, or `error`
 - this keeps retrieval-side usefulness traceable from local history without making Memo0 the source of truth
+
+OpenClaw runtime context should improve retrieval relevance, but it still cannot change:
+
+- release/install truth resolved from the local registry and artifact state
+- review or access decisions owned by hosted control-plane policy
+- background-task scheduling truth owned by the server job queue and service timers
 
 ## Evaluation Matrix
 
@@ -201,6 +216,12 @@ Lifecycle writeback is best-effort and post-commit.
 - review approved or rejected
 
 Writeback emits `memory_writeback` audit events so operators can see what happened even when the provider is disabled or failing.
+
+Scheduled maintenance is still a hosted control-plane concern, but the maintained vocabulary now matches OpenClaw runtime semantics:
+
+- timer-driven memory curation is treated as background-task maintenance for runtime memory hygiene
+- those timers enqueue hosted jobs; they do not make the control plane depend on an OpenClaw runtime process
+- actor refs and operator messaging should make that distinction explicit
 
 Operators can inspect recent writeback health with:
 

@@ -26,7 +26,10 @@ from infinitas_skill.release.signing_bootstrap import (
     public_key_from_key_path,
     signer_identities_for_key,
 )
+from server.artifact_ops import sha256_bytes
 from server.modules.authoring.service import load_metadata
+from infinitas_skill.release.service import collect_release_state
+from infinitas_skill.release.release_resolution import resolve_skill
 from server.modules.release import service
 from server.modules.release.models import Artifact, Release
 from server.modules.release.storage import ArtifactStorage, build_artifact_storage
@@ -471,6 +474,20 @@ def materialize_release(
         sha256=stored_signature.sha256,
         size_bytes=stored_signature.size_bytes,
     )
+    try:
+        skill_dir = resolve_skill(repo_root, skill_slug)
+        release_state = collect_release_state(skill_dir, mode="stable-release", root=repo_root)
+        platform_compatibility = release_state.get("release", {}).get("platform_compatibility", {})
+    except Exception:
+        platform_compatibility = {
+            "canonical_runtime_platform": "openclaw",
+            "canonical_runtime": {},
+            "blocking_platforms": [],
+        }
+    release.platform_compatibility_json = json.dumps(platform_compatibility, ensure_ascii=False)
+    db.add(release)
+    db.flush()
+
     service.mark_release_ready(
         db,
         release=release,
@@ -538,4 +555,73 @@ def _existing_materialization_is_current(
         )
     except DistributionError:
         return False
-    return bool(verified.get("verified"))
+    if not bool(verified.get("verified")):
+        return False
+    return _artifact_rows_match_materialized_files(
+        release=release,
+        existing_artifacts=existing_artifacts,
+        artifact_root=artifact_root,
+        publisher=publisher,
+        skill_slug=skill_slug,
+        version=version,
+    )
+
+
+def _artifact_rows_match_materialized_files(
+    *,
+    release: Release,
+    existing_artifacts: list[Artifact],
+    artifact_root: Path,
+    publisher: str,
+    skill_slug: str,
+    version: str,
+) -> bool:
+    paths_by_kind = {
+        "bundle": (
+            Path(artifact_root)
+            / "skills"
+            / publisher
+            / skill_slug
+            / version
+            / "skill.tar.gz"
+        ),
+        "manifest": (
+            Path(artifact_root)
+            / "skills"
+            / publisher
+            / skill_slug
+            / version
+            / "manifest.json"
+        ),
+        "provenance": (
+            Path(artifact_root)
+            / "provenance"
+            / f"{publisher}--{skill_slug}-{version}.json"
+        ),
+        "signature": Path(artifact_root)
+        / "provenance"
+        / f"{publisher}--{skill_slug}-{version}.json.ssig",
+    }
+    release_artifact_ids = {
+        "bundle": release.bundle_artifact_id,
+        "manifest": release.manifest_artifact_id,
+        "provenance": release.provenance_artifact_id,
+        "signature": release.signature_artifact_id,
+    }
+    artifacts_by_id = {int(item.id): item for item in existing_artifacts}
+
+    for kind, path in paths_by_kind.items():
+        artifact_id = release_artifact_ids.get(kind)
+        if artifact_id is None:
+            return False
+        artifact = artifacts_by_id.get(int(artifact_id))
+        if artifact is None or str(artifact.kind) != kind:
+            return False
+        if not path.is_file():
+            return False
+        raw = path.read_bytes()
+        if sha256_bytes(raw) != artifact.sha256:
+            return False
+        if len(raw) != int(artifact.size_bytes or 0):
+            return False
+    return True

@@ -10,6 +10,11 @@ from infinitas_skill.install.planning import (
     run_check_install_target,
     run_resolve_install_plan,
 )
+from infinitas_skill.openclaw.cli import (
+    OPENCLAW_PARSER_DESCRIPTION,
+    OPENCLAW_TOP_LEVEL_HELP,
+    configure_openclaw_parser,
+)
 from infinitas_skill.policy.cli import (
     POLICY_PARSER_DESCRIPTION,
     POLICY_TOP_LEVEL_HELP,
@@ -104,6 +109,13 @@ def build_parser() -> argparse.ArgumentParser:
     install_sub = install.add_subparsers(dest='install_command')
     _build_install_resolve_plan_parser(install_sub)
     _build_install_check_target_parser(install_sub)
+
+    openclaw = top.add_parser(
+        'openclaw',
+        help=OPENCLAW_TOP_LEVEL_HELP,
+        description=OPENCLAW_PARSER_DESCRIPTION,
+    )
+    configure_openclaw_parser(openclaw)
 
     registry = top.add_parser(
         'registry',

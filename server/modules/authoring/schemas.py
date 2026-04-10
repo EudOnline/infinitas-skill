@@ -26,9 +26,16 @@ def _load_metadata(raw: str | None) -> dict:
     return payload
 
 
+SLUG_PATTERN = r"^[a-z0-9]+(?:-[a-z0-9]+)*$"
+SEMVER_PATTERN = (
+    r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
+    r"(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$"
+)
+
+
 class SkillCreateRequest(BaseModel):
-    slug: str
-    display_name: str
+    slug: str = Field(min_length=1, max_length=200, pattern=SLUG_PATTERN)
+    display_name: str = Field(min_length=1, max_length=200)
     summary: str = ""
     default_visibility_profile: str | None = None
 
@@ -97,7 +104,7 @@ class SkillDraftView(BaseModel):
 
 
 class SkillDraftSealRequest(BaseModel):
-    version: str
+    version: str = Field(min_length=1, max_length=64, pattern=SEMVER_PATTERN)
 
 
 class SkillVersionView(BaseModel):

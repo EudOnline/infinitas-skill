@@ -19,6 +19,27 @@ from .recommendation_ranking import (
 from .resolver import load_discovery_index
 
 
+def _runtime_summary(item: dict[str, Any]) -> tuple[dict[str, Any], str, list[str]]:
+    runtime = dict(item.get("runtime") or {})
+    readiness = dict(runtime.get("readiness") or {})
+    readiness_status = readiness.get("status")
+    if not isinstance(readiness_status, str) or not readiness_status.strip():
+        readiness_status = "ready" if readiness.get("ready") is True else "unknown"
+    install_targets = runtime.get("install_targets")
+    install_targets = install_targets if isinstance(install_targets, dict) else {}
+    workspace_targets = list(install_targets.get("workspace") or [])
+    if not workspace_targets:
+        workspace_targets = [
+            target
+            for target in list(runtime.get("workspace_targets") or [])
+            if isinstance(target, str)
+            and target
+            and not target.startswith("~/")
+            and not Path(target).is_absolute()
+        ]
+    return runtime, readiness_status, workspace_targets
+
+
 def recommend_skills(
     root: Path,
     task: str,
@@ -50,14 +71,24 @@ def recommend_skills(
     for item in payload.get("skills") or []:
         if not isinstance(item, dict):
             continue
+        runtime, runtime_readiness, workspace_targets = _runtime_summary(item)
+        scoring_item = dict(item)
+        if target_agent == "openclaw":
+            legacy = list(scoring_item.get("agent_compatible") or [])
+            if (runtime.get("platform") == "openclaw") and (
+                (runtime.get("readiness") or {}).get("ready") is True
+            ):
+                if "openclaw" not in legacy:
+                    legacy.append("openclaw")
+            scoring_item["agent_compatible"] = legacy
         score, factors = score_item(
-            item,
+            scoring_item,
             task_tokens=task_tokens,
             target_agent=target_agent,
             default_registry=default_registry,
         )
         memory_signals = calculate_memory_signals(
-            item,
+            scoring_item,
             factors=factors,
             records=memory_records,
         )
@@ -86,9 +117,17 @@ def recommend_skills(
                     "maturity": decision_metadata["maturity"],
                     "quality_score": decision_metadata["quality_score"],
                     "score": score,
-                    "recommendation_reason": recommendation_reason(item, factors),
+                    "recommendation_reason": recommendation_reason(scoring_item, factors),
                     "ranking_factors": factors,
                     "memory_signals": memory_signals,
+                    "runtime": runtime,
+                    "runtime_readiness": runtime_readiness,
+                    "workspace_targets": workspace_targets,
+                    "plugin_needs": {"required": dict(runtime.get("plugin_capabilities") or {})},
+                    "background_tasks": dict(
+                        runtime.get("background_tasks") or {"required": False}
+                    ),
+                    "subagents": dict(runtime.get("subagents") or {"required": False}),
                 },
             )
         )

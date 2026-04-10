@@ -93,7 +93,10 @@ def collect_release_state(skill_dir, mode="stable-release", root=None):
     require_fresh_platform_support = mode in {"preflight", "stable-release"}
     releaser_identity = resolve_releaser_identity(root)
     platform_compatibility = {
+        "canonical_runtime_platform": "openclaw",
+        "canonical_runtime": {},
         "declared_support": meta.get("agent_compatible") or [],
+        "historical_platforms": [],
         "verified_support": {},
         "blocking_platforms": [],
         "policy": {},
@@ -206,11 +209,16 @@ def collect_release_state(skill_dir, mode="stable-release", root=None):
                 "id": "platform-verified-support",
                 "rule": (
                     "preflight and stable releases require fresh verified support "
-                    "for declared platforms"
+                    "for the canonical OpenClaw runtime"
                 ),
                 "value": {
                     "enforced": require_fresh_platform_support,
+                    "canonical_runtime_platform": platform_compatibility.get(
+                        "canonical_runtime_platform"
+                    ),
+                    "canonical_runtime": platform_compatibility.get("canonical_runtime", {}),
                     "declared_support": platform_compatibility.get("declared_support", []),
+                    "historical_platforms": platform_compatibility.get("historical_platforms", []),
                     "blocking_platforms": platform_compatibility.get("blocking_platforms", []),
                     "evaluation_error": platform_compatibility.get("evaluation_error"),
                 },

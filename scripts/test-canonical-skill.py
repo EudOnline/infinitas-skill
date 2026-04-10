@@ -88,10 +88,36 @@ def scaffold_canonical_skill(repo: Path):
     return skill_dir
 
 
+def scaffold_legacy_openclaw_skill(repo: Path):
+    skill_dir = repo / 'skills-src' / 'legacy-openclaw-skill'
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    write_json(
+        skill_dir / '_meta.json',
+        {
+            'schema_version': 1,
+            'name': 'legacy-openclaw-skill',
+            'summary': 'Legacy OpenClaw migration fixture',
+            'distribution': {},
+            'tests': {},
+        },
+    )
+    (skill_dir / 'SKILL.md').write_text(
+        '---\n'
+        'name: Legacy OpenClaw Skill\n'
+        'description: Legacy OpenClaw migration fixture.\n'
+        'metadata.openclaw.requires: shell, file-access\n'
+        '---\n\n'
+        '# Legacy OpenClaw Skill\n',
+        encoding='utf-8',
+    )
+    return skill_dir
+
+
 def main():
     tmpdir, repo = prepare_repo()
     try:
         canonical_dir = scaffold_canonical_skill(repo)
+        legacy_openclaw_dir = scaffold_legacy_openclaw_skill(repo)
         module = load_module(repo / 'scripts' / 'canonical_skill_lib.py')
 
         canonical = module.load_skill_source(canonical_dir)
@@ -111,6 +137,13 @@ def main():
         legacy_path = Path(legacy.get('instructions_body_path') or '')
         if legacy_path.name != 'SKILL.md':
             fail(f'expected legacy instructions body path to end with SKILL.md, got {legacy_path!r}')
+
+        legacy_openclaw = module.load_skill_source(legacy_openclaw_dir)
+        if legacy_openclaw.get('source_mode') != 'legacy-migration':
+            fail(
+                "expected OpenClaw legacy source_mode 'legacy-migration', "
+                f"got {legacy_openclaw.get('source_mode')!r}"
+            )
 
         result = run([sys.executable, str(repo / 'scripts' / 'validate-registry.py'), 'skills-src/demo-skill'], cwd=repo)
         combined = result.stdout + result.stderr

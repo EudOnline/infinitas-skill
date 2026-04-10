@@ -2,13 +2,15 @@
 audience: operators and release maintainers
 owner: repository maintainers
 source_of_truth: platform drift playbook
-last_reviewed: 2026-03-30
+last_reviewed: 2026-04-08
 status: maintained
 ---
 
 # Platform Drift Playbook
 
 Codex, Claude Code, and OpenClaw will keep changing their runtime assumptions, export formats, and recommended repository layouts. This playbook is the maintenance loop for keeping `infinitas-skill` aligned with those upstream shifts without letting stale claims leak into discovery or release output.
+
+OpenClaw is the maintained runtime contract. Codex and Claude evidence still matters for migration and historical compatibility reporting, but release blocking now follows canonical OpenClaw freshness instead of triple-runtime parity.
 
 ## 1. Verify upstream docs first
 
@@ -63,7 +65,11 @@ If the platform change could affect whether a skill still works, refresh verifie
 uv run python3 scripts/record-verified-support.py <skill> --platform codex --platform claude --platform openclaw --build-catalog
 ```
 
-You do not need to refresh every platform every time, but you do need fresh evidence for every platform the skill still declares in `_meta.json.agent_compatible` before a stable release can pass `preflight` or `stable-release`.
+Operational rule:
+
+- Fresh OpenClaw evidence is required before `uv run infinitas release check-state <skill> --mode preflight` or `--mode stable-release` can pass.
+- Codex and Claude evidence should be refreshed when you still want to keep historical compatibility claims accurate in discovery, audit, or migration output.
+- `_meta.json.agent_compatible` remains legacy declaration metadata. It is no longer the maintained release gate by itself.
 
 ## 5. Interpret stale evidence in discovery and release flows
 
@@ -76,8 +82,9 @@ The repository now treats compatibility freshness as a first-class signal:
 Operational meaning:
 
 - Discovery and recommendation surfaces can still show stale evidence, but they rank fresh verified support higher than stale or declared-only claims.
-- Release readiness blocks when a declared platform is `stale`, `unknown`, `blocked`, `broken`, or `unsupported`.
-- `uv run infinitas release check-state <name> --mode preflight --json` exposes the blocking details in `release.platform_compatibility`.
+- Release readiness blocks when the canonical OpenClaw runtime is `stale`, `unknown`, `blocked`, `broken`, or `unsupported`.
+- Historical Codex and Claude evidence remains visible in `release.platform_compatibility.verified_support`, but it is non-blocking release context.
+- `uv run infinitas release check-state <name> --mode preflight --json` exposes the blocking details in `release.platform_compatibility.canonical_runtime` and `release.platform_compatibility.blocking_platforms`.
 
 ## 6. Steady-state maintenance loop
 

@@ -1,4 +1,8 @@
-"""Platform render helpers for skills."""
+"""Platform render helpers for migration/export flows.
+
+OpenClaw runtime semantics are owned by ``infinitas_skill.openclaw``.
+This module remains for cross-platform export compatibility during migration.
+"""
 
 from __future__ import annotations
 
@@ -79,7 +83,15 @@ def render_skill_markdown(source: dict, platform: str, profile: dict) -> str:
         else {}
     )
     if platform == "openclaw":
-        requires = platform_overrides.get("requires") or []
+        # OpenClaw rendering here is migration/export support, not runtime truth.
+        runtime = (
+            source.get("openclaw_runtime")
+            if isinstance(source.get("openclaw_runtime"), dict)
+            else {}
+        )
+        requires = runtime.get("requires") if isinstance(runtime.get("requires"), list) else []
+        if not requires:
+            requires = platform_overrides.get("requires") or []
         if not requires:
             requires = [
                 intent.replace("_", "-")
@@ -87,9 +99,9 @@ def render_skill_markdown(source: dict, platform: str, profile: dict) -> str:
             ]
         rendered_requires = ", ".join(requires) if requires else "none"
         frontmatter.append(f"metadata.openclaw.requires: {rendered_requires}")
-        license_value = platform_overrides.get("license") or (
-            source.get("distribution") or {}
-        ).get("license")
+        license_value = platform_overrides.get("license") or (source.get("distribution") or {}).get(
+            "license"
+        )
         if license_value:
             frontmatter.append(f"metadata.openclaw.license: {license_value}")
     frontmatter.append("---")
@@ -154,7 +166,7 @@ def render_skill(source: dict, platform: str, out_dir: Path, profile: dict) -> d
         shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     files = []
-    if source.get("source_mode") == "legacy":
+    if source.get("source_mode") in {"legacy", "legacy-migration"}:
         files.extend(_copy_legacy_entries(source_dir, out_dir))
     else:
         for dirname in ["references", "assets", "scripts"]:

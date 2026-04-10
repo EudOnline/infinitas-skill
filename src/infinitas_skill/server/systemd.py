@@ -32,7 +32,7 @@ def render_env_example(args: argparse.Namespace) -> str:
             'INFINITAS_SERVER_MEMORY_CURATION_APPLY=1',
             'INFINITAS_SERVER_MEMORY_CURATION_LIMIT=50',
             f'INFINITAS_SERVER_MEMORY_CURATION_MAX_ACTIONS={args.curation_max_actions}',
-            'INFINITAS_SERVER_MEMORY_CURATION_ACTOR_REF=system:memory-curation:schedule',
+            'INFINITAS_SERVER_MEMORY_CURATION_ACTOR_REF=system:openclaw-background-task:memory-curation',
             '',
         ]
     )
@@ -217,7 +217,7 @@ WantedBy=timers.target
 def render_memory_curation_service(args: argparse.Namespace) -> str:
     database_url = args.database_url or f'sqlite:///{args.repo_root.rstrip("/")}/data/server.db'
     return f"""[Unit]
-Description=Infinitas Hosted Registry Memory Curation Enqueue
+Description=Infinitas OpenClaw Runtime Memory Maintenance Background Task Enqueue
 After=network-online.target
 
 [Service]
@@ -232,7 +232,7 @@ ExecStart={args.python_bin} -m infinitas_skill.cli.main server memory-curation -
 
 def render_memory_curation_timer(args: argparse.Namespace) -> str:
     return f"""[Unit]
-Description=Schedule Infinitas Hosted Registry memory curation
+Description=Schedule Infinitas OpenClaw runtime memory maintenance
 
 [Timer]
 OnCalendar={args.curation_on_calendar}

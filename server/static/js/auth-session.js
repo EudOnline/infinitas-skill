@@ -31,7 +31,7 @@
     }
     let template = uiText(key, fallback);
     Object.entries(replacements).forEach(([name, value]) => {
-      template = template.replace(`{${name}}`, String(value));
+      template = template.replaceAll(`{${name}}`, String(value));
     });
     return template;
   }
@@ -88,7 +88,10 @@
 
   async function requestSessionCleanup(logLabel) {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      const res = await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+      if (!res.ok) {
+        console.error(logLabel, res.status, res.statusText);
+      }
     } catch (error) {
       console.error(logLabel, error);
     } finally {
@@ -112,20 +115,285 @@
     return null;
   }
 
+  function createAuthModalController(options) {
+    const {
+      prefix = '',
+      modalTitle = uiText('auth_modal_title', 'Authentication'),
+      onLoginSuccess = null,
+      extraBindEvents = null,
+    } = options || {};
+
+    const ids = {
+      trigger: prefix + 'open-auth-modal-btn',
+      modal: prefix + 'auth-modal',
+      backdrop: prefix + 'auth-modal-backdrop',
+      close: prefix + 'auth-modal-close',
+      cancel: prefix + 'cancel-auth-btn',
+      form: prefix + 'auth-form',
+      input: prefix + 'token-input',
+      toggle: prefix + 'token-toggle',
+      error: prefix + 'auth-error',
+      errorMessage: prefix + 'error-message',
+      hint: prefix + 'token-hint',
+      loginBtn: prefix + 'login-btn',
+    };
+
+    let isOpen = false;
+    let pendingRedirect = null;
+    let errorTimeout = null;
+
+    const dom = {};
+
+    function getElement(id) {
+      return document.getElementById(id);
+    }
+
+    function cacheElements() {
+      Object.keys(ids).forEach((key) => {
+        dom[key] = getElement(ids[key]);
+      });
+    }
+
+    function showError(message) {
+      if (!dom.errorMessage || !dom.error) return;
+      dom.errorMessage.textContent = message;
+      dom.error.hidden = false;
+      if (errorTimeout) clearTimeout(errorTimeout);
+      errorTimeout = setTimeout(() => {
+        if (dom.error) dom.error.hidden = true;
+        errorTimeout = null;
+      }, 5000);
+    }
+
+    function hideError() {
+      if (!dom.error) return;
+      dom.error.hidden = true;
+      if (errorTimeout) {
+        clearTimeout(errorTimeout);
+        errorTimeout = null;
+      }
+    }
+
+    function togglePasswordVisibility() {
+      if (!dom.input || !dom.toggle) return;
+      const isPassword = dom.input.type === 'password';
+      dom.input.type = isPassword ? 'text' : 'password';
+      const span = dom.toggle.querySelector('span');
+      if (span) span.textContent = isPassword ? '🙈' : '👁️';
+      dom.toggle.setAttribute('aria-label', isPassword ?
+        uiText('hide_password', '隐藏密码') :
+        uiText('show_password', '显示密码'));
+    }
+
+    async function handleLogin() {
+      if (!dom.input || !dom.loginBtn) return;
+      const token = dom.input.value.trim();
+      const validationError = validateToken(token);
+      if (validationError) {
+        showError(validationError);
+        return;
+      }
+
+      hideError();
+      setLoading(true);
+
+      try {
+        const res = await fetch(`/api/auth/login?lang=${encodeURIComponent(currentPageLanguage())}`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        });
+        let data;
+        try {
+          data = await res.json();
+        } catch (_error) {
+          throw new Error(uiText('auth_bad_server_data', '服务器返回无效数据'));
+        }
+        if (!res.ok || data.success !== true) {
+          showError(data.error || uiText('auth_verify_failed', '验证失败，请检查访问令牌是否正确'));
+          setLoading(false);
+          return;
+        }
+        saveLocalSession();
+        setAuthCookieHint(true);
+        closeModal();
+        if (typeof onLoginSuccess === 'function') {
+          onLoginSuccess(data);
+        }
+        const nextTarget = pendingRedirect;
+        pendingRedirect = null;
+        if (nextTarget) {
+          window.location.href = nextTarget;
+        } else {
+          setLoading(false);
+        }
+      } catch (e) {
+        showError(e.message || uiText('auth_network_error', '网络错误'));
+        setLoading(false);
+      }
+    }
+
+    function setLoading(loading) {
+      if (!dom.loginBtn) return;
+      if (loading) {
+        dom.loginBtn.setAttribute('aria-busy', 'true');
+        dom.loginBtn.classList.add('kawaii-button--loading');
+        dom.loginBtn.style.opacity = '0.7';
+        dom.loginBtn.style.pointerEvents = 'none';
+        const icon = dom.loginBtn.querySelector('.btn-icon');
+        const text = dom.loginBtn.querySelector('.btn-text');
+        if (icon) icon.textContent = '⏳';
+        if (text) text.textContent = uiText('auth_verify_loading', '验证中…');
+      } else {
+        dom.loginBtn.removeAttribute('aria-busy');
+        dom.loginBtn.classList.remove('kawaii-button--loading');
+        dom.loginBtn.style.opacity = '';
+        dom.loginBtn.style.pointerEvents = '';
+        const icon = dom.loginBtn.querySelector('.btn-icon');
+        const text = dom.loginBtn.querySelector('.btn-text');
+        if (icon) icon.textContent = '🔓';
+        if (text) text.textContent = uiText('auth_login', '登录');
+      }
+    }
+
+    function openModal(redirectHref = null) {
+      if (!dom.modal) return;
+      pendingRedirect = (typeof redirectHref === 'string' && redirectHref.startsWith('/')) ? redirectHref : null;
+      dom.lastFocus = document.activeElement;
+      dom.modal.hidden = false;
+      dom.modal.setAttribute('role', 'dialog');
+      dom.modal.setAttribute('aria-modal', 'true');
+      const title = dom.modal.querySelector('.auth-modal-title, .console-auth-modal__title');
+      if (title && title.id) {
+        dom.modal.setAttribute('aria-labelledby', title.id);
+      }
+      isOpen = true;
+      document.body.style.overflow = 'hidden';
+      document.addEventListener('click', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+      if (dom.input) {
+        dom.input.value = '';
+        dom.input.type = 'password';
+        setTimeout(() => dom.input.focus(), 50);
+      }
+      hideError();
+    }
+
+    function closeModal() {
+      if (!dom.modal) return;
+      dom.modal.hidden = true;
+      isOpen = false;
+      document.body.style.overflow = '';
+      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+      pendingRedirect = null;
+      hideError();
+      setLoading(false);
+      if (dom.input) {
+        dom.input.value = '';
+        dom.input.type = 'password';
+      }
+      if (dom.toggle) {
+        const span = dom.toggle.querySelector('span');
+        if (span) span.textContent = '👁️';
+        dom.toggle.setAttribute('aria-label', uiText('toggle_password_visibility', '显示密码'));
+      }
+      if (dom.lastFocus && dom.lastFocus.focus) {
+        dom.lastFocus.focus();
+        dom.lastFocus = null;
+      }
+    }
+
+    function handleKeyDown(event) {
+      if (!isOpen) return;
+      if (event.key === 'Escape') {
+        closeModal();
+        return;
+      }
+      if (event.key === 'Tab') {
+        const focusables = Array.from(dom.modal.querySelectorAll('input, button, [href], select, textarea, [tabindex]:not([tabindex="-1"])')).filter((el) => !el.disabled && !el.hidden);
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    }
+
+    function handleClickOutside(event) {
+      if (!isOpen || !dom.backdrop) return;
+      if (event.target === dom.backdrop) {
+        closeModal();
+      }
+    }
+
+    function bindEvents() {
+      if (dom.trigger) dom.trigger.addEventListener('click', () => openModal());
+      if (dom.close) dom.close.addEventListener('click', () => closeModal());
+      if (dom.cancel) dom.cancel.addEventListener('click', () => closeModal());
+
+      if (dom.form) {
+        dom.form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          handleLogin();
+        });
+      } else {
+        if (dom.loginBtn) {
+          dom.loginBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            handleLogin();
+          });
+        }
+        if (dom.input) {
+          dom.input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleLogin();
+            }
+          });
+        }
+      }
+      if (dom.input) dom.input.addEventListener('input', hideError);
+      if (dom.toggle) dom.toggle.addEventListener('click', togglePasswordVisibility);
+      if (typeof extraBindEvents === 'function') {
+        extraBindEvents();
+      }
+    }
+
+    cacheElements();
+    bindEvents();
+
+    return {
+      openModal,
+      closeModal,
+      isOpen: () => isOpen,
+      dom,
+    };
+  }
+
   function initHomeAuthSession() {
     const wrapper = document.getElementById('user-trigger-wrapper');
     if (!wrapper) {
       return;
     }
 
-    const homeConfig = window.HOME_AUTH_SESSION_CONFIG || {};
+    function parseHomeAuthData() {
+      try {
+        const el = document.getElementById('home-auth-session-data');
+        return el && el.dataset.json ? JSON.parse(el.dataset.json) : {};
+      } catch (_) { return {}; }
+    }
+    const homeConfig = parseHomeAuthData();
     const bgPresets = homeConfig.bgPresets || { light: [], dark: [] };
     let currentUser = initialSessionUser();
     let isUserPanelOpen = false;
-    let isAuthModalOpen = false;
-    let pendingAuthTarget = null;
-    let lastAuthTrigger = null;
-    let errorTimeout = null;
+    let bgObserver = null;
 
     function normalizeProtectedTarget(rawTarget) {
       if (typeof rawTarget !== 'string' || !rawTarget.startsWith('/')) {
@@ -181,11 +449,12 @@
           document.body.style.removeProperty(variableName);
           return;
         }
-        const lightGradient = 'linear-gradient(135deg, rgba(255, 240, 245, 0.88) 0%, rgba(255, 228, 235, 0.82) 50%, rgba(255, 248, 250, 0.88) 100%)';
-        const darkGradient = 'linear-gradient(135deg, rgba(15, 10, 25, 0.88) 0%, rgba(25, 15, 35, 0.85) 50%, rgba(20, 10, 30, 0.88) 100%)';
+        const lightGradient = getComputedStyle(document.body).getPropertyValue('--bg-gradient-light').trim() || 'linear-gradient(135deg, rgba(255, 240, 245, 0.92) 0%, rgba(255, 228, 235, 0.88) 50%, rgba(255, 248, 250, 0.92) 100%)';
+        const darkGradient = getComputedStyle(document.body).getPropertyValue('--bg-gradient-dark').trim() || 'linear-gradient(135deg, rgba(15, 10, 25, 0.92) 0%, rgba(25, 15, 35, 0.9) 50%, rgba(20, 10, 30, 0.92) 100%)';
         if (preset.url) {
           const gradient = theme === 'light' ? lightGradient : darkGradient;
-          document.body.style.setProperty(variableName, `${gradient}, url('${preset.url}')`);
+          const safeUrl = preset.url.replace(/['()\\]/g, '\\$&');
+          document.body.style.setProperty(variableName, `${gradient}, url('${safeUrl}')`);
           return;
         }
         document.body.style.removeProperty(variableName);
@@ -203,22 +472,38 @@
             ? uiText('user_panel_theme_light', '浅色')
             : uiText('user_panel_theme_dark', '深色');
         }
-        const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (match) => ({
+        const escapeHtml = (value) => String(value).replace(/[&<"']/g, (match) => ({
           '&': '&amp;',
           '<': '&lt;',
           '>': '&gt;',
           '"': '&quot;',
           "'": '&#39;',
         }[match]));
-        grid.innerHTML = presets.map((preset) => {
+        grid.replaceChildren();
+        presets.forEach((preset) => {
           const isActive = preset.id === currentBgId;
-          const bgStyle = preset.url ? `background-image: url('${preset.url}')` : '';
           const gradientClass = preset.url ? '' : 'bg-option--gradient';
-          return `<button class="bg-option ${gradientClass} ${isActive ? 'is-active' : ''}" data-bg-id="${preset.id}" data-name="${escapeHtml(preset.name)}" type="button" aria-label="${escapeHtml(preset.name)}" aria-pressed="${isActive ? 'true' : 'false'}" style="${bgStyle}"></button>`;
-        }).join('');
-        grid.querySelectorAll('.bg-option').forEach((button) => {
-          button.addEventListener('click', () => handleBgSelect(theme, button.dataset.bgId));
+          const btn = document.createElement('button');
+          btn.className = `bg-option ${gradientClass} ${isActive ? 'is-active' : ''}`;
+          btn.dataset.bgId = preset.id;
+          btn.dataset.name = preset.name;
+          btn.type = 'button';
+          btn.setAttribute('aria-label', preset.name);
+          btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+          if (preset.url) {
+            btn.style.backgroundImage = `url('${preset.url}')`;
+          }
+          grid.appendChild(btn);
         });
+        if (!grid.dataset.delegateBound) {
+          grid.dataset.delegateBound = 'true';
+          grid.addEventListener('click', (e) => {
+            const button = e.target.closest('.bg-option');
+            if (!button) return;
+            const currentTheme = document.documentElement.getAttribute('data-color-scheme') || 'light';
+            handleBgSelect(currentTheme, button.dataset.bgId);
+          });
+        }
       },
       init() {
         const currentTheme = document.documentElement.getAttribute('data-color-scheme') || 'light';
@@ -226,7 +511,7 @@
         if (currentBgId) {
           BackgroundManager.apply(currentTheme, currentBgId);
         }
-        const observer = new MutationObserver((mutations) => {
+        bgObserver = new MutationObserver((mutations) => {
           mutations.forEach((mutation) => {
             if (mutation.attributeName !== 'data-color-scheme') {
               return;
@@ -239,7 +524,10 @@
             }
           });
         });
-        observer.observe(document.documentElement, { attributes: true });
+        bgObserver.observe(document.documentElement, { attributes: true });
+        window.addEventListener('beforeunload', () => {
+          if (bgObserver) bgObserver.disconnect();
+        });
       },
     };
 
@@ -250,6 +538,7 @@
         try {
           const response = await fetch('/api/background/set', {
             method: 'POST',
+            credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ theme, bg_id: bgId }),
           });
@@ -268,7 +557,7 @@
         button.classList.remove('is-active');
         button.setAttribute('aria-pressed', 'false');
       });
-      const activeButton = grid.querySelector(`[data-bg-id="${bgId}"]`);
+      const activeButton = grid.querySelector(`[data-bg-id="${CSS.escape(bgId)}"]`);
       if (activeButton) {
         activeButton.classList.add('is-active');
         activeButton.setAttribute('aria-pressed', 'true');
@@ -338,64 +627,6 @@
       }
     }
 
-    function setLoading(loading) {
-      const button = document.getElementById('login-btn');
-      if (!button) {
-        return;
-      }
-      const icon = button.querySelector('.btn-icon');
-      const text = button.querySelector('.btn-text');
-      button.disabled = loading;
-      button.classList.toggle('kawaii-button--loading', loading);
-      if (icon) {
-        icon.textContent = loading ? '⏳' : '🔓';
-      }
-      if (text) {
-        text.textContent = loading
-          ? uiText('auth_verify_loading', '验证中...')
-          : uiText('auth_verify', '验证');
-      }
-    }
-
-    function hideError() {
-      const errorBox = document.getElementById('auth-error');
-      if (errorBox) {
-        errorBox.hidden = true;
-      }
-      if (errorTimeout) {
-        clearTimeout(errorTimeout);
-        errorTimeout = null;
-      }
-    }
-
-    function showError(message) {
-      const errorBox = document.getElementById('auth-error');
-      const errorMessage = document.getElementById('error-message');
-      if (!errorBox || !errorMessage) {
-        return;
-      }
-      errorMessage.textContent = message;
-      errorBox.hidden = false;
-      if (errorTimeout) {
-        clearTimeout(errorTimeout);
-      }
-      errorTimeout = window.setTimeout(() => {
-        errorBox.hidden = true;
-        errorTimeout = null;
-      }, 5000);
-    }
-
-    function resolveAuthReturnTarget() {
-      const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      if (!active) {
-        return null;
-      }
-      if (active.closest('#user-panel')) {
-        return document.getElementById('user-trigger');
-      }
-      return active;
-    }
-
     function closeUserPanel() {
       const panel = document.getElementById('user-panel');
       const trigger = document.getElementById('user-trigger');
@@ -424,51 +655,6 @@
       }
     }
 
-    function openAuthModal(targetHref = null) {
-      const modal = document.getElementById('auth-modal');
-      if (!modal) {
-        return;
-      }
-      lastAuthTrigger = resolveAuthReturnTarget();
-      pendingAuthTarget = targetHref;
-      isAuthModalOpen = true;
-      modal.hidden = false;
-      document.body.style.overflow = 'hidden';
-      closeUserPanel();
-      window.setTimeout(() => {
-        const input = document.getElementById('token-input');
-        if (input) {
-          input.focus();
-        }
-      }, 100);
-    }
-
-    function closeAuthModal(clearPendingTarget = true) {
-      const modal = document.getElementById('auth-modal');
-      if (!modal) {
-        return;
-      }
-      isAuthModalOpen = false;
-      modal.hidden = true;
-      document.body.style.overflow = '';
-      if (clearPendingTarget) {
-        pendingAuthTarget = null;
-      }
-      const input = document.getElementById('token-input');
-      if (input) {
-        input.value = '';
-      }
-      hideError();
-      setLoading(false);
-      if (lastAuthTrigger && typeof lastAuthTrigger.focus === 'function' && document.contains(lastAuthTrigger)) {
-        window.setTimeout(() => {
-          if (document.contains(lastAuthTrigger)) {
-            lastAuthTrigger.focus();
-          }
-        }, 0);
-      }
-    }
-
     async function syncBackgroundToServer() {
       if (!currentUser) {
         return;
@@ -476,18 +662,28 @@
       const settings = BackgroundManager.getSettings();
       try {
         if (settings.light) {
-          await fetch('/api/background/set', {
+          const response = await fetch('/api/background/set', {
             method: 'POST',
+            credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ theme: 'light', bg_id: settings.light }),
           });
+          if (!response.ok) {
+            console.error('sync background failed:', response.status);
+            return;
+          }
         }
         if (settings.dark) {
-          await fetch('/api/background/set', {
+          const response = await fetch('/api/background/set', {
             method: 'POST',
+            credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ theme: 'dark', bg_id: settings.dark }),
           });
+          if (!response.ok) {
+            console.error('sync background failed:', response.status);
+            return;
+          }
         }
       } catch (error) {
         console.error('Failed to sync background:', error);
@@ -496,7 +692,7 @@
 
     async function fetchAndApplyUserBackground() {
       try {
-        const response = await fetch('/api/background/me');
+        const response = await fetch('/api/background/me', { credentials: 'same-origin' });
         if (!response.ok) {
           return;
         }
@@ -534,7 +730,7 @@
         return;
       }
       try {
-        const response = await fetch('/api/auth/me');
+        const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
         if (response.ok) {
           const payload = await response.json();
           if (payload.authenticated) {
@@ -556,54 +752,6 @@
       updateUserPanelState();
     }
 
-    async function handleLogin() {
-      const input = document.getElementById('token-input');
-      if (!input) {
-        return;
-      }
-      const token = input.value.trim();
-      const validationError = validateToken(token);
-      if (validationError) {
-        showError(validationError);
-        return;
-      }
-      hideError();
-      setLoading(true);
-      try {
-        const response = await fetch(`/api/auth/login?lang=${currentPageLanguage()}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token }),
-        });
-        let payload;
-        try {
-          payload = await response.json();
-        } catch (_error) {
-          throw new Error(uiText('auth_bad_server_data', '服务器返回无效数据'));
-        }
-        if (!response.ok || payload.success !== true) {
-          showError(payload.error || uiText('auth_verify_failed', '验证失败，请检查访问令牌是否正确'));
-          return;
-        }
-        saveLocalSession();
-        setAuthCookieHint(true);
-        currentUser = { username: payload.username };
-        updateUserTriggerIcon(true);
-        updateUserPanelState();
-        const nextTarget = pendingAuthTarget;
-        closeAuthModal(false);
-        await syncBackgroundToServer();
-        pendingAuthTarget = null;
-        if (nextTarget) {
-          window.location.href = nextTarget;
-        }
-      } catch (error) {
-        showError(error.message || uiText('auth_network_error', '网络错误，请检查网络连接后重试'));
-      } finally {
-        setLoading(false);
-      }
-    }
-
     async function handleLogout() {
       clearLocalSession();
       await requestSessionCleanup('Failed to clear auth cookie on server:');
@@ -613,24 +761,6 @@
       closeUserPanel();
       document.body.style.removeProperty('--bg-image');
       document.body.style.removeProperty('--bg-image-dark');
-    }
-
-    function togglePasswordVisibility() {
-      const input = document.getElementById('token-input');
-      const toggle = document.getElementById('token-toggle');
-      if (!input || !toggle) {
-        return;
-      }
-      const revealing = input.type === 'password';
-      input.type = revealing ? 'text' : 'password';
-      const icon = toggle.querySelector('span');
-      if (icon) {
-        icon.textContent = revealing ? '🙈' : '👁️';
-      }
-      toggle.setAttribute(
-        'aria-label',
-        revealing ? uiText('hide_password', '隐藏密码') : uiText('show_password', '显示密码')
-      );
     }
 
     function handleClickOutside(event) {
@@ -643,44 +773,37 @@
       if (event.key !== 'Escape') {
         return;
       }
-      if (isAuthModalOpen) {
-        closeAuthModal();
-        return;
-      }
       if (isUserPanelOpen) {
         closeUserPanel();
       }
     }
 
     function handleProtectedNavigation(event) {
+      const link = event.target.closest('[data-auth-required="true"]');
+      if (!link) return;
       if (currentUser) {
         return;
       }
       event.preventDefault();
-      const link = event.currentTarget;
       const targetHref = link.dataset.authTarget || link.getAttribute('href') || null;
-      openAuthModal(targetHref);
+      controller.openModal(targetHref);
     }
 
     function bindEvents() {
       document.getElementById('user-trigger')?.addEventListener('click', toggleUserPanel);
-      document.getElementById('open-auth-modal-btn')?.addEventListener('click', () => openAuthModal());
-      document.getElementById('auth-modal-close')?.addEventListener('click', () => closeAuthModal());
-      document.getElementById('cancel-auth-btn')?.addEventListener('click', () => closeAuthModal());
-      document.getElementById('auth-modal-backdrop')?.addEventListener('click', () => closeAuthModal());
-      document.getElementById('auth-form')?.addEventListener('submit', (event) => {
-        event.preventDefault();
-        handleLogin();
-      });
-      document.getElementById('token-input')?.addEventListener('input', hideError);
-      document.getElementById('token-toggle')?.addEventListener('click', togglePasswordVisibility);
       document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
-      document.querySelectorAll('[data-auth-required="true"]').forEach((link) => {
-        link.addEventListener('click', handleProtectedNavigation);
-      });
-      document.addEventListener('click', handleClickOutside);
-      document.addEventListener('keydown', handleKeyDown);
+      document.body.addEventListener('click', handleProtectedNavigation);
     }
+
+    const controller = createAuthModalController({
+      prefix: '',
+      modalTitle: uiText('auth_modal_title', 'Authentication'),
+      onLoginSuccess: (data) => {
+        currentUser = { username: data.username };
+        updateUserTriggerIcon(true);
+        updateUserPanelState();
+      },
+    });
 
     async function init() {
       BackgroundManager.init();
@@ -696,10 +819,10 @@
         window.location.replace(protectedTarget);
         return;
       }
-      openAuthModal(protectedTarget);
+      controller.openModal(protectedTarget);
     }
 
-    window.openAuthModal = openAuthModal;
+    window.openHomeAuthModal = controller.openModal;
     init();
   }
 
@@ -711,10 +834,6 @@
 
     let currentUser = initialSessionUser();
     let panelOpen = false;
-    let modalOpen = false;
-    let pendingTarget = null;
-    let lastTrigger = null;
-    let errorTimeout = null;
 
     function roleLabel(role) {
       const normalized = (role || '').toLowerCase();
@@ -809,124 +928,8 @@
       closePanel();
     }
 
-    function hideError() {
-      const errorBox = document.getElementById('console-auth-error');
-      if (errorBox) {
-        errorBox.hidden = true;
-      }
-      if (errorTimeout) {
-        clearTimeout(errorTimeout);
-        errorTimeout = null;
-      }
-    }
-
-    function showError(message) {
-      const errorBox = document.getElementById('console-auth-error');
-      const errorMessage = document.getElementById('console-error-message');
-      if (!errorBox || !errorMessage) {
-        return;
-      }
-      errorMessage.textContent = message;
-      errorBox.hidden = false;
-      if (errorTimeout) {
-        clearTimeout(errorTimeout);
-      }
-      errorTimeout = window.setTimeout(() => {
-        errorBox.hidden = true;
-        errorTimeout = null;
-      }, 5000);
-    }
-
-    function setLoginLoading(loading) {
-      const button = document.getElementById('console-login-btn');
-      if (!button) {
-        return;
-      }
-      const icon = button.querySelector('.btn-icon');
-      const text = button.querySelector('.btn-text');
-      button.disabled = loading;
-      if (icon) {
-        icon.textContent = loading ? '⏳' : '🔓';
-      }
-      if (text) {
-        text.textContent = loading
-          ? uiText('auth_verify_loading', 'Verifying...')
-          : uiText('auth_verify', 'Verify');
-      }
-    }
-
-    function resetLoginButton() {
-      setLoginLoading(false);
-    }
-
-    function resolveReturnTarget() {
-      const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      if (!active) {
-        return document.getElementById('console-session-trigger');
-      }
-      if (active.closest('#console-session-panel')) {
-        return document.getElementById('console-session-trigger');
-      }
-      return active;
-    }
-
-    function openAuthModal(targetHref = null) {
-      const modal = document.getElementById('console-auth-modal');
-      if (!modal) {
-        return;
-      }
-      lastTrigger = resolveReturnTarget();
-      pendingTarget = targetHref;
-      modal.hidden = false;
-      modalOpen = true;
-      document.body.style.overflow = 'hidden';
-      hideError();
-      closePanel();
-      window.setTimeout(() => {
-        const input = document.getElementById('console-token-input');
-        if (input) {
-          input.focus();
-        }
-      }, 40);
-    }
-
-    function closeAuthModal(clearTarget = true) {
-      const modal = document.getElementById('console-auth-modal');
-      const input = document.getElementById('console-token-input');
-      const toggle = document.getElementById('console-token-toggle');
-      const toggleIcon = toggle?.querySelector('span');
-      if (!modal) {
-        return;
-      }
-      modal.hidden = true;
-      modalOpen = false;
-      document.body.style.overflow = '';
-      if (clearTarget) {
-        pendingTarget = null;
-      }
-      if (input) {
-        input.value = '';
-        input.type = 'password';
-      }
-      if (toggleIcon) {
-        toggleIcon.textContent = '👁️';
-      }
-      if (toggle) {
-        toggle.setAttribute('aria-label', uiText('toggle_password_visibility', 'Toggle password visibility'));
-      }
-      hideError();
-      resetLoginButton();
-      if (lastTrigger && typeof lastTrigger.focus === 'function' && document.contains(lastTrigger)) {
-        window.setTimeout(() => {
-          if (document.contains(lastTrigger)) {
-            lastTrigger.focus();
-          }
-        }, 0);
-      }
-    }
-
     async function refreshCurrentUser() {
-      const response = await fetch('/api/auth/me');
+      const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
       if (!response.ok) {
         throw new Error('auth probe failed');
       }
@@ -964,53 +967,6 @@
       renderSessionState();
     }
 
-    async function handleLogin() {
-      const input = document.getElementById('console-token-input');
-      if (!input) {
-        return;
-      }
-      const token = input.value.trim();
-      const validationError = validateToken(token);
-      if (validationError) {
-        showError(validationError);
-        return;
-      }
-      hideError();
-      setLoginLoading(true);
-      try {
-        const response = await fetch(`/api/auth/login?lang=${encodeURIComponent(currentPageLanguage())}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token }),
-        });
-        let payload;
-        try {
-          payload = await response.json();
-        } catch (_error) {
-          throw new Error(uiText('auth_bad_server_data', 'The server returned invalid data'));
-        }
-        if (!response.ok || payload.success !== true) {
-          showError(payload.error || uiText('auth_verify_failed', 'Verification failed, please check your token'));
-          return;
-        }
-        saveLocalSession();
-        await refreshCurrentUser();
-        const nextTarget = pendingTarget;
-        closeAuthModal(false);
-        pendingTarget = null;
-        if (window.toast) {
-          toast.success(uiText('auth_session_active', 'Session active'));
-        }
-        if (nextTarget) {
-          window.location.href = nextTarget;
-        }
-      } catch (error) {
-        showError(error.message || uiText('auth_network_error', 'Network error, please check your connection and try again'));
-      } finally {
-        setLoginLoading(false);
-      }
-    }
-
     async function handleLogout() {
       clearLocalSession();
       await requestSessionCleanup('Console logout request failed:');
@@ -1020,41 +976,16 @@
       window.location.href = sessionConfig.homeHref || '/';
     }
 
-    function togglePasswordVisibility() {
-      const input = document.getElementById('console-token-input');
-      const toggle = document.getElementById('console-token-toggle');
-      const icon = toggle?.querySelector('span');
-      if (!input || !toggle) {
-        return;
-      }
-      const revealing = input.type === 'password';
-      input.type = revealing ? 'text' : 'password';
-      if (icon) {
-        icon.textContent = revealing ? '🙈' : '👁️';
-      }
-      toggle.setAttribute(
-        'aria-label',
-        revealing ? uiText('hide_password', 'Hide password') : uiText('show_password', 'Show password')
-      );
-    }
-
     function handleDocumentClick(event) {
       const trigger = document.getElementById('console-session-trigger');
       const panel = document.getElementById('console-session-panel');
       if (panelOpen && trigger && panel && !trigger.contains(event.target) && !panel.contains(event.target)) {
         closePanel();
       }
-      if (modalOpen && event.target instanceof HTMLElement && event.target.id === 'console-auth-modal-backdrop') {
-        closeAuthModal();
-      }
     }
 
     function handleKeyDown(event) {
       if (event.key !== 'Escape') {
-        return;
-      }
-      if (modalOpen) {
-        closeAuthModal();
         return;
       }
       if (panelOpen) {
@@ -1064,21 +995,19 @@
 
     function bindEvents() {
       document.getElementById('console-session-trigger')?.addEventListener('click', togglePanel);
-      document.getElementById('console-open-auth-modal-btn')?.addEventListener('click', () => openAuthModal());
       document.getElementById('console-logout-btn')?.addEventListener('click', handleLogout);
-      document.getElementById('console-auth-modal-close')?.addEventListener('click', () => closeAuthModal());
-      document.getElementById('console-cancel-auth-btn')?.addEventListener('click', () => closeAuthModal());
-      document.getElementById('console-login-btn')?.addEventListener('click', handleLogin);
-      document.getElementById('console-token-toggle')?.addEventListener('click', togglePasswordVisibility);
-      document.getElementById('console-token-input')?.addEventListener('input', hideError);
-      document.getElementById('console-token-input')?.addEventListener('keypress', (event) => {
-        if (event.key === 'Enter') {
-          handleLogin();
-        }
-      });
-      document.addEventListener('click', handleDocumentClick);
-      document.addEventListener('keydown', handleKeyDown);
     }
+
+    const controller = createAuthModalController({
+      prefix: 'console-',
+      modalTitle: uiText('console_auth_modal_title', 'Identity check'),
+      onLoginSuccess: () => {
+        renderSessionState();
+        if (window.toast) {
+          window.toast.success(uiText('auth_session_active', 'Session active'));
+        }
+      },
+    });
 
     async function init() {
       renderSessionState();
@@ -1086,10 +1015,9 @@
       await initAuthState();
     }
 
-    window.openAuthModal = openAuthModal;
+    window.openConsoleAuthModal = controller.openModal;
     init();
   }
-
   function initAll() {
     initHomeAuthSession();
     initConsoleAuthSession();

@@ -92,13 +92,16 @@ def build_inspect_payload(
     skill_entry: dict[str, Any],
     resolved_version: str,
     trust_state: str,
-    verified_support: dict[str, Any],
     dependency_view: dict[str, Any],
     provenance_view: dict[str, Any],
     distribution_view: dict[str, Any],
     trust_view: dict[str, Any],
     memory_hints: dict[str, Any],
 ) -> dict[str, Any]:
+    runtime = dict(skill_entry.get("runtime") or {})
+    install_targets = (
+        runtime.get("install_targets") if isinstance(runtime.get("install_targets"), dict) else {}
+    )
     return {
         "ok": True,
         "name": skill_entry.get("name"),
@@ -108,13 +111,15 @@ def build_inspect_payload(
         "latest_version": skill_entry.get("latest_version"),
         "trust_state": trust_state,
         "decision_metadata": canonical_decision_metadata(skill_entry),
-        "compatibility": {
-            "declared_support": (
-                (skill_entry.get("compatibility") or {}).get("declared_support") or []
-            ),
-            "verified_support": verified_support,
-            "verified_summary": compatibility_summary(verified_support),
-            "freshness_summary": compatibility_freshness_summary(verified_support),
+        "runtime": runtime,
+        "runtime_readiness": (
+            (runtime.get("readiness") or {}).get("status")
+            if isinstance(runtime.get("readiness"), dict)
+            else None
+        ),
+        "workspace_fit": {
+            "scope": runtime.get("workspace_scope"),
+            "targets": list(install_targets.get("workspace") or []),
         },
         "dependencies": dependency_view,
         "provenance": provenance_view,

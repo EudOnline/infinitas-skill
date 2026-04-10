@@ -1,307 +1,39 @@
 {% extends "layout-kawaii.html" %}
 {% block body %}
-<section class="kawaii-card animate-in login-section">
-  <div class="section-kicker">{{ '令牌认证' if page_language == 'zh' else 'Token Auth' }}</div>
-  <h2 class="page-title login-title">{{ '登录' if page_language == 'zh' else 'Login' }}</h2>
-  <p class="login-intro">{{ '登录后可进入你的私人技能库，查看技能、草稿、发布、分享和访问令牌。' if page_language == 'zh' else 'Sign in to enter your private skill library and inspect skills, drafts, releases, sharing, and access tokens.' }}</p>
+<section class="kawaii-card animate-in">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['login_badge'] }}</div>
+  <h2 class="font-display text-[clamp(1.5rem,3.5vw,2.2rem)] font-extrabold leading-tight text-kawaii-ink mb-2">{{ ui['login_title'] }}</h2>
+  <p class="mt-2 text-kawaii-ink-soft">{{ ui['login_desc'] }}</p>
   
-  <div class="auth-panel login-panel" id="login-panel">
-    <div class="auth-header login-auth-header">
-      <span class="auth-icon" aria-hidden="true">🔑</span>
-      <span class="auth-title">{{ '输入访问令牌' if page_language == 'zh' else 'Enter Access Token' }}</span>
+  <div class="login-panel" id="login-panel">
+    <div class="flex items-center gap-2 mb-3">
+      <span aria-hidden="true">🔑</span>
+      <span>{{ ui['login_input_label'] }}</span>
     </div>
     
-    <div class="auth-form">
+    <div>
       <div class="token-input-wrapper login-token-wrapper">
         <input type="password" id="token-input" class="token-input login-token-input" 
-               placeholder="{{ '输入你的访问令牌' if page_language == 'zh' else 'Enter your access token' }}" 
+               placeholder="{{ ui['login_placeholder'] }}" 
                autocomplete="off" minlength="8" maxlength="128"
-               aria-label="{{ '访问令牌' if page_language == 'zh' else 'Access token' }}"/>
-        <button type="button" class="token-toggle login-token-toggle" id="token-toggle" title="{{ '显示/隐藏密码' if page_language == 'zh' else 'Show/Hide password' }}" aria-label="{{ '切换密码可见性' if page_language == 'zh' else 'Toggle password visibility' }}">
+               aria-label="{{ ui['login_aria_label'] }}"/>
+        <button type="button" class="token-toggle login-token-toggle" id="token-toggle" title="{{ ui['toggle_password_title'] }}" aria-label="{{ ui['toggle_password_visibility'] }}">
           <span aria-hidden="true">👁️</span>
         </button>
       </div>
-      <p class="auth-hint login-auth-hint">💡 {{ '访问令牌可在个人账户设置中获取' if page_language == 'zh' else 'Token can be found in account settings' }}</p>
+      <p class="auth-hint text-xs text-kawaii-ink-muted mb-3"><span aria-hidden="true">💡</span> {{ ui['login_hint'] }}</p>
       <button class="kawaii-button kawaii-button--primary" id="login-btn" type="button">
-        <span class="btn-icon" aria-hidden="true">🔓</span>
-        <span class="btn-text">{{ '登录' if page_language == 'zh' else 'Login' }}</span>
+        <span class="btn-icon" aria-hidden="true"><span aria-hidden="true">🔓</span></span>
+        <span>{{ ui['login_button'] }}</span>
       </button>
     </div>
     
-    <div class="auth-error login-auth-error" id="auth-error" role="alert" aria-live="polite" hidden>
+    <div class="auth-error flex items-center gap-2 p-3 bg-kawaii-danger/10 dark:bg-kawaii-danger/15 border border-kawaii-danger/30 dark:border-kawaii-danger/40 rounded-kawaii-md text-kawaii-danger text-sm mt-3" id="auth-error" role="alert" aria-live="polite" hidden>
       <span aria-hidden="true">❌</span>
-      <span id="error-message">{{ '访问令牌无效' if page_language == 'zh' else 'Token invalid' }}</span>
+      <span id="error-message">{{ ui['login_error'] }}</span>
     </div>
   </div>
 </section>
 
-<script>
-/**
- * 登录页认证模块
- */
-(function() {
-  'use strict';
-  
-  const STORAGE_KEY = 'infinitas_auth_token';
-  const EXPIRY_KEY = 'infinitas_auth_expiry';
-  const DAYS_30 = 30 * 24 * 60 * 60 * 1000;
-  const appSession = window.APP_SESSION || {};
-  let errorTimeout = null;
-  
-  // Cache DOM elements
-  const dom = {
-    tokenInput: document.getElementById('token-input'),
-    loginBtn: document.getElementById('login-btn'),
-    authError: document.getElementById('auth-error'),
-    errorMessage: document.getElementById('error-message'),
-    tokenToggle: document.getElementById('token-toggle')
-  };
 
-  const TokenManager = {
-    save() {
-      const expiry = Date.now() + DAYS_30;
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.setItem(EXPIRY_KEY, expiry.toString());
-    }
-  };
-
-  function setLoading(loading) {
-    const btnIcon = dom.loginBtn.querySelector('.btn-icon');
-    const btnText = dom.loginBtn.querySelector('.btn-text');
-    if (loading) {
-      dom.loginBtn.classList.add('kawaii-button--loading');
-      dom.loginBtn.style.opacity = '0.7';
-      dom.loginBtn.style.pointerEvents = 'none';
-      btnIcon.textContent = '⏳';
-      btnText.textContent = '{{ "验证中..." if page_language == "zh" else "Verifying..." }}';
-    } else {
-      dom.loginBtn.classList.remove('kawaii-button--loading');
-      dom.loginBtn.style.opacity = '';
-      dom.loginBtn.style.pointerEvents = '';
-      btnIcon.textContent = '🔓';
-      btnText.textContent = '{{ "登录" if page_language == "zh" else "Login" }}';
-    }
-  }
-
-  function validateToken(token) {
-    if (!token) return '{{ "请输入访问令牌" if page_language == "zh" else "Please enter token" }}';
-    if (token.length < 8) return '{{ "访问令牌长度不能少于 8 位" if page_language == "zh" else "Token must be at least 8 characters" }}';
-    if (token.length > 128) return '{{ "访问令牌长度不能超过 128 位" if page_language == "zh" else "Token must not exceed 128 characters" }}';
-    return null;
-  }
-
-  function showError(message) {
-    dom.errorMessage.textContent = message;
-    dom.authError.hidden = false;
-    if (errorTimeout) clearTimeout(errorTimeout);
-    errorTimeout = setTimeout(() => {
-      dom.authError.hidden = true;
-      errorTimeout = null;
-    }, 5000);
-  }
-
-  function hideError() {
-    dom.authError.hidden = true;
-    if (errorTimeout) {
-      clearTimeout(errorTimeout);
-      errorTimeout = null;
-    }
-  }
-
-  async function handleLogin() {
-    const token = dom.tokenInput.value.trim();
-    
-    const validationError = validateToken(token);
-    if (validationError) {
-      showError(validationError);
-      return;
-    }
-
-    hideError();
-    setLoading(true);
-
-    try {
-      const res = await fetch('/api/auth/login?lang={{ page_language }}', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({token})
-      });
-      const data = await res.json();
-      
-      if (data.success) {
-        TokenManager.save();
-        appSession.has_auth_cookie_hint = true;
-        appSession.hasAuthCookieHint = true;
-        window.location.href = '{{ home_href or "/" }}';
-      } else {
-        showError(data.error || '{{ "验证失败，请检查访问令牌是否正确" if page_language == "zh" else "Verification failed, please check your token" }}');
-      }
-    } catch (e) {
-      showError('{{ "网络错误，请检查网络连接后重试" if page_language == "zh" else "Network error, please check your connection and try again" }}');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // Toggle password visibility
-  if (dom.tokenToggle) {
-    dom.tokenToggle.addEventListener('click', () => {
-      const isPassword = dom.tokenInput.type === 'password';
-      dom.tokenInput.type = isPassword ? 'text' : 'password';
-      dom.tokenToggle.querySelector('span').textContent = isPassword ? '🙈' : '👁️';
-      dom.tokenToggle.setAttribute('aria-label', isPassword ? 
-        '{{ "隐藏密码" if page_language == "zh" else "Hide password" }}' : 
-        '{{ "显示密码" if page_language == "zh" else "Show password" }}');
-    });
-  }
-
-  // Hide error when user starts typing
-  dom.tokenInput.addEventListener('input', () => {
-    hideError();
-  });
-
-  dom.loginBtn.addEventListener('click', handleLogin);
-  dom.tokenInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') handleLogin();
-  });
-})();
-</script>
-
-<style>
-  /* Login page specific styles */
-  .login-title {
-    font-size: clamp(1.35rem, 3vw, 1.85rem);
-    margin-top: 0.45rem;
-  }
-
-  .login-intro {
-    margin: 0.5rem 0 0;
-    color: var(--kawaii-ink-soft);
-  }
-  
-  .login-panel {
-    margin-top: 1rem;
-    background: var(--kawaii-panel-soft);
-    border: 1px solid var(--kawaii-line);
-    border-radius: var(--radius-lg);
-    padding: 1.25rem;
-  }
-  
-  .login-auth-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-  }
-  
-  .login-auth-header .auth-icon {
-    font-size: 1.25rem;
-  }
-  
-  .login-auth-header .auth-title {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1rem;
-    color: var(--kawaii-ink);
-  }
-  
-  .login-token-wrapper {
-    position: relative;
-    margin-bottom: 0.5rem;
-  }
-  
-  .login-token-input {
-    width: 100%;
-    padding: 0.75rem 2.5rem 0.75rem 1rem;
-    border: 2px solid var(--kawaii-line);
-    border-radius: var(--radius-md);
-    background: var(--kawaii-surface);
-    font-family: var(--font-mono);
-    font-size: 16px; /* 16px 防止 iOS 自动缩放 */
-    color: var(--kawaii-ink);
-    transition: border-color 200ms ease, box-shadow 200ms ease;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-  }
-  
-  @media (min-width: 721px) {
-    .login-token-input {
-      font-size: 0.9rem;
-    }
-  }
-  
-  .login-token-input:focus {
-    border-color: var(--kawaii-primary);
-    box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.15);
-    outline: none;
-  }
-  
-  .login-token-toggle {
-    position: absolute;
-    right: 0.5rem;
-    top: 50%;
-    transform: translateY(-50%);
-    background: transparent;
-    border: none;
-    padding: 0.25rem;
-    cursor: pointer;
-    font-size: 1rem;
-    opacity: 0.6;
-    transition: opacity 200ms ease;
-  }
-  
-  .login-token-toggle:hover {
-    opacity: 1;
-  }
-  
-  .login-auth-hint {
-    font-size: 0.8rem;
-    color: var(--kawaii-ink-muted);
-    margin: 0 0 0.75rem 0;
-  }
-  
-  .login-auth-error {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem;
-    background: rgba(255, 107, 107, 0.1);
-    border: 1px solid rgba(255, 107, 107, 0.3);
-    border-radius: var(--radius-md);
-    color: var(--kawaii-danger);
-    font-size: 0.9rem;
-    margin-top: 0.75rem;
-  }
-  
-  /* Dark mode support */
-  html[data-color-scheme="dark"] .login-panel {
-    background: rgba(35, 35, 60, 0.7);
-    border-color: rgba(147, 112, 219, 0.4);
-  }
-  
-  html[data-color-scheme="dark"] .login-auth-header .auth-title {
-    color: #fff;
-  }
-  
-  html[data-color-scheme="dark"] .login-token-input {
-    background: rgba(30, 30, 50, 0.9);
-    border-color: rgba(147, 112, 219, 0.35);
-    color: #fff;
-  }
-  
-  html[data-color-scheme="dark"] .login-token-input:focus {
-    border-color: #ff69b4;
-    box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.25);
-  }
-  
-  html[data-color-scheme="dark"] .login-auth-hint {
-    color: rgba(255, 255, 255, 0.5);
-  }
-  
-  html[data-color-scheme="dark"] .login-auth-error {
-    background: rgba(255, 51, 102, 0.15);
-    border-color: rgba(255, 51, 102, 0.4);
-    color: #ff6b6b;
-  }
-</style>
 {% endblock %}

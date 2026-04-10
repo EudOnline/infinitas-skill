@@ -1,7 +1,15 @@
-.PHONY: bootstrap clean-local ci-fast test-fast test-full lint-maintained fmt-maintained doctor
+.PHONY: bootstrap clean-local ci-fast test-fast test-full lint-maintained fmt-maintained doctor build-css watch-css
+
+build-css:
+	npm run build
+
+watch-css:
+	npm run watch
 
 bootstrap:
 	uv sync
+	npm install
+	npm run build
 
 clean-local:
 	find . \( -path './.venv' -o -path './.worktrees' \) -prune -o -type d -name '__pycache__' -exec rm -rf {} +

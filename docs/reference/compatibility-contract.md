@@ -2,7 +2,7 @@
 audience: contributors, integrators, reviewers
 owner: repository maintainers
 source_of_truth: compatibility contract reference
-last_reviewed: 2026-03-30
+last_reviewed: 2026-04-07
 status: maintained
 ---
 
@@ -120,9 +120,9 @@ Operational steady-state guidance, accepted maintenance notes, and the final ver
 
 ## Notes on runtime vs format compatibility
 
-`agent_compatible` is a runtime compatibility declaration: it says which agent runtimes a skill claims to support. That declaration is now treated as **declared support**, not the final compatibility verdict.
+Treat `agent_compatible` as legacy migration metadata. The maintained runtime contract is now OpenClaw-native, so `agent_compatible` remains useful only for migration, historical declarations, and compatibility-era audit context.
 
-As the multi-platform pipeline evolves, the repository distinguishes between:
+The repository still distinguishes between these legacy compatibility concepts when historical data is present:
 
 - **declared support**: what the author says a skill intends to support
 - **verified support**: what recent platform-specific checks and evidence files have confirmed
@@ -133,4 +133,4 @@ Verified support now carries additive freshness metadata so the repository can d
 - older evidence that is now stale because of age or because the tracked platform contract changed after the last verification
 - missing evidence, which remains `unknown`
 
-It is **not** the same thing as registry file-format compatibility. File-format compatibility is governed by versioned schemas, migration guarantees, and regression tests.
+It is **not** the same thing as registry file-format compatibility. File-format compatibility is governed by versioned schemas, migration guarantees, and regression tests. It is also not the maintained runtime contract; OpenClaw runtime behavior now lives in `openclaw-runtime-contract.md`.

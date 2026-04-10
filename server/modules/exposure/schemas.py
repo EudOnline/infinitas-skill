@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -26,14 +27,14 @@ def _load_policy_snapshot(raw: str | None) -> dict:
 
 class ExposureCreateRequest(BaseModel):
     audience_type: str
-    listing_mode: str = "listed"
-    install_mode: str = "enabled"
+    listing_mode: Literal["listed", "direct_only"] = "listed"
+    install_mode: Literal["enabled", "disabled"] = "enabled"
     requested_review_mode: str = "none"
 
 
 class ExposurePatchRequest(BaseModel):
-    listing_mode: str | None = None
-    install_mode: str | None = None
+    listing_mode: Literal["listed", "direct_only"] | None = None
+    install_mode: Literal["enabled", "disabled"] | None = None
     requested_review_mode: str | None = None
 
 

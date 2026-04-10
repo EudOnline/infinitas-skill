@@ -8,6 +8,7 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from infinitas_skill.install.distribution import DistributionError, verify_distribution_manifest
 from server.models import Artifact, Exposure, Principal, Release, Skill, SkillVersion
 
 
@@ -57,18 +58,30 @@ def _artifact_exists(artifact_root: Path, relative_path: str) -> bool:
     return candidate.is_file()
 
 
-def projection_has_materialized_artifacts(entry: DiscoveryProjection, artifact_root: Path) -> bool:
+def projection_has_materialized_artifacts(
+    entry: DiscoveryProjection,
+    artifact_root: Path,
+    repo_root: Path,
+) -> bool:
     if not isinstance(entry.bundle_sha256, str) or not entry.bundle_sha256.strip():
         return False
-    return all(
-        _artifact_exists(artifact_root, path)
-        for path in (
-            entry.manifest_path,
-            entry.bundle_path,
-            entry.provenance_path,
-            entry.signature_path,
-        )
+    required_paths = (
+        entry.manifest_path,
+        entry.bundle_path,
+        entry.provenance_path,
+        entry.signature_path,
     )
+    if not all(_artifact_exists(artifact_root, path) for path in required_paths):
+        return False
+    try:
+        verified = verify_distribution_manifest(
+            Path(artifact_root).resolve() / entry.manifest_path,
+            root=artifact_root,
+            attestation_root=repo_root,
+        )
+    except DistributionError:
+        return False
+    return bool(verified.get("verified"))
 
 
 def build_release_projections(db: Session) -> list[DiscoveryProjection]:
@@ -82,6 +95,7 @@ def build_release_projections(db: Session) -> list[DiscoveryProjection]:
             Exposure.review_requirement.label("review_requirement"),
             Exposure.state.label("exposure_state"),
             Release.state.label("release_state"),
+            Release.bundle_artifact_id.label("bundle_artifact_id"),
             Release.ready_at.label("ready_at"),
             Principal.slug.label("publisher"),
             Skill.slug.label("name"),
@@ -104,17 +118,20 @@ def build_release_projections(db: Session) -> list[DiscoveryProjection]:
         )
     ).all()
 
-    release_ids = {int(row.release_id) for row in rows}
+    bundle_artifact_ids = {
+        int(row.bundle_artifact_id)
+        for row in rows
+        if row.bundle_artifact_id is not None
+    }
     bundle_sha_by_release: dict[int, str] = {}
-    if release_ids:
+    if bundle_artifact_ids:
         artifact_rows = db.execute(
-            select(Artifact.release_id, Artifact.kind, Artifact.sha256).where(
-                Artifact.release_id.in_(release_ids)
+            select(Artifact.id, Artifact.release_id, Artifact.sha256).where(
+                Artifact.id.in_(bundle_artifact_ids)
             )
         ).all()
         for artifact_row in artifact_rows:
-            if artifact_row.kind == "bundle":
-                bundle_sha_by_release[int(artifact_row.release_id)] = artifact_row.sha256
+            bundle_sha_by_release[int(artifact_row.release_id)] = artifact_row.sha256
 
     projections: list[DiscoveryProjection] = []
     for row in rows:

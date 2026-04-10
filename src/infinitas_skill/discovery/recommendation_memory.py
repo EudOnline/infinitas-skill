@@ -107,6 +107,11 @@ def load_recommendation_memory_context(
         user_ref=memory_scope.get("user_ref"),
         principal_ref=memory_scope.get("principal_ref"),
         skill_ref=memory_scope.get("skill_ref"),
+        runtime_platform=memory_scope.get("runtime_platform"),
+        workspace_root=memory_scope.get("workspace_root"),
+        session_ref=memory_scope.get("session_ref"),
+        task_capabilities=memory_scope.get("task_capabilities"),
+        runtime_capabilities=memory_scope.get("runtime_capabilities"),
     )
     provider_scope = dict(context_query.provider_scope)
     for key in ["user_id", "agent_id", "run_id", "namespace"]:

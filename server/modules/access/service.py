@@ -196,6 +196,8 @@ def grant_allows_release(db: Session, *, grant_id: int, release_id: int) -> bool
     exposure = db.get(Exposure, grant.exposure_id)
     if exposure is None:
         return False
+    if exposure.audience_type != "grant":
+        return False
     if exposure.state != "active" or exposure.install_mode != "enabled":
         return False
     return exposure.release_id == release_id

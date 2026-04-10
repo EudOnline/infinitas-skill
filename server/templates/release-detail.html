@@ -2,41 +2,102 @@
 {% from "macros.html" import console_table_shell %}
 
 {% block body %}
-<section class="kawaii-card animate-in detail-shell">
-  <div class="section-kicker">{{ '发布详情' if page_language == 'zh' else 'Release detail' }}</div>
-  <div class="detail-grid">
+<section class="kawaii-card animate-in">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_release_detail'] }}</div>
+  <div class="detail-grid detail-grid--release">
     <article>
       <h2>{{ release.skill_name }} {{ release.version }}</h2>
-      <p>{{ '发布是不可变交付物，后续分享只是在 release 外侧叠加 audience 策略。' if page_language == 'zh' else 'A release is immutable; later sharing only adds audience policies around the release.' }}</p>
-      <div class="detail-actions">
-        <a class="entity-link" href="{{ release.skill_href }}">{{ '查看技能' if page_language == 'zh' else 'Open skill' }}</a>
-        <a class="entity-link" href="{{ release.share_href }}">{{ '分享设置' if page_language == 'zh' else 'Share settings' }}</a>
+      <p>{{ ui['hint_release_immutable'] }}</p>
+      <div class="flex flex-wrap items-center gap-2 mt-4">
+        <a class="text-kawaii-primary-deep font-bold no-underline" href="{{ release.skill_href }}">{{ ui['action_open_skill_short'] }}</a>
+        <a class="text-kawaii-primary-deep font-bold no-underline" href="{{ release.share_href }}">{{ ui['action_share_settings'] }}</a>
       </div>
     </article>
     <dl class="detail-meta">
       <div><dt>ID</dt><dd>#{{ release.id }}</dd></div>
-      <div><dt>{{ '状态' if page_language == 'zh' else 'State' }}</dt><dd>{{ release.state }}</dd></div>
-      <div><dt>{{ '格式版本' if page_language == 'zh' else 'Format version' }}</dt><dd>{{ release.format_version }}</dd></div>
-      <div><dt>{{ '就绪时间' if page_language == 'zh' else 'Ready at' }}</dt><dd>{{ release.ready_at }}</dd></div>
-      <div><dt>{{ '创建时间' if page_language == 'zh' else 'Created at' }}</dt><dd>{{ release.created_at }}</dd></div>
+      <div><dt>{{ ui['table_col_state'] }}</dt>
+        <dd>
+          <span id="release-status"
+                class="kawaii-badge {% if release.state_raw == 'ready' %}kawaii-badge--success{% elif release.state_raw == 'preparing' %}kawaii-badge--pending{% else %}kawaii-badge--running{% endif %}"
+                data-release-id="{{ release.id }}"
+                data-state="{{ release.state_raw }}">
+            {{ release.state }}
+          </span>
+          {% if release.state_raw == 'preparing' %}
+          <span class="block mt-1.5 text-sm text-kawaii-ink-soft">{{ ui['text_materializing'] }}</span>
+          {% endif %}
+        </dd>
+      </div>
+      <div><dt>{{ ui['label_format_version'] }}</dt><dd>{{ release.format_version }}</dd></div>
+      <div><dt>{{ ui['label_ready_at'] }}</dt><dd>{{ release.ready_at }}</dd></div>
+      <div><dt>{{ ui['label_created_at'] }}</dt><dd>{{ release.created_at }}</dd></div>
+      <div><dt>{{ ui['label_runtime_platform'] }}</dt><dd>{{ release.canonical_runtime_platform }}</dd></div>
+      <div><dt>{{ ui['label_runtime_readiness'] }}</dt>
+        <dd>
+          {% if release.canonical_runtime and release.canonical_runtime.freshness_state %}
+            <span class="kawaii-badge {% if release.canonical_runtime.freshness_state == 'fresh' %}kawaii-badge--success{% elif release.canonical_runtime.freshness_state == 'stale' %}kawaii-badge--pending{% else %}kawaii-badge--running{% endif %}">
+              {{ release.canonical_runtime.freshness_state }}
+            </span>
+          {% else %}
+            <span class="kawaii-badge kawaii-badge--running">-</span>
+          {% endif %}
+        </dd>
+      </div>
+      <div><dt>{{ ui['label_blocking_platforms'] }}</dt>
+        <dd>
+          {% if release.blocking_platforms %}
+            {% for item in release.blocking_platforms %}
+              <span class="kawaii-badge kawaii-badge--pending">{{ item.platform or item.name or 'unknown' }}</span>
+            {% endfor %}
+          {% else %}
+            <span class="kawaii-badge kawaii-badge--success">{{ ui['text_none'] }}</span>
+          {% endif %}
+        </dd>
+      </div>
     </dl>
   </div>
 </section>
 
+{% if release.verified_support or release.historical_platforms %}
+<section class="kawaii-card animate-in">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_historical_compatibility'] }}</div>
+  <dl class="detail-meta">
+    {% if release.verified_support %}
+    <div><dt>{{ ui['label_verified_support'] }}</dt>
+      <dd>
+        {% for platform, info in release.verified_support.items() %}
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="font-semibold min-w-[4rem]">{{ platform }}</span>
+            <span class="kawaii-badge {% if info.freshness_state == 'fresh' %}kawaii-badge--success{% elif info.freshness_state == 'stale' %}kawaii-badge--pending{% else %}kawaii-badge--running{% endif %}">{{ info.freshness_state or '-' }}</span>
+          </div>
+        {% endfor %}
+      </dd>
+    </div>
+    {% endif %}
+    {% if release.historical_platforms %}
+    <div><dt>{{ ui['label_historical_platforms'] }}</dt>
+      <dd>{{ release.historical_platforms | join(', ') }}</dd>
+    </div>
+    {% endif %}
+  </dl>
+</section>
+{% endif %}
+
+<div id="artifact-section" {% if release.state_raw != 'ready' %}hidden{% endif %}>
 {% call console_table_shell(
-  '产物' if page_language == 'zh' else 'Artifacts',
-  '还没有产物。' if page_language == 'zh' else 'No artifacts yet.',
+  ui['section_artifacts'],
+  ui['empty_artifacts'],
   artifact_rows,
   page_language
 ) %}
 <table>
   <thead>
     <tr>
-      <th>ID</th>
-      <th>{{ '类型' if page_language == 'zh' else 'Kind' }}</th>
-      <th>SHA256</th>
-      <th>{{ '大小' if page_language == 'zh' else 'Size' }}</th>
-      <th>{{ '存储位置' if page_language == 'zh' else 'Storage URI' }}</th>
+      <th scope="col">ID</th>
+      <th scope="col">{{ ui['table_col_kind'] }}</th>
+      <th scope="col">SHA256</th>
+      <th scope="col">{{ ui['table_col_size'] }}</th>
+      <th scope="col">{{ ui['table_col_storage_uri'] }}</th>
     </tr>
   </thead>
   <tbody>
@@ -52,21 +113,22 @@
   </tbody>
 </table>
 {% endcall %}
+</div>
 
 {% call console_table_shell(
-  '分享出口' if page_language == 'zh' else 'Share exits',
-  '还没有分享出口。' if page_language == 'zh' else 'No share exits.',
+  ui['section_share_exits'],
+  ui['empty_share_exits'],
   exposure_rows,
   page_language
 ) %}
 <table>
   <thead>
     <tr>
-      <th>ID</th>
-      <th>{{ 'Audience' if page_language == 'en' else '可见范围' }}</th>
-      <th>{{ '状态' if page_language == 'zh' else 'State' }}</th>
-      <th>{{ '列出策略' if page_language == 'zh' else 'Listing' }}</th>
-      <th>{{ '跳转' if page_language == 'zh' else 'Open' }}</th>
+      <th scope="col">ID</th>
+      <th scope="col">{{ ui['table_col_audience'] }}</th>
+      <th scope="col">{{ ui['table_col_state'] }}</th>
+      <th scope="col">{{ ui['table_col_listing'] }}</th>
+      <th scope="col">{{ ui['table_col_open'] }}</th>
     </tr>
   </thead>
   <tbody>
@@ -76,66 +138,12 @@
       <td>{{ item.audience }}</td>
       <td>{{ item.state }}</td>
       <td>{{ item.listing_mode }}</td>
-      <td><a class="entity-link" href="{{ item.share_href }}">{{ '分享页' if page_language == 'zh' else 'Share page' }}</a></td>
+      <td><a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.share_href }}">{{ ui['action_share_page'] }}</a></td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
 {% endcall %}
 
-<style>
-  .detail-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.85fr);
-    gap: 1rem;
-  }
 
-  .detail-grid p {
-    margin: 0.4rem 0 0;
-    color: var(--kawaii-ink-soft);
-  }
-
-  .detail-meta {
-    display: grid;
-    gap: 0.85rem;
-    margin: 0;
-  }
-
-  .detail-meta dt {
-    font-size: 0.82rem;
-    color: var(--kawaii-ink-muted);
-  }
-
-  .detail-meta dd {
-    margin: 0.2rem 0 0;
-    font-weight: 700;
-  }
-
-  .detail-actions {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    margin-top: 1rem;
-  }
-
-  .entity-link {
-    color: var(--kawaii-primary-deep);
-    text-decoration: none;
-    font-weight: 700;
-  }
-
-  .table-code {
-    display: inline-block;
-    max-width: 24rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  @media (max-width: 860px) {
-    .detail-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-</style>
 {% endblock %}

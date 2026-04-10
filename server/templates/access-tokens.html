@@ -2,28 +2,45 @@
 {% from "macros.html" import console_table_shell %}
 
 {% block body %}
-<section class="kawaii-card animate-in detail-shell">
-  <div class="section-kicker">{{ '访问控制' if page_language == 'zh' else 'Access control' }}</div>
-  <p class="detail-copy">{{ 'token 和 grant 已经从技能生命周期里拆开。技能负责内容，exposure 负责谁能看，credential 负责谁能用哪个 token。' if page_language == 'zh' else 'Tokens and grants are now separate from the skill lifecycle. Skills carry content, exposures describe who can see it, and credentials decide who can use which token.' }}</p>
+<section class="kawaii-card animate-in">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_access_control'] }}</div>
+  <p class="text-kawaii-ink-soft leading-relaxed max-w-prose mb-4">{{ ui['hint_access_tokens'] }}</p>
+</section>
+
+<section class="kawaii-card animate-in">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_current_identity'] }}</div>
+  <div id="access-me" class="p-4 border border-dashed border-kawaii-line rounded-kawaii-md text-kawaii-ink-muted">{{ ui['text_loading'] }}</div>
+</section>
+
+<section class="kawaii-card animate-in">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_release_access_check'] }}</div>
+  <div class="flex flex-wrap items-end gap-3">
+    <label class="flex flex-col gap-1.5">
+      <span>{{ ui['label_release_id'] | default('Release ID') }}</span>
+      <input class="kawaii-input" type="number" id="release-access-id" min="1" placeholder="123" />
+    </label>
+    <button class="kawaii-button kawaii-button--secondary" type="button" data-action="check-release-access">{{ ui['action_check'] }}</button>
+    <span id="release-access-check"></span>
+  </div>
 </section>
 
 {% call console_table_shell(
-  '令牌' if page_language == 'zh' else 'Tokens',
-  '还没有令牌。' if page_language == 'zh' else 'No tokens yet.',
+  ui['section_tokens'],
+  ui['empty_tokens'],
   credential_rows,
   page_language
 ) %}
 <table>
   <thead>
     <tr>
-      <th>ID</th>
-      <th>{{ '类型' if page_language == 'zh' else 'Type' }}</th>
-      <th>{{ '主体' if page_language == 'zh' else 'Principal' }}</th>
-      <th>{{ '作用域' if page_language == 'zh' else 'Scopes' }}</th>
-      <th>{{ 'Grant' if page_language == 'en' else '授权' }}</th>
-      <th>{{ 'Release' if page_language == 'en' else '关联发布' }}</th>
-      <th>{{ '过期时间' if page_language == 'zh' else 'Expires' }}</th>
-      <th>{{ '最后使用' if page_language == 'zh' else 'Last used' }}</th>
+      <th scope="col">ID</th>
+      <th scope="col">{{ ui['table_col_type'] }}</th>
+      <th scope="col">{{ ui['table_col_principal'] }}</th>
+      <th scope="col">{{ ui['table_col_scopes'] }}</th>
+      <th scope="col">{{ ui['table_col_grant'] }}</th>
+      <th scope="col">{{ ui['table_col_release'] }}</th>
+      <th scope="col">{{ ui['table_col_expires'] }}</th>
+      <th scope="col">{{ ui['table_col_last_used'] }}</th>
     </tr>
   </thead>
   <tbody>
@@ -44,20 +61,20 @@
 {% endcall %}
 
 {% call console_table_shell(
-  '授权记录' if page_language == 'zh' else 'Grant records',
-  '还没有 grant。' if page_language == 'zh' else 'No grants yet.',
+  ui['badge_grant_records'],
+  ui['empty_grants'],
   grant_rows,
   page_language
 ) %}
 <table>
   <thead>
     <tr>
-      <th>ID</th>
-      <th>{{ '类型' if page_language == 'zh' else 'Type' }}</th>
-      <th>{{ '对象' if page_language == 'zh' else 'Subject' }}</th>
-      <th>{{ 'Audience' if page_language == 'en' else '可见范围' }}</th>
-      <th>{{ 'Release' if page_language == 'en' else '关联发布' }}</th>
-      <th>{{ '状态' if page_language == 'zh' else 'State' }}</th>
+      <th scope="col">ID</th>
+      <th scope="col">{{ ui['table_col_type'] }}</th>
+      <th scope="col">{{ ui['table_col_subject'] }}</th>
+      <th scope="col">{{ ui['table_col_audience'] }}</th>
+      <th scope="col">{{ ui['table_col_release'] }}</th>
+      <th scope="col">{{ ui['table_col_state'] }}</th>
     </tr>
   </thead>
   <tbody>
@@ -75,10 +92,5 @@
 </table>
 {% endcall %}
 
-<style>
-  .detail-copy {
-    margin: 0;
-    color: var(--kawaii-ink-soft);
-  }
-</style>
+
 {% endblock %}

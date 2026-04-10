@@ -2,39 +2,72 @@
 {% from "macros.html" import console_table_shell %}
 
 {% block body %}
-<section class="kawaii-card animate-in lifecycle-overview">
-  <div class="section-kicker">{{ '生命周期总览' if page_language == 'zh' else 'Lifecycle overview' }}</div>
-  <div class="lifecycle-overview__grid">
+<section class="kawaii-card animate-in mb-4">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_lifecycle_overview'] }}</div>
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4">
     <article>
-      <h2>{{ '先写，再封版，再发布' if page_language == 'zh' else 'Draft, seal, then release' }}</h2>
-      <p>{{ '技能、草稿、发布、分享和访问令牌已经拆成独立领域对象，后续扩展审核、授权和安装规则时不必再修改同一张大表。' if page_language == 'zh' else 'Skills, drafts, releases, sharing, and access tokens now live as separate domain objects so review, authorization, and install rules can evolve without reshaping one giant table.' }}</p>
+      <h2>{{ ui['hint_lifecycle'] }}</h2>
+      <p>{{ ui['hint_lifecycle_desc'] }}</p>
     </article>
     <article>
-      <h2>{{ '查看访问与审核' if page_language == 'zh' else 'Open access and review' }}</h2>
-      <p>{{ '令牌和 grant 放在访问页，公开暴露的审核单放在审核页。' if page_language == 'zh' else 'Tokens and grants live on the access page, while public exposure review cases live in the review inbox.' }}</p>
-      <div class="lifecycle-actions">
-        <a class="kawaii-button kawaii-button--primary" href="{{ access_href }}">{{ '访问页' if page_language == 'zh' else 'Access' }}</a>
-        <a class="kawaii-button kawaii-button--ghost" href="{{ review_cases_href }}">{{ '审核页' if page_language == 'zh' else 'Review' }}</a>
+      <h2>{{ ui['hint_access_review'] }}</h2>
+      <p>{{ ui['hint_access_review_desc'] }}</p>
+      <div class="flex flex-wrap items-center gap-2 mt-3">
+        <a class="kawaii-button kawaii-button--primary" href="{{ access_href }}">{{ ui['action_access_page'] }}</a>
+        <a class="kawaii-button kawaii-button--ghost" href="{{ review_cases_href }}">{{ ui['action_review_page'] }}</a>
       </div>
     </article>
   </div>
 </section>
 
+<section class="kawaii-card animate-in">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_create_skill'] }}</div>
+  <form id="create-skill-form" class="lifecycle-form">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <label>
+        <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['label_slug_with_hint'] }}</span>
+        <input class="kawaii-input" type="text" name="slug" required placeholder="my-skill" />
+      </label>
+      <label>
+        <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['label_display_name'] }}</span>
+        <input class="kawaii-input" type="text" name="display_name" required placeholder="My Skill" />
+      </label>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <label>
+        <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['label_summary'] }}</span>
+        <input class="kawaii-input" type="text" name="summary" placeholder="{{ ui['placeholder_summary'] }}" />
+      </label>
+      <label>
+        <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['table_col_default_visibility'] }}</span>
+        <select class="kawaii-input" name="default_visibility_profile">
+          <option value="">-</option>
+          <option value="private">{{ ui['option_private'] }}</option>
+          <option value="public">{{ ui['option_public'] }}</option>
+        </select>
+      </label>
+    </div>
+    <div class="flex flex-wrap items-center gap-2 mt-4">
+      <button class="kawaii-button kawaii-button--primary" type="submit">{{ ui['badge_create_skill'] }}</button>
+    </div>
+  </form>
+</section>
+
 {% call console_table_shell(
-  '技能' if page_language == 'zh' else 'Skills',
-  '还没有技能。' if page_language == 'zh' else 'No skills yet.',
+  ui['table_col_skill'],
+  ui['empty_skills'],
   skill_items,
   page_language
 ) %}
 <table id="skills">
   <thead>
     <tr>
-      <th>ID</th>
-      <th>{{ '技能' if page_language == 'zh' else 'Skill' }}</th>
-      <th>{{ '命名空间' if page_language == 'zh' else 'Namespace' }}</th>
-      <th>{{ '草稿 / 版本 / 发布' if page_language == 'zh' else 'Drafts / Versions / Releases' }}</th>
-      <th>{{ '默认可见性' if page_language == 'zh' else 'Default visibility' }}</th>
-      <th>{{ '更新时间' if page_language == 'zh' else 'Updated' }}</th>
+      <th scope="col">ID</th>
+      <th scope="col">{{ ui['table_col_skill'] }}</th>
+      <th scope="col">{{ ui['table_col_namespace'] }}</th>
+      <th scope="col">{{ ui['table_col_drafts_versions_releases'] }}</th>
+      <th scope="col">{{ ui['table_col_default_visibility'] }}</th>
+      <th scope="col">{{ ui['table_col_updated'] }}</th>
     </tr>
   </thead>
   <tbody>
@@ -42,8 +75,8 @@
     <tr>
       <td>{{ item.id }}</td>
       <td>
-        <a class="entity-link" href="{{ item.detail_href }}">{{ item.display_name }}</a>
-        <div class="table-note">{{ item.summary }}</div>
+        <a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.detail_href }}">{{ item.display_name }}</a>
+        <div class="text-xs text-kawaii-ink-muted mt-1">{{ item.summary }}</div>
       </td>
       <td>{{ item.namespace }}</td>
       <td>{{ item.draft_count }} / {{ item.version_count }} / {{ item.release_count }}</td>
@@ -56,26 +89,26 @@
 {% endcall %}
 
 {% call console_table_shell(
-  '草稿' if page_language == 'zh' else 'Drafts',
-  '还没有草稿。' if page_language == 'zh' else 'No drafts yet.',
+  ui['section_drafts'],
+  ui['empty_drafts'],
   draft_items,
   page_language
 ) %}
 <table id="drafts">
   <thead>
     <tr>
-      <th>ID</th>
-      <th>{{ '技能' if page_language == 'zh' else 'Skill' }}</th>
-      <th>{{ '状态' if page_language == 'zh' else 'State' }}</th>
-      <th>{{ '入口文件' if page_language == 'zh' else 'Entrypoint' }}</th>
-      <th>{{ '内容引用' if page_language == 'zh' else 'Content ref' }}</th>
-      <th>{{ '更新时间' if page_language == 'zh' else 'Updated' }}</th>
+      <th scope="col">ID</th>
+      <th scope="col">{{ ui['table_col_skill'] }}</th>
+      <th scope="col">{{ ui['table_col_state'] }}</th>
+      <th scope="col">{{ ui['table_col_entrypoint'] }}</th>
+      <th scope="col">{{ ui['table_col_content_ref'] }}</th>
+      <th scope="col">{{ ui['table_col_updated'] }}</th>
     </tr>
   </thead>
   <tbody>
     {% for item in draft_items %}
     <tr>
-      <td><a class="entity-link" href="{{ item.detail_href }}">{{ item.id }}</a></td>
+      <td><a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.detail_href }}">{{ item.id }}</a></td>
       <td>{{ item.skill_name }}</td>
       <td>{{ item.state }}</td>
       <td>{{ item.entrypoint }}</td>
@@ -88,20 +121,20 @@
 {% endcall %}
 
 {% call console_table_shell(
-  '发布' if page_language == 'zh' else 'Releases',
-  '还没有发布。' if page_language == 'zh' else 'No releases yet.',
+  ui['section_releases'],
+  ui['empty_releases'],
   release_items,
   page_language
 ) %}
 <table id="releases">
   <thead>
     <tr>
-      <th>ID</th>
-      <th>{{ '技能' if page_language == 'zh' else 'Skill' }}</th>
-      <th>{{ '版本' if page_language == 'zh' else 'Version' }}</th>
-      <th>{{ '状态' if page_language == 'zh' else 'State' }}</th>
-      <th>{{ '分享出口' if page_language == 'zh' else 'Share exits' }}</th>
-      <th>{{ '操作' if page_language == 'zh' else 'Actions' }}</th>
+      <th scope="col">ID</th>
+      <th scope="col">{{ ui['table_col_skill'] }}</th>
+      <th scope="col">{{ ui['table_col_version_short'] }}</th>
+      <th scope="col">{{ ui['table_col_state'] }}</th>
+      <th scope="col">{{ ui['table_col_share_exits'] }}</th>
+      <th scope="col">{{ ui['table_col_actions'] }}</th>
     </tr>
   </thead>
   <tbody>
@@ -113,9 +146,9 @@
       <td>{{ item.state }}</td>
       <td>{{ item.exposure_count }}</td>
       <td>
-        <div class="table-actions">
-          <a class="entity-link" href="{{ item.detail_href }}">{{ '详情' if page_language == 'zh' else 'Detail' }}</a>
-          <a class="entity-link" href="{{ item.share_href }}">{{ '分享' if page_language == 'zh' else 'Share' }}</a>
+        <div class="flex flex-wrap items-center gap-2">
+          <a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.detail_href }}">{{ ui['action_detail'] }}</a>
+          <a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.share_href }}">{{ ui['action_share'] }}</a>
         </div>
       </td>
     </tr>
@@ -125,26 +158,26 @@
 {% endcall %}
 
 {% call console_table_shell(
-  '分享' if page_language == 'zh' else 'Share',
-  '还没有可见性出口。' if page_language == 'zh' else 'No share entries yet.',
+  ui['section_share'],
+  ui['empty_share_entries'],
   share_items,
   page_language
 ) %}
 <table id="share">
   <thead>
     <tr>
-      <th>ID</th>
-      <th>{{ '技能' if page_language == 'zh' else 'Skill' }}</th>
-      <th>{{ 'Audience' if page_language == 'en' else '可见范围' }}</th>
-      <th>{{ '列出 / 安装' if page_language == 'zh' else 'Listing / Install' }}</th>
-      <th>{{ '审核' if page_language == 'zh' else 'Review' }}</th>
-      <th>{{ '状态' if page_language == 'zh' else 'State' }}</th>
+      <th scope="col">ID</th>
+      <th scope="col">{{ ui['table_col_skill'] }}</th>
+      <th scope="col">{{ ui['table_col_audience'] }}</th>
+      <th scope="col">{{ ui['table_col_listing_install'] }}</th>
+      <th scope="col">{{ ui['table_col_review'] }}</th>
+      <th scope="col">{{ ui['table_col_state'] }}</th>
     </tr>
   </thead>
   <tbody>
     {% for item in share_items %}
     <tr>
-      <td><a class="entity-link" href="{{ item.share_href }}">#{{ item.id }}</a></td>
+      <td><a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.share_href }}">#{{ item.id }}</a></td>
       <td>{{ item.skill_name }}</td>
       <td>{{ item.audience }}</td>
       <td>{{ item.listing_mode }} / {{ item.install_mode }}</td>
@@ -157,26 +190,26 @@
 {% endcall %}
 
 {% call console_table_shell(
-  '审核' if page_language == 'zh' else 'Review',
-  '还没有审核单。' if page_language == 'zh' else 'No review cases yet.',
+  ui['section_review'],
+  ui['empty_review_cases'],
   review_items,
   page_language
 ) %}
 <table id="review">
   <thead>
     <tr>
-      <th>ID</th>
-      <th>{{ '技能' if page_language == 'zh' else 'Skill' }}</th>
-      <th>{{ 'Audience' if page_language == 'en' else '可见范围' }}</th>
-      <th>{{ '模式' if page_language == 'zh' else 'Mode' }}</th>
-      <th>{{ '状态' if page_language == 'zh' else 'State' }}</th>
-      <th>{{ '打开时间' if page_language == 'zh' else 'Opened' }}</th>
+      <th scope="col">ID</th>
+      <th scope="col">{{ ui['table_col_skill'] }}</th>
+      <th scope="col">{{ ui['table_col_audience'] }}</th>
+      <th scope="col">{{ ui['table_col_mode'] }}</th>
+      <th scope="col">{{ ui['table_col_state'] }}</th>
+      <th scope="col">{{ ui['table_col_opened'] }}</th>
     </tr>
   </thead>
   <tbody>
     {% for item in review_items %}
     <tr>
-      <td><a class="entity-link" href="{{ item.review_href }}">#{{ item.id }}</a></td>
+      <td><a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.review_href }}">#{{ item.id }}</a></td>
       <td>{{ item.skill_name }}</td>
       <td>{{ item.audience }}</td>
       <td>{{ item.mode }}</td>
@@ -188,57 +221,5 @@
 </table>
 {% endcall %}
 
-<style>
-  .lifecycle-overview {
-    margin-bottom: 1.5rem;
-  }
 
-  .lifecycle-overview__grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 1rem;
-  }
-
-  .lifecycle-overview__grid h2 {
-    margin: 0 0 0.4rem;
-    font-size: 1.05rem;
-  }
-
-  .lifecycle-overview__grid p {
-    margin: 0;
-    color: var(--kawaii-ink-soft);
-  }
-
-  .lifecycle-actions {
-    display: flex;
-    gap: 0.75rem;
-    margin-top: 1rem;
-    flex-wrap: wrap;
-  }
-
-  .entity-link {
-    font-weight: 700;
-    color: var(--kawaii-primary-deep);
-    text-decoration: none;
-  }
-
-  .table-note {
-    margin-top: 0.35rem;
-    color: var(--kawaii-ink-soft);
-  }
-
-  .table-code {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: inline-block;
-    max-width: 28rem;
-  }
-
-  .table-actions {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-  }
-</style>
 {% endblock %}

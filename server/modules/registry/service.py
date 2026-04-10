@@ -3,11 +3,15 @@ from __future__ import annotations
 import hmac
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 
 from fastapi import Request
 from sqlalchemy.orm import Session
 
+from infinitas_skill.discovery.index import normalize_discovery_skill
+from infinitas_skill.openclaw.runtime_model import build_openclaw_runtime_model
+from infinitas_skill.root import ROOT
 from server.auth import AUTH_COOKIE_NAME
 from server.modules.access.authn import AccessContext, resolve_access_context
 from server.modules.access.authz import can_access_release
@@ -23,18 +27,6 @@ INSTALL_POLICY = {
     "direct_source_install_allowed": False,
     "require_attestation": True,
     "require_sha256": True,
-}
-
-OPENCLAW_INTEROP = {
-    "runtime_targets": ["~/.openclaw/skills", "~/.openclaw/workspace/skills"],
-    "import_supported": True,
-    "export_supported": True,
-    "public_publish": {
-        "clawhub": {
-            "supported": True,
-            "default": False,
-        }
-    },
 }
 
 TOP_LEVEL_METADATA_PATHS = frozenset(
@@ -75,6 +67,16 @@ def _iso(value: datetime | None) -> str | None:
     return value.isoformat().replace("+00:00", "Z")
 
 
+@lru_cache(maxsize=1)
+def _openclaw_runtime_targets() -> tuple[str, ...]:
+    try:
+        runtime_model = build_openclaw_runtime_model(ROOT)
+        runtime_targets = list(runtime_model.get("skill_dir_candidates") or [])
+    except Exception:
+        runtime_targets = ["skills", ".agents/skills", "~/.agents/skills", "~/.openclaw/skills"]
+    return tuple(runtime_targets)
+
+
 def _extract_bearer_token(authorization: str | None) -> str | None:
     if not isinstance(authorization, str):
         return None
@@ -86,9 +88,9 @@ def _extract_bearer_token(authorization: str | None) -> str | None:
 
 
 def _resolve_request_token(request: Request) -> str | None:
-    return _extract_bearer_token(
-        request.headers.get("authorization")
-    ) or request.cookies.get(AUTH_COOKIE_NAME)
+    return _extract_bearer_token(request.headers.get("authorization")) or request.cookies.get(
+        AUTH_COOKIE_NAME
+    )
 
 
 def _matches_registry_reader_token(token: str, allowed_tokens: list[str]) -> bool:
@@ -145,6 +147,56 @@ def _version_sort_key(version: str) -> tuple[tuple[int, int], ...]:
     return tuple(parts)
 
 
+def _partition_runtime_targets(targets: list[str]) -> dict[str, list[str]]:
+    workspace: list[str] = []
+    shared: list[str] = []
+    for target in targets:
+        if not isinstance(target, str) or not target:
+            continue
+        if target.startswith("~/") or Path(target).is_absolute():
+            if target not in shared:
+                shared.append(target)
+        elif target not in workspace:
+            workspace.append(target)
+    return {"workspace": workspace, "shared": shared}
+
+
+def _registry_runtime_payload() -> dict:
+    runtime_targets = list(_openclaw_runtime_targets())
+    install_targets = _partition_runtime_targets(runtime_targets)
+    skill_precedence = list(runtime_targets)
+    for marker in ["bundled", "extra"]:
+        if marker not in skill_precedence:
+            skill_precedence.append(marker)
+    runtime_model = build_openclaw_runtime_model(ROOT)
+    capabilities = dict(runtime_model.get("capabilities") or {})
+    return {
+        "platform": "openclaw",
+        "source_mode": "hosted-registry-release",
+        "workspace_scope": "workspace",
+        "workspace_targets": runtime_targets,
+        "skill_precedence": skill_precedence,
+        "install_targets": install_targets,
+        "requires": {"tools": [], "bins": [], "env": [], "config": []},
+        "requires_tokens": [],
+        "requires_detail": {"tools": [], "bins": [], "env": [], "config": []},
+        "plugin_capabilities": {},
+        "background_tasks": {"required": False},
+        "subagents": {"required": False},
+        "readiness": {
+            "ready": True,
+            "supports_background_tasks": capabilities.get("supports_background_tasks") is True,
+            "supports_plugins": capabilities.get("supports_plugins") is True,
+            "supports_subagents": capabilities.get("supports_subagents") is True,
+            "status": "ready",
+        },
+        "legacy_compatibility": {
+            "agent_compatible": ["openclaw"],
+            "agent_compatible_deprecated": True,
+        },
+    }
+
+
 def _entry_ready_key(entry: DiscoveryProjection) -> tuple[int, str]:
     if entry.ready_at is None:
         return (0, "")
@@ -173,11 +225,13 @@ def _dedupe_entries(entries: list[DiscoveryProjection]) -> list[DiscoveryProject
 
 def _all_accessible_entries(db: Session, request: Request) -> list[DiscoveryProjection]:
     audience = _resolve_registry_audience(db, request)
-    artifact_root = get_settings().artifact_path
+    settings = get_settings()
+    artifact_root = settings.artifact_path
+    repo_root = settings.repo_path
     entries = [
         entry
         for entry in build_release_projections(db)
-        if projection_has_materialized_artifacts(entry, artifact_root)
+        if projection_has_materialized_artifacts(entry, artifact_root, repo_root)
     ]
 
     if audience.mode == "public":
@@ -208,9 +262,7 @@ def _all_accessible_entries(db: Session, request: Request) -> list[DiscoveryProj
 
 def _listed_entries(db: Session, request: Request) -> list[DiscoveryProjection]:
     return [
-        entry
-        for entry in _all_accessible_entries(db, request)
-        if entry.listing_mode == "listed"
+        entry for entry in _all_accessible_entries(db, request) if entry.listing_mode == "listed"
     ]
 
 
@@ -250,6 +302,7 @@ def _skill_defaults(entry: dict) -> dict:
         "use_when": [],
         "avoid_when": [],
         "runtime_assumptions": [],
+        "runtime": _registry_runtime_payload(),
         "agent_compatible": [],
         "verified_support": {},
         "compatibility": {
@@ -258,7 +311,19 @@ def _skill_defaults(entry: dict) -> dict:
         },
         "entrypoints": {"skill_md": "SKILL.md"},
         "requires": {"tools": [], "env": []},
-        "interop": {"openclaw": dict(OPENCLAW_INTEROP)},
+        "interop": {
+            "openclaw": {
+                "runtime_targets": list(_openclaw_runtime_targets()),
+                "import_supported": True,
+                "export_supported": True,
+                "public_publish": {
+                    "clawhub": {
+                        "supported": True,
+                        "default": False,
+                    }
+                },
+            }
+        },
     }
 
 
@@ -287,6 +352,7 @@ def _build_ai_index_from_entries(entries: list[dict]) -> dict:
         skills.append(
             {
                 "name": latest_entry.get("name"),
+                "display_name": latest_entry.get("display_name") or latest_entry.get("name"),
                 "publisher": defaults["publisher"],
                 "qualified_name": key,
                 "summary": defaults["summary"],
@@ -298,6 +364,7 @@ def _build_ai_index_from_entries(entries: list[dict]) -> dict:
                 "use_when": list(defaults["use_when"]),
                 "avoid_when": list(defaults["avoid_when"]),
                 "runtime_assumptions": list(defaults["runtime_assumptions"]),
+                "runtime": dict(defaults["runtime"]),
                 "agent_compatible": list(defaults["agent_compatible"]),
                 "compatibility": dict(defaults["compatibility"]),
                 "verified_support": dict(defaults["verified_support"]),
@@ -368,50 +435,15 @@ def build_registry_discovery_payload(_settings, db: Session, request: Request) -
     for skill in ai_payload.get("skills") or []:
         if not isinstance(skill, dict):
             continue
-        qualified_name = skill.get("qualified_name") or skill.get("name")
-        name = skill.get("name")
-        publisher = skill.get("publisher")
-        match_names: list[str] = []
-        candidates = [
-            name,
-            qualified_name,
-            f"{publisher}/{name}" if publisher and name else None,
-        ]
-        for candidate in candidates:
-            if isinstance(candidate, str) and candidate and candidate not in match_names:
-                match_names.append(candidate)
-        latest_version = skill.get("latest_version") or skill.get("default_install_version")
-        latest_version_payload = ((skill.get("versions") or {}).get(latest_version or "")) or {}
-        skills.append(
-            {
-                "name": name,
-                "qualified_name": qualified_name,
-                "publisher": publisher,
-                "summary": skill.get("summary") or "",
-                "source_registry": "self",
-                "source_priority": 100,
-                "match_names": sorted(match_names),
-                "default_install_version": skill.get("default_install_version"),
-                "latest_version": latest_version,
-                "available_versions": list(skill.get("available_versions") or []),
-                "agent_compatible": list(skill.get("agent_compatible") or []),
-                "install_requires_confirmation": False,
-                "trust_level": "private",
-                "trust_state": skill.get("trust_state") or "private-first",
-                "tags": list(skill.get("tags") or []),
-                "maturity": skill.get("maturity") or "stable",
-                "quality_score": int(skill.get("quality_score") or 0),
-                "last_verified_at": skill.get("last_verified_at"),
-                "capabilities": list(skill.get("capabilities") or []),
-                "verified_support": dict(skill.get("verified_support") or {}),
-                "attestation_formats": list(
-                    latest_version_payload.get("attestation_formats") or ["private-first"]
-                ),
-                "use_when": list(skill.get("use_when") or []),
-                "avoid_when": list(skill.get("avoid_when") or []),
-                "runtime_assumptions": list(skill.get("runtime_assumptions") or []),
-            }
+        normalized = normalize_discovery_skill(
+            skill,
+            source_registry="self",
+            source_priority=100,
+            trust_level="private",
+            default_registry="self",
         )
+        normalized["display_name"] = skill.get("display_name") or skill.get("name")
+        skills.append(normalized)
     return {
         "schema_version": 1,
         "generated_at": _utc_now_iso(),

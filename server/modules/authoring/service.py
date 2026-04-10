@@ -105,7 +105,11 @@ def get_skill_or_404(db: Session, skill_id: int) -> Skill:
     return skill
 
 
-def assert_namespace_owner(skill: Skill, *, principal_id: int) -> None:
+def assert_namespace_owner(
+    skill: Skill, *, principal_id: int, is_maintainer: bool = False
+) -> None:
+    if is_maintainer:
+        return
     if skill.namespace_id != principal_id:
         raise ForbiddenError("skill namespace access denied")
 
@@ -115,12 +119,17 @@ def create_draft(
     *,
     skill_id: int,
     actor_principal_id: int,
+    is_maintainer: bool = False,
     payload: SkillDraftCreateRequest,
 ) -> SkillDraft:
     skill = repository.get_skill(db, skill_id)
     if skill is None:
         raise NotFoundError("skill not found")
-    assert_namespace_owner(skill, principal_id=actor_principal_id)
+    assert_namespace_owner(
+        skill,
+        principal_id=actor_principal_id,
+        is_maintainer=is_maintainer,
+    )
     if payload.base_version_id is not None:
         base_version = repository.get_skill_version(db, payload.base_version_id)
         if base_version is None:
@@ -157,6 +166,7 @@ def patch_draft(
     *,
     draft_id: int,
     actor_principal_id: int,
+    is_maintainer: bool = False,
     payload: SkillDraftPatchRequest,
 ) -> SkillDraft:
     draft = repository.get_draft(db, draft_id)
@@ -167,7 +177,11 @@ def patch_draft(
     skill = repository.get_skill(db, draft.skill_id)
     if skill is None:
         raise NotFoundError("skill not found")
-    assert_namespace_owner(skill, principal_id=actor_principal_id)
+    assert_namespace_owner(
+        skill,
+        principal_id=actor_principal_id,
+        is_maintainer=is_maintainer,
+    )
 
     if payload.content_ref is not None:
         draft.content_ref = payload.content_ref
@@ -185,6 +199,7 @@ def seal_draft(
     *,
     draft_id: int,
     actor_principal_id: int,
+    is_maintainer: bool = False,
     version: str,
 ) -> tuple[SkillDraft, SkillVersion]:
     draft = repository.get_draft(db, draft_id)
@@ -196,7 +211,11 @@ def seal_draft(
     skill = repository.get_skill(db, draft.skill_id)
     if skill is None:
         raise NotFoundError("skill not found")
-    assert_namespace_owner(skill, principal_id=actor_principal_id)
+    assert_namespace_owner(
+        skill,
+        principal_id=actor_principal_id,
+        is_maintainer=is_maintainer,
+    )
     existing_version = repository.get_skill_version_by_skill_and_version(
         db,
         skill_id=skill.id,

@@ -67,6 +67,27 @@ def normalize_discovery_skill(
     default_registry: str,
 ) -> dict:
     decision_metadata = canonical_decision_metadata(skill)
+    runtime = dict(skill.get("runtime") or {})
+    readiness = dict(runtime.get("readiness") or {})
+    runtime_readiness = readiness.get("status")
+    if not isinstance(runtime_readiness, str) or not runtime_readiness.strip():
+        runtime_readiness = "ready" if readiness.get("ready") is True else "unknown"
+    install_targets = runtime.get("install_targets")
+    install_targets = install_targets if isinstance(install_targets, dict) else {}
+    workspace_targets = list(install_targets.get("workspace") or [])
+    if not workspace_targets:
+        workspace_targets = [
+            target
+            for target in list(runtime.get("workspace_targets") or [])
+            if isinstance(target, str)
+            and target
+            and not target.startswith("~/")
+            and not Path(target).is_absolute()
+        ]
+    legacy_agent_compatible = list(skill.get("agent_compatible") or [])
+    if runtime.get("platform") == "openclaw" and readiness.get("ready") is True:
+        if "openclaw" not in legacy_agent_compatible:
+            legacy_agent_compatible.append("openclaw")
     qualified_name = skill.get("qualified_name") or skill.get("name")
     latest_version = skill.get("latest_version") or skill.get("default_install_version") or ""
     match_names = []
@@ -94,7 +115,10 @@ def normalize_discovery_skill(
         "default_install_version": skill.get("default_install_version") or latest_version,
         "latest_version": latest_version,
         "available_versions": list(skill.get("available_versions") or []),
-        "agent_compatible": list(skill.get("agent_compatible") or []),
+        "runtime": runtime,
+        "runtime_readiness": runtime_readiness,
+        "workspace_targets": workspace_targets,
+        "agent_compatible": legacy_agent_compatible,
         "install_requires_confirmation": source_registry != default_registry,
         "trust_level": trust_level,
         "trust_state": skill.get("trust_state") or "unknown",
@@ -275,10 +299,14 @@ def validate_discovery_index_payload(payload: dict) -> list:
             errors.append(f"{prefix}.trust_level must be a non-empty string")
         if not isinstance(skill.get("install_requires_confirmation"), bool):
             errors.append(f"{prefix}.install_requires_confirmation must be a boolean")
+        if skill.get("runtime_readiness") is not None and (
+            not isinstance(skill.get("runtime_readiness"), str)
+            or not skill.get("runtime_readiness", "").strip()
+        ):
+            errors.append(f"{prefix}.runtime_readiness must be a non-empty string when present")
         for field in [
             "match_names",
             "available_versions",
-            "agent_compatible",
             "use_when",
             "avoid_when",
             "runtime_assumptions",
@@ -289,6 +317,12 @@ def validate_discovery_index_payload(payload: dict) -> list:
             value = skill.get(field)
             if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
                 errors.append(f"{prefix}.{field} must be an array of strings")
+        if skill.get("workspace_targets") is not None:
+            value = skill.get("workspace_targets")
+            if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+                errors.append(
+                    f"{prefix}.workspace_targets must be an array of strings when present"
+                )
         if not isinstance(skill.get("maturity"), str) or not skill.get("maturity", "").strip():
             errors.append(f"{prefix}.maturity must be a non-empty string")
         if not isinstance(skill.get("quality_score"), int):
@@ -305,4 +339,65 @@ def validate_discovery_index_payload(payload: dict) -> list:
             errors.append(f"{prefix}.trust_state must be a non-empty string")
         if not isinstance(skill.get("verified_support"), dict):
             errors.append(f"{prefix}.verified_support must be an object")
+        runtime = skill.get("runtime")
+        if runtime is not None:
+            if not isinstance(runtime, dict):
+                errors.append(f"{prefix}.runtime must be an object when present")
+                continue
+            if runtime.get("platform") != "openclaw":
+                errors.append(f"{prefix}.runtime.platform must equal openclaw")
+            for field in ["workspace_scope", "source_mode"]:
+                value = runtime.get(field)
+                if not isinstance(value, str) or not value.strip():
+                    errors.append(f"{prefix}.runtime.{field} must be a non-empty string")
+            for field in ["workspace_targets", "skill_precedence"]:
+                value = runtime.get(field)
+                if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+                    errors.append(f"{prefix}.runtime.{field} must be an array of strings")
+            install_targets = runtime.get("install_targets")
+            if not isinstance(install_targets, dict):
+                errors.append(f"{prefix}.runtime.install_targets must be an object")
+            else:
+                for field in ["workspace", "shared"]:
+                    value = install_targets.get(field)
+                    if not isinstance(value, list) or not all(
+                        isinstance(item, str) for item in value
+                    ):
+                        errors.append(
+                            f"{prefix}.runtime.install_targets.{field} must be an array of strings"
+                        )
+            requires = runtime.get("requires")
+            if not isinstance(requires, dict):
+                errors.append(f"{prefix}.runtime.requires must be an object")
+            else:
+                for field in ["tools", "bins", "env", "config"]:
+                    value = requires.get(field)
+                    if not isinstance(value, list) or not all(
+                        isinstance(item, str) for item in value
+                    ):
+                        errors.append(
+                            f"{prefix}.runtime.requires.{field} must be an array of strings"
+                        )
+            if not isinstance(runtime.get("plugin_capabilities"), dict):
+                errors.append(f"{prefix}.runtime.plugin_capabilities must be an object")
+            for field in ["background_tasks", "subagents", "legacy_compatibility"]:
+                if not isinstance(runtime.get(field), dict):
+                    errors.append(f"{prefix}.runtime.{field} must be an object")
+            readiness = runtime.get("readiness")
+            if not isinstance(readiness, dict):
+                errors.append(f"{prefix}.runtime.readiness must be an object")
+            else:
+                if (
+                    not isinstance(readiness.get("status"), str)
+                    or not readiness.get("status", "").strip()
+                ):
+                    errors.append(f"{prefix}.runtime.readiness.status must be a non-empty string")
+                for field in [
+                    "ready",
+                    "supports_background_tasks",
+                    "supports_plugins",
+                    "supports_subagents",
+                ]:
+                    if not isinstance(readiness.get(field), bool):
+                        errors.append(f"{prefix}.runtime.readiness.{field} must be a boolean")
     return errors

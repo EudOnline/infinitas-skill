@@ -5,6 +5,8 @@ from typing import Any
 from infinitas_skill.memory import effective_memory_score
 from infinitas_skill.memory.contracts import MemoryRecord
 
+from .agent_support import supports_target_agent
+
 TRUST_SCORES = {
     "verified": 3,
     "attested": 2,
@@ -119,13 +121,28 @@ def compatibility_signal(item: dict[str, Any], *, target_agent: str | None) -> d
     payload = payload if isinstance(payload, dict) else {}
     state = payload.get("state")
     freshness_state = payload.get("freshness_state")
+    runtime = item.get("runtime") if isinstance(item.get("runtime"), dict) else {}
+    readiness = runtime.get("readiness") if isinstance(runtime.get("readiness"), dict) else {}
     declared = target_agent in (item.get("agent_compatible") or [])
+    runtime_ready = (
+        target_agent == "openclaw"
+        and runtime.get("platform") == "openclaw"
+        and readiness.get("ready") is True
+    )
 
     if state in {"blocked", "broken", "unsupported"}:
         return {
             "compatible": False,
             "bonus": 0,
             "mode": "rejected",
+            "state": state,
+            "freshness_state": freshness_state,
+        }
+    if runtime_ready:
+        return {
+            "compatible": True,
+            "bonus": 650,
+            "mode": "runtime-ready",
             "state": state,
             "freshness_state": freshness_state,
         }
@@ -153,7 +170,7 @@ def compatibility_signal(item: dict[str, Any], *, target_agent: str | None) -> d
             "state": state,
             "freshness_state": freshness_state,
         }
-    if declared:
+    if declared or supports_target_agent(item, target_agent):
         return {
             "compatible": True,
             "bonus": 350,

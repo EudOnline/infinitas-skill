@@ -2,7 +2,7 @@
 audience: operators and release maintainers
 owner: repository maintainers
 source_of_truth: release checklist
-last_reviewed: 2026-04-01
+last_reviewed: 2026-04-08
 status: maintained
 ---
 
@@ -31,7 +31,7 @@ Before pushing or promoting a skill:
 
 Before creating stable release output for an active skill:
 
-- [ ] if upstream Codex / Claude Code / OpenClaw behavior changed, follow `docs/ops/platform-drift-playbook.md` before starting release work
+- [ ] if upstream OpenClaw behavior changed, or if historical Codex / Claude compatibility claims need refreshing, follow `docs/ops/platform-drift-playbook.md` before starting release work
 - [ ] trusted signer bootstrap was completed with `uv run infinitas release bootstrap-signing ...` or an equivalent existing-key flow from `docs/ops/signing-bootstrap.md`
 - [ ] `config/allowed_signers` contains at least one trusted release signer entry committed in-repo
 - [ ] publisher `authorized_signers` / `authorized_releasers` policy was updated when the release uses a qualified publisher namespace
@@ -41,7 +41,8 @@ Before creating stable release output for an active skill:
 - [ ] expected tag `skill/<name>/v<version>` does not already point at the wrong commit
 - [ ] default stable tag is created with `scripts/release-skill.sh <name> --push-tag` or `scripts/release-skill-tag.sh <name> --create --push`
 - [ ] `uv run infinitas release check-state <name> --mode preflight --json` passes before writing notes, provenance, or GitHub releases
-- [ ] `uv run infinitas release check-state <name> --mode preflight --json` shows `release.platform_compatibility.blocking_platforms = []` for every declared platform
+- [ ] `uv run infinitas release check-state <name> --mode preflight --json` shows `release.platform_compatibility.canonical_runtime_platform = "openclaw"`
+- [ ] `uv run infinitas release check-state <name> --mode preflight --json` shows `release.platform_compatibility.blocking_platforms = []` for the canonical OpenClaw runtime
 - [ ] if delegated reviewer groups, delegated publisher teams, or break-glass waivers are involved, `uv run infinitas release check-state <name> --mode preflight --json` shows the expected `review.latest_decisions`, `review.ignored_decisions`, `release.delegated_teams`, and `release.exception_usage`
 - [ ] any command that writes release notes or distribution output also includes `--write-provenance` while the v9 attestation policy is enabled
 - [ ] release notes or provenance reference `refs/tags/skill/<name>/v<version>` instead of local-only `HEAD`
@@ -52,8 +53,9 @@ Before creating stable release output for an active skill:
 - [ ] `config/signing.json` `attestation.policy.release_trust_mode` matches the intended rollout mode; the key `release_trust_mode` is set to `ssh`, `ci`, or `both`
 - [ ] `uv run infinitas release doctor-signing <name> --provenance catalog/provenance/<name>-<version>.json` reports no blocking failures after the rehearsal
 - [ ] any optional legacy HMAC provenance signing happens after the required SSH attestation has already been verified
-- [ ] platform evidence was refreshed with `python3 scripts/record-verified-support.py <name> --platform codex --platform claude --platform openclaw --build-catalog` if verified compatibility claims changed
-- [ ] if any declared platform shows `freshness_state = stale|unknown`, refresh the evidence and rerun the playbook steps in `docs/ops/platform-drift-playbook.md`
+- [ ] fresh OpenClaw evidence was recorded with `python3 scripts/record-verified-support.py <name> --platform openclaw --build-catalog` before a stable release if runtime behavior or platform contracts changed
+- [ ] if historical Codex or Claude compatibility claims are still surfaced to users, refresh them with `python3 scripts/record-verified-support.py <name> --platform codex --platform claude --build-catalog` when those claims change
+- [ ] if `release.platform_compatibility.canonical_runtime.freshness_state = stale|unknown`, refresh the evidence and rerun the playbook steps in `docs/ops/platform-drift-playbook.md`
 
 When the hosted control plane performs the release:
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime
 
 from pydantic import BaseModel, Field
@@ -25,9 +26,14 @@ class ReleaseView(BaseModel):
     created_by_principal_id: int | None = None
     created_at: str
     ready_at: str | None = None
+    platform_compatibility: dict = {}
 
     @classmethod
     def from_model(cls, release: Release) -> "ReleaseView":
+        try:
+            platform_compatibility = json.loads(release.platform_compatibility_json or "{}")
+        except json.JSONDecodeError:
+            platform_compatibility = {}
         return cls(
             id=release.id,
             skill_version_id=release.skill_version_id,
@@ -40,6 +46,7 @@ class ReleaseView(BaseModel):
             created_by_principal_id=release.created_by_principal_id,
             created_at=_iso(release.created_at) or "",
             ready_at=_iso(release.ready_at),
+            platform_compatibility=platform_compatibility,
         )
 
 

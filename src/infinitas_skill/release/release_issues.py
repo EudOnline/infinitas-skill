@@ -26,14 +26,14 @@ def apply_platform_support_findings(
     if platform_error is not None:
         platform_message = f"cannot evaluate platform verified support: {platform_error}"
         platform_compatibility["evaluation_error"] = platform_message
-        if require_fresh_platform_support and platform_compatibility.get("declared_support"):
+        if require_fresh_platform_support:
             issues.append(
                 issue(
                     "platform-verified-support",
                     platform_message,
                     rule=(
                         "preflight and stable releases require fresh verified support "
-                        "for declared platforms"
+                        "for the canonical OpenClaw runtime"
                     ),
                 )
             )
@@ -51,11 +51,11 @@ def apply_platform_support_findings(
                 "platform-verified-support",
                 (
                     "platform verified support is stale or missing, or the verified "
-                    f"state is incompatible, for declared platforms: {details}"
+                    f"state is incompatible, for the canonical OpenClaw runtime: {details}"
                 ),
                 rule=(
                     "preflight and stable releases require fresh verified support "
-                    "for declared platforms"
+                    "for the canonical OpenClaw runtime"
                 ),
             )
         )

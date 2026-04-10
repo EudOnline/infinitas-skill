@@ -8,7 +8,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from infinitas_skill.install.distribution import verify_distribution_manifest
-from server.models import Job, utcnow
+from server.models import Artifact, Job, Release, utcnow
 from tests.helpers.signing import add_allowed_signer, configure_git_ssh_signing
 
 
@@ -308,6 +308,161 @@ def test_repeat_release_request_can_recover_when_previous_materialization_job_is
         attestation_root=temp_repo_copy,
     )
     assert verified["verified"] is True
+
+
+def test_repeat_release_request_requeues_when_artifact_rows_do_not_match_materialized_files(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    _prepare_signing_repo(temp_repo_copy, signing_key)
+    artifact_root = _configure_env(monkeypatch, tmp_path=tmp_path, repo=temp_repo_copy)
+    from server.app import create_app
+    from server.db import get_session_factory
+    from server.worker import run_worker_loop
+
+    client = TestClient(create_app())
+    release_id, version_id = _create_release_with_version(client)
+
+    processed = run_worker_loop(limit=1)
+    assert processed == 1
+
+    session_factory = get_session_factory()
+    with session_factory() as session:
+        bundle_artifact = (
+            session.query(Artifact)
+            .filter(Artifact.release_id == release_id, Artifact.kind == "bundle")
+            .one()
+        )
+        bundle_artifact.sha256 = "deadbeef"
+        session.add(bundle_artifact)
+        session.commit()
+
+    retry = client.post(
+        f"/api/v1/versions/{version_id}/releases",
+        headers={"Authorization": "Bearer fixture-maintainer-token"},
+    )
+    assert retry.status_code == 200, retry.text
+
+    processed = run_worker_loop(limit=1)
+    assert processed == 1
+
+    bundle_path = (
+        artifact_root
+        / "skills"
+        / "fixture-maintainer"
+        / "materialized-release"
+        / "0.1.0"
+        / "skill.tar.gz"
+    )
+    expected_sha = __import__("hashlib").sha256(bundle_path.read_bytes()).hexdigest()
+    with session_factory() as session:
+        refreshed_bundle_artifact = (
+            session.query(Artifact)
+            .filter(Artifact.release_id == release_id, Artifact.kind == "bundle")
+            .one()
+        )
+        assert refreshed_bundle_artifact.sha256 == expected_sha
+
+
+def test_release_artifacts_endpoint_returns_current_rows_only(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    _prepare_signing_repo(temp_repo_copy, signing_key)
+    _configure_env(monkeypatch, tmp_path=tmp_path, repo=temp_repo_copy)
+    from server.app import create_app
+    from server.db import get_session_factory
+    from server.worker import run_worker_loop
+
+    client = TestClient(create_app())
+    release_id, _version_id = _create_release_with_version(client)
+
+    processed = run_worker_loop(limit=1)
+    assert processed == 1
+
+    session_factory = get_session_factory()
+    with session_factory() as session:
+        session.add(
+            Artifact(
+                release_id=release_id,
+                kind="bundle",
+                storage_uri="objects/sha256/stale-bundle",
+                sha256="deadbeef",
+                size_bytes=1,
+            )
+        )
+        session.commit()
+
+    artifacts = client.get(
+        f"/api/v1/releases/{release_id}/artifacts",
+        headers={"Authorization": "Bearer fixture-maintainer-token"},
+    )
+    assert artifacts.status_code == 200, artifacts.text
+    payload = artifacts.json()
+    assert payload["total"] == 4
+    assert {item["kind"] for item in payload["items"]} == {
+        "bundle",
+        "manifest",
+        "provenance",
+        "signature",
+    }
+    assert all(item["sha256"] != "deadbeef" for item in payload["items"])
+
+
+def test_repeat_release_request_requeues_when_release_artifact_pointers_drift(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    _prepare_signing_repo(temp_repo_copy, signing_key)
+    _configure_env(monkeypatch, tmp_path=tmp_path, repo=temp_repo_copy)
+    from server.app import create_app
+    from server.db import get_session_factory
+    from server.worker import run_worker_loop
+
+    client = TestClient(create_app())
+    release_id, version_id = _create_release_with_version(client)
+
+    processed = run_worker_loop(limit=1)
+    assert processed == 1
+
+    session_factory = get_session_factory()
+    with session_factory() as session:
+        release = session.get(Release, release_id)
+        manifest_artifact = (
+            session.query(Artifact)
+            .filter(Artifact.release_id == release_id, Artifact.kind == "manifest")
+            .one()
+        )
+        assert release is not None
+        release.bundle_artifact_id = manifest_artifact.id
+        session.add(release)
+        session.commit()
+
+    retry = client.post(
+        f"/api/v1/versions/{version_id}/releases",
+        headers={"Authorization": "Bearer fixture-maintainer-token"},
+    )
+    assert retry.status_code == 200, retry.text
+
+    processed = run_worker_loop(limit=1)
+    assert processed == 1
+
+    with session_factory() as session:
+        refreshed_release = session.get(Release, release_id)
+        bundle_artifact = (
+            session.query(Artifact)
+            .filter(Artifact.release_id == release_id, Artifact.kind == "bundle")
+            .one()
+        )
+        assert refreshed_release is not None
+        assert refreshed_release.bundle_artifact_id == bundle_artifact.id
+        assert refreshed_release.bundle_artifact_id != refreshed_release.manifest_artifact_id
 
 
 def test_repeat_release_request_does_not_duplicate_materialization_job_with_active_lease(

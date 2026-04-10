@@ -3,26 +3,38 @@
   "platform": "openclaw",
   "runtime": {
     "skill_dir_candidates": [
-      "~/.openclaw/skills",
-      "~/.openclaw/workspace/skills"
+      "skills",
+      ".agents/skills",
+      "~/.agents/skills",
+      "~/.openclaw/skills"
     ],
-    "entrypoint": "SKILL.md"
+    "entrypoint": "SKILL.md",
+    "workspace_state_dir": ".openclaw/state",
+    "session_store": ".openclaw/sessions"
   },
   "capabilities": {
-    "supports_subagents": false,
-    "supports_commands": false,
+    "supports_subagents": true,
+    "supports_commands": true,
+    "supports_plugins": true,
+    "supports_background_tasks": true,
+    "supports_cron_jobs": true,
     "supports_public_publish": true
   },
   "constraints": {
     "text_only_public_bundle": true,
     "public_license": "MIT-0",
-    "size_budget_mb": 50
+    "size_budget_mb": 50,
+    "runtime_model": "openclaw-native"
   },
   "contract": {
     "sources": [
       "https://docs.openclaw.ai/tools/skills",
+      "https://docs.openclaw.ai/tools/subagents",
+      "https://docs.openclaw.ai/tools/plugins",
+      "https://docs.openclaw.ai/tools/background-tasks",
+      "https://docs.openclaw.ai/tools/cron-jobs",
       "https://docs.openclaw.ai/tools/clawhub"
     ],
-    "last_verified": "2026-03-12"
+    "last_verified": "2026-04-07"
   }
 }

@@ -366,6 +366,7 @@ def build_skill_version_rows(
                 "version": version.version,
                 "created_at": humanize_timestamp(version.created_at.isoformat()),
                 "release_href": with_lang(f"/releases/{release.id}", lang) if release else "",
+                "has_release": release is not None,
             }
         )
     return version_rows
@@ -433,7 +434,8 @@ def build_draft_detail_payload(
             "id": draft.id,
             "skill_name": skill.display_name,
             "state": humanize_status(draft.state, lang),
-            "content_ref": draft.content_ref or "-",
+            "state_raw": draft.state,
+            "content_ref": draft.content_ref or "",
             "base_version": base_version.version if base_version else "-",
             "updated_at": humanize_timestamp(draft.updated_at.isoformat()),
             "metadata_pretty": json.dumps(metadata, ensure_ascii=False, indent=2)
@@ -475,6 +477,38 @@ def build_release_exposure_rows(
     ]
 
 
+def _release_platform_compatibility(release: object) -> dict[str, Any]:
+    try:
+        return json.loads(release.platform_compatibility_json or "{}")
+    except json.JSONDecodeError:
+        return {}
+
+
+def _build_exposure_policy() -> dict[str, dict[str, Any]]:
+    return {
+        "private": {
+            "allowed_requested_review_modes": ["none"],
+            "effective_requested_review_mode": "none",
+            "effective_review_requirement": "none",
+        },
+        "authenticated": {
+            "allowed_requested_review_modes": ["none"],
+            "effective_requested_review_mode": "none",
+            "effective_review_requirement": "none",
+        },
+        "grant": {
+            "allowed_requested_review_modes": ["none", "advisory", "blocking"],
+            "effective_requested_review_mode": None,
+            "effective_review_requirement": None,
+        },
+        "public": {
+            "allowed_requested_review_modes": ["blocking"],
+            "effective_requested_review_mode": "blocking",
+            "effective_review_requirement": "blocking",
+        },
+    }
+
+
 def build_release_detail_payload(
     *,
     release: object,
@@ -484,20 +518,78 @@ def build_release_detail_payload(
     exposure_rows: list[dict[str, Any]],
     lang: str,
 ) -> dict[str, Any]:
+    platform_compatibility = _release_platform_compatibility(release)
     return {
         "release": {
             "id": release.id,
             "skill_name": skill.display_name,
             "version": version.version,
             "state": humanize_status(release.state, lang),
+            "state_raw": release.state,
             "format_version": release.format_version,
             "ready_at": humanize_timestamp(release.ready_at),
             "created_at": humanize_timestamp(release.created_at.isoformat()),
             "skill_href": with_lang(f"/skills/{skill.id}", lang),
             "share_href": with_lang(f"/releases/{release.id}/share", lang),
+            "platform_compatibility": platform_compatibility,
+            "canonical_runtime_platform": (
+                platform_compatibility.get("canonical_runtime_platform") or "openclaw"
+            ),
+            "canonical_runtime": platform_compatibility.get("canonical_runtime") or {},
+            "blocking_platforms": platform_compatibility.get("blocking_platforms") or [],
+            "verified_support": platform_compatibility.get("verified_support") or {},
+            "historical_platforms": platform_compatibility.get("historical_platforms") or [],
         },
         "artifact_rows": artifact_rows,
         "exposure_rows": exposure_rows,
+    }
+
+
+def _derive_exposure_action_state(
+    *,
+    exposure: object,
+    review_case_state: str,
+) -> dict[str, object]:
+    state = str(getattr(exposure, "state", "") or "").strip().lower()
+    review_requirement = str(
+        getattr(exposure, "review_requirement", "") or ""
+    ).strip().lower()
+
+    can_patch = state not in {"revoked", "rejected"}
+    can_revoke = state in {"pending_policy", "review_open", "active"}
+
+    if state in {"active", "revoked", "rejected"}:
+        return {
+            "can_activate": False,
+            "can_revoke": can_revoke,
+            "can_patch": can_patch,
+            "activation_block_reason": "",
+        }
+
+    if review_requirement == "blocking":
+        if review_case_state == "approved":
+            return {
+                "can_activate": True,
+                "can_revoke": can_revoke,
+                "can_patch": can_patch,
+                "activation_block_reason": "",
+            }
+        block_reason = {
+            "open": "blocking_review_open",
+            "rejected": "blocking_review_rejected",
+        }.get(review_case_state, "blocking_review_unapproved")
+        return {
+            "can_activate": False,
+            "can_revoke": can_revoke,
+            "can_patch": can_patch,
+            "activation_block_reason": block_reason,
+        }
+
+    return {
+        "can_activate": state in {"pending_policy", "review_open"},
+        "can_revoke": can_revoke,
+        "can_patch": can_patch,
+        "activation_block_reason": "",
     }
 
 
@@ -511,19 +603,36 @@ def build_share_rows(
     share_rows: list[dict[str, Any]] = []
     for exposure in exposures:
         review_case = (review_cases_by_exposure.get(exposure.id) or [None])[0]
+        review_case_state = str(getattr(review_case, "state", None) or "none")
+        policy_snapshot = load_json_object(
+            getattr(exposure, "policy_snapshot_json", "{}") or "{}"
+        )
         share_rows.append(
             {
                 "id": exposure.id,
                 "audience": humanize_audience_type(exposure.audience_type, lang),
+                "audience_raw": exposure.audience_type,
                 "listing_mode": humanize_listing_mode(exposure.listing_mode, lang),
+                "listing_mode_raw": exposure.listing_mode,
                 "install_mode": humanize_install_mode(exposure.install_mode, lang),
+                "install_mode_raw": exposure.install_mode,
                 "review_requirement": humanize_review_gate(exposure.review_requirement, lang),
+                "review_requirement_raw": exposure.review_requirement,
                 "review_case_state": humanize_review_gate(
-                    review_case.state if review_case else "none",
+                    review_case_state,
                     lang,
+                ),
+                "review_case_state_raw": review_case_state,
+                "requested_review_mode_raw": str(
+                    policy_snapshot.get("requested_review_mode") or "none"
                 ),
                 "grant_count": len(grants_by_exposure.get(exposure.id, [])),
                 "state": humanize_status(exposure.state, lang),
+                "state_raw": exposure.state,
+                **_derive_exposure_action_state(
+                    exposure=exposure,
+                    review_case_state=review_case_state,
+                ),
             }
         )
     return share_rows
@@ -537,12 +646,22 @@ def build_release_share_payload(
     share_rows: list[dict[str, Any]],
     lang: str,
 ) -> dict[str, Any]:
+    platform_compatibility = _release_platform_compatibility(release)
     return {
         "release": {
             "id": release.id,
             "skill_name": skill.display_name,
             "version": version.version,
             "detail_href": with_lang(f"/releases/{release.id}", lang),
+            "platform_compatibility": platform_compatibility,
+            "canonical_runtime_platform": (
+                platform_compatibility.get("canonical_runtime_platform") or "openclaw"
+            ),
+            "canonical_runtime": platform_compatibility.get("canonical_runtime") or {},
+            "blocking_platforms": platform_compatibility.get("blocking_platforms") or [],
+            "verified_support": platform_compatibility.get("verified_support") or {},
+            "historical_platforms": platform_compatibility.get("historical_platforms") or [],
+            "exposure_policy": _build_exposure_policy(),
         },
         "share_rows": share_rows,
     }
@@ -636,14 +755,17 @@ def build_review_case_rows(
         review_rows.append(
             {
                 "id": review_case.id,
+                "exposure_id": exposure.id if exposure else None,
                 "skill_name": skill.display_name if skill else "-",
                 "audience": humanize_audience_type(
                     exposure.audience_type if exposure else None, lang
                 ),
                 "mode": humanize_review_gate(review_case.mode, lang),
                 "state": humanize_review_gate(review_case.state, lang),
+                "state_raw": review_case.state,
                 "opened_at": humanize_timestamp(review_case.opened_at.isoformat()),
                 "closed_at": humanize_timestamp(review_case.closed_at),
+                "share_href": with_lang(f"/releases/{release.id}/share", lang) if release else "",
             }
         )
     return review_rows

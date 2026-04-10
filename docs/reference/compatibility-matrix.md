@@ -2,7 +2,7 @@
 audience: contributors, integrators, reviewers
 owner: repository maintainers
 source_of_truth: compatibility matrix reference
-last_reviewed: 2026-03-30
+last_reviewed: 2026-04-07
 status: maintained
 ---
 
@@ -22,17 +22,19 @@ The registry now exports a machine-readable compatibility view at:
 
 ## Why this exists
 
-As the registry grows, consumers often need to answer questions like:
+As the registry grows, operators may still need to answer questions like:
 
 - Which skills claim to work with OpenClaw?
-- Which ones are suitable for Codex or Claude Code?
+- Which ones carried historical Codex or Claude Code declarations?
 - How many stable vs experimental skills do we currently have?
 
 `catalog/compatibility.json` gives you a single generated file for that.
 
 ## Current compatibility source of truth
 
-During the migration window, compatibility has two sources of truth with different meanings:
+This matrix is now legacy and transitional. It remains useful during migration, but it is no longer the maintained runtime center of gravity.
+
+During the migration window, compatibility has two historical sources of truth with different meanings:
 
 - **declared support** is still read from author metadata such as `_meta.json.agent_compatible`
 - **verified support** is produced by platform-specific compatibility checks and evidence files
@@ -47,7 +49,7 @@ Compatibility is still declared manually in each skill's `_meta.json`:
 }
 ```
 
-The matrix is only a generated view; edit `_meta.json`, then run:
+The matrix is only a generated historical view; edit `_meta.json`, then run:
 
 ```bash
 scripts/build-catalog.sh
@@ -55,7 +57,7 @@ scripts/build-catalog.sh
 
 ## What this does not guarantee
 
-`catalog/compatibility.json` currently reflects declared support from `_meta.json.agent_compatible`, and will increasingly add verified support from compatibility evidence as the new pipeline lands.
+`catalog/compatibility.json` currently reflects compatibility-era declarations from `_meta.json.agent_compatible` and historical verified-support evidence.
 
 Verified support freshness is additive:
 
@@ -63,7 +65,7 @@ Verified support freshness is additive:
 - `stale`: evidence exists, but it is too old or predates a newer platform contract review
 - `unknown`: no evidence has been recorded for that declared platform yet
 
-When freshness turns `stale` or `unknown`, discovery can still show the skill, but release readiness now blocks until the evidence is refreshed. The maintenance loop for that workflow lives in [docs/ops/platform-drift-playbook.md](../ops/platform-drift-playbook.md).
+When freshness turns `stale` or `unknown`, the matrix should be treated as migration or audit context rather than authoritative runtime truth. The maintained runtime contract now lives in [openclaw-runtime-contract.md](openclaw-runtime-contract.md).
 
 It does **not** guarantee:
 

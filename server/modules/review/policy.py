@@ -22,7 +22,7 @@ def evaluate_exposure_policy(*, audience_type: str, requested_review_mode: str) 
     if audience == "public":
         return PolicyOutcome(
             audience_type=audience,
-            requested_review_mode=requested,
+            requested_review_mode="blocking",
             review_requirement="blocking",
             auto_activate=False,
         )
@@ -36,7 +36,7 @@ def evaluate_exposure_policy(*, audience_type: str, requested_review_mode: str) 
         )
     return PolicyOutcome(
         audience_type=audience,
-        requested_review_mode=requested,
+        requested_review_mode="none",
         review_requirement="none",
         auto_activate=True,
     )

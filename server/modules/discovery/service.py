@@ -147,11 +147,13 @@ def _ensure_grant_context(context: AccessContext) -> None:
 
 
 def _available_release_projections(db: Session) -> list[DiscoveryProjection]:
-    artifact_root = get_settings().artifact_path
+    settings = get_settings()
+    artifact_root = settings.artifact_path
+    repo_root = settings.repo_path
     return [
         entry
         for entry in build_release_projections(db)
-        if projection_has_materialized_artifacts(entry, artifact_root)
+        if projection_has_materialized_artifacts(entry, artifact_root, repo_root)
     ]
 
 

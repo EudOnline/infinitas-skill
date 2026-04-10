@@ -1,90 +1,69 @@
 {% extends "layout-kawaii.html" %}
 
 {% block body %}
-<section class="kawaii-card animate-in detail-shell">
-  <div class="section-kicker">{{ '草稿详情' if page_language == 'zh' else 'Draft detail' }}</div>
-  <div class="detail-grid">
+<section class="kawaii-card animate-in">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_draft_detail'] }}</div>
+  <div class="detail-grid detail-grid--draft">
     <article class="detail-panel">
       <h2>{{ draft.skill_name }}</h2>
-      <p>{{ '草稿是可编辑态，封版后会进入不可变版本。' if page_language == 'zh' else 'Drafts stay editable until they are sealed into immutable versions.' }}</p>
-      <div class="detail-actions">
-        <a class="entity-link" href="{{ draft.skill_href }}">{{ '返回技能' if page_language == 'zh' else 'Open skill' }}</a>
+      <p>{{ ui['hint_draft_editable'] }}</p>
+      <div class="flex flex-wrap items-center gap-2 mt-4">
+        <a class="text-kawaii-primary-deep font-bold no-underline" href="{{ draft.skill_href }}">{{ ui['action_open_skill'] }}</a>
       </div>
     </article>
     <article class="detail-panel">
       <dl class="detail-meta">
         <div><dt>ID</dt><dd>#{{ draft.id }}</dd></div>
-        <div><dt>{{ '状态' if page_language == 'zh' else 'State' }}</dt><dd>{{ draft.state }}</dd></div>
-        <div><dt>{{ '基线版本' if page_language == 'zh' else 'Base version' }}</dt><dd>{{ draft.base_version }}</dd></div>
-        <div><dt>{{ '更新时间' if page_language == 'zh' else 'Updated' }}</dt><dd>{{ draft.updated_at }}</dd></div>
+        <div><dt>{{ ui['table_col_state'] }}</dt><dd>{{ draft.state }}</dd></div>
+        <div><dt>{{ ui['label_base_version'] }}</dt><dd>{{ draft.base_version }}</dd></div>
+        <div><dt>{{ ui['table_col_updated'] }}</dt><dd>{{ draft.updated_at }}</dd></div>
       </dl>
     </article>
   </div>
 </section>
 
-<section class="kawaii-card animate-in detail-shell">
-  <div class="section-kicker">{{ '内容引用' if page_language == 'zh' else 'Content ref' }}</div>
-  <code class="long-code">{{ draft.content_ref }}</code>
+{% if draft.state_raw == 'open' %}
+<section class="kawaii-card animate-in">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_edit_draft'] }}</div>
+  <form id="save-draft-form" class="lifecycle-form" data-draft-id="{{ draft.id }}">
+    <label>
+      <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['table_col_content_ref'] }}</span>
+      <input class="kawaii-input" type="text" name="content_ref" value="{{ draft.content_ref }}" required />
+    </label>
+    <label>
+      <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['label_metadata_json'] }}</span>
+      <textarea class="kawaii-input font-mono text-sm" name="metadata_json" rows="6" required>{{ draft.metadata_pretty }}</textarea>
+    </label>
+    <div class="flex flex-wrap items-center gap-2 mt-4">
+      <button class="kawaii-button kawaii-button--primary" type="submit">{{ ui['action_save_draft'] }}</button>
+    </div>
+  </form>
 </section>
 
-<section class="kawaii-card animate-in detail-shell">
-  <div class="section-kicker">{{ '元数据快照' if page_language == 'zh' else 'Metadata snapshot' }}</div>
-  <pre class="json-block">{{ draft.metadata_pretty }}</pre>
+<section class="kawaii-card animate-in">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_seal_draft'] }}</div>
+  <p class="text-kawaii-ink-soft leading-relaxed max-w-prose mb-4">{{ ui['hint_seal'] }}</p>
+  <form id="seal-draft-form" class="lifecycle-form" data-draft-id="{{ draft.id }}">
+    <label>
+      <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['table_col_version'] }}</span>
+      <input class="kawaii-input" type="text" name="version" required placeholder="0.1.0" />
+    </label>
+    <div class="flex flex-wrap items-center gap-2 mt-4">
+      <button class="kawaii-button kawaii-button--secondary" type="submit">{{ ui['action_confirm_seal'] }}</button>
+    </div>
+  </form>
+</section>
+{% else %}
+<section class="kawaii-card animate-in">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['table_col_content_ref'] }}</div>
+  <code class="block w-full overflow-auto p-4 rounded-kawaii-md bg-kawaii-code-surface text-kawaii-ink m-0 whitespace-pre-wrap break-words">{{ draft.content_ref or '-' }}</code>
 </section>
 
-<style>
-  .detail-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1rem;
-  }
+<section class="kawaii-card animate-in">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_metadata_snapshot'] }}</div>
+  <pre class="block w-full overflow-auto p-4 rounded-kawaii-md bg-kawaii-code-surface text-kawaii-ink m-0 whitespace-pre-wrap break-words">{{ draft.metadata_pretty }}</pre>
+</section>
+{% endif %}
 
-  .detail-panel p {
-    margin: 0.4rem 0 0;
-    color: var(--kawaii-ink-soft);
-  }
 
-  .detail-meta {
-    display: grid;
-    gap: 0.85rem;
-    margin: 0;
-  }
-
-  .detail-meta dt {
-    font-size: 0.82rem;
-    color: var(--kawaii-ink-muted);
-  }
-
-  .detail-meta dd {
-    margin: 0.2rem 0 0;
-    font-weight: 700;
-  }
-
-  .detail-actions {
-    margin-top: 1rem;
-  }
-
-  .entity-link {
-    color: var(--kawaii-primary-deep);
-    text-decoration: none;
-    font-weight: 700;
-  }
-
-  .long-code,
-  .json-block {
-    display: block;
-    width: 100%;
-    overflow: auto;
-    padding: 1rem;
-    border-radius: var(--radius-md);
-    background: var(--kawaii-code-surface);
-    color: var(--kawaii-ink);
-  }
-
-  .json-block {
-    margin: 0;
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-</style>
 {% endblock %}

@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
+from server.models import Artifact
 from tests.helpers.signing import add_allowed_signer, configure_git_ssh_signing
 
 
@@ -208,6 +209,9 @@ def test_registry_read_tokens_gate_registry_routes_without_breaking_user_credent
     assert reader_token.status_code == 200, reader_token.text
     skills = reader_token.json().get("skills") or []
     assert any(item.get("name") == "registry-gated-skill" for item in skills)
+    ai_skill = next(item for item in skills if item.get("name") == "registry-gated-skill")
+    assert (ai_skill.get("runtime") or {}).get("platform") == "openclaw"
+    assert (ai_skill.get("runtime") or {}).get("readiness", {}).get("status") == "ready"
 
     maintainer_token = client.get(
         "/registry/ai-index.json",
@@ -215,11 +219,172 @@ def test_registry_read_tokens_gate_registry_routes_without_breaking_user_credent
     )
     assert maintainer_token.status_code == 200, maintainer_token.text
 
+    discovery_index = client.get(
+        "/registry/discovery-index.json",
+        headers={"Authorization": "Bearer registry-reader-token"},
+    )
+    assert discovery_index.status_code == 200, discovery_index.text
+    discovery_skills = discovery_index.json().get("skills") or []
+    qualified_name = "fixture-maintainer/registry-gated-skill"
+    registry_skill = next(
+        item for item in discovery_skills if item.get("qualified_name") == qualified_name
+    )
+    assert registry_skill["display_name"] == "Registry Gated Skill"
+    assert (registry_skill.get("runtime") or {}).get("platform") == "openclaw"
+    assert registry_skill.get("runtime_readiness") == "ready"
+    assert registry_skill.get("workspace_targets") == ["skills", ".agents/skills"]
+
     manifest = client.get(
         "/registry/skills/fixture-maintainer/registry-gated-skill/0.1.0/manifest.json",
         headers={"Authorization": "Bearer registry-reader-token"},
     )
     assert manifest.status_code == 200, manifest.text
+
+
+def test_registry_metadata_uses_current_release_bundle_artifact(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    _prepare_signing_repo(temp_repo_copy, signing_key)
+    _configure_env(monkeypatch, tmp_path=tmp_path, repo=temp_repo_copy)
+
+    from server.app import create_app
+    from server.db import get_session_factory
+    from server.worker import run_worker_loop
+
+    client = TestClient(create_app())
+    release_id, maintainer_authorization = _create_public_release(client)
+
+    processed = run_worker_loop(limit=1)
+    assert processed == 1
+
+    exposure = client.post(
+        f"/api/v1/releases/{release_id}/exposures",
+        headers={"Authorization": maintainer_authorization},
+        json={
+            "audience_type": "public",
+            "listing_mode": "listed",
+            "install_mode": "enabled",
+            "requested_review_mode": "none",
+        },
+    )
+    assert exposure.status_code == 201, exposure.text
+    _approve_exposure_review(
+        client,
+        authorization=maintainer_authorization,
+        exposure_id=int(exposure.json()["id"]),
+    )
+
+    session_factory = get_session_factory()
+    with session_factory() as session:
+        current_bundle = session.scalar(
+            select(Artifact)
+            .where(Artifact.release_id == release_id)
+            .where(Artifact.kind == "bundle")
+            .order_by(Artifact.id.asc())
+        )
+        assert current_bundle is not None
+        expected_sha = current_bundle.sha256
+        session.add(
+            Artifact(
+                release_id=release_id,
+                kind="bundle",
+                storage_uri="objects/sha256/stale-bundle",
+                sha256="deadbeef",
+                size_bytes=1,
+            )
+        )
+        session.commit()
+
+    compatibility = client.get(
+        "/registry/compatibility.json",
+        headers={"Authorization": "Bearer registry-reader-token"},
+    )
+    assert compatibility.status_code == 200, compatibility.text
+    compatibility_skills = compatibility.json().get("skills") or []
+    registry_skill = next(
+        item
+        for item in compatibility_skills
+        if item.get("qualified_name") == "fixture-maintainer/registry-gated-skill"
+    )
+    assert registry_skill["bundle_sha256"] == expected_sha
+
+
+def test_invalid_manifest_hides_release_from_catalog_and_registry(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    _prepare_signing_repo(temp_repo_copy, signing_key)
+    artifact_root = _configure_env(monkeypatch, tmp_path=tmp_path, repo=temp_repo_copy)
+
+    from server.app import create_app
+    from server.worker import run_worker_loop
+
+    client = TestClient(create_app())
+    release_id, maintainer_authorization = _create_public_release(client)
+
+    processed = run_worker_loop(limit=1)
+    assert processed == 1
+
+    exposure = client.post(
+        f"/api/v1/releases/{release_id}/exposures",
+        headers={"Authorization": maintainer_authorization},
+        json={
+            "audience_type": "public",
+            "listing_mode": "listed",
+            "install_mode": "enabled",
+            "requested_review_mode": "none",
+        },
+    )
+    assert exposure.status_code == 201, exposure.text
+    _approve_exposure_review(
+        client,
+        authorization=maintainer_authorization,
+        exposure_id=int(exposure.json()["id"]),
+    )
+
+    manifest_path = (
+        artifact_root
+        / "skills"
+        / "fixture-maintainer"
+        / "registry-gated-skill"
+        / "0.1.0"
+        / "manifest.json"
+    )
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "kind": "private-skill-release-manifest",
+                "release_id": release_id,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    catalog = client.get("/api/v1/catalog/public")
+    assert catalog.status_code == 200, catalog.text
+    assert not any(
+        item.get("qualified_name") == "fixture-maintainer/registry-gated-skill"
+        for item in (catalog.json().get("items") or [])
+    )
+
+    registry_ai_index = client.get(
+        "/registry/ai-index.json",
+        headers={"Authorization": "Bearer registry-reader-token"},
+    )
+    assert registry_ai_index.status_code == 200, registry_ai_index.text
+    assert not any(
+        item.get("qualified_name") == "fixture-maintainer/registry-gated-skill"
+        for item in (registry_ai_index.json().get("skills") or [])
+    )
 
 
 def test_public_registry_ignores_invalid_cookie_and_bearer_token(

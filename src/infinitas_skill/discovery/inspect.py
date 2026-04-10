@@ -86,7 +86,6 @@ def inspect_skill(
     provenance_path = version_entry.get("attestation_path") or distribution.get("attestation_path")
     manifest_payload = _load_optional_json(root, manifest_path)
     provenance_payload = _load_optional_json(root, provenance_path)
-    verified_support = (skill_entry.get("compatibility") or {}).get("verified_support") or {}
     dependency_view = {
         "root": (manifest_payload.get("dependencies") or {}).get("root")
         or (distribution.get("dependencies") or {}).get("root")
@@ -172,13 +171,43 @@ def inspect_skill(
         skill_entry=skill_entry,
         resolved_version=resolved_version,
         trust_state=trust_state,
-        verified_support=verified_support,
         dependency_view=dependency_view,
         provenance_view=provenance_view,
         distribution_view=distribution_view,
         trust_view=trust_view,
         memory_hints=memory_hints,
     )
+    runtime = dict(skill_entry.get("runtime") or {})
+    readiness = dict(runtime.get("readiness") or {})
+    readiness_status = readiness.get("status")
+    if not isinstance(readiness_status, str) or not readiness_status.strip():
+        readiness_status = "ready" if readiness.get("ready") is True else "unknown"
+    install_targets = runtime.get("install_targets")
+    install_targets = install_targets if isinstance(install_targets, dict) else {}
+    workspace_targets = list(install_targets.get("workspace") or [])
+    if not workspace_targets:
+        workspace_targets = [
+            target
+            for target in list(runtime.get("workspace_targets") or [])
+            if isinstance(target, str)
+            and target
+            and not target.startswith("~/")
+            and not Path(target).is_absolute()
+        ]
+    payload["runtime"] = runtime
+    payload["runtime_readiness"] = readiness_status
+    payload["workspace_fit"] = {
+        "scope": runtime.get("workspace_scope") or "workspace",
+        "status": (
+            "workspace-targets-declared" if workspace_targets else "workspace-targets-unknown"
+        ),
+        "targets": workspace_targets,
+    }
+    payload["plugin_needs"] = {
+        "required": dict(runtime.get("plugin_capabilities") or {}),
+    }
+    payload["background_tasks"] = dict(runtime.get("background_tasks") or {"required": False})
+    payload["subagents"] = dict(runtime.get("subagents") or {"required": False})
     emit_inspect_memory_audit(
         audit_recorder=audit_recorder,
         skill_ref=skill_entry.get("qualified_name") or skill_entry.get("name") or name,
