@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
+
 import json
 import os
 import shutil
@@ -17,6 +19,11 @@ from infinitas_skill.testing.env import build_regression_test_env
 FIXTURE_NAME = "release-fixture"
 FIXTURE_VERSION = "1.2.3"
 FIXTURE_TAG = f"skill/{FIXTURE_NAME}/v{FIXTURE_VERSION}"
+PLATFORM_EVIDENCE_MINUTES = {
+    "codex": 0,
+    "claude": 1,
+    "openclaw": 2,
+}
 
 
 def fail(message):
@@ -39,10 +46,24 @@ def write_json(path: Path, payload):
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def contract_checked_at(repo: Path, platform: str):
+    profile_path = repo / "profiles" / f"{platform}.json"
+    payload = json.loads(profile_path.read_text(encoding="utf-8"))
+    contract = payload.get("contract") if isinstance(payload.get("contract"), dict) else {}
+    last_verified = contract.get("last_verified")
+    if not isinstance(last_verified, str) or not last_verified:
+        fail(f"missing contract.last_verified for platform {platform!r}")
+    minute = PLATFORM_EVIDENCE_MINUTES.get(platform, 0)
+    return f"{last_verified}T12:{minute:02d}:00Z"
+
+
 def make_env(repo: Path, extra=None):
+    merged_extra = {"INFINITAS_SKILL_RELEASER": "release-test"}
+    if extra:
+        merged_extra.update(extra)
     return build_regression_test_env(
         ROOT,
-        extra=extra,
+        extra=merged_extra,
         env=os.environ.copy(),
         add_pythonpath=repo / "src",
     )
@@ -109,9 +130,9 @@ def scaffold_fixture(repo: Path):
 
 def seed_fresh_platform_evidence(repo: Path):
     fixtures = [
-        ("codex", "2026-03-12T12:00:00Z"),
-        ("claude", "2026-03-12T12:01:00Z"),
-        ("openclaw", "2026-03-12T12:02:00Z"),
+        ("codex", contract_checked_at(repo, "codex")),
+        ("claude", contract_checked_at(repo, "claude")),
+        ("openclaw", contract_checked_at(repo, "openclaw")),
     ]
     for platform, checked_at in fixtures:
         path = (
@@ -405,6 +426,24 @@ def scenario_dirty_worktree_is_rejected():
         shutil.rmtree(tmpdir)
 
 
+def scenario_unauthorized_releaser_is_rejected():
+    tmpdir, repo, _origin, _key_path, _identity = prepare_repo(include_signers=True)
+    try:
+        result = run(
+            infinitas_cli(repo, "release", "check-state", FIXTURE_NAME, "--mode", "preflight"),
+            cwd=repo,
+            expect=1,
+            env=make_env(repo, {"INFINITAS_SKILL_RELEASER": "Release Fixture"}),
+        )
+        assert_contains(
+            result.stdout,
+            "authorized_releasers",
+            "unauthorized releaser error",
+        )
+    finally:
+        shutil.rmtree(tmpdir)
+
+
 def scenario_dirty_worktree_exception_can_pass_preflight():
     tmpdir, repo, _origin, _key_path, _identity = prepare_repo(include_signers=True)
     try:
@@ -444,7 +483,8 @@ def scenario_dirty_worktree_exception_can_pass_preflight():
         )
         if not record:
             fail(
-                f"expected policy_trace.exceptions to mention dirty-worktree-waiver, got {exceptions!r}"
+                "expected policy_trace.exceptions to mention dirty-worktree-waiver, "
+                f"got {exceptions!r}"
             )
         if record.get("justification") != "Emergency release preflight waiver":
             fail(f"expected trace justification to survive, got {record!r}")
@@ -479,7 +519,7 @@ def scenario_release_state_exports_delegated_audit_details():
                 repo, "release", "check-state", FIXTURE_NAME, "--mode", "preflight", "--json"
             ),
             cwd=repo,
-            env=make_env(repo),
+            env=make_env(repo, {"INFINITAS_SKILL_RELEASER": "Release Fixture"}),
         )
         payload = json.loads(result.stdout)
         if payload.get("release_ready") is not True:
@@ -494,7 +534,8 @@ def scenario_release_state_exports_delegated_audit_details():
             fail(f"expected approval_count 1, got {review.get('approval_count')!r}")
         if review.get("blocking_rejection_count") != 0:
             fail(
-                f"expected blocking_rejection_count 0, got {review.get('blocking_rejection_count')!r}"
+                "expected blocking_rejection_count 0, got "
+                f"{review.get('blocking_rejection_count')!r}"
             )
         if review.get("quorum_met") is not True:
             fail(f"expected quorum_met true, got {review.get('quorum_met')!r}")
@@ -513,7 +554,8 @@ def scenario_release_state_exports_delegated_audit_details():
         )
         if not counted_approval or "security" not in (counted_approval.get("groups") or []):
             fail(
-                f"expected lvxiaoer latest_decisions entry to cover security, got {latest_decisions!r}"
+                "expected lvxiaoer latest_decisions entry to cover security, got "
+                f"{latest_decisions!r}"
             )
         ignored_decisions = review.get("ignored_decisions") or []
         if len(ignored_decisions) != 1 or ignored_decisions[0].get("reviewer") != "outsider":
@@ -532,7 +574,8 @@ def scenario_release_state_exports_delegated_audit_details():
         release_exception_usage = release.get("exception_usage") or []
         if not any(item.get("id") == "dirty-worktree-waiver" for item in release_exception_usage):
             fail(
-                f"expected release.exception_usage to mention dirty-worktree-waiver, got {release_exception_usage!r}"
+                "expected release.exception_usage to mention dirty-worktree-waiver, "
+                f"got {release_exception_usage!r}"
             )
     finally:
         shutil.rmtree(tmpdir)
@@ -595,27 +638,13 @@ def scenario_ahead_of_upstream_is_rejected():
 def scenario_stale_or_missing_platform_evidence_blocks_preflight():
     tmpdir, repo, _origin, _key_path, _identity = prepare_repo(include_signers=True)
     try:
-        fixture_meta_path = repo / "skills" / "active" / FIXTURE_NAME / "_meta.json"
-        meta = json.loads(fixture_meta_path.read_text(encoding="utf-8"))
-        meta["agent_compatible"] = ["codex", "claude"]
-        write_json(fixture_meta_path, meta)
-
-        write_platform_evidence(repo, "codex", checked_at="2026-03-12T00:00:00Z")
-        write_profile_last_verified(repo, "codex", "2026-03-13")
-        claude_evidence_path = (
-            repo
-            / "catalog"
-            / "compatibility-evidence"
-            / "claude"
-            / FIXTURE_NAME
-            / f"{FIXTURE_VERSION}.json"
-        )
-        claude_evidence_path.unlink()
-        run(["git", "add", str(fixture_meta_path.relative_to(repo))], cwd=repo)
-        run(["git", "add", "catalog/compatibility-evidence/codex"], cwd=repo)
+        write_platform_evidence(repo, "openclaw", checked_at="2026-03-12T12:02:00Z")
+        write_platform_evidence(repo, "claude", checked_at="2026-04-08T12:01:00Z")
+        write_platform_evidence(repo, "codex", checked_at="2026-04-08T12:00:00Z")
+        run(["git", "add", "catalog/compatibility-evidence/openclaw"], cwd=repo)
         run(["git", "add", "catalog/compatibility-evidence/claude"], cwd=repo)
-        run(["git", "add", "profiles/codex.json"], cwd=repo)
-        run(["git", "commit", "-m", "add stale platform evidence fixture"], cwd=repo)
+        run(["git", "add", "catalog/compatibility-evidence/codex"], cwd=repo)
+        run(["git", "commit", "-m", "add stale canonical platform evidence fixture"], cwd=repo)
         run(["git", "push"], cwd=repo)
 
         result = run(
@@ -637,15 +666,21 @@ def scenario_stale_or_missing_platform_evidence_blocks_preflight():
         blocking_rules = (payload.get("policy_trace") or {}).get("blocking_rules") or []
         if not any(item.get("id") == "platform-verified-support" for item in blocking_rules):
             fail(
-                f"expected policy_trace.blocking_rules to include platform-verified-support, got {blocking_rules!r}"
+                "expected policy_trace.blocking_rules to include "
+                f"platform-verified-support, got {blocking_rules!r}"
             )
 
         platform_compatibility = (payload.get("release") or {}).get("platform_compatibility") or {}
         verified_support = platform_compatibility.get("verified_support") or {}
-        if verified_support.get("codex", {}).get("freshness_state") != "stale":
-            fail(f"expected codex freshness_state stale, got {verified_support.get('codex')!r}")
-        if verified_support.get("claude", {}).get("freshness_state") != "unknown":
-            fail(f"expected claude freshness_state unknown, got {verified_support.get('claude')!r}")
+        if verified_support.get("openclaw", {}).get("freshness_state") != "stale":
+            fail(
+                "expected openclaw freshness_state stale, got "
+                f"{verified_support.get('openclaw')!r}"
+            )
+        if verified_support.get("codex", {}).get("freshness_state") != "fresh":
+            fail(f"expected codex freshness_state fresh, got {verified_support.get('codex')!r}")
+        if verified_support.get("claude", {}).get("freshness_state") != "fresh":
+            fail(f"expected claude freshness_state fresh, got {verified_support.get('claude')!r}")
     finally:
         shutil.rmtree(tmpdir)
 
@@ -734,7 +769,8 @@ def scenario_local_signed_tag_can_emit_local_provenance():
             fail(f"expected release_mode 'local-tag', got {release.get('release_mode')!r}")
         if provenance.get("source_snapshot", {}).get("pushed") is not False:
             fail(
-                f"expected unpushed local source snapshot, got {provenance.get('source_snapshot')!r}"
+                "expected unpushed local source snapshot, got "
+                f"{provenance.get('source_snapshot')!r}"
             )
         if provenance.get("git", {}).get("remote_tag_commit") is not None:
             fail(
@@ -815,7 +851,8 @@ def scenario_signed_pushed_release_succeeds():
         provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
         if provenance["source_snapshot"]["immutable"] is not True:
             fail(
-                f"expected immutable source snapshot, got {provenance['source_snapshot']['immutable']!r}"
+                "expected immutable source snapshot, got "
+                f"{provenance['source_snapshot']['immutable']!r}"
             )
         if provenance["source_snapshot"]["pushed"] is not True:
             fail(
@@ -833,13 +870,15 @@ def scenario_signed_pushed_release_succeeds():
         )
         if provenance["git"]["remote_tag_commit"] != remote_tag:
             fail(
-                f"expected remote_tag_commit {remote_tag}, got {provenance['git']['remote_tag_commit']!r}"
+                f"expected remote_tag_commit {remote_tag}, got "
+                f"{provenance['git']['remote_tag_commit']!r}"
             )
         if provenance.get("kind") != "skill-release-attestation":
             fail(f"unexpected provenance kind {provenance.get('kind')!r}")
         if provenance.get("attestation", {}).get("signer_identity") != identity:
             fail(
-                f"expected attestation signer_identity {identity!r}, got {provenance.get('attestation', {}).get('signer_identity')!r}"
+                f"expected attestation signer_identity {identity!r}, got "
+                f"{provenance.get('attestation', {}).get('signer_identity')!r}"
             )
         if not provenance.get("registry", {}).get("resolved"):
             fail("expected resolved registry context in release attestation")
@@ -889,6 +928,7 @@ SCENARIOS = {
         scenario_missing_tag_blocks_release_even_when_outer_requirements_are_set
     ),
     "scenario_dirty_worktree_is_rejected": scenario_dirty_worktree_is_rejected,
+    "scenario_unauthorized_releaser_is_rejected": scenario_unauthorized_releaser_is_rejected,
     "scenario_dirty_worktree_exception_can_pass_preflight": (
         scenario_dirty_worktree_exception_can_pass_preflight
     ),

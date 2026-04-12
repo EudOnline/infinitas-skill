@@ -40,6 +40,7 @@ settings = get_settings()
 print(json.dumps({
     "environment": settings.environment,
     "secret_key": settings.secret_key,
+    "allowed_hosts": settings.allowed_hosts,
     "bootstrap_users": settings.bootstrap_users,
 }))
 """
@@ -67,6 +68,7 @@ def build_env(tmpdir: Path) -> dict[str, str]:
     for key in [
         "INFINITAS_SERVER_ENV",
         "INFINITAS_SERVER_SECRET_KEY",
+        "INFINITAS_SERVER_ALLOWED_HOSTS",
         "INFINITAS_SERVER_BOOTSTRAP_USERS",
         "INFINITAS_SERVER_ALLOW_INSECURE_DEFAULTS",
     ]:
@@ -79,6 +81,7 @@ def scenario_production_requires_explicit_secret() -> None:
     try:
         env = build_env(tmpdir)
         env["INFINITAS_SERVER_ENV"] = "production"
+        env["INFINITAS_SERVER_ALLOWED_HOSTS"] = json.dumps(["registry.example.com"])
         env["INFINITAS_SERVER_BOOTSTRAP_USERS"] = json.dumps(FIXTURE_BOOTSTRAP_USERS)
 
         missing_secret = run_settings_probe(env, expect=1)
@@ -105,6 +108,7 @@ def scenario_production_requires_explicit_bootstrap_users() -> None:
         env = build_env(tmpdir)
         env["INFINITAS_SERVER_ENV"] = "production"
         env["INFINITAS_SERVER_SECRET_KEY"] = "prod-secret-key"
+        env["INFINITAS_SERVER_ALLOWED_HOSTS"] = json.dumps(["registry.example.com"])
 
         missing_bootstrap = run_settings_probe(env, expect=1)
         assert_contains(
@@ -120,6 +124,30 @@ def scenario_production_requires_explicit_bootstrap_users() -> None:
             "INFINITAS_SERVER_BOOTSTRAP_USERS",
             "empty production bootstrap failure",
         )
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def scenario_production_requires_explicit_allowed_hosts() -> None:
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-settings-hosts-"))
+    try:
+        env = build_env(tmpdir)
+        env["INFINITAS_SERVER_ENV"] = "production"
+        env["INFINITAS_SERVER_SECRET_KEY"] = "prod-secret-key"
+        env["INFINITAS_SERVER_BOOTSTRAP_USERS"] = json.dumps(FIXTURE_BOOTSTRAP_USERS)
+
+        missing_hosts = run_settings_probe(env, expect=1)
+        assert_contains(
+            missing_hosts.stderr + missing_hosts.stdout,
+            "INFINITAS_SERVER_ALLOWED_HOSTS",
+            "missing production allowed hosts failure",
+        )
+
+        env["INFINITAS_SERVER_ALLOWED_HOSTS"] = json.dumps(["registry.example.com"])
+        result = run_settings_probe(env)
+        payload = json.loads(result.stdout)
+        if payload.get("allowed_hosts") != ["registry.example.com"]:
+            fail(f"expected configured allowed hosts, got {payload}")
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -153,6 +181,7 @@ def scenario_production_rejects_invalid_registry_read_tokens() -> None:
         env = build_env(tmpdir)
         env["INFINITAS_SERVER_ENV"] = "production"
         env["INFINITAS_SERVER_SECRET_KEY"] = "prod-secret-key"
+        env["INFINITAS_SERVER_ALLOWED_HOSTS"] = json.dumps(["registry.example.com"])
         env["INFINITAS_SERVER_BOOTSTRAP_USERS"] = json.dumps(FIXTURE_BOOTSTRAP_USERS)
 
         env["INFINITAS_REGISTRY_READ_TOKENS"] = "not-json"
@@ -177,6 +206,7 @@ def scenario_production_rejects_invalid_registry_read_tokens() -> None:
 def main() -> None:
     scenario_production_requires_explicit_secret()
     scenario_production_requires_explicit_bootstrap_users()
+    scenario_production_requires_explicit_allowed_hosts()
     scenario_production_rejects_invalid_registry_read_tokens()
     scenario_test_mode_can_use_fixture_defaults()
     print("OK: settings hardening checks passed")

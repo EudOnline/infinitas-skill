@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CHECK_ALL_PATH = ROOT / "scripts" / "check-all.sh"
 VALIDATE_WORKFLOW_PATH = ROOT / ".github" / "workflows" / "validate.yml"
+PACKAGE_JSON_PATH = ROOT / "package.json"
 
 MAX_LINES = {
     "server/app.py": 80,
@@ -35,3 +37,14 @@ def test_fast_path_wires_maintainability_budget_check() -> None:
     workflow = VALIDATE_WORKFLOW_PATH.read_text(encoding="utf-8")
     assert "tests/integration/test_maintainability_budgets.py" in check_all
     assert "scripts/check-all.sh" in workflow
+
+
+def test_validate_workflow_covers_frontend_build_contract() -> None:
+    workflow = VALIDATE_WORKFLOW_PATH.read_text(encoding="utf-8")
+    package = json.loads(PACKAGE_JSON_PATH.read_text(encoding="utf-8"))
+    test_script = (package.get("scripts") or {}).get("test")
+
+    assert "actions/setup-node" in workflow
+    assert "npm ci" in workflow
+    assert "npm run build" in workflow
+    assert isinstance(test_script, str) and "no test specified" not in test_script

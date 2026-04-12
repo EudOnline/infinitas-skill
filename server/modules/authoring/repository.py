@@ -72,7 +72,12 @@ def get_skill_version(db: Session, skill_version_id: int) -> SkillVersion | None
     return db.get(SkillVersion, skill_version_id)
 
 
-def get_skill_version_by_skill_and_version(db: Session, *, skill_id: int, version: str) -> SkillVersion | None:
+def get_skill_version_by_skill_and_version(
+    db: Session,
+    *,
+    skill_id: int,
+    version: str,
+) -> SkillVersion | None:
     return db.scalar(
         select(SkillVersion)
         .where(SkillVersion.skill_id == skill_id)

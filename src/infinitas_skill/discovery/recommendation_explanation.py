@@ -167,41 +167,35 @@ def build_recommendation_explanation(
     memory_records_count: int,
     memory_context_enabled: bool,
 ) -> dict[str, Any]:
+    curation_summary = (
+        dict(memory_context.get("curation_summary") or {})
+        if isinstance(memory_context, dict)
+        else {}
+    )
+    memory_summary = {
+        "used": bool(
+            memory_context_enabled
+            and any(
+                isinstance(entry[3].get("memory_signals"), dict)
+                and isinstance(entry[3]["memory_signals"].get("applied_boost"), int)
+                and entry[3]["memory_signals"]["applied_boost"] > 0
+                for entry in scored
+            )
+        ),
+        "backend": (
+            memory_context.get("backend") if isinstance(memory_context, dict) else "disabled"
+        ),
+        "matched_count": memory_records_count,
+        "advisory_only": True,
+        "status": memory_context.get("status") if isinstance(memory_context, dict) else "disabled",
+    }
+    input_count = curation_summary.get("input_count")
+    if isinstance(input_count, int):
+        memory_summary["retrieved_count"] = input_count
+    if curation_summary:
+        memory_summary["curation_summary"] = curation_summary
     explanation = {
-        "memory_summary": {
-            "used": bool(
-                memory_context_enabled
-                and any(
-                    isinstance(entry[3].get("memory_signals"), dict)
-                    and isinstance(entry[3]["memory_signals"].get("applied_boost"), int)
-                    and entry[3]["memory_signals"]["applied_boost"] > 0
-                    for entry in scored
-                )
-            ),
-            "backend": (
-                memory_context.get("backend") if isinstance(memory_context, dict) else "disabled"
-            ),
-            "matched_count": memory_records_count,
-            "retrieved_count": (
-                (memory_context.get("curation_summary") or {}).get("input_count")
-                if isinstance(memory_context, dict)
-                else 0
-            ),
-            "advisory_only": True,
-            "status": (
-                memory_context.get("status") if isinstance(memory_context, dict) else "disabled"
-            ),
-            "curation_summary": (
-                dict(memory_context.get("curation_summary") or {})
-                if isinstance(memory_context, dict)
-                else {
-                    "input_count": 0,
-                    "kept_count": 0,
-                    "suppressed_duplicates": 0,
-                    "suppressed_low_signal": 0,
-                }
-            ),
-        }
+        "memory_summary": memory_summary
     }
     if isinstance(memory_context, dict):
         memory_error = memory_context.get("error")

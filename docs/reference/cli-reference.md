@@ -16,6 +16,12 @@ Regenerate and review it with:
 uv run python3 -m infinitas_skill.cli.reference
 ```
 
+## Local validation quick notes
+
+- `npm test` only rebuilds the Tailwind assets and prints a reminder that it does not represent the maintained verification gate.
+- Use `make ci-fast` for the local fast gate and `scripts/check-all.sh` as the authoritative closeout gate (CI uses the same command with the supported environment flags).
+- Release `preflight` and `stable-release` now block whenever `namespace_policy.authorized_releasers` is configured and the resolved releaser identity is not authorized. This gate appears in `infinitas release check-state`.
+
 ## Top-level CLI
 
 ```text

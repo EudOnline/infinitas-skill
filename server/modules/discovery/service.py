@@ -146,15 +146,19 @@ def _ensure_grant_context(context: AccessContext) -> None:
         raise ForbiddenError("grant credential required")
 
 
+_CATALOG_MAX_ENTRIES = 500
+
+
 def _available_release_projections(db: Session) -> list[DiscoveryProjection]:
     settings = get_settings()
     artifact_root = settings.artifact_path
     repo_root = settings.repo_path
-    return [
+    entries = [
         entry
         for entry in build_release_projections(db)
         if projection_has_materialized_artifacts(entry, artifact_root, repo_root)
     ]
+    return entries[:_CATALOG_MAX_ENTRIES]
 
 
 def list_public_catalog(db: Session) -> list[DiscoveryProjection]:

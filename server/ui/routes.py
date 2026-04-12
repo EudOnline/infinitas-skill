@@ -21,7 +21,7 @@ from server.ui.auth_state import (
 from server.ui.console import build_console_forbidden_context
 from server.ui.formatting import build_kawaii_ui_context
 from server.ui.home import build_home_context
-from server.ui.i18n import pick_lang, resolve_language
+from server.ui.i18n import build_registry_base_url, pick_lang, resolve_language
 from server.ui.lifecycle import (
     build_access_tokens_page_context,
     build_draft_detail_page_context,
@@ -62,6 +62,7 @@ def _forbidden_owner_response(
 
 def _build_login_context(request: Request) -> dict[str, Any]:
     lang = resolve_language(request)
+    registry_base_url = build_registry_base_url(request)
     page_eyebrow = pick_lang(lang, "维护控制台", "Maintainer-only console")
     page_kicker = pick_lang(lang, "认证入口", "Auth entry")
     content = pick_lang(
@@ -78,7 +79,7 @@ def _build_login_context(request: Request) -> dict[str, Any]:
         "page_mode": "console",
         "show_console_session": False,
         "nav_links": build_site_nav(home=False, lang=lang),
-        "cli_command": 'curl -H "Authorization: Bearer <token>" https://skills.example.com/api/v1/me',
+        "cli_command": f'curl -H "Authorization: Bearer <token>" {registry_base_url}/api/v1/me',
         "page_stats": [
             {
                 "value": pick_lang(lang, "Bearer Token", "Bearer Token"),
@@ -109,7 +110,6 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         context = {
             "request": request,
             "app_name": settings.app_name,
-            "database_url": settings.database_url,
             "user_count": db.scalar(select(func.count()).select_from(User)) or 0,
         }
         context.update(build_home_context(settings=settings, db=db, request=request))

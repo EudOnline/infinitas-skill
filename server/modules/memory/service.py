@@ -384,6 +384,7 @@ def record_lifecycle_memory_event_best_effort(
     scope: Mapping[str, Any] | None = None,
 ) -> MemoryWritebackOutcome | None:
     try:
+        nested = db.begin_nested()
         outcome = record_lifecycle_memory_event(
             db,
             lifecycle_event=lifecycle_event,
@@ -395,8 +396,11 @@ def record_lifecycle_memory_event_best_effort(
             memory_write_enabled=memory_write_enabled,
             scope=scope,
         )
-        db.commit()
+        nested.commit()
         return outcome
     except Exception:
-        db.rollback()
+        try:
+            nested.rollback()
+        except Exception:
+            pass
         return None

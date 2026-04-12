@@ -4,6 +4,7 @@ import hashlib
 import json
 import re
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from server.modules.authoring import repository
@@ -208,6 +209,9 @@ def seal_draft(
     if draft.state != "open":
         raise ConflictError("draft is already sealed")
 
+    # Lock draft row to prevent concurrent seal race
+    db.scalar(select(SkillDraft).where(SkillDraft.id == draft_id).with_for_update())
+
     skill = repository.get_skill(db, draft.skill_id)
     if skill is None:
         raise NotFoundError("skill not found")
@@ -216,10 +220,11 @@ def seal_draft(
         principal_id=actor_principal_id,
         is_maintainer=is_maintainer,
     )
-    existing_version = repository.get_skill_version_by_skill_and_version(
-        db,
-        skill_id=skill.id,
-        version=version,
+    existing_version = db.scalar(
+        select(SkillVersion)
+        .where(SkillVersion.skill_id == skill.id)
+        .where(SkillVersion.version == version)
+        .with_for_update()
     )
     if existing_version is not None:
         raise ConflictError("skill version already exists")

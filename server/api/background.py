@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from server.auth import get_current_user
 from server.db import get_db
 from server.models import User
-from server.auth import get_current_user
 
 router = APIRouter(prefix="/api/background", tags=["background"])
 

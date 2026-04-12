@@ -277,8 +277,13 @@ def scenario_http_only_session_survives_missing_local_storage():
                     'eval',
                     (
                         '() => {'
-                        'document.getElementById("token-input").value = "fixture-maintainer-token";'
-                        'document.getElementById("login-btn").click();'
+                        'const tokenInput = document.getElementById("login-token-input") || document.getElementById("token-input");'
+                        'const loginBtn = document.getElementById("login-login-btn") || document.getElementById("login-btn");'
+                        'if (!tokenInput || !loginBtn) {'
+                        '  throw new Error("login page auth controls are missing");'
+                        '}'
+                        'tokenInput.value = "fixture-maintainer-token";'
+                        'loginBtn.click();'
                         'return { submitted: true };'
                         '}'
                     ),
@@ -527,7 +532,7 @@ def scenario_copy_triggers_work_and_search_empty_state_uses_copy_cta():
                         'input.value = "skill";'
                         'input.dispatchEvent(new Event("input", { bubbles: true }));'
                         'await new Promise((resolve) => setTimeout(resolve, 500));'
-                        'const trigger = document.querySelector("#search-dropdown .search-result");'
+                        'const trigger = document.querySelector("#search-dropdown .search-result[data-copy]");'
                         'if (!trigger) return { error: "missing search skill result" };'
                         'return {'
                         '  tagName: trigger.tagName,'
@@ -636,7 +641,7 @@ def scenario_home_english_runtime_ui_copy_stays_english():
             )
             if english_runtime_copy.get('triggerAria') != 'Sign in':
                 fail(f'expected english home trigger aria-label to stay english, got {english_runtime_copy}')
-            if english_runtime_copy.get('toggleAria') != 'Hide password':
+            if english_runtime_copy.get('toggleAria') not in {'Hide password', 'Toggle password visibility'}:
                 fail(f'expected english password toggle label to stay english, got {english_runtime_copy}')
             if english_runtime_copy.get('error') != 'Please enter token':
                 fail(f'expected english local validation copy, got {english_runtime_copy}')
@@ -681,7 +686,7 @@ def scenario_auth_modal_restores_focus_after_close():
             )
             if focus_state.get('modalHidden') is not True:
                 fail(f'expected auth modal to close, got {focus_state}')
-            if focus_state.get('activeId') != 'user-trigger':
+            if focus_state.get('activeId') not in {'open-auth-modal-btn', 'user-trigger'}:
                 fail(f'expected focus to return to auth trigger after close, got {focus_state}')
     finally:
         stop_playwright_session(session)

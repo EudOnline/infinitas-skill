@@ -5,16 +5,15 @@ from pathlib import Path
 
 import pytest
 
-
 ROOT = Path(__file__).resolve().parents[1]
 for path in (ROOT, ROOT / "src", ROOT / "scripts"):
     path_text = str(path)
     if path_text not in sys.path:
         sys.path.insert(0, path_text)
 
-from tests.helpers.env import make_test_env
-from tests.helpers.repo_copy import copy_repo_without_local_state
-from tests.helpers.signing import add_allowed_signer, generate_signing_key
+from tests.helpers.env import make_test_env  # noqa: E402
+from tests.helpers.repo_copy import copy_repo_without_local_state  # noqa: E402
+from tests.helpers.signing import add_allowed_signer, generate_signing_key  # noqa: E402
 
 pytest_plugins = ["tests.fixtures.repo_state"]
 

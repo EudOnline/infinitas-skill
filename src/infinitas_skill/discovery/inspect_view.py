@@ -87,11 +87,38 @@ def derive_trust_state(
     return version_entry.get("trust_state") or "unknown"
 
 
+def _declared_support(skill_entry: dict[str, Any]) -> list[str]:
+    compatibility = skill_entry.get("compatibility") if isinstance(skill_entry, dict) else {}
+    declared = (
+        (compatibility.get("declared_support") if isinstance(compatibility, dict) else None)
+        or skill_entry.get("declared_support")
+        or skill_entry.get("agent_compatible")
+        or []
+    )
+    return [item for item in declared if isinstance(item, str) and item]
+
+
+def _resolved_verified_support(
+    skill_entry: dict[str, Any], verified_support: dict[str, Any] | None
+) -> dict[str, Any]:
+    if isinstance(verified_support, dict):
+        return dict(verified_support)
+    compatibility = skill_entry.get("compatibility") if isinstance(skill_entry, dict) else {}
+    compatibility_verified = (
+        compatibility.get("verified_support") if isinstance(compatibility, dict) else None
+    )
+    if isinstance(compatibility_verified, dict):
+        return dict(compatibility_verified)
+    current_verified = skill_entry.get("verified_support")
+    return dict(current_verified) if isinstance(current_verified, dict) else {}
+
+
 def build_inspect_payload(
     *,
     skill_entry: dict[str, Any],
     resolved_version: str,
     trust_state: str,
+    verified_support: dict[str, Any] | None = None,
     dependency_view: dict[str, Any],
     provenance_view: dict[str, Any],
     distribution_view: dict[str, Any],
@@ -99,6 +126,7 @@ def build_inspect_payload(
     memory_hints: dict[str, Any],
 ) -> dict[str, Any]:
     runtime = dict(skill_entry.get("runtime") or {})
+    verified_support_view = _resolved_verified_support(skill_entry, verified_support)
     install_targets = (
         runtime.get("install_targets") if isinstance(runtime.get("install_targets"), dict) else {}
     )
@@ -111,6 +139,12 @@ def build_inspect_payload(
         "latest_version": skill_entry.get("latest_version"),
         "trust_state": trust_state,
         "decision_metadata": canonical_decision_metadata(skill_entry),
+        "compatibility": {
+            "declared_support": _declared_support(skill_entry),
+            "verified_support": verified_support_view,
+            "state_summary": compatibility_summary(verified_support_view),
+            "freshness_summary": compatibility_freshness_summary(verified_support_view),
+        },
         "runtime": runtime,
         "runtime_readiness": (
             (runtime.get("readiness") or {}).get("status")

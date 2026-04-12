@@ -4,11 +4,11 @@ from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
 
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import Session, sessionmaker
 
+from alembic import command
 from server.models import Base, User
 from server.settings import get_settings
 
@@ -25,12 +25,22 @@ def get_engine():
     if settings.database_url.startswith("sqlite:///"):
         db_path = Path(settings.database_url.removeprefix("sqlite:///"))
         db_path.parent.mkdir(parents=True, exist_ok=True)
-    return create_engine(settings.database_url, future=True, **_engine_kwargs(settings.database_url))
+    return create_engine(
+        settings.database_url,
+        future=True,
+        **_engine_kwargs(settings.database_url),
+    )
 
 
 @lru_cache(maxsize=1)
 def get_session_factory():
-    return sessionmaker(bind=get_engine(), autoflush=False, autocommit=False, expire_on_commit=False, class_=Session)
+    return sessionmaker(
+        bind=get_engine(),
+        autoflush=False,
+        autocommit=False,
+        expire_on_commit=False,
+        class_=Session,
+    )
 
 
 def _alembic_config() -> Config:
@@ -47,7 +57,9 @@ def init_db():
     has_version_table = inspector.has_table("alembic_version")
     if not has_version_table:
         managed_tables = {table.name for table in Base.metadata.sorted_tables}
-        existing_tables = {name for name in inspector.get_table_names() if name != "sqlite_sequence"}
+        existing_tables = {
+            name for name in inspector.get_table_names() if name != "sqlite_sequence"
+        }
         if existing_tables.intersection(managed_tables):
             raise RuntimeError(
                 "refusing to auto-upgrade an unversioned private-first database; "
@@ -57,7 +69,10 @@ def init_db():
 
 
 def seed_bootstrap_users():
-    from server.modules.access.service import ensure_personal_credential_for_user, ensure_user_principal
+    from server.modules.access.service import (
+        ensure_personal_credential_for_user,
+        ensure_user_principal,
+    )
 
     settings = get_settings()
     factory = get_session_factory()

@@ -168,6 +168,9 @@ echo "status: $STATUS"
 echo "tag: $TAG"
 
 if [[ $CREATE -eq 1 || $PUSH -eq 1 ]]; then
+  if [[ $CREATE -eq 1 && $UNSIGNED -ne 1 ]]; then
+    ensure_repo_signers
+  fi
   if [[ $LOCAL -eq 1 && $PUSH -eq 1 ]]; then
     echo "--local creates only local tags; omit --push" >&2
     exit 1
@@ -191,7 +194,6 @@ if [[ $CREATE -eq 1 ]]; then
     git tag "$TAG"
     echo "created unsigned tag: $TAG"
   else
-    ensure_repo_signers
     SIGNING_KEY="$(signing_key_value)"
     if [[ -z "$SIGNING_KEY" ]]; then
       echo "stable release tags are SSH-signed by default; set $SIGNING_KEY_ENV or git config user.signingkey before creating $TAG" >&2

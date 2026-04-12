@@ -21,7 +21,7 @@ from server.modules.release import service as release_service
 from server.ui.auth_state import principal_label
 from server.ui.console import build_lifecycle_console_context
 from server.ui.formatting import load_json_object
-from server.ui.i18n import resolve_language
+from server.ui.i18n import build_registry_base_url, resolve_language
 from server.ui.lifecycle_actions import (
     build_access_tokens_rows_bundle,
     build_release_detail_rows_bundle,
@@ -62,6 +62,7 @@ def build_skills_page_context(
     limit: int,
 ) -> dict[str, Any]:
     lang = resolve_language(request)
+    registry_base_url = build_registry_base_url(request)
     user = actor.user
     principal_id = actor.principal.id if actor.principal else None
     scope = load_registry_scope(
@@ -110,6 +111,7 @@ def build_skills_page_context(
 
     descriptor = describe_skills_page(
         lang,
+        registry_base_url=registry_base_url,
         skills_count=len(skills),
         drafts_count=len(drafts),
         releases_count=len(releases),
@@ -137,6 +139,7 @@ def build_skill_detail_page_context(
     skill: Skill,
 ) -> dict[str, Any]:
     lang = resolve_language(request)
+    registry_base_url = build_registry_base_url(request)
     drafts = db.scalars(
         select(SkillDraft)
         .where(SkillDraft.skill_id == skill.id)
@@ -172,6 +175,7 @@ def build_skill_detail_page_context(
 
     descriptor = describe_skill_detail_page(
         lang,
+        registry_base_url=registry_base_url,
         skill=skill,
         principal_name=principal_name,
         draft_count=len(drafts),
@@ -207,11 +211,13 @@ def build_draft_detail_page_context(
     skill: Skill,
 ) -> dict[str, Any]:
     lang = resolve_language(request)
+    registry_base_url = build_registry_base_url(request)
     base_version = db.get(SkillVersion, draft.base_version_id) if draft.base_version_id else None
     metadata = load_json_object(draft.metadata_json)
 
     descriptor = describe_draft_detail_page(
         lang,
+        registry_base_url=registry_base_url,
         draft=draft,
         base_version=base_version,
         skill_name=skill.display_name,
@@ -246,6 +252,7 @@ def build_release_detail_page_context(
     skill: Skill,
 ) -> dict[str, Any]:
     lang = resolve_language(request)
+    registry_base_url = build_registry_base_url(request)
     artifacts = release_service.get_current_artifacts_for_release(db, release)
     exposures = db.scalars(
         select(Exposure).where(Exposure.release_id == release.id).order_by(Exposure.id.desc())
@@ -259,6 +266,7 @@ def build_release_detail_page_context(
     )
     descriptor = describe_release_detail_page(
         lang,
+        registry_base_url=registry_base_url,
         release=release,
         version=version,
         skill_name=skill.display_name,
@@ -296,6 +304,7 @@ def build_release_share_page_context(
     skill: Skill,
 ) -> dict[str, Any]:
     lang = resolve_language(request)
+    registry_base_url = build_registry_base_url(request)
     exposures = db.scalars(
         select(Exposure).where(Exposure.release_id == release.id).order_by(Exposure.id.asc())
     ).all()
@@ -322,6 +331,7 @@ def build_release_share_page_context(
     )
     descriptor = describe_release_share_page(
         lang,
+        registry_base_url=registry_base_url,
         release=release,
         version=version,
         skill_name=skill.display_name,
@@ -356,6 +366,7 @@ def build_access_tokens_page_context(
     limit: int,
 ) -> dict[str, Any]:
     lang = resolve_language(request)
+    registry_base_url = build_registry_base_url(request)
     user = actor.user
     principal_id = actor.principal.id if actor.principal else None
     scope = load_registry_scope(
@@ -385,6 +396,7 @@ def build_access_tokens_page_context(
 
     descriptor = describe_access_tokens_page(
         lang,
+        registry_base_url=registry_base_url,
         credentials=scope["credentials"],
         grants=scope["grants"],
     )
@@ -414,6 +426,7 @@ def build_review_cases_page_context(
     limit: int,
 ) -> dict[str, Any]:
     lang = resolve_language(request)
+    registry_base_url = build_registry_base_url(request)
     user = actor.user
     principal_id = actor.principal.id if actor.principal else None
     scope = load_registry_scope(
@@ -431,7 +444,11 @@ def build_review_cases_page_context(
         limit=limit,
     )
 
-    descriptor = describe_review_cases_page(lang, review_cases=scope["review_cases"])
+    descriptor = describe_review_cases_page(
+        lang,
+        registry_base_url=registry_base_url,
+        review_cases=scope["review_cases"],
+    )
     context = build_lifecycle_console_context(
         request=request,
         title=descriptor["title"],

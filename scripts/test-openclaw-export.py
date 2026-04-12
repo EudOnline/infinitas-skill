@@ -16,6 +16,11 @@ from infinitas_skill.testing.env import build_regression_test_env
 
 FIXTURE_NAME = 'release-fixture'
 FIXTURE_VERSION = '1.2.3'
+PLATFORM_EVIDENCE_MINUTES = {
+    'codex': 0,
+    'claude': 1,
+    'openclaw': 2,
+}
 
 
 def fail(message):
@@ -38,8 +43,56 @@ def write_json(path: Path, payload):
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
 
-def make_env(extra=None):
-    return build_regression_test_env(ROOT, extra=extra, env=os.environ.copy())
+def make_env(repo: Path, extra=None):
+    merged_extra = {'INFINITAS_SKILL_RELEASER': 'release-test'}
+    if extra:
+        merged_extra.update(extra)
+    return build_regression_test_env(
+        ROOT,
+        extra=merged_extra,
+        env=os.environ.copy(),
+        add_pythonpath=repo / 'src',
+    )
+
+
+def contract_checked_at(repo: Path, platform: str):
+    profile_path = repo / 'profiles' / f'{platform}.json'
+    payload = json.loads(profile_path.read_text(encoding='utf-8'))
+    contract = payload.get('contract') if isinstance(payload.get('contract'), dict) else {}
+    last_verified = contract.get('last_verified')
+    if not isinstance(last_verified, str) or not last_verified:
+        fail(f'missing contract.last_verified for platform {platform!r}')
+    minute = PLATFORM_EVIDENCE_MINUTES.get(platform, 0)
+    return f'{last_verified}T12:{minute:02d}:00Z'
+
+
+def seed_fresh_platform_evidence(repo: Path):
+    fixtures = (
+        ('codex', contract_checked_at(repo, 'codex')),
+        ('claude', contract_checked_at(repo, 'claude')),
+        ('openclaw', contract_checked_at(repo, 'openclaw')),
+    )
+    for platform, checked_at in fixtures:
+        path = (
+            repo
+            / 'catalog'
+            / 'compatibility-evidence'
+            / platform
+            / FIXTURE_NAME
+            / f'{FIXTURE_VERSION}.json'
+        )
+        path.parent.mkdir(parents=True, exist_ok=True)
+        write_json(
+            path,
+            {
+                'platform': platform,
+                'skill': FIXTURE_NAME,
+                'version': FIXTURE_VERSION,
+                'state': 'adapted',
+                'checked_at': checked_at,
+                'checker': f'check-{platform}-compat.py',
+            },
+        )
 
 
 def scaffold_fixture(repo: Path, *, include_binary: bool = False):
@@ -108,9 +161,22 @@ def prepare_repo(*, include_binary: bool = False):
     shutil.copytree(
         ROOT,
         repo,
-        ignore=shutil.ignore_patterns('.git', '.planning', '__pycache__', '.cache', 'scripts/__pycache__'),
+        ignore=shutil.ignore_patterns(
+            '.git',
+            '.venv',
+            '.planning',
+            '.worktrees',
+            '.pytest_cache',
+            '.ruff_cache',
+            '.mypy_cache',
+            '__pycache__',
+            '*.pyc',
+            '.cache',
+            'scripts/__pycache__',
+        ),
     )
     scaffold_fixture(repo, include_binary=include_binary)
+    seed_fresh_platform_evidence(repo)
     run(['git', 'init', '--bare', str(origin)], cwd=tmpdir)
     run(['git', 'init', '-b', 'main'], cwd=repo)
     run(['git', 'config', 'user.name', 'Release Fixture'], cwd=repo)
@@ -138,7 +204,7 @@ def prepare_repo(*, include_binary: bool = False):
     run(
         [str(repo / 'scripts' / 'release-skill.sh'), FIXTURE_NAME, '--push-tag', '--write-provenance'],
         cwd=repo,
-        env=make_env(),
+        env=make_env(repo),
     )
     return tmpdir, repo
 

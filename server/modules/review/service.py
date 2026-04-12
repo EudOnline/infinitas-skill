@@ -5,7 +5,7 @@ import json
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from server.models import Exposure, ReviewCase, ReviewDecision, ReviewPolicy, utcnow
+from server.models import Exposure, ReviewCase, ReviewDecision, ReviewPolicy, User, utcnow
 from server.modules.memory.service import record_lifecycle_memory_event_best_effort
 from server.modules.review import default_policy
 
@@ -108,6 +108,7 @@ def record_decision(
     *,
     review_case_id: int,
     reviewer_principal_id: int,
+    reviewer_user: User | None = None,
     decision: str,
     note: str,
     evidence: dict | None,
@@ -115,6 +116,9 @@ def record_decision(
     review_case = get_review_case_or_404(db, review_case_id)
     if review_case.state != "open":
         raise ConflictError("review case is already closed")
+
+    if reviewer_user is not None and reviewer_user.role not in ("maintainer", "contributor"):
+        raise ConflictError("only maintainers or contributors can record review decisions")
 
     normalized_decision = str(decision or "").strip().lower()
     if normalized_decision not in {"approve", "reject", "comment"}:

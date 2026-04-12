@@ -11,6 +11,7 @@ from infinitas_skill.memory.config import load_memory_config
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SERVER_ENV = 'development'
 DEFAULT_SECRET_KEY = 'change-me'
+DEFAULT_ALLOWED_HOSTS = ['testserver', 'localhost', '127.0.0.1', '::1']
 
 DEFAULT_BOOTSTRAP_USERS = [
     {
@@ -35,6 +36,7 @@ class Settings:
     environment: str
     database_url: str
     secret_key: str
+    allowed_hosts: list[str]
     template_dir: Path
     bootstrap_users: list[dict]
     repo_path: Path
@@ -145,6 +147,22 @@ def _positive_int_env(name: str, *, default: int) -> int:
     return value if value > 0 else default
 
 
+def _load_allowed_hosts(environment: str) -> list[str]:
+    hosts = _load_string_list_env(
+        'INFINITAS_SERVER_ALLOWED_HOSTS',
+        strict=environment == 'production',
+    )
+    normalized = list(dict.fromkeys(hosts))
+    if normalized:
+        return normalized
+    if environment == 'production':
+        raise RuntimeError(
+            'INFINITAS_SERVER_ALLOWED_HOSTS must be set to a non-empty JSON array '
+            'when INFINITAS_SERVER_ENV=production'
+        )
+    return list(DEFAULT_ALLOWED_HOSTS)
+
+
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     environment = _normalize_environment(os.environ.get('INFINITAS_SERVER_ENV'))
@@ -162,6 +180,7 @@ def get_settings() -> Settings:
                 'INFINITAS_SERVER_ENV=production'
             )
         secret_key = DEFAULT_SECRET_KEY
+    allowed_hosts = _load_allowed_hosts(environment)
 
     bootstrap_raw = os.environ.get('INFINITAS_SERVER_BOOTSTRAP_USERS')
     bootstrap_payload = _load_bootstrap_payload(
@@ -229,6 +248,7 @@ def get_settings() -> Settings:
         environment=environment,
         database_url=database_url,
         secret_key=secret_key,
+        allowed_hosts=allowed_hosts,
         template_dir=ROOT / 'server' / 'templates',
         bootstrap_users=bootstrap_users,
         repo_path=repo_path,

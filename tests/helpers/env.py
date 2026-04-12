@@ -9,7 +9,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from infinitas_skill.testing.env import build_regression_test_env
+from infinitas_skill.testing.env import build_regression_test_env  # noqa: E402
 
 
 def make_test_env(extra: dict[str, str] | None = None) -> dict[str, str]:

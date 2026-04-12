@@ -129,6 +129,7 @@ def create_or_get_release(
         select(Release)
         .where(Release.skill_version_id == skill_version.id)
         .order_by(Release.id.desc())
+        .with_for_update()
     )
     if existing is not None:
         return existing, False

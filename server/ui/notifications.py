@@ -6,9 +6,14 @@ from server.ui.formatting import humanize_status, humanize_timestamp
 from server.ui.i18n import pick_lang
 
 
+def _registry_cli_prefix(registry_base_url: str) -> str:
+    return f"python -m infinitas_skill.cli.main registry --base-url {registry_base_url}"
+
+
 def describe_skills_page(
     lang: str,
     *,
+    registry_base_url: str,
     skills_count: int,
     drafts_count: int,
     releases_count: int,
@@ -30,8 +35,7 @@ def describe_skills_page(
             ),
         ),
         "cli_command": (
-            "python -m infinitas_skill.cli.main registry --base-url https://skills.example.com "
-            "--token <token> skills get <skill-id>"
+            f"{_registry_cli_prefix(registry_base_url)} --token <token> skills get <skill-id>"
         ),
         "stats": [
             {
@@ -71,6 +75,7 @@ def describe_skills_page(
 def describe_skill_detail_page(
     lang: str,
     *,
+    registry_base_url: str,
     skill: object,
     principal_name: str,
     draft_count: int,
@@ -84,8 +89,7 @@ def describe_skill_detail_page(
             "This skill detail view tracks drafts, versions, and releases inside one namespace.",
         ),
         "cli_command": (
-            "python -m infinitas_skill.cli.main registry --base-url https://skills.example.com "
-            f"--token <token> skills get {skill.id}"
+            f"{_registry_cli_prefix(registry_base_url)} --token <token> skills get {skill.id}"
         ),
         "stats": [
             {
@@ -110,6 +114,7 @@ def describe_skill_detail_page(
 def describe_draft_detail_page(
     lang: str,
     *,
+    registry_base_url: str,
     draft: object,
     base_version: object | None,
     skill_name: str,
@@ -125,8 +130,8 @@ def describe_draft_detail_page(
             ),
         ),
         "cli_command": (
-            "python -m infinitas_skill.cli.main registry --base-url https://skills.example.com "
-            f"--token <token> drafts update {draft.id} --metadata-json '{{}}'"
+            f"{_registry_cli_prefix(registry_base_url)} --token <token> drafts update "
+            f"{draft.id} --metadata-json '{{}}'"
         ),
         "stats": [
             {
@@ -151,6 +156,7 @@ def describe_draft_detail_page(
 def describe_release_detail_page(
     lang: str,
     *,
+    registry_base_url: str,
     release: object,
     version: object,
     skill_name: str,
@@ -168,8 +174,7 @@ def describe_release_detail_page(
             ),
         ),
         "cli_command": (
-            "python -m infinitas_skill.cli.main registry --base-url https://skills.example.com "
-            f"--token <token> releases get {release.id}"
+            f"{_registry_cli_prefix(registry_base_url)} --token <token> releases get {release.id}"
         ),
         "stats": [
             {
@@ -201,6 +206,7 @@ def describe_release_detail_page(
 def describe_release_share_page(
     lang: str,
     *,
+    registry_base_url: str,
     release: object,
     version: object,
     skill_name: str,
@@ -221,8 +227,8 @@ def describe_release_share_page(
             ),
         ),
         "cli_command": (
-            "python -m infinitas_skill.cli.main registry --base-url https://skills.example.com "
-            f"--token <token> exposures create {release.id} --audience-type public"
+            f"{_registry_cli_prefix(registry_base_url)} --token <token> exposures create "
+            f"{release.id} --audience-type public"
         ),
         "stats": [
             {
@@ -252,6 +258,7 @@ def describe_release_share_page(
 def describe_access_tokens_page(
     lang: str,
     *,
+    registry_base_url: str,
     credentials: list[object],
     grants: list[object],
 ) -> dict[str, Any]:
@@ -269,10 +276,7 @@ def describe_access_tokens_page(
                 "without reshaping the skill lifecycle."
             ),
         ),
-        "cli_command": (
-            "python -m infinitas_skill.cli.main registry --base-url https://skills.example.com "
-            "--token <token> tokens me"
-        ),
+        "cli_command": f"{_registry_cli_prefix(registry_base_url)} --token <token> tokens me",
         "stats": [
             {
                 "value": str(len(credentials)),
@@ -298,7 +302,9 @@ def describe_access_tokens_page(
     }
 
 
-def describe_review_cases_page(lang: str, *, review_cases: list[object]) -> dict[str, Any]:
+def describe_review_cases_page(
+    lang: str, *, registry_base_url: str, review_cases: list[object]
+) -> dict[str, Any]:
     return {
         "title": pick_lang(lang, "审核收件箱", "Review inbox"),
         "content": pick_lang(
@@ -310,8 +316,8 @@ def describe_review_cases_page(lang: str, *, review_cases: list[object]) -> dict
             ),
         ),
         "cli_command": (
-            "python -m infinitas_skill.cli.main registry --base-url https://skills.example.com "
-            "--token <token> reviews get-case <review-case-id>"
+            f"{_registry_cli_prefix(registry_base_url)} --token <token> reviews get-case "
+            "<review-case-id>"
         ),
         "stats": [
             {

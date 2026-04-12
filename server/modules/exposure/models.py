@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from server.models import Base, utcnow
+from server.models import Base
 
 
 class Exposure(Base):
@@ -16,7 +16,10 @@ class Exposure(Base):
     install_mode: Mapped[str] = mapped_column(String(32), default="enabled")
     review_requirement: Mapped[str] = mapped_column(String(32), default="none")
     state: Mapped[str] = mapped_column(String(32), default="draft")
-    requested_by_principal_id: Mapped[int | None] = mapped_column(ForeignKey("principals.id"), nullable=True)
+    requested_by_principal_id: Mapped[int | None] = mapped_column(
+        ForeignKey("principals.id"),
+        nullable=True,
+    )
     policy_snapshot_json: Mapped[str] = mapped_column(Text, default="{}")
     activated_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     ended_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)

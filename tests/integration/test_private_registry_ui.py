@@ -12,6 +12,7 @@ from sqlalchemy import select
 ROOT = Path(__file__).resolve().parents[2]
 APP_PATH = ROOT / "server" / "app.py"
 APP_JS_PATH = ROOT / "server" / "static" / "js" / "app.js"
+AUTH_SESSION_JS_PATH = ROOT / "server" / "static" / "js" / "auth-session.js"
 ROUTES_PATH = ROOT / "server" / "ui" / "routes.py"
 LIFECYCLE_PATH = ROOT / "server" / "ui" / "lifecycle.py"
 ALEMBIC_CONFIG_PATH = ROOT / "alembic.ini"
@@ -166,6 +167,7 @@ def _slice_source(source: str, start_marker: str, end_marker: str) -> str:
 
 def assert_private_registry_ui_js_contracts() -> None:
     source = APP_JS_PATH.read_text(encoding="utf-8")
+    auth_session_source = AUTH_SESSION_JS_PATH.read_text(encoding="utf-8")
     create_draft_source = _slice_source(
         source,
         "async function createDraft(form) {",
@@ -195,6 +197,21 @@ def assert_private_registry_ui_js_contracts() -> None:
         source,
         "async function pollReleaseReady(releaseId, intervalMs = 3000) {",
         "\n}\n\nasync function createExposure(form) {",
+    )
+    auth_handle_login_source = _slice_source(
+        auth_session_source,
+        "    async function handleLogin() {",
+        "\n    }\n\n    function setLoading(loading) {",
+    )
+    auth_init_home_source = _slice_source(
+        auth_session_source,
+        "  function initHomeAuthSession() {",
+        "\n  function initConsoleAuthSession() {",
+    )
+    auth_console_login_success_source = _slice_source(
+        auth_session_source,
+        "    const controller = createAuthModalController({",
+        "\n\n    async function init() {",
     )
 
     assert "/api/v1/releases/${releaseId}/artifacts" in source, (
@@ -271,6 +288,24 @@ def assert_private_registry_ui_js_contracts() -> None:
             "expected release polling UI to update summary stats and recover from empty-state "
             f"artifact sections; missing marker {marker!r}"
         )
+    next_target_index = auth_handle_login_source.index("const nextTarget = pendingRedirect;")
+    close_modal_index = auth_handle_login_source.index("closeModal(")
+    assert next_target_index < close_modal_index, (
+        "expected auth login flow to snapshot pendingRedirect before closing the modal so "
+        "protected navigation survives successful login"
+    )
+    for marker in [
+        "const loginPanel = document.getElementById('login-panel');",
+        "window.location.href = sessionConfig.homeHref || '/';",
+    ]:
+        assert marker in auth_init_home_source, (
+            "expected auth-session bootstrap to initialize the standalone /login page and "
+            f"redirect after successful login; missing marker {marker!r}"
+        )
+    assert "currentUser = { username: data.username, role: data.role || null };" in auth_console_login_success_source, (
+        "expected console auth success handler to refresh local session state immediately "
+        "with the login response role"
+    )
 
 
 def create_ready_release(client, headers: dict[str, str], *, slug: str, display_name: str) -> int:
@@ -373,12 +408,46 @@ def assert_private_first_console_ui_round_trip() -> None:
         from fastapi.testclient import TestClient
 
         from server.app import create_app
+        from server.auth import AUTH_COOKIE_NAME
         from server.db import get_session_factory
         from server.worker import run_worker_loop
 
         client = TestClient(create_app())
         session_factory = get_session_factory()
         headers = {"Authorization": "Bearer fixture-maintainer-token"}
+        registry_base_url = str(client.base_url).rstrip("/")
+
+        login_response = client.get("/login?lang=en")
+        assert login_response.status_code == 200, login_response.text
+        login_html = login_response.text
+        assert f'{registry_base_url}/api/v1/me' in login_html
+        assert "skills.example.com" not in login_html
+
+        api_login_response = client.post(
+            "/api/auth/login?lang=en",
+            json={"token": "fixture-maintainer-token"},
+        )
+        assert api_login_response.status_code == 200, api_login_response.text
+        session_cookie = api_login_response.cookies.get(AUTH_COOKIE_NAME)
+        assert session_cookie
+        assert session_cookie != "fixture-maintainer-token"
+        assert "fixture-maintainer-token" not in (
+            api_login_response.headers.get("set-cookie") or ""
+        )
+        api_login_payload = api_login_response.json()
+        assert api_login_payload == {
+            "success": True,
+            "username": "fixture-maintainer",
+            "role": "maintainer",
+            "error": None,
+        }
+        session_probe = client.get("/api/auth/me")
+        assert session_probe.status_code == 200, session_probe.text
+        assert session_probe.json() == {
+            "authenticated": True,
+            "username": "fixture-maintainer",
+            "role": "maintainer",
+        }
 
         # 1) Create skill through API (UI will verify forms exist)
         create_skill_response = client.post(
@@ -397,6 +466,8 @@ def assert_private_first_console_ui_round_trip() -> None:
         skills_response = client.get("/skills?lang=en", headers=headers)
         assert skills_response.status_code == 200, skills_response.text
         skills_html = skills_response.text
+        assert f"registry --base-url {registry_base_url}" in skills_html
+        assert "skills.example.com" not in skills_html
         for label in ["Skills", "Drafts", "Releases", "Share", "Access", "Review"]:
             assert label in skills_html
         assert 'id="create-skill-form"' in skills_html
@@ -488,6 +559,8 @@ def assert_private_first_console_ui_round_trip() -> None:
         share_response = client.get(f"/releases/{release_id}/share?lang=en", headers=headers)
         assert share_response.status_code == 200, share_response.text
         share_html = share_response.text
+        assert f"registry --base-url {registry_base_url}" in share_html
+        assert "skills.example.com" not in share_html
         assert 'id="create-exposure-form"' in share_html
         for label in ["Private", "Shared by token", "Public"]:
             assert label in share_html
@@ -562,6 +635,22 @@ def assert_private_first_console_ui_round_trip() -> None:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
+def assert_ui_rejects_untrusted_host_headers() -> None:
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-private-ui-host-test-"))
+    try:
+        configure_env(tmpdir)
+
+        from fastapi.testclient import TestClient
+
+        from server.app import create_app
+
+        client = TestClient(create_app())
+        poisoned = client.get("/login?lang=en", headers={"host": "skills.example.com"})
+        assert poisoned.status_code == 400, poisoned.text
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 def test_server_app_delegates_html_routes_and_respects_size_budget() -> None:
     assert_ui_route_registration_boundary()
     assert_app_size_budget()
@@ -573,6 +662,10 @@ def test_server_app_delegates_html_routes_and_respects_size_budget() -> None:
 
 def test_private_first_console_ui_round_trip() -> None:
     assert_private_first_console_ui_round_trip()
+
+
+def test_private_registry_ui_rejects_untrusted_host_headers() -> None:
+    assert_ui_rejects_untrusted_host_headers()
 
 
 def test_private_registry_ui_js_contracts_cover_access_and_install_panels() -> None:
@@ -587,4 +680,5 @@ def main() -> None:
     assert_template_response_request_first()
     assert_alembic_config_declares_path_separator()
     assert_private_first_console_ui_round_trip()
+    assert_ui_rejects_untrusted_host_headers()
     assert_private_registry_ui_js_contracts()

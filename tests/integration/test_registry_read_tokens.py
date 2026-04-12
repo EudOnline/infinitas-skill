@@ -507,6 +507,10 @@ def test_production_rejects_malformed_registry_read_tokens(monkeypatch, tmp_path
     monkeypatch.setenv("INFINITAS_SERVER_DATABASE_URL", f"sqlite:///{tmp_path / 'server.db'}")
     monkeypatch.setenv("INFINITAS_SERVER_SECRET_KEY", "prod-secret-key")
     monkeypatch.setenv(
+        "INFINITAS_SERVER_ALLOWED_HOSTS",
+        json.dumps(["registry.example.com"]),
+    )
+    monkeypatch.setenv(
         "INFINITAS_SERVER_BOOTSTRAP_USERS",
         json.dumps(
             [
@@ -532,6 +536,10 @@ def test_production_rejects_non_array_registry_read_tokens(monkeypatch, tmp_path
     monkeypatch.setenv("INFINITAS_SERVER_ENV", "production")
     monkeypatch.setenv("INFINITAS_SERVER_DATABASE_URL", f"sqlite:///{tmp_path / 'server.db'}")
     monkeypatch.setenv("INFINITAS_SERVER_SECRET_KEY", "prod-secret-key")
+    monkeypatch.setenv(
+        "INFINITAS_SERVER_ALLOWED_HOSTS",
+        json.dumps(["registry.example.com"]),
+    )
     monkeypatch.setenv(
         "INFINITAS_SERVER_BOOTSTRAP_USERS",
         json.dumps(

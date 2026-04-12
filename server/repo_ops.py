@@ -1,13 +1,12 @@
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import shutil
 import subprocess
 from contextlib import contextmanager
 from pathlib import Path
-
-import fcntl
 
 
 class RepoOpError(Exception):
@@ -39,8 +38,16 @@ def run_command(repo_path: Path, command: list[str], *, env: dict | None = None)
     full_env = os.environ.copy()
     if env:
         full_env.update(env)
-    result = subprocess.run(command, cwd=repo_path, text=True, capture_output=True, env=full_env)
-    combined = '\n'.join(part for part in [result.stdout.strip(), result.stderr.strip()] if part).strip()
+    result = subprocess.run(
+        command,
+        cwd=repo_path,
+        text=True,
+        capture_output=True,
+        env=full_env,
+    )
+    combined = "\n".join(
+        part for part in [result.stdout.strip(), result.stderr.strip()] if part
+    ).strip()
     rendered = f'$ {" ".join(command)}'
     if combined:
         rendered += f'\n{combined}'
@@ -50,14 +57,24 @@ def run_command(repo_path: Path, command: list[str], *, env: dict | None = None)
 
 
 def git_status_is_clean(repo_path: Path) -> bool:
-    result = subprocess.run(['git', 'status', '--short'], cwd=repo_path, text=True, capture_output=True)
+    result = subprocess.run(
+        ['git', 'status', '--short'],
+        cwd=repo_path,
+        text=True,
+        capture_output=True,
+    )
     if result.returncode != 0:
         raise RepoOpError(result.stderr.strip() or 'git status failed')
     return not result.stdout.strip()
 
 
 def current_branch(repo_path: Path) -> str:
-    result = subprocess.run(['git', 'branch', '--show-current'], cwd=repo_path, text=True, capture_output=True)
+    result = subprocess.run(
+        ['git', 'branch', '--show-current'],
+        cwd=repo_path,
+        text=True,
+        capture_output=True,
+    )
     if result.returncode != 0:
         raise RepoOpError(result.stderr.strip() or 'could not resolve current branch')
     return result.stdout.strip() or 'main'
@@ -111,6 +128,9 @@ def materialize_submission_skill(
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
     if review_payload is not None:
-        (skill_dir / 'reviews.json').write_text(json.dumps(review_payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        (skill_dir / 'reviews.json').write_text(
+            json.dumps(review_payload, ensure_ascii=False, indent=2) + '\n',
+            encoding='utf-8',
+        )
 
     return skill_dir

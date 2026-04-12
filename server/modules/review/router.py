@@ -120,6 +120,7 @@ def create_review_decision(
             db,
             review_case_id=review_case_id,
             reviewer_principal_id=principal_id,
+            reviewer_user=context.user,
             decision=payload.decision,
             note=payload.note,
             evidence=payload.evidence,

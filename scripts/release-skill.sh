@@ -47,6 +47,18 @@ ATT_SIGNATURE_EXT="${ATT_CFG[0]}"
 ATT_REQUIRE_RELEASE="${ATT_CFG[1]}"
 ATT_REQUIRE_DISTRIBUTION="${ATT_CFG[2]}"
 
+run_release_check() {
+  local output
+  output="$(mktemp)"
+  if "$@" >"$output" 2>&1; then
+    rm -f "$output"
+    return 0
+  fi
+  cat "$output" >&2
+  rm -f "$output"
+  return 1
+}
+
 resolve_skill() {
   local name="$1"
   if [[ -d "$name" && -f "$name/_meta.json" ]]; then
@@ -153,7 +165,7 @@ if [[ $LOCAL_PROVENANCE -eq 1 && ($PUSH_TAG -eq 1 || $GITHUB_RELEASE -eq 1 || -n
 fi
 
 DIR="$(resolve_skill "$TARGET")" || { echo "cannot resolve skill: $TARGET" >&2; exit 1; }
-"$ROOT/scripts/check-skill.sh" "$DIR" >/dev/null
+run_release_check "$ROOT/scripts/check-skill.sh" "$DIR"
 CHECK_ALL_ENV=()
 CHECK_ALL_BLOCKS_RAW="${INFINITAS_RELEASE_HELPER_CHECK_ALL_BLOCKS:-}"
 CHECK_ALL_ARGS=()
@@ -167,9 +179,9 @@ if [[ -z "${INFINITAS_SKIP_HOSTED_E2E_TESTS:-}" && -z "${INFINITAS_REQUIRE_HOSTE
   CHECK_ALL_ENV+=("INFINITAS_SKIP_HOSTED_E2E_TESTS=1")
 fi
 if [[ ${#CHECK_ALL_ENV[@]} -gt 0 ]]; then
-  env "${CHECK_ALL_ENV[@]}" "$ROOT/scripts/check-all.sh" "${CHECK_ALL_ARGS[@]}" >/dev/null
+  run_release_check env "${CHECK_ALL_ENV[@]}" "$ROOT/scripts/check-all.sh" "${CHECK_ALL_ARGS[@]}"
 else
-  "$ROOT/scripts/check-all.sh" "${CHECK_ALL_ARGS[@]}" >/dev/null
+  run_release_check "$ROOT/scripts/check-all.sh" "${CHECK_ALL_ARGS[@]}"
 fi
 
 META_JSON="$(mktemp)"

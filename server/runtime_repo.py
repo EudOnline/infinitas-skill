@@ -51,7 +51,12 @@ def is_git_repo(path: Path) -> bool:
     path = Path(path).resolve()
     if not path.is_dir():
         return False
-    result = subprocess.run(['git', 'rev-parse', '--is-inside-work-tree'], cwd=path, text=True, capture_output=True)
+    result = subprocess.run(
+        ['git', 'rev-parse', '--is-inside-work-tree'],
+        cwd=path,
+        text=True,
+        capture_output=True,
+    )
     return result.returncode == 0 and result.stdout.strip() == 'true'
 
 
@@ -84,10 +89,16 @@ def _configure_origin(repo_path: Path, origin_url: str) -> bool:
         current = result.stdout.strip()
         if current == origin_url:
             return False
-        _ensure_success(_run_git(repo_path, 'remote', 'set-url', 'origin', origin_url), 'git remote set-url origin')
+        _ensure_success(
+            _run_git(repo_path, 'remote', 'set-url', 'origin', origin_url),
+            'git remote set-url origin',
+        )
         return True
 
-    _ensure_success(_run_git(repo_path, 'remote', 'add', 'origin', origin_url), 'git remote add origin')
+    _ensure_success(
+        _run_git(repo_path, 'remote', 'add', 'origin', origin_url),
+        'git remote add origin',
+    )
     return True
 
 
@@ -138,11 +149,22 @@ def ensure_runtime_repo(
         _copy_snapshot(bundled_repo_path, repo_path)
 
         _ensure_success(_run_git(repo_path, 'init', '-b', branch), f'git init {branch}')
-        _ensure_success(_run_git(repo_path, 'config', 'user.name', git_user_name), 'git config user.name')
-        _ensure_success(_run_git(repo_path, 'config', 'user.email', git_user_email), 'git config user.email')
+        _ensure_success(
+            _run_git(repo_path, 'config', 'user.name', git_user_name),
+            'git config user.name',
+        )
+        _ensure_success(
+            _run_git(repo_path, 'config', 'user.email', git_user_email),
+            'git config user.email',
+        )
         _ensure_success(_run_git(repo_path, 'add', '.'), 'git add .')
         _ensure_success(
-            _run_git(repo_path, 'commit', '-m', 'bootstrap: seed hosted runtime repo from image snapshot'),
+            _run_git(
+                repo_path,
+                'commit',
+                '-m',
+                'bootstrap: seed hosted runtime repo from image snapshot',
+            ),
             'git commit bootstrap snapshot',
         )
         origin_configured = _configure_origin(repo_path, origin_url)

@@ -18,6 +18,11 @@ from infinitas_skill.testing.env import build_regression_test_env
 
 FIXTURE_NAME = "release-fixture"
 FIXTURE_VERSION = "1.2.3"
+PLATFORM_EVIDENCE_MINUTES = {
+    "codex": 0,
+    "claude": 1,
+    "openclaw": 2,
+}
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from attestation_lib import AttestationError, publish_attestation_to_transparency_log  # noqa: E402
@@ -44,9 +49,12 @@ def write_json(path: Path, payload):
 
 
 def make_env(repo: Path, extra=None):
+    merged_extra = {"INFINITAS_SKILL_RELEASER": "release-test"}
+    if extra:
+        merged_extra.update(extra)
     return build_regression_test_env(
         ROOT,
-        extra=extra,
+        extra=merged_extra,
         env=os.environ.copy(),
         add_pythonpath=repo / "src",
     )
@@ -54,6 +62,17 @@ def make_env(repo: Path, extra=None):
 
 def infinitas_cli(repo: Path, *args: str) -> list[str]:
     return [sys.executable, "-m", "infinitas_skill.cli.main", *args]
+
+
+def contract_checked_at(repo: Path, platform: str):
+    profile_path = repo / "profiles" / f"{platform}.json"
+    payload = json.loads(profile_path.read_text(encoding="utf-8"))
+    contract = payload.get("contract") if isinstance(payload.get("contract"), dict) else {}
+    last_verified = contract.get("last_verified")
+    if not isinstance(last_verified, str) or not last_verified:
+        fail(f"missing contract.last_verified for platform {platform!r}")
+    minute = PLATFORM_EVIDENCE_MINUTES.get(platform, 0)
+    return f"{last_verified}T12:{minute:02d}:00Z"
 
 
 def scaffold_fixture(repo: Path):
@@ -113,9 +132,9 @@ def scaffold_fixture(repo: Path):
 
 def seed_fresh_platform_evidence(repo: Path):
     fixtures = [
-        ("codex", "2026-03-12T12:00:00Z"),
-        ("claude", "2026-03-12T12:01:00Z"),
-        ("openclaw", "2026-03-12T12:02:00Z"),
+        ("codex", contract_checked_at(repo, "codex")),
+        ("claude", contract_checked_at(repo, "claude")),
+        ("openclaw", contract_checked_at(repo, "openclaw")),
     ]
     for platform, checked_at in fixtures:
         path = (
@@ -148,7 +167,17 @@ def prepare_repo():
         ROOT,
         repo,
         ignore=shutil.ignore_patterns(
-            ".git", ".planning", "__pycache__", ".cache", "scripts/__pycache__"
+            ".git",
+            ".venv",
+            ".planning",
+            ".worktrees",
+            ".cache",
+            ".pytest_cache",
+            ".ruff_cache",
+            ".mypy_cache",
+            "__pycache__",
+            "*.pyc",
+            "scripts/__pycache__",
         ),
     )
     (repo / "config" / "allowed_signers").write_text("", encoding="utf-8")

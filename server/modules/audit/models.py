@@ -15,4 +15,8 @@ class AuditEvent(Base):
     event_type: Mapped[str] = mapped_column(String(128))
     actor_ref: Mapped[str] = mapped_column(String(255), default="")
     payload_json: Mapped[str] = mapped_column(Text, default="{}")
-    occurred_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    occurred_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True),
+        default=utcnow,
+        index=True,
+    )

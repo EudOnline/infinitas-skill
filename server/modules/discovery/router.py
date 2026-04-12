@@ -10,7 +10,12 @@ from server.auth import get_current_access_context
 from server.db import get_db
 from server.modules.access.authn import AccessContext
 from server.modules.discovery import service
-from server.modules.discovery.schemas import CatalogEntryView, CatalogListView, InstallResolutionView, ProjectionArtifactPaths
+from server.modules.discovery.schemas import (
+    CatalogEntryView,
+    CatalogListView,
+    InstallResolutionView,
+    ProjectionArtifactPaths,
+)
 from server.settings import get_settings
 
 router = APIRouter(prefix="/api/v1", tags=["discovery"])
@@ -47,6 +52,9 @@ def _install_links(request: Request) -> ProjectionArtifactPaths:
 
 def _install_payload(request: Request, entry) -> InstallResolutionView:
     links = _install_links(request)
+    ready_at = None
+    if entry.ready_at is not None:
+        ready_at = entry.ready_at.isoformat().replace("+00:00", "Z")
     return InstallResolutionView(
         exposure_id=entry.exposure_id,
         release_id=entry.release_id,
@@ -57,7 +65,7 @@ def _install_payload(request: Request, entry) -> InstallResolutionView:
         version=entry.version,
         display_name=entry.display_name,
         summary=entry.summary,
-        ready_at=entry.ready_at.isoformat().replace("+00:00", "Z") if entry.ready_at is not None else None,
+        ready_at=ready_at,
         manifest_path=entry.manifest_path,
         bundle_path=entry.bundle_path,
         provenance_path=entry.provenance_path,
@@ -138,7 +146,9 @@ def search_grant(
     db: Session = Depends(get_db),
 ):
     try:
-        return _catalog_list(service.search_grant_catalog(db, context=context, query=q, limit=limit))
+        return _catalog_list(
+            service.search_grant_catalog(db, context=context, query=q, limit=limit)
+        )
     except service.ForbiddenError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
 
@@ -157,7 +167,10 @@ def install_public(
     except service.ConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     if artifact:
-        return _artifact_response(get_settings().artifact_path, service.artifact_relative_path(entry, artifact=artifact))
+        return _artifact_response(
+            get_settings().artifact_path,
+            service.artifact_relative_path(entry, artifact=artifact),
+        )
     return _install_payload(request, entry)
 
 
@@ -178,7 +191,10 @@ def install_me(
     except service.ConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     if artifact:
-        return _artifact_response(get_settings().artifact_path, service.artifact_relative_path(entry, artifact=artifact))
+        return _artifact_response(
+            get_settings().artifact_path,
+            service.artifact_relative_path(entry, artifact=artifact),
+        )
     return _install_payload(request, entry)
 
 
@@ -199,5 +215,8 @@ def install_grant(
     except service.ConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     if artifact:
-        return _artifact_response(get_settings().artifact_path, service.artifact_relative_path(entry, artifact=artifact))
+        return _artifact_response(
+            get_settings().artifact_path,
+            service.artifact_relative_path(entry, artifact=artifact),
+        )
     return _install_payload(request, entry)

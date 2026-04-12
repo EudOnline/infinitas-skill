@@ -12,6 +12,11 @@ ROOT = Path(__file__).resolve().parent.parent
 PROMOTION_FIXTURE = "promotion-break-glass-fixture"
 PROMOTION_EXCEPTION_ID = "promotion-group-waiver"
 RELEASE_EXCEPTION_ID = "dirty-worktree-waiver"
+PLATFORM_EVIDENCE_MINUTES = {
+    "codex": 0,
+    "claude": 1,
+    "openclaw": 2,
+}
 
 
 def fail(message):
@@ -22,6 +27,7 @@ def fail(message):
 def cli_env(repo: Path):
     env = os.environ.copy()
     env["PYTHONPATH"] = str(repo / "src")
+    env.setdefault("INFINITAS_SKILL_RELEASER", "lvxiaoer")
     return env
 
 
@@ -61,6 +67,44 @@ def load_json_output(result, *, command):
         )
 
 
+def contract_checked_at(repo: Path, platform: str):
+    profile_path = repo / "profiles" / f"{platform}.json"
+    payload = json.loads(profile_path.read_text(encoding="utf-8"))
+    contract = payload.get("contract") if isinstance(payload.get("contract"), dict) else {}
+    last_verified = contract.get("last_verified")
+    if not isinstance(last_verified, str) or not last_verified:
+        fail(f"missing contract.last_verified for platform {platform!r}")
+    minute = PLATFORM_EVIDENCE_MINUTES.get(platform, 0)
+    return f"{last_verified}T12:{minute:02d}:00Z"
+
+
+def refresh_platform_evidence(repo: Path, skill_name: str):
+    meta_path = repo / "skills" / "active" / skill_name / "_meta.json"
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    version = meta["version"]
+    for platform in PLATFORM_EVIDENCE_MINUTES:
+        path = (
+            repo
+            / "catalog"
+            / "compatibility-evidence"
+            / platform
+            / skill_name
+            / f"{version}.json"
+        )
+        payload = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+        payload.update(
+            {
+                "platform": platform,
+                "skill": skill_name,
+                "version": version,
+                "state": payload.get("state") or "adapted",
+                "checked_at": contract_checked_at(repo, platform),
+                "checker": payload.get("checker") or f"check-{platform}-compat.py",
+            }
+        )
+        write_json(path, payload)
+
+
 def copy_repo(prefix):
     tmpdir = Path(tempfile.mkdtemp(prefix=prefix))
     repo = tmpdir / "repo"
@@ -69,9 +113,14 @@ def copy_repo(prefix):
         repo,
         ignore=shutil.ignore_patterns(
             ".git",
+            ".venv",
             ".worktrees",
             ".planning",
+            ".pytest_cache",
+            ".ruff_cache",
+            ".mypy_cache",
             "__pycache__",
+            "*.pyc",
             ".cache",
             "catalog",
             "scripts/__pycache__",
@@ -335,9 +384,10 @@ def scenario_expired_promotion_exception_is_ignored():
 def scenario_release_exception_allows_dirty_worktree():
     tmpdir, repo = copy_repo("infinitas-break-glass-release-")
     try:
-        init_git_fixture(repo)
         skill_name = "operate-infinitas-skill"
         skill_ref = "lvxiaoer/operate-infinitas-skill"
+        refresh_platform_evidence(repo, skill_name)
+        init_git_fixture(repo)
         command = [
             *infinitas_cli(repo, "release", "check-state"),
             skill_name,
@@ -395,6 +445,7 @@ def scenario_release_exception_allows_dirty_worktree():
 def scenario_expired_release_exception_is_ignored():
     tmpdir, repo = copy_repo("infinitas-break-glass-release-expired-")
     try:
+        refresh_platform_evidence(repo, "operate-infinitas-skill")
         init_git_fixture(repo)
         (repo / "DIRTY.txt").write_text("dirty\n", encoding="utf-8")
         write_exception_policy(

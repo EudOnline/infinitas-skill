@@ -205,6 +205,8 @@ def activate_exposure(
     )
     if exposure.state == "active":
         return exposure
+    if exposure.state in {"revoked", "rejected"}:
+        raise ConflictError("closed exposure cannot be re-activated")
     if exposure.review_requirement == "blocking":
         review_case = review_service.get_open_review_case_for_exposure(db, exposure.id)
         if review_case is not None:
@@ -252,6 +254,12 @@ def revoke_exposure(
         return exposure
     exposure.state = "revoked"
     exposure.ended_at = utcnow()
+    # Close any open review cases for this exposure
+    open_case = review_service.get_open_review_case_for_exposure(db, exposure.id)
+    if open_case is not None:
+        open_case.state = "closed"
+        open_case.closed_at = utcnow()
+        db.add(open_case)
     db.add(exposure)
     db.commit()
     db.refresh(exposure)

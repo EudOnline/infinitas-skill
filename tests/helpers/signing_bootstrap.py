@@ -16,6 +16,11 @@ from tests.helpers.repo_copy import copy_repo_without_local_state
 
 FIXTURE_NAME = "bootstrap-fixture"
 FIXTURE_VERSION = "1.2.3"
+PLATFORM_EVIDENCE_MINUTES = {
+    "codex": 0,
+    "claude": 1,
+    "openclaw": 2,
+}
 
 
 def fail(message):
@@ -37,8 +42,21 @@ def write_json(path: Path, payload):
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def contract_checked_at(repo: Path, platform: str):
+    profile_path = repo / "profiles" / f"{platform}.json"
+    payload = json.loads(profile_path.read_text(encoding="utf-8"))
+    contract = payload.get("contract") if isinstance(payload.get("contract"), dict) else {}
+    last_verified = contract.get("last_verified")
+    if not isinstance(last_verified, str) or not last_verified:
+        raise AssertionError(f"missing contract.last_verified for platform {platform!r}")
+    minute = PLATFORM_EVIDENCE_MINUTES.get(platform, 0)
+    return f"{last_verified}T12:{minute:02d}:00Z"
+
+
 def scaffold_fixture(repo: Path):
     fixture_dir = repo / "skills" / "active" / FIXTURE_NAME
+    if fixture_dir.exists():
+        shutil.rmtree(fixture_dir)
     shutil.copytree(ROOT / "templates" / "basic-skill", fixture_dir)
     meta = json.loads((fixture_dir / "_meta.json").read_text(encoding="utf-8"))
     meta.update(
@@ -99,9 +117,9 @@ def seed_fresh_platform_evidence(repo: Path):
     seed_platform_evidence(
         repo,
         [
-            ("codex", "2026-03-12T12:00:00Z", "adapted"),
-            ("claude", "2026-03-12T12:01:00Z", "adapted"),
-            ("openclaw", "2026-03-12T12:02:00Z", "adapted"),
+            ("codex", contract_checked_at(repo, "codex"), "adapted"),
+            ("claude", contract_checked_at(repo, "claude"), "adapted"),
+            ("openclaw", contract_checked_at(repo, "openclaw"), "adapted"),
         ],
     )
 

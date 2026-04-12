@@ -4,9 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
-
 from test_support.server_ops import prepare_artifacts, prepare_repo, prepare_sqlite_db
-
 
 ROOT = Path(__file__).resolve().parents[2]
 

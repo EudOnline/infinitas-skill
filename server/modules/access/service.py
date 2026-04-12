@@ -76,6 +76,13 @@ def resolve_credential_by_token(db: Session, token: str) -> Credential | None:
     )
 
 
+def resolve_credential_by_id(db: Session, credential_id: int | None) -> Credential | None:
+    if not isinstance(credential_id, int) or credential_id <= 0:
+        return None
+    now = _utcnow()
+    return db.scalar(_active_credentials_query(now).where(Credential.id == credential_id))
+
+
 def ensure_user_principal(db: Session, user: User) -> Principal:
     existing = db.scalar(
         select(Principal).where(Principal.kind == "user").where(Principal.slug == user.username)

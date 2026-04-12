@@ -8,9 +8,11 @@
     "test": "tests"
   },
   "scripts": {
-    "build": "tailwindcss -i server/static/css/input.css -o server/static/css/output.css --minify",
-    "watch": "tailwindcss -i server/static/css/input.css -o server/static/css/output.css --watch",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build:css": "tailwindcss -i server/static/css/input.css -o server/static/css/output.css --minify",
+    "watch:css": "tailwindcss -i server/static/css/input.css -o server/static/css/output.css --watch",
+    "build": "npm run build:css",
+    "watch": "npm run watch:css",
+    "test": "npm run build:css && node -e \"console.log('note: npm test only verifies the frontend asset build; run make ci-fast or scripts/check-all.sh for real validation')\""
   },
   "repository": {
     "type": "git",

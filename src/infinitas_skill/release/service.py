@@ -34,7 +34,7 @@ from infinitas_skill.release.policy_state import (
     signing_key_path,
 )
 from infinitas_skill.release.release_issues import (
-    apply_identity_warnings,
+    apply_identity_findings,
     apply_local_tag_findings,
     apply_platform_support_findings,
     apply_preflight_signer_warning,
@@ -121,8 +121,10 @@ def collect_release_state(skill_dir, mode="stable-release", root=None):
         platform_compatibility=platform_compatibility,
         platform_error=platform_error,
     )
-    apply_identity_warnings(
+    apply_identity_findings(
+        issues=issues,
         warnings=warnings,
+        mode=mode,
         releaser_identity=releaser_identity,
         namespace_report=namespace_report,
         identity=identity,

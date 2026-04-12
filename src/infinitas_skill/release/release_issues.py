@@ -61,28 +61,53 @@ def apply_platform_support_findings(
         )
 
 
-def apply_identity_warnings(
+def apply_identity_findings(
     *,
+    issues: list[dict[str, str]],
     warnings: list[str],
+    mode: str,
     releaser_identity: str | None,
     namespace_report: dict[str, Any],
     identity: dict[str, Any],
     transparency_log: dict[str, Any] | Any,
     local_tag: dict[str, Any],
 ) -> None:
+    authorized_releasers = namespace_report.get("authorized_releasers", [])
+    enforce_releaser_authorization = bool(authorized_releasers) and mode in {
+        "preflight",
+        "stable-release",
+    }
     if not releaser_identity:
-        warnings.append(
+        message = (
             "cannot determine releaser identity; set INFINITAS_SKILL_RELEASER or "
             "git config user.name/user.email"
         )
-    elif namespace_report.get("authorized_releasers") and (
-        releaser_identity not in namespace_report.get("authorized_releasers", [])
-    ):
-        warnings.append(
+        if enforce_releaser_authorization:
+            issues.append(
+                issue(
+                    "unauthorized-releaser-identity",
+                    message,
+                    rule="preflight and stable releases require an authorized releaser identity",
+                )
+            )
+        else:
+            warnings.append(message)
+    elif authorized_releasers and releaser_identity not in authorized_releasers:
+        message = (
             f"releaser identity {releaser_identity!r} is not listed in "
             "namespace-policy authorized_releasers for "
             f"{identity.get('qualified_name') or identity.get('name')}"
         )
+        if enforce_releaser_authorization:
+            issues.append(
+                issue(
+                    "unauthorized-releaser-identity",
+                    message,
+                    rule="preflight and stable releases require an authorized releaser identity",
+                )
+            )
+        else:
+            warnings.append(message)
     if isinstance(transparency_log, dict) and transparency_log.get("error"):
         warnings.append(
             f"transparency log proof could not be verified: {transparency_log.get('error')}"
@@ -312,7 +337,7 @@ def apply_preflight_signer_warning(
 
 
 __all__ = [
-    "apply_identity_warnings",
+    "apply_identity_findings",
     "apply_local_tag_findings",
     "apply_platform_support_findings",
     "apply_preflight_signer_warning",

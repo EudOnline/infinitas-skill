@@ -67,8 +67,8 @@ def scenario_home_uses_kawaii_theme_with_live_context():
         checks = [
             ('kawaii theme root attribute', 'data-theme="kawaii"' in html),
             ('kawaii layout topbar present', 'class="topbar animate-in"' in html),
-            ('kawaii layout topbar controls present', 'class="topbar-controls"' in html),
-            ('kawaii layout shell present', 'class="site-shell"' in html),
+            ('kawaii layout topbar controls present', 'class="topbar-side ' in html),
+            ('kawaii layout shell present', 'id="main-content"' in html),
             ('kawaii layout language toggles present', '/?lang=' in html),
             ('home anchor nav start', 'href="#start"' in html),
             ('home anchor nav handoff', 'href="#handoff"' in html),
@@ -76,9 +76,18 @@ def scenario_home_uses_kawaii_theme_with_live_context():
             ('no broken skills nav on home', 'href="/skills"' not in html),
             ('auth modal uses dialog semantics', 'role="dialog"' in html and 'aria-modal="true"' in html and 'aria-labelledby="auth-modal-title"' in html),
             ('user trigger exposes controlled panel', 'aria-controls="user-panel"' in html),
-            ('status chip mode present', '🔒 模式' in html),
-            ('status chip sync present', '📅 同步' in html),
-            ('status chip flow present', '⚡ 流转' in html),
+            (
+                'status chip mode present',
+                re.search(r'<span class="status-chip"><span aria-hidden="true">🔒</span>\s*模式</span>', html) is not None,
+            ),
+            (
+                'status chip sync present',
+                re.search(r'<span class="status-chip"><span aria-hidden="true">📅</span>\s*同步</span>', html) is not None,
+            ),
+            (
+                'status chip flow present',
+                re.search(r'<span class="status-chip"><span aria-hidden="true">⚡</span>\s*流转</span>', html) is not None,
+            ),
             ('anonymous app session exposes cookie hint flag', session_bootstrap.get('has_auth_cookie_hint') is False),
             ('anonymous app session omits current user bootstrap', 'current_user' not in session_bootstrap),
         ]
@@ -283,8 +292,8 @@ def scenario_home_english_copy_stays_english_and_preserves_lang_routes():
             'Copy inspect command',
             'aria-label="Main content"',
             'aria-label="Primary navigation"',
-            "name: 'Sakura Street'",
-            "name: 'Starry Night'",
+            'Sakura Street',
+            'Starry Night',
         ]
         missing_strings = [marker for marker in required_strings if marker not in html]
         if missing_strings:
@@ -571,9 +580,9 @@ def scenario_home_auth_gate_opens_before_console_navigation():
 
         auth_js = (ROOT / 'server' / 'static' / 'js' / 'auth-session.js').read_text(encoding='utf-8')
         required_js_markers = [
-            'let pendingAuthTarget = null;',
-            "openAuthModal(targetHref = null)",
-            "document.querySelectorAll('[data-auth-required=\"true\"]').forEach",
+            "const link = event.target.closest('[data-auth-required=\"true\"]');",
+            "const targetHref = link.dataset.authTarget || link.getAttribute('href') || null;",
+            'openAuthModal(targetHref);',
         ]
         missing_js = [marker for marker in required_js_markers if marker not in auth_js]
         if missing_js:
@@ -598,7 +607,7 @@ def scenario_home_user_entry_floats_clear_of_content_cards():
         if response.status_code != 200:
             fail(f'expected GET / to return 200, got {response.status_code}: {response.text}')
 
-        html = response.text
+        css = (ROOT / 'server' / 'static' / 'css' / 'input.css').read_text(encoding='utf-8')
         required_patterns = {
             'user trigger wrapper fixed to viewport': (
                 r'\.user-trigger-wrapper\s*\{[^}]*position:\s*fixed;[^}]*right:\s*max\(1rem,\s*calc\(\(100vw\s*-\s*1200px\)\s*/\s*2\)\);'
@@ -610,20 +619,20 @@ def scenario_home_user_entry_floats_clear_of_content_cards():
                 r'\.user-panel\s*\{[^}]*position:\s*absolute;[^}]*top:\s*calc\(100%\s*\+\s*0\.75rem\);[^}]*right:\s*0;'
             ),
             'mobile user trigger docks away from content cards': (
-                r'@media\s*\(max-width:\s*720px\)\s*\{.*?\.user-trigger-wrapper\s*\{[^}]*top:\s*auto;[^}]*bottom:\s*max\(1rem,\s*env\(safe-area-inset-bottom\)\);'
+                r'@media\s*\(max-width:\s*767px\)\s*\{.*?\.user-trigger-wrapper\s*\{[^}]*top:\s*auto;[^}]*bottom:\s*max\(1rem,\s*env\(safe-area-inset-bottom\)\);'
             ),
             'mobile user panel opens upward from the docked trigger': (
-                r'@media\s*\(max-width:\s*720px\)\s*\{.*?\.user-panel\s*\{[^}]*top:\s*auto;[^}]*bottom:\s*calc\(100%\s*\+\s*0\.5rem\);'
+                r'@media\s*\(max-width:\s*767px\)\s*\{.*?\.user-panel\s*\{[^}]*top:\s*auto;[^}]*bottom:\s*calc\(100%\s*\+\s*0\.5rem\);'
             ),
         }
-        missing = [label for label, pattern in required_patterns.items() if not re.search(pattern, html, re.S)]
+        missing = [label for label, pattern in required_patterns.items() if not re.search(pattern, css, re.S)]
         if missing:
             fail(f'home page user entry still overlaps the content layout: {", ".join(missing)}')
 
         banned_patterns = {
             'user trigger wrapper in normal flow': r'\.user-trigger-wrapper\s*\{[^}]*position:\s*relative;',
         }
-        present = [label for label, pattern in banned_patterns.items() if re.search(pattern, html, re.S)]
+        present = [label for label, pattern in banned_patterns.items() if re.search(pattern, css, re.S)]
         if present:
             fail(f'home page still contains in-flow user trigger rules: {", ".join(present)}')
     finally:
@@ -748,7 +757,7 @@ def scenario_static_app_js_binds_copy_triggers_and_avoids_dead_create_route():
         required_snippets = [
             "querySelectorAll('[data-copy]')",
             'copyToClipboard(trigger.dataset.copy',
-            'scripts/new-skill.sh lvxiaoer/my-skill basic',
+            'scripts/new-skill.sh publisher/my-skill basic',
         ]
         missing = [snippet for snippet in required_snippets if snippet not in js]
         if missing:

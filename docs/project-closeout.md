@@ -90,6 +90,12 @@ Hosted-registry end-to-end expectations:
 - When local full hosted e2e coverage is desired, run `python3 -m pip install .` first, then run `python3 scripts/test-hosted-registry-e2e.py`.
 - Fresh local verification was rerun on 2026-03-29 for the upgraded regression matrix; hosted-registry e2e remained CI-authoritative because the full optional dependency set was not installed in the local environment.
 
+### Closeout Gate Notes
+
+- `npm test` only rebuilds the frontend assets; it prints a note that this is not the maintained verification gate.
+- `make ci-fast` is the local fast gate that mirrors the maintained regression tier, and `scripts/check-all.sh` is the authoritative closeout gate for the repository and CI. See [reference/testing](./reference/testing.md) for the full matrix.
+- The release policy now blocks `preflight` and `stable-release` when `namespace_policy.authorized_releasers` is configured and the resolved releaser identity is outside that list. OpenClaw freshness remains the canonical runtime gate; Codex and Claude evidence continue to play regression/audit roles but do not compete as primary release blockers.
+
 ## Steady-State Guidance
 
 For future maintenance, keep all of the following true:

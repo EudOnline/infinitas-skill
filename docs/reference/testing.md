@@ -20,7 +20,9 @@ Use the verification layers in this order:
 2. Migration-focused OpenClaw matrix: `uv run pytest tests/unit/openclaw tests/integration/test_openclaw_runtime_index.py tests/integration/test_openclaw_install_planning.py tests/integration/test_cli_openclaw_runtime.py tests/integration/test_cli_release_state.py tests/integration/test_memory_evaluation_matrix.py -q`
 3. Broader release and hosted-surface sweeps: named `scripts/check-all.sh` blocks
 
-OpenClaw is the maintained runtime contract. Legacy Codex and Claude compatibility checks remain useful regression and audit coverage, but they are no longer the primary release gate.
+`npm test` now only rebuilds frontend assets and prints a reminder about its limited scope. Use `make ci-fast` as the local fast-gate shortcut and trust `scripts/check-all.sh` as the authoritative closeout gate that CI also runs under the canonical hosted-registry flags.
+
+OpenClaw is the maintained runtime contract. Codex and Claude compatibility checks remain useful regression and audit coverage, but they are no longer equal-weight release blockers. OpenClaw freshness drives the primary gate, and `preflight`/`stable-release` now block when `namespace_policy.authorized_releasers` is configured and the resolved releaser identity is not authorized.
 
 Raw `uv` and script commands remain available below as fallback detail.
 

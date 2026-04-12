@@ -23,5 +23,13 @@ def add_allowed_signer(allowed_signers_path: Path, *, identity: str, key_path: P
 
 
 def configure_git_ssh_signing(repo: Path, key_path: Path) -> None:
-    subprocess.run(["git", "config", "gpg.format", "ssh"], cwd=repo, check=True, capture_output=True, text=True)
-    subprocess.run(["git", "config", "user.signingkey", str(key_path)], cwd=repo, check=True, capture_output=True, text=True)
+    subprocess.run(
+        ["git", "config", "gpg.format", "ssh"], cwd=repo, check=True, capture_output=True, text=True
+    )
+    subprocess.run(
+        ["git", "config", "user.signingkey", str(key_path)],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )

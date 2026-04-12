@@ -33,6 +33,10 @@ def request_path_with_query(request: Request) -> str:
     return path
 
 
+def build_registry_base_url(request: Request) -> str:
+    return str(request.base_url).rstrip("/")
+
+
 def build_auth_redirect_url(request: Request, lang: str) -> str:
     target_parts = urlsplit(with_lang("/", lang))
     query = dict(parse_qsl(target_parts.query, keep_blank_values=True))
@@ -55,6 +59,7 @@ def build_language_switches(request: Request, lang: str) -> list[dict[str, str |
 
 __all__ = [
     "build_auth_redirect_url",
+    "build_registry_base_url",
     "build_language_switches",
     "pick_lang",
     "request_path_with_query",
