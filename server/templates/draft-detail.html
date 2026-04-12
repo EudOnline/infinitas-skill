@@ -28,7 +28,7 @@
   <form id="save-draft-form" class="lifecycle-form" data-draft-id="{{ draft.id }}">
     <label>
       <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['table_col_content_ref'] }}</span>
-      <input class="kawaii-input" type="text" name="content_ref" value="{{ draft.content_ref }}" required />
+      <input class="kawaii-input" type="text" name="content_ref" value="{{ draft.content_ref | forceescape }}" required />
     </label>
     <label>
       <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['label_metadata_json'] }}</span>

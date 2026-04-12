@@ -68,7 +68,7 @@
         <button class="kawaii-button kawaii-button--ghost" id="cancel-auth-btn" type="button">{{ ui.auth_cancel if ui else '取消' if page_language == 'zh' else 'Cancel' }}</button>
         <button class="kawaii-button kawaii-button--primary" id="login-btn" type="submit">
           <span class="btn-icon" aria-hidden="true">🔓</span>
-          <span>{{ ui.auth_verify if ui else '验证' if page_language == 'zh' else 'Verify' }}</span>
+          <span class="btn-text">{{ ui.auth_verify if ui else '验证' if page_language == 'zh' else 'Verify' }}</span>
         </button>
       </div>
     </form>
@@ -93,4 +93,9 @@
     ],
   }
 } %}
-<div hidden id="home-auth-session-data" data-json="{{ home_auth_session_config | tojson }}"></div>
+<div hidden id="home-auth-session-data" data-json="{{ home_auth_session_config | tojson | forceescape }}"></div>
+<script id="home-auth-session-bootstrap">
+  window.AUTH_SESSION_CONFIG = Object.assign(window.AUTH_SESSION_CONFIG || {}, {
+    bgPresets: {{ home_auth_session_config['bgPresets'] | tojson | forceescape }}
+  });
+</script>

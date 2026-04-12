@@ -2,15 +2,25 @@
  * infinitas-skill v2 - Core JavaScript
  */
 
-function parseAppData() {
+function parseJsonData(id) {
   try {
-    const el = document.getElementById('app-ui-data');
+    const el = document.getElementById(id);
     return el && el.dataset.json ? JSON.parse(el.dataset.json) : {};
   } catch (_) {
     return {};
   }
 }
-const APP_UI = parseAppData();
+const APP_UI = parseJsonData('app-ui-data');
+const APP_SESSION = parseJsonData('app-session-data');
+const APP_AUTH_CONFIG = parseJsonData('app-auth-config-data');
+const HOME_AUTH_SESSION_CONFIG = parseJsonData('home-auth-session-data');
+
+window.APP_UI = APP_UI;
+window.APP_SESSION = APP_SESSION;
+window.AUTH_SESSION_CONFIG = {
+  ...APP_AUTH_CONFIG,
+  ...HOME_AUTH_SESSION_CONFIG,
+};
 
 function currentPageLanguage() {
   const lang = (document.documentElement.lang || '').toLowerCase();
@@ -31,16 +41,6 @@ function uiText(key, fallback) {
 
 function isSafeUrl(url) {
   return typeof url === 'string' && /^https?:\/\//.test(url);
-}
-
-function escapeHtml(text) {
-  if (text == null) return '';
-  return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 function sanitizeClassName(text) {
@@ -96,8 +96,11 @@ class ToastManager {
     closeBtn.setAttribute('type', 'button');
     closeBtn.setAttribute('aria-label', uiText('toast_close', 'Dismiss notification'));
     closeBtn.textContent = '×';
-    closeBtn.addEventListener('click', () => toast.remove());
-    
+    closeBtn.addEventListener('click', () => {
+      if (toast._autoTimer) clearTimeout(toast._autoTimer);
+      toast.remove();
+    });
+
     toast.appendChild(icon);
     toast.appendChild(content);
     toast.appendChild(closeBtn);
@@ -105,11 +108,13 @@ class ToastManager {
     this.container.appendChild(toast);
 
     // Auto remove
-    setTimeout(() => {
-      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    toast._autoTimer = setTimeout(() => {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        toast.remove();
+      } else {
         toast.style.animation = 'toast-out 300ms ease forwards';
+        setTimeout(() => toast.remove(), 300);
       }
-      setTimeout(() => toast.remove(), 300);
     }, duration);
   }
 
@@ -173,6 +178,12 @@ class ThemeManager {
 
   init() {
     this.apply(this.current, false);
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-theme-choice]');
+      if (btn) {
+        this.set(btn.dataset.themeChoice);
+      }
+    });
   }
 
   apply(scheme, save = true) {
@@ -253,15 +264,22 @@ class SearchManager {
         this.input.focus();
       }
 
-      // Escape to close
+      // Escape to close (or back to results from install panel)
       if (e.key === 'Escape') {
+        if (this.dropdown && this.dropdown.getAttribute('role') === 'dialog' && this.lastSearchData) {
+          this.render(this.lastSearchData);
+          this.open();
+          if (this.input) this.input.focus();
+          return;
+        }
         this.close();
       }
 
-      // Arrow navigation (skip if user is typing in another input)
+      // Arrow navigation (skip if user is typing in another input/text field)
       if (this.dropdown && !this.dropdown.hidden) {
-        const tag = document.activeElement?.tagName;
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        const active = document.activeElement;
+        const isOwnInput = active === this.input;
+        if (!isOwnInput && (active?.tagName === 'INPUT' || active?.tagName === 'TEXTAREA' || active?.tagName === 'SELECT')) return;
         if (e.key === 'ArrowDown') {
           e.preventDefault();
           this.selectNext();
@@ -362,9 +380,9 @@ class SearchManager {
         }
         return;
       }
-      
+
       console.error('Search error:', err);
-      this.renderFallback(query);
+      this.render({ skills: [], commands: [] });
     }
   }
 
@@ -377,6 +395,7 @@ class SearchManager {
     this.dropdown.replaceChildren();
     this.dropdown.setAttribute('role', 'listbox');
     this.dropdown.setAttribute('aria-label', uiText('search_results_label', '搜索结果'));
+    if (this.input) this.input.removeAttribute('aria-activedescendant');
     
     // Skills section
     if (data.skills && data.skills.length > 0) {
@@ -489,7 +508,8 @@ class SearchManager {
       
       const skillsOffset = data.skills?.length || 0;
       data.commands.forEach((cmd, i) => {
-        const el = document.createElement('div');
+        const el = document.createElement('button');
+        el.type = 'button';
         el.className = 'search-result';
         el.setAttribute('role', 'option');
         el.setAttribute('id', `search-option-${skillsOffset + i}`);
@@ -521,7 +541,7 @@ class SearchManager {
         el.appendChild(info);
         
         // Safely bind click event
-        el.addEventListener('click', () => copyToClipboard(cmd.command));
+        el.dataset.copy = cmd.command;
         
         results.appendChild(el);
       });
@@ -549,7 +569,7 @@ class SearchManager {
       trigger.type = 'button';
       trigger.className = 'kawaii-button kawaii-button--primary';
       trigger.classList.add('search-empty-action');
-      trigger.dataset.copy = uiText('search_create_command', 'scripts/new-skill.sh lvxiaoer/my-skill basic');
+      trigger.dataset.copy = uiText('search_create_command', 'scripts/new-skill.sh publisher/my-skill basic');
       trigger.textContent = uiText('search_create_label', '创建新技能');
       
       empty.appendChild(icon);
@@ -562,17 +582,6 @@ class SearchManager {
     bindCopyTriggers(this.dropdown);
     
     this.selectedIndex = -1;
-  }
-
-  renderFallback(query) {
-    // Show static skills from page data
-    const skills = window.SKILLS_DATA || [];
-    const filtered = skills.filter(s => 
-      s.name.toLowerCase().includes(query.toLowerCase()) ||
-      s.summary?.toLowerCase().includes(query.toLowerCase())
-    );
-    
-    this.render({ skills: filtered.slice(0, 5), commands: [] });
   }
 
   async showSkillInstall(skill) {
@@ -588,8 +597,8 @@ class SearchManager {
   renderInstallPanel(data, skill) {
     if (!this.dropdown) return;
     this.dropdown.replaceChildren();
-    this.dropdown.removeAttribute('role');
-    this.dropdown.removeAttribute('aria-label');
+    this.dropdown.setAttribute('role', 'dialog');
+    this.dropdown.setAttribute('aria-label', uiText('search_install_panel_label', 'Skill install details'));
 
     const panel = document.createElement('div');
     panel.className = 'search-install-panel';
@@ -603,6 +612,7 @@ class SearchManager {
       if (this.lastSearchData) {
         this.render(this.lastSearchData);
         this.open();
+        if (this.input) this.input.focus();
       } else {
         this.close();
       }
@@ -730,6 +740,7 @@ class SearchManager {
 
     this.dropdown.appendChild(panel);
     bindCopyTriggers(this.dropdown);
+    setTimeout(() => backBtn.focus(), 50);
   }
 
   selectNext() {
@@ -768,7 +779,11 @@ class SearchManager {
   activateSelected() {
     const items = this.dropdown.querySelectorAll('.search-result');
     const selected = items[this.selectedIndex];
-    if (selected) {
+    if (!selected) return;
+    const copyText = selected.dataset.copy;
+    if (copyText) {
+      copyToClipboard(copyText);
+    } else {
       selected.click();
     }
   }
@@ -814,16 +829,15 @@ async function copyToClipboard(text) {
     textarea.style.position = 'fixed';
     textarea.style.opacity = '0';
     document.body.appendChild(textarea);
-    textarea.select();
-    
     try {
+      textarea.select();
       document.execCommand('copy');
       toast.success(document.body.dataset.copySuccess || uiText('copy_success', '已复制'));
     } catch (err) {
       toast.error(document.body.dataset.copyError || uiText('copy_error', '复制失败'));
+    } finally {
+      document.body.removeChild(textarea);
     }
-    
-    document.body.removeChild(textarea);
   }
 }
 
@@ -924,20 +938,12 @@ function setButtonLoading(button, loading) {
   }
 }
 
-function refreshPage(delay = 0) {
-  if (delay > 0) {
-    setTimeout(() => window.location.reload(), delay);
-  } else {
-    window.location.reload();
-  }
-}
-
 function reloadWithToast(type, message, delay = 600) {
   const key = `lifecycle_toast_${Date.now()}`;
   try {
     sessionStorage.setItem(key, JSON.stringify({ type, message, ts: Date.now() }));
   } catch (_e) {}
-  setTimeout(() => window.location.reload(), delay);
+  setTimeout(() => { window.location.href = preserveLang(window.location.pathname + window.location.search); }, delay);
 }
 
 function drainPendingToasts() {
@@ -957,7 +963,10 @@ function drainPendingToasts() {
 
 function preserveLang(path) {
   const lang = currentPageLanguage();
-  return lang ? `${path}?lang=${encodeURIComponent(lang)}` : path;
+  if (!lang) return path;
+  const url = new URL(path, window.location.origin);
+  url.searchParams.set('lang', lang);
+  return url.pathname + url.search;
 }
 
 // ============================================
@@ -1001,7 +1010,7 @@ async function createDraft(form) {
       setButtonLoading(button, false);
       return;
     }
-    const result = await apiPost(`/api/v1/skills/${skillId}/drafts`, data);
+    const result = await apiPost(`/api/v1/skills/${encodeURIComponent(skillId)}/drafts`, data);
     toast.success(uiText('draft_created', '草稿创建成功'));
     window.location.href = preserveLang(`/drafts/${result.id}`);
   } catch (err) {
@@ -1025,7 +1034,7 @@ async function saveDraft(form) {
       setButtonLoading(button, false);
       return;
     }
-    await apiPatch(`/api/v1/drafts/${draftId}`, data);
+    await apiPatch(`/api/v1/drafts/${encodeURIComponent(draftId)}`, data);
     reloadWithToast('success', uiText('draft_saved', '草稿保存成功'));
   } catch (err) {
     setButtonLoading(button, false);
@@ -1039,7 +1048,7 @@ async function sealDraft(form) {
   setButtonLoading(button, true);
   try {
     const version = form.elements.version.value.trim();
-    await apiPost(`/api/v1/drafts/${draftId}/seal`, { version });
+    await apiPost(`/api/v1/drafts/${encodeURIComponent(draftId)}/seal`, { version });
     reloadWithToast('success', uiText('draft_sealed', '草稿已封版'));
   } catch (err) {
     setButtonLoading(button, false);
@@ -1050,7 +1059,7 @@ async function sealDraft(form) {
 async function createRelease(versionId, button) {
   setButtonLoading(button, true);
   try {
-    await apiPost(`/api/v1/versions/${versionId}/releases`, {});
+    await apiPost(`/api/v1/versions/${encodeURIComponent(versionId)}/releases`, {});
     reloadWithToast('success', uiText('release_created', '发布创建成功'));
   } catch (err) {
     setButtonLoading(button, false);
@@ -1062,7 +1071,7 @@ async function updateArtifactsTable(releaseId) {
   const section = document.getElementById('artifact-section');
   if (!section) return 0;
   try {
-    const data = await apiGet(`/api/v1/releases/${releaseId}/artifacts`);
+    const data = await apiGet(`/api/v1/releases/${encodeURIComponent(releaseId)}/artifacts`);
     const artifacts = Array.isArray(data) ? data : (data.items || []);
     const tableScroll = section.querySelector('.table-scroll');
     if (!tableScroll) return 0;
@@ -1106,7 +1115,7 @@ async function updateArtifactsTable(releaseId) {
       code3.textContent = item.sha256 || '';
       td3.appendChild(code3);
       const td4 = document.createElement('td');
-      td4.textContent = item.size_bytes || '';
+      td4.textContent = item.size_bytes ? formatBytes(item.size_bytes) : '';
       const td5 = document.createElement('td');
       const code5 = document.createElement('code');
       code5.className = 'table-code';
@@ -1130,13 +1139,18 @@ async function pollReleaseReady(releaseId, intervalMs = 3000) {
   const statusEl = document.getElementById('release-status');
   if (!statusEl) return () => {};
   statusEl.setAttribute('aria-live', 'polite');
-  const controller = new AbortController();
+  const ac = new AbortController();
   let timer = null;
   let attempts = 0;
   const maxAttempts = 120; // ~6 min at 3s interval
+  const stop = () => {
+    ac.abort();
+    if (timer) clearTimeout(timer);
+    window.removeEventListener('beforeunload', stop);
+  };
   const check = async () => {
     try {
-      const data = await apiGet(`/api/v1/releases/${releaseId}`, controller.signal);
+      const data = await apiGet(`/api/v1/releases/${encodeURIComponent(releaseId)}`, ac.signal);
       if (data.state === 'ready') {
         if (statusEl) {
           statusEl.textContent = uiText('release_ready', '已就绪');
@@ -1145,7 +1159,6 @@ async function pollReleaseReady(releaseId, intervalMs = 3000) {
         }
         const artifactSection = document.getElementById('artifact-section');
         if (artifactSection) artifactSection.hidden = false;
-        // Keep the server-rendered formatted ready_at value; do not overwrite with raw API value
         const artifactCount = await updateArtifactsTable(releaseId);
         const lang = currentPageLanguage();
         const stateLabel = uiText('label_state', lang === 'en' ? 'State' : '状态');
@@ -1163,22 +1176,24 @@ async function pollReleaseReady(releaseId, intervalMs = 3000) {
           }
         });
         toast.success(uiText('release_is_ready', '发布产物已就绪'));
+        stop();
         return;
       }
-      if (controller.signal.aborted) return;
+      if (ac.signal.aborted) return;
       if (++attempts >= maxAttempts) {
         stop();
         return;
       }
       timer = setTimeout(() => check(), intervalMs);
     } catch (err) {
-      if (controller.signal.aborted) return;
+      if (ac.signal.aborted) return;
       if (err.status === 403 || err.status === 404) {
         statusEl.textContent = uiText('release_poll_stopped', '状态刷新已停止');
         statusEl.classList.remove('kawaii-badge--pending', 'kawaii-badge--success');
         statusEl.classList.add('kawaii-badge--running');
         statusEl.dataset.state = 'error';
         toast.error(err.message || uiText('generic_action_failed', '操作失败，请刷新页面重试'));
+        stop();
         return;
       }
       console.error('poll release error:', err);
@@ -1189,13 +1204,8 @@ async function pollReleaseReady(releaseId, intervalMs = 3000) {
       timer = setTimeout(() => check(), intervalMs * 2);
     }
   };
-  check();
-  const stop = () => {
-    controller.abort();
-    if (timer) clearTimeout(timer);
-    window.removeEventListener('beforeunload', stop);
-  };
   window.addEventListener('beforeunload', stop);
+  check();
   return stop;
 }
 
@@ -1210,7 +1220,7 @@ async function createExposure(form) {
       install_mode: form.elements.install_mode.value,
       requested_review_mode: form.elements.requested_review_mode.value,
     };
-    await apiPost(`/api/v1/releases/${releaseId}/exposures`, data);
+    await apiPost(`/api/v1/releases/${encodeURIComponent(releaseId)}/exposures`, data);
     reloadWithToast('success', uiText('exposure_created', '分享出口创建成功'));
   } catch (err) {
     setButtonLoading(button, false);
@@ -1226,7 +1236,7 @@ async function patchExposure(exposureId, form) {
     if (form.elements.listing_mode) data.listing_mode = form.elements.listing_mode.value;
     if (form.elements.install_mode) data.install_mode = form.elements.install_mode.value;
     if (form.elements.requested_review_mode) data.requested_review_mode = form.elements.requested_review_mode.value;
-    await apiPatch(`/api/v1/exposures/${exposureId}`, data);
+    await apiPatch(`/api/v1/exposures/${encodeURIComponent(exposureId)}`, data);
     reloadWithToast('success', uiText('exposure_patched', '分享设置已更新'));
   } catch (err) {
     setButtonLoading(button, false);
@@ -1315,7 +1325,7 @@ function syncExposureReviewModePolicy() {
 async function activateExposure(exposureId, button) {
   setButtonLoading(button, true);
   try {
-    await apiPost(`/api/v1/exposures/${exposureId}/activate`, {});
+    await apiPost(`/api/v1/exposures/${encodeURIComponent(exposureId)}/activate`, {});
     reloadWithToast('success', uiText('exposure_activated', '分享已激活'));
   } catch (err) {
     setButtonLoading(button, false);
@@ -1326,7 +1336,7 @@ async function activateExposure(exposureId, button) {
 async function revokeExposure(exposureId, button) {
   setButtonLoading(button, true);
   try {
-    await apiPost(`/api/v1/exposures/${exposureId}/revoke`, {});
+    await apiPost(`/api/v1/exposures/${encodeURIComponent(exposureId)}/revoke`, {});
     reloadWithToast('success', uiText('exposure_revoked', '分享已撤销'));
   } catch (err) {
     setButtonLoading(button, false);
@@ -1337,7 +1347,7 @@ async function revokeExposure(exposureId, button) {
 async function submitReviewDecision(reviewCaseId, decision, note = '', button) {
   setButtonLoading(button, true);
   try {
-    await apiPost(`/api/v1/review-cases/${reviewCaseId}/decisions`, { decision, note, evidence: {} });
+    await apiPost(`/api/v1/review-cases/${encodeURIComponent(reviewCaseId)}/decisions`, { decision, note, evidence: {} });
     const msgMap = {
       approve: uiText('review_approved', '审核已通过'),
       reject: uiText('review_rejected', '审核已驳回'),
@@ -1351,8 +1361,8 @@ async function submitReviewDecision(reviewCaseId, decision, note = '', button) {
 }
 
 async function toggleReviewDetail(reviewCaseId, button) {
-  const row = document.getElementById(`review-detail-row-${reviewCaseId}`);
-  const content = document.getElementById(`review-detail-content-${reviewCaseId}`);
+  const row = document.getElementById(`review-detail-row-${encodeURIComponent(reviewCaseId)}`);
+  const content = document.getElementById(`review-detail-content-${encodeURIComponent(reviewCaseId)}`);
   if (!row || !content) return;
 
   const isHidden = row.hidden;
@@ -1370,7 +1380,7 @@ async function toggleReviewDetail(reviewCaseId, button) {
   setButtonLoading(button, true);
   let opened = false;
   try {
-    const data = await apiGet(`/api/v1/review-cases/${reviewCaseId}`);
+    const data = await apiGet(`/api/v1/review-cases/${encodeURIComponent(reviewCaseId)}`);
     renderReviewDetail(content, data);
     row.hidden = false;
     opened = true;
@@ -1459,16 +1469,6 @@ function renderReviewDetail(container, data) {
   container.appendChild(frag);
 }
 
-function escapeHtml(text) {
-  if (text == null) return '';
-  return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
 function formatAudienceType(audienceType) {
   const lang = currentPageLanguage();
   const map = {
@@ -1502,15 +1502,19 @@ function formatListingMode(mode) {
   return entry ? entry[lang] || entry.zh : (mode || '');
 }
 
+function formatBytes(bytes) {
+  if (!bytes || bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+}
+
 async function checkAccessMe() {
   const container = document.getElementById('access-me');
   if (!container) return;
   const lang = currentPageLanguage();
   try {
-    const data = await fetch('/api/v1/access/me', { credentials: 'same-origin' }).then(r => {
-      if (!r.ok) throw new Error(uiText('access_load_failed', lang === 'en' ? 'Failed / 加载失败' : '加载失败 / Failed'));
-      return r.json();
-    });
+    const data = await apiGet('/api/v1/access/me');
     const grid = document.createElement('div');
     grid.className = 'access-me-grid';
     const fields = [
@@ -1530,7 +1534,8 @@ async function checkAccessMe() {
       row.appendChild(val);
       grid.appendChild(row);
     });
-    container.replaceChildren(grid);  } catch (err) {
+    container.replaceChildren(grid);
+  } catch (err) {
     container.textContent = uiText('access_me_error', lang === 'en' ? 'Unable to load identity / 无法加载身份信息' : '无法加载身份信息 / Unable to load identity');
   }
 }
@@ -1547,10 +1552,7 @@ async function checkReleaseAccess(releaseId) {
     return;
   }
   try {
-    const data = await fetch(`/api/v1/access/releases/${releaseId}/check`, { credentials: 'same-origin' }).then(r => {
-      if (!r.ok) throw new Error(uiText('access_load_failed', lang === 'en' ? 'Failed / 加载失败' : '加载失败 / Failed'));
-      return r.json();
-    });
+    const data = await apiGet(`/api/v1/access/releases/${encodeURIComponent(releaseId)}/check`);
     const okText = uiText('access_ok', lang === 'en' ? 'Access granted' : '有访问权限');
     const labelOk = uiText('label_ok', lang === 'en' ? 'ok / 状态' : '状态 / ok');
     const labelCredentialType = uiText('label_credential_type', lang === 'en' ? 'credential_type / 凭证类型' : '凭证类型 / credential_type');
@@ -1633,15 +1635,11 @@ function handleCreateReleaseClick(e) {
   if (versionId) createRelease(versionId, btn);
 }
 
-function initCreateRelease() {
-  document.body.addEventListener('click', handleCreateReleaseClick);
-}
-
 function initReleaseDetail() {
   const statusEl = document.getElementById('release-status');
   const releaseId = statusEl?.dataset.releaseId;
   if (statusEl && releaseId && statusEl.dataset.state === 'preparing') {
-    pollReleaseReady(releaseId);
+    window._releasePollStop = pollReleaseReady(releaseId);
   }
 }
 
@@ -1672,8 +1670,7 @@ function initShareDetail() {
       createExposure(createForm);
     });
   }
-  document.body.addEventListener('click', handleShareDetailClick);
-  document.body.addEventListener('submit', handleShareDetailSubmit);
+  // click/submit handlers registered by initDelegatedActions
   syncExposureReviewModePolicy();
 }
 
@@ -1705,10 +1702,6 @@ function handleReviewCaseClick(e) {
   }
 }
 
-function initReviewCases() {
-  document.body.addEventListener('click', handleReviewCaseClick);
-}
-
 function handleAccessTokensClick(e) {
   const btn = e.target.closest('[data-action="check-release-access"]');
   if (!btn) return;
@@ -1718,35 +1711,51 @@ function handleAccessTokensClick(e) {
 
 function initAccessTokens() {
   checkAccessMe();
-  document.body.addEventListener('click', handleAccessTokensClick);
+  // click handler registered by initDelegatedActions
 }
 
-function toggleTheme() {
-  window.themeManager.toggle();
-}
-
-function setTheme(theme) {
-  window.themeManager.set(theme);
+// Unified delegated action dispatcher (single click + submit listener)
+function initDelegatedActions() {
+  document.body.addEventListener('click', (e) => {
+    handleCreateReleaseClick(e);
+    handleShareDetailClick(e);
+    handleReviewCaseClick(e);
+    handleAccessTokensClick(e);
+  });
+  document.body.addEventListener('submit', (e) => {
+    handleShareDetailSubmit(e);
+  });
 }
 
 // ============================================
 // Error Handling
 // ============================================
-window.addEventListener('unhandledrejection', (event) => {
-  if (typeof event.reason?.stack === 'string' && !event.reason.stack.includes(window.location.host)) return;
-  console.error('Unhandled promise rejection:', event.reason);
-  if (window.toast) {
-    toast.error(uiText('generic_unexpected_error', '发生错误，请刷新页面重试'));
-  }
-});
+(function setupErrorHandlers() {
+  let lastErrorTime = 0;
+  const minInterval = 5000;
 
-window.addEventListener('error', (event) => {
-  if (typeof event.filename === 'string' && !event.filename.includes(window.location.host)) return;
-  console.error('Global error:', event.error);
-  if (window.toast) {
-    toast.error(uiText('generic_unexpected_error', '发生错误，请刷新页面重试'));
-  }
-});
+  window.addEventListener('unhandledrejection', (event) => {
+    if (typeof event.reason?.stack === 'string' && !event.reason.stack.includes(window.location.origin)) return;
+    const now = Date.now();
+    if (now - lastErrorTime < minInterval) return;
+    lastErrorTime = now;
+    console.error('Unhandled promise rejection:', event.reason);
+    if (window.toast) {
+      window.toast.error(uiText('generic_unexpected_error', '发生错误，请刷新页面重试'));
+    }
+  });
+
+  window.addEventListener('error', (event) => {
+    if (typeof event.filename === 'string' && !event.filename.includes(window.location.origin)) return;
+    const now = Date.now();
+    if (now - lastErrorTime < minInterval) return;
+    lastErrorTime = now;
+    console.error('Global error:', event.error);
+    if (window.toast) {
+      window.toast.error(uiText('generic_unexpected_error', '发生错误，请刷新页面重试'));
+    }
+  });
+})();
 
 // ============================================
 // Initialize
@@ -1763,13 +1772,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Initialize lifecycle action pages
+  initDelegatedActions();
   initCreateSkill();
   initCreateDraft();
   initDraftDetail();
-  initCreateRelease();
   initReleaseDetail();
   initShareDetail();
-  initReviewCases();
   initAccessTokens();
 
   // Animate elements on scroll using Intersection Observer (better performance)
@@ -1814,45 +1822,5 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// Cleanup on page unload (for SPA or navigation scenarios)
-window.addEventListener('beforeunload', () => {
-  if (window.searchManager) {
-    window.searchManager.destroy();
-  }
-  
-  // Clean up Intersection Observer
-  if (window._revealObserver) {
-    window._revealObserver.disconnect();
-    window._revealObserver = null;
-  }
-});
-
-// Rate-limited global error logging
-(function setupGlobalErrorLimit() {
-  let lastErrorTime = 0;
-  const minInterval = 5000;
-  window.addEventListener('error', (e) => {
-    const now = Date.now();
-    if (now - lastErrorTime < minInterval) return;
-    lastErrorTime = now;
-    if (typeof console !== 'undefined' && console.error) {
-      console.error('Global error:', e.message, e.filename, e.lineno);
-    }
-  });
-})();
 
 // Expose globals for inline handlers
-window.copyToClipboard = copyToClipboard;
-window.toggleTheme = toggleTheme;
-window.setTheme = setTheme;
-window.createSkill = createSkill;
-window.createDraft = createDraft;
-window.saveDraft = saveDraft;
-window.sealDraft = sealDraft;
-window.createRelease = createRelease;
-window.createExposure = createExposure;
-window.patchExposure = patchExposure;
-window.activateExposure = activateExposure;
-window.revokeExposure = revokeExposure;
-window.submitReviewDecision = submitReviewDecision;
-window.toggleReviewDetail = toggleReviewDetail;

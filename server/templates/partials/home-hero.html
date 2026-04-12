@@ -1,4 +1,4 @@
-<section class="mb-4 md:mb-3.5 animate-in" id="start">
+<section class="hero-section mb-4 md:mb-3.5 animate-in" id="start">
   <div class="p-8 relative md:p-5 kawaii-card">
     <div class="corner-decoration corner-decoration--tl"></div>
     <div class="corner-decoration corner-decoration--br"></div>
@@ -17,7 +17,7 @@
         <p class="text-base text-kawaii-ink-soft mb-5 leading-relaxed max-w-[26rem]">{{ hero_body }} {{ hero_support }}</p>
         <p class="-mt-[0.45rem] mb-[1.2rem] text-[0.86rem] text-kawaii-ink-muted max-w-md">{{ '私人技能库采用 private-first 结构：私人可直接流转，公开必须走审核。' if page_language == 'zh' else 'This private skill library is private-first: private paths flow directly, while public paths must pass review.' }}</p>
 
-        <button class="min-h-[2.75rem] py-[0.6rem] px-[1.25rem] kawaii-button kawaii-button--primary" type="button" data-copy="{{ hero_primary_copy }}">
+        <button class="hero-cta min-h-[2.75rem] py-[0.6rem] px-[1.25rem] kawaii-button kawaii-button--primary" type="button" data-copy="{{ hero_primary_copy | forceescape }}">
           <span><span aria-hidden="true">📋</span></span>
           <span>{{ hero_primary_link.label }}</span>
         </button>
@@ -31,12 +31,12 @@
 
         <div class="quick-pills">
           {% for prompt in human_prompts[:3] %}
-          <button class="quick-pill {{ 'quick-pill--primary' if loop.first }}" type="button" data-copy="{{ prompt.prompt }}">
+          <button class="quick-pill {{ 'quick-pill--primary' if loop.first }}" type="button" data-copy="{{ prompt.prompt | forceescape }}">
             <span aria-hidden="true">{{ '🔍' if loop.first else '✨' if loop.index == 2 else '🎯' }}</span> {{ prompt.title }}
           </button>
           {% endfor %}
           {% for cmd in command_examples[:2] %}
-          <button class="quick-pill quick-pill--code" type="button" data-copy="{{ cmd.command }}">
+          <button class="quick-pill quick-pill--code" type="button" data-copy="{{ cmd.command | forceescape }}">
             <span aria-hidden="true">⌨️</span> {{ cmd.title }}
           </button>
           {% endfor %}

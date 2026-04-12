@@ -6,7 +6,7 @@
 {% include "partials/home-hero.html" %}
 
 <!-- 📊 状态条 -->
-<section class="mb-4 md:mb-3.5 animate-in [animation-delay:100ms]">
+<section class="status-section mb-4 md:mb-3.5 animate-in [animation-delay:100ms]">
   <div class="flex flex-wrap gap-2">
     {% for state in operating_states %}
     <span class="status-chip"><span aria-hidden="true">{{ state.icon }}</span> {{ state.label }}</span>
@@ -27,7 +27,7 @@
     </div>
   </div>
   
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+  <div class="skills-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
     {% for skill in featured_skills %}
     <div class="skill-card">
       <div class="flex justify-between items-start mb-2 gap-2 min-w-0">
@@ -41,7 +41,7 @@
       </div>
       <h3 class="font-display text-[0.95rem] font-bold text-kawaii-ink mb-0.5 break-words">{{ skill.name }}</h3>
       <p class="text-sm text-kawaii-ink-soft mb-3 break-words leading-normal">{{ skill.summary }}</p>
-      <button class="skill-copy" type="button" data-copy="{{ skill.inspect_command }}" title="{{ ui['copy_icon_title'] }}">
+      <button class="skill-copy" type="button" data-copy="{{ skill.inspect_command | forceescape }}" title="{{ ui['copy_icon_title'] }}">
         <span aria-hidden="true">📋</span> {{ ui['copy_inspect_action'] }}
       </button>
     </div>

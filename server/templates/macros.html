@@ -2,25 +2,8 @@
   infinitas-skill 可复用模板宏
 #}
 
-{%- macro insight_cards_section(cards, language='zh') -%}
-{% if cards %}
-<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-3" data-reveal data-reveal-index="1">
-  {% for card in cards %}
-  <article class="insight-card">
-    <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ '维护说明' if language == 'zh' else 'Maintainer note' }}</div>
-    <h3>{{ card.title }}</h3>
-    <p>{{ card.body }}</p>
-    <div class="insight-card__code">
-      <code>{{ card.command }}</code>
-    </div>
-  </article>
-  {% endfor %}
-</section>
-{% endif %}
-{%- endmacro -%}
-
-{%- macro console_table_shell(title, empty_text, items, language='zh') -%}
-<section class="console-table-shell" data-reveal data-reveal-index="1">
+{%- macro console_table_shell(title, empty_text, items) -%}
+<section class="console-table-shell" data-reveal>
   <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ title }}</div>
   <div class="overflow-x-auto -mx-4 px-4 table-scroll">
     {% if items %}
@@ -30,18 +13,4 @@
     {% endif %}
   </div>
 </section>
-{%- endmacro -%}
-
-{%- macro status_badge(status, formatter=None) -%}
-{% set raw_status = status or '' %}
-{% set label = formatter(raw_status) if formatter else raw_status %}
-<span class="status-badge inline-flex items-center gap-1.5 rounded-full text-[0.76rem] font-bold py-1 px-[0.65rem] border border-kawaii-line bg-kawaii-panel-muted" data-status="{{ raw_status|lower }}">{{ label }}</span>
-{%- endmacro -%}
-
-{%- macro table_id(value) -%}
-<span class="font-mono text-xs text-kawaii-ink-muted">{{ value or "-" }}</span>
-{%- endmacro -%}
-
-{%- macro table_note(value) -%}
-<span class="text-xs text-kawaii-ink-muted mt-1">{{ value or "-" }}</span>
 {%- endmacro -%}

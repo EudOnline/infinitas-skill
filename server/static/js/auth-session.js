@@ -5,40 +5,24 @@
   const EXPIRY_KEY = 'infinitas_auth_expiry';
   const DAYS_30 = 30 * 24 * 60 * 60 * 1000;
   const BG_STORAGE_KEY = 'infinitas_bg_settings';
-  const shell = window.infinitasAppShell || {};
+  const shell = window.infinitasAppShell;
   const appSession = window.APP_SESSION || {};
   const sessionConfig = window.AUTH_SESSION_CONFIG || {};
 
   function currentPageLanguage() {
-    if (typeof shell.currentPageLanguage === 'function') {
-      return shell.currentPageLanguage();
-    }
-    const lang = (document.documentElement.lang || '').toLowerCase();
-    return lang.startsWith('en') ? 'en' : 'zh';
+    return shell.currentPageLanguage();
   }
 
   function uiText(key, fallback) {
-    if (typeof shell.uiText === 'function') {
-      return shell.uiText(key, fallback);
-    }
-    const value = (window.APP_UI || {})[key];
-    return typeof value === 'string' && value ? value : fallback;
+    return shell.uiText(key, fallback);
   }
 
   function uiTemplate(key, fallback, replacements = {}) {
-    if (typeof shell.uiTemplate === 'function') {
-      return shell.uiTemplate(key, fallback, replacements);
-    }
-    let template = uiText(key, fallback);
-    Object.entries(replacements).forEach(([name, value]) => {
-      template = template.replaceAll(`{${name}}`, String(value));
-    });
-    return template;
+    return shell.uiTemplate(key, fallback, replacements);
   }
 
-  function saveLocalSession() {
+  function markLocalSessionActive() {
     try {
-      window.localStorage.removeItem(STORAGE_KEY);
       window.localStorage.setItem(EXPIRY_KEY, String(Date.now() + DAYS_30));
     } catch (_error) {
       // Ignore storage failures so cookie-backed auth can still work.
@@ -120,7 +104,6 @@
       prefix = '',
       modalTitle = uiText('auth_modal_title', 'Authentication'),
       onLoginSuccess = null,
-      extraBindEvents = null,
     } = options || {};
 
     const ids = {
@@ -139,8 +122,10 @@
     };
 
     let isOpen = false;
+    let loginInProgress = false;
     let pendingRedirect = null;
     let errorTimeout = null;
+    let focusTimer = null;
 
     const dom = {};
 
@@ -186,7 +171,7 @@
     }
 
     async function handleLogin() {
-      if (!dom.input || !dom.loginBtn) return;
+      if (!dom.input || !dom.loginBtn || loginInProgress) return;
       const token = dom.input.value.trim();
       const validationError = validateToken(token);
       if (validationError) {
@@ -196,6 +181,7 @@
 
       hideError();
       setLoading(true);
+      loginInProgress = true;
 
       try {
         const res = await fetch(`/api/auth/login?lang=${encodeURIComponent(currentPageLanguage())}`, {
@@ -215,13 +201,13 @@
           setLoading(false);
           return;
         }
-        saveLocalSession();
+        const nextTarget = pendingRedirect;
+        markLocalSessionActive();
         setAuthCookieHint(true);
-        closeModal();
+        closeModal({ preserveRedirect: true });
         if (typeof onLoginSuccess === 'function') {
           onLoginSuccess(data);
         }
-        const nextTarget = pendingRedirect;
         pendingRedirect = null;
         if (nextTarget) {
           window.location.href = nextTarget;
@@ -231,6 +217,8 @@
       } catch (e) {
         showError(e.message || uiText('auth_network_error', '网络错误'));
         setLoading(false);
+      } finally {
+        loginInProgress = false;
       }
     }
 
@@ -260,7 +248,8 @@
     function openModal(redirectHref = null) {
       if (!dom.modal) return;
       pendingRedirect = (typeof redirectHref === 'string' && redirectHref.startsWith('/')) ? redirectHref : null;
-      dom.lastFocus = document.activeElement;
+      const focusReturnId = prefix === 'console-' ? 'console-session-trigger' : 'user-trigger';
+      dom.lastFocus = document.activeElement || document.getElementById(focusReturnId);
       dom.modal.hidden = false;
       dom.modal.setAttribute('role', 'dialog');
       dom.modal.setAttribute('aria-modal', 'true');
@@ -275,19 +264,29 @@
       if (dom.input) {
         dom.input.value = '';
         dom.input.type = 'password';
-        setTimeout(() => dom.input.focus(), 50);
+        if (focusTimer) clearTimeout(focusTimer);
+        focusTimer = setTimeout(() => {
+          dom.input?.focus();
+          focusTimer = null;
+        }, 50);
       }
       hideError();
     }
 
-    function closeModal() {
+    function closeModal(options = {}) {
+      const { preserveRedirect = false } = options;
+      let explicitHomeTrigger = null;
       if (!dom.modal) return;
       dom.modal.hidden = true;
+      dom.modal.removeAttribute('aria-modal');
+      dom.modal.removeAttribute('role');
       isOpen = false;
       document.body.style.overflow = '';
       document.removeEventListener('click', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
-      pendingRedirect = null;
+      if (!preserveRedirect) {
+        pendingRedirect = null;
+      }
       hideError();
       setLoading(false);
       if (dom.input) {
@@ -297,22 +296,44 @@
       if (dom.toggle) {
         const span = dom.toggle.querySelector('span');
         if (span) span.textContent = '👁️';
-        dom.toggle.setAttribute('aria-label', uiText('toggle_password_visibility', '显示密码'));
+        dom.toggle.setAttribute('aria-label', uiText('show_password', '显示密码'));
       }
-      if (dom.lastFocus && dom.lastFocus.focus) {
-        dom.lastFocus.focus();
+      if (prefix === '') {
+        const homePanel = document.getElementById('user-panel');
+        const homeTrigger = document.getElementById('user-trigger');
+        if (homePanel) homePanel.hidden = true;
+        if (homeTrigger) {
+          homeTrigger.setAttribute('aria-expanded', 'false');
+          explicitHomeTrigger = homeTrigger;
+        }
+      }
+      if (focusTimer) {
+        clearTimeout(focusTimer);
+        focusTimer = null;
+      }
+      if (explicitHomeTrigger && explicitHomeTrigger.focus) {
+        explicitHomeTrigger.focus();
+        setTimeout(() => explicitHomeTrigger.focus(), 16);
         dom.lastFocus = null;
+      } else if (dom.lastFocus && dom.lastFocus.focus) {
+        const nextFocus = dom.lastFocus;
+        dom.lastFocus = null;
+        setTimeout(() => {
+          nextFocus.focus();
+          setTimeout(() => nextFocus.focus(), 16);
+        }, 0);
       }
     }
 
     function handleKeyDown(event) {
       if (!isOpen) return;
       if (event.key === 'Escape') {
+        event.stopImmediatePropagation();
         closeModal();
         return;
       }
       if (event.key === 'Tab') {
-        const focusables = Array.from(dom.modal.querySelectorAll('input, button, [href], select, textarea, [tabindex]:not([tabindex="-1"])')).filter((el) => !el.disabled && !el.hidden);
+        const focusables = Array.from(dom.modal.querySelectorAll('input, button, [href], select, textarea, [tabindex]:not([tabindex="-1"])')).filter((el) => !el.disabled && !el.hidden && el.getClientRects().length > 0);
         if (focusables.length === 0) return;
         const first = focusables[0];
         const last = focusables[focusables.length - 1];
@@ -329,6 +350,7 @@
     function handleClickOutside(event) {
       if (!isOpen || !dom.backdrop) return;
       if (event.target === dom.backdrop) {
+        event.stopImmediatePropagation();
         closeModal();
       }
     }
@@ -361,9 +383,6 @@
       }
       if (dom.input) dom.input.addEventListener('input', hideError);
       if (dom.toggle) dom.toggle.addEventListener('click', togglePasswordVisibility);
-      if (typeof extraBindEvents === 'function') {
-        extraBindEvents();
-      }
     }
 
     cacheElements();
@@ -379,7 +398,9 @@
 
   function initHomeAuthSession() {
     const wrapper = document.getElementById('user-trigger-wrapper');
-    if (!wrapper) {
+    const loginPanel = document.getElementById('login-panel');
+    const standaloneLoginPage = !!loginPanel && !wrapper;
+    if (!wrapper && !loginPanel) {
       return;
     }
 
@@ -399,6 +420,9 @@
       if (typeof rawTarget !== 'string' || !rawTarget.startsWith('/')) {
         return null;
       }
+      if (rawTarget.startsWith('//')) {
+        return null;
+      }
       return rawTarget;
     }
 
@@ -412,6 +436,11 @@
       url.searchParams.delete('next');
       window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
       return target;
+    }
+
+    function openAuthModal(targetHref = null) {
+      targetHref = normalizeProtectedTarget(targetHref);
+      controller.openModal(targetHref);
     }
 
     const BackgroundManager = {
@@ -472,13 +501,6 @@
             ? uiText('user_panel_theme_light', '浅色')
             : uiText('user_panel_theme_dark', '深色');
         }
-        const escapeHtml = (value) => String(value).replace(/[&<"']/g, (match) => ({
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#39;',
-        }[match]));
         grid.replaceChildren();
         presets.forEach((preset) => {
           const isActive = preset.id === currentBgId;
@@ -491,7 +513,8 @@
           btn.setAttribute('aria-label', preset.name);
           btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
           if (preset.url) {
-            btn.style.backgroundImage = `url('${preset.url}')`;
+            const safeUrl = preset.url.replace(/['()\\]/g, '\\$&');
+            btn.style.backgroundImage = `url('${safeUrl}')`;
           }
           grid.appendChild(btn);
         });
@@ -655,41 +678,6 @@
       }
     }
 
-    async function syncBackgroundToServer() {
-      if (!currentUser) {
-        return;
-      }
-      const settings = BackgroundManager.getSettings();
-      try {
-        if (settings.light) {
-          const response = await fetch('/api/background/set', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ theme: 'light', bg_id: settings.light }),
-          });
-          if (!response.ok) {
-            console.error('sync background failed:', response.status);
-            return;
-          }
-        }
-        if (settings.dark) {
-          const response = await fetch('/api/background/set', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ theme: 'dark', bg_id: settings.dark }),
-          });
-          if (!response.ok) {
-            console.error('sync background failed:', response.status);
-            return;
-          }
-        }
-      } catch (error) {
-        console.error('Failed to sync background:', error);
-      }
-    }
-
     async function fetchAndApplyUserBackground() {
       try {
         const response = await fetch('/api/background/me', { credentials: 'same-origin' });
@@ -735,7 +723,7 @@
           const payload = await response.json();
           if (payload.authenticated) {
             setAuthCookieHint(true);
-            currentUser = { username: payload.username };
+            currentUser = { username: payload.username, role: payload.role || null };
             updateUserTriggerIcon(true);
             updateUserPanelState();
             await fetchAndApplyUserBackground();
@@ -761,6 +749,7 @@
       closeUserPanel();
       document.body.style.removeProperty('--bg-image');
       document.body.style.removeProperty('--bg-image-dark');
+      document.dispatchEvent(new CustomEvent('infinitas:auth-changed', { detail: { authenticated: false } }));
     }
 
     function handleClickOutside(event) {
@@ -786,22 +775,32 @@
       }
       event.preventDefault();
       const targetHref = link.dataset.authTarget || link.getAttribute('href') || null;
-      controller.openModal(targetHref);
+      openAuthModal(targetHref);
     }
 
     function bindEvents() {
       document.getElementById('user-trigger')?.addEventListener('click', toggleUserPanel);
       document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
+      document.querySelectorAll('[data-auth-required="true"]').forEach((link) => {
+        link.setAttribute('aria-haspopup', 'dialog');
+      });
       document.body.addEventListener('click', handleProtectedNavigation);
+      document.addEventListener('click', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
     }
 
+    const authPrefix = standaloneLoginPage ? 'login-' : '';
     const controller = createAuthModalController({
-      prefix: '',
+      prefix: authPrefix,
       modalTitle: uiText('auth_modal_title', 'Authentication'),
       onLoginSuccess: (data) => {
-        currentUser = { username: data.username };
+        currentUser = { username: data.username, role: data.role || null };
         updateUserTriggerIcon(true);
         updateUserPanelState();
+        document.dispatchEvent(new CustomEvent('infinitas:auth-changed', { detail: { authenticated: true, username: data.username, role: data.role } }));
+        if (standaloneLoginPage) {
+          window.location.href = sessionConfig.homeHref || '/';
+        }
       },
     });
 
@@ -810,6 +809,10 @@
       updateUserTriggerIcon(!!currentUser);
       updateUserPanelState();
       await initAuthState();
+      if (standaloneLoginPage && currentUser) {
+        window.location.replace(sessionConfig.homeHref || '/');
+        return;
+      }
       bindEvents();
       const protectedTarget = consumePendingAuthRedirect();
       if (!protectedTarget) {
@@ -819,10 +822,10 @@
         window.location.replace(protectedTarget);
         return;
       }
-      controller.openModal(protectedTarget);
+      openAuthModal(protectedTarget);
     }
 
-    window.openHomeAuthModal = controller.openModal;
+    window.openHomeAuthModal = openAuthModal;
     init();
   }
 
@@ -881,7 +884,8 @@
       const avatar = document.getElementById('console-session-avatar');
       const authenticated = !!currentUser;
       if (icon) {
-        icon.textContent = authenticated ? '👤' : '🔒';
+        const inner = icon.querySelector('[aria-hidden]') || icon;
+        inner.textContent = authenticated ? '👤' : '🔒';
       }
       if (label) {
         label.textContent = authenticated ? currentUser.username : uiText('console_session_guest', 'Sign in');
@@ -934,7 +938,7 @@
         throw new Error('auth probe failed');
       }
       const payload = await response.json();
-      currentUser = payload.authenticated ? payload : null;
+      currentUser = payload.authenticated ? { username: payload.username, role: payload.role || null } : null;
       setAuthCookieHint(!!currentUser);
       renderSessionState();
       return currentUser;
@@ -996,12 +1000,15 @@
     function bindEvents() {
       document.getElementById('console-session-trigger')?.addEventListener('click', togglePanel);
       document.getElementById('console-logout-btn')?.addEventListener('click', handleLogout);
+      document.addEventListener('click', handleDocumentClick);
+      document.addEventListener('keydown', handleKeyDown);
     }
 
     const controller = createAuthModalController({
       prefix: 'console-',
       modalTitle: uiText('console_auth_modal_title', 'Identity check'),
-      onLoginSuccess: () => {
+      onLoginSuccess: (data) => {
+        currentUser = { username: data.username, role: data.role || null };
         renderSessionState();
         if (window.toast) {
           window.toast.success(uiText('auth_session_active', 'Session active'));
@@ -1013,6 +1020,14 @@
       renderSessionState();
       bindEvents();
       await initAuthState();
+      document.addEventListener('infinitas:auth-changed', (e) => {
+        if (e.detail.authenticated) {
+          currentUser = { username: e.detail.username, role: e.detail.role || null };
+        } else {
+          currentUser = null;
+        }
+        renderSessionState();
+      });
     }
 
     window.openConsoleAuthModal = controller.openModal;

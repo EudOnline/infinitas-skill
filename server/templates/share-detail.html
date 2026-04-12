@@ -49,9 +49,9 @@
   <form id="create-exposure-form"
         class="lifecycle-form"
         data-release-id="{{ release.id }}">
-  <div hidden id="exposure-policy-data" data-json="{{ release.exposure_policy | tojson }}"></div>
+  <div hidden id="exposure-policy-data" data-json="{{ release.exposure_policy | tojson | forceescape }}"></div>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-      <label>
+      <label for="exposure-audience-type">
         <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['table_col_audience'] }}</span>
         <select class="kawaii-input" name="audience_type" id="exposure-audience-type">
           <option value="private">{{ ui['option_private'] }}</option>
@@ -60,23 +60,23 @@
           <option value="public">{{ ui['option_public'] }}</option>
         </select>
       </label>
-      <label>
+      <label for="exposure-listing-mode">
         <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['label_listing_mode'] }}</span>
-        <select class="kawaii-input" name="listing_mode">
+        <select class="kawaii-input" name="listing_mode" id="exposure-listing-mode">
           <option value="listed">{{ ui['option_listed'] }}</option>
           <option value="direct_only">{{ ui['option_direct_only'] }}</option>
         </select>
       </label>
-      <label>
+      <label for="exposure-install-mode">
         <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['label_install_mode'] }}</span>
-        <select class="kawaii-input" name="install_mode">
+        <select class="kawaii-input" name="install_mode" id="exposure-install-mode">
           <option value="enabled">{{ ui['option_install_enabled'] }}</option>
           <option value="disabled">{{ ui['option_install_disabled'] }}</option>
         </select>
       </label>
-      <label>
+      <label for="exposure-review-mode">
         <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['label_review_mode'] }}</span>
-        <select class="kawaii-input" name="requested_review_mode">
+        <select class="kawaii-input" name="requested_review_mode" id="exposure-review-mode">
           <option value="none">{{ ui['option_no_review'] }}</option>
           <option value="advisory">{{ ui['option_advisory'] }}</option>
           <option value="blocking">{{ ui['option_blocking'] }}</option>
@@ -96,8 +96,7 @@
 {% call console_table_shell(
   ui['section_audience_exits'],
   ui['empty_audience_exits'],
-  share_rows,
-  page_language
+  share_rows
 ) %}
 <table>
   <thead>
@@ -151,11 +150,13 @@
         {% if item.can_patch %}
         <form class="patch-form" data-action="patch-exposure" data-exposure-id="{{ item.id }}">
           <div class="flex flex-wrap items-center gap-2 mb-2">
-            <select class="kawaii-input" name="listing_mode">
+            <label style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0" for="patch-listing-{{ item.id }}">{{ ui['label_listing_mode'] }}</label>
+            <select class="kawaii-input" name="listing_mode" id="patch-listing-{{ item.id }}">
               <option value="listed" {% if item.listing_mode_raw == 'listed' %}selected{% endif %}>{{ ui['option_listed'] }}</option>
               <option value="direct_only" {% if item.listing_mode_raw == 'direct_only' %}selected{% endif %}>{{ ui['option_direct_only'] }}</option>
             </select>
-            <select class="kawaii-input" name="install_mode">
+            <label style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0" for="patch-install-{{ item.id }}">{{ ui['label_install_mode'] }}</label>
+            <select class="kawaii-input" name="install_mode" id="patch-install-{{ item.id }}">
               <option value="enabled" {% if item.install_mode_raw == 'enabled' %}selected{% endif %}>{{ ui['option_enabled'] }}</option>
               <option value="disabled" {% if item.install_mode_raw == 'disabled' %}selected{% endif %}>{{ ui['option_disabled'] }}</option>
             </select>

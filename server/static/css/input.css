@@ -14,7 +14,16 @@
       
       :root {
         color-scheme: light;
-        
+
+        /* Primitive RGB tokens (referenced by derived tokens below) */
+        --kawaii-white-rgb: 255, 255, 255;
+        --kawaii-black-rgb: 0, 0, 0;
+        --kawaii-primary-deep-rgb: 255, 20, 147;
+        --kawaii-sky-blue-rgb: 0, 191, 255;
+        --kawaii-blush-rgb: 255, 179, 196;
+        --kawaii-ink-rgb: 73, 78, 100;
+        --kawaii-paper-soft-rgb: 255, 240, 245;
+
         /* 🌸 主色调：更鲜艳的樱花粉 x 天空蓝渐变系 */
         --kawaii-primary: #ff69b4;           /* 热粉红 - 更鲜艳 */
         --kawaii-primary-rgb: 255, 105, 180;
@@ -58,7 +67,7 @@
         --kawaii-panel: rgba(var(--kawaii-white-rgb), 0.84);
         --kawaii-panel-soft: rgba(var(--kawaii-white-rgb), 0.74);
         --kawaii-panel-muted: rgba(var(--kawaii-white-rgb), 0.62);
-        --kawaii-line: var(--kawaii-line);
+        --kawaii-line: #dcc4d2;
         --kawaii-line-rgb: 220, 196, 210;
         --kawaii-line-soft: rgba(var(--kawaii-line-rgb), 0.58);
         --kawaii-accent-soft: rgba(var(--kawaii-blush-rgb), 0.55);
@@ -143,6 +152,41 @@
         --kawaii-toast-warning-rgb: 255, 193, 7;
         --kawaii-toast-info: #2196f3;
         --kawaii-toast-info-rgb: 33, 150, 243;
+
+        /* Extended tokens - light */
+        --kawaii-accent-purple-rgb: 220, 196, 210;
+        --kawaii-dark-surface-rgb: 255, 255, 255;
+        --kawaii-deep-surface-rgb: 245, 245, 250;
+        --kawaii-candy-depth: #cc00cc;
+        --kawaii-ink-dim: #7a7a90;
+        --kawaii-primary-deep-rgb: 255, 20, 147;
+        --kawaii-light-pink-rgb: 255, 182, 193;
+        --kawaii-teal: #0099aa;
+        --kawaii-soft-pink: #ff85a2;
+        --kawaii-mauve: #c5c5e0;
+        --kawaii-gold: #ffd700;
+        --kawaii-gold-rgb: 255, 215, 0;
+        --kawaii-salmon-rgb: 255, 107, 107;
+        --kawaii-mint-rgb: 144, 238, 144;
+        --kawaii-galaxy-1: #1a0a2e;
+        --kawaii-galaxy-2: #16213e;
+        --kawaii-galaxy-3: #0f3460;
+        --kawaii-galaxy-4: #2d1b4e;
+        --kawaii-backdrop-rgb: 255, 248, 250;
+        --kawaii-backdrop-deep-rgb: 255, 228, 235;
+        --kawaii-panel-elevated-rgb: 255, 255, 255;
+        --kawaii-panel-dark-rgb: 40, 40, 70;
+        --kawaii-panel-dim-rgb: 35, 35, 60;
+        --kawaii-panel-deep-rgb: 28, 28, 48;
+        --kawaii-secondary-deep-rgb: 0, 153, 204;
+        --kawaii-midnight-rgb: 45, 45, 75;
+        --kawaii-magenta-rgb: 255, 0, 255;
+        --kawaii-dusty-rose-rgb: 221, 145, 176;
+        --kawaii-warm-mist-rgb: 203, 164, 182;
+        --kawaii-sky-pastel-rgb: 135, 206, 235;
+        --kawaii-sky-light-rgb: 135, 206, 250;
+        --kawaii-pale-green-rgb: 152, 251, 152;
+        --kawaii-plum-rgb: 36, 22, 42;
       }
 
       /* 🌙 深色模式 - Neon Night 霓虹夜之城 */
@@ -153,9 +197,9 @@
         --kawaii-paper: #0a0a14;              /* 深空黑 */
         --kawaii-paper-soft: #121220;         /* 午夜蓝 */
         --kawaii-surface: rgba(var(--kawaii-deep-surface-rgb), 0.9);
-        --kawaii-surface-elevated: var(--kawaii-surface-elevated);
+        --kawaii-surface-elevated: rgba(var(--kawaii-panel-elevated-rgb), 0.95);
         --kawaii-panel: rgba(var(--kawaii-panel-dark-rgb), 0.92);
-        --kawaii-panel-soft: var(--kawaii-panel-soft);
+        --kawaii-panel-soft: rgba(var(--kawaii-panel-dim-rgb), 0.85);
         --kawaii-panel-muted: rgba(var(--kawaii-panel-deep-rgb), 0.8);
         --kawaii-line: rgba(var(--kawaii-accent-purple-rgb), 0.3);
         --kawaii-line-soft: rgba(var(--kawaii-accent-purple-rgb), 0.18);
@@ -262,6 +306,19 @@
         --kawaii-toast-warning-rgb: 255, 193, 7;
         --kawaii-toast-info: #2196f3;
         --kawaii-toast-info-rgb: 33, 150, 243;
+
+        /* Extended tokens - dark */
+        --kawaii-accent-purple-rgb: 147, 112, 219;
+        --kawaii-dark-surface-rgb: 30, 30, 50;
+        --kawaii-deep-surface-rgb: 20, 20, 40;
+        --kawaii-candy-depth: #cc00cc;
+        --kawaii-ink-dim: #8888a0;
+        --kawaii-backdrop-rgb: 15, 10, 25;
+        --kawaii-backdrop-deep-rgb: 10, 10, 25;
+        --kawaii-panel-elevated-rgb: 40, 40, 70;
+        --kawaii-panel-dark-rgb: 35, 35, 60;
+        --kawaii-panel-dim-rgb: 30, 30, 55;
+        --kawaii-panel-deep-rgb: 28, 28, 48;
       }
 
       @media (prefers-color-scheme: dark) {
@@ -270,7 +327,7 @@
           --kawaii-paper: #0a0a14;
           --kawaii-paper-soft: #121220;
           --kawaii-surface: rgba(var(--kawaii-deep-surface-rgb), 0.9);
-          --kawaii-surface-elevated: var(--kawaii-surface-elevated);
+          --kawaii-surface-elevated: rgba(var(--kawaii-panel-elevated-rgb), 0.95);
           --kawaii-ink: #ffffff;
           --kawaii-ink-soft: #e8e8ff;
           --kawaii-ink-muted: #a0a0c8;
@@ -364,90 +421,6 @@
             url('https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1920&q=80') center/cover no-repeat;
         }
       }
-      
-  --kawaii-accent-purple-rgb: 220, 196, 210;
-  --kawaii-dark-surface-rgb: 255, 255, 255;
-  --kawaii-deep-surface-rgb: 245, 245, 250;
-  --kawaii-white-rgb: 255, 255, 255;
-  --kawaii-black-rgb: 0, 0, 0;
-  --kawaii-candy-depth: #cc00cc;
-  --kawaii-ink-dim: #7a7a90;
-
-  --kawaii-accent-purple-rgb: 147, 112, 219;
-  --kawaii-dark-surface-rgb: 30, 30, 50;
-  --kawaii-deep-surface-rgb: 20, 20, 40;
-  --kawaii-white-rgb: 255, 255, 255;
-  --kawaii-black-rgb: 0, 0, 0;
-  --kawaii-candy-depth: #cc00cc;
-  --kawaii-ink-dim: #8888a0;
-
-  --kawaii-primary-deep-rgb: 255, 20, 147;
-  --kawaii-light-pink-rgb: 255, 182, 193;
-  --kawaii-teal: #0099aa;
-  --kawaii-soft-pink: #ff85a2;
-  --kawaii-mauve: #c5c5e0;
-  --kawaii-gold: #ffd700;
-  --kawaii-gold-rgb: 255, 215, 0;
-  --kawaii-salmon-rgb: 255, 107, 107;
-  --kawaii-mint-rgb: 144, 238, 144;
-  --kawaii-galaxy-1: #1a0a2e;
-  --kawaii-galaxy-2: #16213e;
-  --kawaii-galaxy-3: #0f3460;
-  --kawaii-galaxy-4: #2d1b4e;
-
-  --kawaii-primary-deep-rgb: 255, 20, 147;
-  --kawaii-light-pink-rgb: 255, 182, 193;
-  --kawaii-teal: #0099aa;
-  --kawaii-soft-pink: #ff85a2;
-  --kawaii-mauve: #c5c5e0;
-  --kawaii-gold: #ffd700;
-  --kawaii-gold-rgb: 255, 215, 0;
-  --kawaii-salmon-rgb: 255, 107, 107;
-  --kawaii-mint-rgb: 144, 238, 144;
-  --kawaii-galaxy-1: #1a0a2e;
-  --kawaii-galaxy-2: #16213e;
-  --kawaii-galaxy-3: #0f3460;
-  --kawaii-galaxy-4: #2d1b4e;
-
-  --kawaii-backdrop-rgb: 255, 248, 250;
-  --kawaii-backdrop-deep-rgb: 255, 228, 235;
-  --kawaii-panel-elevated-rgb: 255, 255, 255;
-  --kawaii-panel-dark-rgb: 40, 40, 70;
-  --kawaii-panel-dim-rgb: 35, 35, 60;
-  --kawaii-panel-deep-rgb: 28, 28, 48;
-  --kawaii-sky-blue-rgb: 0, 191, 255;
-  --kawaii-blush-rgb: 255, 179, 196;
-  --kawaii-ink-rgb: 73, 78, 100;
-
-  --kawaii-backdrop-rgb: 15, 10, 25;
-  --kawaii-backdrop-deep-rgb: 10, 10, 25;
-  --kawaii-panel-elevated-rgb: 40, 40, 70;
-  --kawaii-panel-dark-rgb: 35, 35, 60;
-  --kawaii-panel-dim-rgb: 30, 30, 55;
-  --kawaii-panel-deep-rgb: 28, 28, 48;
-  --kawaii-sky-blue-rgb: 0, 191, 255;
-  --kawaii-blush-rgb: 255, 179, 196;
-  --kawaii-ink-rgb: 73, 78, 100;
-
-  --kawaii-secondary-deep-rgb: 0, 153, 204;
-  --kawaii-midnight-rgb: 45, 45, 75;
-  --kawaii-magenta-rgb: 255, 0, 255;
-  --kawaii-dusty-rose-rgb: 221, 145, 176;
-  --kawaii-warm-mist-rgb: 203, 164, 182;
-  --kawaii-sky-pastel-rgb: 135, 206, 235;
-  --kawaii-sky-light-rgb: 135, 206, 250;
-  --kawaii-pale-green-rgb: 152, 251, 152;
-  --kawaii-plum-rgb: 36, 22, 42;
-
-  --kawaii-secondary-deep-rgb: 0, 153, 204;
-  --kawaii-midnight-rgb: 45, 45, 75;
-  --kawaii-magenta-rgb: 255, 0, 255;
-  --kawaii-dusty-rose-rgb: 221, 145, 176;
-  --kawaii-warm-mist-rgb: 203, 164, 182;
-  --kawaii-sky-pastel-rgb: 135, 206, 235;
-  --kawaii-sky-light-rgb: 135, 206, 250;
-  --kawaii-pale-green-rgb: 152, 251, 152;
-  --kawaii-plum-rgb: 36, 22, 42;
 
 }
 
@@ -928,12 +901,7 @@
         font-size: 0.78rem;
         padding: 0.4rem 0.7rem;
       }
-      
-      .search-install-action {
-        font-size: 0.78rem;
-        padding: 0.45rem 0.9rem;
-      }
-      
+
       html[data-color-scheme="dark"] .search-install-version {
         background: rgba(var(--kawaii-neon-pink-rgb), 0.15);
         color: var(--kawaii-primary-soft);
@@ -3665,17 +3633,6 @@
     to { transform: rotate(360deg); }
   }
 
-/* Floating decorations from layout-kawaii.html */
-.floating-decoration {
-  position: fixed;
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0.18;
-}
-.floating-heart { top: 10%; left: 5%; }
-.floating-star { top: 20%; right: 8%; }
-.floating-sparkle { bottom: 15%; left: 8%; }
-.floating-music { bottom: 20%; right: 5%; }
 [data-reveal-index="1"] { --reveal-index: 1; }
 
 @media (max-width: 767px) {
@@ -3693,9 +3650,9 @@
             --kawaii-paper: #0a0a14;              /* 深空黑 */
             --kawaii-paper-soft: #121220;         /* 午夜蓝 */
             --kawaii-surface: rgba(var(--kawaii-deep-surface-rgb), 0.9);
-            --kawaii-surface-elevated: var(--kawaii-surface-elevated);
+            --kawaii-surface-elevated: rgba(var(--kawaii-panel-elevated-rgb), 0.95);
             --kawaii-panel: rgba(var(--kawaii-panel-dark-rgb), 0.92);
-            --kawaii-panel-soft: var(--kawaii-panel-soft);
+            --kawaii-panel-soft: rgba(var(--kawaii-panel-dim-rgb), 0.85);
             --kawaii-panel-muted: rgba(var(--kawaii-panel-deep-rgb), 0.8);
             --kawaii-line: rgba(var(--kawaii-accent-purple-rgb), 0.3);
             --kawaii-line-soft: rgba(var(--kawaii-accent-purple-rgb), 0.18);

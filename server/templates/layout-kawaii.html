@@ -46,7 +46,129 @@
         }
       })();
     </script>
-    
+    <style>
+      :root {
+        --kawaii-ink-soft: #64637d;
+        --kawaii-ink-muted: #7c7b92;
+        --kawaii-panel: rgba(255, 255, 255, 0.84);
+        --kawaii-panel-soft: rgba(255, 255, 255, 0.74);
+        --kawaii-line: rgba(220, 196, 210, 0.72);
+      }
+      html[data-color-scheme="dark"] {
+        color-scheme: dark;
+        --kawaii-panel: rgba(35, 35, 60, 0.92);
+      }
+      #main-content,
+      .kawaii-card,
+      .status-chip,
+      .topbar-controls,
+      .floating-decoration {
+        overflow-wrap: anywhere;
+        min-width: 0;
+      }
+      .topbar-controls {
+        display: contents;
+      }
+      .hero-section {
+        margin-bottom: 1rem;
+      }
+      .status-section {
+        margin-bottom: 1rem;
+      }
+      .console-section {
+        margin-bottom: 1rem;
+      }
+      .section-topline {
+        margin-bottom: 0.75rem;
+      }
+      .toggle-chip {
+        min-height: 2.75rem;
+      }
+      .quick-pill {
+        min-height: 2.75rem;
+      }
+      .skill-copy {
+        min-height: 2.75rem;
+      }
+      .copy-button {
+        min-height: 2.75rem;
+      }
+      .auth-modal-close {
+        width: 2.75rem;
+        height: 2.75rem;
+      }
+      .token-toggle {
+        width: 2.75rem;
+        height: 2.75rem;
+      }
+      .toast__close {
+        width: 2.75rem;
+        height: 2.75rem;
+      }
+      .user-panel-bg-grid {
+        grid-template-columns: repeat(auto-fit, minmax(2.75rem, 1fr));
+      }
+      .bg-option {
+        min-width: 2.75rem;
+        min-height: 2.75rem;
+      }
+      .user-trigger-wrapper {
+        position: fixed;
+        right: max(1rem, calc((100vw - 1200px) / 2));
+        top: calc(12px + 5.5rem);
+        z-index: 90;
+      }
+      .user-panel {
+        position: absolute;
+        top: calc(100% + 0.75rem);
+        right: 0;
+        background: var(--kawaii-panel);
+        border: 1px solid var(--kawaii-line);
+      }
+      .quick-start,
+      .console-card,
+      .skill-card,
+      .session-panel,
+      .auth-modal-content,
+      .console-auth-modal__card {
+        background: var(--kawaii-panel-soft);
+        border: 1px solid var(--kawaii-line);
+      }
+      html[data-color-scheme="dark"] .kawaii-card::after {
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+      }
+      @media (prefers-color-scheme: dark) {
+        html:not([data-color-scheme]) .kawaii-card::after {
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+        }
+      }
+      @media (max-width: 720px) {
+        .hero-cta {
+          width: 100%;
+        }
+        .section-action {
+          width: 100%;
+        }
+        .section-action .kawaii-button {
+          width: 100%;
+        }
+        .console-grid,
+        .skills-grid {
+          grid-template-columns: 1fr;
+        }
+        .nav a {
+          min-height: 2.75rem;
+        }
+        .user-trigger-wrapper {
+          top: auto;
+          bottom: max(1rem, env(safe-area-inset-bottom));
+        }
+        .user-panel {
+          top: auto;
+          bottom: calc(100% + 0.5rem);
+        }
+      }
+    </style>
     <link rel="stylesheet" href="/static/css/output.css" />
   </head>
   
@@ -89,15 +211,17 @@
           class="search-input" 
           placeholder="{{ ui['search_placeholder'] }}"
           autocomplete="off"
-          aria-label="{{ ui['search_placeholder'] }}"
+          aria-label="{{ ui['search_aria_label'] if ui and ui['search_aria_label'] else 'Search' }}"
           aria-autocomplete="list"
           aria-controls="search-dropdown"
           aria-expanded="false"
         />
         <kbd class="search-shortcut" aria-hidden="true">⌘K</kbd>
+        <span style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0">{{ ui['search_shortcut_hint'] if ui else 'Press Command+K to search' }}</span>
         <div id="search-dropdown" class="search-dropdown" role="listbox" aria-label="{{ ui['search_results_label'] }}" hidden></div>
       </div>
       
+      <div class="topbar-controls">
       <div class="topbar-side inline-flex items-center justify-end gap-3 min-w-0 flex-wrap lg:justify-self-end md:justify-self-start md:gap-[0.55rem]">
         <div class="inline-flex items-center gap-[0.45rem] flex-wrap justify-end md:justify-start">
           <div class="toggle-group" role="group" aria-label="{{ ui['theme_toggle_label'] }}">
@@ -159,10 +283,12 @@
         {% endif %}
         <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-kawaii-success/15 border border-kawaii-success/30 rounded-full text-sm font-bold text-kawaii-success">{{ ui['page_kicker'] if ui and ui['page_kicker'] else page_kicker or page_eyebrow or ui['page_kicker_fallback'] }}</div>
       </div>
+      </div>
     </header>
 
     <!-- 📦 主内容区 -->
-    <main class="w-full max-w-[1200px] mx-auto px-4 md:px-6 pb-12" id="main-content" aria-label="{{ ui['aria_main_content'] }}">
+    <main class="w-full max-w-[1200px] mx-auto px-4 md:px-6 pb-12" id="main-content" tabindex="-1" aria-label="{{ ui['aria_main_content'] }}">
+      <div class="site-shell">
       {% if page_mode == "console" %}
       <section class="mb-4">
         <article class="mb-4 kawaii-card animate-in">
@@ -182,7 +308,7 @@
                 <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui.cli_mirror_label if ui else "CLI mirror" }}</div>
                 <code class="block break-all">{{ cli_command }}</code>
               </div>
-              <button class="px-3 py-1.5 bg-kawaii-primary/10 hover:bg-kawaii-primary/20 border border-kawaii-primary/30 rounded-kawaii-md text-sm font-bold text-kawaii-primary transition-colors shrink-0" type="button" data-copy="{{ cli_command }}">{{ ui.copy_button_label if ui else "Copy" }}</button>
+              <button class="px-3 py-1.5 bg-kawaii-primary/10 hover:bg-kawaii-primary/20 border border-kawaii-primary/30 rounded-kawaii-md text-sm font-bold text-kawaii-primary transition-colors shrink-0" type="button" data-copy="{{ cli_command | forceescape }}">{{ ui.copy_button_label if ui else "Copy" }}</button>
             </div>
             {% endif %}
           </div>
@@ -200,9 +326,9 @@
         </article>
       </section>
       {% endif %}
-      <div hidden id="app-ui-data" data-json="{{ (ui or {}) | tojson }}"></div>
-      <div hidden id="app-session-data" data-json="{{ (session_ui or {}) | tojson }}"></div>
-      <div hidden id="app-auth-config-data" data-json="{{ {'homeHref': (home_href or '/')} | tojson }}"></div>
+      <div hidden id="app-ui-data" data-json="{{ (ui or {}) | tojson | forceescape }}"></div>
+      <div hidden id="app-session-data" data-json="{{ (session_ui or {}) | tojson | forceescape }}"></div>
+      <div hidden id="app-auth-config-data" data-json="{{ {'homeHref': (home_href or '/')} | tojson | forceescape }}"></div>
       {% block body %}
       {% if content %}
       <section class="kawaii-card animate-in">
@@ -210,6 +336,7 @@
       </section>
       {% endif %}
       {% endblock %}
+      </div>
     </main>
 
     {% if show_console_session %}
@@ -258,7 +385,7 @@
           <button class="kawaii-button kawaii-button--ghost" id="console-cancel-auth-btn" type="button">{{ ui.auth_cancel if ui else 'Cancel' }}</button>
           <button class="kawaii-button kawaii-button--primary" id="console-login-btn" type="button">
             <span class="btn-icon" aria-hidden="true">🔓</span>
-            <span>{{ ui.auth_verify if ui else 'Verify' }}</span>
+            <span class="btn-text">{{ ui.auth_verify if ui else 'Verify' }}</span>
           </button>
         </div>
       </div>
