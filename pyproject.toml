@@ -34,6 +34,14 @@ dev = [
 where = [".", "src"]
 include = ["server*", "infinitas_skill*"]
 
+[tool.setuptools.package-data]
+server = [
+  "templates/*.html",
+  "templates/partials/*.html",
+  "static/css/*.css",
+  "static/js/*.js",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 

@@ -1,10 +1,10 @@
 {
   "platform": "openclaw",
-  "skill": "consume-infinitas-skill",
-  "qualified_name": "lvxiaoer/consume-infinitas-skill",
+  "skill": "release-infinitas-skill",
+  "qualified_name": "lvxiaoer/release-infinitas-skill",
   "version": "0.1.0",
   "state": "adapted",
-  "checked_at": "2026-04-13T03:32:48Z",
+  "checked_at": "2026-04-13T03:32:02Z",
   "checker": "check-openclaw-compat.py",
   "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py."
 }

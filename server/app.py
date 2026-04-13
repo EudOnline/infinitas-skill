@@ -24,6 +24,7 @@ from server.security import SecurityHeadersMiddleware
 from server.settings import get_settings
 from server.ui.routes import register_ui_routes
 
+
 def create_app() -> FastAPI:
     settings = get_settings()
     templates = Jinja2Templates(directory=str(settings.template_dir))

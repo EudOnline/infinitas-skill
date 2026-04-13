@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-13T00:02:01Z",
+  "generated_at": "2026-04-13T03:32:57Z",
   "count": 4,
   "skills": [
     {
@@ -120,14 +120,14 @@
         },
         "openclaw": {
           "state": "adapted",
-          "checked_at": "2026-03-16T03:52:59Z",
+          "checked_at": "2026-04-13T03:32:48Z",
           "checker": "check-openclaw-compat.py",
           "evidence_path": "catalog/compatibility-evidence/openclaw/consume-infinitas-skill/0.1.0.json",
           "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py.",
           "contract_last_verified": "2026-04-07",
-          "fresh_until": "2026-04-15T03:52:59Z",
-          "freshness_state": "stale",
-          "freshness_reason": "contract-newer-than-evidence"
+          "fresh_until": "2026-05-13T03:32:48Z",
+          "freshness_state": "fresh",
+          "freshness_reason": "not-applicable"
         }
       }
     },
@@ -244,6 +244,17 @@
           "fresh_until": "2026-04-15T03:53:17Z",
           "freshness_state": "stale",
           "freshness_reason": "contract-newer-than-evidence"
+        },
+        "openclaw": {
+          "state": "adapted",
+          "checked_at": "2026-04-13T03:32:48Z",
+          "checker": "check-openclaw-compat.py",
+          "evidence_path": "catalog/compatibility-evidence/openclaw/federation-registry-ops/0.1.0.json",
+          "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py.",
+          "contract_last_verified": "2026-04-07",
+          "fresh_until": "2026-05-13T03:32:48Z",
+          "freshness_state": "fresh",
+          "freshness_reason": "not-applicable"
         }
       }
     },
@@ -366,14 +377,14 @@
         },
         "openclaw": {
           "state": "adapted",
-          "checked_at": "2026-03-12T12:56:55Z",
+          "checked_at": "2026-04-13T03:32:48Z",
           "checker": "check-openclaw-compat.py",
           "evidence_path": "catalog/compatibility-evidence/openclaw/operate-infinitas-skill/0.1.1.json",
           "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py.",
           "contract_last_verified": "2026-04-07",
-          "fresh_until": "2026-04-11T12:56:55Z",
-          "freshness_state": "stale",
-          "freshness_reason": "age-expired"
+          "fresh_until": "2026-05-13T03:32:48Z",
+          "freshness_state": "fresh",
+          "freshness_reason": "not-applicable"
         }
       }
     },
@@ -490,6 +501,17 @@
           "fresh_until": "2026-04-15T03:52:42Z",
           "freshness_state": "stale",
           "freshness_reason": "contract-newer-than-evidence"
+        },
+        "openclaw": {
+          "state": "adapted",
+          "checked_at": "2026-04-13T03:32:02Z",
+          "checker": "check-openclaw-compat.py",
+          "evidence_path": "catalog/compatibility-evidence/openclaw/release-infinitas-skill/0.1.0.json",
+          "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py.",
+          "contract_last_verified": "2026-04-07",
+          "fresh_until": "2026-05-13T03:32:02Z",
+          "freshness_state": "fresh",
+          "freshness_reason": "not-applicable"
         }
       }
     }
