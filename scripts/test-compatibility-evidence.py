@@ -4,6 +4,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from datetime import date, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -28,6 +29,10 @@ def run(command, cwd, expect=0):
 def write_json(path: Path, payload):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+
+def iso_at(day: date, hour: int, minute: int = 0) -> str:
+    return f'{day.isoformat()}T{hour:02d}:{minute:02d}:00Z'
 
 
 def prepare_repo():
@@ -84,7 +89,7 @@ def scaffold_skill(repo: Path):
     return skill_dir
 
 
-def write_evidence(repo: Path):
+def write_evidence(repo: Path, *, codex_checked_day: date, openclaw_checked_day: date):
     write_json(
         repo / 'catalog' / 'compatibility-evidence' / 'codex' / 'triple-demo' / '1.2.3.json',
         {
@@ -92,7 +97,7 @@ def write_evidence(repo: Path):
             'skill': 'triple-demo',
             'version': '1.2.3',
             'state': 'adapted',
-            'checked_at': '2026-03-12T12:00:00Z',
+            'checked_at': iso_at(codex_checked_day, 12),
             'checker': 'check-codex-compat.py',
         },
     )
@@ -103,7 +108,7 @@ def write_evidence(repo: Path):
             'skill': 'triple-demo',
             'version': '1.2.3',
             'state': 'adapted',
-            'checked_at': '2026-03-12T12:05:00Z',
+            'checked_at': iso_at(openclaw_checked_day, 12, 5),
             'checker': 'check-openclaw-compat.py',
         },
     )
@@ -121,9 +126,21 @@ def write_platform_last_verified(repo: Path, platform: str, value: str):
 def main():
     tmpdir, repo = prepare_repo()
     try:
+        today = date.today()
+        codex_checked_day = today - timedelta(days=3)
+        openclaw_checked_day = today - timedelta(days=3)
+        codex_contract_day = today - timedelta(days=2)
+        openclaw_contract_day = today - timedelta(days=3)
+        claude_contract_day = today - timedelta(days=4)
         scaffold_skill(repo)
-        write_evidence(repo)
-        write_platform_last_verified(repo, 'codex', '2026-03-13')
+        write_evidence(
+            repo,
+            codex_checked_day=codex_checked_day,
+            openclaw_checked_day=openclaw_checked_day,
+        )
+        write_platform_last_verified(repo, 'codex', codex_contract_day.isoformat())
+        write_platform_last_verified(repo, 'openclaw', openclaw_contract_day.isoformat())
+        write_platform_last_verified(repo, 'claude', claude_contract_day.isoformat())
         run([str(repo / 'scripts' / 'build-catalog.sh')], cwd=repo)
 
         catalog = json.loads((repo / 'catalog' / 'compatibility.json').read_text(encoding='utf-8'))
@@ -145,7 +162,7 @@ def main():
             fail(f"expected codex freshness_state stale, got {verified.get('codex')!r}")
         if verified.get('codex', {}).get('freshness_reason') != 'contract-newer-than-evidence':
             fail(f"expected codex freshness_reason contract-newer-than-evidence, got {verified.get('codex')!r}")
-        if verified.get('codex', {}).get('contract_last_verified') != '2026-03-13':
+        if verified.get('codex', {}).get('contract_last_verified') != codex_contract_day.isoformat():
             fail(f"expected codex contract_last_verified 2026-03-13, got {verified.get('codex')!r}")
         if verified.get('openclaw', {}).get('state') != 'adapted':
             fail(f"expected openclaw verified_support adapted, got {verified.get('openclaw')!r}")
@@ -153,9 +170,10 @@ def main():
             fail(f"expected openclaw freshness_state fresh, got {verified.get('openclaw')!r}")
         if verified.get('openclaw', {}).get('freshness_reason') != 'not-applicable':
             fail(f"expected openclaw freshness_reason not-applicable, got {verified.get('openclaw')!r}")
-        if verified.get('openclaw', {}).get('contract_last_verified') != '2026-03-12':
+        if verified.get('openclaw', {}).get('contract_last_verified') != openclaw_contract_day.isoformat():
             fail(f"expected openclaw contract_last_verified 2026-03-12, got {verified.get('openclaw')!r}")
-        if verified.get('openclaw', {}).get('fresh_until') != '2026-04-11T12:05:00Z':
+        expected_openclaw_fresh_until = iso_at(openclaw_checked_day + timedelta(days=30), 12, 5)
+        if verified.get('openclaw', {}).get('fresh_until') != expected_openclaw_fresh_until:
             fail(f"expected openclaw fresh_until 2026-04-11T12:05:00Z, got {verified.get('openclaw')!r}")
         if verified.get('claude', {}).get('state') != 'unknown':
             fail(f"expected claude verified_support unknown, got {verified.get('claude')!r}")
@@ -163,7 +181,7 @@ def main():
             fail(f"expected claude freshness_state unknown, got {verified.get('claude')!r}")
         if verified.get('claude', {}).get('freshness_reason') != 'missing-evidence':
             fail(f"expected claude freshness_reason missing-evidence, got {verified.get('claude')!r}")
-        if verified.get('claude', {}).get('contract_last_verified') != '2026-03-12':
+        if verified.get('claude', {}).get('contract_last_verified') != claude_contract_day.isoformat():
             fail(f"expected claude contract_last_verified 2026-03-12, got {verified.get('claude')!r}")
     finally:
         shutil.rmtree(tmpdir)

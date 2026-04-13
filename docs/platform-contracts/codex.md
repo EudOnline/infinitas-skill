@@ -17,7 +17,7 @@
 - https://developers.openai.com/codex/cloud
 
 ## Last verified
-2026-03-12
+2026-04-13
 
 ## Verification steps
 - Confirm the Agent Skills page still requires `SKILL.md` with `name` and `description`, and still documents optional support directories.

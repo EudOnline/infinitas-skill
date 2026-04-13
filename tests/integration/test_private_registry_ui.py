@@ -165,38 +165,53 @@ def _slice_source(source: str, start_marker: str, end_marker: str) -> str:
     return source[start:end]
 
 
+def _slice_top_level_function_source(source: str, start_marker: str) -> str:
+    start = source.index(start_marker)
+    search_from = start + len(start_marker)
+    candidates = []
+    for marker in (
+        "\nasync function ",
+        "\nfunction ",
+        "\n// ============================================",
+    ):
+        idx = source.find(marker, search_from)
+        if idx != -1:
+            candidates.append(idx)
+    end = min(candidates) if candidates else len(source)
+    return source[start:end]
+
+
 def assert_private_registry_ui_js_contracts() -> None:
     source = APP_JS_PATH.read_text(encoding="utf-8")
     auth_session_source = AUTH_SESSION_JS_PATH.read_text(encoding="utf-8")
-    create_draft_source = _slice_source(
+    create_draft_source = _slice_top_level_function_source(
         source,
         "async function createDraft(form) {",
-        "\n}\n\nasync function saveDraft(form) {",
     )
     install_panel_source = _slice_source(
         source,
         "  renderInstallPanel(data, skill) {",
         "\n\n  selectNext()",
     )
-    access_check_source = _slice_source(
+    artifacts_table_source = _slice_top_level_function_source(
+        source,
+        "async function updateArtifactsTable(releaseId) {",
+    )
+    access_check_source = _slice_top_level_function_source(
         source,
         "async function checkReleaseAccess(releaseId) {",
-        "\n}\n\n// ============================================",
     )
-    review_detail_source = _slice_source(
+    review_detail_source = _slice_top_level_function_source(
         source,
         "async function toggleReviewDetail(reviewCaseId, button) {",
-        "\n}\n\nfunction renderReviewDetail(container, data) {",
     )
-    exposure_policy_source = _slice_source(
+    exposure_policy_source = _slice_top_level_function_source(
         source,
         "function syncExposureReviewModePolicy() {",
-        "\n}\n\nfunction initReviewCases() {",
     )
-    release_poll_source = _slice_source(
+    release_poll_source = _slice_top_level_function_source(
         source,
         "async function pollReleaseReady(releaseId, intervalMs = 3000) {",
-        "\n}\n\nasync function createExposure(form) {",
     )
     auth_handle_login_source = _slice_source(
         auth_session_source,
@@ -214,9 +229,15 @@ def assert_private_registry_ui_js_contracts() -> None:
         "\n\n    async function init() {",
     )
 
-    assert "/api/v1/releases/${releaseId}/artifacts" in source, (
-        "expected release detail polling to refresh artifact rows from the release artifacts API"
-    )
+    for marker in [
+        "async function updateArtifactsTable(releaseId) {",
+        "apiGet(`/api/v1/releases/${encodeURIComponent(releaseId)}/artifacts`)",
+        "const artifacts = Array.isArray(data) ? data : (data.items || []);",
+    ]:
+        assert marker in artifacts_table_source if marker != "async function updateArtifactsTable(releaseId) {" else marker in source, (
+            "expected release detail polling to refresh artifact rows from the release artifacts API; "
+            f"missing marker {marker!r}"
+        )
     for marker in [
         "toast.error(uiText('invalid_json', 'JSON 格式错误'));",
         "setButtonLoading(button, false);",
@@ -280,7 +301,7 @@ def assert_private_registry_ui_js_contracts() -> None:
         ".page-stats .stat",
         "valueEl.textContent = readyText;",
         "valueEl.textContent = String(artifactCount || 0);",
-        "const data = await apiGet(`/api/v1/releases/${releaseId}`, controller.signal);",
+        "const data = await apiGet(`/api/v1/releases/${encodeURIComponent(releaseId)}`, ac.signal);",
         "if (err.status === 403 || err.status === 404) {",
         "data.items || []",
     ]:

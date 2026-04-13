@@ -20,9 +20,9 @@
   "contract": {
     "sources": [
       "https://code.claude.com/docs/en/sub-agents",
-      "https://docs.anthropic.com/en/docs/claude-code/security",
-      "https://docs.anthropic.com/en/docs/claude-code/getting-started"
+      "https://code.claude.com/docs/en/security",
+      "https://code.claude.com/docs/en/getting-started"
     ],
-    "last_verified": "2026-03-12"
+    "last_verified": "2026-04-13"
   }
 }

@@ -16,6 +16,11 @@ from infinitas_skill.testing.env import build_regression_test_env
 
 FIXTURE_NAME = 'release-fixture'
 FIXTURE_VERSION = '1.2.3'
+PLATFORM_EVIDENCE_MINUTES = {
+    'codex': 0,
+    'claude': 1,
+    'openclaw': 2,
+}
 
 
 def fail(message):
@@ -36,6 +41,17 @@ def run(command, cwd, expect=0, env=None):
 
 def write_json(path: Path, payload):
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+
+def contract_checked_at(repo: Path, platform: str):
+    profile_path = repo / 'profiles' / f'{platform}.json'
+    payload = json.loads(profile_path.read_text(encoding='utf-8'))
+    contract = payload.get('contract') if isinstance(payload.get('contract'), dict) else {}
+    last_verified = contract.get('last_verified')
+    if not isinstance(last_verified, str) or not last_verified:
+        fail(f'missing contract.last_verified for platform {platform!r}')
+    minute = PLATFORM_EVIDENCE_MINUTES.get(platform, 0)
+    return f'{last_verified}T12:{minute:02d}:00Z'
 
 
 def make_env(extra=None):
@@ -63,6 +79,7 @@ def scaffold_fixture(repo: Path):
             'runtime_assumptions': ['A local repo checkout is available'],
             'owner': 'release-test',
             'owners': ['release-test'],
+            'maintainers': ['Release Fixture'],
             'author': 'release-test',
             'review_state': 'approved',
             'distribution': {
@@ -108,6 +125,24 @@ def scaffold_fixture(repo: Path):
             ],
         },
     )
+    sync_platform_evidence(repo)
+
+
+def sync_platform_evidence(repo: Path):
+    for platform in ('codex', 'claude', 'openclaw'):
+        path = repo / 'catalog' / 'compatibility-evidence' / platform / FIXTURE_NAME / f'{FIXTURE_VERSION}.json'
+        path.parent.mkdir(parents=True, exist_ok=True)
+        write_json(
+            path,
+            {
+                'platform': platform,
+                'skill': FIXTURE_NAME,
+                'version': FIXTURE_VERSION,
+                'state': 'adapted',
+                'checked_at': contract_checked_at(repo, platform),
+                'checker': f'check-{platform}-compat.py',
+            },
+        )
 
 
 def prepare_repo():
@@ -189,13 +224,23 @@ def main():
             fail(f"expected canonical avoid_when, got {entry.get('avoid_when')!r}")
         if entry.get('runtime_assumptions') != ['A local repo checkout is available']:
             fail(f"expected canonical runtime_assumptions, got {entry.get('runtime_assumptions')!r}")
-        if entry.get('last_verified_at') != '2026-03-12T12:02:00Z':
-            fail(f"expected last_verified_at 2026-03-12T12:02:00Z for fresh fixture evidence, got {entry.get('last_verified_at')!r}")
         compatibility = entry.get('compatibility') or {}
         if not isinstance(compatibility.get('verified_support'), dict):
             fail('expected compatibility.verified_support to be an object')
         if entry.get('verified_support') != compatibility.get('verified_support'):
             fail('expected top-level verified_support to match compatibility.verified_support')
+        checked_at_values = [
+            payload.get('checked_at')
+            for payload in (entry.get('verified_support') or {}).values()
+            if isinstance(payload, dict) and isinstance(payload.get('checked_at'), str)
+        ]
+        if not checked_at_values:
+            fail('expected ai-index verified_support checked_at values')
+        expected_last_verified_at = max(checked_at_values)
+        if entry.get('last_verified_at') != expected_last_verified_at:
+            fail(
+                f"expected last_verified_at {expected_last_verified_at!r} from verified_support evidence, got {entry.get('last_verified_at')!r}"
+            )
         for platform, payload in (entry.get('verified_support') or {}).items():
             if not isinstance(payload, dict):
                 fail(f'expected ai-index verified_support payload for {platform!r} to be an object')
@@ -220,7 +265,8 @@ def main():
             fail(f"expected interop.openclaw.import_supported=true, got {interop.get('import_supported')!r}")
         if interop.get('export_supported') is not True:
             fail(f"expected interop.openclaw.export_supported=true, got {interop.get('export_supported')!r}")
-        if interop.get('runtime_targets') != ['~/.openclaw/skills', '~/.openclaw/workspace/skills']:
+        expected_runtime_targets = ((entry.get('runtime') or {}).get('workspace_targets') or [])
+        if interop.get('runtime_targets') != expected_runtime_targets:
             fail(f"unexpected runtime_targets: {interop.get('runtime_targets')!r}")
 
         original_ai_index = json.loads(ai_index_path.read_text(encoding='utf-8'))

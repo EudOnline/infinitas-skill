@@ -90,6 +90,7 @@ def _search_skill_payload(
     version: str,
     audience_type: str,
     listing_mode: str,
+    install_api_path: str | None = None,
     runtime: dict | None = None,
     runtime_readiness: str | None = None,
     workspace_targets: list[str] | None = None,
@@ -107,8 +108,9 @@ def _search_skill_payload(
         "listing_mode": listing_mode,
         "install_scope": scope,
         "install_ref": install_ref,
-        "install_api_path": f"/api/v1/install/{scope}/{install_ref}",
     }
+    if isinstance(install_api_path, str) and install_api_path:
+        payload["install_api_path"] = install_api_path
     if isinstance(runtime, dict) and runtime:
         payload["runtime"] = runtime
     if isinstance(runtime_readiness, str) and runtime_readiness.strip():
@@ -130,6 +132,7 @@ def _search_payload(entries, *, scope: str) -> dict:
                 version=entry.version,
                 audience_type=entry.audience_type,
                 listing_mode=entry.listing_mode,
+                install_api_path=f"/api/v1/install/{scope}/{_install_ref(entry.qualified_name, entry.version)}",
                 runtime=runtime,
                 runtime_readiness=runtime_readiness,
                 workspace_targets=workspace_targets,
@@ -222,6 +225,7 @@ def _search_catalog_snapshot(*, query: str, limit: int) -> list[dict]:
             version=item.get("latest_version") or item.get("default_install_version") or "",
             audience_type="public",
             listing_mode="listed",
+            install_api_path=None,
             runtime=item.get("runtime") if isinstance(item.get("runtime"), dict) else None,
             runtime_readiness=item.get("runtime_readiness"),
             workspace_targets=item.get("workspace_targets")

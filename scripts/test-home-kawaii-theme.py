@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from html import unescape
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -17,6 +18,17 @@ from server.artifact_ops import sync_catalog_artifacts
 def fail(message: str):
     print(f'FAIL: {message}', file=sys.stderr)
     raise SystemExit(1)
+
+
+def parse_bootstrap_payload(html: str, element_id: str) -> dict:
+    match = re.search(rf'id="{re.escape(element_id)}"[^>]*data-json="([^"]*)"', html)
+    if not match:
+        fail(f'expected page to embed bootstrap payload in #{element_id}')
+    try:
+        return json.loads(unescape(match.group(1)))
+    except json.JSONDecodeError as exc:
+        fail(f'failed to parse bootstrap payload from #{element_id}: {exc}')
+    return {}
 
 
 def configure_env(tmpdir: Path):
@@ -57,13 +69,7 @@ def scenario_home_uses_kawaii_theme_with_live_context():
             fail(f'expected GET / to return 200, got {response.status_code}: {response.text}')
 
         html = response.text
-        session_match = re.search(r'window\.APP_SESSION\s*=\s*(\{.*?\});', html, re.S)
-        if not session_match:
-            fail('home page should embed the APP_SESSION bootstrap payload')
-        try:
-            session_bootstrap = json.loads(session_match.group(1))
-        except json.JSONDecodeError as exc:
-            fail(f'failed to parse APP_SESSION bootstrap payload: {exc}')
+        session_bootstrap = parse_bootstrap_payload(html, 'app-session-data')
         checks = [
             ('kawaii theme root attribute', 'data-theme="kawaii"' in html),
             ('kawaii layout topbar present', 'class="topbar animate-in"' in html),

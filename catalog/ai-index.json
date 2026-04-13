@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-03-30T01:23:27Z",
+  "generated_at": "2026-04-13T00:02:01Z",
   "registry": {
     "default_registry": "self"
   },
@@ -44,6 +44,85 @@
         "Generated catalog indexes are present or can be rebuilt",
         "Target runtime directories such as ~/.openclaw/skills are writable when installation is requested"
       ],
+      "runtime": {
+        "platform": "openclaw",
+        "source_mode": "legacy",
+        "workspace_scope": "workspace",
+        "workspace_targets": [
+          "skills",
+          ".agents/skills",
+          "~/.agents/skills",
+          "~/.openclaw/skills"
+        ],
+        "skill_precedence": [
+          "skills",
+          ".agents/skills",
+          "~/.agents/skills",
+          "~/.openclaw/skills",
+          "bundled",
+          "extra"
+        ],
+        "install_targets": {
+          "workspace": [
+            "skills",
+            ".agents/skills"
+          ],
+          "shared": [
+            "~/.agents/skills",
+            "~/.openclaw/skills"
+          ]
+        },
+        "requires": {
+          "tools": [
+            "read",
+            "exec"
+          ],
+          "bins": [
+            "git"
+          ],
+          "env": [],
+          "config": []
+        },
+        "requires_tokens": [
+          "tools:read",
+          "tools:exec",
+          "bins:git"
+        ],
+        "requires_detail": {
+          "tools": [
+            "read",
+            "exec"
+          ],
+          "bins": [
+            "git"
+          ],
+          "env": [],
+          "config": []
+        },
+        "plugin_capabilities": {},
+        "background_tasks": {
+          "required": false
+        },
+        "subagents": {
+          "required": false
+        },
+        "readiness": {
+          "ready": true,
+          "supports_background_tasks": true,
+          "supports_plugins": true,
+          "supports_subagents": true,
+          "status": "ready"
+        },
+        "legacy_compatibility": {
+          "agent_compatible": [
+            "openclaw",
+            "claude",
+            "claude-code",
+            "codex"
+          ],
+          "agent_compatible_deprecated": true
+        }
+      },
       "agent_compatible": [
         "openclaw",
         "claude",
@@ -63,10 +142,10 @@
             "checker": "check-claude-compat.py",
             "evidence_path": "catalog/compatibility-evidence/claude/consume-infinitas-skill/0.1.0.json",
             "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py.",
-            "contract_last_verified": "2026-03-12",
+            "contract_last_verified": "2026-04-13",
             "fresh_until": "2026-04-15T03:52:58Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
+            "freshness_state": "stale",
+            "freshness_reason": "contract-newer-than-evidence"
           },
           "codex": {
             "state": "adapted",
@@ -74,10 +153,10 @@
             "checker": "check-codex-compat.py",
             "evidence_path": "catalog/compatibility-evidence/codex/consume-infinitas-skill/0.1.0.json",
             "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py.",
-            "contract_last_verified": "2026-03-12",
+            "contract_last_verified": "2026-04-13",
             "fresh_until": "2026-04-15T03:52:58Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
+            "freshness_state": "stale",
+            "freshness_reason": "contract-newer-than-evidence"
           },
           "openclaw": {
             "state": "adapted",
@@ -85,10 +164,10 @@
             "checker": "check-openclaw-compat.py",
             "evidence_path": "catalog/compatibility-evidence/openclaw/consume-infinitas-skill/0.1.0.json",
             "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py.",
-            "contract_last_verified": "2026-03-12",
+            "contract_last_verified": "2026-04-07",
             "fresh_until": "2026-04-15T03:52:59Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
+            "freshness_state": "stale",
+            "freshness_reason": "contract-newer-than-evidence"
           }
         }
       },
@@ -99,10 +178,10 @@
           "checker": "check-claude-compat.py",
           "evidence_path": "catalog/compatibility-evidence/claude/consume-infinitas-skill/0.1.0.json",
           "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py.",
-          "contract_last_verified": "2026-03-12",
+          "contract_last_verified": "2026-04-13",
           "fresh_until": "2026-04-15T03:52:58Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "contract-newer-than-evidence"
         },
         "codex": {
           "state": "adapted",
@@ -110,10 +189,10 @@
           "checker": "check-codex-compat.py",
           "evidence_path": "catalog/compatibility-evidence/codex/consume-infinitas-skill/0.1.0.json",
           "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py.",
-          "contract_last_verified": "2026-03-12",
+          "contract_last_verified": "2026-04-13",
           "fresh_until": "2026-04-15T03:52:58Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "contract-newer-than-evidence"
         },
         "openclaw": {
           "state": "adapted",
@@ -121,10 +200,10 @@
           "checker": "check-openclaw-compat.py",
           "evidence_path": "catalog/compatibility-evidence/openclaw/consume-infinitas-skill/0.1.0.json",
           "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py.",
-          "contract_last_verified": "2026-03-12",
+          "contract_last_verified": "2026-04-07",
           "fresh_until": "2026-04-15T03:52:59Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "contract-newer-than-evidence"
         }
       },
       "trust_state": "verified",
@@ -141,13 +220,18 @@
           "read",
           "exec"
         ],
-        "env": []
+        "env": [],
+        "bins": [
+          "git"
+        ]
       },
       "interop": {
         "openclaw": {
           "runtime_targets": [
-            "~/.openclaw/skills",
-            "~/.openclaw/workspace/skills"
+            "skills",
+            ".agents/skills",
+            "~/.agents/skills",
+            "~/.openclaw/skills"
           ],
           "import_supported": true,
           "export_supported": true,
@@ -213,10 +297,90 @@
         "config/registry-sources.json and generated catalog exports are available",
         "The task is about registry operations inside infinitas-skill rather than a generic Git repository"
       ],
+      "runtime": {
+        "platform": "openclaw",
+        "source_mode": "legacy",
+        "workspace_scope": "workspace",
+        "workspace_targets": [
+          "skills",
+          ".agents/skills",
+          "~/.agents/skills",
+          "~/.openclaw/skills"
+        ],
+        "skill_precedence": [
+          "skills",
+          ".agents/skills",
+          "~/.agents/skills",
+          "~/.openclaw/skills",
+          "bundled",
+          "extra"
+        ],
+        "install_targets": {
+          "workspace": [
+            "skills",
+            ".agents/skills"
+          ],
+          "shared": [
+            "~/.agents/skills",
+            "~/.openclaw/skills"
+          ]
+        },
+        "requires": {
+          "tools": [
+            "read",
+            "exec"
+          ],
+          "bins": [
+            "git"
+          ],
+          "env": [],
+          "config": []
+        },
+        "requires_tokens": [
+          "tools:read",
+          "tools:exec",
+          "bins:git"
+        ],
+        "requires_detail": {
+          "tools": [
+            "read",
+            "exec"
+          ],
+          "bins": [
+            "git"
+          ],
+          "env": [],
+          "config": []
+        },
+        "plugin_capabilities": {},
+        "background_tasks": {
+          "required": false
+        },
+        "subagents": {
+          "required": false
+        },
+        "readiness": {
+          "ready": true,
+          "supports_background_tasks": true,
+          "supports_plugins": true,
+          "supports_subagents": true,
+          "status": "ready"
+        },
+        "legacy_compatibility": {
+          "agent_compatible": [
+            "claude",
+            "claude-code",
+            "codex",
+            "openclaw"
+          ],
+          "agent_compatible_deprecated": true
+        }
+      },
       "agent_compatible": [
         "claude",
         "claude-code",
-        "codex"
+        "codex",
+        "openclaw"
       ],
       "compatibility": {
         "declared_support": [
@@ -230,10 +394,10 @@
             "checker": "check-claude-compat.py",
             "evidence_path": "catalog/compatibility-evidence/claude/federation-registry-ops/0.1.0.json",
             "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py.",
-            "contract_last_verified": "2026-03-12",
+            "contract_last_verified": "2026-04-13",
             "fresh_until": "2026-04-15T03:53:17Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
+            "freshness_state": "stale",
+            "freshness_reason": "contract-newer-than-evidence"
           },
           "codex": {
             "state": "adapted",
@@ -241,10 +405,10 @@
             "checker": "check-codex-compat.py",
             "evidence_path": "catalog/compatibility-evidence/codex/federation-registry-ops/0.1.0.json",
             "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py.",
-            "contract_last_verified": "2026-03-12",
+            "contract_last_verified": "2026-04-13",
             "fresh_until": "2026-04-15T03:53:17Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
+            "freshness_state": "stale",
+            "freshness_reason": "contract-newer-than-evidence"
           }
         }
       },
@@ -255,10 +419,10 @@
           "checker": "check-claude-compat.py",
           "evidence_path": "catalog/compatibility-evidence/claude/federation-registry-ops/0.1.0.json",
           "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py.",
-          "contract_last_verified": "2026-03-12",
+          "contract_last_verified": "2026-04-13",
           "fresh_until": "2026-04-15T03:53:17Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "contract-newer-than-evidence"
         },
         "codex": {
           "state": "adapted",
@@ -266,10 +430,10 @@
           "checker": "check-codex-compat.py",
           "evidence_path": "catalog/compatibility-evidence/codex/federation-registry-ops/0.1.0.json",
           "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py.",
-          "contract_last_verified": "2026-03-12",
+          "contract_last_verified": "2026-04-13",
           "fresh_until": "2026-04-15T03:53:17Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "contract-newer-than-evidence"
         }
       },
       "trust_state": "verified",
@@ -286,13 +450,18 @@
           "read",
           "exec"
         ],
-        "env": []
+        "env": [],
+        "bins": [
+          "git"
+        ]
       },
       "interop": {
         "openclaw": {
           "runtime_targets": [
-            "~/.openclaw/skills",
-            "~/.openclaw/workspace/skills"
+            "skills",
+            ".agents/skills",
+            "~/.agents/skills",
+            "~/.openclaw/skills"
           ],
           "import_supported": true,
           "export_supported": true,
@@ -357,6 +526,85 @@
         "A Git checkout of infinitas-skill is available",
         "Repository scripts can be executed from the workspace"
       ],
+      "runtime": {
+        "platform": "openclaw",
+        "source_mode": "legacy",
+        "workspace_scope": "workspace",
+        "workspace_targets": [
+          "skills",
+          ".agents/skills",
+          "~/.agents/skills",
+          "~/.openclaw/skills"
+        ],
+        "skill_precedence": [
+          "skills",
+          ".agents/skills",
+          "~/.agents/skills",
+          "~/.openclaw/skills",
+          "bundled",
+          "extra"
+        ],
+        "install_targets": {
+          "workspace": [
+            "skills",
+            ".agents/skills"
+          ],
+          "shared": [
+            "~/.agents/skills",
+            "~/.openclaw/skills"
+          ]
+        },
+        "requires": {
+          "tools": [
+            "read",
+            "exec"
+          ],
+          "bins": [
+            "git"
+          ],
+          "env": [],
+          "config": []
+        },
+        "requires_tokens": [
+          "tools:read",
+          "tools:exec",
+          "bins:git"
+        ],
+        "requires_detail": {
+          "tools": [
+            "read",
+            "exec"
+          ],
+          "bins": [
+            "git"
+          ],
+          "env": [],
+          "config": []
+        },
+        "plugin_capabilities": {},
+        "background_tasks": {
+          "required": false
+        },
+        "subagents": {
+          "required": false
+        },
+        "readiness": {
+          "ready": true,
+          "supports_background_tasks": true,
+          "supports_plugins": true,
+          "supports_subagents": true,
+          "status": "ready"
+        },
+        "legacy_compatibility": {
+          "agent_compatible": [
+            "openclaw",
+            "claude",
+            "claude-code",
+            "codex"
+          ],
+          "agent_compatible_deprecated": true
+        }
+      },
       "agent_compatible": [
         "openclaw",
         "claude",
@@ -376,10 +624,10 @@
             "checker": "check-claude-compat.py",
             "evidence_path": "catalog/compatibility-evidence/claude/operate-infinitas-skill/0.1.1.json",
             "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py.",
-            "contract_last_verified": "2026-03-12",
+            "contract_last_verified": "2026-04-13",
             "fresh_until": "2026-04-11T12:56:55Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
+            "freshness_state": "stale",
+            "freshness_reason": "age-expired"
           },
           "codex": {
             "state": "adapted",
@@ -387,10 +635,10 @@
             "checker": "check-codex-compat.py",
             "evidence_path": "catalog/compatibility-evidence/codex/operate-infinitas-skill/0.1.1.json",
             "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py.",
-            "contract_last_verified": "2026-03-12",
+            "contract_last_verified": "2026-04-13",
             "fresh_until": "2026-04-11T12:56:55Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
+            "freshness_state": "stale",
+            "freshness_reason": "age-expired"
           },
           "openclaw": {
             "state": "adapted",
@@ -398,10 +646,10 @@
             "checker": "check-openclaw-compat.py",
             "evidence_path": "catalog/compatibility-evidence/openclaw/operate-infinitas-skill/0.1.1.json",
             "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py.",
-            "contract_last_verified": "2026-03-12",
+            "contract_last_verified": "2026-04-07",
             "fresh_until": "2026-04-11T12:56:55Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
+            "freshness_state": "stale",
+            "freshness_reason": "age-expired"
           }
         }
       },
@@ -412,10 +660,10 @@
           "checker": "check-claude-compat.py",
           "evidence_path": "catalog/compatibility-evidence/claude/operate-infinitas-skill/0.1.1.json",
           "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py.",
-          "contract_last_verified": "2026-03-12",
+          "contract_last_verified": "2026-04-13",
           "fresh_until": "2026-04-11T12:56:55Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         },
         "codex": {
           "state": "adapted",
@@ -423,10 +671,10 @@
           "checker": "check-codex-compat.py",
           "evidence_path": "catalog/compatibility-evidence/codex/operate-infinitas-skill/0.1.1.json",
           "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py.",
-          "contract_last_verified": "2026-03-12",
+          "contract_last_verified": "2026-04-13",
           "fresh_until": "2026-04-11T12:56:55Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         },
         "openclaw": {
           "state": "adapted",
@@ -434,10 +682,10 @@
           "checker": "check-openclaw-compat.py",
           "evidence_path": "catalog/compatibility-evidence/openclaw/operate-infinitas-skill/0.1.1.json",
           "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py.",
-          "contract_last_verified": "2026-03-12",
+          "contract_last_verified": "2026-04-07",
           "fresh_until": "2026-04-11T12:56:55Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         }
       },
       "trust_state": "verified",
@@ -454,13 +702,18 @@
           "read",
           "exec"
         ],
-        "env": []
+        "env": [],
+        "bins": [
+          "git"
+        ]
       },
       "interop": {
         "openclaw": {
           "runtime_targets": [
-            "~/.openclaw/skills",
-            "~/.openclaw/workspace/skills"
+            "skills",
+            ".agents/skills",
+            "~/.agents/skills",
+            "~/.openclaw/skills"
           ],
           "import_supported": true,
           "export_supported": true,
@@ -526,10 +779,90 @@
         "A writable infinitas-skill repository checkout is available",
         "Signing configuration and allowed signers are already set up"
       ],
+      "runtime": {
+        "platform": "openclaw",
+        "source_mode": "legacy",
+        "workspace_scope": "workspace",
+        "workspace_targets": [
+          "skills",
+          ".agents/skills",
+          "~/.agents/skills",
+          "~/.openclaw/skills"
+        ],
+        "skill_precedence": [
+          "skills",
+          ".agents/skills",
+          "~/.agents/skills",
+          "~/.openclaw/skills",
+          "bundled",
+          "extra"
+        ],
+        "install_targets": {
+          "workspace": [
+            "skills",
+            ".agents/skills"
+          ],
+          "shared": [
+            "~/.agents/skills",
+            "~/.openclaw/skills"
+          ]
+        },
+        "requires": {
+          "tools": [
+            "read",
+            "exec"
+          ],
+          "bins": [
+            "git"
+          ],
+          "env": [],
+          "config": []
+        },
+        "requires_tokens": [
+          "tools:read",
+          "tools:exec",
+          "bins:git"
+        ],
+        "requires_detail": {
+          "tools": [
+            "read",
+            "exec"
+          ],
+          "bins": [
+            "git"
+          ],
+          "env": [],
+          "config": []
+        },
+        "plugin_capabilities": {},
+        "background_tasks": {
+          "required": false
+        },
+        "subagents": {
+          "required": false
+        },
+        "readiness": {
+          "ready": true,
+          "supports_background_tasks": true,
+          "supports_plugins": true,
+          "supports_subagents": true,
+          "status": "ready"
+        },
+        "legacy_compatibility": {
+          "agent_compatible": [
+            "claude",
+            "claude-code",
+            "codex",
+            "openclaw"
+          ],
+          "agent_compatible_deprecated": true
+        }
+      },
       "agent_compatible": [
         "claude",
         "claude-code",
-        "codex"
+        "codex",
+        "openclaw"
       ],
       "compatibility": {
         "declared_support": [
@@ -543,10 +876,10 @@
             "checker": "check-codex-compat.py",
             "evidence_path": "catalog/compatibility-evidence/codex/release-infinitas-skill/0.1.0.json",
             "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py.",
-            "contract_last_verified": "2026-03-12",
+            "contract_last_verified": "2026-04-13",
             "fresh_until": "2026-04-15T03:52:41Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
+            "freshness_state": "stale",
+            "freshness_reason": "contract-newer-than-evidence"
           },
           "claude": {
             "state": "adapted",
@@ -554,10 +887,10 @@
             "checker": "check-claude-compat.py",
             "evidence_path": "catalog/compatibility-evidence/claude/release-infinitas-skill/0.1.0.json",
             "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py.",
-            "contract_last_verified": "2026-03-12",
+            "contract_last_verified": "2026-04-13",
             "fresh_until": "2026-04-15T03:52:42Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
+            "freshness_state": "stale",
+            "freshness_reason": "contract-newer-than-evidence"
           }
         }
       },
@@ -568,10 +901,10 @@
           "checker": "check-codex-compat.py",
           "evidence_path": "catalog/compatibility-evidence/codex/release-infinitas-skill/0.1.0.json",
           "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py.",
-          "contract_last_verified": "2026-03-12",
+          "contract_last_verified": "2026-04-13",
           "fresh_until": "2026-04-15T03:52:41Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "contract-newer-than-evidence"
         },
         "claude": {
           "state": "adapted",
@@ -579,10 +912,10 @@
           "checker": "check-claude-compat.py",
           "evidence_path": "catalog/compatibility-evidence/claude/release-infinitas-skill/0.1.0.json",
           "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py.",
-          "contract_last_verified": "2026-03-12",
+          "contract_last_verified": "2026-04-13",
           "fresh_until": "2026-04-15T03:52:42Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "contract-newer-than-evidence"
         }
       },
       "trust_state": "verified",
@@ -599,13 +932,18 @@
           "read",
           "exec"
         ],
-        "env": []
+        "env": [],
+        "bins": [
+          "git"
+        ]
       },
       "interop": {
         "openclaw": {
           "runtime_targets": [
-            "~/.openclaw/skills",
-            "~/.openclaw/workspace/skills"
+            "skills",
+            ".agents/skills",
+            "~/.agents/skills",
+            "~/.openclaw/skills"
           ],
           "import_supported": true,
           "export_supported": true,

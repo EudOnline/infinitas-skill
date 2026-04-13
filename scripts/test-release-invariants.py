@@ -639,8 +639,8 @@ def scenario_stale_or_missing_platform_evidence_blocks_preflight():
     tmpdir, repo, _origin, _key_path, _identity = prepare_repo(include_signers=True)
     try:
         write_platform_evidence(repo, "openclaw", checked_at="2026-03-12T12:02:00Z")
-        write_platform_evidence(repo, "claude", checked_at="2026-04-08T12:01:00Z")
-        write_platform_evidence(repo, "codex", checked_at="2026-04-08T12:00:00Z")
+        write_platform_evidence(repo, "claude", checked_at=contract_checked_at(repo, "claude"))
+        write_platform_evidence(repo, "codex", checked_at=contract_checked_at(repo, "codex"))
         run(["git", "add", "catalog/compatibility-evidence/openclaw"], cwd=repo)
         run(["git", "add", "catalog/compatibility-evidence/claude"], cwd=repo)
         run(["git", "add", "catalog/compatibility-evidence/codex"], cwd=repo)

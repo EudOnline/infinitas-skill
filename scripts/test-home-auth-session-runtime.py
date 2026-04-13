@@ -532,12 +532,20 @@ def scenario_copy_triggers_work_and_search_empty_state_uses_copy_cta():
                         'input.value = "skill";'
                         'input.dispatchEvent(new Event("input", { bubbles: true }));'
                         'await new Promise((resolve) => setTimeout(resolve, 500));'
-                        'const trigger = document.querySelector("#search-dropdown .search-result[data-copy]");'
+                        'const trigger = document.querySelector("#search-dropdown .search-result");'
                         'if (!trigger) return { error: "missing search skill result" };'
+                        'const copy = trigger.dataset.copy || null;'
+                        'trigger.click();'
+                        'await new Promise((resolve) => setTimeout(resolve, 300));'
+                        'const dropdown = document.getElementById("search-dropdown");'
+                        'const panel = dropdown ? dropdown.querySelector(".search-install-panel") : null;'
                         'return {'
                         '  tagName: trigger.tagName,'
                         '  href: trigger.getAttribute("href"),'
-                        '  copy: trigger.dataset.copy || null'
+                        '  copy,'
+                        '  dropdownRole: dropdown ? dropdown.getAttribute("role") : null,'
+                        '  panelOpen: !!panel,'
+                        '  panelActionCount: dropdown ? dropdown.querySelectorAll("[data-copy], a.search-install-link").length : 0'
                         '};'
                         '}'
                     ),
@@ -549,8 +557,14 @@ def scenario_copy_triggers_work_and_search_empty_state_uses_copy_cta():
                 fail(f'search skill result should be a button action instead of a dead link, got {search_skill}')
             if search_skill.get('href') is not None:
                 fail(f'search skill result should not navigate to a missing route, got {search_skill}')
-            if not (search_skill.get('copy') or '').startswith('scripts/inspect-skill.sh '):
-                fail(f'search skill result should expose an inspect command copy action, got {search_skill}')
+            if search_skill.get('copy'):
+                if not search_skill['copy'].startswith('scripts/inspect-skill.sh '):
+                    fail(f'search skill result should expose an inspect command copy action, got {search_skill}')
+            else:
+                if search_skill.get('dropdownRole') != 'dialog' or not search_skill.get('panelOpen'):
+                    fail(f'search skill result should open the install detail panel, got {search_skill}')
+                if int(search_skill.get('panelActionCount') or 0) <= 0:
+                    fail(f'search install detail panel should expose follow-up actions, got {search_skill}')
     finally:
         stop_playwright_session(session)
         shutil.rmtree(tmpdir, ignore_errors=True)
@@ -641,7 +655,11 @@ def scenario_home_english_runtime_ui_copy_stays_english():
             )
             if english_runtime_copy.get('triggerAria') != 'Sign in':
                 fail(f'expected english home trigger aria-label to stay english, got {english_runtime_copy}')
-            if english_runtime_copy.get('toggleAria') not in {'Hide password', 'Toggle password visibility'}:
+            if english_runtime_copy.get('toggleAria') not in {
+                'Show password',
+                'Hide password',
+                'Toggle password visibility',
+            }:
                 fail(f'expected english password toggle label to stay english, got {english_runtime_copy}')
             if english_runtime_copy.get('error') != 'Please enter token':
                 fail(f'expected english local validation copy, got {english_runtime_copy}')

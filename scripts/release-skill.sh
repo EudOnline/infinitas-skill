@@ -179,9 +179,17 @@ if [[ -z "${INFINITAS_SKIP_HOSTED_E2E_TESTS:-}" && -z "${INFINITAS_REQUIRE_HOSTE
   CHECK_ALL_ENV+=("INFINITAS_SKIP_HOSTED_E2E_TESTS=1")
 fi
 if [[ ${#CHECK_ALL_ENV[@]} -gt 0 ]]; then
-  run_release_check env "${CHECK_ALL_ENV[@]}" "$ROOT/scripts/check-all.sh" "${CHECK_ALL_ARGS[@]}"
+  if [[ ${#CHECK_ALL_ARGS[@]} -gt 0 ]]; then
+    run_release_check env "${CHECK_ALL_ENV[@]}" "$ROOT/scripts/check-all.sh" "${CHECK_ALL_ARGS[@]}"
+  else
+    run_release_check env "${CHECK_ALL_ENV[@]}" "$ROOT/scripts/check-all.sh"
+  fi
 else
-  run_release_check "$ROOT/scripts/check-all.sh" "${CHECK_ALL_ARGS[@]}"
+  if [[ ${#CHECK_ALL_ARGS[@]} -gt 0 ]]; then
+    run_release_check "$ROOT/scripts/check-all.sh" "${CHECK_ALL_ARGS[@]}"
+  else
+    run_release_check "$ROOT/scripts/check-all.sh"
+  fi
 fi
 
 META_JSON="$(mktemp)"

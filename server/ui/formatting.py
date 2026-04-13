@@ -539,6 +539,7 @@ def build_kawaii_ui_context(
             "placeholder_summary": pick_lang(lang, "一句话描述", "One line summary"),
             "aria_main_content": pick_lang(lang, "主内容", "Main content"),
             "aria_primary_navigation": pick_lang(lang, "主导航", "Primary navigation"),
+            "search_aria_label": pick_lang(lang, "搜索技能或命令", "Search skills or commands"),
             "aria_search_results": pick_lang(lang, "搜索结果", "Search results"),
             "skip_to_main_content": pick_lang(lang, "跳转到主内容", "Skip to main content"),
             "meta_description": pick_lang(lang, "infinitas - 小二的私人技能库，覆盖技能创作、发布、分享与安装", "infinitas - a private-first agent skill library for authoring, release, sharing, and install"),

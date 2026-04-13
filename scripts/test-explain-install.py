@@ -21,6 +21,34 @@ V2 = '1.2.4'
 EXTERNAL_REGISTRY_NAME = 'external-demo'
 EXTERNAL_SKILL_NAME = 'external-only-skill'
 EXTERNAL_SKILL_VERSION = '0.9.0'
+PLATFORM_EVIDENCE_MINUTES = {
+    'codex': 0,
+    'claude': 1,
+    'openclaw': 2,
+}
+OPENCLAW_RUNTIME = {
+    'platform': 'openclaw',
+    'source_mode': 'legacy',
+    'workspace_scope': 'workspace',
+    'workspace_targets': ['skills', '.agents/skills', '~/.agents/skills', '~/.openclaw/skills'],
+    'skill_precedence': ['skills', '.agents/skills', '~/.agents/skills', '~/.openclaw/skills', 'bundled', 'extra'],
+    'install_targets': {
+        'workspace': ['skills', '.agents/skills'],
+        'shared': ['~/.agents/skills', '~/.openclaw/skills'],
+    },
+    'requires': {'tools': [], 'bins': [], 'env': [], 'config': []},
+    'plugin_capabilities': {},
+    'background_tasks': {'required': False},
+    'subagents': {'required': False},
+    'legacy_compatibility': {'agent_compatible': ['openclaw', 'claude-code', 'codex'], 'agent_compatible_deprecated': True},
+    'readiness': {
+        'ready': True,
+        'supports_background_tasks': True,
+        'supports_plugins': True,
+        'supports_subagents': True,
+        'status': 'ready',
+    },
+}
 
 
 def fail(message):
@@ -42,6 +70,17 @@ def run(command, cwd, expect=0, env=None):
 def write_json(path: Path, payload):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+
+def contract_checked_at(repo: Path, platform: str):
+    profile_path = repo / 'profiles' / f'{platform}.json'
+    payload = json.loads(profile_path.read_text(encoding='utf-8'))
+    contract = payload.get('contract') if isinstance(payload.get('contract'), dict) else {}
+    last_verified = contract.get('last_verified')
+    if not isinstance(last_verified, str) or not last_verified:
+        fail(f'missing contract.last_verified for platform {platform!r}')
+    minute = PLATFORM_EVIDENCE_MINUTES.get(platform, 0)
+    return f'{last_verified}T12:{minute:02d}:00Z'
 
 
 def iso_hours_ago(hours: int):
@@ -71,6 +110,7 @@ def update_fixture(repo: Path, version: str):
             'summary': f'Fixture skill version {version} for explain-install tests',
             'owner': 'release-test',
             'owners': ['release-test'],
+            'maintainers': ['Release Fixture'],
             'author': 'release-test',
             'review_state': 'approved',
             'distribution': {
@@ -117,6 +157,23 @@ def update_fixture(repo: Path, version: str):
             ],
         },
     )
+    sync_platform_evidence(repo, version)
+
+
+def sync_platform_evidence(repo: Path, version: str):
+    for platform in ('codex', 'claude', 'openclaw'):
+        path = repo / 'catalog' / 'compatibility-evidence' / platform / FIXTURE_NAME / f'{version}.json'
+        write_json(
+            path,
+            {
+                'platform': platform,
+                'skill': FIXTURE_NAME,
+                'version': version,
+                'state': 'adapted',
+                'checked_at': contract_checked_at(repo, platform),
+                'checker': f'check-{platform}-compat.py',
+            },
+        )
 
 
 def external_ai_index_payload():
@@ -147,6 +204,7 @@ def external_ai_index_payload():
                 'capabilities': ['external-coverage', 'install-explanation'],
                 'verified_support': {},
                 'trust_state': 'attested',
+                'runtime': OPENCLAW_RUNTIME,
                 'default_install_version': EXTERNAL_SKILL_VERSION,
                 'latest_version': EXTERNAL_SKILL_VERSION,
                 'available_versions': [EXTERNAL_SKILL_VERSION],

@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from datetime import date, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -39,6 +40,10 @@ def run(command, cwd, expect=0, env=None):
 
 def write_json(path: Path, payload):
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+
+def iso_at(day: date, hour: int, minute: int = 0) -> str:
+    return f'{day.isoformat()}T{hour:02d}:{minute:02d}:00Z'
 
 
 def make_env(extra=None):
@@ -124,6 +129,22 @@ def rewrite_promotion_policy(repo: Path):
     write_json(policy_path, policy)
 
 
+def rewrite_namespace_policy(repo: Path):
+    policy_path = repo / 'policy' / 'namespace-policy.json'
+    policy = json.loads(policy_path.read_text(encoding='utf-8'))
+    publishers = policy.get('publishers') if isinstance(policy.get('publishers'), dict) else {}
+    lvxiaoer = publishers.get('lvxiaoer') if isinstance(publishers.get('lvxiaoer'), dict) else {}
+
+    authorized_signers = lvxiaoer.get('authorized_signers') if isinstance(lvxiaoer.get('authorized_signers'), list) else []
+    authorized_releasers = lvxiaoer.get('authorized_releasers') if isinstance(lvxiaoer.get('authorized_releasers'), list) else []
+
+    lvxiaoer['authorized_signers'] = list(dict.fromkeys([*authorized_signers, 'release-test']))
+    lvxiaoer['authorized_releasers'] = list(dict.fromkeys([*authorized_releasers, 'Verified Fixture']))
+    publishers['lvxiaoer'] = lvxiaoer
+    policy['publishers'] = publishers
+    write_json(policy_path, policy)
+
+
 def stabilize_active_skill_reviews(repo: Path):
     active_root = repo / 'skills' / 'active'
     if not active_root.is_dir():
@@ -149,6 +170,31 @@ def stabilize_active_skill_reviews(repo: Path):
         write_json(reviews_path, reviews)
 
 
+def refresh_fixture_openclaw_evidence(repo: Path):
+    checked_day = date.today() - timedelta(days=1)
+    evidence_path = (
+        repo
+        / 'catalog'
+        / 'compatibility-evidence'
+        / 'openclaw'
+        / FIXTURE_NAME
+        / f'{FIXTURE_VERSION}.json'
+    )
+    payload = (
+        json.loads(evidence_path.read_text(encoding='utf-8'))
+        if evidence_path.exists()
+        else {
+            'platform': 'openclaw',
+            'skill': FIXTURE_NAME,
+            'version': FIXTURE_VERSION,
+            'state': 'adapted',
+            'checker': 'check-openclaw-compat.py',
+        }
+    )
+    payload['checked_at'] = iso_at(checked_day, 12, 2)
+    write_json(evidence_path, payload)
+
+
 def prepare_repo():
     tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-record-verified-support-'))
     repo = tmpdir / 'repo'
@@ -159,8 +205,10 @@ def prepare_repo():
         ignore=shutil.ignore_patterns('.git', '.planning', '__pycache__', '.cache', 'scripts/__pycache__', '.worktrees'),
     )
     rewrite_promotion_policy(repo)
+    rewrite_namespace_policy(repo)
     stabilize_active_skill_reviews(repo)
     scaffold_fixture(repo)
+    refresh_fixture_openclaw_evidence(repo)
     run(['git', 'init', '--bare', str(origin)], cwd=tmpdir)
     run(['git', 'init', '-b', 'main'], cwd=repo)
     run(['git', 'config', 'user.name', 'Verified Fixture'], cwd=repo)
@@ -226,6 +274,10 @@ def main():
             fail(f'missing compatibility entry for {FIXTURE_NAME}')
 
         verified = entry.get('verified_support') or {}
+        contract_dates = {}
+        for platform in ['codex', 'claude', 'openclaw']:
+            profile = json.loads((repo / 'profiles' / f'{platform}.json').read_text(encoding='utf-8'))
+            contract_dates[platform] = ((profile.get('contract') or {}).get('last_verified'))
         for platform in ['codex', 'claude', 'openclaw']:
             if verified.get(platform, {}).get('state') != 'adapted':
                 fail(f"expected verified_support {platform}=adapted, got {verified.get(platform)!r}")
@@ -233,8 +285,11 @@ def main():
                 fail(f"expected verified_support {platform} freshness_state=fresh, got {verified.get(platform)!r}")
             if verified.get(platform, {}).get('freshness_reason') != 'not-applicable':
                 fail(f"expected verified_support {platform} freshness_reason=not-applicable, got {verified.get(platform)!r}")
-            if verified.get(platform, {}).get('contract_last_verified') != '2026-03-12':
-                fail(f"expected verified_support {platform} contract_last_verified=2026-03-12, got {verified.get(platform)!r}")
+            if verified.get(platform, {}).get('contract_last_verified') != contract_dates[platform]:
+                fail(
+                    f"expected verified_support {platform} contract_last_verified={contract_dates[platform]!r}, "
+                    f"got {verified.get(platform)!r}"
+                )
             if not isinstance(verified.get(platform, {}).get('fresh_until'), str) or not verified.get(platform, {}).get('fresh_until'):
                 fail(f"expected verified_support {platform} fresh_until string, got {verified.get(platform)!r}")
 

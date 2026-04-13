@@ -12,11 +12,11 @@
 
 ## Official sources
 - https://code.claude.com/docs/en/sub-agents
-- https://docs.anthropic.com/en/docs/claude-code/security
-- https://docs.anthropic.com/en/docs/claude-code/getting-started
+- https://code.claude.com/docs/en/security
+- https://code.claude.com/docs/en/getting-started
 
 ## Last verified
-2026-03-12
+2026-04-13
 
 ## Verification steps
 - Confirm the subagents guide still documents Markdown + YAML frontmatter and the storage scopes for `.claude/agents/` and `~/.claude/agents/`.
