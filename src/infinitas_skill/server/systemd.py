@@ -18,6 +18,8 @@ def render_env_example(args: argparse.Namespace) -> str:
     return '\n'.join(
         [
             f'# Copy this file to {args.env_file} and replace placeholder secrets before enabling services.',
+            'INFINITAS_SERVER_ENV=production',
+            'INFINITAS_SERVER_ALLOWED_HOSTS=["127.0.0.1","localhost"]',
             f'INFINITAS_SERVER_DATABASE_URL={database_url}',
             'INFINITAS_SERVER_SECRET_KEY=replace-with-random-secret',
             f'INFINITAS_SERVER_BOOTSTRAP_USERS={bootstrap_users}',

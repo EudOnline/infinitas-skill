@@ -190,7 +190,6 @@ class ThemeManager {
     const html = document.documentElement;
     scheme = scheme === 'dark' ? 'dark' : 'light';
     html.dataset.colorScheme = scheme;
-    html.style.colorScheme = scheme;
     this.updateButtons(scheme);
     this.current = scheme;
 

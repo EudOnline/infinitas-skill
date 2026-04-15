@@ -94,8 +94,3 @@
   }
 } %}
 <div hidden id="home-auth-session-data" data-json="{{ home_auth_session_config | tojson | forceescape }}"></div>
-<script id="home-auth-session-bootstrap">
-  window.AUTH_SESSION_CONFIG = Object.assign(window.AUTH_SESSION_CONFIG || {}, {
-    bgPresets: {{ home_auth_session_config['bgPresets'] | tojson | forceescape }}
-  });
-</script>

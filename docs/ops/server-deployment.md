@@ -24,6 +24,7 @@ The recommended single-node deployment shape now includes a generated `systemd` 
 ## Required environment
 
 - `INFINITAS_SERVER_ENV=production`
+- `INFINITAS_SERVER_ALLOWED_HOSTS`
 - `INFINITAS_SERVER_DATABASE_URL`
 - `INFINITAS_SERVER_SECRET_KEY`
 - `INFINITAS_SERVER_BOOTSTRAP_USERS`
@@ -43,6 +44,7 @@ Production safety rails:
 
 - `INFINITAS_SERVER_SECRET_KEY` must not be left empty or set to `change-me`
 - `INFINITAS_SERVER_BOOTSTRAP_USERS` must be a non-empty JSON array in production
+- `INFINITAS_SERVER_ALLOWED_HOSTS` must be a non-empty JSON array in production
 - fixture defaults now remain available only in `development` or `test` mode, so a misconfigured production deployment fails fast during startup
 
 ## Startup sequence
@@ -98,6 +100,7 @@ mkdir -p .deploy/{repo,data,artifacts,backups,home}
 
 # Edit .env.compose before starting the stack:
 # - keep INFINITAS_SERVER_ENV=production
+# - set INFINITAS_SERVER_ALLOWED_HOSTS for local access, for example ["127.0.0.1","localhost"]
 # - replace INFINITAS_SERVER_SECRET_KEY=change-me
 # - replace the bootstrap operator tokens in INFINITAS_SERVER_BOOTSTRAP_USERS
 
@@ -429,7 +432,7 @@ Suggested install flow:
 
 1. Copy `*.service` and `*.timer` into `/etc/systemd/system/`
 2. Copy `infinitas-hosted.env.example` to `/etc/infinitas/hosted-registry.env`
-3. Replace placeholder secrets and bootstrap tokens in the env file
+3. Replace placeholder secrets and bootstrap tokens in the env file, then set `INFINITAS_SERVER_ALLOWED_HOSTS` for the hostnames that will reach the service
 4. Run `sudo systemctl daemon-reload`
 5. Enable and start:
    - `sudo systemctl enable --now infinitas-hosted-api.service`

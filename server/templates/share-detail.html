@@ -150,12 +150,12 @@
         {% if item.can_patch %}
         <form class="patch-form" data-action="patch-exposure" data-exposure-id="{{ item.id }}">
           <div class="flex flex-wrap items-center gap-2 mb-2">
-            <label style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0" for="patch-listing-{{ item.id }}">{{ ui['label_listing_mode'] }}</label>
+            <label class="sr-only" for="patch-listing-{{ item.id }}">{{ ui['label_listing_mode'] }}</label>
             <select class="kawaii-input" name="listing_mode" id="patch-listing-{{ item.id }}">
               <option value="listed" {% if item.listing_mode_raw == 'listed' %}selected{% endif %}>{{ ui['option_listed'] }}</option>
               <option value="direct_only" {% if item.listing_mode_raw == 'direct_only' %}selected{% endif %}>{{ ui['option_direct_only'] }}</option>
             </select>
-            <label style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0" for="patch-install-{{ item.id }}">{{ ui['label_install_mode'] }}</label>
+            <label class="sr-only" for="patch-install-{{ item.id }}">{{ ui['label_install_mode'] }}</label>
             <select class="kawaii-input" name="install_mode" id="patch-install-{{ item.id }}">
               <option value="enabled" {% if item.install_mode_raw == 'enabled' %}selected{% endif %}>{{ ui['option_enabled'] }}</option>
               <option value="disabled" {% if item.install_mode_raw == 'disabled' %}selected{% endif %}>{{ ui['option_disabled'] }}</option>

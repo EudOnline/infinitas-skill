@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import ast
+import base64
+import hashlib
 import json
 import os
 import shutil
 import tempfile
 from pathlib import Path
+import re
 
 from sqlalchemy import select
 
@@ -15,6 +18,10 @@ APP_JS_PATH = ROOT / "server" / "static" / "js" / "app.js"
 AUTH_SESSION_JS_PATH = ROOT / "server" / "static" / "js" / "auth-session.js"
 ROUTES_PATH = ROOT / "server" / "ui" / "routes.py"
 LIFECYCLE_PATH = ROOT / "server" / "ui" / "lifecycle.py"
+LAYOUT_TEMPLATE_PATH = ROOT / "server" / "templates" / "layout-kawaii.html"
+HOME_AUTH_PANEL_TEMPLATE_PATH = ROOT / "server" / "templates" / "partials" / "home-auth-panel.html"
+SHARE_DETAIL_TEMPLATE_PATH = ROOT / "server" / "templates" / "share-detail.html"
+SECURITY_PATH = ROOT / "server" / "security.py"
 ALEMBIC_CONFIG_PATH = ROOT / "alembic.ini"
 APP_LINE_BUDGET = 220
 LIFECYCLE_LINE_BUDGET = 500
@@ -181,9 +188,17 @@ def _slice_top_level_function_source(source: str, start_marker: str) -> str:
     return source[start:end]
 
 
+def _sha256_base64(payload: str) -> str:
+    return base64.b64encode(hashlib.sha256(payload.encode("utf-8")).digest()).decode("ascii")
+
+
 def assert_private_registry_ui_js_contracts() -> None:
     source = APP_JS_PATH.read_text(encoding="utf-8")
     auth_session_source = AUTH_SESSION_JS_PATH.read_text(encoding="utf-8")
+    layout_template = LAYOUT_TEMPLATE_PATH.read_text(encoding="utf-8")
+    home_auth_panel_template = HOME_AUTH_PANEL_TEMPLATE_PATH.read_text(encoding="utf-8")
+    share_detail_template = SHARE_DETAIL_TEMPLATE_PATH.read_text(encoding="utf-8")
+    security_source = SECURITY_PATH.read_text(encoding="utf-8")
     create_draft_source = _slice_top_level_function_source(
         source,
         "async function createDraft(form) {",
@@ -326,6 +341,38 @@ def assert_private_registry_ui_js_contracts() -> None:
     assert "currentUser = { username: data.username, role: data.role || null };" in auth_console_login_success_source, (
         "expected console auth success handler to refresh local session state immediately "
         "with the login response role"
+    )
+    assert "home-auth-session-bootstrap" not in home_auth_panel_template, (
+        "expected home auth panel data bootstrap to avoid inline script tags so the "
+        "page stays compatible with the CSP"
+    )
+    assert "style=" not in layout_template, (
+        "expected layout-kawaii template to avoid inline style attributes under the "
+        "current CSP"
+    )
+    assert "style=" not in share_detail_template, (
+        "expected share-detail template to avoid inline style attributes under the "
+        "current CSP"
+    )
+    assert ".style.colorScheme" not in source, (
+        "expected app theme bootstrap to avoid writing inline style.colorScheme under the CSP"
+    )
+    assert ".style.colorScheme" not in layout_template, (
+        "expected inline theme bootstrap to avoid writing inline style.colorScheme under the CSP"
+    )
+    layout_script = re.search(r"<script>(.*?)</script>", layout_template, re.S)
+    layout_style = re.search(r"<style>(.*?)</style>", layout_template, re.S)
+    assert layout_script is not None, "expected layout-kawaii template to keep a single inline theme bootstrap"
+    assert layout_style is not None, "expected layout-kawaii template to keep the inline critical CSS block"
+    assert _sha256_base64(layout_script.group(1)) in security_source, (
+        "expected CSP script-src hashes to match the current inline theme bootstrap"
+    )
+    assert _sha256_base64(layout_style.group(1)) in security_source, (
+        "expected CSP style-src hashes to match the current inline critical CSS block"
+    )
+    assert '/static/js/deco-effects.js' not in layout_template, (
+        "expected layout-kawaii template to avoid loading decorative runtime scripts that "
+        "mutate inline styles under the CSP"
     )
 
 

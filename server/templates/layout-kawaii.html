@@ -39,20 +39,32 @@
           const saved = window.localStorage.getItem(storageKey);
           const scheme = saved === 'light' || saved === 'dark' ? saved : fallback;
           root.dataset.colorScheme = scheme;
-          root.style.colorScheme = scheme;
         } catch (_error) {
           root.dataset.colorScheme = fallback;
-          root.style.colorScheme = fallback;
         }
       })();
     </script>
     <style>
+      html {
+        color-scheme: light;
+      }
       :root {
         --kawaii-ink-soft: #64637d;
         --kawaii-ink-muted: #7c7b92;
         --kawaii-panel: rgba(255, 255, 255, 0.84);
         --kawaii-panel-soft: rgba(255, 255, 255, 0.74);
         --kawaii-line: rgba(220, 196, 210, 0.72);
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
       }
       html[data-color-scheme="dark"] {
         color-scheme: dark;
@@ -217,7 +229,7 @@
           aria-expanded="false"
         />
         <kbd class="search-shortcut" aria-hidden="true">⌘K</kbd>
-        <span style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0">{{ ui['search_shortcut_hint'] if ui else 'Press Command+K to search' }}</span>
+        <span class="sr-only">{{ ui['search_shortcut_hint'] if ui else 'Press Command+K to search' }}</span>
         <div id="search-dropdown" class="search-dropdown" role="listbox" aria-label="{{ ui['search_results_label'] }}" hidden></div>
       </div>
       
@@ -399,7 +411,6 @@
     <div class="floating-decoration floating-music"><span aria-hidden="true">🎵</span></div>
     
     <!-- 🎊 交互 -->
-    <script src="/static/js/deco-effects.js"></script>
     <script src="/static/js/app.js"></script>
     <script src="/static/js/auth-session.js"></script>
   </body>
