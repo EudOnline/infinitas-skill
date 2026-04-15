@@ -99,6 +99,7 @@ cp .env.compose.example .env.compose
 mkdir -p .deploy/{repo,data,artifacts,backups,home}
 
 # Edit .env.compose before starting the stack:
+# - set INFINITAS_UID / INFINITAS_GID to the host account that should own .deploy/* (run `id -u` and `id -g` on Linux)
 # - keep INFINITAS_SERVER_ENV=production
 # - set INFINITAS_SERVER_ALLOWED_HOSTS for local access, for example ["127.0.0.1","localhost"]
 # - replace INFINITAS_SERVER_SECRET_KEY=change-me
