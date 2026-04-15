@@ -41,7 +41,7 @@
   </div>
 </div>
 
-<div class="auth-modal" id="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" hidden>
+<div class="auth-modal" id="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title"{% if session_current_user %} hidden{% endif %}>
   <div class="auth-modal-backdrop" id="auth-modal-backdrop"></div>
   <div class="auth-modal-content">
     <div class="auth-modal-header">

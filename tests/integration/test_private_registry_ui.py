@@ -22,6 +22,7 @@ LAYOUT_TEMPLATE_PATH = ROOT / "server" / "templates" / "layout-kawaii.html"
 HOME_AUTH_PANEL_TEMPLATE_PATH = ROOT / "server" / "templates" / "partials" / "home-auth-panel.html"
 SHARE_DETAIL_TEMPLATE_PATH = ROOT / "server" / "templates" / "share-detail.html"
 SECURITY_PATH = ROOT / "server" / "security.py"
+INPUT_CSS_PATH = ROOT / "server" / "static" / "css" / "input.css"
 ALEMBIC_CONFIG_PATH = ROOT / "alembic.ini"
 APP_LINE_BUDGET = 220
 LIFECYCLE_LINE_BUDGET = 500
@@ -374,6 +375,51 @@ def assert_private_registry_ui_js_contracts() -> None:
         "expected layout-kawaii template to avoid loading decorative runtime scripts that "
         "mutate inline styles under the CSP"
     )
+
+
+def assert_home_auth_modal_initial_state_is_explicit() -> None:
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-private-ui-auth-modal-test-"))
+    try:
+        configure_env(tmpdir)
+
+        from fastapi.testclient import TestClient
+
+        from server.app import create_app
+
+        client = TestClient(create_app())
+        response = client.get("/")
+        assert response.status_code == 200, response.text
+        html = response.text
+
+        auth_modal = re.search(r'<div class="auth-modal" id="auth-modal"([^>]*)>', html)
+        assert auth_modal is not None, "expected home page to render the auth modal"
+        assert "hidden" not in auth_modal.group(1), (
+            "expected anonymous home auth modal to render explicitly open instead of relying "
+            "on CSS to override the hidden attribute"
+        )
+
+        auth_error = re.search(r'<div class="auth-error" id="auth-error"([^>]*)>', html)
+        assert auth_error is not None, "expected home page to render the auth error container"
+        assert "hidden" in auth_error.group(1), (
+            "expected the auth error banner to stay hidden until login actually fails"
+        )
+
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def assert_auth_hidden_states_are_preserved_in_css() -> None:
+    css_source = INPUT_CSS_PATH.read_text(encoding="utf-8")
+    for marker in [
+        ".auth-modal[hidden]",
+        ".console-auth-modal[hidden]",
+        ".auth-error[hidden]",
+        ".console-auth-modal__error[hidden]",
+    ]:
+        assert marker in css_source, (
+            "expected auth UI styles to preserve the hidden attribute for modals and "
+            f"error banners; missing marker {marker!r}"
+        )
 
 
 def create_ready_release(client, headers: dict[str, str], *, slug: str, display_name: str) -> int:
@@ -740,6 +786,14 @@ def test_private_registry_ui_js_contracts_cover_access_and_install_panels() -> N
     assert_private_registry_ui_js_contracts()
 
 
+def test_home_auth_modal_initial_state_is_explicit() -> None:
+    assert_home_auth_modal_initial_state_is_explicit()
+
+
+def test_auth_hidden_states_are_preserved_in_css() -> None:
+    assert_auth_hidden_states_are_preserved_in_css()
+
+
 def main() -> None:
     assert_ui_route_registration_boundary()
     assert_app_size_budget()
@@ -750,3 +804,5 @@ def main() -> None:
     assert_private_first_console_ui_round_trip()
     assert_ui_rejects_untrusted_host_headers()
     assert_private_registry_ui_js_contracts()
+    assert_home_auth_modal_initial_state_is_explicit()
+    assert_auth_hidden_states_are_preserved_in_css()
