@@ -9,23 +9,12 @@ from sqlalchemy.orm import Session
 
 from infinitas_skill.openclaw.runtime_model import build_openclaw_runtime_model
 from infinitas_skill.root import ROOT
-from server.auth import AUTH_COOKIE_NAME
+from server.auth import maybe_get_current_access_context
 from server.db import get_db
-from server.modules.access.authn import resolve_access_context
 from server.modules.discovery import service as discovery_service
 from server.settings import get_settings
 
 router = APIRouter(prefix="/api/search", tags=["search"])
-
-
-def _extract_bearer_token(authorization: str | None) -> str | None:
-    if not isinstance(authorization, str):
-        return None
-    prefix = "Bearer "
-    if not authorization.startswith(prefix):
-        return None
-    token = authorization[len(prefix) :].strip()
-    return token or None
 
 
 def _publisher_from_qualified_name(qualified_name: str) -> str:
@@ -225,7 +214,10 @@ def _search_catalog_snapshot(*, query: str, limit: int) -> list[dict]:
             version=item.get("latest_version") or item.get("default_install_version") or "",
             audience_type="public",
             listing_mode="listed",
-            install_api_path=None,
+            install_api_path=(
+                "/api/v1/install/public/"
+                f"{_install_ref(item.get('qualified_name') or item.get('name') or '', item.get('latest_version') or item.get('default_install_version') or '')}"
+            ),
             runtime=item.get("runtime") if isinstance(item.get("runtime"), dict) else None,
             runtime_readiness=item.get("runtime_readiness"),
             workspace_targets=item.get("workspace_targets")
@@ -244,13 +236,8 @@ def search_registry(
     scope: str = Query(default="public", pattern="^(public|me|grant)$"),
     db: Session = Depends(get_db),
 ):
-    token = _extract_bearer_token(request.headers.get("authorization")) or request.cookies.get(
-        AUTH_COOKIE_NAME
-    )
     if scope in {"me", "grant"}:
-        if not token:
-            raise HTTPException(status_code=401, detail="search requires authentication")
-        context = resolve_access_context(db, token, allow_user_bridge=True)
+        context = maybe_get_current_access_context(request, db)
         if context is None:
             raise HTTPException(status_code=401, detail="search requires authentication")
         effective_scope = _effective_search_scope(

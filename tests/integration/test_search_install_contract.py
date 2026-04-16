@@ -266,6 +266,57 @@ def test_me_search_results_include_install_resolution_targets_for_private_entrie
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
+def test_me_search_accepts_browser_session_cookie_authentication() -> None:
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-search-cookie-test-"))
+    try:
+        configure_env(tmpdir)
+
+        from fastapi.testclient import TestClient
+
+        from server.app import create_app
+        from server.auth import AUTH_COOKIE_NAME
+
+        client = TestClient(create_app())
+        token_headers = {"Authorization": "Bearer fixture-maintainer-token"}
+
+        release_id = create_ready_release(
+            client,
+            token_headers,
+            slug="cookie-search-skill",
+            display_name="Cookie Search Skill",
+        )
+        create_exposure(
+            client,
+            token_headers,
+            release_id=release_id,
+            audience_type="private",
+            listing_mode="direct_only",
+            requested_review_mode="none",
+        )
+
+        login_response = client.post("/api/auth/login?lang=en", json={"token": "fixture-maintainer-token"})
+        assert login_response.status_code == 200, login_response.text
+        assert login_response.json()["success"] is True
+        session_cookie = login_response.cookies.get(AUTH_COOKIE_NAME)
+        assert session_cookie, "expected login to issue a browser session cookie"
+
+        client.cookies.set(AUTH_COOKIE_NAME, session_cookie)
+        response = client.get("/api/search?q=cookie-search&scope=me")
+        assert response.status_code == 200, response.text
+
+        payload = response.json()
+        skills = payload.get("skills") or []
+        cookie_entry = next(
+            item
+            for item in skills
+            if item.get("qualified_name") == "fixture-maintainer/cookie-search-skill"
+        )
+        assert cookie_entry["install_scope"] == "me"
+        assert cookie_entry["audience_type"] == "private"
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 def test_grant_search_uses_grant_install_scope_for_grant_credentials() -> None:
     tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-search-grant-test-"))
     try:

@@ -343,6 +343,15 @@ def assert_private_registry_ui_js_contracts() -> None:
         "expected console auth success handler to refresh local session state immediately "
         "with the login response role"
     )
+    for marker in [
+        "const homeAuthModalStartsVisible = !standaloneLoginPage && controller.dom.modal && !controller.dom.modal.hidden;",
+        "if (homeAuthModalStartsVisible) {",
+        "openAuthModal();",
+    ]:
+        assert marker in auth_init_home_source, (
+            "expected home auth bootstrap to explicitly sync a server-rendered visible modal "
+            f"into the open modal controller state; missing marker {marker!r}"
+        )
     assert "home-auth-session-bootstrap" not in home_auth_panel_template, (
         "expected home auth panel data bootstrap to avoid inline script tags so the "
         "page stays compatible with the CSP"

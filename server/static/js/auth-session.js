@@ -814,6 +814,10 @@
         return;
       }
       bindEvents();
+      const homeAuthModalStartsVisible = !standaloneLoginPage && controller.dom.modal && !controller.dom.modal.hidden;
+      if (homeAuthModalStartsVisible) {
+        openAuthModal();
+      }
       const protectedTarget = consumePendingAuthRedirect();
       if (!protectedTarget) {
         return;
