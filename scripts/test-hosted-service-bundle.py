@@ -116,6 +116,7 @@ def scenario_render_systemd_bundle():
         env_example = (output_dir / f'{prefix}.env.example').read_text(encoding='utf-8')
 
         assert_contains(api_unit, f'EnvironmentFile={env_file}', 'api unit')
+        assert_contains(api_unit, f'Environment=PYTHONPATH={repo_root}/src', 'api unit')
         assert_contains(api_unit, python_bin, 'api unit')
         assert_contains(api_unit, 'uvicorn server.app:app', 'api unit')
         assert_contains(worker_unit, f'Environment=PYTHONPATH={repo_root}/src', 'worker unit')
@@ -150,7 +151,7 @@ def scenario_render_systemd_bundle():
         assert_contains(compose_file, 'python3 -m infinitas_skill.cli.main server inspect-state', 'compose file')
         assert_contains(compose_file, 'PYTHONPATH', 'compose file')
         assert_contains(readme, 'uv run infinitas server healthcheck', 'README')
-        assert_contains(readme, 'The old server-operation wrapper scripts were retired', 'README')
+        assert_contains(readme, '`uv run infinitas ...` is the maintained CLI surface.', 'README')
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 

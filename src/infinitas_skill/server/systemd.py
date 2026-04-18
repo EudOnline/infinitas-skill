@@ -51,6 +51,7 @@ Type=simple
 User={args.service_user}
 WorkingDirectory={args.repo_root}
 EnvironmentFile={args.env_file}
+Environment=PYTHONPATH={args.repo_root.rstrip("/")}/src
 ExecStart={args.python_bin} -m uvicorn server.app:app --host {args.listen_host} --port {args.listen_port}
 Restart=on-failure
 RestartSec=5

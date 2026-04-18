@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
+from server.auth import AUTH_COOKIE_NAME
 from server.models import Artifact
 from tests.helpers.signing import add_allowed_signer, configure_git_ssh_signing
 
@@ -218,6 +219,15 @@ def test_registry_read_tokens_gate_registry_routes_without_breaking_user_credent
         headers={"Authorization": maintainer_authorization},
     )
     assert maintainer_token.status_code == 200, maintainer_token.text
+
+    login_response = client.post("/api/auth/login?lang=en", json={"token": "fixture-maintainer-token"})
+    assert login_response.status_code == 200, login_response.text
+    session_cookie = login_response.cookies.get(AUTH_COOKIE_NAME)
+    assert session_cookie, "expected login to issue a browser session cookie"
+    client.cookies.set(AUTH_COOKIE_NAME, session_cookie)
+
+    session_response = client.get("/registry/ai-index.json")
+    assert session_response.status_code == 200, session_response.text
 
     discovery_index = client.get(
         "/registry/discovery-index.json",

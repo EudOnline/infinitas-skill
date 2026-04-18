@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from infinitas_skill.discovery.index import normalize_discovery_skill
 from infinitas_skill.openclaw.runtime_model import build_openclaw_runtime_model
 from infinitas_skill.root import ROOT
-from server.auth import AUTH_COOKIE_NAME
+from server.auth import AUTH_COOKIE_NAME, maybe_get_current_access_context
 from server.modules.access.authn import AccessContext, resolve_access_context
 from server.modules.access.authz import can_access_release
 from server.modules.discovery.projections import (
@@ -88,9 +88,7 @@ def _extract_bearer_token(authorization: str | None) -> str | None:
 
 
 def _resolve_request_token(request: Request) -> str | None:
-    return _extract_bearer_token(request.headers.get("authorization")) or request.cookies.get(
-        AUTH_COOKIE_NAME
-    )
+    return _extract_bearer_token(request.headers.get("authorization"))
 
 
 def _matches_registry_reader_token(token: str, allowed_tokens: list[str]) -> bool:
@@ -103,16 +101,22 @@ def _matches_registry_reader_token(token: str, allowed_tokens: list[str]) -> boo
 def _resolve_registry_audience(db: Session, request: Request) -> RegistryAudience:
     settings = get_settings()
     allowed_reader_tokens = list(settings.registry_read_tokens)
-    token = _resolve_request_token(request)
-    if not token and not allowed_reader_tokens:
+    bearer_token = _resolve_request_token(request)
+    session_cookie = request.cookies.get(AUTH_COOKIE_NAME)
+    has_auth_input = bool(bearer_token or session_cookie)
+
+    if not has_auth_input and not allowed_reader_tokens:
         return RegistryAudience(mode="public", context=None)
-    if not token:
+    if not has_auth_input:
         raise UnauthorizedError("missing registry bearer token")
 
-    if allowed_reader_tokens and _matches_registry_reader_token(token, allowed_reader_tokens):
+    if allowed_reader_tokens and _matches_registry_reader_token(bearer_token, allowed_reader_tokens):
         return RegistryAudience(mode="public", context=None)
 
-    context = resolve_access_context(db, token, allow_user_bridge=True)
+    if bearer_token:
+        context = resolve_access_context(db, bearer_token, allow_user_bridge=True)
+    else:
+        context = maybe_get_current_access_context(request, db)
     if context is None and not allowed_reader_tokens:
         return RegistryAudience(mode="public", context=None)
     if context is None:
