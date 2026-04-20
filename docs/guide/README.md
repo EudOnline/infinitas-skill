@@ -13,6 +13,7 @@ Use the guide section when you need orientation, decision framing, or contributo
 ## Start here
 
 - [Private-first cutover](private-first-cutover.md)
+- [Retired multi-object branch notes](multi-object-agent-distribution-branch-notes.md)
 - [Trust model](trust-model.md)
 - [Frontend control-plane alignment](frontend-control-plane-alignment.md)
 - [Frontend control-plane checklist](frontend-control-plane-checklist.md)
