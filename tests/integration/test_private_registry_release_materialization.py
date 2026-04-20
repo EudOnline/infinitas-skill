@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import io
 import json
 import subprocess
+import tarfile
 from datetime import timedelta
 from pathlib import Path
 
@@ -56,6 +58,57 @@ def _configure_env(monkeypatch, *, tmp_path: Path, repo: Path) -> Path:
         ),
     )
     return artifact_root
+
+
+def _build_uploaded_bundle_bytes() -> bytes:
+    buffer = io.BytesIO()
+    with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
+        entries = {
+            "materialized-release/SKILL.md": b"# Materialized Release\n",
+            "materialized-release/_meta.json": (
+                json.dumps(
+                    {
+                        "name": "materialized-release",
+                        "version": "0.1.0",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n"
+            ).encode("utf-8"),
+            "materialized-release/notes.txt": b"uploaded bundle fixture\n",
+        }
+        for path, raw in entries.items():
+            info = tarfile.TarInfo(path)
+            info.size = len(raw)
+            archive.addfile(info, io.BytesIO(raw))
+    return buffer.getvalue()
+
+
+def _stage_uploaded_content_artifact(*, artifact_root: Path) -> int:
+    from server.db import get_session_factory
+    from server.modules.release.models import Artifact
+    from server.modules.release.storage import build_artifact_storage
+
+    storage = build_artifact_storage(artifact_root)
+    stored = storage.put_bytes(
+        _build_uploaded_bundle_bytes(),
+        public_path="draft-content/materialized-release-uploaded.tar.gz",
+    )
+
+    session_factory = get_session_factory()
+    with session_factory() as session:
+        artifact = Artifact(
+            release_id=None,
+            kind="draft_content",
+            storage_uri=stored.storage_uri,
+            sha256=stored.sha256,
+            size_bytes=stored.size_bytes,
+        )
+        session.add(artifact)
+        session.commit()
+        session.refresh(artifact)
+        return int(artifact.id)
 
 
 def _create_release(client: TestClient) -> int:
@@ -148,6 +201,52 @@ def _create_release_with_version(client: TestClient) -> tuple[int, int]:
     return int(release.json()["id"]), version_id
 
 
+def _create_uploaded_content_release(client: TestClient, *, artifact_root: Path) -> int:
+    headers = {"Authorization": "Bearer fixture-maintainer-token"}
+    create_skill = client.post(
+        "/api/v1/skills",
+        headers=headers,
+        json={
+            "slug": "materialized-release",
+            "display_name": "Materialized Release",
+            "summary": "Hosted release materialization fixture",
+        },
+    )
+    assert create_skill.status_code == 201, create_skill.text
+    skill_id = int(create_skill.json()["id"])
+
+    artifact_id = _stage_uploaded_content_artifact(artifact_root=artifact_root)
+    create_draft = client.post(
+        f"/api/v1/skills/{skill_id}/drafts",
+        headers=headers,
+        json={
+            "content_mode": "uploaded_bundle",
+            "content_upload_token": str(artifact_id),
+            "metadata": {
+                "entrypoint": "SKILL.md",
+                "manifest": {"name": "materialized-release", "version": "0.1.0"},
+            },
+        },
+    )
+    assert create_draft.status_code == 201, create_draft.text
+    draft_id = int(create_draft.json()["id"])
+
+    seal = client.post(
+        f"/api/v1/drafts/{draft_id}/seal",
+        headers=headers,
+        json={"version": "0.1.0"},
+    )
+    assert seal.status_code == 201, seal.text
+    version_id = int((seal.json().get("skill_version") or {})["id"])
+
+    release = client.post(
+        f"/api/v1/versions/{version_id}/releases",
+        headers=headers,
+    )
+    assert release.status_code == 201, release.text
+    return int(release.json()["id"])
+
+
 def test_materialized_release_manifest_is_install_verifiable(
     monkeypatch,
     tmp_path: Path,
@@ -192,6 +291,41 @@ def test_materialized_release_manifest_is_install_verifiable(
         attestation_root=temp_repo_copy,
     )
     assert verified["verified"] is True
+
+
+def test_uploaded_content_release_bundle_contains_uploaded_files(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    _prepare_signing_repo(temp_repo_copy, signing_key)
+    artifact_root = _configure_env(monkeypatch, tmp_path=tmp_path, repo=temp_repo_copy)
+    from server.app import create_app
+    from server.worker import run_worker_loop
+
+    client = TestClient(create_app())
+    release_id = _create_uploaded_content_release(client, artifact_root=artifact_root)
+
+    processed = run_worker_loop(limit=1)
+    assert processed == 1
+
+    bundle_path = (
+        artifact_root
+        / "skills"
+        / "fixture-maintainer"
+        / "materialized-release"
+        / "0.1.0"
+        / "skill.tar.gz"
+    )
+    assert bundle_path.exists(), f"missing bundle for release {release_id}"
+
+    with tarfile.open(bundle_path, mode="r:gz") as archive:
+        names = set(archive.getnames())
+
+    assert "materialized-release/SKILL.md" in names
+    assert "materialized-release/_meta.json" in names
+    assert "materialized-release/notes.txt" in names
 
 
 def test_repeat_release_request_requeues_legacy_ready_release_for_rematerialization(

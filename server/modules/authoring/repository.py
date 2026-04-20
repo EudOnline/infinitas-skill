@@ -3,7 +3,8 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from server.modules.authoring.models import Skill, SkillDraft, SkillVersion
+from server.modules.authoring.models import RegistryObject, Skill, SkillDraft, SkillVersion
+from server.modules.release.models import Artifact
 
 
 def get_skill(db: Session, skill_id: int) -> Skill | None:
@@ -21,6 +22,7 @@ def get_skill_by_namespace_and_slug(db: Session, *, namespace_id: int, slug: str
 def create_skill(
     db: Session,
     *,
+    registry_object_id: int | None,
     namespace_id: int,
     slug: str,
     display_name: str,
@@ -29,6 +31,7 @@ def create_skill(
     created_by_principal_id: int | None,
 ) -> Skill:
     skill = Skill(
+        registry_object_id=registry_object_id,
         namespace_id=namespace_id,
         slug=slug,
         display_name=display_name,
@@ -42,6 +45,32 @@ def create_skill(
     return skill
 
 
+def create_registry_object(
+    db: Session,
+    *,
+    kind: str,
+    namespace_id: int,
+    slug: str,
+    display_name: str,
+    summary: str,
+    default_visibility_profile: str | None,
+    created_by_principal_id: int | None,
+) -> RegistryObject:
+    registry_object = RegistryObject(
+        kind=kind,
+        namespace_id=namespace_id,
+        slug=slug,
+        display_name=display_name,
+        summary=summary,
+        status="active",
+        default_visibility_profile=default_visibility_profile,
+        created_by_principal_id=created_by_principal_id,
+    )
+    db.add(registry_object)
+    db.flush()
+    return registry_object
+
+
 def get_draft(db: Session, draft_id: int) -> SkillDraft | None:
     return db.get(SkillDraft, draft_id)
 
@@ -51,7 +80,9 @@ def create_draft(
     *,
     skill_id: int,
     base_version_id: int | None,
+    content_mode: str,
     content_ref: str,
+    content_artifact_id: int | None,
     metadata_json: str,
     updated_by_principal_id: int | None,
 ) -> SkillDraft:
@@ -59,7 +90,9 @@ def create_draft(
         skill_id=skill_id,
         base_version_id=base_version_id,
         state="open",
+        content_mode=content_mode,
         content_ref=content_ref,
+        content_artifact_id=content_artifact_id,
         metadata_json=metadata_json,
         updated_by_principal_id=updated_by_principal_id,
     )
@@ -85,6 +118,10 @@ def get_skill_version_by_skill_and_version(
     )
 
 
+def get_artifact(db: Session, artifact_id: int) -> Artifact | None:
+    return db.get(Artifact, artifact_id)
+
+
 def create_skill_version(
     db: Session,
     *,
@@ -92,6 +129,7 @@ def create_skill_version(
     version: str,
     content_digest: str,
     metadata_digest: str,
+    sealed_manifest_json: str,
     created_from_draft_id: int | None,
     created_by_principal_id: int | None,
 ) -> SkillVersion:
@@ -100,6 +138,7 @@ def create_skill_version(
         version=version,
         content_digest=content_digest,
         metadata_digest=metadata_digest,
+        sealed_manifest_json=sealed_manifest_json,
         created_from_draft_id=created_from_draft_id,
         created_by_principal_id=created_by_principal_id,
     )

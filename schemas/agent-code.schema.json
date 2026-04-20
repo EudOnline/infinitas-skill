@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/infinitas-skill/agent-code.schema.json",
+  "title": "infinitas-skill agent code",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "kind",
+    "schema_version",
+    "runtime",
+    "dependencies"
+  ],
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "agent_code"
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "runtime": {
+      "type": "object",
+      "required": [
+        "family"
+      ],
+      "properties": {
+        "family": {
+          "type": "string",
+          "minLength": 1
+        },
+        "language": {
+          "type": "string",
+          "minLength": 1
+        },
+        "entrypoint": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "name"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "skill",
+              "agent_preset"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "content_mode": {
+      "type": "string",
+      "enum": [
+        "uploaded_bundle",
+        "external_ref"
+      ]
+    }
+  }
+}

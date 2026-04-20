@@ -62,11 +62,13 @@ def _build_install_resolve_plan_parser(subparsers):
     parser.set_defaults(
         _handler=lambda args: run_resolve_install_plan(
             skill_dir=args.skill_dir,
+            registry_entry_json=args.registry_entry_json,
             target_dir=args.target_dir,
             source_registry=args.source_registry,
             source_json=args.source_json,
             mode=args.mode,
             as_json=args.json,
+            memory_mode=args.memory_mode,
         )
     )
 

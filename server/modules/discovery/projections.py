@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 
 from infinitas_skill.install.distribution import DistributionError, verify_distribution_manifest
 from server.models import Artifact, Exposure, Principal, Release, Skill, SkillVersion
+from server.modules.agent_codes.models import AgentCodeSpec
+from server.modules.agent_presets.models import AgentPresetSpec
 
 
 @dataclass(frozen=True)
@@ -23,6 +25,7 @@ class DiscoveryProjection:
     exposure_state: str
     release_state: str
     publisher: str
+    kind: str
     name: str
     qualified_name: str
     display_name: str
@@ -34,6 +37,8 @@ class DiscoveryProjection:
     provenance_path: str
     signature_path: str
     bundle_sha256: str | None
+    supported_memory_modes: list[str] | None = None
+    default_memory_mode: str | None = None
 
 
 def _artifact_paths(*, publisher: str, name: str, version: str) -> dict[str, str]:
@@ -96,17 +101,22 @@ def build_release_projections(db: Session) -> list[DiscoveryProjection]:
             Exposure.state.label("exposure_state"),
             Release.state.label("release_state"),
             Release.bundle_artifact_id.label("bundle_artifact_id"),
+            Release.object_kind.label("kind"),
             Release.ready_at.label("ready_at"),
             Principal.slug.label("publisher"),
             Skill.slug.label("name"),
             Skill.display_name.label("display_name"),
             Skill.summary.label("summary"),
             SkillVersion.version.label("version"),
+            AgentPresetSpec.supported_memory_modes_json.label("supported_memory_modes_json"),
+            AgentPresetSpec.default_memory_mode.label("default_memory_mode"),
         )
         .join(Release, Release.id == Exposure.release_id)
         .join(SkillVersion, SkillVersion.id == Release.skill_version_id)
         .join(Skill, Skill.id == SkillVersion.skill_id)
         .join(Principal, Principal.id == Skill.namespace_id)
+        .outerjoin(AgentPresetSpec, AgentPresetSpec.skill_id == Skill.id)
+        .outerjoin(AgentCodeSpec, AgentCodeSpec.skill_id == Skill.id)
         .where(Release.state == "ready")
         .where(Exposure.state == "active")
         .where(Exposure.install_mode == "enabled")
@@ -139,6 +149,14 @@ def build_release_projections(db: Session) -> list[DiscoveryProjection]:
         name = str(row.name)
         version = str(row.version)
         paths = _artifact_paths(publisher=publisher, name=name, version=version)
+        supported_memory_modes = None
+        if row.supported_memory_modes_json:
+            try:
+                payload = json.loads(row.supported_memory_modes_json)
+            except json.JSONDecodeError:
+                payload = []
+            if isinstance(payload, list):
+                supported_memory_modes = [str(item) for item in payload if isinstance(item, str)]
         projections.append(
             DiscoveryProjection(
                 exposure_id=int(row.exposure_id),
@@ -150,6 +168,7 @@ def build_release_projections(db: Session) -> list[DiscoveryProjection]:
                 exposure_state=str(row.exposure_state),
                 release_state=str(row.release_state),
                 publisher=publisher,
+                kind=str(row.kind or "skill"),
                 name=name,
                 qualified_name=f"{publisher}/{name}",
                 display_name=str(row.display_name),
@@ -161,6 +180,10 @@ def build_release_projections(db: Session) -> list[DiscoveryProjection]:
                 provenance_path=paths["provenance_path"],
                 signature_path=paths["signature_path"],
                 bundle_sha256=bundle_sha_by_release.get(int(row.release_id)),
+                supported_memory_modes=supported_memory_modes,
+                default_memory_mode=(
+                    str(row.default_memory_mode) if row.default_memory_mode is not None else None
+                ),
             )
         )
     return projections

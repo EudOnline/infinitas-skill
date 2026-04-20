@@ -8,12 +8,15 @@ import tarfile
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+import shutil
 
 from sqlalchemy.orm import Session
 
 from infinitas_skill.install.distribution import (
     DistributionError,
     build_distribution_manifest_payload,
+    deterministic_bundle,
+    inspect_distribution_bundle,
     verify_distribution_manifest,
 )
 from infinitas_skill.release.attestation import (
@@ -89,6 +92,109 @@ def _bundle_bytes(*, skill_slug: str, content_ref: str, metadata: dict) -> tuple
                 info.gname = ""
                 archive.addfile(info, io.BytesIO(raw))
     return buffer.getvalue(), file_count
+
+
+def _artifact_object_path(*, artifact_root: Path, storage_uri: str) -> Path:
+    root = Path(artifact_root).resolve()
+    candidate = (root / str(storage_uri or "")).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError as exc:
+        raise RuntimeError(f"artifact storage_uri escapes artifact root: {storage_uri!r}") from exc
+    return candidate
+
+
+def _bundle_root_dir(bundle_path: Path) -> str:
+    with tarfile.open(bundle_path, mode="r:gz") as archive:
+        for member in archive.getmembers():
+            member_path = Path(member.name)
+            if member_path.parts:
+                return str(member_path.parts[0])
+    raise RuntimeError(f"bundle has no archive members: {bundle_path}")
+
+
+def _uploaded_bundle_data(
+    db: Session,
+    *,
+    artifact_root: Path,
+    content_artifact_id: int | None,
+) -> tuple[bytes, int, str]:
+    if content_artifact_id is None:
+        raise RuntimeError("uploaded_bundle draft is missing content_artifact_id")
+    artifact = db.get(Artifact, int(content_artifact_id))
+    if artifact is None:
+        raise RuntimeError(f"uploaded bundle artifact {content_artifact_id} not found")
+    source_path = _artifact_object_path(artifact_root=artifact_root, storage_uri=artifact.storage_uri)
+    if not source_path.is_file():
+        raise RuntimeError(f"uploaded bundle artifact payload missing: {source_path}")
+    raw = source_path.read_bytes()
+    bundle_metadata = inspect_distribution_bundle(source_path, expected_root=None)
+    file_manifest = bundle_metadata.get("file_manifest") or []
+    return raw, len(file_manifest), _bundle_root_dir(source_path)
+
+
+def _materialize_bundle(
+    db: Session,
+    *,
+    snapshot,
+    artifact_root: Path,
+) -> tuple[bytes, int, str]:
+    metadata = load_metadata(snapshot.draft.metadata_json)
+    if snapshot.draft.content_mode == "uploaded_bundle":
+        return _uploaded_bundle_data(
+            db,
+            artifact_root=artifact_root,
+            content_artifact_id=snapshot.draft.content_artifact_id,
+        )
+    if snapshot.release.object_kind == "agent_code" and snapshot.draft.content_ref.startswith("git+"):
+        raw, file_count = _external_ref_bundle_bytes(
+            content_ref=snapshot.draft.content_ref,
+            bundle_root_dir=snapshot.skill.slug,
+        )
+        return raw, file_count, snapshot.skill.slug
+    return (
+        *_bundle_bytes(
+            skill_slug=snapshot.skill.slug,
+            content_ref=snapshot.draft.content_ref,
+            metadata=metadata,
+        ),
+        snapshot.skill.slug,
+    )
+
+
+def _draft_source_ref(snapshot) -> str:
+    if snapshot.draft.content_ref:
+        return snapshot.draft.content_ref
+    if snapshot.draft.content_artifact_id is not None:
+        return f"artifact:{snapshot.draft.content_artifact_id}"
+    return ""
+
+
+def _external_ref_bundle_bytes(*, content_ref: str, bundle_root_dir: str) -> tuple[bytes, int]:
+    ref = str(content_ref or "").strip()
+    if not ref.startswith("git+"):
+        raise RuntimeError(f"unsupported external content_ref: {content_ref!r}")
+    remote, separator, commit = ref[len("git+") :].partition("#")
+    if not separator or not commit.strip():
+        raise RuntimeError(f"external git content_ref must pin a commit: {content_ref!r}")
+
+    with tempfile.TemporaryDirectory(prefix="infinitas-agent-code-import-") as temp_dir:
+        repo_dir = Path(temp_dir) / "repo"
+        subprocess.run(
+            ["git", "clone", "--quiet", remote, str(repo_dir)],
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repo_dir), "checkout", "--quiet", commit.strip()],
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+        output_path = Path(temp_dir) / "bundle.tar.gz"
+        bundle_info = deterministic_bundle(repo_dir, output_path, root_dir=bundle_root_dir)
+        return output_path.read_bytes(), int(bundle_info["file_count"])
 
 
 def _resolve_signer_identity(
@@ -176,14 +282,15 @@ def _build_provenance_payload(
     branch = _git_value(repo_root, "branch", "--show-current")
     upstream = _git_value(repo_root, "rev-parse", "--abbrev-ref", "@{upstream}")
     head_commit = _git_value(repo_root, "rev-parse", "HEAD")
+    source_ref = _draft_source_ref(snapshot)
     source_commit = _content_ref_commit(
-        snapshot.draft.content_ref,
+        source_ref,
         snapshot.skill_version.content_digest,
     )
     source_snapshot = {
-        "kind": "content-ref",
+        "kind": "uploaded-bundle" if snapshot.draft.content_mode == "uploaded_bundle" else "content-ref",
         "tag": release_marker,
-        "ref": snapshot.draft.content_ref,
+        "ref": source_ref,
         "commit": source_commit,
         "remote": repo_url,
         "upstream": upstream,
@@ -225,10 +332,10 @@ def _build_provenance_payload(
         "version": version,
         "registry": "hosted",
         "stage": "sealed",
-        "path": snapshot.draft.content_ref,
-        "skill_path": snapshot.draft.content_ref,
+        "path": source_ref,
+        "skill_path": source_ref,
         "relative_path": None,
-        "source_type": "content-ref",
+        "source_type": source_snapshot["kind"],
         "distribution_manifest": manifest_public_path,
         "distribution_bundle": bundle_public_path,
         "distribution_bundle_sha256": bundle_sha256,
@@ -241,7 +348,7 @@ def _build_provenance_payload(
         "conflicts_with": [],
         "root": True,
         "source_commit": source_commit,
-        "source_ref": snapshot.draft.content_ref,
+        "source_ref": source_ref,
         "source_tag": release_marker,
         "source_snapshot_kind": source_snapshot["kind"],
         "source_snapshot_tag": source_snapshot["tag"],
@@ -294,8 +401,8 @@ def _build_provenance_payload(
                 "version": version,
                 "registry": "hosted",
                 "stage": "sealed",
-                "path": snapshot.draft.content_ref,
-                "source_type": "content-ref",
+                "path": source_ref,
+                "source_type": source_snapshot["kind"],
                 "distribution_manifest": manifest_public_path,
                 "source_snapshot_tag": source_snapshot["tag"],
                 "source_snapshot_commit": source_snapshot["commit"],
@@ -383,7 +490,6 @@ def materialize_release(
     ):
         return release, existing_artifacts
 
-    metadata = load_metadata(snapshot.draft.metadata_json)
     publisher = snapshot.namespace.slug
     version = snapshot.skill_version.version
     skill_slug = snapshot.skill.slug
@@ -395,11 +501,10 @@ def materialize_release(
     signature_public_path = f"provenance/{provenance_basename}.ssig"
 
     storage = storage_backend or build_artifact_storage(artifact_root)
-    bundle_root_dir = skill_slug
-    bundle_bytes, bundle_file_count = _bundle_bytes(
-        skill_slug=skill_slug,
-        content_ref=snapshot.draft.content_ref,
-        metadata=metadata,
+    bundle_bytes, bundle_file_count, bundle_root_dir = _materialize_bundle(
+        db,
+        snapshot=snapshot,
+        artifact_root=artifact_root,
     )
     stored_bundle = storage.put_bytes(bundle_bytes, public_path=bundle_public_path)
     attestation_cfg = load_attestation_config(repo_root)

@@ -326,6 +326,53 @@ def plan_from_skill_dir(
     )
 
 
+def plan_from_registry_entry(entry: dict, *, memory_mode: str | None = None) -> dict:
+    kind = str(entry.get("kind") or "skill")
+    supported_memory_modes = [
+        str(item) for item in (entry.get("supported_memory_modes") or []) if isinstance(item, str)
+    ]
+    default_memory_mode = entry.get("default_memory_mode")
+    selected_memory_mode = None
+    if kind == "agent_preset":
+        selected_memory_mode = memory_mode or default_memory_mode
+        if selected_memory_mode not in supported_memory_modes:
+            raise DependencyError(
+                f"unsupported memory_mode for {entry.get('qualified_name') or entry.get('name')}",
+                {
+                    "skill": entry.get("qualified_name") or entry.get("name"),
+                    "constraints": supported_memory_modes,
+                },
+            )
+
+    root = {
+        "kind": kind,
+        "name": entry.get("name"),
+        "qualified_name": entry.get("qualified_name") or entry.get("name"),
+        "version": entry.get("default_install_version") or entry.get("latest_version"),
+        "publisher": entry.get("publisher"),
+        "selected_memory_mode": selected_memory_mode,
+        "default_memory_mode": default_memory_mode,
+        "supported_memory_modes": supported_memory_modes,
+    }
+    step = {
+        "order": 1,
+        "action": "install",
+        "kind": kind,
+        "name": root["name"],
+        "qualified_name": root["qualified_name"],
+        "version": root["version"],
+        "manifest_path": ((entry.get("versions") or {}).get(root["version"]) or {}).get("manifest_path"),
+        "bundle_path": ((entry.get("versions") or {}).get(root["version"]) or {}).get("bundle_path"),
+        "selected_memory_mode": selected_memory_mode,
+    }
+    return {
+        "mode": "install",
+        "root": root,
+        "steps": [step],
+        "runtime": dict(entry.get("runtime") or {}),
+    }
+
+
 __all__ = [
     "DependencyError",
     "DependencyPlanner",

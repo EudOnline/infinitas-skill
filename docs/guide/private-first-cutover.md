@@ -33,6 +33,19 @@ The legacy product workflow is removed:
 - no `jobs` surface tied to submission state
 - no `publish-skill.sh`, `promote-skill.sh`, `request-review.sh`, or `approve-skill.sh` operator path
 
+## Multi-object vocabulary
+
+The maintained hosted vocabulary now distinguishes three first-class publishable object kinds:
+
+- `skill` for installable skill bundles
+- `agent_preset` for shared OpenClaw runtime configuration bundles
+- `agent_code` for lightweight runnable agent code bundles
+
+Later hosted lifecycle work must use these exact object-kind names. The install and release path also uses two exact content-shape terms:
+
+- `memory_mode` for the selected preset memory variant
+- `content_mode` for whether hosted content comes from an uploaded bundle or an immutable external reference
+
 ## Supported runtime model
 
 1. author into a draft
@@ -51,6 +64,8 @@ The legacy product workflow is removed:
 - `discovery-index.json` is listing-oriented
 - artifact paths are authorized by current audience scope
 - catalog alias paths are served by the same projection layer
+
+Hosted storage is no longer limited to metadata snapshots. The maintained model allows the platform to own complete content bundles for supported object kinds and release them as platform-managed artifacts.
 
 ## Verification used for the cutover
 

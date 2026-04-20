@@ -81,8 +81,16 @@ from server.modules.access.models import (  # noqa: E402
     Team,
     TeamMembership,
 )
+from server.modules.agent_codes.models import AgentCodeSpec  # noqa: E402
+from server.modules.agent_presets.models import AgentPresetSpec  # noqa: E402
 from server.modules.audit.models import AuditEvent  # noqa: E402
-from server.modules.authoring.models import Namespace, Skill, SkillDraft, SkillVersion  # noqa: E402
+from server.modules.authoring.models import (  # noqa: E402
+    Namespace,
+    RegistryObject,
+    Skill,
+    SkillDraft,
+    SkillVersion,
+)
 from server.modules.exposure.models import Exposure  # noqa: E402
 from server.modules.release.models import Artifact, Release  # noqa: E402
 from server.modules.review.models import (  # noqa: E402
@@ -93,6 +101,8 @@ from server.modules.review.models import (  # noqa: E402
 
 __all__ = [
     "AccessGrant",
+    "AgentCodeSpec",
+    "AgentPresetSpec",
     "Artifact",
     "AuditEvent",
     "Base",
@@ -101,6 +111,7 @@ __all__ = [
     "Job",
     "Namespace",
     "Principal",
+    "RegistryObject",
     "Release",
     "ReviewCase",
     "ReviewDecision",

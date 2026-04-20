@@ -12,6 +12,12 @@ class Release(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     skill_version_id: Mapped[int] = mapped_column(ForeignKey("skill_versions.id"), index=True)
+    registry_object_id: Mapped[int | None] = mapped_column(
+        ForeignKey("registry_objects.id"),
+        nullable=True,
+        index=True,
+    )
+    object_kind: Mapped[str] = mapped_column(String(64), default="skill")
     state: Mapped[str] = mapped_column(String(32), default="preparing")
     format_version: Mapped[str] = mapped_column(String(32), default="1")
     manifest_artifact_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -31,7 +37,7 @@ class Artifact(Base):
     __tablename__ = "artifacts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    release_id: Mapped[int] = mapped_column(ForeignKey("releases.id"), index=True)
+    release_id: Mapped[int | None] = mapped_column(ForeignKey("releases.id"), index=True, nullable=True)
     kind: Mapped[str] = mapped_column(String(32))
     storage_uri: Mapped[str] = mapped_column(Text, default="")
     sha256: Mapped[str] = mapped_column(String(128), default="")

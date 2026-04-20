@@ -5,7 +5,11 @@ import json
 import sys
 
 from infinitas_skill.install.output import error_to_payload, plan_to_text
-from infinitas_skill.install.service import DependencyError, plan_from_skill_dir
+from infinitas_skill.install.service import (
+    DependencyError,
+    plan_from_registry_entry,
+    plan_from_skill_dir,
+)
 
 INSTALL_MODES = ("install", "sync")
 
@@ -147,10 +151,18 @@ def _load_source_info(source_json: str | None):
 def configure_resolve_install_plan_parser(
     parser: argparse.ArgumentParser,
 ) -> argparse.ArgumentParser:
-    parser.add_argument("--skill-dir", required=True, help="Skill directory to resolve from")
+    parser.add_argument("--skill-dir", help="Skill directory to resolve from")
+    parser.add_argument(
+        "--registry-entry-json",
+        help="Hosted registry entry JSON for object-aware install planning",
+    )
     parser.add_argument("--target-dir", help="Existing install target directory to plan against")
     parser.add_argument("--source-registry", help="Registry hint for the root skill source")
     parser.add_argument("--source-json", help="Resolved source metadata JSON for the root skill")
+    parser.add_argument(
+        "--memory-mode",
+        help="Selected memory mode for agent_preset registry installs",
+    )
     parser.add_argument(
         "--mode",
         choices=INSTALL_MODES,
@@ -176,22 +188,31 @@ def parse_resolve_install_plan_args(
 
 def run_resolve_install_plan(
     *,
-    skill_dir: str,
+    skill_dir: str | None = None,
+    registry_entry_json: str | None = None,
     target_dir: str | None = None,
     source_registry: str | None = None,
     source_json: str | None = None,
     mode: str = "install",
     as_json: bool = False,
+    memory_mode: str | None = None,
 ) -> int:
     source_info = _load_source_info(source_json)
     try:
-        plan = plan_from_skill_dir(
-            skill_dir,
-            target_dir=target_dir,
-            source_registry=source_registry,
-            source_info=source_info,
-            mode=mode,
-        )
+        if registry_entry_json is not None:
+            plan = plan_from_registry_entry(
+                json.loads(registry_entry_json), memory_mode=memory_mode
+            )
+        else:
+            if not skill_dir:
+                raise DependencyError("resolve-plan requires --skill-dir or --registry-entry-json")
+            plan = plan_from_skill_dir(
+                skill_dir,
+                target_dir=target_dir,
+                source_registry=source_registry,
+                source_info=source_info,
+                mode=mode,
+            )
     except DependencyError as exc:
         emit_resolve_install_plan_error(exc)
         return 1
@@ -207,11 +228,13 @@ def resolve_install_plan_main(argv: list[str] | None = None, *, prog: str | None
     args = parse_resolve_install_plan_args(argv, prog=prog)
     return run_resolve_install_plan(
         skill_dir=args.skill_dir,
+        registry_entry_json=args.registry_entry_json,
         target_dir=args.target_dir,
         source_registry=args.source_registry,
         source_json=args.source_json,
         mode=args.mode,
         as_json=args.json,
+        memory_mode=args.memory_mode,
     )
 
 

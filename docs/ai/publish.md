@@ -2,9 +2,17 @@
 
 Private-first publishing is no longer a shell pipeline around review, promotion, and publish scripts.
 
+The hosted registry supports three first-class publishable object kinds:
+
+- `skill`
+- `agent_preset`
+- `agent_code`
+
+Use `agent_preset` for shareable OpenClaw configuration objects such as prompt, tool, model, dependency, and memory defaults. Use `agent_code` for lightweight runnable agent implementations whose released bundle must still be owned and materialized by the platform.
+
 The supported flow is:
 
-1. create or load a skill record
+1. create or load the target object record
 2. create a draft
 3. patch the draft until ready
 4. seal the draft into an immutable version
@@ -12,6 +20,8 @@ The supported flow is:
 6. let the worker materialize release artifacts
 7. create exposures for `private`, `grant`, or `public`
 8. approve the public review case when public exposure is required
+
+Hosted drafts may now point at full content bundles, not only metadata. The content path is described by `content_mode`, which distinguishes uploaded hosted content from immutable external references that must be frozen into platform-owned release artifacts.
 
 ## CLI entrypoint
 
@@ -38,6 +48,8 @@ uv run infinitas registry exposures create 1 \
   --install-mode enabled \
   --requested-review-mode none
 ```
+
+The current maintained CLI examples still demonstrate the `skill` flow. Later object-specific entrypoints for `agent_preset` and `agent_code` must preserve the same draft -> seal -> release -> expose lifecycle semantics.
 
 ## Review semantics
 

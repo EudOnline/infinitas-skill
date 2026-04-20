@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/infinitas-skill/agent-preset.schema.json",
+  "title": "infinitas-skill agent preset",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "kind",
+    "schema_version",
+    "runtime",
+    "dependencies",
+    "supported_memory_modes",
+    "default_memory_mode"
+  ],
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "agent_preset"
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "runtime": {
+      "type": "object",
+      "required": [
+        "family"
+      ],
+      "properties": {
+        "family": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "entrypoint": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "name"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "skill",
+              "agent_code"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "supported_memory_modes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "none",
+          "local",
+          "shared"
+        ]
+      }
+    },
+    "default_memory_mode": {
+      "type": "string",
+      "enum": [
+        "none",
+        "local",
+        "shared"
+      ]
+    }
+  }
+}

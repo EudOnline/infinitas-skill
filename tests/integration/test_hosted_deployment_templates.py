@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[2]
 COMPOSE_ENV_EXAMPLE = ROOT / ".env.compose.example"
 DEPLOYMENT_DOC = ROOT / "docs" / "ops" / "server-deployment.md"

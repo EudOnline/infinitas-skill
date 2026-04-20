@@ -22,6 +22,42 @@ class Skill(Base):
         ForeignKey("principals.id"),
         nullable=True,
     )
+    registry_object_id: Mapped[int | None] = mapped_column(
+        ForeignKey("registry_objects.id"),
+        nullable=True,
+        index=True,
+    )
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True),
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+
+class RegistryObject(Base):
+    __tablename__ = "registry_objects"
+    __table_args__ = (
+        UniqueConstraint(
+            "namespace_id",
+            "kind",
+            "slug",
+            name="uq_registry_objects_namespace_id_kind_slug",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    kind: Mapped[str] = mapped_column(String(64))
+    namespace_id: Mapped[int] = mapped_column(ForeignKey("principals.id"), index=True)
+    slug: Mapped[str] = mapped_column(String(200))
+    display_name: Mapped[str] = mapped_column(String(200))
+    summary: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    default_visibility_profile: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_by_principal_id: Mapped[int | None] = mapped_column(
+        ForeignKey("principals.id"),
+        nullable=True,
+    )
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),
@@ -37,7 +73,9 @@ class SkillDraft(Base):
     skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"), index=True)
     base_version_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     state: Mapped[str] = mapped_column(String(32), default="open")
+    content_mode: Mapped[str] = mapped_column(String(32), default="external_ref")
     content_ref: Mapped[str] = mapped_column(Text, default="")
+    content_artifact_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     metadata_json: Mapped[str] = mapped_column(Text, default="{}")
     updated_by_principal_id: Mapped[int | None] = mapped_column(
         ForeignKey("principals.id"),
@@ -61,6 +99,7 @@ class SkillVersion(Base):
     version: Mapped[str] = mapped_column(String(64))
     content_digest: Mapped[str] = mapped_column(String(255))
     metadata_digest: Mapped[str] = mapped_column(String(255))
+    sealed_manifest_json: Mapped[str] = mapped_column(Text, default="{}")
     created_from_draft_id: Mapped[int | None] = mapped_column(
         ForeignKey("skill_drafts.id"),
         nullable=True,

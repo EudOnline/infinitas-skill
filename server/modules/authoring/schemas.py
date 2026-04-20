@@ -26,6 +26,18 @@ def _load_metadata(raw: str | None) -> dict:
     return payload
 
 
+def _load_manifest(raw: str | None) -> dict:
+    if not raw:
+        return {}
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    return payload
+
+
 SLUG_PATTERN = r"^[a-z0-9]+(?:-[a-z0-9]+)*$"
 SEMVER_PATTERN = (
     r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
@@ -69,13 +81,17 @@ class SkillView(BaseModel):
 
 
 class SkillDraftCreateRequest(BaseModel):
+    content_mode: str | None = None
     base_version_id: int | None = None
     content_ref: str = ""
+    content_upload_token: str | None = None
     metadata: dict = Field(default_factory=dict)
 
 
 class SkillDraftPatchRequest(BaseModel):
+    content_mode: str | None = None
     content_ref: str | None = None
+    content_upload_token: str | None = None
     metadata: dict | None = None
 
 
@@ -84,7 +100,9 @@ class SkillDraftView(BaseModel):
     skill_id: int
     base_version_id: int | None = None
     state: str
+    content_mode: str
     content_ref: str
+    content_artifact_id: int | None = None
     metadata: dict = Field(default_factory=dict)
     updated_by_principal_id: int | None = None
     updated_at: str
@@ -96,7 +114,9 @@ class SkillDraftView(BaseModel):
             skill_id=draft.skill_id,
             base_version_id=draft.base_version_id,
             state=draft.state,
+            content_mode=draft.content_mode,
             content_ref=draft.content_ref,
+            content_artifact_id=draft.content_artifact_id,
             metadata=_load_metadata(draft.metadata_json),
             updated_by_principal_id=draft.updated_by_principal_id,
             updated_at=_iso(draft.updated_at) or "",
@@ -113,6 +133,8 @@ class SkillVersionView(BaseModel):
     version: str
     content_digest: str
     metadata_digest: str
+    sealed_manifest_json: str
+    sealed_manifest: dict = Field(default_factory=dict)
     created_from_draft_id: int | None = None
     created_by_principal_id: int | None = None
     created_at: str
@@ -125,6 +147,8 @@ class SkillVersionView(BaseModel):
             version=version.version,
             content_digest=version.content_digest,
             metadata_digest=version.metadata_digest,
+            sealed_manifest_json=version.sealed_manifest_json,
+            sealed_manifest=_load_manifest(version.sealed_manifest_json),
             created_from_draft_id=version.created_from_draft_id,
             created_by_principal_id=version.created_by_principal_id,
             created_at=_iso(version.created_at) or "",

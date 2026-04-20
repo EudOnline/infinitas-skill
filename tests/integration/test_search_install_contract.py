@@ -294,7 +294,9 @@ def test_me_search_accepts_browser_session_cookie_authentication() -> None:
             requested_review_mode="none",
         )
 
-        login_response = client.post("/api/auth/login?lang=en", json={"token": "fixture-maintainer-token"})
+        login_response = client.post(
+            "/api/auth/login?lang=en", json={"token": "fixture-maintainer-token"}
+        )
         assert login_response.status_code == 200, login_response.text
         assert login_response.json()["success"] is True
         session_cookie = login_response.cookies.get(AUTH_COOKIE_NAME)

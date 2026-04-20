@@ -22,6 +22,23 @@ The maintained runtime contract centers on:
 - plugin capability expectations
 - background task and cron-oriented runtime assumptions
 
+## Published object contract
+
+OpenClaw-facing distribution now treats these object kinds as first-class:
+
+- `skill`
+- `agent_preset`
+- `agent_code`
+
+`agent_preset` is the shared OpenClaw configuration object. It captures runtime-facing configuration such as prompt, model, tool, dependency, and memory defaults without implying that the preset itself owns the executable runtime implementation.
+
+`agent_code` is the lightweight runnable agent-code object. It may originate from an immutable external source, but hosted release output must still be a platform-owned frozen bundle rather than a live upstream reference.
+
+Install-time preset selection must use the exact variant field names:
+
+- `memory_mode`
+- `content_mode`
+
 ## Backend source-of-truth boundary
 
 The following remain authoritative in the repository backend:
@@ -32,6 +49,8 @@ The following remain authoritative in the repository backend:
 - install planning and audit history
 
 OpenClaw runtime state does not replace those records. It defines how maintained runtime-facing metadata, discovery, and install behavior should be interpreted.
+
+Hosted content ownership also remains a backend concern. The backend may store complete uploaded content bundles and freeze immutable external imports so downstream installs always resolve through hosted artifacts.
 
 ## Legacy migration boundary
 

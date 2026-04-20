@@ -16,6 +16,7 @@ Use the guide section when you need orientation, decision framing, or contributo
 - [Trust model](trust-model.md)
 - [Frontend control-plane alignment](frontend-control-plane-alignment.md)
 - [Frontend control-plane checklist](frontend-control-plane-checklist.md)
+- [Kimi frontend execution brief](kimi-frontend-execution-brief.md)
 - [Repository conventions](conventions.md)
 - [Workflow drills](../ai/workflow-drills.md)
 

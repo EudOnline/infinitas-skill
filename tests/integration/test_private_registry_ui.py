@@ -5,10 +5,10 @@ import base64
 import hashlib
 import json
 import os
+import re
 import shutil
 import tempfile
 from pathlib import Path
-import re
 
 from sqlalchemy import select
 
@@ -250,7 +250,11 @@ def assert_private_registry_ui_js_contracts() -> None:
         "apiGet(`/api/v1/releases/${encodeURIComponent(releaseId)}/artifacts`)",
         "const artifacts = Array.isArray(data) ? data : (data.items || []);",
     ]:
-        assert marker in artifacts_table_source if marker != "async function updateArtifactsTable(releaseId) {" else marker in source, (
+        assert (
+            marker in artifacts_table_source
+            if marker != "async function updateArtifactsTable(releaseId) {"
+            else marker in source
+        ), (
             "expected release detail polling to refresh artifact rows from the release artifacts API; "
             f"missing marker {marker!r}"
         )
@@ -321,7 +325,9 @@ def assert_private_registry_ui_js_contracts() -> None:
         "if (err.status === 403 || err.status === 404) {",
         "data.items || []",
     ]:
-        assert marker in source if marker == "data.items || []" else marker in release_poll_source, (
+        assert (
+            marker in source if marker == "data.items || []" else marker in release_poll_source
+        ), (
             "expected release polling UI to update summary stats and recover from empty-state "
             f"artifact sections; missing marker {marker!r}"
         )
@@ -339,7 +345,10 @@ def assert_private_registry_ui_js_contracts() -> None:
             "expected auth-session bootstrap to initialize the standalone /login page and "
             f"redirect after successful login; missing marker {marker!r}"
         )
-    assert "currentUser = { username: data.username, role: data.role || null };" in auth_console_login_success_source, (
+    assert (
+        "currentUser = { username: data.username, role: data.role || null };"
+        in auth_console_login_success_source
+    ), (
         "expected console auth success handler to refresh local session state immediately "
         "with the login response role"
     )
@@ -357,12 +366,10 @@ def assert_private_registry_ui_js_contracts() -> None:
         "page stays compatible with the CSP"
     )
     assert "style=" not in layout_template, (
-        "expected layout-kawaii template to avoid inline style attributes under the "
-        "current CSP"
+        "expected layout-kawaii template to avoid inline style attributes under the current CSP"
     )
     assert "style=" not in share_detail_template, (
-        "expected share-detail template to avoid inline style attributes under the "
-        "current CSP"
+        "expected share-detail template to avoid inline style attributes under the current CSP"
     )
     assert ".style.colorScheme" not in source, (
         "expected app theme bootstrap to avoid writing inline style.colorScheme under the CSP"
@@ -372,15 +379,19 @@ def assert_private_registry_ui_js_contracts() -> None:
     )
     layout_script = re.search(r"<script>(.*?)</script>", layout_template, re.S)
     layout_style = re.search(r"<style>(.*?)</style>", layout_template, re.S)
-    assert layout_script is not None, "expected layout-kawaii template to keep a single inline theme bootstrap"
-    assert layout_style is not None, "expected layout-kawaii template to keep the inline critical CSS block"
+    assert layout_script is not None, (
+        "expected layout-kawaii template to keep a single inline theme bootstrap"
+    )
+    assert layout_style is not None, (
+        "expected layout-kawaii template to keep the inline critical CSS block"
+    )
     assert _sha256_base64(layout_script.group(1)) in security_source, (
         "expected CSP script-src hashes to match the current inline theme bootstrap"
     )
     assert _sha256_base64(layout_style.group(1)) in security_source, (
         "expected CSP style-src hashes to match the current inline critical CSS block"
     )
-    assert '/static/js/deco-effects.js' not in layout_template, (
+    assert "/static/js/deco-effects.js" not in layout_template, (
         "expected layout-kawaii template to avoid loading decorative runtime scripts that "
         "mutate inline styles under the CSP"
     )
@@ -543,7 +554,7 @@ def assert_private_first_console_ui_round_trip() -> None:
         login_response = client.get("/login?lang=en")
         assert login_response.status_code == 200, login_response.text
         login_html = login_response.text
-        assert f'{registry_base_url}/api/v1/me' in login_html
+        assert f"{registry_base_url}/api/v1/me" in login_html
         assert "skills.example.com" not in login_html
 
         api_login_response = client.post(
@@ -650,7 +661,11 @@ def assert_private_first_console_ui_round_trip() -> None:
         release_detail_response = client.get(f"/releases/{release_id}?lang=en", headers=headers)
         assert release_detail_response.status_code == 200, release_detail_response.text
         release_detail_html = release_detail_response.text
-        assert "preparing" in release_detail_html or "Pending" in release_detail_html or "pending" in release_detail_html.lower()
+        assert (
+            "preparing" in release_detail_html
+            or "Pending" in release_detail_html
+            or "pending" in release_detail_html.lower()
+        )
         assert 'id="release-status"' in release_detail_html
         assert 'id="artifact-section"' in release_detail_html
 
@@ -662,7 +677,11 @@ def assert_private_first_console_ui_round_trip() -> None:
         release_ready_response = client.get(f"/releases/{release_id}?lang=en", headers=headers)
         assert release_ready_response.status_code == 200, release_ready_response.text
         release_ready_html = release_ready_response.text
-        assert "ready" in release_ready_html.lower() or "Ready" in release_ready_html or "success" in release_ready_html.lower()
+        assert (
+            "ready" in release_ready_html.lower()
+            or "Ready" in release_ready_html
+            or "success" in release_ready_html.lower()
+        )
         for label in ["Manifest", "Bundle", "Provenance", "Signature"]:
             assert label in release_ready_html
 

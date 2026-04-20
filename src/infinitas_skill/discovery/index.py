@@ -106,6 +106,7 @@ def normalize_discovery_skill(
             match_names.append(qualified)
     return {
         "name": skill.get("name"),
+        "kind": skill.get("kind") or "skill",
         "qualified_name": qualified_name,
         "publisher": publisher,
         "summary": skill.get("summary") or "",
@@ -137,6 +138,8 @@ def normalize_discovery_skill(
         "use_when": decision_metadata["use_when"],
         "avoid_when": decision_metadata["avoid_when"],
         "runtime_assumptions": decision_metadata["runtime_assumptions"],
+        "supported_memory_modes": list(skill.get("supported_memory_modes") or []),
+        "default_memory_mode": skill.get("default_memory_mode"),
     }
 
 

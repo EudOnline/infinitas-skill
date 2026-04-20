@@ -99,6 +99,79 @@ def command_authoring_seal_draft(args):
     )
 
 
+def command_agent_preset_create(args):
+    return request_json(
+        args,
+        'POST',
+        '/api/v1/agent-presets',
+        {
+            'slug': args.slug,
+            'display_name': args.display_name,
+            'summary': args.summary,
+            'runtime_family': args.runtime_family,
+            'supported_memory_modes': args.supported_memory_modes,
+            'default_memory_mode': args.default_memory_mode,
+            'pinned_skill_dependencies': args.pinned_skill_dependencies,
+        },
+    )
+
+
+def command_agent_preset_create_draft(args):
+    return request_json(
+        args,
+        'POST',
+        f'/api/v1/agent-presets/{args.preset_id}/drafts',
+        {
+            'prompt': args.prompt,
+            'model': args.model,
+            'tools': args.tools,
+        },
+    )
+
+
+def command_agent_preset_seal_draft(args):
+    return request_json(
+        args,
+        'POST',
+        f'/api/v1/agent-preset-drafts/{args.draft_id}/seal',
+        {'version': args.version},
+    )
+
+
+def command_agent_code_create(args):
+    return request_json(
+        args,
+        'POST',
+        '/api/v1/agent-codes',
+        {
+            'slug': args.slug,
+            'display_name': args.display_name,
+            'summary': args.summary,
+            'runtime_family': args.runtime_family,
+            'language': args.language,
+            'entrypoint': args.entrypoint,
+        },
+    )
+
+
+def command_agent_code_create_draft(args):
+    return request_json(
+        args,
+        'POST',
+        f'/api/v1/agent-codes/{args.code_id}/drafts',
+        {'content_ref': args.content_ref},
+    )
+
+
+def command_agent_code_seal_draft(args):
+    return request_json(
+        args,
+        'POST',
+        f'/api/v1/agent-code-drafts/{args.draft_id}/seal',
+        {'version': args.version},
+    )
+
+
 def command_release_create(args):
     return request_json(args, 'POST', f'/api/v1/versions/{args.version_id}/releases', {})
 
@@ -197,7 +270,7 @@ def configure_registry_parser(parser: argparse.ArgumentParser) -> argparse.Argum
     )
     subparsers = parser.add_subparsers(
         dest='registry_command',
-        metavar='{skills,drafts,releases,exposures,grants,tokens,reviews}',
+        metavar='{skills,drafts,agent-presets,agent-codes,releases,exposures,grants,tokens,reviews}',
     )
 
     skills = subparsers.add_parser('skills', help='Manage private-first skill records')
@@ -242,6 +315,47 @@ def configure_registry_parser(parser: argparse.ArgumentParser) -> argparse.Argum
     drafts_seal.add_argument('draft_id', type=int, help='Draft identifier')
     drafts_seal.add_argument('--version', required=True, help='Semantic version to create')
     drafts_seal.set_defaults(_handler=_wrap_registry_handler(command_authoring_seal_draft))
+
+    agent_presets = subparsers.add_parser('agent-presets', help='Manage publishable agent preset objects')
+    agent_presets_subparsers = agent_presets.add_subparsers(dest='subcommand', metavar='{create,create-draft,seal-draft}')
+    preset_create = agent_presets_subparsers.add_parser('create', help='Create a new agent preset object')
+    preset_create.add_argument('--slug', required=True)
+    preset_create.add_argument('--display-name', required=True)
+    preset_create.add_argument('--summary', default='')
+    preset_create.add_argument('--runtime-family', default='openclaw')
+    preset_create.add_argument('--supported-memory-modes', nargs='*', default=['none'])
+    preset_create.add_argument('--default-memory-mode', default='none')
+    preset_create.add_argument('--pinned-skill-dependencies', nargs='*', default=[])
+    preset_create.set_defaults(_handler=_wrap_registry_handler(command_agent_preset_create))
+    preset_draft = agent_presets_subparsers.add_parser('create-draft', help='Create a draft payload for an agent preset')
+    preset_draft.add_argument('preset_id', type=int)
+    preset_draft.add_argument('--prompt', default='')
+    preset_draft.add_argument('--model', default='')
+    preset_draft.add_argument('--tools', nargs='*', default=[])
+    preset_draft.set_defaults(_handler=_wrap_registry_handler(command_agent_preset_create_draft))
+    preset_seal = agent_presets_subparsers.add_parser('seal-draft', help='Seal an agent preset draft')
+    preset_seal.add_argument('draft_id', type=int)
+    preset_seal.add_argument('--version', required=True)
+    preset_seal.set_defaults(_handler=_wrap_registry_handler(command_agent_preset_seal_draft))
+
+    agent_codes = subparsers.add_parser('agent-codes', help='Manage publishable agent code objects')
+    agent_codes_subparsers = agent_codes.add_subparsers(dest='subcommand', metavar='{create,create-draft,seal-draft}')
+    code_create = agent_codes_subparsers.add_parser('create', help='Create a new agent code object')
+    code_create.add_argument('--slug', required=True)
+    code_create.add_argument('--display-name', required=True)
+    code_create.add_argument('--summary', default='')
+    code_create.add_argument('--runtime-family', default='openclaw')
+    code_create.add_argument('--language', default='python')
+    code_create.add_argument('--entrypoint', required=True)
+    code_create.set_defaults(_handler=_wrap_registry_handler(command_agent_code_create))
+    code_draft = agent_codes_subparsers.add_parser('create-draft', help='Create an external-import draft for agent code')
+    code_draft.add_argument('code_id', type=int)
+    code_draft.add_argument('--content-ref', required=True)
+    code_draft.set_defaults(_handler=_wrap_registry_handler(command_agent_code_create_draft))
+    code_seal = agent_codes_subparsers.add_parser('seal-draft', help='Seal an agent code draft')
+    code_seal.add_argument('draft_id', type=int)
+    code_seal.add_argument('--version', required=True)
+    code_seal.set_defaults(_handler=_wrap_registry_handler(command_agent_code_seal_draft))
 
     releases = subparsers.add_parser('releases', help='Create and inspect immutable releases')
     releases_subparsers = releases.add_subparsers(dest='subcommand', metavar='{create,get,artifacts}')

@@ -14,6 +14,8 @@ from server.auth import get_current_user
 from server.db import ensure_database_ready, get_db
 from server.models import User
 from server.modules.access.router import router as access_router
+from server.modules.agent_codes.router import router as agent_code_router
+from server.modules.agent_presets.router import router as agent_preset_router
 from server.modules.authoring.router import router as authoring_router
 from server.modules.discovery.router import router as discovery_router
 from server.modules.exposure.router import router as exposure_router
@@ -49,6 +51,8 @@ def create_app() -> FastAPI:
     app.include_router(background_router)
     app.include_router(search_router)
     app.include_router(access_router)
+    app.include_router(agent_code_router)
+    app.include_router(agent_preset_router)
     app.include_router(authoring_router)
     app.include_router(discovery_router)
     app.include_router(release_router)

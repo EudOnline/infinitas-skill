@@ -271,7 +271,8 @@ def _listed_entries(db: Session, request: Request) -> list[DiscoveryProjection]:
 
 
 def _distribution_entry(entry: DiscoveryProjection) -> dict:
-    return {
+    payload = {
+        "kind": entry.kind,
         "name": entry.name,
         "publisher": entry.publisher,
         "qualified_name": entry.qualified_name,
@@ -292,10 +293,16 @@ def _distribution_entry(entry: DiscoveryProjection) -> dict:
         "release_id": entry.release_id,
         "exposure_id": entry.exposure_id,
     }
+    if entry.supported_memory_modes:
+        payload["supported_memory_modes"] = list(entry.supported_memory_modes)
+    if entry.default_memory_mode:
+        payload["default_memory_mode"] = entry.default_memory_mode
+    return payload
 
 
 def _skill_defaults(entry: dict) -> dict:
     return {
+        "kind": entry.get("kind") or "skill",
         "publisher": entry.get("publisher"),
         "summary": entry.get("summary") or "",
         "tags": [],
@@ -328,6 +335,8 @@ def _skill_defaults(entry: dict) -> dict:
                 },
             }
         },
+        "supported_memory_modes": list(entry.get("supported_memory_modes") or []),
+        "default_memory_mode": entry.get("default_memory_mode"),
     }
 
 
@@ -356,6 +365,7 @@ def _build_ai_index_from_entries(entries: list[dict]) -> dict:
         skills.append(
             {
                 "name": latest_entry.get("name"),
+                "kind": defaults["kind"],
                 "display_name": latest_entry.get("display_name") or latest_entry.get("name"),
                 "publisher": defaults["publisher"],
                 "qualified_name": key,
@@ -382,6 +392,8 @@ def _build_ai_index_from_entries(entries: list[dict]) -> dict:
                     "env": list(defaults["requires"]["env"]),
                 },
                 "interop": {"openclaw": dict(defaults["interop"]["openclaw"])},
+                "supported_memory_modes": list(defaults["supported_memory_modes"]),
+                "default_memory_mode": defaults["default_memory_mode"],
                 "versions": {
                     version: {
                         "manifest_path": version_map[version]["manifest_path"],
