@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
+from infinitas_skill.install.service import DependencyError, resolve_memory_mode_selection
 from server.auth import get_current_access_context
 from server.db import get_db
 from server.modules.access.authn import AccessContext
@@ -50,11 +51,24 @@ def _install_links(request: Request) -> ProjectionArtifactPaths:
     )
 
 
-def _install_payload(request: Request, entry) -> InstallResolutionView:
+def _install_payload(
+    request: Request,
+    entry,
+    *,
+    memory_mode: str | None = None,
+) -> InstallResolutionView:
     links = _install_links(request)
     ready_at = None
     if entry.ready_at is not None:
         ready_at = entry.ready_at.isoformat().replace("+00:00", "Z")
+    selected_memory_mode = None
+    if entry.kind == "agent_preset":
+        selection = resolve_memory_mode_selection(
+            supported_modes=entry.supported_memory_modes,
+            default_mode=entry.default_memory_mode,
+            requested_mode=memory_mode,
+        )
+        selected_memory_mode = selection["selected_memory_mode"]
     return InstallResolutionView(
         exposure_id=entry.exposure_id,
         release_id=entry.release_id,
@@ -79,6 +93,9 @@ def _install_payload(request: Request, entry) -> InstallResolutionView:
         bundle_url=links.bundle_url,
         provenance_url=links.provenance_url,
         signature_url=links.signature_url,
+        supported_memory_modes=list(entry.supported_memory_modes or []),
+        default_memory_mode=entry.default_memory_mode,
+        selected_memory_mode=selected_memory_mode,
     )
 
 
@@ -158,6 +175,7 @@ def install_public(
     request: Request,
     skill_ref: str,
     artifact: str | None = Query(default=None),
+    memory_mode: str | None = Query(default=None),
     db: Session = Depends(get_db),
 ):
     try:
@@ -171,7 +189,10 @@ def install_public(
             get_settings().artifact_path,
             service.artifact_relative_path(entry, artifact=artifact),
         )
-    return _install_payload(request, entry)
+    try:
+        return _install_payload(request, entry, memory_mode=memory_mode)
+    except DependencyError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("/install/me/{skill_ref:path}", response_model=InstallResolutionView)
@@ -179,6 +200,7 @@ def install_me(
     request: Request,
     skill_ref: str,
     artifact: str | None = Query(default=None),
+    memory_mode: str | None = Query(default=None),
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
 ):
@@ -195,7 +217,10 @@ def install_me(
             get_settings().artifact_path,
             service.artifact_relative_path(entry, artifact=artifact),
         )
-    return _install_payload(request, entry)
+    try:
+        return _install_payload(request, entry, memory_mode=memory_mode)
+    except DependencyError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("/install/grant/{skill_ref:path}", response_model=InstallResolutionView)
@@ -203,6 +228,7 @@ def install_grant(
     request: Request,
     skill_ref: str,
     artifact: str | None = Query(default=None),
+    memory_mode: str | None = Query(default=None),
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
 ):
@@ -219,4 +245,7 @@ def install_grant(
             get_settings().artifact_path,
             service.artifact_relative_path(entry, artifact=artifact),
         )
-    return _install_payload(request, entry)
+    try:
+        return _install_payload(request, entry, memory_mode=memory_mode)
+    except DependencyError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc

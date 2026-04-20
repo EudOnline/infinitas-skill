@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -63,6 +64,8 @@ def test_agent_preset_registry_and_install_planning_expose_memory_variants(
     _prepare_signing_repo(temp_repo_copy, signing_key)
     _configure_env(monkeypatch, tmp_path=tmp_path, repo=temp_repo_copy)
     from server.app import create_app
+    from server.db import get_session_factory
+    from server.modules.agent_presets.models import AgentPresetSpec
     from server.worker import run_worker_loop
 
     client = TestClient(create_app())
@@ -83,6 +86,14 @@ def test_agent_preset_registry_and_install_planning_expose_memory_variants(
     )
     assert exposure.status_code == 201, exposure.text
 
+    with get_session_factory()() as session:
+        preset_spec = session.get(AgentPresetSpec, 1)
+        assert preset_spec is not None
+        preset_spec.supported_memory_modes_json = json.dumps(["none"])
+        preset_spec.default_memory_mode = "none"
+        session.add(preset_spec)
+        session.commit()
+
     ai_index = client.get(
         "/registry/ai-index.json",
         headers={"Authorization": "Bearer fixture-maintainer-token"},
@@ -97,6 +108,30 @@ def test_agent_preset_registry_and_install_planning_expose_memory_variants(
     assert preset_entry["kind"] == "agent_preset"
     assert preset_entry["supported_memory_modes"] == ["none", "local", "shared"]
     assert preset_entry["default_memory_mode"] == "shared"
+
+    catalog = client.get(
+        "/api/v1/catalog/me",
+        headers={"Authorization": "Bearer fixture-maintainer-token"},
+    )
+    assert catalog.status_code == 200, catalog.text
+    catalog_entry = next(
+        item
+        for item in catalog.json()["items"]
+        if item.get("qualified_name") == "fixture-maintainer/shared-soul"
+    )
+    assert catalog_entry["supported_memory_modes"] == ["none", "local", "shared"]
+    assert catalog_entry["default_memory_mode"] == "shared"
+
+    install_resolution = client.get(
+        "/api/v1/install/me/fixture-maintainer/shared-soul@0.1.0",
+        headers={"Authorization": "Bearer fixture-maintainer-token"},
+        params={"memory_mode": "local"},
+    )
+    assert install_resolution.status_code == 200, install_resolution.text
+    install_payload = install_resolution.json()
+    assert install_payload["supported_memory_modes"] == ["none", "local", "shared"]
+    assert install_payload["default_memory_mode"] == "shared"
+    assert install_payload["selected_memory_mode"] == "local"
 
     install_plan = plan_from_registry_entry(preset_entry, memory_mode="local")
     assert install_plan["root"]["kind"] == "agent_preset"

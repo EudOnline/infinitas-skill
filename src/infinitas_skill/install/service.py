@@ -41,6 +41,40 @@ def _string_list(value: object) -> list[str]:
     return out
 
 
+def resolve_memory_mode_selection(
+    *,
+    supported_modes: object,
+    default_mode: object,
+    requested_mode: str | None = None,
+) -> dict[str, object]:
+    supported = _string_list(supported_modes)
+    normalized_default = (
+        str(default_mode).strip() if isinstance(default_mode, str) and default_mode.strip() else None
+    )
+    if normalized_default not in supported:
+        normalized_default = supported[0] if supported else None
+    normalized_requested = (
+        str(requested_mode).strip()
+        if isinstance(requested_mode, str) and requested_mode.strip()
+        else None
+    )
+    if normalized_requested is not None and normalized_requested not in supported:
+        raise DependencyError(
+            f"unsupported memory mode: {normalized_requested}",
+            {
+                "supported_memory_modes": supported,
+                "default_memory_mode": normalized_default,
+                "requested_memory_mode": normalized_requested,
+            },
+        )
+    selected = normalized_requested or normalized_default
+    return {
+        "supported_memory_modes": supported,
+        "default_memory_mode": normalized_default,
+        "selected_memory_mode": selected,
+    }
+
+
 def _bool_required(value: object) -> bool:
     if isinstance(value, bool):
         return value
@@ -327,22 +361,17 @@ def plan_from_skill_dir(
 
 
 def plan_from_registry_entry(entry: dict, *, memory_mode: str | None = None) -> dict:
-    kind = str(entry.get("kind") or "skill")
-    supported_memory_modes = [
-        str(item) for item in (entry.get("supported_memory_modes") or []) if isinstance(item, str)
-    ]
-    default_memory_mode = entry.get("default_memory_mode")
+    kind = str(entry.get("kind") or entry.get("object_kind") or "skill")
+    memory_selection = resolve_memory_mode_selection(
+        supported_modes=entry.get("supported_memory_modes"),
+        default_mode=entry.get("default_memory_mode"),
+        requested_mode=memory_mode,
+    )
+    supported_memory_modes = list(memory_selection["supported_memory_modes"])
+    default_memory_mode = memory_selection["default_memory_mode"]
     selected_memory_mode = None
     if kind == "agent_preset":
-        selected_memory_mode = memory_mode or default_memory_mode
-        if selected_memory_mode not in supported_memory_modes:
-            raise DependencyError(
-                f"unsupported memory_mode for {entry.get('qualified_name') or entry.get('name')}",
-                {
-                    "skill": entry.get("qualified_name") or entry.get("name"),
-                    "constraints": supported_memory_modes,
-                },
-            )
+        selected_memory_mode = memory_selection["selected_memory_mode"]
 
     root = {
         "kind": kind,
@@ -380,5 +409,6 @@ __all__ = [
     "error_to_payload",
     "normalize_meta_dependencies",
     "plan_from_skill_dir",
+    "resolve_memory_mode_selection",
     "plan_to_text",
 ]
