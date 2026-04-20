@@ -59,7 +59,12 @@ def test_agent_code_external_import_materializes_hosted_bundle(
         },
     )
     assert create_code.status_code == 201, create_code.text
-    code_id = int(create_code.json()["id"])
+    code_payload = create_code.json()
+    code_id = int(code_payload["id"])
+
+    fetch_code = client.get(f"/api/v1/agent-codes/{code_id}", headers=headers)
+    assert fetch_code.status_code == 200, fetch_code.text
+    assert fetch_code.json() == code_payload
 
     create_draft = client.post(
         f"/api/v1/agent-codes/{code_id}/drafts",
@@ -79,7 +84,10 @@ def test_agent_code_external_import_materializes_hosted_bundle(
     assert seal.status_code == 201, seal.text
     version_id = int(seal.json()["skill_version"]["id"])
 
-    release = client.post(f"/api/v1/versions/{version_id}/releases", headers=headers)
+    release = client.post(
+        f"/api/v1/agent-code-versions/{version_id}/releases",
+        headers=headers,
+    )
     assert release.status_code == 201, release.text
 
     processed = run_worker_loop(limit=1)

@@ -57,6 +57,13 @@ def test_agent_preset_create_draft_and_seal_flow() -> None:
         assert preset_payload["pinned_skill_dependencies"] == ["team/search-helper@1.2.0"]
 
         preset_id = int(preset_payload["id"])
+        fetch_preset = client.get(
+            f"/api/v1/agent-presets/{preset_id}",
+            headers=headers,
+        )
+        assert fetch_preset.status_code == 200, fetch_preset.text
+        assert fetch_preset.json() == preset_payload
+
         create_draft = client.post(
             f"/api/v1/agent-presets/{preset_id}/drafts",
             headers=headers,
@@ -91,5 +98,15 @@ def test_agent_preset_create_draft_and_seal_flow() -> None:
         assert version_payload["sealed_manifest"]["metadata"]["pinned_skill_dependencies"] == [
             "team/search-helper@1.2.0"
         ]
+
+        version_id = int(version_payload["id"])
+        create_release = client.post(
+            f"/api/v1/agent-preset-versions/{version_id}/releases",
+            headers=headers,
+        )
+        assert create_release.status_code == 201, create_release.text
+        release_payload = create_release.json()
+        assert release_payload["skill_version_id"] == version_id
+        assert release_payload["state"] == "preparing"
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
