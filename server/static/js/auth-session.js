@@ -412,6 +412,7 @@
     }
     const homeConfig = parseHomeAuthData();
     const bgPresets = homeConfig.bgPresets || { light: [], dark: [] };
+    const suppressInitialModal = homeConfig.suppressInitialModal === true;
     let currentUser = initialSessionUser();
     let isUserPanelOpen = false;
     let bgObserver = null;
@@ -816,7 +817,11 @@
       bindEvents();
       const homeAuthModalStartsVisible = !standaloneLoginPage && controller.dom.modal && !controller.dom.modal.hidden;
       if (homeAuthModalStartsVisible) {
-        openAuthModal();
+        if (suppressInitialModal && !currentUser) {
+          controller.dom.modal.hidden = true;
+        } else {
+          openAuthModal();
+        }
       }
       const protectedTarget = consumePendingAuthRedirect();
       if (!protectedTarget) {

@@ -91,6 +91,7 @@
       {'id': 'cyberpunk', 'name': ('赛博朋克' if page_language == 'zh' else 'Cyberpunk'), 'url': 'https://images.unsplash.com/photo-1555680202-c86f0e12f086?w=1920&q=80'},
       {'id': 'gradient-dark', 'name': ('深色渐变' if page_language == 'zh' else 'Night Gradient'), 'url': None},
     ],
-  }
+  },
+  'suppressInitialModal': registry_reader_tokens_enabled | default(false),
 } %}
 <div hidden id="home-auth-session-data" data-json="{{ home_auth_session_config | tojson | forceescape }}"></div>

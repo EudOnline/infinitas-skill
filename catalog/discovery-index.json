@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-04-13T03:32:57Z",
+  "generated_at": "2026-04-20T15:15:24Z",
   "default_registry": "self",
   "sources": [
     {
@@ -20,6 +20,7 @@
   "skills": [
     {
       "name": "consume-infinitas-skill",
+      "kind": "skill",
       "qualified_name": "lvxiaoer/consume-infinitas-skill",
       "publisher": "lvxiaoer",
       "summary": "Guide agents through search, recommendation, inspection, pull, install, and upgrade flows for released infinitas-skill artifacts.",
@@ -153,7 +154,7 @@
           "contract_last_verified": "2026-04-13",
           "fresh_until": "2026-04-15T03:52:58Z",
           "freshness_state": "stale",
-          "freshness_reason": "contract-newer-than-evidence"
+          "freshness_reason": "age-expired"
         },
         "codex": {
           "state": "adapted",
@@ -164,7 +165,7 @@
           "contract_last_verified": "2026-04-13",
           "fresh_until": "2026-04-15T03:52:58Z",
           "freshness_state": "stale",
-          "freshness_reason": "contract-newer-than-evidence"
+          "freshness_reason": "age-expired"
         },
         "openclaw": {
           "state": "adapted",
@@ -192,10 +193,13 @@
       "runtime_assumptions": [
         "Generated catalog indexes are present or can be rebuilt",
         "Target runtime directories such as ~/.openclaw/skills are writable when installation is requested"
-      ]
+      ],
+      "supported_memory_modes": [],
+      "default_memory_mode": null
     },
     {
       "name": "federation-registry-ops",
+      "kind": "skill",
       "qualified_name": "lvxiaoer/federation-registry-ops",
       "publisher": "lvxiaoer",
       "summary": "Help agents inspect registry sources, federation rules, mirror behavior, and audit or inventory exports inside infinitas-skill.",
@@ -328,7 +332,7 @@
           "contract_last_verified": "2026-04-13",
           "fresh_until": "2026-04-15T03:53:17Z",
           "freshness_state": "stale",
-          "freshness_reason": "contract-newer-than-evidence"
+          "freshness_reason": "age-expired"
         },
         "codex": {
           "state": "adapted",
@@ -339,7 +343,7 @@
           "contract_last_verified": "2026-04-13",
           "fresh_until": "2026-04-15T03:53:17Z",
           "freshness_state": "stale",
-          "freshness_reason": "contract-newer-than-evidence"
+          "freshness_reason": "age-expired"
         },
         "openclaw": {
           "state": "adapted",
@@ -367,10 +371,13 @@
       "runtime_assumptions": [
         "config/registry-sources.json and generated catalog exports are available",
         "The task is about registry operations inside infinitas-skill rather than a generic Git repository"
-      ]
+      ],
+      "supported_memory_modes": [],
+      "default_memory_mode": null
     },
     {
       "name": "operate-infinitas-skill",
+      "kind": "skill",
       "qualified_name": "lvxiaoer/operate-infinitas-skill",
       "publisher": "lvxiaoer",
       "summary": "Teach OpenClaw, Codex, and Claude Code how to operate inside the infinitas-skill repository.",
@@ -541,10 +548,13 @@
       "runtime_assumptions": [
         "A Git checkout of infinitas-skill is available",
         "Repository scripts can be executed from the workspace"
-      ]
+      ],
+      "supported_memory_modes": [],
+      "default_memory_mode": null
     },
     {
       "name": "release-infinitas-skill",
+      "kind": "skill",
       "qualified_name": "lvxiaoer/release-infinitas-skill",
       "publisher": "lvxiaoer",
       "summary": "Guide agents through validation, review, promotion, and immutable release of infinitas-skill registry skills.",
@@ -677,7 +687,7 @@
           "contract_last_verified": "2026-04-13",
           "fresh_until": "2026-04-15T03:52:41Z",
           "freshness_state": "stale",
-          "freshness_reason": "contract-newer-than-evidence"
+          "freshness_reason": "age-expired"
         },
         "claude": {
           "state": "adapted",
@@ -688,7 +698,7 @@
           "contract_last_verified": "2026-04-13",
           "fresh_until": "2026-04-15T03:52:42Z",
           "freshness_state": "stale",
-          "freshness_reason": "contract-newer-than-evidence"
+          "freshness_reason": "age-expired"
         },
         "openclaw": {
           "state": "adapted",
@@ -716,7 +726,9 @@
       "runtime_assumptions": [
         "A writable infinitas-skill repository checkout is available",
         "Signing configuration and allowed signers are already set up"
-      ]
+      ],
+      "supported_memory_modes": [],
+      "default_memory_mode": null
     }
   ]
 }

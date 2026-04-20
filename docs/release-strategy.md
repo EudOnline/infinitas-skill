@@ -1,3 +1,11 @@
+---
+audience: contributors, reviewers, release maintainers
+owner: repository maintainers
+source_of_truth: legacy top-level release strategy doc
+last_reviewed: 2026-04-21
+status: legacy
+---
+
 # Release, Tag, and Attestation Strategy
 
 This repository tracks skill evolution inside git, but stable release artifacts now resolve against immutable git tags instead of best-effort local branch state.

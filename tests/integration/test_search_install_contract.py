@@ -204,6 +204,102 @@ def test_public_search_snapshot_results_include_install_resolution_targets() -> 
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
+def test_public_search_snapshot_install_targets_resolve_install_payload() -> None:
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-search-snapshot-install-test-"))
+    try:
+        artifact_root = configure_env(tmpdir)
+        distribution_dir = artifact_root / "catalog" / "distributions" / "partner" / "snapshot-skill" / "1.2.3"
+        distribution_dir.mkdir(parents=True, exist_ok=True)
+        manifest_path = "catalog/distributions/partner/snapshot-skill/1.2.3/manifest.json"
+        bundle_path = "catalog/distributions/partner/snapshot-skill/1.2.3/skill.tar.gz"
+        provenance_path = "catalog/provenance/snapshot-skill-1.2.3.json"
+        signature_path = "catalog/provenance/snapshot-skill-1.2.3.json.ssig"
+        (artifact_root / manifest_path).write_text(
+            json.dumps({"name": "snapshot-skill", "version": "1.2.3"}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        (artifact_root / bundle_path).write_bytes(b"snapshot bundle")
+        (artifact_root / provenance_path).parent.mkdir(parents=True, exist_ok=True)
+        (artifact_root / provenance_path).write_text(
+            json.dumps({"attestation": {"format": "ssh"}}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        (artifact_root / signature_path).write_text("snapshot-signature", encoding="utf-8")
+        (artifact_root / "catalog" / "discovery-index.json").write_text(
+            json.dumps(
+                {
+                    "skills": [
+                        {
+                            "name": "snapshot-skill",
+                            "display_name": "Snapshot Skill",
+                            "qualified_name": "partner/snapshot-skill",
+                            "publisher": "partner",
+                            "summary": "Snapshot skill summary",
+                            "default_install_version": "1.2.3",
+                            "latest_version": "1.2.3",
+                            "runtime": {
+                                "platform": "openclaw",
+                                "readiness": {"ready": True, "status": "ready"},
+                            },
+                            "runtime_readiness": "ready",
+                            "workspace_targets": ["skills", ".agents/skills"],
+                            "match_names": [
+                                "Snapshot Skill",
+                                "snapshot-skill",
+                                "partner/snapshot-skill",
+                            ],
+                        }
+                    ]
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        (artifact_root / "catalog" / "distributions.json").write_text(
+            json.dumps(
+                {
+                    "skills": [
+                        {
+                            "name": "snapshot-skill",
+                            "publisher": "partner",
+                            "qualified_name": "partner/snapshot-skill",
+                            "version": "1.2.3",
+                            "summary": "Snapshot skill summary",
+                            "manifest_path": manifest_path,
+                            "bundle_path": bundle_path,
+                            "bundle_sha256": "snapshot-bundle-sha",
+                            "attestation_path": provenance_path,
+                            "attestation_signature_path": signature_path,
+                        }
+                    ]
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+        from fastapi.testclient import TestClient
+
+        from server.app import create_app
+
+        client = TestClient(create_app())
+
+        install_response = client.get("/api/v1/install/public/partner/snapshot-skill@1.2.3")
+        assert install_response.status_code == 200, install_response.text
+        payload = install_response.json()
+        assert payload["qualified_name"] == "partner/snapshot-skill"
+        assert payload["display_name"] == "Snapshot Skill"
+        assert payload["bundle_sha256"] == "snapshot-bundle-sha"
+
+        manifest_response = client.get(payload["manifest_download_path"])
+        assert manifest_response.status_code == 200, manifest_response.text
+        assert manifest_response.json()["name"] == "snapshot-skill"
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 def test_me_search_results_include_install_resolution_targets_for_private_entries() -> None:
     tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-search-me-test-"))
     try:

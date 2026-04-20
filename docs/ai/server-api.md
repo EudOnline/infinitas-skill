@@ -1,3 +1,11 @@
+---
+audience: contributors, integrators, operators
+owner: repository maintainers
+source_of_truth: legacy ai protocol annex
+last_reviewed: 2026-04-21
+status: legacy
+---
+
 # Hosted Server API
 
 The hosted app is now private-first only. There is no supported `submissions / reviews / jobs` control plane anymore.

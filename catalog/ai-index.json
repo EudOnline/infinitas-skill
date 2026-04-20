@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-04-13T03:32:57Z",
+  "generated_at": "2026-04-20T15:15:24Z",
   "registry": {
     "default_registry": "self"
   },
@@ -145,7 +145,7 @@
             "contract_last_verified": "2026-04-13",
             "fresh_until": "2026-04-15T03:52:58Z",
             "freshness_state": "stale",
-            "freshness_reason": "contract-newer-than-evidence"
+            "freshness_reason": "age-expired"
           },
           "codex": {
             "state": "adapted",
@@ -156,7 +156,7 @@
             "contract_last_verified": "2026-04-13",
             "fresh_until": "2026-04-15T03:52:58Z",
             "freshness_state": "stale",
-            "freshness_reason": "contract-newer-than-evidence"
+            "freshness_reason": "age-expired"
           },
           "openclaw": {
             "state": "adapted",
@@ -181,7 +181,7 @@
           "contract_last_verified": "2026-04-13",
           "fresh_until": "2026-04-15T03:52:58Z",
           "freshness_state": "stale",
-          "freshness_reason": "contract-newer-than-evidence"
+          "freshness_reason": "age-expired"
         },
         "codex": {
           "state": "adapted",
@@ -192,7 +192,7 @@
           "contract_last_verified": "2026-04-13",
           "fresh_until": "2026-04-15T03:52:58Z",
           "freshness_state": "stale",
-          "freshness_reason": "contract-newer-than-evidence"
+          "freshness_reason": "age-expired"
         },
         "openclaw": {
           "state": "adapted",
@@ -397,7 +397,7 @@
             "contract_last_verified": "2026-04-13",
             "fresh_until": "2026-04-15T03:53:17Z",
             "freshness_state": "stale",
-            "freshness_reason": "contract-newer-than-evidence"
+            "freshness_reason": "age-expired"
           },
           "codex": {
             "state": "adapted",
@@ -408,7 +408,7 @@
             "contract_last_verified": "2026-04-13",
             "fresh_until": "2026-04-15T03:53:17Z",
             "freshness_state": "stale",
-            "freshness_reason": "contract-newer-than-evidence"
+            "freshness_reason": "age-expired"
           },
           "openclaw": {
             "state": "adapted",
@@ -433,7 +433,7 @@
           "contract_last_verified": "2026-04-13",
           "fresh_until": "2026-04-15T03:53:17Z",
           "freshness_state": "stale",
-          "freshness_reason": "contract-newer-than-evidence"
+          "freshness_reason": "age-expired"
         },
         "codex": {
           "state": "adapted",
@@ -444,7 +444,7 @@
           "contract_last_verified": "2026-04-13",
           "fresh_until": "2026-04-15T03:53:17Z",
           "freshness_state": "stale",
-          "freshness_reason": "contract-newer-than-evidence"
+          "freshness_reason": "age-expired"
         },
         "openclaw": {
           "state": "adapted",
@@ -901,7 +901,7 @@
             "contract_last_verified": "2026-04-13",
             "fresh_until": "2026-04-15T03:52:41Z",
             "freshness_state": "stale",
-            "freshness_reason": "contract-newer-than-evidence"
+            "freshness_reason": "age-expired"
           },
           "claude": {
             "state": "adapted",
@@ -912,7 +912,7 @@
             "contract_last_verified": "2026-04-13",
             "fresh_until": "2026-04-15T03:52:42Z",
             "freshness_state": "stale",
-            "freshness_reason": "contract-newer-than-evidence"
+            "freshness_reason": "age-expired"
           },
           "openclaw": {
             "state": "adapted",
@@ -937,7 +937,7 @@
           "contract_last_verified": "2026-04-13",
           "fresh_until": "2026-04-15T03:52:41Z",
           "freshness_state": "stale",
-          "freshness_reason": "contract-newer-than-evidence"
+          "freshness_reason": "age-expired"
         },
         "claude": {
           "state": "adapted",
@@ -948,7 +948,7 @@
           "contract_last_verified": "2026-04-13",
           "fresh_until": "2026-04-15T03:52:42Z",
           "freshness_state": "stale",
-          "freshness_reason": "contract-newer-than-evidence"
+          "freshness_reason": "age-expired"
         },
         "openclaw": {
           "state": "adapted",

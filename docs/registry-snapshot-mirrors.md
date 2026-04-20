@@ -1,3 +1,11 @@
+---
+audience: contributors, integrators, operators
+owner: repository maintainers
+source_of_truth: legacy top-level mirror strategy doc
+last_reviewed: 2026-04-21
+status: legacy
+---
+
 # Registry Snapshot Mirrors
 
 Version 13 Phase 2 adds immutable registry snapshots for operators who need offline or recovery-friendly access to a previously synced remote registry.

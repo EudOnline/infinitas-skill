@@ -1,3 +1,11 @@
+---
+audience: contributors, integrators, operators
+owner: repository maintainers
+source_of_truth: legacy ai protocol annex
+last_reviewed: 2026-04-21
+status: legacy
+---
+
 # Hosted Registry Protocol
 
 ## Purpose

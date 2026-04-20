@@ -421,7 +421,8 @@ class SearchManager {
         el.setAttribute('aria-selected', 'false');
         el.setAttribute('tabindex', '-1');
         el.dataset.index = i;
-        if (skill.install_api_path) {
+        const prefersInstallPanel = currentSearchScope() !== 'public';
+        if (skill.install_api_path && prefersInstallPanel) {
           el.addEventListener('click', () => this.showSkillInstall(skill));
         } else {
           const inspectTarget = skill.qualified_name || skill.id || skill.name || '';

@@ -2,7 +2,7 @@
 audience: contributors, operators, reviewers
 owner: repository maintainers
 source_of_truth: docs landing page
-last_reviewed: 2026-04-07
+last_reviewed: 2026-04-21
 status: maintained
 ---
 
@@ -17,6 +17,14 @@ The docs tree is being rebuilt around audience and task instead of historical fi
 - [Operations](ops/README.md): deployment, backup, signing, release, and drift-management runbooks
 - [ADRs](adr/0001-maintainability-reset.md): durable architecture decisions and policy cut lines, including the OpenClaw runtime cutover in [0003](adr/0003-openclaw-runtime-canonical.md)
 - [Archive](archive/README.md): historical plans, superseded narratives, and closeout material
+
+## Indexed legacy annexes
+
+- [Legacy AI protocol docs](ai/README.md): older machine-facing wrapper and protocol pages still referenced by tests and automation
+- [Legacy platform contracts](platform-contracts/README.md): source snapshots for external runtime/platform assumptions
+- [Release, tag, and attestation strategy](release-strategy.md): transitional top-level release policy narrative
+- [Registry snapshot mirrors](registry-snapshot-mirrors.md): transitional top-level mirror and snapshot narrative
+- [Project closeout](project-closeout.md): historical closeout and steady-state verification context
 
 ## Migration rules
 

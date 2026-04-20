@@ -1,3 +1,11 @@
+---
+audience: contributors, integrators, automation authors
+owner: repository maintainers
+source_of_truth: legacy ai protocol annex
+last_reviewed: 2026-04-21
+status: legacy
+---
+
 # Discovery and Install Semantics
 
 Private-first discovery is audience-aware.

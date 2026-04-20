@@ -1,3 +1,11 @@
+---
+audience: contributors, integrators, automation authors
+owner: repository maintainers
+source_of_truth: legacy ai protocol annex
+last_reviewed: 2026-04-21
+status: legacy
+---
+
 # Workflow Drills
 
 Use this short drill when a caller needs a private-first recommendation and you want to verify the result before mutating a local runtime.

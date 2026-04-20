@@ -19,6 +19,10 @@ SECTION_LANDINGS = {
     'ops': DOCS_ROOT / 'ops' / 'README.md',
     'archive': DOCS_ROOT / 'archive' / 'README.md',
 }
+LEGACY_SECTION_LANDINGS = {
+    'ai': DOCS_ROOT / 'ai' / 'README.md',
+    'platform-contracts': DOCS_ROOT / 'platform-contracts' / 'README.md',
+}
 GLOBAL_INDEXES = [ROOT / 'README.md', DOCS_ROOT / 'README.md']
 REQUIRED_MAINTAINED_SURFACE_MARKERS = [
     '## Maintained surfaces',
@@ -93,6 +97,21 @@ def maintained_docs():
     return docs
 
 
+def legacy_docs():
+    docs = []
+    legacy_paths = []
+    for section in LEGACY_SECTION_LANDINGS:
+        legacy_paths.extend(sorted((DOCS_ROOT / section).glob('*.md')))
+    legacy_paths.extend(sorted(DOCS_ROOT / name for name in LEGACY_ROOT_ALLOWLIST if name != 'README.md'))
+
+    for path in legacy_paths:
+        metadata = parse_front_matter(path)
+        if metadata is None:
+            fail(f'expected explicit front matter on indexed legacy doc: {path}')
+        docs.append((path, metadata))
+    return docs
+
+
 def check_root_allowlist():
     root_docs = {path.name for path in DOCS_ROOT.glob('*.md')}
     unexpected = sorted(root_docs - LEGACY_ROOT_ALLOWLIST)
@@ -122,6 +141,12 @@ def ensure_required_metadata(path: Path, metadata: dict[str, str]):
             fail(f'missing required metadata field {field!r} in {path}')
 
 
+def ensure_legacy_metadata(path: Path, metadata: dict[str, str]):
+    ensure_required_metadata(path, metadata)
+    if metadata.get('status') != 'legacy':
+        fail(f'indexed legacy doc must declare status: legacy in {path}')
+
+
 def linked_from_any(path: Path, sources: list[Path]):
     basename = path.name
     for source in sources:
@@ -149,6 +174,29 @@ def ensure_landing_coverage(path: Path):
             if not linked_from_any(path, [landing]):
                 fail(f'maintained doc is not linked from its section landing page: {path}')
             return
+
+
+def ensure_legacy_landing_coverage(path: Path):
+    if path in GLOBAL_INDEXES:
+        return
+    if path.name == 'README.md':
+        relative = path.relative_to(DOCS_ROOT).as_posix()
+        docs_index_text = (DOCS_ROOT / 'README.md').read_text(encoding='utf-8')
+        if relative not in docs_index_text:
+            fail(f'legacy landing page is not linked from docs/README.md: {path}')
+        return
+
+    for section, landing in LEGACY_SECTION_LANDINGS.items():
+        section_root = DOCS_ROOT / section
+        if path.is_relative_to(section_root):
+            if not linked_from_any(path, [landing]):
+                fail(f'legacy doc is not linked from its legacy landing page: {path}')
+            return
+
+    if path.parent == DOCS_ROOT:
+        if not linked_from_any(path, [DOCS_ROOT / 'README.md', DOCS_ROOT / 'archive' / 'README.md']):
+            fail(f'legacy root doc is not linked from docs indexes: {path}')
+        return
 
 
 def ensure_no_worktree_links(path: Path):
@@ -191,8 +239,11 @@ def ensure_legacy_command_mentions_have_canonical_entrypoints(path: Path):
 def main():
     check_root_allowlist()
     docs = maintained_docs()
+    legacy = legacy_docs()
     if not docs:
         fail('expected at least one maintained document')
+    if not legacy:
+        fail('expected at least one indexed legacy document')
 
     ensure_readme_has_maintained_surface_inventory()
 
@@ -202,6 +253,11 @@ def main():
         ensure_landing_coverage(path)
         ensure_no_worktree_links(path)
         ensure_legacy_command_mentions_have_canonical_entrypoints(path)
+
+    for path, metadata in legacy:
+        ensure_legacy_metadata(path, metadata)
+        ensure_legacy_landing_coverage(path)
+        ensure_no_worktree_links(path)
 
     print('OK: document governance checks passed')
 

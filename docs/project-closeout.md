@@ -1,3 +1,11 @@
+---
+audience: contributors, operators, release maintainers
+owner: repository maintainers
+source_of_truth: legacy top-level project closeout record
+last_reviewed: 2026-04-21
+status: legacy
+---
+
 # Project Closeout
 
 This document records the final verification matrix and steady-state guidance for the completed `infinitas-skill` project.

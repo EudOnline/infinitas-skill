@@ -1,3 +1,11 @@
+---
+audience: contributors, reviewers, compatibility maintainers
+owner: repository maintainers
+source_of_truth: legacy platform contract annex
+last_reviewed: 2026-04-21
+status: legacy
+---
+
 # Claude Platform Contract
 
 ## Stable assumptions

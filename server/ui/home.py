@@ -276,6 +276,7 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
             "维护台现在完全围绕技能、草稿、发布、分享、访问和审核，不再经过旧的 submission 队列。",
             "The console now centers on skills, drafts, releases, sharing, access, and review without routing work through legacy submission queues.",
         ),
+        "registry_reader_tokens_enabled": bool(settings.registry_read_tokens),
     }
     context.update(build_kawaii_ui_context(request, lang, lifecycle_mode, page_eyebrow))
     return context

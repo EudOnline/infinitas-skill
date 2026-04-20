@@ -1,3 +1,11 @@
+---
+audience: contributors, integrators, operators
+owner: repository maintainers
+source_of_truth: legacy ai protocol annex
+last_reviewed: 2026-04-21
+status: legacy
+---
+
 # Publish and Release
 
 Private-first publishing is no longer a shell pipeline around review, promotion, and publish scripts.
