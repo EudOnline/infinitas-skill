@@ -142,10 +142,10 @@ When a skill is `drifted`, prefer repair over silent overwrite:
 
 Mutation commands such as:
 
-- `scripts/sync-skill.sh`
-- `scripts/upgrade-skill.sh`
-- `scripts/switch-installed-skill.sh`
-- `scripts/rollback-installed-skill.sh`
+- `uv run infinitas install sync`
+- `uv run infinitas install upgrade`
+- `uv run infinitas install switch`
+- `uv run infinitas install rollback`
 
 now follow one guard order before overwriting local files:
 
@@ -172,7 +172,7 @@ Use this matrix when you need to predict what overwrite-style mutation will do:
 | `freshness_state = never-verified` and immutable source metadata is compatibility-only | `freshness.never_verified_policy` | `warning` under the default `warn` policy | `backfill-distribution-manifest` or `reinstall` |
 | explicit `--force` | bypasses local readiness guardrails | forced overwrite | use only when intentionally bypassing the target-local safety checks |
 
-`upgrade-skill.sh --mode confirm`, `check-skill-update.sh`, `report-installed-integrity.py`, and the overwrite-style mutation commands all consume the same derived readiness fields so wrappers do not need separate per-command policy logic.
+`infinitas install upgrade --mode confirm`, `infinitas install check-update`, `report-installed-integrity.py`, and the overwrite-style mutation commands all consume the same derived readiness fields so wrappers do not need separate per-command policy logic.
 
 ## Trust Boundary
 

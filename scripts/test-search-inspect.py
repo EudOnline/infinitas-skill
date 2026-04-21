@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -38,8 +39,30 @@ def run(command, cwd, expect=0):
     return result
 
 
+def run_discovery_cli(*args, cwd, expect=0):
+    env = dict(os.environ)
+    env['PYTHONPATH'] = str((cwd / 'src').resolve())
+    try:
+        result = subprocess.run(
+            [sys.executable, '-m', 'infinitas_skill.cli.main', 'discovery', *args],
+            cwd=cwd,
+            text=True,
+            capture_output=True,
+            env=env,
+        )
+    except FileNotFoundError as exc:
+        fail(f'missing command {sys.executable!r}: {exc}')
+    if result.returncode != expect:
+        fail(
+            f'command {result.args!r} exited {result.returncode}, expected {expect}\n'
+            f'stdout:\n{result.stdout}\n'
+            f'stderr:\n{result.stderr}'
+        )
+    return result
+
+
 def scenario_search_returns_trust_and_compatibility_fields():
-    result = run(['./scripts/search-skills.sh', 'operate'], cwd=ROOT)
+    result = run_discovery_cli('search', 'operate', '--json', cwd=ROOT)
     payload = json.loads(result.stdout)
     results = payload.get('results') or []
     if not results:
@@ -84,7 +107,15 @@ def scenario_search_returns_trust_and_compatibility_fields():
 
 
 def scenario_search_filters_by_publisher_and_agent():
-    result = run(['./scripts/search-skills.sh', '--publisher', 'lvxiaoer', '--agent', 'codex'], cwd=ROOT)
+    result = run_discovery_cli(
+        'search',
+        '--publisher',
+        'lvxiaoer',
+        '--agent',
+        'codex',
+        '--json',
+        cwd=ROOT,
+    )
     payload = json.loads(result.stdout)
     results = payload.get('results') or []
     expected = {
@@ -103,7 +134,7 @@ def scenario_search_filters_by_publisher_and_agent():
 
 
 def scenario_inspect_returns_distribution_and_dependency_views():
-    result = run(['./scripts/inspect-skill.sh', QUALIFIED_NAME], cwd=ROOT)
+    result = run_discovery_cli('inspect', QUALIFIED_NAME, '--json', cwd=ROOT)
     payload = json.loads(result.stdout)
     if payload.get('qualified_name') != QUALIFIED_NAME:
         fail(f"expected inspect qualified_name {QUALIFIED_NAME!r}, got {payload.get('qualified_name')!r}")
@@ -111,9 +142,9 @@ def scenario_inspect_returns_distribution_and_dependency_views():
         if key not in payload:
             fail(f'missing inspect field {key!r}')
     compatibility = payload.get('compatibility') or {}
-    verified_summary = compatibility.get('verified_summary') or {}
-    if verified_summary.get('codex') != 'adapted':
-        fail(f"expected codex compatibility summary 'adapted', got {verified_summary.get('codex')!r}")
+    state_summary = compatibility.get('state_summary') or {}
+    if state_summary.get('codex') != 'adapted':
+        fail(f"expected codex compatibility summary 'adapted', got {state_summary.get('codex')!r}")
     freshness_summary = compatibility.get('freshness_summary') or {}
     if freshness_summary.get('codex') not in {'fresh', 'stale', 'unknown'}:
         fail(f"expected codex freshness summary fresh/stale/unknown, got {freshness_summary.get('codex')!r}")

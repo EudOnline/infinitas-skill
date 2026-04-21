@@ -64,7 +64,7 @@ PY
 
 [[ -n "$TARGET_VERSION" ]] || { echo "could not determine repair target version" >&2; exit 1; }
 
-SWITCH_OUTPUT="$("$ROOT/scripts/switch-installed-skill.sh" "$NAME" "$TARGET_DIR" --to-version "$TARGET_VERSION" --registry "$SOURCE_REGISTRY" --qualified-name "$QUALIFIED_NAME" --force)" || {
+SWITCH_OUTPUT="$(env PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}" python3 -m infinitas_skill.cli.main install switch "$NAME" "$TARGET_DIR" --to-version "$TARGET_VERSION" --registry "$SOURCE_REGISTRY" --qualified-name "$QUALIFIED_NAME" --force --json)" || {
   status=$?
   printf '%s\n' "$SWITCH_OUTPUT"
   exit $status

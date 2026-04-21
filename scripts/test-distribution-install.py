@@ -64,6 +64,15 @@ def make_env(extra=None):
     return build_regression_test_env(ROOT, extra=extra, env=os.environ.copy())
 
 
+def run_cli(repo: Path, args: list[str], *, expect=0):
+    return run(
+        [sys.executable, '-m', 'infinitas_skill.cli.main', *args],
+        cwd=repo,
+        expect=expect,
+        env=make_env({'PYTHONPATH': str(repo / 'src')}),
+    )
+
+
 def scaffold_fixture(repo: Path, version: str):
     fixture_dir = repo / 'skills' / 'active' / FIXTURE_NAME
     if fixture_dir.exists():
@@ -312,20 +321,15 @@ def scenario_install_switch_and_rollback_use_distribution_manifests():
         target_dir = tmpdir / 'installed'
         target_dir.mkdir(parents=True, exist_ok=True)
 
-        run(
-            [str(repo / 'scripts' / 'install-skill.sh'), FIXTURE_NAME, str(target_dir), '--version', V2],
-            cwd=repo,
-            env=make_env(),
-        )
+        run_cli(repo, ['install', 'exact', FIXTURE_NAME, str(target_dir), '--version', V2])
         manifest = assert_current_install(target_dir, V2)
         history = (manifest.get('history') or {}).get(FIXTURE_NAME) or []
         if len(history) != 0:
             fail(f'expected install history length 0 after initial install, got {len(history)}')
 
-        run(
-            [str(repo / 'scripts' / 'switch-installed-skill.sh'), FIXTURE_NAME, str(target_dir), '--to-version', V1, '--force'],
-            cwd=repo,
-            env=make_env(),
+        run_cli(
+            repo,
+            ['install', 'switch', FIXTURE_NAME, str(target_dir), '--to-version', V1, '--force', '--json'],
         )
         manifest = assert_current_install(target_dir, V1)
         history = (manifest.get('history') or {}).get(FIXTURE_NAME) or []
@@ -334,23 +338,18 @@ def scenario_install_switch_and_rollback_use_distribution_manifests():
         if history[-1].get('version') != V2:
             fail(f"expected latest history entry to preserve {V2}, got {history[-1].get('version')!r}")
 
-        run(
-            [str(repo / 'scripts' / 'rollback-installed-skill.sh'), FIXTURE_NAME, str(target_dir), '--steps', '1', '--force'],
-            cwd=repo,
-            env=make_env(),
+        run_cli(
+            repo,
+            ['install', 'rollback', FIXTURE_NAME, str(target_dir), '--steps', '1', '--force', '--json'],
         )
         manifest = assert_current_install(target_dir, V2)
         history = (manifest.get('history') or {}).get(FIXTURE_NAME) or []
         if len(history) != 2:
             fail(f'expected install history length 2 after rollback, got {len(history)}')
 
-        sync_result = run(
-            [str(repo / 'scripts' / 'sync-skill.sh'), FIXTURE_NAME, str(target_dir)],
-            cwd=repo,
-            env=make_env(),
-        )
+        sync_result = run_cli(repo, ['install', 'sync', FIXTURE_NAME, str(target_dir), '--json'])
         combined = sync_result.stdout + sync_result.stderr
-        if 'already up to date' not in combined and 'synced:' not in combined:
+        if '"state": "up-to-date"' not in combined and '"state": "synced"' not in combined:
             fail(f'unexpected sync output:\n{combined}')
         assert_current_install(target_dir, V2)
     finally:
@@ -389,11 +388,7 @@ def scenario_installed_distribution_can_be_repaired_after_drift():
         target_dir = tmpdir / 'installed'
         target_dir.mkdir(parents=True, exist_ok=True)
 
-        run(
-            [str(repo / 'scripts' / 'install-skill.sh'), FIXTURE_NAME, str(target_dir), '--version', V1],
-            cwd=repo,
-            env=make_env(),
-        )
+        run_cli(repo, ['install', 'exact', FIXTURE_NAME, str(target_dir), '--version', V1])
         verify_payload = json.loads(
             run(
                 [sys.executable, str(repo / 'scripts' / 'verify-installed-skill.py'), FIXTURE_NAME, str(target_dir), '--json'],
@@ -452,11 +447,7 @@ def scenario_installed_distribution_verifies_after_legacy_manifest_backfill():
         target_dir = tmpdir / 'installed-backfilled'
         target_dir.mkdir(parents=True, exist_ok=True)
 
-        run(
-            [str(repo / 'scripts' / 'install-skill.sh'), FIXTURE_NAME, str(target_dir), '--version', V1],
-            cwd=repo,
-            env=make_env(),
-        )
+        run_cli(repo, ['install', 'exact', FIXTURE_NAME, str(target_dir), '--version', V1])
 
         failed_verify = json.loads(
             run(
@@ -511,36 +502,29 @@ def scenario_switch_and_rollback_force_bypass_stale_guardrails_and_keep_drift_pr
 
         target_dir = tmpdir / 'installed-stale-guardrails'
         target_dir.mkdir(parents=True, exist_ok=True)
-        run(
-            [str(repo / 'scripts' / 'install-skill.sh'), FIXTURE_NAME, str(target_dir), '--version', V2],
-            cwd=repo,
-            env=make_env(),
-        )
+        run_cli(repo, ['install', 'exact', FIXTURE_NAME, str(target_dir), '--version', V2])
         assert_current_install(target_dir, V2)
 
         write_install_integrity_policy(repo, stale_policy='fail')
         mark_install_stale(target_dir, FIXTURE_NAME)
 
-        run(
-            [str(repo / 'scripts' / 'switch-installed-skill.sh'), FIXTURE_NAME, str(target_dir), '--to-version', V1, '--force'],
-            cwd=repo,
-            env=make_env(),
+        run_cli(
+            repo,
+            ['install', 'switch', FIXTURE_NAME, str(target_dir), '--to-version', V1, '--force', '--json'],
         )
         assert_current_install(target_dir, V1)
 
         mark_install_stale(target_dir, FIXTURE_NAME)
-        run(
-            [str(repo / 'scripts' / 'rollback-installed-skill.sh'), FIXTURE_NAME, str(target_dir), '--steps', '1', '--force'],
-            cwd=repo,
-            env=make_env(),
+        run_cli(
+            repo,
+            ['install', 'rollback', FIXTURE_NAME, str(target_dir), '--steps', '1', '--force', '--json'],
         )
         assert_current_install(target_dir, V2)
 
         mark_install_stale(target_dir, FIXTURE_NAME)
-        run(
-            [str(repo / 'scripts' / 'switch-installed-skill.sh'), FIXTURE_NAME, str(target_dir), '--to-version', V1, '--force'],
-            cwd=repo,
-            env=make_env(),
+        run_cli(
+            repo,
+            ['install', 'switch', FIXTURE_NAME, str(target_dir), '--to-version', V1, '--force', '--json'],
         )
         assert_current_install(target_dir, V1)
 
@@ -549,10 +533,9 @@ def scenario_switch_and_rollback_force_bypass_stale_guardrails_and_keep_drift_pr
         with (installed_dir / 'SKILL.md').open('a', encoding='utf-8') as handle:
             handle.write('\nLocal drift before switch/rollback precedence checks.\n')
 
-        switch_drift = run(
-            [str(repo / 'scripts' / 'switch-installed-skill.sh'), FIXTURE_NAME, str(target_dir), '--to-version', V1],
-            cwd=repo,
-            env=make_env(),
+        switch_drift = run_cli(
+            repo,
+            ['install', 'switch', FIXTURE_NAME, str(target_dir), '--to-version', V1, '--json'],
             expect=1,
         )
         switch_drift_output = switch_drift.stdout + switch_drift.stderr
@@ -561,10 +544,9 @@ def scenario_switch_and_rollback_force_bypass_stale_guardrails_and_keep_drift_pr
         if 'report-installed-integrity.py' in switch_drift_output:
             fail(f'expected switch drift precedence to avoid stale refresh guidance\n{switch_drift_output}')
 
-        rollback_drift = run(
-            [str(repo / 'scripts' / 'rollback-installed-skill.sh'), FIXTURE_NAME, str(target_dir), '--steps', '1'],
-            cwd=repo,
-            env=make_env(),
+        rollback_drift = run_cli(
+            repo,
+            ['install', 'rollback', FIXTURE_NAME, str(target_dir), '--steps', '1', '--json'],
             expect=1,
         )
         rollback_drift_output = rollback_drift.stdout + rollback_drift.stderr
@@ -586,20 +568,14 @@ def scenario_switch_and_rollback_never_verified_guardrails_and_force_bypass():
 
         target_dir = tmpdir / 'installed-never-verified-guardrails'
         target_dir.mkdir(parents=True, exist_ok=True)
-        run(
-            [str(repo / 'scripts' / 'install-skill.sh'), FIXTURE_NAME, str(target_dir), '--version', V2],
-            cwd=repo,
-            env=make_env(),
-        )
+        run_cli(repo, ['install', 'exact', FIXTURE_NAME, str(target_dir), '--version', V2])
         assert_current_install(target_dir, V2)
 
         write_install_integrity_policy(repo, stale_policy='warn', never_verified_policy='warn')
         mark_install_never_verified(target_dir, FIXTURE_NAME)
 
-        switch_warn = run(
-            [str(repo / 'scripts' / 'switch-installed-skill.sh'), FIXTURE_NAME, str(target_dir), '--to-version', V1],
-            cwd=repo,
-            env=make_env(),
+        switch_warn = run_cli(
+            repo, ['install', 'switch', FIXTURE_NAME, str(target_dir), '--to-version', V1, '--json']
         )
         switch_warn_output = switch_warn.stdout + switch_warn.stderr
         if 'report-installed-integrity.py' not in switch_warn_output or '--refresh' not in switch_warn_output:
@@ -607,10 +583,8 @@ def scenario_switch_and_rollback_never_verified_guardrails_and_force_bypass():
         assert_current_install(target_dir, V1)
 
         mark_install_never_verified(target_dir, FIXTURE_NAME)
-        rollback_warn = run(
-            [str(repo / 'scripts' / 'rollback-installed-skill.sh'), FIXTURE_NAME, str(target_dir), '--steps', '1'],
-            cwd=repo,
-            env=make_env(),
+        rollback_warn = run_cli(
+            repo, ['install', 'rollback', FIXTURE_NAME, str(target_dir), '--steps', '1', '--json']
         )
         rollback_warn_output = rollback_warn.stdout + rollback_warn.stderr
         if 'report-installed-integrity.py' not in rollback_warn_output or '--refresh' not in rollback_warn_output:
@@ -619,10 +593,9 @@ def scenario_switch_and_rollback_never_verified_guardrails_and_force_bypass():
 
         write_install_integrity_policy(repo, stale_policy='warn', never_verified_policy='fail')
         mark_install_never_verified(target_dir, FIXTURE_NAME)
-        switch_fail = run(
-            [str(repo / 'scripts' / 'switch-installed-skill.sh'), FIXTURE_NAME, str(target_dir), '--to-version', V1],
-            cwd=repo,
-            env=make_env(),
+        switch_fail = run_cli(
+            repo,
+            ['install', 'switch', FIXTURE_NAME, str(target_dir), '--to-version', V1, '--json'],
             expect=1,
         )
         switch_fail_output = switch_fail.stdout + switch_fail.stderr
@@ -631,10 +604,9 @@ def scenario_switch_and_rollback_never_verified_guardrails_and_force_bypass():
         assert_current_install(target_dir, V2)
 
         mark_install_never_verified(target_dir, FIXTURE_NAME)
-        rollback_fail = run(
-            [str(repo / 'scripts' / 'rollback-installed-skill.sh'), FIXTURE_NAME, str(target_dir), '--steps', '1'],
-            cwd=repo,
-            env=make_env(),
+        rollback_fail = run_cli(
+            repo,
+            ['install', 'rollback', FIXTURE_NAME, str(target_dir), '--steps', '1', '--json'],
             expect=1,
         )
         rollback_fail_output = rollback_fail.stdout + rollback_fail.stderr
@@ -643,18 +615,16 @@ def scenario_switch_and_rollback_never_verified_guardrails_and_force_bypass():
         assert_current_install(target_dir, V2)
 
         mark_install_never_verified(target_dir, FIXTURE_NAME)
-        run(
-            [str(repo / 'scripts' / 'switch-installed-skill.sh'), FIXTURE_NAME, str(target_dir), '--to-version', V1, '--force'],
-            cwd=repo,
-            env=make_env(),
+        run_cli(
+            repo,
+            ['install', 'switch', FIXTURE_NAME, str(target_dir), '--to-version', V1, '--force', '--json'],
         )
         assert_current_install(target_dir, V1)
 
         mark_install_never_verified(target_dir, FIXTURE_NAME)
-        run(
-            [str(repo / 'scripts' / 'rollback-installed-skill.sh'), FIXTURE_NAME, str(target_dir), '--steps', '1', '--force'],
-            cwd=repo,
-            env=make_env(),
+        run_cli(
+            repo,
+            ['install', 'rollback', FIXTURE_NAME, str(target_dir), '--steps', '1', '--force', '--json'],
         )
         assert_current_install(target_dir, V2)
 
@@ -663,10 +633,9 @@ def scenario_switch_and_rollback_never_verified_guardrails_and_force_bypass():
         with (installed_dir / 'SKILL.md').open('a', encoding='utf-8') as handle:
             handle.write('\nLocal drift before never-verified switch/rollback precedence checks.\n')
 
-        switch_drift = run(
-            [str(repo / 'scripts' / 'switch-installed-skill.sh'), FIXTURE_NAME, str(target_dir), '--to-version', V1],
-            cwd=repo,
-            env=make_env(),
+        switch_drift = run_cli(
+            repo,
+            ['install', 'switch', FIXTURE_NAME, str(target_dir), '--to-version', V1, '--json'],
             expect=1,
         )
         switch_drift_output = switch_drift.stdout + switch_drift.stderr
@@ -675,10 +644,9 @@ def scenario_switch_and_rollback_never_verified_guardrails_and_force_bypass():
         if 'report-installed-integrity.py' in switch_drift_output:
             fail(f'expected never-verified switch drift precedence to avoid refresh guidance\n{switch_drift_output}')
 
-        rollback_drift = run(
-            [str(repo / 'scripts' / 'rollback-installed-skill.sh'), FIXTURE_NAME, str(target_dir), '--steps', '1'],
-            cwd=repo,
-            env=make_env(),
+        rollback_drift = run_cli(
+            repo,
+            ['install', 'rollback', FIXTURE_NAME, str(target_dir), '--steps', '1', '--json'],
             expect=1,
         )
         rollback_drift_output = rollback_drift.stdout + rollback_drift.stderr

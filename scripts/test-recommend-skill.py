@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -34,6 +35,28 @@ def run(command, cwd, expect=0):
     if result.returncode != expect:
         fail(
             f'command {command!r} exited {result.returncode}, expected {expect}\n'
+            f'stdout:\n{result.stdout}\n'
+            f'stderr:\n{result.stderr}'
+        )
+    return result
+
+
+def run_discovery_cli(*args, cwd, expect=0):
+    env = dict(os.environ)
+    env['PYTHONPATH'] = str((cwd / 'src').resolve())
+    try:
+        result = subprocess.run(
+            [sys.executable, '-m', 'infinitas_skill.cli.main', 'discovery', *args],
+            cwd=cwd,
+            text=True,
+            capture_output=True,
+            env=env,
+        )
+    except FileNotFoundError as exc:
+        fail(f'missing command {sys.executable!r}: {exc}')
+    if result.returncode != expect:
+        fail(
+            f'command {result.args!r} exited {result.returncode}, expected {expect}\n'
             f'stdout:\n{result.stdout}\n'
             f'stderr:\n{result.stderr}'
         )
@@ -83,7 +106,14 @@ def assert_comparative_signals(payload, *, label):
 
 def scenario_recommend_returns_ranked_fields_for_real_catalog():
     payload = json.loads(
-        run(['./scripts/recommend-skill.sh', 'operate in this repo', '--target-agent', 'codex'], cwd=ROOT).stdout
+        run_discovery_cli(
+            'recommend',
+            'operate in this repo',
+            '--target-agent',
+            'codex',
+            '--json',
+            cwd=ROOT,
+        ).stdout
     )
     results = payload.get('results') or []
     if not results:
@@ -167,7 +197,16 @@ def scenario_recommend_prefers_specialized_real_skills():
         ('debug federated registry mirror audit export', 'codex', FEDERATION_QUALIFIED_NAME),
     ]
     for task, agent, expected in scenarios:
-        payload = json.loads(run(['./scripts/recommend-skill.sh', task, '--target-agent', agent], cwd=ROOT).stdout)
+        payload = json.loads(
+            run_discovery_cli(
+                'recommend',
+                task,
+                '--target-agent',
+                agent,
+                '--json',
+                cwd=ROOT,
+            ).stdout
+        )
         results = payload.get('results') or []
         if not results:
             fail(f'expected recommendation results for {task!r}')
@@ -309,7 +348,14 @@ def scenario_recommend_prefers_private_high_quality_match():
     tmpdir, repo = prepare_repo()
     try:
         payload = json.loads(
-            run(['./scripts/recommend-skill.sh', 'Need repo operations', '--target-agent', 'codex'], cwd=repo).stdout
+            run_discovery_cli(
+                'recommend',
+                'Need repo operations',
+                '--target-agent',
+                'codex',
+                '--json',
+                cwd=repo,
+            ).stdout
         )
         results = payload.get('results') or []
         if len(results) < 2:
@@ -433,7 +479,16 @@ def scenario_recommend_prefers_fresh_verified_support():
             },
         ]
         write_json(repo / 'catalog' / 'discovery-index.json', payload_data)
-        payload = json.loads(run(['./scripts/recommend-skill.sh', 'Need repo operations', '--target-agent', 'codex'], cwd=repo).stdout)
+        payload = json.loads(
+            run_discovery_cli(
+                'recommend',
+                'Need repo operations',
+                '--target-agent',
+                'codex',
+                '--json',
+                cwd=repo,
+            ).stdout
+        )
         results = payload.get('results') or []
         if len(results) < 2:
             fail(f'expected at least two results for freshness comparison, got {results!r}')

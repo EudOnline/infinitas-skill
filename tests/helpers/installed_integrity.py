@@ -43,6 +43,15 @@ def run(command, cwd, expect=0, env=None):
     return result
 
 
+def run_cli(repo: Path, args: list[str], *, expect=0):
+    return run(
+        [sys.executable, "-m", "infinitas_skill.cli.main", *args],
+        cwd=repo,
+        expect=expect,
+        env=make_env(repo),
+    )
+
+
 def write_json(path: Path, payload):
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -211,16 +220,9 @@ def release_fixture(repo: Path):
 
 
 def install_fixture(repo: Path, target_dir: Path):
-    run(
-        [
-            str(repo / "scripts" / "install-skill.sh"),
-            FIXTURE_NAME,
-            str(target_dir),
-            "--version",
-            VERSION,
-        ],
-        cwd=repo,
-        env=make_env(repo),
+    run_cli(
+        repo,
+        ["install", "exact", FIXTURE_NAME, str(target_dir), "--version", VERSION],
     )
 
 
@@ -450,10 +452,9 @@ def assert_installed_integrity_clean_drift_and_repair():
                 f"{drift_payload.get('unexpected_files')!r}"
             )
 
-        sync_result = run(
-            [str(repo / "scripts" / "sync-skill.sh"), FIXTURE_NAME, str(target_dir)],
-            cwd=repo,
-            env=make_env(repo),
+        sync_result = run_cli(
+            repo,
+            ["install", "sync", FIXTURE_NAME, str(target_dir)],
             expect=1,
         )
         sync_output = sync_result.stdout + sync_result.stderr
@@ -538,11 +539,7 @@ def assert_installed_integrity_stale_mutation_guardrails():
         write_install_integrity_policy(repo, stale_policy="warn")
         mark_install_stale(target_warn, FIXTURE_NAME)
 
-        sync_warn = run(
-            [str(repo / "scripts" / "sync-skill.sh"), FIXTURE_NAME, str(target_warn)],
-            cwd=repo,
-            env=make_env(repo),
-        )
+        sync_warn = run_cli(repo, ["install", "sync", FIXTURE_NAME, str(target_warn)])
         sync_warn_output = sync_warn.stdout + sync_warn.stderr
         if (
             "report-installed-integrity.py" not in sync_warn_output
@@ -552,10 +549,9 @@ def assert_installed_integrity_stale_mutation_guardrails():
                 f"expected stale warn sync output to recommend refresh command\n{sync_warn_output}"
             )
 
-        upgrade_warn = run(
-            [str(repo / "scripts" / "upgrade-skill.sh"), FIXTURE_NAME, str(target_warn)],
-            cwd=repo,
-            env=make_env(repo),
+        upgrade_warn = run_cli(
+            repo,
+            ["install", "upgrade", FIXTURE_NAME, str(target_warn), "--json"],
         )
         upgrade_warn_output = upgrade_warn.stdout + upgrade_warn.stderr
         if (
@@ -579,10 +575,8 @@ def assert_installed_integrity_stale_mutation_guardrails():
         write_install_integrity_policy(repo, stale_policy="warn", never_verified_policy="warn")
         mark_install_never_verified(target_never_warn, FIXTURE_NAME)
 
-        sync_never_warn = run(
-            [str(repo / "scripts" / "sync-skill.sh"), FIXTURE_NAME, str(target_never_warn)],
-            cwd=repo,
-            env=make_env(repo),
+        sync_never_warn = run_cli(
+            repo, ["install", "sync", FIXTURE_NAME, str(target_never_warn)]
         )
         sync_never_warn_output = sync_never_warn.stdout + sync_never_warn.stderr
         if (
@@ -594,10 +588,9 @@ def assert_installed_integrity_stale_mutation_guardrails():
                 f"{sync_never_warn_output}"
             )
 
-        upgrade_never_warn = run(
-            [str(repo / "scripts" / "upgrade-skill.sh"), FIXTURE_NAME, str(target_never_warn)],
-            cwd=repo,
-            env=make_env(repo),
+        upgrade_never_warn = run_cli(
+            repo,
+            ["install", "upgrade", FIXTURE_NAME, str(target_never_warn), "--json"],
         )
         upgrade_never_warn_output = upgrade_never_warn.stdout + upgrade_never_warn.stderr
         if (
@@ -621,11 +614,8 @@ def assert_installed_integrity_stale_mutation_guardrails():
         write_install_integrity_policy(repo, stale_policy="fail")
         mark_install_stale(target_fail, FIXTURE_NAME)
 
-        sync_fail = run(
-            [str(repo / "scripts" / "sync-skill.sh"), FIXTURE_NAME, str(target_fail)],
-            cwd=repo,
-            env=make_env(repo),
-            expect=1,
+        sync_fail = run_cli(
+            repo, ["install", "sync", FIXTURE_NAME, str(target_fail)], expect=1
         )
         sync_fail_output = sync_fail.stdout + sync_fail.stderr
         if (
@@ -636,10 +626,9 @@ def assert_installed_integrity_stale_mutation_guardrails():
                 f"expected stale fail sync output to recommend refresh command\n{sync_fail_output}"
             )
 
-        upgrade_fail = run(
-            [str(repo / "scripts" / "upgrade-skill.sh"), FIXTURE_NAME, str(target_fail)],
-            cwd=repo,
-            env=make_env(repo),
+        upgrade_fail = run_cli(
+            repo,
+            ["install", "upgrade", FIXTURE_NAME, str(target_fail), "--json"],
             expect=1,
         )
         upgrade_fail_payload = json.loads(upgrade_fail.stdout)
@@ -673,11 +662,7 @@ def assert_installed_integrity_stale_mutation_guardrails():
         if refreshed_item.get("freshness_state") == "stale":
             fail(f"expected refresh run to clear stale state, got {refreshed_item!r}")
 
-        run(
-            [str(repo / "scripts" / "sync-skill.sh"), FIXTURE_NAME, str(target_fail)],
-            cwd=repo,
-            env=make_env(repo),
-        )
+        run_cli(repo, ["install", "sync", FIXTURE_NAME, str(target_fail)])
 
         target_never_fail = tmpdir / "installed-never-fail"
         target_never_fail.mkdir(parents=True, exist_ok=True)
@@ -685,11 +670,8 @@ def assert_installed_integrity_stale_mutation_guardrails():
         write_install_integrity_policy(repo, stale_policy="warn", never_verified_policy="fail")
         mark_install_never_verified(target_never_fail, FIXTURE_NAME)
 
-        sync_never_fail = run(
-            [str(repo / "scripts" / "sync-skill.sh"), FIXTURE_NAME, str(target_never_fail)],
-            cwd=repo,
-            env=make_env(repo),
-            expect=1,
+        sync_never_fail = run_cli(
+            repo, ["install", "sync", FIXTURE_NAME, str(target_never_fail)], expect=1
         )
         sync_never_fail_output = sync_never_fail.stdout + sync_never_fail.stderr
         if (
@@ -701,10 +683,9 @@ def assert_installed_integrity_stale_mutation_guardrails():
                 f"{sync_never_fail_output}"
             )
 
-        upgrade_never_fail = run(
-            [str(repo / "scripts" / "upgrade-skill.sh"), FIXTURE_NAME, str(target_never_fail)],
-            cwd=repo,
-            env=make_env(repo),
+        upgrade_never_fail = run_cli(
+            repo,
+            ["install", "upgrade", FIXTURE_NAME, str(target_never_fail), "--json"],
             expect=1,
         )
         upgrade_never_fail_payload = json.loads(upgrade_never_fail.stdout)
@@ -746,48 +727,27 @@ def assert_installed_integrity_stale_mutation_guardrails():
                 f"expected refresh run to clear never-verified state, got {refreshed_never_item!r}"
             )
 
-        run(
-            [str(repo / "scripts" / "sync-skill.sh"), FIXTURE_NAME, str(target_never_fail)],
-            cwd=repo,
-            env=make_env(repo),
+        run_cli(repo, ["install", "sync", FIXTURE_NAME, str(target_never_fail)])
+
+        mark_install_never_verified(target_never_fail, FIXTURE_NAME)
+        run_cli(
+            repo,
+            ["install", "sync", FIXTURE_NAME, str(target_never_fail), "--force"],
         )
 
         mark_install_never_verified(target_never_fail, FIXTURE_NAME)
-        run(
-            [
-                str(repo / "scripts" / "sync-skill.sh"),
-                FIXTURE_NAME,
-                str(target_never_fail),
-                "--force",
-            ],
-            cwd=repo,
-            env=make_env(repo),
-        )
-
-        mark_install_never_verified(target_never_fail, FIXTURE_NAME)
-        run(
-            [
-                str(repo / "scripts" / "upgrade-skill.sh"),
-                FIXTURE_NAME,
-                str(target_never_fail),
-                "--force",
-            ],
-            cwd=repo,
-            env=make_env(repo),
+        run_cli(
+            repo,
+            ["install", "upgrade", FIXTURE_NAME, str(target_never_fail), "--force", "--json"],
         )
 
         mark_install_stale(target_fail, FIXTURE_NAME)
-        run(
-            [str(repo / "scripts" / "sync-skill.sh"), FIXTURE_NAME, str(target_fail), "--force"],
-            cwd=repo,
-            env=make_env(repo),
-        )
+        run_cli(repo, ["install", "sync", FIXTURE_NAME, str(target_fail), "--force"])
 
         mark_install_stale(target_fail, FIXTURE_NAME)
-        run(
-            [str(repo / "scripts" / "upgrade-skill.sh"), FIXTURE_NAME, str(target_fail), "--force"],
-            cwd=repo,
-            env=make_env(repo),
+        run_cli(
+            repo,
+            ["install", "upgrade", FIXTURE_NAME, str(target_fail), "--force", "--json"],
         )
 
         mark_install_stale(target_fail, FIXTURE_NAME)
@@ -795,11 +755,8 @@ def assert_installed_integrity_stale_mutation_guardrails():
         with (installed_dir / "SKILL.md").open("a", encoding="utf-8") as handle:
             handle.write("\nLocal drift before stale-guard precedence check.\n")
 
-        sync_drift = run(
-            [str(repo / "scripts" / "sync-skill.sh"), FIXTURE_NAME, str(target_fail)],
-            cwd=repo,
-            env=make_env(repo),
-            expect=1,
+        sync_drift = run_cli(
+            repo, ["install", "sync", FIXTURE_NAME, str(target_fail)], expect=1
         )
         sync_drift_output = sync_drift.stdout + sync_drift.stderr
         if (
@@ -813,10 +770,9 @@ def assert_installed_integrity_stale_mutation_guardrails():
                 f"{sync_drift_output}"
             )
 
-        upgrade_drift = run(
-            [str(repo / "scripts" / "upgrade-skill.sh"), FIXTURE_NAME, str(target_fail)],
-            cwd=repo,
-            env=make_env(repo),
+        upgrade_drift = run_cli(
+            repo,
+            ["install", "upgrade", FIXTURE_NAME, str(target_fail), "--json"],
             expect=1,
         )
         upgrade_drift_output = upgrade_drift.stdout + upgrade_drift.stderr
@@ -836,11 +792,8 @@ def assert_installed_integrity_stale_mutation_guardrails():
         with (installed_dir / "SKILL.md").open("a", encoding="utf-8") as handle:
             handle.write("\nLocal drift before never-verified precedence check.\n")
 
-        sync_never_drift = run(
-            [str(repo / "scripts" / "sync-skill.sh"), FIXTURE_NAME, str(target_never_fail)],
-            cwd=repo,
-            env=make_env(repo),
-            expect=1,
+        sync_never_drift = run_cli(
+            repo, ["install", "sync", FIXTURE_NAME, str(target_never_fail)], expect=1
         )
         sync_never_drift_output = sync_never_drift.stdout + sync_never_drift.stderr
         if (
@@ -857,10 +810,9 @@ def assert_installed_integrity_stale_mutation_guardrails():
                 f"{sync_never_drift_output}"
             )
 
-        upgrade_never_drift = run(
-            [str(repo / "scripts" / "upgrade-skill.sh"), FIXTURE_NAME, str(target_never_fail)],
-            cwd=repo,
-            env=make_env(repo),
+        upgrade_never_drift = run_cli(
+            repo,
+            ["install", "upgrade", FIXTURE_NAME, str(target_never_fail), "--json"],
             expect=1,
         )
         upgrade_never_drift_output = upgrade_never_drift.stdout + upgrade_never_drift.stderr
@@ -920,7 +872,9 @@ def assert_installed_integrity_docs_exist():
         if required not in compatibility_docs:
             fail(f"expected docs/reference/compatibility-contract.md to mention {required!r}")
 
-    discovery_docs = (ROOT / "docs" / "ai" / "discovery.md").read_text(encoding="utf-8")
+    discovery_docs = (
+        ROOT / "docs" / "reference" / "discovery-install-workflows.md"
+    ).read_text(encoding="utf-8")
     for required in [
         "report-installed-integrity.py",
         "catalog/audit-export.json",
@@ -928,17 +882,7 @@ def assert_installed_integrity_docs_exist():
         ".infinitas-skill-installed-integrity.json",
     ]:
         if required not in discovery_docs:
-            fail(f"expected docs/ai/discovery.md to mention {required!r}")
-
-    pull_docs = (ROOT / "docs" / "ai" / "pull.md").read_text(encoding="utf-8")
-    for required in [
-        "report-installed-integrity.py",
-        "catalog/audit-export.json",
-        "target-local",
-        ".infinitas-skill-installed-integrity.json",
-    ]:
-        if required not in pull_docs:
-            fail(f"expected docs/ai/pull.md to mention {required!r}")
+            fail(f"expected docs/reference/discovery-install-workflows.md to mention {required!r}")
 
     federation_docs = (ROOT / "docs" / "ops" / "federation-operations.md").read_text(
         encoding="utf-8"

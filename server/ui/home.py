@@ -93,7 +93,7 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
                 "summary": summary,
                 "icon": _get_skill_icon(skill),
                 "rating": _calculate_skill_rating(skill),
-                "inspect_command": f"scripts/inspect-skill.sh {qualified_name}"
+                "inspect_command": f"uv run infinitas discovery inspect {qualified_name} --json"
                 if qualified_name
                 else "",
             }
@@ -150,13 +150,18 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
             "label": pick_lang(lang, "执行命令", "Run command"),
             "title": pick_lang(lang, "搜索候选", "Search options"),
             "short_label": pick_lang(lang, "搜索", "Search"),
-            "command": 'scripts/recommend-skill.sh "Need a codex skill for repository operations"',
+            "command": (
+                'uv run infinitas discovery recommend '
+                '"Need a codex skill for repository operations" --target-agent codex --json'
+            ),
         },
         {
             "label": pick_lang(lang, "执行命令", "Run command"),
             "title": pick_lang(lang, "检查细节", "Inspect details"),
             "short_label": pick_lang(lang, "检查", "Inspect"),
-            "command": f"scripts/inspect-skill.sh {inspect_example_target}",
+            "command": (
+                f"uv run infinitas discovery inspect {inspect_example_target} --json"
+            ),
         },
     ]
     human_prompts = [

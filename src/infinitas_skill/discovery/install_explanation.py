@@ -65,7 +65,7 @@ def build_resolve_explanation(payload):
     next_actions = _dedupe_strings(
         [
             payload.get("recommended_next_step"),
-            "run inspect-skill for release details" if resolved else None,
+            "run infinitas discovery inspect for release details" if resolved else None,
         ]
     )
 

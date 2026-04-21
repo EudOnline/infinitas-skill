@@ -25,34 +25,20 @@ def assert_contains(path: Path, needle: str):
 
 def main():
     readme = ROOT / 'README.md'
-    discovery = ROOT / 'docs' / 'ai' / 'discovery.md'
-    search_doc = ROOT / 'docs' / 'ai' / 'search-and-inspect.md'
-    recommend_doc = ROOT / 'docs' / 'ai' / 'recommend.md'
-    workflow_doc = ROOT / 'docs' / 'ai' / 'workflow-drills.md'
+    docs_readme = ROOT / 'docs' / 'README.md'
+    consume_skill = ROOT / 'skills' / 'active' / 'consume-infinitas-skill' / 'SKILL.md'
+    consume_smoke = ROOT / 'skills' / 'active' / 'consume-infinitas-skill' / 'tests' / 'smoke.md'
+    cli_reference = ROOT / 'docs' / 'reference' / 'cli-reference.md'
 
-    assert_contains(readme, 'scripts/recommend-skill.sh')
-    assert_contains(readme, 'docs/ai/workflow-drills.md')
-    assert_contains(discovery, 'scripts/recommend-skill.sh')
-    assert_contains(search_doc, 'scripts/recommend-skill.sh')
-    assert_contains(search_doc, 'search-skills.sh')
-    assert_contains(search_doc, 'inspect-skill.sh')
-    assert_contains(search_doc, 'recommendation_reason')
-    assert_contains(search_doc, 'ranking_factors')
-    assert_contains(search_doc, 'confidence')
-    assert_contains(search_doc, 'comparative_signals')
-    assert_contains(recommend_doc, 'scripts/recommend-skill.sh')
-    assert_contains(recommend_doc, 'trust state')
-    assert_contains(recommend_doc, 'compatibility')
-    assert_contains(recommend_doc, 'maturity')
-    assert_contains(recommend_doc, 'verification freshness')
-    assert_contains(recommend_doc, 'confidence')
-    assert_contains(recommend_doc, 'comparative_signals')
-    assert_contains(recommend_doc, 'comparison_summary')
-    assert_contains(recommend_doc, '_meta.json')
-    assert_contains(recommend_doc, 'canonical source')
-    assert_contains(workflow_doc, 'scripts/recommend-skill.sh')
-    assert_contains(workflow_doc, 'scripts/inspect-skill.sh')
-    assert_contains(workflow_doc, '--mode confirm')
+    assert_contains(readme, 'docs/reference/cli-reference.md')
+    assert_contains(readme, 'uv run infinitas discovery')
+    assert_contains(docs_readme, 'platform-contracts/README.md')
+    assert_contains(consume_skill, 'uv run infinitas discovery recommend')
+    assert_contains(consume_skill, 'uv run infinitas discovery inspect')
+    assert_contains(consume_smoke, 'uv run infinitas discovery recommend')
+    assert_contains(consume_smoke, '--mode confirm')
+    assert_contains(cli_reference, 'infinitas discovery recommend')
+    assert_contains(cli_reference, 'infinitas discovery inspect')
 
     print('OK: recommend docs checks passed')
 

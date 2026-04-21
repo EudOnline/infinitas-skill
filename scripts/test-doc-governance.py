@@ -20,7 +20,6 @@ SECTION_LANDINGS = {
     'archive': DOCS_ROOT / 'archive' / 'README.md',
 }
 LEGACY_SECTION_LANDINGS = {
-    'ai': DOCS_ROOT / 'ai' / 'README.md',
     'platform-contracts': DOCS_ROOT / 'platform-contracts' / 'README.md',
 }
 GLOBAL_INDEXES = [ROOT / 'README.md', DOCS_ROOT / 'README.md']
@@ -46,13 +45,29 @@ RETIRED_LEGACY_SHIMS = {
     'scripts/render-hosted-systemd.py': 'infinitas server render-systemd',
     'scripts/prune-hosted-backups.py': 'infinitas server prune-backups',
     'scripts/run-hosted-worker.py': 'infinitas server worker',
+    'scripts/resolve-skill.sh': 'infinitas install resolve-skill',
+    'scripts/install-by-name.sh': 'infinitas install by-name',
+    'scripts/check-skill-update.sh': 'infinitas install check-update',
+    'scripts/upgrade-skill.sh': 'infinitas install upgrade',
 }
 RETIRED_CLI_WRAPPER_TESTS = {
     'scripts/test-infinitas-cli-policy.py': 'tests/integration/test_cli_policy.py',
-    'scripts/test-infinitas-cli-install-planning.py': 'tests/integration/test_cli_install_planning.py',
+    'scripts/test-infinitas-cli-install-planning.py': (
+        'tests/integration/test_cli_install_planning.py'
+    ),
     'scripts/test-infinitas-cli-release-state.py': 'tests/integration/test_cli_release_state.py',
     'scripts/test-infinitas-cli-server-inspect.py': 'tests/integration/test_cli_server_ops.py',
 }
+REMOVED_OPERATOR_SHIMS = [
+    Path('scripts/request-review.sh'),
+    Path('scripts/approve-skill.sh'),
+    Path('scripts/search-skills.sh'),
+    Path('scripts/recommend-skill.sh'),
+    Path('scripts/inspect-skill.sh'),
+]
+REMOVED_LEGACY_DOC_ANNEXES = [
+    Path('docs/ai'),
+]
 
 
 def fail(message):
@@ -102,7 +117,9 @@ def legacy_docs():
     legacy_paths = []
     for section in LEGACY_SECTION_LANDINGS:
         legacy_paths.extend(sorted((DOCS_ROOT / section).glob('*.md')))
-    legacy_paths.extend(sorted(DOCS_ROOT / name for name in LEGACY_ROOT_ALLOWLIST if name != 'README.md'))
+    legacy_paths.extend(
+        sorted(DOCS_ROOT / name for name in LEGACY_ROOT_ALLOWLIST if name != 'README.md')
+    )
 
     for path in legacy_paths:
         metadata = parse_front_matter(path)
@@ -194,7 +211,10 @@ def ensure_legacy_landing_coverage(path: Path):
             return
 
     if path.parent == DOCS_ROOT:
-        if not linked_from_any(path, [DOCS_ROOT / 'README.md', DOCS_ROOT / 'archive' / 'README.md']):
+        if not linked_from_any(
+            path,
+            [DOCS_ROOT / 'README.md', DOCS_ROOT / 'archive' / 'README.md'],
+        ):
             fail(f'legacy root doc is not linked from docs indexes: {path}')
         return
 
@@ -210,6 +230,26 @@ def ensure_readme_has_maintained_surface_inventory():
     for marker in REQUIRED_MAINTAINED_SURFACE_MARKERS:
         if marker not in text:
             fail(f'missing maintained surface inventory marker {marker!r} in README.md')
+
+
+def ensure_docs_index_does_not_expose_legacy_ai_landing():
+    text = (DOCS_ROOT / 'README.md').read_text(encoding='utf-8')
+    if 'ai/README.md' in text:
+        fail('docs/README.md must not expose the legacy AI landing page')
+
+
+def ensure_removed_operator_shims_stay_deleted():
+    for rel_path in REMOVED_OPERATOR_SHIMS:
+        path = ROOT / rel_path
+        if path.exists():
+            fail(f'removed operator shim must stay deleted: {path}')
+
+
+def ensure_removed_legacy_doc_annexes_stay_deleted():
+    for rel_path in REMOVED_LEGACY_DOC_ANNEXES:
+        path = ROOT / rel_path
+        if path.exists():
+            fail(f'removed legacy doc annex must stay deleted: {path}')
 
 
 def ensure_legacy_command_mentions_have_canonical_entrypoints(path: Path):
@@ -246,6 +286,9 @@ def main():
         fail('expected at least one indexed legacy document')
 
     ensure_readme_has_maintained_surface_inventory()
+    ensure_docs_index_does_not_expose_legacy_ai_landing()
+    ensure_removed_operator_shims_stay_deleted()
+    ensure_removed_legacy_doc_annexes_stay_deleted()
 
     for path, metadata in docs:
         ensure_allowed_location(path)

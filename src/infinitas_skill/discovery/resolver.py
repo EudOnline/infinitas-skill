@@ -108,7 +108,7 @@ def resolve_skill(*, payload: dict, query: str, target_agent: str | None = None)
             "resolved": resolved,
             "candidates": [],
             "requires_confirmation": False,
-            "recommended_next_step": "run install-by-name",
+            "recommended_next_step": "run infinitas install by-name",
         }
 
     if len(private_compatible) > 1:
@@ -149,7 +149,7 @@ def resolve_skill(*, payload: dict, query: str, target_agent: str | None = None)
             "resolved": resolved,
             "candidates": [],
             "requires_confirmation": True,
-            "recommended_next_step": "confirm and run install-by-name",
+            "recommended_next_step": "confirm and run infinitas install by-name",
         }
 
     if len(external_compatible) > 1:

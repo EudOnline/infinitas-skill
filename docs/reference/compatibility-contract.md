@@ -19,8 +19,8 @@ The following are currently treated as stable contracts unless a future deprecat
 - archived exact-version snapshot resolution for historical installs and lineage lookups
 - install manifest core keys used by install, sync, list, switch, and rollback flows
 - top-level install commands and their current safety expectations:
-  - `scripts/install-skill.sh`
-  - `scripts/sync-skill.sh`
+  - `uv run infinitas install exact`
+  - `uv run infinitas install sync`
   - `scripts/list-installed.sh`
 
 ## Versioned file formats

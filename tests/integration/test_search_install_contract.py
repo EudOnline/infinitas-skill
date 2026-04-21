@@ -208,14 +208,25 @@ def test_public_search_snapshot_install_targets_resolve_install_payload() -> Non
     tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-search-snapshot-install-test-"))
     try:
         artifact_root = configure_env(tmpdir)
-        distribution_dir = artifact_root / "catalog" / "distributions" / "partner" / "snapshot-skill" / "1.2.3"
+        distribution_dir = (
+            artifact_root
+            / "catalog"
+            / "distributions"
+            / "partner"
+            / "snapshot-skill"
+            / "1.2.3"
+        )
         distribution_dir.mkdir(parents=True, exist_ok=True)
         manifest_path = "catalog/distributions/partner/snapshot-skill/1.2.3/manifest.json"
         bundle_path = "catalog/distributions/partner/snapshot-skill/1.2.3/skill.tar.gz"
         provenance_path = "catalog/provenance/snapshot-skill-1.2.3.json"
         signature_path = "catalog/provenance/snapshot-skill-1.2.3.json.ssig"
         (artifact_root / manifest_path).write_text(
-            json.dumps({"name": "snapshot-skill", "version": "1.2.3"}, ensure_ascii=False, indent=2),
+            json.dumps(
+                {"name": "snapshot-skill", "version": "1.2.3"},
+                ensure_ascii=False,
+                indent=2,
+            ),
             encoding="utf-8",
         )
         (artifact_root / bundle_path).write_bytes(b"snapshot bundle")

@@ -165,10 +165,10 @@ Resolver output now prefers `distribution-manifest` sources when available.
 That means these workflows can materialize from immutable release artifacts instead of copying directly from the live skill folder:
 
 ```bash
-scripts/install-skill.sh my-skill ~/.openclaw/skills --version 1.2.3
-scripts/sync-skill.sh my-skill ~/.openclaw/skills
-scripts/switch-installed-skill.sh my-skill ~/.openclaw/skills --to-version 1.2.3 --force
-scripts/rollback-installed-skill.sh my-skill ~/.openclaw/skills --force
+uv run python3 -m infinitas_skill.cli.main install exact my-skill ~/.openclaw/skills --version 1.2.3
+uv run python3 -m infinitas_skill.cli.main install sync my-skill ~/.openclaw/skills
+uv run python3 -m infinitas_skill.cli.main install switch my-skill ~/.openclaw/skills --to-version 1.2.3 --force
+uv run python3 -m infinitas_skill.cli.main install rollback my-skill ~/.openclaw/skills --force
 ```
 
 When a distribution manifest is selected, the toolchain:
@@ -245,9 +245,9 @@ The discovery layer does not replace distribution manifests; it resolves to them
 Commands such as:
 
 ```bash
-scripts/install-by-name.sh my-skill ~/.openclaw/skills
-scripts/check-skill-update.sh my-skill ~/.openclaw/skills
-scripts/upgrade-skill.sh my-skill ~/.openclaw/skills
+uv run infinitas install by-name my-skill ~/.openclaw/skills --json
+uv run infinitas install check-update my-skill ~/.openclaw/skills --json
+uv run infinitas install upgrade my-skill ~/.openclaw/skills --json
 ```
 
 still rely on immutable release metadata underneath:

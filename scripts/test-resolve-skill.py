@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -28,6 +29,31 @@ def run(command, cwd, expect=0):
 def write_json(path: Path, payload):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+
+def cli_env(repo: Path):
+    return dict(os.environ, PYTHONPATH=str(repo / 'src'))
+
+
+def cli_command(*args: str):
+    return [sys.executable, '-m', 'infinitas_skill.cli.main', *args]
+
+
+def run_cli(repo: Path, args: list[str], expect=0):
+    result = subprocess.run(
+        cli_command(*args),
+        cwd=repo,
+        text=True,
+        capture_output=True,
+        env=cli_env(repo),
+    )
+    if result.returncode != expect:
+        fail(
+            f'command {args!r} exited {result.returncode}, expected {expect}\n'
+            f'stdout:\n{result.stdout}\n'
+            f'stderr:\n{result.stderr}'
+        )
+    return result
 
 
 def discovery_index_payload():
@@ -208,7 +234,7 @@ def prepare_repo():
 def main():
     tmpdir, repo = prepare_repo()
     try:
-        payload = json.loads(run([str(repo / 'scripts' / 'resolve-skill.sh'), 'demo-skill'], cwd=repo).stdout)
+        payload = json.loads(run_cli(repo, ['install', 'resolve-skill', 'demo-skill', '--json']).stdout)
         if payload.get('state') != 'resolved-private':
             fail(f"expected resolved-private, got {payload.get('state')!r}")
         if payload.get('requires_confirmation') is not False:
@@ -217,23 +243,44 @@ def main():
         if resolved.get('source_registry') != 'self':
             fail(f"expected resolved source_registry self, got {resolved.get('source_registry')!r}")
 
-        payload = json.loads(run([str(repo / 'scripts' / 'resolve-skill.sh'), 'external-only-skill'], cwd=repo).stdout)
+        payload = json.loads(
+            run_cli(repo, ['install', 'resolve-skill', 'external-only-skill', '--json']).stdout
+        )
         if payload.get('state') != 'resolved-external':
             fail(f"expected resolved-external, got {payload.get('state')!r}")
         if payload.get('requires_confirmation') is not True:
             fail(f"expected requires_confirmation true, got {payload.get('requires_confirmation')!r}")
 
-        payload = json.loads(run([str(repo / 'scripts' / 'resolve-skill.sh'), 'ambiguous-skill'], cwd=repo).stdout)
+        payload = json.loads(
+            run_cli(repo, ['install', 'resolve-skill', 'ambiguous-skill', '--json']).stdout
+        )
         if payload.get('state') != 'ambiguous':
             fail(f"expected ambiguous, got {payload.get('state')!r}")
         if len(payload.get('candidates') or []) != 2:
             fail(f"expected 2 ambiguous candidates, got {len(payload.get('candidates') or [])}")
 
-        payload = json.loads(run([str(repo / 'scripts' / 'resolve-skill.sh'), 'demo-skill', '--target-agent', 'codex'], cwd=repo).stdout)
+        payload = json.loads(
+            run_cli(
+                repo,
+                ['install', 'resolve-skill', 'demo-skill', '--target-agent', 'codex', '--json'],
+            ).stdout
+        )
         if payload.get('state') == 'incompatible':
             fail(f"expected codex-compatible demo-skill, got {payload!r}")
 
-        payload = json.loads(run([str(repo / 'scripts' / 'resolve-skill.sh'), 'incompatible-skill', '--target-agent', 'codex'], cwd=repo).stdout)
+        payload = json.loads(
+            run_cli(
+                repo,
+                [
+                    'install',
+                    'resolve-skill',
+                    'incompatible-skill',
+                    '--target-agent',
+                    'codex',
+                    '--json',
+                ],
+            ).stdout
+        )
         if payload.get('state') != 'incompatible':
             fail(f"expected incompatible state, got {payload.get('state')!r}")
     finally:

@@ -12,6 +12,23 @@ REMOVED_CLI_SHIMS = [
     "scripts/check-promotion-policy.py",
     "scripts/registryctl.py",
     "scripts/check-release-state.py",
+    "scripts/resolve-skill.sh",
+    "scripts/install-by-name.sh",
+    "scripts/check-skill-update.sh",
+    "scripts/upgrade-skill.sh",
+    "scripts/install-skill.sh",
+    "scripts/sync-skill.sh",
+    "scripts/switch-installed-skill.sh",
+    "scripts/rollback-installed-skill.sh",
+    "scripts/search-skills.sh",
+    "scripts/recommend-skill.sh",
+    "scripts/inspect-skill.sh",
+    "scripts/ai_index_lib.py",
+    "scripts/discovery_index_lib.py",
+    "scripts/discovery_resolver_lib.py",
+    "scripts/explain_install_lib.py",
+    "scripts/search_inspect_lib.py",
+    "scripts/recommend_skill_lib.py",
 ]
 
 
@@ -167,35 +184,6 @@ def test_installed_integrity_script_libs_stay_thin_wrappers() -> None:
             )
 
 
-def test_discovery_script_libs_stay_thin_wrappers() -> None:
-    expected_wrappers = {
-        "scripts/ai_index_lib.py": "from infinitas_skill.discovery.ai_index import *",
-        "scripts/discovery_index_lib.py": "from infinitas_skill.discovery.index import *",
-        "scripts/discovery_resolver_lib.py": "from infinitas_skill.discovery.resolver import *",
-        "scripts/recommend_skill_lib.py": "from infinitas_skill.discovery.recommendation import *",
-        "scripts/explain_install_lib.py": (
-            "from infinitas_skill.discovery.install_explanation import *"
-        ),
-    }
-    forbidden_markers = [
-        "def build_ai_index",
-        "def build_discovery_index",
-        "def load_discovery_index",
-        "def recommend_skills",
-        "def build_install_explanation",
-    ]
-
-    for rel_path, wrapper_import in expected_wrappers.items():
-        text = _read(rel_path)
-        assert wrapper_import in text, (
-            f"{rel_path} should stay a thin wrapper around the package module"
-        )
-        for marker in forbidden_markers:
-            assert marker not in text, (
-                f"{rel_path} should not keep duplicated discovery-chain implementation: {marker}"
-            )
-
-
 def test_release_fixture_scripts_share_python_env_helper() -> None:
     expected_marker = "build_regression_test_env"
     script_paths = [
@@ -264,10 +252,6 @@ def test_discovery_consumer_script_libs_stay_thin_wrappers() -> None:
     expected_wrapper_markers = {
         "scripts/decision_metadata_lib.py": [
             "from infinitas_skill.discovery.decision_metadata import *",
-        ],
-        "scripts/search_inspect_lib.py": [
-            "from infinitas_skill.discovery.search import *",
-            "from infinitas_skill.discovery.inspect import *",
         ],
         "scripts/result_schema_lib.py": [
             "from infinitas_skill.discovery.result_schema import *",

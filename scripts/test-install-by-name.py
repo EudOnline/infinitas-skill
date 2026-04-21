@@ -89,6 +89,19 @@ def make_env(extra=None):
     return build_regression_test_env(ROOT, extra=extra, env=os.environ.copy())
 
 
+def cli_env(repo: Path):
+    env = dict(os.environ, PYTHONPATH=str(repo / 'src'))
+    return build_regression_test_env(ROOT, extra=env, env=os.environ.copy())
+
+
+def cli_command(*args: str):
+    return [sys.executable, '-m', 'infinitas_skill.cli.main', *args]
+
+
+def run_cli(repo: Path, args: list[str], expect=0):
+    return run(cli_command(*args), cwd=repo, expect=expect, env=cli_env(repo))
+
+
 def scaffold_fixture(repo: Path):
     fixture_dir = repo / 'skills' / 'active' / FIXTURE_NAME
     if fixture_dir.exists():
@@ -329,7 +342,7 @@ def main():
     tmpdir, repo = prepare_repo()
     try:
         target_dir = tmpdir / 'installed'
-        run([str(repo / 'scripts' / 'install-by-name.sh'), FIXTURE_NAME, str(target_dir)], cwd=repo)
+        run_cli(repo, ['install', 'by-name', FIXTURE_NAME, str(target_dir), '--json'])
         manifest = read_install_manifest(target_dir)
         entry = (manifest.get('skills') or {}).get(FIXTURE_NAME) or {}
         if entry.get('source_registry') != 'self':
@@ -344,9 +357,9 @@ def main():
             fail(f"expected install_target {str(target_dir.resolve())!r}, got {entry.get('install_target')!r}")
 
         blocked_target = tmpdir / 'external-auto-target'
-        result = run(
-            [str(repo / 'scripts' / 'install-by-name.sh'), EXTERNAL_SKILL_NAME, str(blocked_target)],
-            cwd=repo,
+        result = run_cli(
+            repo,
+            ['install', 'by-name', EXTERNAL_SKILL_NAME, str(blocked_target), '--json'],
             expect=1,
         )
         combined = result.stdout + result.stderr
@@ -356,9 +369,17 @@ def main():
             fail('external auto install unexpectedly created target directory')
 
         confirm_target = tmpdir / 'external-confirm-target'
-        result = run(
-            [str(repo / 'scripts' / 'install-by-name.sh'), EXTERNAL_SKILL_NAME, str(confirm_target), '--mode', 'confirm'],
-            cwd=repo,
+        result = run_cli(
+            repo,
+            [
+                'install',
+                'by-name',
+                EXTERNAL_SKILL_NAME,
+                str(confirm_target),
+                '--mode',
+                'confirm',
+                '--json',
+            ],
         )
         payload = json.loads(result.stdout)
         if payload.get('state') != 'planned':
@@ -425,9 +446,9 @@ def main():
             },
         )
         ambiguous_target = tmpdir / 'ambiguous-target'
-        ambiguous = run(
-            [str(repo / 'scripts' / 'install-by-name.sh'), 'ambiguous-skill', str(ambiguous_target)],
-            cwd=repo,
+        ambiguous = run_cli(
+            repo,
+            ['install', 'by-name', 'ambiguous-skill', str(ambiguous_target), '--json'],
             expect=1,
         )
         ambiguous_payload = json.loads(ambiguous.stdout)
@@ -473,15 +494,17 @@ def main():
             },
         )
         incompatible_target = tmpdir / 'incompatible-target'
-        incompatible = run(
+        incompatible = run_cli(
+            repo,
             [
-                str(repo / 'scripts' / 'install-by-name.sh'),
+                'install',
+                'by-name',
                 'incompatible-skill',
                 str(incompatible_target),
                 '--target-agent',
                 'codex',
+                '--json',
             ],
-            cwd=repo,
             expect=1,
         )
         incompatible_payload = json.loads(incompatible.stdout)

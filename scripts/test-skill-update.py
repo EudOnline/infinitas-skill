@@ -64,6 +64,19 @@ def make_env(extra=None):
     return build_regression_test_env(ROOT, extra=extra, env=os.environ.copy())
 
 
+def cli_env(repo: Path):
+    env = dict(os.environ, PYTHONPATH=str(repo / 'src'))
+    return build_regression_test_env(ROOT, extra=env, env=os.environ.copy())
+
+
+def cli_command(*args: str):
+    return [sys.executable, '-m', 'infinitas_skill.cli.main', *args]
+
+
+def run_cli(repo: Path, args: list[str], expect=0):
+    return run(cli_command(*args), cwd=repo, expect=expect, env=cli_env(repo))
+
+
 def scaffold_fixture(repo: Path, version: str):
     fixture_dir = repo / 'skills' / 'active' / FIXTURE_NAME
     if fixture_dir.exists():
@@ -282,9 +295,14 @@ def main():
         shutil.rmtree(repo / 'skills' / 'active' / FIXTURE_NAME)
 
         target_dir = tmpdir / 'installed'
-        run([str(repo / 'scripts' / 'install-by-name.sh'), FIXTURE_NAME, str(target_dir), '--version', V1], cwd=repo)
+        run_cli(
+            repo,
+            ['install', 'by-name', FIXTURE_NAME, str(target_dir), '--version', V1, '--json'],
+        )
 
-        payload = json.loads(run([str(repo / 'scripts' / 'check-skill-update.sh'), FIXTURE_NAME, str(target_dir)], cwd=repo).stdout)
+        payload = json.loads(
+            run_cli(repo, ['install', 'check-update', FIXTURE_NAME, str(target_dir), '--json']).stdout
+        )
         if payload.get('installed_version') != V1:
             fail(f"expected installed_version {V1!r}, got {payload.get('installed_version')!r}")
         if payload.get('latest_available_version') != V2:
@@ -326,7 +344,10 @@ def main():
         write_install_integrity_policy(repo, stale_policy='warn', never_verified_policy='warn')
         mark_install_never_verified(target_dir, FIXTURE_NAME)
         never_verified_payload = json.loads(
-            run([str(repo / 'scripts' / 'check-skill-update.sh'), FIXTURE_NAME, str(target_dir)], cwd=repo).stdout
+            run_cli(
+                repo,
+                ['install', 'check-update', FIXTURE_NAME, str(target_dir), '--json'],
+            ).stdout
         )
         if never_verified_payload.get('freshness_state') != 'never-verified':
             fail(f"expected never-verified freshness_state 'never-verified', got {never_verified_payload!r}")
@@ -353,7 +374,9 @@ def main():
 
         write_install_integrity_policy(repo, stale_policy='warn')
         mark_install_stale(target_dir, FIXTURE_NAME)
-        stale_payload = json.loads(run([str(repo / 'scripts' / 'check-skill-update.sh'), FIXTURE_NAME, str(target_dir)], cwd=repo).stdout)
+        stale_payload = json.loads(
+            run_cli(repo, ['install', 'check-update', FIXTURE_NAME, str(target_dir), '--json']).stdout
+        )
         if stale_payload.get('freshness_state') != 'stale':
             fail(f"expected stale freshness_state 'stale', got {stale_payload!r}")
         if stale_payload.get('recommended_action') != 'refresh':
@@ -365,10 +388,9 @@ def main():
         if stale_payload.get('next_step') != 'refresh-installed-integrity':
             fail(f"expected stale next_step 'refresh-installed-integrity', got {stale_payload.get('next_step')!r}")
 
-        warn_upgrade = run(
-            [str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_dir)],
-            cwd=repo,
-            env=make_env(),
+        warn_upgrade = run_cli(
+            repo,
+            ['install', 'upgrade', FIXTURE_NAME, str(target_dir), '--json'],
         )
         warn_upgrade_payload = json.loads(warn_upgrade.stdout)
         if warn_upgrade_payload.get('state') != 'installed' or warn_upgrade_payload.get('to_version') != V2:
@@ -380,10 +402,9 @@ def main():
         if current.get('installed_version') != V2:
             fail(f"expected stale warn upgrade to install {V2!r}, got {current.get('installed_version')!r}")
 
-        run(
-            [str(repo / 'scripts' / 'rollback-installed-skill.sh'), FIXTURE_NAME, str(target_dir), '--steps', '1', '--force'],
-            cwd=repo,
-            env=make_env(),
+        run_cli(
+            repo,
+            ['install', 'rollback', FIXTURE_NAME, str(target_dir), '--steps', '1', '--force', '--json'],
         )
         manifest = read_install_manifest(target_dir)
         current = ((manifest.get('skills') or {}).get(FIXTURE_NAME) or {})
@@ -392,10 +413,9 @@ def main():
 
         write_install_integrity_policy(repo, stale_policy='fail')
         mark_install_stale(target_dir, FIXTURE_NAME)
-        blocked = run(
-            [str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_dir)],
-            cwd=repo,
-            env=make_env(),
+        blocked = run_cli(
+            repo,
+            ['install', 'upgrade', FIXTURE_NAME, str(target_dir), '--json'],
             expect=1,
         )
         blocked_payload = json.loads(blocked.stdout)
@@ -421,37 +441,38 @@ def main():
         if refreshed_skill.get('freshness_state') != 'fresh':
             fail(f"expected refresh to clear stale state, got {refreshed_skill!r}")
 
-        refreshed_upgrade = json.loads(run([str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_dir)], cwd=repo, env=make_env()).stdout)
+        refreshed_upgrade = json.loads(
+            run_cli(repo, ['install', 'upgrade', FIXTURE_NAME, str(target_dir), '--json']).stdout
+        )
         if refreshed_upgrade.get('state') != 'installed' or refreshed_upgrade.get('to_version') != V2:
             fail(f'expected refresh to clear stale upgrade block, got {refreshed_upgrade!r}')
 
-        run(
-            [str(repo / 'scripts' / 'rollback-installed-skill.sh'), FIXTURE_NAME, str(target_dir), '--steps', '1', '--force'],
-            cwd=repo,
-            env=make_env(),
+        run_cli(
+            repo,
+            ['install', 'rollback', FIXTURE_NAME, str(target_dir), '--steps', '1', '--force', '--json'],
         )
         mark_install_stale(target_dir, FIXTURE_NAME)
         force_upgrade = json.loads(
-            run(
-                [str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_dir), '--force'],
-                cwd=repo,
-                env=make_env(),
+            run_cli(
+                repo,
+                ['install', 'upgrade', FIXTURE_NAME, str(target_dir), '--force', '--json'],
             ).stdout
         )
         if force_upgrade.get('state') != 'installed' or force_upgrade.get('to_version') != V2:
             fail(f'expected --force to bypass stale-policy block, got {force_upgrade!r}')
 
-        run(
-            [str(repo / 'scripts' / 'rollback-installed-skill.sh'), FIXTURE_NAME, str(target_dir), '--steps', '1', '--force'],
-            cwd=repo,
-            env=make_env(),
+        run_cli(
+            repo,
+            ['install', 'rollback', FIXTURE_NAME, str(target_dir), '--steps', '1', '--force', '--json'],
         )
         mark_install_stale(target_dir, FIXTURE_NAME)
         installed_dir = target_dir / FIXTURE_NAME
         with (installed_dir / 'SKILL.md').open('a', encoding='utf-8') as handle:
             handle.write('\nLocal drift before update check.\n')
 
-        payload = json.loads(run([str(repo / 'scripts' / 'check-skill-update.sh'), FIXTURE_NAME, str(target_dir)], cwd=repo).stdout)
+        payload = json.loads(
+            run_cli(repo, ['install', 'check-update', FIXTURE_NAME, str(target_dir), '--json']).stdout
+        )
         if payload.get('update_available') is not True:
             fail(f"expected update_available true for drifted install, got {payload.get('update_available')!r}")
         integrity = payload.get('integrity')
@@ -473,10 +494,9 @@ def main():
         if not any('drift' in reason.lower() for reason in policy_reasons):
             fail(f'expected drifted explanation policy reason, got {payload!r}')
 
-        result = run(
-            [str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_dir)],
-            cwd=repo,
-            env=make_env(),
+        result = run_cli(
+            repo,
+            ['install', 'upgrade', FIXTURE_NAME, str(target_dir), '--json'],
             expect=1,
         )
         combined = result.stdout + result.stderr
@@ -509,7 +529,9 @@ def main():
         if refreshed_skill.get('freshness_state') != 'fresh':
             fail(f"expected refresh after repair to restore fresh state, got {refreshed_skill!r}")
 
-        payload = json.loads(run([str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_dir)], cwd=repo).stdout)
+        payload = json.loads(
+            run_cli(repo, ['install', 'upgrade', FIXTURE_NAME, str(target_dir), '--json']).stdout
+        )
         if payload.get('from_version') != V1:
             fail(f"expected from_version {V1!r}, got {payload.get('from_version')!r}")
         if payload.get('to_version') != V2:
@@ -526,10 +548,9 @@ def main():
         with (installed_dir / 'SKILL.md').open('a', encoding='utf-8') as handle:
             handle.write('\nLocal drift before rollback.\n')
 
-        result = run(
-            [str(repo / 'scripts' / 'rollback-installed-skill.sh'), FIXTURE_NAME, str(target_dir)],
-            cwd=repo,
-            env=make_env(),
+        result = run_cli(
+            repo,
+            ['install', 'rollback', FIXTURE_NAME, str(target_dir), '--json'],
             expect=1,
         )
         combined = result.stdout + result.stderr
@@ -542,9 +563,17 @@ def main():
             env=make_env(),
         )
 
-        result = run(
-            [str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_dir), '--registry', 'other-registry'],
-            cwd=repo,
+        result = run_cli(
+            repo,
+            [
+                'install',
+                'upgrade',
+                FIXTURE_NAME,
+                str(target_dir),
+                '--registry',
+                'other-registry',
+                '--json',
+            ],
             expect=1,
         )
         combined = result.stdout + result.stderr
