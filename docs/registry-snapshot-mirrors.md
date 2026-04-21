@@ -62,7 +62,7 @@ python3 scripts/resolve-skill-source.py demo --registry upstream --snapshot late
 ```
 
 ```bash
-scripts/install-skill.sh demo ~/.openclaw/skills --registry upstream --snapshot latest
+uv run python3 -m infinitas_skill.cli.main install exact demo ~/.openclaw/skills --registry upstream --snapshot latest
 ```
 
 ```bash
@@ -73,7 +73,7 @@ Behavior:
 
 - `resolve-skill-source.py` resolves from the immutable snapshot tree instead of `.cache/registries/<registry>`
 - missing snapshots fail explicitly; they do not fall back to the mutable cache
-- `install-skill.sh` preserves snapshot identity in the install manifest
+- `infinitas install exact` preserves snapshot identity in the install manifest
 - `sync-registry-source.sh --snapshot ...` validates the snapshot and prints its root without fetching remote state
 
 When a concrete snapshot is selected, resolved payloads expose snapshot metadata such as:

@@ -16,26 +16,21 @@ Regenerate and review it with:
 uv run python3 -m infinitas_skill.cli.reference
 ```
 
-## Local validation quick notes
-
-- `npm test` only rebuilds the Tailwind assets and prints a reminder that it does not represent the maintained verification gate.
-- Use `make ci-fast` for the local fast gate and `scripts/check-all.sh` as the authoritative closeout gate (CI uses the same command with the supported environment flags).
-- Release `preflight` and `stable-release` now block whenever `namespace_policy.authorized_releasers` is configured and the resolved releaser identity is not authorized. This gate appears in `infinitas release check-state`.
-
 ## Top-level CLI
 
 ```text
 usage: infinitas [-h]
-                 {compatibility,release,install,openclaw,registry,policy,server}
+                 {compatibility,release,install,discovery,openclaw,registry,policy,server}
                  ...
 
 infinitas project CLI
 
 positional arguments:
-  {compatibility,release,install,openclaw,registry,policy,server}
+  {compatibility,release,install,discovery,openclaw,registry,policy,server}
     compatibility       Compatibility tools
     release             Release readiness, signing, and verification tools
-    install             Install planning tools
+    install             Install planning and workflow tools
+    discovery           Discovery and inspection tools
     openclaw            OpenClaw runtime tools
     registry            Hosted registry control-plane tools
     policy              Policy validation and promotion tools
@@ -52,7 +47,9 @@ usage: infinitas compatibility check-platform-contracts [-h]
                                                         [--max-age-days MAX_AGE_DAYS]
                                                         [--stale-policy {warn,fail}]
 
-Check platform contract-watch documents.
+Check platform contract-watch documents. OpenClaw is the maintained runtime
+gate; other platform documents remain for migration and historical
+verification.
 
 options:
   -h, --help            show this help message and exit
@@ -62,13 +59,101 @@ options:
                         Whether over-age contract docs should warn or fail.
 ```
 
+## `infinitas discovery`
+
+```text
+usage: infinitas discovery [-h] {search,recommend,inspect} ...
+
+Discovery, recommendation, and inspection CLI
+
+positional arguments:
+  {search,recommend,inspect}
+    search              Search generated discovery surfaces
+    recommend           Recommend the best matching skill
+    inspect             Inspect one released skill
+
+options:
+  -h, --help            show this help message and exit
+```
+
+## `infinitas discovery search`
+
+```text
+usage: infinitas discovery search [-h] [--publisher PUBLISHER] [--agent AGENT]
+                                  [--tag TAG] [--repo-root REPO_ROOT] [--json]
+                                  [query]
+
+Search generated discovery surfaces
+
+positional arguments:
+  query                 Optional search query
+
+options:
+  -h, --help            show this help message and exit
+  --publisher PUBLISHER
+                        Filter by publisher
+  --agent AGENT         Filter by target agent
+  --tag TAG             Filter by tag
+  --repo-root REPO_ROOT
+                        Repository root containing generated catalog artifacts
+  --json                Emit pretty JSON output
+```
+
+## `infinitas discovery recommend`
+
+```text
+usage: infinitas discovery recommend [-h] [--target-agent TARGET_AGENT]
+                                     [--limit LIMIT] [--repo-root REPO_ROOT]
+                                     [--json]
+                                     task
+
+Recommend the best matching skill
+
+positional arguments:
+  task                  Task or intent to rank against the discovery index
+
+options:
+  -h, --help            show this help message and exit
+  --target-agent TARGET_AGENT
+                        Optional target runtime/agent
+  --limit LIMIT         Maximum ranked results to emit
+  --repo-root REPO_ROOT
+                        Repository root containing generated catalog artifacts
+  --json                Emit pretty JSON output
+```
+
+## `infinitas discovery inspect`
+
+```text
+usage: infinitas discovery inspect [-h] [--version VERSION]
+                                   [--target-agent TARGET_AGENT]
+                                   [--repo-root REPO_ROOT] [--json]
+                                   name
+
+Inspect one released skill
+
+positional arguments:
+  name                  Qualified name or skill name
+
+options:
+  -h, --help            show this help message and exit
+  --version VERSION     Optional version override
+  --target-agent TARGET_AGENT
+                        Optional target runtime/agent
+  --repo-root REPO_ROOT
+                        Repository root containing generated catalog artifacts
+  --json                Emit pretty JSON output
+```
+
 ## `infinitas install resolve-plan`
 
 ```text
-usage: infinitas install resolve-plan [-h] --skill-dir SKILL_DIR
+usage: infinitas install resolve-plan [-h] [--skill-dir SKILL_DIR]
+                                      [--registry-entry-json REGISTRY_ENTRY_JSON]
                                       [--target-dir TARGET_DIR]
                                       [--source-registry SOURCE_REGISTRY]
                                       [--source-json SOURCE_JSON]
+                                      [--memory-mode MEMORY_MODE]
                                       [--mode {install,sync}] [--json]
 
 Resolve an install or sync dependency plan
@@ -77,12 +162,18 @@ options:
   -h, --help            show this help message and exit
   --skill-dir SKILL_DIR
                         Skill directory to resolve from
+  --registry-entry-json REGISTRY_ENTRY_JSON
+                        Hosted registry entry JSON for object-aware install
+                        planning
   --target-dir TARGET_DIR
                         Existing install target directory to plan against
   --source-registry SOURCE_REGISTRY
                         Registry hint for the root skill source
   --source-json SOURCE_JSON
                         Resolved source metadata JSON for the root skill
+  --memory-mode MEMORY_MODE
+                        Selected memory mode for agent_preset registry
+                        installs
   --mode {install,sync}
                         Whether to plan an install or sync flow
   --json                Print machine-readable plan output
@@ -111,6 +202,207 @@ options:
   --mode {install,sync}
                         Whether to check an install or sync flow
   --json                Print machine-readable plan output
+```
+
+## `infinitas install resolve-skill`
+
+```text
+usage: infinitas install resolve-skill [-h] [--target-agent TARGET_AGENT]
+                                       [--repo-root REPO_ROOT] [--json]
+                                       query
+
+Resolve one install candidate from the discovery index
+
+positional arguments:
+  query                 Skill name or qualified_name to resolve
+
+options:
+  -h, --help            show this help message and exit
+  --target-agent TARGET_AGENT
+                        Optional target runtime/agent
+  --repo-root REPO_ROOT
+                        Repository root containing generated catalog artifacts
+  --json                Emit pretty JSON output
+```
+
+## `infinitas install exact`
+
+```text
+usage: infinitas install exact [-h] [--version VERSION] [--registry REGISTRY]
+                               [--snapshot SNAPSHOT] [--force] [--no-deps]
+                               [--repo-root REPO_ROOT] [--json]
+                               name target_dir
+
+Install one exact released skill and apply its dependency plan
+
+positional arguments:
+  name                  Skill name or qualified_name to install exactly
+  target_dir            Target directory for the installed skill
+
+options:
+  -h, --help            show this help message and exit
+  --version VERSION     Optional released version override
+  --registry REGISTRY   Optional source registry override
+  --snapshot SNAPSHOT   Optional registry snapshot selector
+  --force               Overwrite the root target if the resolved plan needs
+                        to replace it
+  --no-deps             Fail instead of applying dependency installs or
+                        upgrades
+  --repo-root REPO_ROOT
+                        Repository root containing generated catalog artifacts
+  --json                Emit pretty JSON output
+```
+
+## `infinitas install by-name`
+
+```text
+usage: infinitas install by-name [-h] [--version VERSION]
+                                 [--target-agent TARGET_AGENT]
+                                 [--mode {auto,confirm}]
+                                 [--repo-root REPO_ROOT] [--json]
+                                 query target_dir
+
+Resolve and install one released skill by discovery-first name lookup
+
+positional arguments:
+  query                 Skill name or qualified_name to install
+  target_dir            Target directory for the installed skill
+
+options:
+  -h, --help            show this help message and exit
+  --version VERSION     Optional released version override
+  --target-agent TARGET_AGENT
+                        Optional target runtime/agent
+  --mode {auto,confirm}
+                        Whether to install immediately or only confirm the
+                        plan
+  --repo-root REPO_ROOT
+                        Repository root containing generated catalog artifacts
+  --json                Emit pretty JSON output
+```
+
+## `infinitas install sync`
+
+```text
+usage: infinitas install sync [-h] [--force] [--repo-root REPO_ROOT] [--json]
+                              installed_name target_dir
+
+Sync one installed skill to the latest releasable state from its source
+
+positional arguments:
+  installed_name        Installed skill name or qualified_name
+  target_dir            Target directory holding the installed skill
+
+options:
+  -h, --help            show this help message and exit
+  --force               Bypass stale or never-verified readiness gates after
+                        drift checks
+  --repo-root REPO_ROOT
+                        Repository root containing generated catalog artifacts
+  --json                Emit pretty JSON output
+```
+
+## `infinitas install check-update`
+
+```text
+usage: infinitas install check-update [-h] [--repo-root REPO_ROOT] [--json]
+                                      installed_name target_dir
+
+Check whether an installed skill has a newer same-registry release
+
+positional arguments:
+  installed_name        Installed skill name or qualified_name
+  target_dir            Target directory holding the install manifest
+
+options:
+  -h, --help            show this help message and exit
+  --repo-root REPO_ROOT
+                        Repository root containing generated catalog artifacts
+  --json                Emit pretty JSON output
+```
+
+## `infinitas install switch`
+
+```text
+usage: infinitas install switch [-h] [--to-version TO_VERSION] [--to-active]
+                                [--registry REGISTRY]
+                                [--qualified-name QUALIFIED_NAME] [--force]
+                                [--repo-root REPO_ROOT] [--json]
+                                installed_name target_dir
+
+Switch one installed skill to another releasable source revision
+
+positional arguments:
+  installed_name        Installed skill name or qualified_name
+  target_dir            Target directory holding the installed skill
+
+options:
+  -h, --help            show this help message and exit
+  --to-version TO_VERSION
+                        Switch to an exact released version
+  --to-active           Switch to the currently resolved active source instead
+                        of an exact version
+  --registry REGISTRY   Optional source registry override
+  --qualified-name QUALIFIED_NAME
+                        Optional qualified_name override
+  --force               Bypass stale or never-verified readiness gates after
+                        drift checks
+  --repo-root REPO_ROOT
+                        Repository root containing generated catalog artifacts
+  --json                Emit pretty JSON output
+```
+
+## `infinitas install rollback`
+
+```text
+usage: infinitas install rollback [-h] [--steps STEPS] [--force]
+                                  [--repo-root REPO_ROOT] [--json]
+                                  installed_name target_dir
+
+Rollback one installed skill to a recorded prior manifest entry
+
+positional arguments:
+  installed_name        Installed skill name or qualified_name
+  target_dir            Target directory holding the installed skill
+
+options:
+  -h, --help            show this help message and exit
+  --steps STEPS         How many history entries to walk back
+  --force               Bypass stale or never-verified readiness gates after
+                        drift checks
+  --repo-root REPO_ROOT
+                        Repository root containing generated catalog artifacts
+  --json                Emit pretty JSON output
+```
+
+## `infinitas install upgrade`
+
+```text
+usage: infinitas install upgrade [-h] [--to-version TO_VERSION]
+                                 [--registry REGISTRY] [--mode {auto,confirm}]
+                                 [--force] [--repo-root REPO_ROOT] [--json]
+                                 installed_name target_dir
+
+Upgrade one installed skill in place from the recorded source registry
+
+positional arguments:
+  installed_name        Installed skill name or qualified_name
+  target_dir            Target directory holding the installed skill
+
+options:
+  -h, --help            show this help message and exit
+  --to-version TO_VERSION
+                        Optional released version override
+  --registry REGISTRY   Optional source registry override; cross-source
+                        upgrade is rejected
+  --mode {auto,confirm}
+                        Whether to upgrade immediately or only confirm the
+                        plan
+  --force               Bypass stale/never-verified readiness gates after
+                        drift checks
+  --repo-root REPO_ROOT
+                        Repository root containing generated catalog artifacts
+  --json                Emit pretty JSON output
 ```
 
 ## `infinitas openclaw`
@@ -278,15 +570,17 @@ options:
 
 ```text
 usage: infinitas registry [-h] [--base-url BASE_URL] [--token TOKEN]
-                          {skills,drafts,releases,exposures,grants,tokens,reviews}
+                          {skills,drafts,agent-presets,agent-codes,releases,exposures,grants,tokens,reviews}
                           ...
 
 Hosted registry private-first control plane CLI
 
 positional arguments:
-  {skills,drafts,releases,exposures,grants,tokens,reviews}
+  {skills,drafts,agent-presets,agent-codes,releases,exposures,grants,tokens,reviews}
     skills              Manage private-first skill records
     drafts              Manage editable drafts and immutable version sealing
+    agent-presets       Manage publishable agent preset objects
+    agent-codes         Manage publishable agent code objects
     releases            Create and inspect immutable releases
     exposures           Manage audience exposure and share policy
     grants              Inspect grant policy scaffolding for token-scoped

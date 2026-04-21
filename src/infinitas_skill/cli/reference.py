@@ -2,9 +2,25 @@
 
 from infinitas_skill.cli.main import build_parser
 from infinitas_skill.compatibility.checks import build_platform_contracts_parser
+from infinitas_skill.discovery.cli import (
+    build_discovery_inspect_parser,
+    build_discovery_parser,
+    build_discovery_recommend_parser,
+    build_discovery_search_parser,
+)
 from infinitas_skill.install.planning import (
     build_check_install_target_parser,
     build_resolve_install_plan_parser,
+)
+from infinitas_skill.install.workflows import (
+    build_install_by_name_parser,
+    build_install_check_update_parser,
+    build_install_exact_parser,
+    build_install_resolve_skill_parser,
+    build_install_rollback_parser,
+    build_install_switch_parser,
+    build_install_sync_parser,
+    build_install_upgrade_parser,
 )
 from infinitas_skill.openclaw.cli import (
     build_openclaw_parser,
@@ -38,192 +54,290 @@ from infinitas_skill.server.ops import (
     build_server_worker_parser,
 )
 
-GENERATED_CLI_REFERENCE_LAST_REVIEWED = '2026-04-07'
+GENERATED_CLI_REFERENCE_LAST_REVIEWED = "2026-04-07"
 
 
 def _render_help_block(text: str) -> str:
-    return f'```text\n{text.rstrip()}\n```\n'
+    return f"```text\n{text.rstrip()}\n```\n"
 
 
 def render_cli_reference() -> str:
     top_level_help = build_parser().format_help()
     compatibility_help = build_platform_contracts_parser(
-        prog='infinitas compatibility check-platform-contracts'
+        prog="infinitas compatibility check-platform-contracts"
     ).format_help()
-    install_resolve_plan_help = build_resolve_install_plan_parser(prog='infinitas install resolve-plan').format_help()
-    install_check_target_help = build_check_install_target_parser(prog='infinitas install check-target').format_help()
-    openclaw_help = build_openclaw_parser(prog='infinitas openclaw').format_help()
-    openclaw_profile_help = build_openclaw_profile_parser(prog='infinitas openclaw profile').format_help()
+    discovery_help = build_discovery_parser(prog="infinitas discovery").format_help()
+    discovery_search_help = build_discovery_search_parser(
+        prog="infinitas discovery search"
+    ).format_help()
+    discovery_recommend_help = build_discovery_recommend_parser(
+        prog="infinitas discovery recommend"
+    ).format_help()
+    discovery_inspect_help = build_discovery_inspect_parser(
+        prog="infinitas discovery inspect"
+    ).format_help()
+    install_resolve_plan_help = build_resolve_install_plan_parser(
+        prog="infinitas install resolve-plan"
+    ).format_help()
+    install_check_target_help = build_check_install_target_parser(
+        prog="infinitas install check-target"
+    ).format_help()
+    install_resolve_skill_help = build_install_resolve_skill_parser(
+        prog="infinitas install resolve-skill"
+    ).format_help()
+    install_exact_help = build_install_exact_parser(prog="infinitas install exact").format_help()
+    install_by_name_help = build_install_by_name_parser(
+        prog="infinitas install by-name"
+    ).format_help()
+    install_sync_help = build_install_sync_parser(prog="infinitas install sync").format_help()
+    install_check_update_help = build_install_check_update_parser(
+        prog="infinitas install check-update"
+    ).format_help()
+    install_switch_help = build_install_switch_parser(prog="infinitas install switch").format_help()
+    install_rollback_help = build_install_rollback_parser(
+        prog="infinitas install rollback"
+    ).format_help()
+    install_upgrade_help = build_install_upgrade_parser(
+        prog="infinitas install upgrade"
+    ).format_help()
+    openclaw_help = build_openclaw_parser(prog="infinitas openclaw").format_help()
+    openclaw_profile_help = build_openclaw_profile_parser(
+        prog="infinitas openclaw profile"
+    ).format_help()
     openclaw_workspace_resolve_help = build_openclaw_workspace_resolve_parser(
-        prog='infinitas openclaw workspace resolve'
+        prog="infinitas openclaw workspace resolve"
     ).format_help()
     openclaw_skill_validate_help = build_openclaw_skill_validate_parser(
-        prog='infinitas openclaw skill validate'
+        prog="infinitas openclaw skill validate"
     ).format_help()
     openclaw_plugin_inspect_help = build_openclaw_plugin_inspect_parser(
-        prog='infinitas openclaw plugin inspect'
+        prog="infinitas openclaw plugin inspect"
     ).format_help()
-    policy_help = build_policy_parser(prog='infinitas policy').format_help()
-    policy_check_packs_help = build_check_policy_packs_parser(prog='infinitas policy check-packs').format_help()
-    policy_check_promotion_help = build_check_promotion_parser(prog='infinitas policy check-promotion').format_help()
+    policy_help = build_policy_parser(prog="infinitas policy").format_help()
+    policy_check_packs_help = build_check_policy_packs_parser(
+        prog="infinitas policy check-packs"
+    ).format_help()
+    policy_check_promotion_help = build_check_promotion_parser(
+        prog="infinitas policy check-promotion"
+    ).format_help()
     policy_recommend_reviewers_help = build_recommend_reviewers_parser(
-        prog='infinitas policy recommend-reviewers'
+        prog="infinitas policy recommend-reviewers"
     ).format_help()
-    policy_review_status_help = build_review_status_parser(prog='infinitas policy review-status').format_help()
-    registry_help = build_registry_parser(prog='infinitas registry').format_help()
-    release_help = build_release_parser(prog='infinitas release').format_help()
-    release_check_state_help = build_release_check_state_parser(prog='infinitas release check-state').format_help()
+    policy_review_status_help = build_review_status_parser(
+        prog="infinitas policy review-status"
+    ).format_help()
+    registry_help = build_registry_parser(prog="infinitas registry").format_help()
+    release_help = build_release_parser(prog="infinitas release").format_help()
+    release_check_state_help = build_release_check_state_parser(
+        prog="infinitas release check-state"
+    ).format_help()
     release_signing_readiness_help = build_signing_readiness_parser(
-        prog='infinitas release signing-readiness'
+        prog="infinitas release signing-readiness"
     ).format_help()
     release_doctor_signing_help = build_signing_doctor_parser(
-        prog='infinitas release doctor-signing'
+        prog="infinitas release doctor-signing"
     ).format_help()
     release_bootstrap_signing_help = build_signing_bootstrap_parser(
-        prog='infinitas release bootstrap-signing'
+        prog="infinitas release bootstrap-signing"
     ).format_help()
-    server_help = build_server_parser(prog='infinitas server').format_help()
-    server_healthcheck_help = build_server_healthcheck_parser(prog='infinitas server healthcheck').format_help()
-    server_backup_help = build_server_backup_parser(prog='infinitas server backup').format_help()
-    server_inspect_state_help = build_server_inspect_state_parser(prog='infinitas server inspect-state').format_help()
-    server_render_systemd_help = build_server_render_systemd_parser(prog='infinitas server render-systemd').format_help()
-    server_prune_backups_help = build_server_prune_backups_parser(prog='infinitas server prune-backups').format_help()
-    server_worker_help = build_server_worker_parser(prog='infinitas server worker').format_help()
+    server_help = build_server_parser(prog="infinitas server").format_help()
+    server_healthcheck_help = build_server_healthcheck_parser(
+        prog="infinitas server healthcheck"
+    ).format_help()
+    server_backup_help = build_server_backup_parser(prog="infinitas server backup").format_help()
+    server_inspect_state_help = build_server_inspect_state_parser(
+        prog="infinitas server inspect-state"
+    ).format_help()
+    server_render_systemd_help = build_server_render_systemd_parser(
+        prog="infinitas server render-systemd"
+    ).format_help()
+    server_prune_backups_help = build_server_prune_backups_parser(
+        prog="infinitas server prune-backups"
+    ).format_help()
+    server_worker_help = build_server_worker_parser(prog="infinitas server worker").format_help()
     lines = [
-        '---',
-        'audience: contributors, integrators, operators',
-        'owner: repository maintainers',
-        'source_of_truth: generated from argparse definitions in src/infinitas_skill',
-        f'last_reviewed: {GENERATED_CLI_REFERENCE_LAST_REVIEWED}',
-        'status: maintained',
-        '---',
-        '',
-        '# CLI Reference',
-        '',
-        'This file is generated from the maintained argparse definitions under `src/infinitas_skill/`.',
-        '',
-        'Regenerate and review it with:',
-        '',
-        '```bash',
-        'uv run python3 -m infinitas_skill.cli.reference',
-        '```',
-        '',
-        '## Top-level CLI',
-        '',
+        "---",
+        "audience: contributors, integrators, operators",
+        "owner: repository maintainers",
+        "source_of_truth: generated from argparse definitions in src/infinitas_skill",
+        f"last_reviewed: {GENERATED_CLI_REFERENCE_LAST_REVIEWED}",
+        "status: maintained",
+        "---",
+        "",
+        "# CLI Reference",
+        "",
+        "This file is generated from the maintained argparse definitions under `src/infinitas_skill/`.",
+        "",
+        "Regenerate and review it with:",
+        "",
+        "```bash",
+        "uv run python3 -m infinitas_skill.cli.reference",
+        "```",
+        "",
+        "## Top-level CLI",
+        "",
         _render_help_block(top_level_help).rstrip(),
-        '',
-        '## `infinitas compatibility check-platform-contracts`',
-        '',
+        "",
+        "## `infinitas compatibility check-platform-contracts`",
+        "",
         _render_help_block(compatibility_help).rstrip(),
-        '',
-        '## `infinitas install resolve-plan`',
-        '',
+        "",
+        "## `infinitas discovery`",
+        "",
+        _render_help_block(discovery_help).rstrip(),
+        "",
+        "## `infinitas discovery search`",
+        "",
+        _render_help_block(discovery_search_help).rstrip(),
+        "",
+        "## `infinitas discovery recommend`",
+        "",
+        _render_help_block(discovery_recommend_help).rstrip(),
+        "",
+        "## `infinitas discovery inspect`",
+        "",
+        _render_help_block(discovery_inspect_help).rstrip(),
+        "",
+        "## `infinitas install resolve-plan`",
+        "",
         _render_help_block(install_resolve_plan_help).rstrip(),
-        '',
-        '## `infinitas install check-target`',
-        '',
+        "",
+        "## `infinitas install check-target`",
+        "",
         _render_help_block(install_check_target_help).rstrip(),
-        '',
-        '## `infinitas openclaw`',
-        '',
+        "",
+        "## `infinitas install resolve-skill`",
+        "",
+        _render_help_block(install_resolve_skill_help).rstrip(),
+        "",
+        "## `infinitas install exact`",
+        "",
+        _render_help_block(install_exact_help).rstrip(),
+        "",
+        "## `infinitas install by-name`",
+        "",
+        _render_help_block(install_by_name_help).rstrip(),
+        "",
+        "## `infinitas install sync`",
+        "",
+        _render_help_block(install_sync_help).rstrip(),
+        "",
+        "## `infinitas install check-update`",
+        "",
+        _render_help_block(install_check_update_help).rstrip(),
+        "",
+        "## `infinitas install switch`",
+        "",
+        _render_help_block(install_switch_help).rstrip(),
+        "",
+        "## `infinitas install rollback`",
+        "",
+        _render_help_block(install_rollback_help).rstrip(),
+        "",
+        "## `infinitas install upgrade`",
+        "",
+        _render_help_block(install_upgrade_help).rstrip(),
+        "",
+        "## `infinitas openclaw`",
+        "",
         _render_help_block(openclaw_help).rstrip(),
-        '',
-        '## `infinitas openclaw profile`',
-        '',
+        "",
+        "## `infinitas openclaw profile`",
+        "",
         _render_help_block(openclaw_profile_help).rstrip(),
-        '',
-        '## `infinitas openclaw workspace resolve`',
-        '',
+        "",
+        "## `infinitas openclaw workspace resolve`",
+        "",
         _render_help_block(openclaw_workspace_resolve_help).rstrip(),
-        '',
-        '## `infinitas openclaw skill validate`',
-        '',
+        "",
+        "## `infinitas openclaw skill validate`",
+        "",
         _render_help_block(openclaw_skill_validate_help).rstrip(),
-        '',
-        '## `infinitas openclaw plugin inspect`',
-        '',
+        "",
+        "## `infinitas openclaw plugin inspect`",
+        "",
         _render_help_block(openclaw_plugin_inspect_help).rstrip(),
-        '',
-        '## `infinitas policy`',
-        '',
+        "",
+        "## `infinitas policy`",
+        "",
         _render_help_block(policy_help).rstrip(),
-        '',
-        '## `infinitas policy check-packs`',
-        '',
+        "",
+        "## `infinitas policy check-packs`",
+        "",
         _render_help_block(policy_check_packs_help).rstrip(),
-        '',
-        '## `infinitas policy check-promotion`',
-        '',
+        "",
+        "## `infinitas policy check-promotion`",
+        "",
         _render_help_block(policy_check_promotion_help).rstrip(),
-        '',
-        '## `infinitas policy recommend-reviewers`',
-        '',
+        "",
+        "## `infinitas policy recommend-reviewers`",
+        "",
         _render_help_block(policy_recommend_reviewers_help).rstrip(),
-        '',
-        '## `infinitas policy review-status`',
-        '',
+        "",
+        "## `infinitas policy review-status`",
+        "",
         _render_help_block(policy_review_status_help).rstrip(),
-        '',
-        '## `infinitas registry`',
-        '',
+        "",
+        "## `infinitas registry`",
+        "",
         _render_help_block(registry_help).rstrip(),
-        '',
-        '## `infinitas release`',
-        '',
+        "",
+        "## `infinitas release`",
+        "",
         _render_help_block(release_help).rstrip(),
-        '',
-        '## `infinitas release check-state`',
-        '',
+        "",
+        "## `infinitas release check-state`",
+        "",
         _render_help_block(release_check_state_help).rstrip(),
-        '',
-        '## `infinitas release signing-readiness`',
-        '',
+        "",
+        "## `infinitas release signing-readiness`",
+        "",
         _render_help_block(release_signing_readiness_help).rstrip(),
-        '',
-        '## `infinitas release doctor-signing`',
-        '',
+        "",
+        "## `infinitas release doctor-signing`",
+        "",
         _render_help_block(release_doctor_signing_help).rstrip(),
-        '',
-        '## `infinitas release bootstrap-signing`',
-        '',
+        "",
+        "## `infinitas release bootstrap-signing`",
+        "",
         _render_help_block(release_bootstrap_signing_help).rstrip(),
-        '',
-        '## `infinitas server`',
-        '',
+        "",
+        "## `infinitas server`",
+        "",
         _render_help_block(server_help).rstrip(),
-        '',
-        '## `infinitas server healthcheck`',
-        '',
+        "",
+        "## `infinitas server healthcheck`",
+        "",
         _render_help_block(server_healthcheck_help).rstrip(),
-        '',
-        '## `infinitas server backup`',
-        '',
+        "",
+        "## `infinitas server backup`",
+        "",
         _render_help_block(server_backup_help).rstrip(),
-        '',
-        '## `infinitas server inspect-state`',
-        '',
+        "",
+        "## `infinitas server inspect-state`",
+        "",
         _render_help_block(server_inspect_state_help).rstrip(),
-        '',
-        '## `infinitas server render-systemd`',
-        '',
+        "",
+        "## `infinitas server render-systemd`",
+        "",
         _render_help_block(server_render_systemd_help).rstrip(),
-        '',
-        '## `infinitas server prune-backups`',
-        '',
+        "",
+        "## `infinitas server prune-backups`",
+        "",
         _render_help_block(server_prune_backups_help).rstrip(),
-        '',
-        '## `infinitas server worker`',
-        '',
+        "",
+        "## `infinitas server worker`",
+        "",
         _render_help_block(server_worker_help).rstrip(),
-        '',
+        "",
     ]
-    return '\n'.join(lines)
+    return "\n".join(lines)
 
 
 def main() -> int:
-    print(render_cli_reference(), end='')
+    print(render_cli_reference(), end="")
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     raise SystemExit(main())

@@ -8,5 +8,5 @@ Expected guidance:
 
 - inspect `config/registry-sources.json`
 - compare `catalog/inventory-export.json` and `catalog/audit-export.json`
-- use `scripts/search-skills.sh` and `scripts/inspect-skill.sh`
+- use `uv run infinitas discovery search` and `uv run infinitas discovery inspect`
 - rebuild generated artifacts only after identifying the source of drift

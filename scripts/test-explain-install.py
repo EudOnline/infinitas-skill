@@ -91,6 +91,19 @@ def make_env(extra=None):
     return build_regression_test_env(ROOT, extra=extra, env=os.environ.copy())
 
 
+def cli_env(repo: Path):
+    env = dict(os.environ, PYTHONPATH=str(repo / 'src'))
+    return build_regression_test_env(ROOT, extra=env, env=os.environ.copy())
+
+
+def cli_command(*args: str):
+    return [sys.executable, '-m', 'infinitas_skill.cli.main', *args]
+
+
+def run_cli(repo: Path, args: list[str], expect=0):
+    return run(cli_command(*args), cwd=repo, expect=expect, env=cli_env(repo))
+
+
 def scaffold_fixture(repo: Path, version: str):
     fixture_dir = repo / 'skills' / 'active' / FIXTURE_NAME
     if fixture_dir.exists():
@@ -417,14 +430,22 @@ def assert_mutation_fields(payload, *, readiness, policy, reason_code, recovery_
 def main():
     tmpdir, repo = prepare_repo()
     try:
-        private_payload = json.loads(run([str(repo / 'scripts' / 'resolve-skill.sh'), FIXTURE_NAME], cwd=repo).stdout)
+        private_payload = json.loads(
+            run_cli(repo, ['install', 'resolve-skill', FIXTURE_NAME, '--json']).stdout
+        )
         assert_explanation(private_payload, registry_name='self', requires_confirmation=False, expected_version=V1)
 
         target_dir = tmpdir / 'installed'
-        run([str(repo / 'scripts' / 'install-by-name.sh'), FIXTURE_NAME, str(target_dir), '--version', V1], cwd=repo)
+        run_cli(
+            repo,
+            ['install', 'by-name', FIXTURE_NAME, str(target_dir), '--version', V1, '--json'],
+        )
 
         no_upgrade_plan_payload = json.loads(
-            run([str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_dir), '--mode', 'confirm'], cwd=repo).stdout
+            run_cli(
+                repo,
+                ['install', 'upgrade', FIXTURE_NAME, str(target_dir), '--mode', 'confirm', '--json'],
+            ).stdout
         )
         if no_upgrade_plan_payload.get('state') != 'up-to-date':
             fail(f"expected confirm no-op state 'up-to-date', got {no_upgrade_plan_payload!r}")
@@ -438,13 +459,18 @@ def main():
         release_current(repo)
         shutil.rmtree(repo / 'skills' / 'active' / FIXTURE_NAME)
 
-        update_payload = json.loads(run([str(repo / 'scripts' / 'check-skill-update.sh'), FIXTURE_NAME, str(target_dir)], cwd=repo).stdout)
+        update_payload = json.loads(
+            run_cli(repo, ['install', 'check-update', FIXTURE_NAME, str(target_dir), '--json']).stdout
+        )
         assert_explanation(update_payload, registry_name='self', requires_confirmation=False, expected_version=V2)
         if V1 not in ((update_payload.get('explanation') or {}).get('version_reason') or ''):
             fail('expected update explanation to mention installed version')
 
         plan_payload = json.loads(
-            run([str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_dir), '--mode', 'confirm'], cwd=repo).stdout
+            run_cli(
+                repo,
+                ['install', 'upgrade', FIXTURE_NAME, str(target_dir), '--mode', 'confirm', '--json'],
+            ).stdout
         )
         assert_explanation(plan_payload, registry_name='self', requires_confirmation=False, expected_version=V2)
         assert_mutation_fields(plan_payload, readiness='ready', policy=None, reason_code=None, recovery_action='none')
@@ -455,17 +481,19 @@ def main():
         write_install_integrity_policy(repo, stale_policy='fail')
         mark_install_stale(target_dir, FIXTURE_NAME)
         stale_no_upgrade_payload = json.loads(
-            run(
+            run_cli(
+                repo,
                 [
-                    str(repo / 'scripts' / 'upgrade-skill.sh'),
+                    'install',
+                    'upgrade',
                     FIXTURE_NAME,
                     str(target_dir),
                     '--mode',
                     'confirm',
                     '--to-version',
                     V1,
+                    '--json',
                 ],
-                cwd=repo,
             ).stdout
         )
         if stale_no_upgrade_payload.get('state') != 'up-to-date':
@@ -483,17 +511,19 @@ def main():
         write_install_integrity_policy(repo, stale_policy='warn', never_verified_policy='fail')
         mark_install_never_verified(target_dir, FIXTURE_NAME)
         never_verified_no_upgrade_payload = json.loads(
-            run(
+            run_cli(
+                repo,
                 [
-                    str(repo / 'scripts' / 'upgrade-skill.sh'),
+                    'install',
+                    'upgrade',
                     FIXTURE_NAME,
                     str(target_dir),
                     '--mode',
                     'confirm',
                     '--to-version',
                     V1,
+                    '--json',
                 ],
-                cwd=repo,
             ).stdout
         )
         if never_verified_no_upgrade_payload.get('state') != 'up-to-date':
@@ -517,7 +547,7 @@ def main():
         write_install_integrity_policy(repo, stale_policy='warn', never_verified_policy='warn')
         mark_install_never_verified(target_dir, FIXTURE_NAME)
         never_verified_update_payload = json.loads(
-            run([str(repo / 'scripts' / 'check-skill-update.sh'), FIXTURE_NAME, str(target_dir)], cwd=repo).stdout
+            run_cli(repo, ['install', 'check-update', FIXTURE_NAME, str(target_dir), '--json']).stdout
         )
         assert_explanation(never_verified_update_payload, registry_name='self', requires_confirmation=False, expected_version=V2)
         never_verified_update_reasons = ((never_verified_update_payload.get('explanation') or {}).get('policy_reasons') or [])
@@ -531,7 +561,10 @@ def main():
             )
 
         never_verified_plan_payload = json.loads(
-            run([str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_dir), '--mode', 'confirm'], cwd=repo).stdout
+            run_cli(
+                repo,
+                ['install', 'upgrade', FIXTURE_NAME, str(target_dir), '--mode', 'confirm', '--json'],
+            ).stdout
         )
         assert_explanation(never_verified_plan_payload, registry_name='self', requires_confirmation=False, expected_version=V2)
         assert_mutation_fields(
@@ -554,7 +587,10 @@ def main():
         write_install_integrity_policy(repo, stale_policy='warn')
         mark_install_stale(target_dir, FIXTURE_NAME)
         stale_warn_payload = json.loads(
-            run([str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_dir), '--mode', 'confirm'], cwd=repo).stdout
+            run_cli(
+                repo,
+                ['install', 'upgrade', FIXTURE_NAME, str(target_dir), '--mode', 'confirm', '--json'],
+            ).stdout
         )
         assert_mutation_fields(
             stale_warn_payload,
@@ -571,9 +607,9 @@ def main():
             fail(f'expected stale warning next_actions to recommend refresh, got {stale_warn_actions!r}')
 
         write_install_integrity_policy(repo, stale_policy='fail')
-        blocked = run(
-            [str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_dir), '--mode', 'confirm'],
-            cwd=repo,
+        blocked = run_cli(
+            repo,
+            ['install', 'upgrade', FIXTURE_NAME, str(target_dir), '--mode', 'confirm', '--json'],
             expect=1,
         )
         blocked_payload = json.loads(blocked.stdout)
@@ -591,7 +627,9 @@ def main():
             fail(f'expected stale block next_actions to recommend refresh, got {blocked_actions!r}')
 
         configure_external_registry(repo, tmpdir)
-        external_payload = json.loads(run([str(repo / 'scripts' / 'resolve-skill.sh'), EXTERNAL_SKILL_NAME], cwd=repo).stdout)
+        external_payload = json.loads(
+            run_cli(repo, ['install', 'resolve-skill', EXTERNAL_SKILL_NAME, '--json']).stdout
+        )
         assert_explanation(
             external_payload,
             registry_name=EXTERNAL_REGISTRY_NAME,
@@ -602,9 +640,17 @@ def main():
         if not policy_reasons:
             fail('expected policy_reasons for external resolution')
 
-        blocked = run(
-            [str(repo / 'scripts' / 'upgrade-skill.sh'), FIXTURE_NAME, str(target_dir), '--registry', 'other-registry'],
-            cwd=repo,
+        blocked = run_cli(
+            repo,
+            [
+                'install',
+                'upgrade',
+                FIXTURE_NAME,
+                str(target_dir),
+                '--registry',
+                'other-registry',
+                '--json',
+            ],
             expect=1,
         )
         blocked_payload = json.loads(blocked.stdout)

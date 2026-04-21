@@ -6,10 +6,15 @@ import re
 import sys
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parent.parent
+SRC = ROOT / 'src'
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
 from dependency_lib import DependencyError, normalize_meta_dependencies
-from ai_index_lib import validate_ai_index_payload
-from discovery_index_lib import validate_discovery_index_payload
 from compatibility_evidence_lib import compatibility_evidence_root, validate_compatibility_evidence_payload
+from infinitas_skill.discovery.ai_index import validate_ai_index_payload
+from infinitas_skill.discovery.index import validate_discovery_index_payload
 from policy_pack_lib import PolicyPackError, load_policy_domain_resolution
 from policy_trace_lib import build_policy_trace, render_policy_trace
 from registry_source_lib import load_registry_config
@@ -17,7 +22,6 @@ from skill_identity_lib import NamespacePolicyError, load_namespace_policy, name
 from schema_version_lib import validate_schema_version
 from canonical_skill_lib import CanonicalSkillError, is_canonical_skill_dir, validate_canonical_payload
 
-ROOT = Path(__file__).resolve().parent.parent
 NAME_RE = re.compile(r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
 SEMVER_RE = re.compile(r'^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9_.-]+)?$')
 FRONTMATTER_RE = re.compile(r'^---\n(.*?)\n---\n?', re.DOTALL)

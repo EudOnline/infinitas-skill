@@ -126,7 +126,7 @@ To consume one snapshot on purpose, pass both the registry name and a selector:
 
 ```bash
 python3 scripts/resolve-skill-source.py demo --registry upstream --snapshot latest --json
-scripts/install-skill.sh demo ~/.openclaw/skills --registry upstream --snapshot latest
+uv run python3 -m infinitas_skill.cli.main install exact demo ~/.openclaw/skills --registry upstream --snapshot latest
 scripts/sync-registry-source.sh upstream --snapshot latest
 ```
 
@@ -286,7 +286,7 @@ Dependency planning now follows a deterministic registry-aware order:
 5. `archived` candidates are only considered for exact version requests, while `incubating` candidates require `allow_incubating: true`.
 6. If the final plan would violate an installed dependency lock or leave an unresolved conflict, install/sync fails before mutating the target directory.
 
-`uv run infinitas install resolve-plan` exposes the same planner that `install-skill.sh`, `sync-skill.sh`, `infinitas install check-target`, and `check-registry-integrity.py` now use.
+`uv run infinitas install resolve-plan` exposes the same planner that `infinitas install exact`, `infinitas install sync`, `infinitas install check-target`, and `check-registry-integrity.py` now use.
 
 ## Catalog output
 

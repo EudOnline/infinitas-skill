@@ -558,7 +558,7 @@ def scenario_copy_triggers_work_and_search_empty_state_uses_copy_cta():
             if search_skill.get('href') is not None:
                 fail(f'search skill result should not navigate to a missing route, got {search_skill}')
             if search_skill.get('copy'):
-                if not search_skill['copy'].startswith('scripts/inspect-skill.sh '):
+                if not search_skill['copy'].startswith('uv run infinitas discovery inspect '):
                     fail(f'search skill result should expose an inspect command copy action, got {search_skill}')
             else:
                 if search_skill.get('dropdownRole') != 'dialog' or not search_skill.get('panelOpen'):
@@ -750,7 +750,7 @@ def scenario_legacy_registry_reader_env_does_not_gate_home_search():
                 fail(f'expected legacy registry reader env to stop triggering auth prompts on home search, got {public_search}')
             if public_search.get('bodyOverflow'):
                 fail(f'expected home search to keep body scroll unlocked, got {public_search}')
-            if not (public_search.get('resultCopy') or '').startswith('scripts/inspect-skill.sh '):
+            if not (public_search.get('resultCopy') or '').startswith('uv run infinitas discovery inspect '):
                 fail(f'expected legacy registry reader env to preserve home inspect actions, got {public_search}')
     finally:
         stop_playwright_session(session)

@@ -13,6 +13,8 @@ Reference docs describe exact behavior, contracts, schemas, and maintained comma
 ## CLI and command surfaces
 
 - [CLI reference](cli-reference.md)
+- [Discovery and install workflows](discovery-install-workflows.md)
+- [Release attestation](release-attestation.md)
 - [Release checklist](../ops/release-checklist.md)
 
 ## Contracts and schemas

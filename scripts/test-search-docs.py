@@ -23,43 +23,33 @@ def assert_contains(path: Path, needle: str) -> None:
 
 
 def main() -> None:
-    search_doc = ROOT / "docs" / "ai" / "search-and-inspect.md"
-    recommend_doc = ROOT / "docs" / "ai" / "recommend.md"
-    pull_doc = ROOT / "docs" / "ai" / "pull.md"
+    readme = ROOT / "README.md"
+    consume_skill = ROOT / "skills" / "active" / "consume-infinitas-skill" / "SKILL.md"
+    federation_skill = ROOT / "skills" / "active" / "federation-registry-ops" / "SKILL.md"
+    cli_reference = ROOT / "docs" / "reference" / "cli-reference.md"
+    app_js = ROOT / "server" / "static" / "js" / "app.js"
 
     for needle in [
-        "scripts/search-skills.sh",
-        "scripts/recommend-skill.sh",
-        "scripts/inspect-skill.sh",
-        "install-by-name.sh",
-        "upgrade-skill.sh",
-        "trust state",
-        "provenance",
-        "verified distribution manifests",
-        "comparison_summary",
+        "uv run infinitas discovery search",
+        "uv run infinitas discovery recommend",
+        "uv run infinitas discovery inspect",
     ]:
-        assert_contains(search_doc, needle)
+        assert_contains(consume_skill, needle)
 
     for needle in [
-        "scripts/recommend-skill.sh",
-        "scripts/search-skills.sh",
-        "scripts/inspect-skill.sh",
-        "trust state",
-        "compatibility",
-        "maturity",
-        "verification freshness",
-        "confidence",
-        "comparative_signals",
-        "comparison_summary",
+        "uv run infinitas discovery search",
+        "uv run infinitas discovery inspect",
     ]:
-        assert_contains(recommend_doc, needle)
+        assert_contains(federation_skill, needle)
 
     for needle in [
-        "provenance",
-        "signature",
-        "/registry/provenance/",
+        "infinitas discovery inspect",
+        "discovery inspect",
     ]:
-        assert_contains(pull_doc, needle)
+        assert_contains(cli_reference, needle)
+
+    assert_contains(readme, "docs/reference/cli-reference.md")
+    assert_contains(app_js, "uv run infinitas discovery inspect")
 
     print("OK: search docs compatibility checks passed")
 

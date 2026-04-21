@@ -19,7 +19,7 @@ Use the guide section when you need orientation, decision framing, or contributo
 - [Frontend control-plane checklist](frontend-control-plane-checklist.md)
 - [Kimi frontend execution brief](kimi-frontend-execution-brief.md)
 - [Repository conventions](conventions.md)
-- [Workflow drills](../ai/workflow-drills.md)
+- [Workflow drills](workflow-drills.md)
 
 ## What belongs here
 

@@ -7,13 +7,12 @@ import sys
 import tempfile
 from pathlib import Path
 
-from discovery_index_lib import build_discovery_index
-
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / 'src'
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from infinitas_skill.discovery.index import build_discovery_index  # noqa: E402
 from infinitas_skill.testing.env import build_regression_test_env
 
 FIXTURE_NAME = 'release-fixture'

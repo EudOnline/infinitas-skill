@@ -31,7 +31,7 @@ def test_doc_governance_rejects_retired_cli_wrappers_in_maintained_ops_docs(
     fake_root = tmp_path
     fake_docs = fake_root / "docs"
     fake_ops = fake_docs / "ops"
-    fake_ai = fake_docs / "ai"
+    fake_platform = fake_docs / "platform-contracts"
 
     _write(
         fake_root / "README.md",
@@ -48,30 +48,29 @@ def test_doc_governance_rejects_retired_cli_wrappers_in_maintained_ops_docs(
         "---\n\n"
         "# Docs\n\n"
         "- [Ops](ops/README.md)\n"
-        "- [Legacy AI](ai/README.md)\n",
     )
     _write(
-        fake_ai / "README.md",
+        fake_platform / "README.md",
         "---\n"
         "audience: automation\n"
         "owner: maintainers\n"
-        "source_of_truth: legacy ai landing\n"
+        "source_of_truth: legacy platform landing\n"
         "last_reviewed: 2026-04-21\n"
         "status: legacy\n"
         "---\n\n"
-        "# AI\n\n"
-        "- [Protocol](discovery.md)\n",
+        "# Platform contracts\n\n"
+        "- [OpenClaw](openclaw.md)\n",
     )
     _write(
-        fake_ai / "discovery.md",
+        fake_platform / "openclaw.md",
         "---\n"
         "audience: automation\n"
         "owner: maintainers\n"
-        "source_of_truth: legacy ai annex\n"
+        "source_of_truth: legacy platform annex\n"
         "last_reviewed: 2026-04-21\n"
         "status: legacy\n"
         "---\n\n"
-        "# Discovery\n",
+        "# OpenClaw\n",
     )
     _write(
         fake_ops / "README.md",
@@ -101,7 +100,9 @@ def test_doc_governance_rejects_retired_cli_wrappers_in_maintained_ops_docs(
     monkeypatch.setattr(module, "ROOT", fake_root)
     monkeypatch.setattr(module, "DOCS_ROOT", fake_docs)
     monkeypatch.setattr(module, "SECTION_LANDINGS", {"ops": fake_ops / "README.md"})
-    monkeypatch.setattr(module, "LEGACY_SECTION_LANDINGS", {"ai": fake_ai / "README.md"})
+    monkeypatch.setattr(
+        module, "LEGACY_SECTION_LANDINGS", {"platform-contracts": fake_platform / "README.md"}
+    )
     monkeypatch.setattr(
         module, "GLOBAL_INDEXES", [fake_root / "README.md", fake_docs / "README.md"]
     )
@@ -148,46 +149,12 @@ def test_openclaw_canonical_runtime_docs_preserve_backend_control_plane_boundary
     assert "legacy and transitional" in compatibility_matrix
 
 
-def test_legacy_doc_surfaces_are_explicitly_indexed_and_metadata_tagged() -> None:
+def test_legacy_ai_landing_is_removed_from_docs_entrypoints() -> None:
     docs_readme = (ROOT / "docs" / "README.md").read_text(encoding="utf-8")
 
-    expected_landings = [
-        ROOT / "docs" / "ai" / "README.md",
-        ROOT / "docs" / "platform-contracts" / "README.md",
-    ]
-    expected_legacy_docs = [
-        ROOT / "docs" / "ai" / "README.md",
-        ROOT / "docs" / "ai" / "memory.md",
-        ROOT / "docs" / "ai" / "workflow-drills.md",
-        ROOT / "docs" / "platform-contracts" / "README.md",
-        ROOT / "docs" / "platform-contracts" / "openclaw.md",
-        ROOT / "docs" / "project-closeout.md",
-        ROOT / "docs" / "registry-snapshot-mirrors.md",
-        ROOT / "docs" / "release-strategy.md",
-    ]
+    assert "ai/README.md" not in docs_readme
+    assert "platform-contracts/README.md" in docs_readme
 
-    for landing in expected_landings:
-        assert landing.exists(), f"expected legacy landing page to exist: {landing}"
-        assert landing.name in docs_readme, (
-            f"expected docs/README.md to index legacy landing page {landing.name}"
-        )
 
-    for path in expected_legacy_docs:
-        assert path.exists(), f"expected legacy doc to exist: {path}"
-        text = path.read_text(encoding="utf-8")
-        lines = text.splitlines()
-        assert len(lines) >= 3 and lines[0].strip() == "---", (
-            f"expected explicit front matter on legacy doc {path}"
-        )
-        metadata = {}
-        for line in lines[1:]:
-            stripped = line.strip()
-            if stripped == "---":
-                break
-            key, value = stripped.split(":", 1)
-            metadata[key.strip()] = value.strip()
-        assert metadata.get("status") == "legacy", (
-            f"expected legacy doc {path} to be tagged with status: legacy"
-        )
-        for field in ["audience", "owner", "source_of_truth", "last_reviewed"]:
-            assert metadata.get(field), f"expected legacy doc {path} to declare {field}"
+def test_legacy_ai_annex_is_removed_from_the_docs_tree() -> None:
+    assert not (ROOT / "docs" / "ai").exists()

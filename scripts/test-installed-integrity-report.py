@@ -56,6 +56,15 @@ def make_env(repo: Path, extra=None):
     )
 
 
+def run_cli(repo: Path, args: list[str], *, expect=0):
+    return run(
+        [sys.executable, '-m', 'infinitas_skill.cli.main', *args],
+        cwd=repo,
+        expect=expect,
+        env=make_env(repo),
+    )
+
+
 def contract_checked_at(repo: Path, platform: str):
     profile_path = repo / 'profiles' / f'{platform}.json'
     payload = json.loads(profile_path.read_text(encoding='utf-8'))
@@ -213,11 +222,7 @@ def release_fixture(repo: Path):
 
 
 def install_fixture(repo: Path, target_dir: Path):
-    run(
-        [str(repo / 'scripts' / 'install-skill.sh'), FIXTURE_NAME, str(target_dir), '--version', VERSION],
-        cwd=repo,
-        env=make_env(repo),
-    )
+    run_cli(repo, ['install', 'exact', FIXTURE_NAME, str(target_dir), '--version', VERSION])
 
 
 def read_install_manifest(target_dir: Path):

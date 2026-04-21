@@ -13,9 +13,9 @@ Use it when the question is about why a registry source is or is not visible, wh
 
 ## Read First
 
-- `docs/federation-operations.md`
-- `docs/ai/discovery.md`
-- `docs/ai/search-and-inspect.md`
+- `docs/ops/federation-operations.md`
+- `docs/reference/cli-reference.md`
+- `docs/reference/multi-registry.md`
 - `catalog/inventory-export.json`
 - `catalog/audit-export.json`
 - `config/registry-sources.json`
@@ -30,8 +30,8 @@ Use it when the question is about why a registry source is or is not visible, wh
 
 ## Command and Artifact Map
 
-- `scripts/search-skills.sh`: confirm whether a skill is visible through generated discovery surfaces
-- `scripts/inspect-skill.sh`: inspect the selected skill's source, trust, and provenance view
+- `uv run infinitas discovery search`: confirm whether a skill is visible through generated discovery surfaces
+- `uv run infinitas discovery inspect`: inspect the selected skill's source, trust, and provenance view
 - `catalog/inventory-export.json`: current inventory and registry visibility view
 - `catalog/audit-export.json`: release and provenance-oriented audit view
 - `scripts/build-catalog.sh`: regenerate derived artifacts after registry-source or policy changes

@@ -54,10 +54,14 @@ requested_version = sys.argv[4] or None
 requested_registry = sys.argv[5] or None
 mode = sys.argv[6]
 
+sys.path.insert(0, str(root / 'src'))
 sys.path.insert(0, str(root / 'scripts'))
-from ai_index_lib import validate_ai_index_payload  # noqa: E402
-from explain_install_lib import build_pull_failure_explanation, build_pull_plan_explanation  # noqa: E402
 from http_registry_lib import HostedRegistryError, fetch_json, registry_catalog_path  # noqa: E402
+from infinitas_skill.discovery.ai_index import validate_ai_index_payload  # noqa: E402
+from infinitas_skill.discovery.install_explanation import (  # noqa: E402
+    build_pull_failure_explanation,
+    build_pull_plan_explanation,
+)
 from registry_source_lib import find_registry, load_registry_config, normalized_auth, resolve_registry_root  # noqa: E402
 
 resolved_registry_name = 'self'
@@ -266,7 +270,7 @@ plan = {
     'attestation_path': version_entry.get('attestation_path'),
     'registry_kind': 'http' if resolved_registry_root is None and requested_registry else 'local',
     'install_name': install_name,
-    'install_command': ['scripts/install-skill.sh', install_name, target_dir, '--version', resolved_version] + (['--registry', resolved_registry_name] if requested_registry else []),
+    'install_command': ['python3', '-m', 'infinitas_skill.cli.main', 'install', 'exact', install_name, target_dir, '--version', resolved_version] + (['--registry', resolved_registry_name] if requested_registry else []),
     'next_step': 'run-install' if mode == 'auto' else 'confirm-or-run',
 }
 plan['explanation'] = build_pull_plan_explanation(plan, requested_version=requested_version)
@@ -299,7 +303,7 @@ PY
 )"
 LOCKFILE_PATH="$TARGET_DIR/.infinitas-skill-install-manifest.json"
 INSTALL_LOG="$(mktemp)"
-INSTALL_ARGS=(./scripts/install-skill.sh "$INSTALL_NAME" "$TARGET_DIR" --version "$RESOLVED_INSTALL_VERSION")
+INSTALL_ARGS=(env "PYTHONPATH=$ROOT/src${PYTHONPATH:+:$PYTHONPATH}" python3 -m infinitas_skill.cli.main install exact "$INSTALL_NAME" "$TARGET_DIR" --version "$RESOLVED_INSTALL_VERSION" --json)
 if [[ -n "$REGISTRY_NAME" ]]; then
   INSTALL_ARGS+=(--registry "$REGISTRY_NAME")
 fi
@@ -307,8 +311,9 @@ if ! "${INSTALL_ARGS[@]}" >"$INSTALL_LOG" 2>&1; then
   python3 - <<'PY' "$ROOT" "$PLAN_JSON" "$INSTALL_LOG"
 import json, sys
 from pathlib import Path
+sys.path.insert(0, sys.argv[1] + '/src')
 sys.path.insert(0, sys.argv[1] + '/scripts')
-from explain_install_lib import build_pull_result_explanation  # noqa: E402
+from infinitas_skill.discovery.install_explanation import build_pull_result_explanation  # noqa: E402
 plan = json.loads(sys.argv[2])
 message = Path(sys.argv[3]).read_text(encoding='utf-8').strip()
 payload = {
@@ -333,8 +338,9 @@ rm -f "$INSTALL_LOG"
 
 python3 - <<'PY' "$ROOT" "$PLAN_JSON" "$LOCKFILE_PATH"
 import json, sys
+sys.path.insert(0, sys.argv[1] + '/src')
 sys.path.insert(0, sys.argv[1] + '/scripts')
-from explain_install_lib import build_pull_result_explanation  # noqa: E402
+from infinitas_skill.discovery.install_explanation import build_pull_result_explanation  # noqa: E402
 plan = json.loads(sys.argv[2])
 lockfile_path = sys.argv[3]
 payload = {

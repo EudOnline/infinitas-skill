@@ -158,13 +158,12 @@ The supported backend lifecycle remains:
 Use these canonical docs for the current model:
 
 - [Private-first cutover](docs/guide/private-first-cutover.md)
-- [Memory operating model](docs/ai/memory.md)
 - [OpenClaw runtime contract](docs/reference/openclaw-runtime-contract.md)
-- [AI workflow drills](docs/ai/workflow-drills.md) explains when to use `scripts/recommend-skill.sh`, `scripts/search-skills.sh`, and `scripts/inspect-skill.sh` for task routing.
+- [CLI reference](docs/reference/cli-reference.md) documents `uv run infinitas discovery ...`, `uv run infinitas registry ...`, and the maintained operator command surface.
+- [Release attestation](docs/reference/release-attestation.md) covers `release_trust_mode`, CI-native attestation, `scripts/verify-ci-attestation.py`, and `.github/workflows/release-attestation.yml`.
 - [Platform drift playbook](docs/ops/platform-drift-playbook.md)
 - [Release checklist](docs/ops/release-checklist.md)
 - [Project health scorecard](docs/ops/2026-04-02-project-health-scorecard.md)
-- [CI-native attestation](docs/ai/ci-attestation.md) documents `.github/workflows/release-attestation.yml` and `python3 scripts/verify-ci-attestation.py`
 - [Hosted registry server deployment](docs/ops/server-deployment.md)
 
 Compatibility reporting still distinguishes between legacy `declared support` metadata such as `_meta.json.agent_compatible` and historical `verified support` evidence. Those fields remain useful for migration and audit context, but they are no longer the maintained runtime source of truth.

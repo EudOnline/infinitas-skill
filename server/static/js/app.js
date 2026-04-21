@@ -426,7 +426,7 @@ class SearchManager {
           el.addEventListener('click', () => this.showSkillInstall(skill));
         } else {
           const inspectTarget = skill.qualified_name || skill.id || skill.name || '';
-          const inspectCommand = inspectTarget ? `scripts/inspect-skill.sh ${inspectTarget}` : '';
+          const inspectCommand = inspectTarget ? `uv run infinitas discovery inspect ${inspectTarget} --json` : '';
           if (inspectCommand) {
             el.dataset.copy = inspectCommand;
           }

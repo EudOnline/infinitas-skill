@@ -16,9 +16,9 @@ Use it when the job is to make a skill safely releasable for other agents, not w
 Start with these machine-facing docs before opening implementation internals:
 
 - `README.md`
-- `docs/ai/publish.md`
-- `docs/ai/server-api.md`
-- `docs/private-first-cutover.md`
+- `docs/reference/cli-reference.md`
+- `docs/ops/release-checklist.md`
+- `docs/guide/private-first-cutover.md`
 
 Default to confirm-first reasoning when a command could seal a draft, create a release, open a review case, or change exposure state.
 

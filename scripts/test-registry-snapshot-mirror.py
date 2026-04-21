@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -19,6 +20,28 @@ def run(command, cwd, expect=0):
     if result.returncode != expect:
         fail(
             f'command {command!r} exited {result.returncode}, expected {expect}\n'
+            f'stdout:\n{result.stdout}\n'
+            f'stderr:\n{result.stderr}'
+        )
+    return result
+
+
+def run_cli(repo: Path, args: list[str], *, expect=0):
+    env = dict(os.environ)
+    pythonpath = str(repo / 'src')
+    current_pythonpath = env.get('PYTHONPATH')
+    env['PYTHONPATH'] = f'{pythonpath}:{current_pythonpath}' if current_pythonpath else pythonpath
+    result = subprocess.run(
+        [sys.executable, '-m', 'infinitas_skill.cli.main', *args],
+        cwd=repo,
+        text=True,
+        capture_output=True,
+        env=env,
+    )
+    if result.returncode != expect:
+        fail(
+            f'command {[sys.executable, "-m", "infinitas_skill.cli.main", *args]!r} '
+            f'exited {result.returncode}, expected {expect}\n'
             f'stdout:\n{result.stdout}\n'
             f'stderr:\n{result.stderr}'
         )
@@ -401,9 +424,21 @@ def scenario_resolve_install_and_sync_can_use_explicit_snapshot():
             fail(f'expected missing snapshot error, got {missing_output!r}')
 
         target_dir = repo / '.tmp-install'
-        installed = run(
-            ['bash', 'scripts/install-skill.sh', 'demo', str(target_dir), '--version', '1.0.0', '--registry', 'upstream', '--snapshot', snapshot_id],
-            cwd=repo,
+        installed = run_cli(
+            repo,
+            [
+                'install',
+                'exact',
+                'demo',
+                str(target_dir),
+                '--version',
+                '1.0.0',
+                '--registry',
+                'upstream',
+                '--snapshot',
+                snapshot_id,
+                '--json',
+            ],
         )
         if 'synced' in (installed.stdout + installed.stderr).lower():
             pass

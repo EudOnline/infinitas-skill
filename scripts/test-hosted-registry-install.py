@@ -38,6 +38,18 @@ def run(command, cwd, expect=0, env=None):
     return result
 
 
+def cli_env(repo: Path):
+    return dict(os.environ, PYTHONPATH=str(repo / 'src'))
+
+
+def cli_command(*args: str):
+    return [sys.executable, '-m', 'infinitas_skill.cli.main', *args]
+
+
+def run_cli(repo: Path, args: list[str], expect=0):
+    return run(cli_command(*args), cwd=repo, expect=expect, env=cli_env(repo))
+
+
 def write_json(path: Path, payload):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
@@ -193,7 +205,7 @@ class HostedRegistryServer:
 
 
 def assert_install_success(repo: Path, target_dir: Path, *, expected_integrity_state: str):
-    result = run([str(repo / 'scripts' / 'install-by-name.sh'), SKILL_NAME, str(target_dir)], cwd=repo)
+    result = run_cli(repo, ['install', 'by-name', SKILL_NAME, str(target_dir), '--json'])
     payload = json.loads(result.stdout)
     if payload.get('state') != 'installed':
         fail(f"expected installed state, got {payload.get('state')!r}")
@@ -265,7 +277,7 @@ def assert_install_success(repo: Path, target_dir: Path, *, expected_integrity_s
 
 
 def assert_install_failure(repo: Path, target_dir: Path, needle: str):
-    result = run([str(repo / 'scripts' / 'install-by-name.sh'), SKILL_NAME, str(target_dir)], cwd=repo, expect=1)
+    result = run_cli(repo, ['install', 'by-name', SKILL_NAME, str(target_dir), '--json'], expect=1)
     combined = result.stdout + result.stderr
     if needle not in combined:
         fail(f'expected failure containing {needle!r}\n{combined}')
