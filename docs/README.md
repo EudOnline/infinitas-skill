@@ -20,7 +20,6 @@ The docs tree is being rebuilt around audience and task instead of historical fi
 
 ## Indexed legacy annexes
 
-- [Legacy AI protocol docs](ai/README.md): older machine-facing wrapper and protocol pages still referenced by tests and automation
 - [Legacy platform contracts](platform-contracts/README.md): source snapshots for external runtime/platform assumptions
 - [Release, tag, and attestation strategy](release-strategy.md): transitional top-level release policy narrative
 - [Registry snapshot mirrors](registry-snapshot-mirrors.md): transitional top-level mirror and snapshot narrative

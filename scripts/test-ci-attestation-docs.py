@@ -20,7 +20,7 @@ def assert_contains(path: Path, needles):
 
 def main():
     assert_contains(
-        ROOT / 'docs' / 'ai' / 'ci-attestation.md',
+        ROOT / 'docs' / 'reference' / 'release-attestation.md',
         [
             'Offline verification',
             'Online verification',
@@ -33,12 +33,15 @@ def main():
         ],
     )
     assert_contains(
-        ROOT / 'docs' / 'ai' / 'publish.md',
-        ['release_trust_mode', 'CI-native attestation', 'scripts/verify-ci-attestation.py'],
-    )
-    assert_contains(
-        ROOT / 'docs' / 'ai' / 'pull.md',
-        ['required_formats', 'scripts/verify-distribution-manifest.py', 'CI attestation'],
+        ROOT / 'docs' / 'reference' / 'release-attestation.md',
+        [
+            'release_trust_mode',
+            'CI-native attestation',
+            'scripts/verify-ci-attestation.py',
+            'required_formats',
+            'scripts/verify-distribution-manifest.py',
+            'CI attestation',
+        ],
     )
     assert_contains(
         ROOT / 'docs' / 'ops' / 'release-checklist.md',

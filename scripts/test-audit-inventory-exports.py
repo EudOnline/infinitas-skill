@@ -198,9 +198,11 @@ def assert_integrity_capability_surfaces(repo: Path):
     if verified_distribution.get('installed_integrity_reason') is not None:
         fail(f'expected catalog verified_distribution installed_integrity_reason to be omitted, got {operate_skill!r}')
 
-    discovery_guidance = (repo / 'docs' / 'ai' / 'discovery.md').read_text(encoding='utf-8')
+    discovery_guidance = (
+        repo / 'docs' / 'reference' / 'distribution-manifests.md'
+    ).read_text(encoding='utf-8')
     if 'installed_integrity_capability' not in discovery_guidance:
-        fail("expected docs/ai/discovery.md to mention 'installed_integrity_capability'")
+        fail("expected docs/reference/distribution-manifests.md to mention 'installed_integrity_capability'")
 
 
 def assert_audit_export(repo: Path):

@@ -16,30 +16,30 @@ Use it when the task begins from a user goal or an already released skill name. 
 Start with these stable surfaces:
 
 - `README.md`
-- `docs/ai/discovery.md`
-- `docs/ai/search-and-inspect.md`
-- `docs/ai/pull.md`
+- `docs/reference/cli-reference.md`
+- `docs/reference/distribution-manifests.md`
+- `docs/reference/installed-skill-integrity.md`
 - `catalog/discovery-index.json`
 - `catalog/ai-index.json`
 
 ## Workflow
 
-1. Search with `scripts/search-skills.sh` when the task is broad or exploratory.
-2. Rank candidates with `scripts/recommend-skill.sh` when the task is phrased as an intent instead of a precise name.
-3. Inspect the winning candidate with `scripts/inspect-skill.sh` before installation.
-4. Use `scripts/install-by-name.sh` or `scripts/pull-skill.sh` for immutable installation.
-5. When the user already has an installed version, compare and update with `scripts/check-skill-update.sh` and `scripts/upgrade-skill.sh`.
+1. Search with `uv run infinitas discovery search` when the task is broad or exploratory.
+2. Rank candidates with `uv run infinitas discovery recommend` when the task is phrased as an intent instead of a precise name.
+3. Inspect the winning candidate with `uv run infinitas discovery inspect` before installation.
+4. Use `uv run infinitas install by-name` or `scripts/pull-skill.sh` for immutable installation.
+5. When the user already has an installed version, compare and update with `uv run infinitas install check-update` and `uv run infinitas install upgrade`.
 6. Prefer `--mode confirm` before any install or upgrade that would mutate a runtime directory.
 
 ## Command Map
 
-- `scripts/search-skills.sh`: list possible skill matches from the generated discovery index
-- `scripts/recommend-skill.sh`: rank the best fit for a task
-- `scripts/inspect-skill.sh`: inspect trust, compatibility, provenance, and decision metadata
-- `scripts/install-by-name.sh`: resolve and install by discovery-first name lookup
+- `uv run infinitas discovery search`: list possible skill matches from the generated discovery index
+- `uv run infinitas discovery recommend`: rank the best fit for a task
+- `uv run infinitas discovery inspect`: inspect trust, compatibility, provenance, and decision metadata
+- `uv run infinitas install by-name`: resolve and install by discovery-first name lookup
 - `scripts/pull-skill.sh`: install a known released skill from immutable artifacts
-- `scripts/check-skill-update.sh`: inspect whether a newer compatible release exists
-- `scripts/upgrade-skill.sh`: perform an immutable upgrade using the recorded source registry
+- `uv run infinitas install check-update`: inspect whether a newer compatible release exists
+- `uv run infinitas install upgrade`: perform an immutable upgrade using the recorded source registry
 
 ## Hard Rules
 

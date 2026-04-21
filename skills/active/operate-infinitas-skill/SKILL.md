@@ -23,11 +23,10 @@ Always distinguish these states before choosing a command:
 Read this machine-facing surface first:
 
 - `README.md`
-- `docs/ai/discovery.md`
-- `docs/ai/publish.md`
-- `docs/ai/pull.md`
-- `docs/ai/server-api.md`
-- `docs/private-first-cutover.md`
+- `docs/reference/cli-reference.md`
+- `docs/reference/openclaw-runtime-contract.md`
+- `docs/ops/release-checklist.md`
+- `docs/guide/private-first-cutover.md`
 
 Use `--mode confirm` first when the request could mutate the repo, write into a runtime directory, or publish a release.
 
