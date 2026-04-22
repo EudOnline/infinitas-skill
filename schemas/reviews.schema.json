@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/infinitas-skill/reviews.schema.json",
+  "title": "infinitas-skill reviews.json",
+  "description": "Validates the reviews.json file that lives inside each skill directory, tracking review requests and decisions.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "version"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version; always 1."
+    },
+    "requests": {
+      "type": "array",
+      "description": "Review requests submitted for this skill.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "requested_at"
+        ],
+        "properties": {
+          "requested_at": {
+            "type": "string",
+            "description": "ISO 8601 timestamp of when the review was requested."
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional note accompanying the review request."
+          }
+        }
+      }
+    },
+    "entries": {
+      "type": "array",
+      "description": "Review decision entries recorded for this skill.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "reviewer",
+          "decision",
+          "at"
+        ],
+        "properties": {
+          "reviewer": {
+            "type": "string",
+            "description": "Reviewer identifier; must be a configured reviewer (enforced by code)."
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected"
+            ],
+            "description": "Review decision."
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional note accompanying the review decision."
+          },
+          "at": {
+            "type": "string",
+            "description": "ISO 8601 timestamp of when the decision was recorded."
+          }
+        }
+      }
+    }
+  }
+}

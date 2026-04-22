@@ -2,7 +2,7 @@
 audience: contributors, integrators, reviewers
 owner: repository maintainers
 source_of_truth: reference landing page
-last_reviewed: 2026-04-07
+last_reviewed: 2026-04-22
 status: maintained
 ---
 
@@ -13,6 +13,8 @@ Reference docs describe exact behavior, contracts, schemas, and maintained comma
 ## CLI and command surfaces
 
 - [CLI reference](cli-reference.md)
+- [Registry CLI reference](registry-cli.md)
+- [Error catalog](error-catalog.md)
 - [Discovery and install workflows](discovery-install-workflows.md)
 - [Release attestation](release-attestation.md)
 - [Release checklist](../ops/release-checklist.md)
@@ -25,6 +27,8 @@ Reference docs describe exact behavior, contracts, schemas, and maintained comma
 - [Installed skill integrity](installed-skill-integrity.md)
 - [Metadata schema](metadata-schema.md)
 - [Distribution manifests](distribution-manifests.md)
+- [Reviews format](reviews-format.md)
+- [Install manifest format](install-manifest-format.md)
 
 ## Policy reference
 

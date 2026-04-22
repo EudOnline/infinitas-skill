@@ -38,7 +38,18 @@ from infinitas_skill.policy.review_commands import (
     build_recommend_reviewers_parser,
     build_review_status_parser,
 )
-from infinitas_skill.registry.cli import build_registry_parser
+from infinitas_skill.registry.cli import (
+    build_registry_agent_codes_parser,
+    build_registry_agent_presets_parser,
+    build_registry_drafts_parser,
+    build_registry_exposures_parser,
+    build_registry_grants_parser,
+    build_registry_parser,
+    build_registry_releases_parser,
+    build_registry_reviews_parser,
+    build_registry_skills_parser,
+    build_registry_tokens_parser,
+)
 from infinitas_skill.release.cli import build_release_parser
 from infinitas_skill.release.signing_bootstrap_cli import build_signing_bootstrap_parser
 from infinitas_skill.release.signing_doctor import build_signing_doctor_parser
@@ -127,6 +138,15 @@ def render_cli_reference() -> str:
         prog="infinitas policy review-status"
     ).format_help()
     registry_help = build_registry_parser(prog="infinitas registry").format_help()
+    registry_skills_help = build_registry_skills_parser().format_help()
+    registry_drafts_help = build_registry_drafts_parser().format_help()
+    registry_agent_presets_help = build_registry_agent_presets_parser().format_help()
+    registry_agent_codes_help = build_registry_agent_codes_parser().format_help()
+    registry_releases_help = build_registry_releases_parser().format_help()
+    registry_exposures_help = build_registry_exposures_parser().format_help()
+    registry_grants_help = build_registry_grants_parser().format_help()
+    registry_tokens_help = build_registry_tokens_parser().format_help()
+    registry_reviews_help = build_registry_reviews_parser().format_help()
     release_help = build_release_parser(prog="infinitas release").format_help()
     release_check_state_help = build_release_check_state_parser(
         prog="infinitas release check-state"
@@ -281,6 +301,42 @@ def render_cli_reference() -> str:
         "## `infinitas registry`",
         "",
         _render_help_block(registry_help).rstrip(),
+        "",
+        "## `infinitas registry skills`",
+        "",
+        _render_help_block(registry_skills_help).rstrip(),
+        "",
+        "## `infinitas registry drafts`",
+        "",
+        _render_help_block(registry_drafts_help).rstrip(),
+        "",
+        "## `infinitas registry agent-presets`",
+        "",
+        _render_help_block(registry_agent_presets_help).rstrip(),
+        "",
+        "## `infinitas registry agent-codes`",
+        "",
+        _render_help_block(registry_agent_codes_help).rstrip(),
+        "",
+        "## `infinitas registry releases`",
+        "",
+        _render_help_block(registry_releases_help).rstrip(),
+        "",
+        "## `infinitas registry exposures`",
+        "",
+        _render_help_block(registry_exposures_help).rstrip(),
+        "",
+        "## `infinitas registry grants`",
+        "",
+        _render_help_block(registry_grants_help).rstrip(),
+        "",
+        "## `infinitas registry tokens`",
+        "",
+        _render_help_block(registry_tokens_help).rstrip(),
+        "",
+        "## `infinitas registry reviews`",
+        "",
+        _render_help_block(registry_reviews_help).rstrip(),
         "",
         "## `infinitas release`",
         "",

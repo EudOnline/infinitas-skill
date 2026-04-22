@@ -1,0 +1,437 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/infinitas-skill/install-manifest.schema.json",
+  "title": "infinitas-skill install manifest",
+  "description": "Validates .infinitas-skill-install-manifest.json files that live at the root of install target directories.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "skills",
+    "history"
+  ],
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "name",
+        "version",
+        "source_type",
+        "source_path",
+        "target_path",
+        "install_target",
+        "installed_version",
+        "installed_at",
+        "install_mode",
+        "action",
+        "updated_at"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Skill name from _meta.json."
+        },
+        "publisher": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "qualified_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "identity_mode": {
+          "type": "string",
+          "enum": [
+            "qualified",
+            "legacy"
+          ]
+        },
+        "author": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "owners": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "maintainers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "version": {
+          "type": "string"
+        },
+        "locked_version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "source_type": {
+          "type": "string",
+          "default": "working-tree",
+          "description": "Origin type of the installed skill."
+        },
+        "source_repo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_registry": {
+          "type": "string",
+          "default": "self"
+        },
+        "source_registry_kind": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_trust": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_commit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_tag": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_root": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_path": {
+          "type": "string",
+          "description": "Filesystem path to the source skill directory."
+        },
+        "source_relative_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_stage": {
+          "type": "string"
+        },
+        "source_publisher": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_qualified_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_identity_mode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_snapshot_of": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_snapshot_created_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_snapshot_kind": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_snapshot_tag": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_snapshot_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_snapshot_commit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_registry_snapshot_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_registry_snapshot_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_registry_snapshot_created_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_registry_snapshot_metadata_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_distribution_manifest": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_distribution_root": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_distribution_bundle": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_distribution_bundle_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_distribution_bundle_size": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "source_distribution_bundle_root_dir": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_distribution_bundle_file_count": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "source_attestation_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_attestation_signature_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_attestation_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_attestation_signature_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_expected_tag": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_resolution_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_update_mode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_pin_mode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_pin_value": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "target_path": {
+          "type": "string",
+          "description": "Relative path of the installed skill within the install target directory."
+        },
+        "install_target": {
+          "type": "string",
+          "description": "Absolute path of the install target directory."
+        },
+        "installed_version": {
+          "type": "string"
+        },
+        "installed_at": {
+          "type": "string",
+          "description": "ISO 8601 timestamp of when the skill was installed."
+        },
+        "last_checked_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "resolved_release_digest": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "target_agent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "install_mode": {
+          "type": "string",
+          "description": "Install mode, typically mirrors the action (e.g. install, update)."
+        },
+        "action": {
+          "type": "string",
+          "description": "Action performed (e.g. install, update)."
+        },
+        "updated_at": {
+          "type": "string",
+          "description": "ISO 8601 timestamp of when this entry was last updated."
+        },
+        "resolution_plan": {
+          "type": "object",
+          "description": "Optional resolution plan used to select this version."
+        },
+        "integrity": {
+          "type": "object",
+          "description": "Optional integrity snapshot for the installed skill."
+        },
+        "integrity_capability": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "integrity_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "integrity_events": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Manifest schema version; always 1."
+    },
+    "repo": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Git remote URL of the source repository."
+    },
+    "updated_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "ISO 8601 timestamp of when the manifest was last updated."
+    },
+    "skills": {
+      "type": "object",
+      "description": "Map of bare skill names to their current install entries.",
+      "additionalProperties": {
+        "$ref": "#/$defs/entry"
+      }
+    },
+    "history": {
+      "type": "object",
+      "description": "Map of bare skill names to arrays of prior install entries.",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/entry"
+        }
+      }
+    }
+  }
+}

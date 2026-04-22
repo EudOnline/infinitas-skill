@@ -594,6 +594,187 @@ options:
   --token TOKEN         Bearer token for hosted registry API
 ```
 
+## `infinitas registry skills`
+
+```text
+usage: infinitas registry skills [-h] [--base-url BASE_URL] [--token TOKEN]
+                                 {create,get} ...
+
+Manage private-first skill records
+
+positional arguments:
+  {create,get}
+    create             Create a new skill namespace entry
+    get                Fetch one skill by id
+
+options:
+  -h, --help           show this help message and exit
+  --base-url BASE_URL  Hosted registry API base URL
+  --token TOKEN        Bearer token for hosted registry API
+```
+
+## `infinitas registry drafts`
+
+```text
+usage: infinitas registry drafts [-h] [--base-url BASE_URL] [--token TOKEN]
+                                 {create,update,seal} ...
+
+Manage editable drafts and immutable version sealing
+
+positional arguments:
+  {create,update,seal}
+    create              Create an editable draft for a skill
+    update              Patch an open draft
+    seal                Seal draft into an immutable skill version
+
+options:
+  -h, --help            show this help message and exit
+  --base-url BASE_URL   Hosted registry API base URL
+  --token TOKEN         Bearer token for hosted registry API
+```
+
+## `infinitas registry agent-presets`
+
+```text
+usage: infinitas registry agent-presets [-h] [--base-url BASE_URL]
+                                        [--token TOKEN]
+                                        {create,create-draft,seal-draft} ...
+
+Manage publishable agent preset objects
+
+positional arguments:
+  {create,create-draft,seal-draft}
+    create              Create a new agent preset object
+    create-draft        Create a draft payload for an agent preset
+    seal-draft          Seal an agent preset draft
+
+options:
+  -h, --help            show this help message and exit
+  --base-url BASE_URL   Hosted registry API base URL
+  --token TOKEN         Bearer token for hosted registry API
+```
+
+## `infinitas registry agent-codes`
+
+```text
+usage: infinitas registry agent-codes [-h] [--base-url BASE_URL]
+                                      [--token TOKEN]
+                                      {create,create-draft,seal-draft} ...
+
+Manage publishable agent code objects
+
+positional arguments:
+  {create,create-draft,seal-draft}
+    create              Create a new agent code object
+    create-draft        Create an external-import draft for agent code
+    seal-draft          Seal an agent code draft
+
+options:
+  -h, --help            show this help message and exit
+  --base-url BASE_URL   Hosted registry API base URL
+  --token TOKEN         Bearer token for hosted registry API
+```
+
+## `infinitas registry releases`
+
+```text
+usage: infinitas registry releases [-h] [--base-url BASE_URL] [--token TOKEN]
+                                   {create,get,artifacts} ...
+
+Create and inspect immutable releases
+
+positional arguments:
+  {create,get,artifacts}
+    create              Create or fetch a release for one skill version
+    get                 Fetch one release by id
+    artifacts           List artifacts for one release
+
+options:
+  -h, --help            show this help message and exit
+  --base-url BASE_URL   Hosted registry API base URL
+  --token TOKEN         Bearer token for hosted registry API
+```
+
+## `infinitas registry exposures`
+
+```text
+usage: infinitas registry exposures [-h] [--base-url BASE_URL] [--token TOKEN]
+                                    {create,update,activate,revoke} ...
+
+Manage audience exposure and share policy
+
+positional arguments:
+  {create,update,activate,revoke}
+    create              Create a new audience exposure for one release
+    update              Patch share policy on an existing exposure
+    activate            Activate an exposure
+    revoke              Revoke an exposure
+
+options:
+  -h, --help            show this help message and exit
+  --base-url BASE_URL   Hosted registry API base URL
+  --token TOKEN         Bearer token for hosted registry API
+```
+
+## `infinitas registry grants`
+
+```text
+usage: infinitas registry grants [-h] [--base-url BASE_URL] [--token TOKEN]
+                                 {list,create-token,revoke} ...
+
+Inspect grant policy scaffolding for token-scoped access
+
+positional arguments:
+  {list,create-token,revoke}
+    list                Reserved command for upcoming grant listing APIs
+    create-token        Reserved command for issuing grant tokens
+    revoke              Reserved command for revoking a grant
+
+options:
+  -h, --help            show this help message and exit
+  --base-url BASE_URL   Hosted registry API base URL
+  --token TOKEN         Bearer token for hosted registry API
+```
+
+## `infinitas registry tokens`
+
+```text
+usage: infinitas registry tokens [-h] [--base-url BASE_URL] [--token TOKEN]
+                                 {me,check-release} ...
+
+Inspect token identity and release authorization
+
+positional arguments:
+  {me,check-release}
+    me                 Show the current access identity from the bearer token
+    check-release      Check release access for the current credential
+
+options:
+  -h, --help           show this help message and exit
+  --base-url BASE_URL  Hosted registry API base URL
+  --token TOKEN        Bearer token for hosted registry API
+```
+
+## `infinitas registry reviews`
+
+```text
+usage: infinitas registry reviews [-h] [--base-url BASE_URL] [--token TOKEN]
+                                  {open-case,get-case,decide} ...
+
+Manage review cases for public-facing exposures
+
+positional arguments:
+  {open-case,get-case,decide}
+    open-case           Open a review case for one exposure
+    get-case            Fetch one review case by id
+    decide              Record a review decision
+
+options:
+  -h, --help            show this help message and exit
+  --base-url BASE_URL   Hosted registry API base URL
+  --token TOKEN         Bearer token for hosted registry API
+```
+
 ## `infinitas release`
 
 ```text

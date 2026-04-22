@@ -436,6 +436,196 @@ def build_registry_parser(*, prog: str | None = None) -> argparse.ArgumentParser
     return configure_registry_parser(parser)
 
 
+def _add_common_args(parser):
+    parser.add_argument(
+        '--base-url',
+        default=os.environ.get('INFINITAS_REGISTRY_API_BASE_URL', 'http://127.0.0.1:8000'),
+        help='Hosted registry API base URL',
+    )
+    parser.add_argument(
+        '--token',
+        default=os.environ.get('INFINITAS_REGISTRY_API_TOKEN', ''),
+        help='Bearer token for hosted registry API',
+    )
+
+
+def build_registry_skills_parser(*, prog=None):
+    parser = argparse.ArgumentParser(
+        prog=prog or 'infinitas registry skills',
+        description='Manage private-first skill records',
+    )
+    _add_common_args(parser)
+    sub = parser.add_subparsers(dest='subcommand', metavar='{create,get}')
+    create = sub.add_parser('create', help='Create a new skill namespace entry')
+    create.add_argument('--slug', required=True, help='Skill slug')
+    create.add_argument('--display-name', required=True, help='Human readable skill display name')
+    create.add_argument('--summary', default='', help='Skill summary')
+    create.add_argument('--default-visibility-profile', default=None, help='Default visibility profile')
+    get = sub.add_parser('get', help='Fetch one skill by id')
+    get.add_argument('skill_id', type=int, help='Skill identifier')
+    return parser
+
+
+def build_registry_drafts_parser(*, prog=None):
+    parser = argparse.ArgumentParser(
+        prog=prog or 'infinitas registry drafts',
+        description='Manage editable drafts and immutable version sealing',
+    )
+    _add_common_args(parser)
+    sub = parser.add_subparsers(dest='subcommand', metavar='{create,update,seal}')
+    create = sub.add_parser('create', help='Create an editable draft for a skill')
+    create.add_argument('skill_id', type=int, help='Skill identifier')
+    create.add_argument('--base-version-id', type=int, default=None, help='Base skill_version id')
+    create.add_argument('--content-ref', default='', help='Content locator/ref used by authoring')
+    create.add_argument('--metadata-json', default='{}', help='Draft metadata as JSON object')
+    update = sub.add_parser('update', help='Patch an open draft')
+    update.add_argument('draft_id', type=int, help='Draft identifier')
+    update.add_argument('--content-ref', default=None, help='Updated content ref')
+    update.add_argument('--metadata-json', default=None, help='Updated metadata JSON object')
+    seal = sub.add_parser('seal', help='Seal draft into an immutable skill version')
+    seal.add_argument('draft_id', type=int, help='Draft identifier')
+    seal.add_argument('--version', required=True, help='Semantic version to create')
+    return parser
+
+
+def build_registry_agent_presets_parser(*, prog=None):
+    parser = argparse.ArgumentParser(
+        prog=prog or 'infinitas registry agent-presets',
+        description='Manage publishable agent preset objects',
+    )
+    _add_common_args(parser)
+    sub = parser.add_subparsers(dest='subcommand', metavar='{create,create-draft,seal-draft}')
+    create = sub.add_parser('create', help='Create a new agent preset object')
+    create.add_argument('--slug', required=True)
+    create.add_argument('--display-name', required=True)
+    create.add_argument('--summary', default='')
+    create.add_argument('--runtime-family', default='openclaw')
+    create.add_argument('--supported-memory-modes', nargs='*', default=['none'])
+    create.add_argument('--default-memory-mode', default='none')
+    create.add_argument('--pinned-skill-dependencies', nargs='*', default=[])
+    draft = sub.add_parser('create-draft', help='Create a draft payload for an agent preset')
+    draft.add_argument('preset_id', type=int)
+    draft.add_argument('--prompt', default='')
+    draft.add_argument('--model', default='')
+    draft.add_argument('--tools', nargs='*', default=[])
+    seal = sub.add_parser('seal-draft', help='Seal an agent preset draft')
+    seal.add_argument('draft_id', type=int)
+    seal.add_argument('--version', required=True)
+    return parser
+
+
+def build_registry_agent_codes_parser(*, prog=None):
+    parser = argparse.ArgumentParser(
+        prog=prog or 'infinitas registry agent-codes',
+        description='Manage publishable agent code objects',
+    )
+    _add_common_args(parser)
+    sub = parser.add_subparsers(dest='subcommand', metavar='{create,create-draft,seal-draft}')
+    create = sub.add_parser('create', help='Create a new agent code object')
+    create.add_argument('--slug', required=True)
+    create.add_argument('--display-name', required=True)
+    create.add_argument('--summary', default='')
+    create.add_argument('--runtime-family', default='openclaw')
+    create.add_argument('--language', default='python')
+    create.add_argument('--entrypoint', required=True)
+    draft = sub.add_parser('create-draft', help='Create an external-import draft for agent code')
+    draft.add_argument('code_id', type=int)
+    draft.add_argument('--content-ref', required=True)
+    seal = sub.add_parser('seal-draft', help='Seal an agent code draft')
+    seal.add_argument('draft_id', type=int)
+    seal.add_argument('--version', required=True)
+    return parser
+
+
+def build_registry_releases_parser(*, prog=None):
+    parser = argparse.ArgumentParser(
+        prog=prog or 'infinitas registry releases',
+        description='Create and inspect immutable releases',
+    )
+    _add_common_args(parser)
+    sub = parser.add_subparsers(dest='subcommand', metavar='{create,get,artifacts}')
+    create = sub.add_parser('create', help='Create or fetch a release for one skill version')
+    create.add_argument('version_id', type=int, help='Skill version identifier')
+    get = sub.add_parser('get', help='Fetch one release by id')
+    get.add_argument('release_id', type=int, help='Release identifier')
+    artifacts = sub.add_parser('artifacts', help='List artifacts for one release')
+    artifacts.add_argument('release_id', type=int, help='Release identifier')
+    return parser
+
+
+def build_registry_exposures_parser(*, prog=None):
+    parser = argparse.ArgumentParser(
+        prog=prog or 'infinitas registry exposures',
+        description='Manage audience exposure and share policy',
+    )
+    _add_common_args(parser)
+    sub = parser.add_subparsers(dest='subcommand', metavar='{create,update,activate,revoke}')
+    create = sub.add_parser('create', help='Create a new audience exposure for one release')
+    create.add_argument('release_id', type=int, help='Release identifier')
+    create.add_argument('--audience-type', required=True, help='Audience type: private, grant, or public')
+    create.add_argument('--listing-mode', default='listed', help='Listing mode')
+    create.add_argument('--install-mode', default='enabled', help='Install mode')
+    create.add_argument('--requested-review-mode', default='none', help='Requested review mode')
+    update = sub.add_parser('update', help='Patch share policy on an existing exposure')
+    update.add_argument('exposure_id', type=int, help='Exposure identifier')
+    update.add_argument('--listing-mode', default=None, help='Updated listing mode')
+    update.add_argument('--install-mode', default=None, help='Updated install mode')
+    update.add_argument('--requested-review-mode', default=None, help='Updated requested review mode')
+    activate = sub.add_parser('activate', help='Activate an exposure')
+    activate.add_argument('exposure_id', type=int, help='Exposure identifier')
+    revoke = sub.add_parser('revoke', help='Revoke an exposure')
+    revoke.add_argument('exposure_id', type=int, help='Exposure identifier')
+    return parser
+
+
+def build_registry_grants_parser(*, prog=None):
+    parser = argparse.ArgumentParser(
+        prog=prog or 'infinitas registry grants',
+        description='Inspect grant policy scaffolding for token-scoped access',
+    )
+    _add_common_args(parser)
+    sub = parser.add_subparsers(dest='subcommand', metavar='{list,create-token,revoke}')
+    sub.add_parser('list', help='Reserved command for upcoming grant listing APIs')
+    gt = sub.add_parser('create-token', help='Reserved command for issuing grant tokens')
+    gt.add_argument('grant_id', type=int, help='Grant identifier')
+    gr = sub.add_parser('revoke', help='Reserved command for revoking a grant')
+    gr.add_argument('grant_id', type=int, help='Grant identifier')
+    return parser
+
+
+def build_registry_tokens_parser(*, prog=None):
+    parser = argparse.ArgumentParser(
+        prog=prog or 'infinitas registry tokens',
+        description='Inspect token identity and release authorization',
+    )
+    _add_common_args(parser)
+    sub = parser.add_subparsers(dest='subcommand', metavar='{me,check-release}')
+    sub.add_parser('me', help='Show the current access identity from the bearer token')
+    check = sub.add_parser('check-release', help='Check release access for the current credential')
+    check.add_argument('release_id', type=int, help='Release identifier')
+    return parser
+
+
+def build_registry_reviews_parser(*, prog=None):
+    parser = argparse.ArgumentParser(
+        prog=prog or 'infinitas registry reviews',
+        description='Manage review cases for public-facing exposures',
+    )
+    _add_common_args(parser)
+    sub = parser.add_subparsers(dest='subcommand', metavar='{open-case,get-case,decide}')
+    open_case = sub.add_parser('open-case', help='Open a review case for one exposure')
+    open_case.add_argument('exposure_id', type=int, help='Exposure identifier')
+    open_case.add_argument('--mode', default=None, help='Optional review mode override')
+    get_case = sub.add_parser('get-case', help='Fetch one review case by id')
+    get_case.add_argument('review_case_id', type=int, help='Review case identifier')
+    decide = sub.add_parser('decide', help='Record a review decision')
+    decide.add_argument('review_case_id', type=int, help='Review case identifier')
+    decide.add_argument('--decision', required=True, help='Decision: approve, reject, or comment')
+    decide.add_argument('--note', default='', help='Decision note')
+    decide.add_argument('--evidence-json', default='{}', help='Evidence JSON object')
+    return parser
+
+
 def registry_main(argv: list[str] | None = None, *, prog: str | None = None) -> int:
     parser = build_registry_parser(prog=prog)
     args = parser.parse_args(argv)
@@ -449,7 +639,16 @@ def registry_main(argv: list[str] | None = None, *, prog: str | None = None) -> 
 __all__ = [
     'REGISTRY_PARSER_DESCRIPTION',
     'REGISTRY_TOP_LEVEL_HELP',
+    'build_registry_agent_codes_parser',
+    'build_registry_agent_presets_parser',
+    'build_registry_drafts_parser',
+    'build_registry_exposures_parser',
+    'build_registry_grants_parser',
     'build_registry_parser',
+    'build_registry_releases_parser',
+    'build_registry_reviews_parser',
+    'build_registry_skills_parser',
+    'build_registry_tokens_parser',
     'configure_registry_parser',
     'registry_main',
 ]
