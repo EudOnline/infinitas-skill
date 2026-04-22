@@ -139,7 +139,8 @@ def create_or_get_release(
         registry_object_id=skill.registry_object_id,
         object_kind=(
             db.get(RegistryObject, skill.registry_object_id).kind
-            if skill.registry_object_id is not None and db.get(RegistryObject, skill.registry_object_id) is not None
+            if skill.registry_object_id is not None
+            and db.get(RegistryObject, skill.registry_object_id) is not None
             else "skill"
         ),
         state="preparing",

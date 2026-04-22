@@ -25,6 +25,17 @@ SEMVER_RE = re.compile(
 COMPARATOR_RE = re.compile(r"^(<=|>=|<|>|=)?(\d+\.\d+\.\d+(?:[-+][A-Za-z0-9_.-]+)?)$")
 
 
+def _resolve_manifest_path(reg_root: Path, manifest_path: str | None) -> str:
+    if not manifest_path:
+        return str(reg_root)
+    resolved = (reg_root / manifest_path).resolve()
+    if not resolved.is_relative_to(reg_root):
+        raise DependencyError(
+            f"distribution manifest_path escapes registry root: {manifest_path}"
+        )
+    return str(resolved)
+
+
 class DependencyError(Exception):
     def __init__(self, message: str, details: dict | None = None):
         super().__init__(message)
@@ -341,7 +352,7 @@ def scan_enabled_registry_skills(root):
                         "status": meta.get("status"),
                         "stage": distribution.get("status") if distribution else stage,
                         "path": (
-                            str((reg_root / distribution.get("manifest_path")).resolve())
+                            _resolve_manifest_path(reg_root, distribution.get("manifest_path"))
                             if distribution
                             else str(skill_dir)
                         ),
@@ -435,7 +446,7 @@ def scan_enabled_registry_skills(root):
                     "version": distribution.get("version"),
                     "status": distribution.get("status"),
                     "stage": distribution.get("status") or "archived",
-                    "path": str((reg_root / distribution.get("manifest_path")).resolve()),
+                    "path": _resolve_manifest_path(reg_root, distribution.get("manifest_path")),
                     "skill_path": None,
                     "dir_name": Path(distribution.get("manifest_path") or "").parent.name,
                     "relative_path": distribution.get("manifest_path"),
@@ -526,6 +537,8 @@ def _candidate_catalog_compare(left, right):
 
 def candidate_from_skill_dir(skill_dir, source_registry=None, source_info=None):
     skill_path = Path(skill_dir).resolve()
+    if not skill_path.is_dir():
+        raise DependencyError(f"skill path is not a directory: {skill_path}")
     meta = load_meta(skill_path / "_meta.json")
     normalized = normalize_meta_dependencies(meta)
     identity = normalize_skill_identity(meta)

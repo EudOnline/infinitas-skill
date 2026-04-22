@@ -56,7 +56,13 @@ def _configure_env(monkeypatch, *, tmp_path: Path, repo: Path) -> Path:
                     "display_name": "Fixture Maintainer",
                     "role": "maintainer",
                     "token": "fixture-maintainer-token",
-                }
+                },
+                {
+                    "username": "fixture-reviewer",
+                    "display_name": "Fixture Reviewer",
+                    "role": "maintainer",
+                    "token": "fixture-reviewer-token",
+                },
             ]
         ),
     )
@@ -80,7 +86,13 @@ def _configure_public_env(monkeypatch, *, tmp_path: Path, repo: Path) -> Path:
                     "display_name": "Fixture Maintainer",
                     "role": "maintainer",
                     "token": "fixture-maintainer-token",
-                }
+                },
+                {
+                    "username": "fixture-reviewer",
+                    "display_name": "Fixture Reviewer",
+                    "role": "maintainer",
+                    "token": "fixture-reviewer-token",
+                },
             ]
         ),
     )
@@ -152,7 +164,7 @@ def _approve_exposure_review(
 
     decision = client.post(
         f"/api/v1/review-cases/{review_case_id}/decisions",
-        headers={"Authorization": authorization},
+        headers={"Authorization": "Bearer fixture-reviewer-token"},
         json={"decision": "approve", "note": "approve public registry exposure"},
     )
     assert decision.status_code == 201, decision.text

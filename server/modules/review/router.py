@@ -54,6 +54,7 @@ def _get_review_case_for_reviewer(
     *,
     review_case_id: int,
     reviewer_principal_id: int,
+    is_maintainer: bool = False,
 ):
     review_case = service.get_review_case_or_404(db, review_case_id)
     exposure = get_exposure_or_404(db, review_case.exposure_id)
@@ -62,6 +63,16 @@ def _get_review_case_for_reviewer(
         and exposure.requested_by_principal_id == reviewer_principal_id
     ):
         raise HTTPException(status_code=403, detail="self-review is not allowed")
+    release = release_service.get_release_or_404(db, exposure.release_id)
+    try:
+        release_service.assert_release_owner(
+            db,
+            release,
+            principal_id=reviewer_principal_id,
+            is_maintainer=is_maintainer,
+        )
+    except release_service.ForbiddenError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     return review_case
 
 
@@ -124,11 +135,13 @@ def create_review_decision(
     db: Session = Depends(get_db),
 ):
     principal_id = _require_review_principal(context)
+    is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
         _get_review_case_for_reviewer(
             db,
             review_case_id=review_case_id,
             reviewer_principal_id=principal_id,
+            is_maintainer=is_maintainer,
         )
         review_case, _ = service.record_decision(
             db,

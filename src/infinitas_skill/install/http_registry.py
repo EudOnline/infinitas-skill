@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import json
 import os
+import ssl
+import tempfile
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from urllib.parse import urljoin
@@ -46,11 +49,29 @@ def _request_headers(token_env: str | None = None) -> dict:
     return headers
 
 
+class _RedirectLimiter(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, method, url, *args, **kwargs):
+        if not hasattr(self, "_count"):
+            self._count = 0
+        self._count += 1
+        if self._count > 3:
+            raise HostedRegistryError(f"too many redirects while fetching {req.full_url}")
+        parsed = urllib.parse.urlparse(url)
+        if parsed.scheme not in ("https", "http"):
+            raise HostedRegistryError(f"redirect to unsupported scheme {parsed.scheme!r}")
+        return super().redirect_request(req, fp, code, method, url, *args, **kwargs)
+
+
 def fetch_bytes(base_url: str, path: str, *, token_env: str | None = None) -> bytes:
     url = build_registry_url(base_url, path)
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in ("https", "http"):
+        raise HostedRegistryError(f"unsupported scheme {parsed.scheme!r} in registry URL")
     request = urllib.request.Request(url, headers=_request_headers(token_env))
+    ctx = ssl.create_default_context()
+    opener = urllib.request.build_opener(_RedirectLimiter)
     try:
-        with urllib.request.urlopen(request) as response:
+        with opener.open(request, context=ctx) as response:
             return response.read()
     except urllib.error.HTTPError as exc:
         raise HostedRegistryError(f"http {exc.code} while fetching {url}") from exc
@@ -70,9 +91,12 @@ def fetch_binary(base_url: str, path: str, output: Path, *, token_env: str | Non
     output = Path(output).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     data = fetch_bytes(base_url, path, token_env=token_env)
-    tmp_path = output.with_suffix(output.suffix + ".tmp")
-    tmp_path.write_bytes(data)
-    tmp_path.replace(output)
+    fd, tmp_path = tempfile.mkstemp(dir=output.parent, prefix=output.name, suffix=".tmp")
+    try:
+        os.write(fd, data)
+    finally:
+        os.close(fd)
+    os.replace(tmp_path, output)
     return output
 
 

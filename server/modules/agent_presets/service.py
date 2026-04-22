@@ -6,7 +6,6 @@ import tarfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from server.modules.agent_presets.models import AgentPresetSpec
@@ -42,7 +41,10 @@ def _stage_uploaded_bundle(*, filename: str, payload: dict) -> Artifact:
         info = tarfile.TarInfo(filename)
         info.size = len(raw)
         archive.addfile(info, io.BytesIO(raw))
-    stored = storage.put_bytes(buffer.getvalue(), public_path=f"draft-content/{Path(filename).name}.tar.gz")
+    stored = storage.put_bytes(
+        buffer.getvalue(),
+        public_path=f"draft-content/{Path(filename).name}.tar.gz",
+    )
     return Artifact(
         release_id=None,
         kind="draft_content",
@@ -129,10 +131,6 @@ def create_agent_preset_draft(
 ):
     record = get_agent_preset_or_404(db, preset_id)
     spec = record.spec
-    spec.default_prompt = payload.prompt
-    spec.default_model = payload.model
-    spec.default_tools_json = _dump_json(payload.tools)
-    db.add(spec)
 
     artifact = _stage_uploaded_bundle(
         filename=f"{record.skill.slug}-preset.json",
@@ -162,6 +160,10 @@ def create_agent_preset_draft(
             metadata=_serialize_preset_defaults(spec),
         ),
     )
+    spec.default_prompt = payload.prompt
+    spec.default_model = payload.model
+    spec.default_tools_json = _dump_json(payload.tools)
+    db.add(spec)
     return draft
 
 

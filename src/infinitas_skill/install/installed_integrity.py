@@ -207,7 +207,9 @@ def _relative_path(path: Path, root: Path):
 def _actual_file_manifest(installed_dir: Path):
     manifest = {}
     for path in sorted(installed_dir.rglob("*")):
-        if not path.is_file():
+        if path.is_symlink() or not path.is_file():
+            continue
+        if not path.resolve().is_relative_to(installed_dir.resolve()):
             continue
         manifest[_relative_path(path, installed_dir)] = sha256_file(path)
     return manifest
@@ -242,7 +244,12 @@ def _expected_file_manifest(entries):
 def _resolve_distribution_manifest_path(manifest_ref: str, *, distribution_root: Path, root: Path):
     manifest_path = Path(manifest_ref)
     if manifest_path.is_absolute():
-        return manifest_path.resolve()
+        resolved = manifest_path.resolve()
+        if not resolved.is_relative_to(root.resolve()):
+            raise InstalledIntegrityError(
+                f"absolute manifest_ref escapes registry root: {manifest_ref}"
+            )
+        return resolved
     root_candidate = (distribution_root / manifest_path).resolve()
     if root_candidate.exists():
         return root_candidate

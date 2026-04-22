@@ -88,8 +88,6 @@ def create_agent_code_draft(
 ):
     record = get_agent_code_or_404(db, code_id)
     spec = record.spec
-    spec.external_source_json = _dump_json({"content_ref": payload.content_ref})
-    db.add(spec)
     draft = authoring_service.create_draft(
         db,
         skill_id=record.skill.id,
@@ -106,6 +104,8 @@ def create_agent_code_draft(
             },
         ),
     )
+    spec.external_source_json = _dump_json({"content_ref": payload.content_ref})
+    db.add(spec)
     return draft
 
 

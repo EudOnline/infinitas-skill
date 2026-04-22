@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from server.models import Job, User, utcnow
 
 DEFAULT_JOB_LEASE_SECONDS = 300
+MAX_JOB_ATTEMPTS = 10
 
 
 def _iso(value) -> str | None:
@@ -148,6 +149,7 @@ def claim_next_job(db: Session, *, lease_seconds: int = DEFAULT_JOB_LEASE_SECOND
         stale_job_id = (
             select(Job.id)
             .where(_running_job_is_stale(claimed_at))
+            .where(Job.attempt_count < MAX_JOB_ATTEMPTS)
             .order_by(Job.id.asc())
             .limit(1)
             .scalar_subquery()

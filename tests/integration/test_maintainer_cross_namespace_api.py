@@ -131,7 +131,7 @@ def test_maintainer_can_administer_contributor_owned_lifecycle_resources() -> No
 
         decision = client.post(
             f"/api/v1/review-cases/{review_case_id}/decisions",
-            headers=maintainer_headers,
+            headers=owner_headers,
             json={"decision": "approve", "note": "approved by maintainer"},
         )
         assert decision.status_code == 201, decision.text

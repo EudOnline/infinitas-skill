@@ -110,8 +110,9 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         context = {
             "request": request,
             "app_name": settings.app_name,
-            "user_count": db.scalar(select(func.count()).select_from(User)) or 0,
         }
+        if session_user is not None:
+            context["user_count"] = db.scalar(select(func.count()).select_from(User)) or 0
         context.update(build_home_context(settings=settings, db=db, request=request))
         context["session_ui"] = build_session_bootstrap(context.get("session_ui"), session_user)
         return templates.TemplateResponse(request, "index-kawaii.html", context)

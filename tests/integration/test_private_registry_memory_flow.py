@@ -21,7 +21,13 @@ def configure_env(tmpdir: Path) -> None:
                 "display_name": "Fixture Maintainer",
                 "role": "maintainer",
                 "token": "fixture-maintainer-token",
-            }
+            },
+            {
+                "username": "fixture-reviewer",
+                "display_name": "Fixture Reviewer",
+                "role": "maintainer",
+                "token": "fixture-reviewer-token",
+            },
         ]
     )
     os.environ["INFINITAS_MEMORY_BACKEND"] = "disabled"
@@ -111,7 +117,7 @@ def test_private_registry_lifecycle_emits_memory_writeback_audit_events() -> Non
 
         approve_response = client.post(
             f"/api/v1/review-cases/{review_case_id}/decisions",
-            headers=headers,
+            headers={"Authorization": "Bearer fixture-reviewer-token"},
             json={"decision": "approve", "note": "approved for memory flow"},
         )
         assert approve_response.status_code == 201, approve_response.text

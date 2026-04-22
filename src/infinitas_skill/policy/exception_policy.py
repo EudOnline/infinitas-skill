@@ -249,10 +249,13 @@ def load_exception_policy(root=ROOT):
 
 def _matches_skill_target(targets, identity):
     identity = identity if isinstance(identity, dict) else {}
-    candidates = [identity.get("qualified_name"), identity.get("name")]
-    candidate_set = {item for item in candidates if isinstance(item, str) and item}
+    qualified = identity.get("qualified_name")
+    name = identity.get("name")
     for target in _normalize_string_list(targets):
-        if target in candidate_set:
+        if "/" in target:
+            if target == qualified:
+                return True
+        elif target == name and qualified is None:
             return True
     return False
 
