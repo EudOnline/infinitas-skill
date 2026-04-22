@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.com/infinitas-skill/install-manifest.schema.json",
+  "$id": "https://infinitas-skill.local/schemas/install-manifest.schema.json",
   "title": "infinitas-skill install manifest",
   "description": "Validates .infinitas-skill-install-manifest.json files that live at the root of install target directories.",
   "type": "object",

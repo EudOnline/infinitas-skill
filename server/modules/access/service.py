@@ -137,7 +137,7 @@ def ensure_personal_credential_for_user(
     if credential.hashed_secret != token_hash:
         credential.hashed_secret = token_hash
         updated = True
-    if not credential.scopes_json:
+    if not credential.scopes_json or credential.scopes_json in ("[]", "{}", ""):
         credential.scopes_json = default_scopes
         updated = True
     if updated:

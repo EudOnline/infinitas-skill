@@ -578,13 +578,18 @@ def safely_extract_bundle(bundle_path, destination_root, expected_root=None):
     destination_root = Path(destination_root).resolve()
     destination_root.mkdir(parents=True, exist_ok=True)
     with tarfile.open(bundle_path, mode="r:gz") as archive:
-        members = archive.getmembers()
-        for member in members:
+        safe_members = []
+        for member in archive.getmembers():
+            if member.issym() or member.islnk():
+                raise DistributionError(f"symlink in bundle is not allowed: {member.name}")
+            if not member.isfile() and not member.isdir():
+                continue
             member_path = destination_root / member.name
             resolved = member_path.resolve()
             if not resolved.is_relative_to(destination_root):
                 raise DistributionError(f"unsafe bundle member path: {member.name}")
-        archive.extractall(destination_root)
+            safe_members.append(member)
+        archive.extractall(destination_root, members=safe_members)
     if expected_root:
         source_dir = destination_root / expected_root
         if not source_dir.is_dir():

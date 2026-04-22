@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://infinitas.local/schemas/discovery-index.schema.json",
+  "$id": "https://infinitas-skill.local/schemas/discovery-index.schema.json",
   "title": "Discovery Index",
   "type": "object",
   "required": [

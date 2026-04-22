@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://openai.invalid/infinitas-skill/platform-profile.schema.json",
+  "$id": "https://infinitas-skill.local/schemas/platform-profile.schema.json",
   "title": "infinitas-skill platform profile",
   "type": "object",
   "required": [

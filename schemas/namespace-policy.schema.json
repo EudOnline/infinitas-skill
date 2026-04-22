@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.com/infinitas-skill/namespace-policy.schema.json",
+  "$id": "https://infinitas-skill.local/schemas/namespace-policy.schema.json",
   "title": "infinitas-skill namespace policy",
   "type": "object",
   "required": [

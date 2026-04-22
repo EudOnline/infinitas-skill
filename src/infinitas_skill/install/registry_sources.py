@@ -702,6 +702,7 @@ def validate_registry_config(root: Path, cfg):
                                 "string when set"
                             )
 
-    if cfg.get("default_registry") not in seen:
+    default_reg = cfg.get("default_registry")
+    if default_reg is not None and default_reg not in seen:
         errors.append("default_registry must match one configured registry name")
     return errors

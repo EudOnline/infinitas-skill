@@ -150,7 +150,7 @@ def create_or_get_release(
     try:
         db.flush()
     except IntegrityError:
-        db.rollback()
+        db.begin_nested().rollback()
         existing = db.scalar(
             select(Release)
             .where(Release.skill_version_id == skill_version.id)

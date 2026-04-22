@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://openai.invalid/infinitas-skill/ai-index.schema.json",
+  "$id": "https://infinitas-skill.local/schemas/ai-index.schema.json",
   "title": "infinitas-skill AI install index",
   "type": "object",
   "required": [
@@ -351,6 +351,37 @@
             },
             "additionalProperties": true
           },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "maturity": {
+            "type": "string"
+          },
+          "quality_score": {
+            "type": ["number", "null"]
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "last_verified_at": {
+            "type": ["string", "null"]
+          },
+          "trust_state": {
+            "type": "string"
+          },
+          "verified_support": {
+            "type": ["boolean", "null"]
+          },
+          "interop": {
+            "type": ["object", "null"],
+            "additionalProperties": true
+          },
           "requires": {
             "type": "object",
             "required": [
@@ -359,6 +390,12 @@
             ],
             "properties": {
               "tools": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "bins": {
                 "type": "array",
                 "items": {
                   "type": "string"

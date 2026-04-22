@@ -71,7 +71,7 @@ def create_release(
             db.refresh(release)
         except Exception:
             db.rollback()
-            raise
+            db.refresh(release)
     else:
         settings = get_settings()
         if release_requires_materialization(

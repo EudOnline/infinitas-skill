@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.com/infinitas-skill/publish-result.schema.json",
+  "$id": "https://infinitas-skill.local/schemas/publish-result.schema.json",
   "title": "publish-skill result",
   "type": "object",
   "oneOf": [

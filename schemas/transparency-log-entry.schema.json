@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://openai.invalid/infinitas-skill/transparency-log-entry.schema.json",
+  "$id": "https://infinitas-skill.local/schemas/transparency-log-entry.schema.json",
   "title": "infinitas-skill transparency log entry",
   "type": "object",
   "required": [

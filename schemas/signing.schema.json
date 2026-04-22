@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://openai.invalid/infinitas-skill/signing.schema.json",
+  "$id": "https://infinitas-skill.local/schemas/signing.schema.json",
   "title": "infinitas-skill signing configuration",
   "type": "object",
   "required": [

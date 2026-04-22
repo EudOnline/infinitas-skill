@@ -632,7 +632,7 @@ def registry_main(argv: list[str] | None = None, *, prog: str | None = None) -> 
     handler = getattr(args, '_handler', None)
     if handler is None:
         parser.print_help()
-        return 0
+        return 2
     return handler(args)
 
 

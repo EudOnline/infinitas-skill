@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from sqlalchemy import select
@@ -206,7 +206,7 @@ def refresh_projection_snapshot(db: Session, artifact_root: Path) -> Path:
     output.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "schema_version": 1,
-        "generated_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds") + "Z",
         "items": [asdict(item) for item in build_release_projections(db)],
     }
     output.write_text(

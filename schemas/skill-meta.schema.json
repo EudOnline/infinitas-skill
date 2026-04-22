@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.com/infinitas-skill/skill-meta.schema.json",
+  "$id": "https://infinitas-skill.local/schemas/skill-meta.schema.json",
   "title": "infinitas-skill _meta.json",
   "type": "object",
   "additionalProperties": true,

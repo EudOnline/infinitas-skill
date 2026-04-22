@@ -10,6 +10,7 @@ from infinitas_skill.install.registry_sources import (
     normalized_refresh_policy,
     resolve_registry_root,
 )
+from infinitas_skill.registry._util import utc_now_iso
 
 
 def refresh_state_dir(root: Path) -> Path:
@@ -18,18 +19,6 @@ def refresh_state_dir(root: Path) -> Path:
 
 def refresh_state_path(root: Path, registry_name: str) -> Path:
     return refresh_state_dir(root) / f"{registry_name}.json"
-
-
-def utc_now_iso(now=None) -> str:
-    current = now if isinstance(now, datetime) else datetime.now(timezone.utc)
-    if current.tzinfo is None:
-        current = current.replace(tzinfo=timezone.utc)
-    return (
-        current.astimezone(timezone.utc)
-        .replace(microsecond=0)
-        .isoformat()
-        .replace("+00:00", "Z")
-    )
 
 
 def parse_timestamp(value):
@@ -77,7 +66,10 @@ def load_refresh_state(root: Path, registry_name: str):
     path = refresh_state_path(root, registry_name)
     if not path.exists():
         return path, None
-    return path, json.loads(path.read_text(encoding="utf-8"))
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        return path, None
+    return path, payload
 
 
 def evaluate_refresh_status(root: Path, reg, *, now=None):

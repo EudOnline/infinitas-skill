@@ -1,4 +1,5 @@
 {
+  "$schema": "../schemas/compatibility-policy.schema.json",
   "platform_contracts": {
     "max_age_days": 30,
     "stale_policy": "fail"

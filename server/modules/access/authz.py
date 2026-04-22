@@ -25,6 +25,20 @@ def can_access_release(db: Session, *, context: AccessContext, release_id: int) 
     ).all()
 
     principal_id = context.principal.id if context.principal is not None else None
+
+    grant_exposure_ids = [
+        e.id for e in exposures if e.audience_type == "grant" and principal_id is not None
+    ]
+    active_grants = {}
+    if grant_exposure_ids:
+        rows = db.scalars(
+            select(AccessGrant)
+            .where(AccessGrant.exposure_id.in_(grant_exposure_ids))
+            .where(AccessGrant.state == "active")
+        ).all()
+        for g in rows:
+            active_grants.setdefault(g.exposure_id, []).append(g)
+
     for exposure in exposures:
         if exposure.audience_type == "public":
             return True
@@ -34,12 +48,7 @@ def can_access_release(db: Session, *, context: AccessContext, release_id: int) 
             if exposure.requested_by_principal_id == principal_id:
                 return True
         if exposure.audience_type == "grant" and principal_id is not None:
-            grants = db.scalars(
-                select(AccessGrant)
-                .where(AccessGrant.exposure_id == exposure.id)
-                .where(AccessGrant.state == "active")
-            ).all()
-            for grant in grants:
+            for grant in active_grants.get(exposure.id, []):
                 if grant.subject_ref == f"principal:{principal_id}":
                     return True
     return False

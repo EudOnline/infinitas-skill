@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://openai.invalid/infinitas-skill/skill-canonical.schema.json",
+  "$id": "https://infinitas-skill.local/schemas/skill-canonical.schema.json",
   "title": "infinitas-skill canonical skill source",
   "type": "object",
   "required": [
@@ -76,7 +76,6 @@
     },
     "verification": {
       "type": "object",
-      "required": ["required_platforms"],
       "properties": {
         "smoke_prompts": {
           "type": "array",
@@ -85,6 +84,13 @@
         "required_platforms": {
           "type": "array",
           "items": {"type": "string"}
+        },
+        "required_runtimes": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "openclaw_runtime": {
+          "type": "string"
         }
       },
       "additionalProperties": true

@@ -52,6 +52,10 @@ def create_agent_preset(
             actor_principal_id=principal_id,
             payload=payload,
         )
+    except authoring_service.NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except authoring_service.ForbiddenError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return AgentPresetView.from_model(
@@ -108,6 +112,10 @@ def create_agent_preset_draft(
             is_maintainer=is_maintainer,
             payload=payload,
         )
+    except authoring_service.NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except authoring_service.ForbiddenError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return SkillDraftView.from_model(draft)
@@ -133,6 +141,10 @@ def seal_agent_preset_draft(
             is_maintainer=is_maintainer,
             version=payload.version,
         )
+    except authoring_service.NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except authoring_service.ForbiddenError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return SkillDraftSealResponse(
@@ -188,7 +200,7 @@ def create_agent_preset_release(
             db.refresh(release)
         except Exception:
             db.rollback()
-            raise
+            db.refresh(release)
     else:
         settings = get_settings()
         if release_requires_materialization(

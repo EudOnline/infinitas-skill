@@ -79,6 +79,22 @@ def get_latest_review_case_for_exposure(db: Session, exposure_id: int) -> Review
     )
 
 
+def close_review_case(db: Session, review_case: ReviewCase, *, reason: str) -> None:
+    if review_case.state != "open":
+        return
+    review_case.state = "closed"
+    review_case.closed_at = utcnow()
+    db.add(review_case)
+    record_lifecycle_memory_event_best_effort(
+        db,
+        lifecycle_event="task.review.close",
+        aggregate_type="review_case",
+        aggregate_id=str(review_case.id),
+        actor_ref="system",
+        payload={"reason": reason},
+    )
+
+
 def open_review_case(
     db: Session,
     *,

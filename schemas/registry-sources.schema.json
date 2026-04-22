@@ -280,6 +280,31 @@
           "if": {
             "properties": {
               "kind": {
+                "const": "git"
+              },
+              "local_path": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["kind", "local_path"]
+          },
+          "then": {
+            "properties": {
+              "update_policy": {
+                "properties": {
+                  "mode": {
+                    "const": "local-only"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
                 "const": "local"
               }
             }

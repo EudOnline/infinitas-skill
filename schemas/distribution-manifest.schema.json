@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://openai.invalid/infinitas-skill/distribution-manifest.schema.json",
+  "$id": "https://infinitas-skill.local/schemas/distribution-manifest.schema.json",
   "title": "infinitas-skill verified distribution manifest",
   "type": "object",
   "required": [

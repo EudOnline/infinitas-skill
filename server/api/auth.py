@@ -92,6 +92,7 @@ async def login(
         context.credential.last_used_at = utcnow()
         db.add(context.credential)
     if context is None or context.user is None:
+        response.status_code = 401
         return TokenLoginResponse(
             success=False,
             error=_pick_lang(lang, "无效的 Token", "Invalid token"),

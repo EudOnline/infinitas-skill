@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from server.models import Exposure, Release, utcnow
@@ -102,6 +103,19 @@ def create_exposure(
     db.add(exposure)
     db.flush()
 
+    existing = db.scalar(
+        select(Exposure)
+        .where(Exposure.release_id == release_id)
+        .where(Exposure.audience_type == outcome.audience_type)
+        .where(Exposure.state.notin_(["revoked", "rejected"]))
+        .where(Exposure.id != exposure.id)
+    )
+    if existing is not None:
+        db.rollback()
+        raise ConflictError(
+            f"active {outcome.audience_type} exposure already exists for this release"
+        )
+
     if outcome.review_requirement in {"advisory", "blocking"}:
         review_service.open_review_case(
             db,
@@ -185,6 +199,18 @@ def patch_exposure(
     db.add(exposure)
     db.commit()
     db.refresh(exposure)
+    record_lifecycle_memory_event_best_effort(
+        db,
+        lifecycle_event="task.exposure.patch",
+        aggregate_type="exposure",
+        aggregate_id=str(exposure.id),
+        actor_ref=f"principal:{actor_principal_id}",
+        payload={
+            "release_id": str(exposure.release_id),
+            "listing_mode": exposure.listing_mode,
+            "install_mode": exposure.install_mode,
+        },
+    )
     return exposure
 
 
@@ -257,9 +283,7 @@ def revoke_exposure(
     # Close any open review cases for this exposure
     open_case = review_service.get_open_review_case_for_exposure(db, exposure.id)
     if open_case is not None:
-        open_case.state = "closed"
-        open_case.closed_at = utcnow()
-        db.add(open_case)
+        review_service.close_review_case(db, open_case, reason="exposure_revoked")
     db.add(exposure)
     db.commit()
     db.refresh(exposure)

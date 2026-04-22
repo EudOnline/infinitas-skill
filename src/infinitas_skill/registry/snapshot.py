@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import shutil
-from datetime import datetime, timezone
 from pathlib import Path
 
 from infinitas_skill.install.registry_sources import (
@@ -14,6 +13,7 @@ from infinitas_skill.install.registry_sources import (
     resolve_registry_root,
 )
 
+from ._util import utc_now_iso
 from .refresh_state import load_refresh_state
 
 
@@ -141,15 +141,6 @@ def resolve_snapshot_selector(root: Path, registry_name: str, selector: str):
     if not choice:
         return None
     return load_snapshot_metadata(root, registry_name, choice)
-
-
-def utc_now_iso(now=None) -> str:
-    current = now if isinstance(now, datetime) else datetime.now(timezone.utc)
-    if current.tzinfo is None:
-        current = current.replace(tzinfo=timezone.utc)
-    return (
-        current.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-    )
 
 
 def default_snapshot_id(*, now=None, source_commit=None):

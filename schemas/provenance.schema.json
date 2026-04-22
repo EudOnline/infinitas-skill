@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://openai.invalid/infinitas-skill/provenance.schema.json",
+  "$id": "https://infinitas-skill.local/schemas/provenance.schema.json",
   "title": "infinitas-skill release attestation",
   "type": "object",
   "required": [

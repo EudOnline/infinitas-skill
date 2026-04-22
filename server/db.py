@@ -115,6 +115,9 @@ def get_db():
     session = factory()
     try:
         yield session
+    except Exception:
+        session.rollback()
+        raise
     finally:
         session.close()
 

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.com/infinitas-skill/reviews.schema.json",
+  "$id": "https://infinitas-skill.local/schemas/reviews.schema.json",
   "title": "infinitas-skill reviews.json",
   "description": "Validates the reviews.json file that lives inside each skill directory, tracking review requests and decisions.",
   "type": "object",

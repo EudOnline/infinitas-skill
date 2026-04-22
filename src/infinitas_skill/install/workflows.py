@@ -1228,6 +1228,15 @@ def run_install_rollback(
     force: bool = False,
     as_json: bool = False,
 ) -> int:
+    if steps < 1:
+        payload = {
+            "ok": False,
+            "state": "failed",
+            "error_code": "invalid-rollback-steps",
+            "message": f"steps must be a positive integer, got {steps}",
+        }
+        _emit_payload(payload, as_json=as_json)
+        return 1
     repo_root = _repo_root(str(root))
     try:
         current_entry = _load_manifest_entry(target_dir, installed_name)

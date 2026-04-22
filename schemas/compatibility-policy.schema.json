@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://infinitas-skill.local/schemas/compatibility-policy.schema.json",
+  "title": "Compatibility Policy",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "platform_contracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_age_days", "stale_policy"],
+      "properties": {
+        "max_age_days": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "stale_policy": {
+          "type": "string",
+          "enum": ["warn", "fail"]
+        }
+      }
+    },
+    "verified_support": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stale_after_days", "contract_newer_than_evidence_policy", "missing_policy"],
+      "properties": {
+        "stale_after_days": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "contract_newer_than_evidence_policy": {
+          "type": "string",
+          "enum": ["ignore", "stale"]
+        },
+        "missing_policy": {
+          "type": "string",
+          "enum": ["unknown"]
+        }
+      }
+    }
+  }
+}
