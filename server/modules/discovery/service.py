@@ -67,7 +67,7 @@ def _dedupe(entries: list[DiscoveryProjection]) -> list[DiscoveryProjection]:
     for entry in entries:
         current = by_release.get(entry.release_id)
         if current is None or (
-            _audience_rank(entry.audience_type) > _audience_rank(current.audience_type)
+            _audience_rank(entry.audience_type) < _audience_rank(current.audience_type)
         ):
             by_release[entry.release_id] = entry
     return sorted(

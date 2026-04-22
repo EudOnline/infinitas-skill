@@ -72,6 +72,8 @@ Each element records one review decision.
 
 Review state is computed by evaluating `entries[]` against the promotion policy:
 
+Note: the hosted registry CLI uses `"approve"/"reject"` (present tense) for `reviews decide --decision`, while the local `reviews.json` entries use `"approved"/"rejected"` (past tense). These are two separate systems with different decision vocabularies.
+
 1. Each entry's `reviewer` must belong to a configured reviewer group in `policy/promotion-policy.json`
 2. Quorum requires the configured minimum number of approvals from the relevant group
 3. `rejected` decisions do not count toward quorum but are recorded for audit
@@ -88,12 +90,14 @@ The policy engine also merges entries from `review-evidence.json` (platform-nati
 ## CLI operations
 
 ```bash
-# Request a review (appends to requests[])
+# Recommend reviewers for a skill (does not modify reviews.json)
 uv run infinitas policy recommend-reviewers <skill> --as-active --json
 
-# Record a decision (appends to entries[])
-# Use scripts or manual JSON editing for local reviews
+# Check review status and quorum
+uv run infinitas policy review-status <skill> --as-active --json
 ```
+
+Review requests and decisions can be added by editing `reviews.json` directly, or by calling `request_review()` and `record_review_decision()` from `src/infinitas_skill/policy/reviews.py`. No CLI command currently invokes these functions directly.
 
 ## Schema file
 

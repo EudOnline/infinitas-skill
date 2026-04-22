@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -21,8 +23,8 @@ class Exposure(Base):
         nullable=True,
     )
     policy_snapshot_json: Mapped[str] = mapped_column(Text, default="{}")
-    activated_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    ended_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     def __init__(self, **kwargs):
         audience_type = kwargs.get("audience_type")

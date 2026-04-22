@@ -146,7 +146,7 @@ Each value in `skills` and each element in `history[]` arrays is an install entr
 
 ## History retention
 
-- Each skill retains up to 25 prior install entries in `history`
+- Each skill retains prior install entries in `history`
 - When a skill is updated, the previous entry is appended to `history[<name>]`
 - Rollback uses these historical entries to restore a prior state
 

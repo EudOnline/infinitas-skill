@@ -33,14 +33,14 @@ Expected response:
 
 ```json
 {
-  "credential_id": "cred_01HXYZ",
-  "credential_type": "api_token",
-  "principal_id": "prin_01HABC",
+  "credential_id": 1,
+  "credential_type": "personal_token",
+  "principal_id": 1,
   "principal_kind": "user",
-  "principal_slug": "alice",
-  "user_id": "usr_01HDEF",
-  "username": "alice",
-  "scopes": ["registry:read", "registry:write"]
+  "principal_slug": "maintainer",
+  "user_id": 1,
+  "username": "maintainer",
+  "scopes": ["session:user", "api:user"]
 }
 ```
 
@@ -63,14 +63,16 @@ Expected response:
 
 ```json
 {
-  "id": "sk_01HPQR",
-  "namespace_id": "ns_01HJKL",
+  "id": 1,
+  "namespace_id": 1,
   "slug": "example-skill",
   "display_name": "Example Skill",
   "summary": "A demonstrative skill",
   "status": "active",
-  "created_at": "2026-04-22T12:00:00Z",
-  "updated_at": "2026-04-22T12:00:00Z"
+  "default_visibility_profile": null,
+  "created_by_principal_id": 1,
+  "created_at": "2026-04-22T10:00:00Z",
+  "updated_at": "2026-04-22T10:00:00Z"
 }
 ```
 
@@ -83,7 +85,7 @@ Expected response:
 Open a draft version against the skill record.
 
 ```bash
-infinitas registry drafts create sk_01HPQR \
+infinitas registry drafts create 1 \
   --content-ref "skills/active/example-skill" \
   --metadata-json '{}'
 ```
@@ -92,12 +94,16 @@ Expected response:
 
 ```json
 {
-  "id": "dr_01HMNO",
-  "skill_id": "sk_01HPQR",
+  "id": 1,
+  "skill_id": 1,
+  "base_version_id": null,
   "state": "open",
+  "content_mode": "external_ref",
   "content_ref": "skills/active/example-skill",
+  "content_artifact_id": null,
   "metadata": {},
-  "created_at": "2026-04-22T12:01:00Z"
+  "updated_by_principal_id": 1,
+  "updated_at": "2026-04-22T10:01:00Z"
 }
 ```
 
@@ -110,7 +116,7 @@ Expected response:
 Lock the draft and assign a semantic version.
 
 ```bash
-infinitas registry drafts seal dr_01HMNO --version 0.1.0
+infinitas registry drafts seal 1 --version 0.1.0
 ```
 
 Expected response:
@@ -119,13 +125,28 @@ Expected response:
 {
   "version": "0.1.0",
   "draft": {
-    "state": "sealed"
+    "id": 1,
+    "skill_id": 1,
+    "base_version_id": null,
+    "state": "sealed",
+    "content_mode": "external_ref",
+    "content_ref": "skills/active/example-skill",
+    "content_artifact_id": null,
+    "metadata": {},
+    "updated_by_principal_id": 1,
+    "updated_at": "2026-04-22T10:02:00Z"
   },
   "skill_version": {
-    "id": "sv_01HSTU",
+    "id": 1,
+    "skill_id": 1,
     "version": "0.1.0",
-    "skill_id": "sk_01HPQR",
-    "created_at": "2026-04-22T12:02:00Z"
+    "content_digest": "sha256:abc123...",
+    "metadata_digest": "sha256:def456...",
+    "sealed_manifest_json": "{\"name\":\"example-skill\"}",
+    "sealed_manifest": {"name": "example-skill"},
+    "created_from_draft_id": 1,
+    "created_by_principal_id": 1,
+    "created_at": "2026-04-22T10:02:00Z"
   }
 }
 ```
@@ -139,24 +160,32 @@ Expected response:
 Initiate release materialization from a sealed version.
 
 ```bash
-infinitas registry releases create sv_01HSTU
+infinitas registry releases create 1
 ```
 
 Expected response:
 
 ```json
 {
-  "id": "rl_01HVWX",
-  "state": "materializing",
-  "format_version": "1",
-  "created_at": "2026-04-22T12:03:00Z"
+  "id": 1,
+  "skill_version_id": 1,
+  "state": "pending",
+  "format_version": "v1",
+  "manifest_artifact_id": null,
+  "bundle_artifact_id": null,
+  "signature_artifact_id": null,
+  "provenance_artifact_id": null,
+  "created_by_principal_id": 1,
+  "created_at": "2026-04-22T10:03:00Z",
+  "ready_at": null,
+  "platform_compatibility": {}
 }
 ```
 
 Release materialization runs in the background. Poll until `state` becomes `ready`:
 
 ```bash
-infinitas registry releases get rl_01HVWX
+infinitas registry releases get 1
 ```
 
 `id` feeds `release_id` in step 6.
@@ -168,19 +197,25 @@ infinitas registry releases get rl_01HVWX
 Expose the release to an audience.
 
 ```bash
-infinitas registry exposures create rl_01HVWX --audience-type private
+infinitas registry exposures create 1 --audience-type private
 ```
 
 Expected response:
 
 ```json
 {
-  "id": "ex_01HYZA",
+  "id": 1,
+  "release_id": 1,
   "audience_type": "private",
-  "state": "active",
+  "listing_mode": "listed",
+  "install_mode": "enabled",
   "review_requirement": "none",
-  "release_id": "rl_01HVWX",
-  "created_at": "2026-04-22T12:04:00Z"
+  "requested_review_mode": "none",
+  "state": "active",
+  "requested_by_principal_id": 1,
+  "policy_snapshot": {},
+  "activated_at": "2026-04-22T10:04:00Z",
+  "ended_at": null
 }
 ```
 
@@ -197,16 +232,21 @@ Open a review case and record a decision. Required for `public` exposures; optio
 **Open a review case:**
 
 ```bash
-infinitas registry reviews open-case ex_01HYZA
+infinitas registry reviews open-case 1
 ```
 
 Expected response:
 
 ```json
 {
-  "id": "rc_01HBCD",
+  "id": 1,
+  "exposure_id": 1,
+  "policy_id": 1,
   "mode": "blocking",
-  "state": "pending",
+  "state": "open",
+  "opened_by_principal_id": 1,
+  "opened_at": "2026-04-22T10:05:00Z",
+  "closed_at": null,
   "decisions": []
 }
 ```
@@ -216,7 +256,7 @@ Expected response:
 **Record a decision:**
 
 ```bash
-infinitas registry reviews decide rc_01HBCD \
+infinitas registry reviews decide 1 \
   --decision approve \
   --note "LGTM"
 ```
@@ -225,15 +265,23 @@ Expected response:
 
 ```json
 {
-  "id": "rc_01HBCD",
+  "id": 1,
+  "exposure_id": 1,
+  "policy_id": 1,
   "mode": "blocking",
   "state": "approved",
+  "opened_by_principal_id": 1,
+  "opened_at": "2026-04-22T10:05:00Z",
+  "closed_at": "2026-04-22T10:06:00Z",
   "decisions": [
     {
+      "id": 1,
+      "review_case_id": 1,
+      "reviewer_principal_id": 2,
       "decision": "approve",
       "note": "LGTM",
-      "reviewer_id": "usr_01HDEF",
-      "decided_at": "2026-04-22T12:05:00Z"
+      "evidence": {},
+      "created_at": "2026-04-22T10:06:00Z"
     }
   ]
 }

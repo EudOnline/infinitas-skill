@@ -267,7 +267,7 @@ def patch_draft(
     is_maintainer: bool = False,
     payload: SkillDraftPatchRequest,
 ) -> SkillDraft:
-    draft = repository.get_draft(db, draft_id)
+    draft = db.scalar(select(SkillDraft).where(SkillDraft.id == draft_id).with_for_update())
     if draft is None:
         raise NotFoundError("draft not found")
     if draft.state != "open":
@@ -319,11 +319,13 @@ def seal_draft(
     draft = repository.get_draft(db, draft_id)
     if draft is None:
         raise NotFoundError("draft not found")
+
+    # Lock draft row and re-read to prevent concurrent seal race
+    locked = db.scalar(select(SkillDraft).where(SkillDraft.id == draft_id).with_for_update())
+    if locked is not None:
+        draft = locked
     if draft.state != "open":
         raise ConflictError("draft is already sealed")
-
-    # Lock draft row to prevent concurrent seal race
-    db.scalar(select(SkillDraft).where(SkillDraft.id == draft_id).with_for_update())
 
     skill = repository.get_skill(db, draft.skill_id)
     if skill is None:

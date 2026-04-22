@@ -18,7 +18,7 @@
     "signing_key_env": "INFINITAS_SKILL_GIT_SIGNING_KEY",
     "ci": {
       "provider": "github-actions",
-      "repository": "lvxiaoer/infinitas-skill",
+      "repository": "EudOnline/infinitas-skill",
       "workflow": "release-attestation"
     },
     "transparency_log": {

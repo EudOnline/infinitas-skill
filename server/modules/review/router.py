@@ -49,6 +49,22 @@ def _require_review_case_owner(
     return review_case
 
 
+def _get_review_case_for_reviewer(
+    db: Session,
+    *,
+    review_case_id: int,
+    reviewer_principal_id: int,
+):
+    review_case = service.get_review_case_or_404(db, review_case_id)
+    exposure = get_exposure_or_404(db, review_case.exposure_id)
+    if (
+        exposure.requested_by_principal_id is not None
+        and exposure.requested_by_principal_id == reviewer_principal_id
+    ):
+        raise HTTPException(status_code=403, detail="self-review is not allowed")
+    return review_case
+
+
 def _review_case_view(db: Session, review_case) -> ReviewCaseView:
     decisions = [
         ReviewDecisionView.from_model(item)
@@ -108,13 +124,11 @@ def create_review_decision(
     db: Session = Depends(get_db),
 ):
     principal_id = _require_review_principal(context)
-    is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
-        _require_review_case_owner(
+        _get_review_case_for_reviewer(
             db,
             review_case_id=review_case_id,
-            principal_id=principal_id,
-            is_maintainer=is_maintainer,
+            reviewer_principal_id=principal_id,
         )
         review_case, _ = service.record_decision(
             db,
@@ -131,8 +145,6 @@ def create_review_decision(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except release_service.NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except release_service.ForbiddenError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
     return _review_case_view(db, review_case)
 
 

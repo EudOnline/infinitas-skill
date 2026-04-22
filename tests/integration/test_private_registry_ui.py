@@ -40,7 +40,13 @@ def configure_env(tmpdir: Path) -> None:
                 "display_name": "Fixture Maintainer",
                 "role": "maintainer",
                 "token": "fixture-maintainer-token",
-            }
+            },
+            {
+                "username": "fixture-reviewer",
+                "display_name": "Fixture Reviewer",
+                "role": "maintainer",
+                "token": "fixture-reviewer-token",
+            },
         ]
     )
 
@@ -526,9 +532,10 @@ def approve_exposure_review(
         assert review_case is not None, f"expected review case for exposure {exposure_id}"
         review_case_id = review_case.id
 
+    reviewer_headers = {"Authorization": "Bearer fixture-reviewer-token"}
     decision_response = client.post(
         f"/api/v1/review-cases/{review_case_id}/decisions",
-        headers=headers,
+        headers=reviewer_headers,
         json={"decision": "approve", "note": "approved for ui fixture"},
     )
     assert decision_response.status_code == 201, decision_response.text

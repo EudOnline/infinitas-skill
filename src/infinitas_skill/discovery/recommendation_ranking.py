@@ -279,6 +279,7 @@ def score_item(
         + (30 * trust_score)
         + (20 * maturity_score)
         + quality_score
+        + (10 * (1 if freshness > 0 else 0))
     )
     factors = {
         "private_registry": private_preferred,

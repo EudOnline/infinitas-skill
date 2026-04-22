@@ -16,6 +16,10 @@
       "type": "integer",
       "minimum": 1
     },
+    "path": {
+      "type": "string",
+      "description": "File system path of the evidence file"
+    },
     "entries": {
       "type": "array",
       "items": {
