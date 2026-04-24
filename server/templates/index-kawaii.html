@@ -6,7 +6,7 @@
 {% include "partials/home-hero.html" %}
 
 <!-- 📊 状态条 -->
-<section class="status-section mb-4 md:mb-3.5 animate-in [animation-delay:100ms]">
+<section class="status-section mb-2.5 md:mb-3 animate-in [animation-delay:100ms]">
   <div class="flex flex-wrap gap-2">
     {% for state in operating_states %}
     <span class="status-chip"><span aria-hidden="true">{{ state.icon }}</span> {{ state.label }}</span>
@@ -18,7 +18,7 @@
 
 <!-- 🌟 快捷技能 -->
 {% if featured_skills %}
-<section class="mb-4 md:mb-3.5 animate-in [animation-delay:300ms]">
+<section class="mb-2.5 md:mb-3 animate-in [animation-delay:300ms]">
   <div class="flex items-center gap-2">
     <div class="text-[1.1rem]"><span aria-hidden="true">🌟</span></div>
     <div>
@@ -27,7 +27,7 @@
     </div>
   </div>
   
-  <div class="skills-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+  <div class="skills-grid grid grid-cols-2 lg:grid-cols-3 gap-3">
     {% for skill in featured_skills %}
     <div class="skill-card">
       <div class="flex justify-between items-start mb-2 gap-2 min-w-0">

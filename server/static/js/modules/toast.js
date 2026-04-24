@@ -10,13 +10,20 @@ export class ToastManager {
       this.container = document.createElement('div');
       this.container.id = 'toast-container';
       this.container.className = 'toast-container';
+      this.container.setAttribute('aria-live', 'polite');
+      this.container.setAttribute('aria-atomic', 'false');
       document.body.appendChild(this.container);
     }
-    this.container.setAttribute('aria-live', 'polite');
-    this.container.setAttribute('aria-atomic', 'false');
+    this.maxStack = 5;
   }
 
   show(message, type = 'info', duration = 3000) {
+    // Enforce stack limit
+    const toasts = this.container.querySelectorAll('.toast');
+    if (toasts.length >= this.maxStack) {
+      toasts[0].remove();
+    }
+
     const toast = document.createElement('div');
     toast.className = `toast toast--${type}`;
     toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
@@ -34,25 +41,49 @@ export class ToastManager {
     closeBtn.setAttribute('type', 'button');
     closeBtn.setAttribute('aria-label', uiText('toast_close', 'Dismiss notification'));
     closeBtn.textContent = '×';
-    closeBtn.addEventListener('click', () => {
-      if (toast._autoTimer) clearTimeout(toast._autoTimer);
-      toast.remove();
-    });
 
-    toast.appendChild(icon);
-    toast.appendChild(content);
-    toast.appendChild(closeBtn);
+    let autoTimer = null;
+    let remaining = duration;
+    let startTime = Date.now();
 
-    this.container.appendChild(toast);
-
-    toast._autoTimer = setTimeout(() => {
+    const removeToast = () => {
+      if (autoTimer) clearTimeout(autoTimer);
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         toast.remove();
       } else {
         toast.style.animation = 'toast-out 300ms ease forwards';
         setTimeout(() => toast.remove(), 300);
       }
-    }, duration);
+    };
+
+    closeBtn.addEventListener('click', removeToast);
+
+    const startTimer = () => {
+      startTime = Date.now();
+      autoTimer = setTimeout(removeToast, remaining);
+    };
+
+    const pauseTimer = () => {
+      if (autoTimer) {
+        clearTimeout(autoTimer);
+        autoTimer = null;
+        remaining -= Date.now() - startTime;
+        if (remaining < 0) remaining = 0;
+      }
+    };
+
+    // Pause on hover / focus
+    toast.addEventListener('mouseenter', pauseTimer);
+    toast.addEventListener('mouseleave', startTimer);
+    toast.addEventListener('focusin', pauseTimer);
+    toast.addEventListener('focusout', startTimer);
+
+    toast.appendChild(icon);
+    toast.appendChild(content);
+    toast.appendChild(closeBtn);
+
+    this.container.appendChild(toast);
+    startTimer();
   }
 
   getIcon(type) {

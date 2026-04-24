@@ -22,8 +22,8 @@ import {
 let toastRef = null;
 export function setLifecycleToastRef(ref) { toastRef = ref; }
 const _toast = {
-  success: (msg, dur) => { if (toastRef) _toast.success(msg, dur); },
-  error: (msg, dur) => { if (toastRef) _toast.error(msg, dur); },
+  success: (msg, dur) => { if (toastRef) toastRef.success(msg, dur); },
+  error: (msg, dur) => { if (toastRef) toastRef.error(msg, dur); },
   info: (msg, dur) => { if (toastRef) toastRef.info(msg, dur); },
   warning: (msg, dur) => { if (toastRef) toastRef.warning(msg, dur); },
 };

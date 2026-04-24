@@ -69,6 +69,10 @@ export function createAuthModalController(options) {
     if (!dom.errorMessage || !dom.error) return;
     dom.errorMessage.textContent = message;
     dom.error.hidden = false;
+    if (dom.input) {
+      dom.input.setAttribute('aria-invalid', 'true');
+      dom.input.setAttribute('aria-describedby', dom.error.id);
+    }
     if (errorTimeout) clearTimeout(errorTimeout);
     errorTimeout = setTimeout(() => {
       if (dom.error) dom.error.hidden = true;
@@ -79,6 +83,13 @@ export function createAuthModalController(options) {
   function hideError() {
     if (!dom.error) return;
     dom.error.hidden = true;
+    if (dom.input) {
+      dom.input.removeAttribute('aria-invalid');
+      const describedBy = dom.input.getAttribute('aria-describedby');
+      if (describedBy && describedBy.includes(dom.error.id)) {
+        dom.input.removeAttribute('aria-describedby');
+      }
+    }
     if (errorTimeout) {
       clearTimeout(errorTimeout);
       errorTimeout = null;
@@ -152,6 +163,7 @@ export function createAuthModalController(options) {
     if (!dom.loginBtn) return;
     if (loading) {
       dom.loginBtn.setAttribute('aria-busy', 'true');
+      dom.loginBtn.disabled = true;
       dom.loginBtn.classList.add('kawaii-button--loading');
       dom.loginBtn.style.opacity = '0.7';
       dom.loginBtn.style.pointerEvents = 'none';
@@ -161,6 +173,7 @@ export function createAuthModalController(options) {
       if (text) text.textContent = uiText('auth_verify_loading', '验证中…');
     } else {
       dom.loginBtn.removeAttribute('aria-busy');
+      dom.loginBtn.disabled = false;
       dom.loginBtn.classList.remove('kawaii-button--loading');
       dom.loginBtn.style.opacity = '';
       dom.loginBtn.style.pointerEvents = '';

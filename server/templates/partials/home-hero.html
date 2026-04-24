@@ -14,8 +14,7 @@
           {% endif %}
         </h1>
 
-        <p class="text-base text-kawaii-ink-soft mb-5 leading-relaxed max-w-[26rem]">{{ hero_body }} {{ hero_support }}</p>
-        <p class="-mt-[0.45rem] mb-[1.2rem] text-[0.86rem] text-kawaii-ink-muted max-w-md">{{ '私人技能库采用 private-first 结构：私人可直接流转，公开必须走审核。' if page_language == 'zh' else 'This private skill library is private-first: private paths flow directly, while public paths must pass review.' }}</p>
+        <p class="text-base text-kawaii-ink-soft mb-5 leading-relaxed max-w-[26rem]">{{ hero_body }}</p>
 
         <button class="hero-cta min-h-[2.75rem] py-[0.6rem] px-[1.25rem] kawaii-button kawaii-button--primary" type="button" data-copy="{{ hero_primary_copy | forceescape }}">
           <span><span aria-hidden="true">📋</span></span>
@@ -42,7 +41,7 @@
           {% endfor %}
         </div>
 
-        <p class="quick-hint"><span aria-hidden="true">💡</span> {{ ui.quick_start_hint if ui else '提示' if page_language == 'zh' else 'Hint' }}</p>
+        <p class="quick-hint"><span aria-hidden="true">💡</span> {{ ui.quick_start_hint if ui else '点击复制，直接粘贴使用' if page_language == 'zh' else 'Click to copy' }}</p>
       </div>
     </div>
   </div>

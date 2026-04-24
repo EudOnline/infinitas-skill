@@ -4,7 +4,7 @@
       <div><span aria-hidden="true">🎮</span></div>
       <div>
         <h2>{{ ui.console_section_title if ui else '控制台' if page_language == 'zh' else 'Console' }}</h2>
-        <p>{{ maintainer_body }}</p>
+        {% if maintainer_body %}<p class="hidden md:block">{{ maintainer_body }}</p>{% endif %}
       </div>
     </div>
 
@@ -29,7 +29,7 @@
         <span class="console-count">{{ link.value }}</span>
       </div>
       <h3 class="console-name">{{ link.title }}</h3>
-      <p class="console-desc">{{ link.detail }}</p>
+      {% if link.detail %}<p class="console-desc">{{ link.detail }}</p>{% endif %}
     </a>
     {% endfor %}
   </div>

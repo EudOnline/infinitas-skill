@@ -134,8 +134,24 @@
         position: absolute;
         top: calc(100% + 0.75rem);
         right: 0;
+        max-height: min(380px, 70vh);
+        overflow-y: auto;
+        overscroll-behavior: contain;
         background: var(--kawaii-panel);
         border: 1px solid var(--kawaii-line);
+      }
+      .user-panel.user-panel--flip {
+        top: auto;
+        bottom: calc(100% + 0.75rem);
+      }
+      @media (max-width: 720px) {
+        .user-panel {
+          max-height: min(340px, 65vh);
+        }
+        .user-panel.user-panel--flip {
+          top: calc(100% + 0.5rem);
+          bottom: auto;
+        }
       }
       .quick-start,
       .console-card,
@@ -166,7 +182,7 @@
         }
         .console-grid,
         .skills-grid {
-          grid-template-columns: 1fr;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
         .nav a {
           min-height: 2.75rem;
@@ -415,6 +431,9 @@
     <div class="floating-decoration floating-sparkle"><span aria-hidden="true">✨</span></div>
     <div class="floating-decoration floating-music"><span aria-hidden="true">🎵</span></div>
     
+    <!-- Toast 容器（静态，供屏幕阅读器提前识别） -->
+    <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div>
+
     <!-- 🎊 交互 -->
     <script type="module" src="/static/js/app.js"></script>
     <script type="module" src="/static/js/auth-session.js"></script>

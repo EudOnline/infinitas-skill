@@ -123,25 +123,23 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
             "icon": "🔒",
             "label": pick_lang(lang, "模式", "Mode"),
             "value": lifecycle_mode,
-            "detail": pick_lang(
-                lang, "私人直达，公开必须审核", "Private flows directly, public requires review"
-            ),
+            "detail": "",
         },
         {
             "icon": "📅",
             "label": pick_lang(lang, "同步", "Sync"),
             "value": localized_stamp(discovery_payload.get("generated_at"), lang),
-            "detail": pick_lang(lang, "catalog 快照", "Catalog snapshot"),
+            "detail": "",
         },
         {
             "icon": "⚡",
             "label": pick_lang(lang, "流转", "Flow"),
             "value": (
-                f"{pending_reviews} 审核单 / {queued_jobs} 待物化"
+                f"{pending_reviews} 审核 / {queued_jobs} 待处理"
                 if lang == "zh"
-                else f"{pending_reviews} review cases / {queued_jobs} materializations pending"
+                else f"{pending_reviews} review / {queued_jobs} pending"
             ),
-            "detail": f"{running_jobs} 物化中" if lang == "zh" else f"{running_jobs} materializing",
+            "detail": f"{running_jobs} 运行中" if lang == "zh" else f"{running_jobs} running",
         },
     ]
     inspect_example_target = featured_skills[0]["qualified_name"] if featured_skills else "<publisher>/<skill>"
@@ -195,42 +193,42 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
             "icon": "📦",
             "title": pick_lang(lang, "技能", "Skills"),
             "value": str(total_skills),
-            "detail": pick_lang(lang, "命名空间中的技能", "Skill records in the namespace"),
+            "detail": "",
         },
         {
             "href": with_lang("/skills#drafts", lang),
             "icon": "✨",
             "title": pick_lang(lang, "草稿", "Drafts"),
             "value": str(total_drafts),
-            "detail": pick_lang(lang, "可继续编辑", "Still editable"),
+            "detail": "",
         },
         {
             "href": with_lang("/skills#releases", lang),
             "icon": "⚙️",
             "title": pick_lang(lang, "发布", "Releases"),
             "value": str(total_releases),
-            "detail": pick_lang(lang, "不可变产物", "Immutable delivery units"),
+            "detail": "",
         },
         {
             "href": with_lang("/skills#share", lang),
             "icon": "🌐",
             "title": pick_lang(lang, "分享", "Share"),
             "value": str(total_exposures),
-            "detail": pick_lang(lang, "私人、令牌和公开出口", "Private, token, and public exits"),
+            "detail": "",
         },
         {
             "href": with_lang("/access/tokens", lang),
             "icon": "🗝️",
             "title": pick_lang(lang, "访问", "Access"),
             "value": str(total_access),
-            "detail": pick_lang(lang, "令牌与授权记录", "Tokens and grant records"),
+            "detail": "",
         },
         {
             "href": with_lang("/review-cases", lang),
             "icon": "📝",
             "title": pick_lang(lang, "审核", "Review"),
             "value": str(pending_reviews),
-            "detail": pick_lang(lang, "公开出口审核单", "Public exposure review cases"),
+            "detail": "",
         },
     ]
     page_eyebrow = pick_lang(lang, "私人技能工作台", "Private agent workspace")
@@ -249,14 +247,10 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
         "hero_emphasis": "",
         "hero_body": pick_lang(
             lang,
-            "这里是你的私人技能库，搜索、检查和执行都交给它。",
-            "This private skill library lets the agent search, inspect, and execute for you.",
+            "搜索、检查、执行，交给 Agent 完成。",
+            "Search, inspect, and execute — let the Agent handle it.",
         ),
-        "hero_support": pick_lang(
-            lang,
-            "你只要说明目标、位置和风险，它会沿着技能生命周期继续推进。",
-            "You only need to name the goal, location, and risk level, then it moves through the skill lifecycle.",
-        ),
+        "hero_support": "",
         "hero_primary_link": {
             "href": "#handoff",
             "label": pick_lang(lang, "复制任务提示", "Copy task prompt"),
@@ -278,8 +272,8 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
         },
         "maintainer_body": pick_lang(
             lang,
-            "维护台现在完全围绕技能、草稿、发布、分享、访问和审核，不再经过旧的 submission 队列。",
-            "The console now centers on skills, drafts, releases, sharing, access, and review without routing work through legacy submission queues.",
+            "",
+            "",
         ),
         "registry_reader_tokens_enabled": bool(settings.registry_read_tokens),
     }

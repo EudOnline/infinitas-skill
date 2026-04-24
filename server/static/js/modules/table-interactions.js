@@ -6,9 +6,23 @@ export function initSortableTable(tableEl) {
   const headers = tableEl.querySelectorAll('th[data-sort]');
   if (!headers.length) return;
 
+  // Ensure live region exists for sort announcements
+  let liveRegion = document.getElementById('table-sort-live');
+  if (!liveRegion) {
+    liveRegion = document.createElement('div');
+    liveRegion.id = 'table-sort-live';
+    liveRegion.className = 'sr-only';
+    liveRegion.setAttribute('aria-live', 'polite');
+    liveRegion.setAttribute('aria-atomic', 'true');
+    document.body.appendChild(liveRegion);
+  }
+
   headers.forEach((th) => {
     th.style.cursor = 'pointer';
     th.style.userSelect = 'none';
+    th.setAttribute('tabindex', '0');
+    th.setAttribute('role', 'columnheader');
+    th.setAttribute('scope', 'col');
 
     const sortType = th.dataset.sort;
     const indicator = document.createElement('span');
@@ -17,20 +31,34 @@ export function initSortableTable(tableEl) {
     indicator.textContent = ' ↕';
     th.appendChild(indicator);
 
-    th.addEventListener('click', () => {
+    function activateSort() {
       const currentDir = th.dataset.sortDir || '';
       const newDir = currentDir === 'asc' ? 'desc' : 'asc';
 
       headers.forEach((h) => {
         h.dataset.sortDir = '';
+        h.removeAttribute('aria-sort');
         const ind = h.querySelector('.sort-indicator');
         if (ind) ind.textContent = ' ↕';
       });
 
       th.dataset.sortDir = newDir;
+      th.setAttribute('aria-sort', newDir === 'asc' ? 'ascending' : 'descending');
       indicator.textContent = newDir === 'asc' ? ' ↑' : ' ↓';
 
       sortTable(tableEl, th.cellIndex, sortType, newDir);
+
+      const label = th.textContent.replace(/[↑↓↕]/g, '').trim();
+      const directionLabel = newDir === 'asc' ? '升序' : '降序';
+      if (liveRegion) liveRegion.textContent = `${label}：已按${directionLabel}排序`;
+    }
+
+    th.addEventListener('click', activateSort);
+    th.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        activateSort();
+      }
     });
   });
 }

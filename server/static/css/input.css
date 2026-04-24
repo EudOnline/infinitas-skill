@@ -2725,7 +2725,7 @@
 
   @media (max-width: 480px) {
     .console-grid {
-      grid-template-columns: 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
   
@@ -2859,12 +2859,16 @@
     }
 
     .console-grid {
-      grid-template-columns: 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .console-card,
     .skill-card {
-      padding: 0.875rem;
+      padding: 0.75rem;
+    }
+
+    .corner-decoration {
+      display: none;
     }
 
     .section-action {
@@ -3003,6 +3007,9 @@
     top: calc(100% + 0.75rem);
     right: 0;
     width: min(280px, calc(100vw - 2rem));
+    max-height: min(380px, 70vh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     background: var(--kawaii-surface-elevated);
     border: 1px solid var(--kawaii-line);
     border-radius: var(--radius-lg);
@@ -3010,7 +3017,28 @@
     backdrop-filter: blur(12px);
     padding: 1rem;
     animation: panel-in 200ms var(--ease-out-quiet);
-    z-index: 220;
+    z-index: 300;
+    scrollbar-width: thin;
+    scrollbar-color: var(--kawaii-line) transparent;
+  }
+
+  .user-panel::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .user-panel::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .user-panel::-webkit-scrollbar-thumb {
+    background: var(--kawaii-line);
+    border-radius: var(--radius-full);
+  }
+
+  /* 面板方向翻转（JS 动态控制） */
+  .user-panel.user-panel--flip {
+    top: auto;
+    bottom: calc(100% + 0.75rem);
   }
 
 
@@ -3187,6 +3215,12 @@
       bottom: calc(100% + 0.5rem);
       right: 0;
       width: min(260px, calc(100vw - 2rem));
+      max-height: min(340px, 65vh);
+    }
+
+    .user-panel.user-panel--flip {
+      top: calc(100% + 0.5rem);
+      bottom: auto;
     }
   }
 

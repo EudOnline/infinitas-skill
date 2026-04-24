@@ -319,6 +319,7 @@ export function initHomeAuthSession() {
     }
     isUserPanelOpen = false;
     panel.hidden = true;
+    panel.classList.remove('user-panel--flip');
     if (trigger) {
       trigger.setAttribute('aria-expanded', 'false');
     }
@@ -332,10 +333,25 @@ export function initHomeAuthSession() {
     }
     isUserPanelOpen = !isUserPanelOpen;
     panel.hidden = !isUserPanelOpen;
+    panel.classList.remove('user-panel--flip');
     trigger.setAttribute('aria-expanded', String(isUserPanelOpen));
     if (isUserPanelOpen && currentUser) {
       const theme = document.documentElement.getAttribute('data-color-scheme') || 'light';
       BackgroundManager.renderSelector(theme);
+    }
+    if (isUserPanelOpen) {
+      // 视口边界检测：若面板超出视口则自动翻转展开方向
+      requestAnimationFrame(() => {
+        const rect = panel.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const isMobile = window.innerWidth <= 767;
+        const margin = 12;
+        if (!isMobile && rect.bottom > viewportHeight - margin) {
+          panel.classList.add('user-panel--flip');
+        } else if (isMobile && rect.top < margin) {
+          panel.classList.add('user-panel--flip');
+        }
+      });
     }
   }
 
