@@ -2,9 +2,12 @@
   infinitas-skill 可复用模板宏
 #}
 
-{%- macro console_table_shell(title, empty_text, items, page_language=None) -%}
+{%- macro console_table_shell(title, empty_text, items, page_language=None, filterable=False) -%}
 <section class="console-table-shell" data-reveal>
   <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ title }}</div>
+  {% if filterable and items %}
+  <input type="text" class="table-filter-input mb-2 w-full px-3 py-1.5 rounded-lg border border-kawaii-line bg-kawaii-panel text-sm text-kawaii-ink focus:outline-none focus:ring-2 focus:ring-kawaii-primary/40" placeholder="Filter..." aria-label="Filter table" data-table-filter>
+  {% endif %}
   <div class="overflow-x-auto -mx-4 px-4 table-scroll">
     {% if items %}
     {{ caller() }}

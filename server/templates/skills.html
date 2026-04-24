@@ -62,26 +62,26 @@
 <table id="skills">
   <thead>
     <tr>
-      <th scope="col">ID</th>
-      <th scope="col">{{ ui['table_col_skill'] }}</th>
-      <th scope="col">{{ ui['table_col_namespace'] }}</th>
-      <th scope="col">{{ ui['table_col_drafts_versions_releases'] }}</th>
-      <th scope="col">{{ ui['table_col_default_visibility'] }}</th>
-      <th scope="col">{{ ui['table_col_updated'] }}</th>
+      <th scope="col" data-sort="number">ID</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_skill'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_namespace'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_drafts_versions_releases'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_default_visibility'] }}</th>
+      <th scope="col" data-sort="date">{{ ui['table_col_updated'] }}</th>
     </tr>
   </thead>
   <tbody>
     {% for item in skill_items %}
     <tr>
-      <td>{{ item.id }}</td>
-      <td>
+      <td data-label="ID">{{ item.id }}</td>
+      <td data-label="{{ ui['table_col_skill'] }}">
         <a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.detail_href }}">{{ item.display_name }}</a>
         <div class="text-xs text-kawaii-ink-muted mt-1">{{ item.summary }}</div>
       </td>
-      <td>{{ item.namespace }}</td>
-      <td>{{ item.draft_count }} / {{ item.version_count }} / {{ item.release_count }}</td>
-      <td>{{ item.default_visibility_profile }}</td>
-      <td>{{ item.updated_at }}</td>
+      <td data-label="{{ ui['table_col_namespace'] }}">{{ item.namespace }}</td>
+      <td data-label="{{ ui['table_col_drafts_versions_releases'] }}">{{ item.draft_count }} / {{ item.version_count }} / {{ item.release_count }}</td>
+      <td data-label="{{ ui['table_col_default_visibility'] }}">{{ item.default_visibility_profile }}</td>
+      <td data-label="{{ ui['table_col_updated'] }}">{{ item.updated_at }}</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -97,23 +97,23 @@
 <table id="drafts">
   <thead>
     <tr>
-      <th scope="col">ID</th>
-      <th scope="col">{{ ui['table_col_skill'] }}</th>
-      <th scope="col">{{ ui['table_col_state'] }}</th>
-      <th scope="col">{{ ui['table_col_entrypoint'] }}</th>
-      <th scope="col">{{ ui['table_col_content_ref'] }}</th>
-      <th scope="col">{{ ui['table_col_updated'] }}</th>
+      <th scope="col" data-sort="number">ID</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_skill'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_state'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_entrypoint'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_content_ref'] }}</th>
+      <th scope="col" data-sort="date">{{ ui['table_col_updated'] }}</th>
     </tr>
   </thead>
   <tbody>
     {% for item in draft_items %}
     <tr>
-      <td><a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.detail_href }}">{{ item.id }}</a></td>
-      <td>{{ item.skill_name }}</td>
-      <td>{{ item.state }}</td>
-      <td>{{ item.entrypoint }}</td>
-      <td><code class="table-code">{{ item.content_ref }}</code></td>
-      <td>{{ item.updated_at }}</td>
+      <td data-label="ID"><a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.detail_href }}">{{ item.id }}</a></td>
+      <td data-label="{{ ui['table_col_skill'] }}">{{ item.skill_name }}</td>
+      <td data-label="{{ ui['table_col_state'] }}">{{ item.state }}</td>
+      <td data-label="{{ ui['table_col_entrypoint'] }}">{{ item.entrypoint }}</td>
+      <td data-label="{{ ui['table_col_content_ref'] }}"><code class="table-code">{{ item.content_ref }}</code></td>
+      <td data-label="{{ ui['table_col_updated'] }}">{{ item.updated_at }}</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -129,23 +129,23 @@
 <table id="releases">
   <thead>
     <tr>
-      <th scope="col">ID</th>
-      <th scope="col">{{ ui['table_col_skill'] }}</th>
-      <th scope="col">{{ ui['table_col_version_short'] }}</th>
-      <th scope="col">{{ ui['table_col_state'] }}</th>
-      <th scope="col">{{ ui['table_col_share_exits'] }}</th>
+      <th scope="col" data-sort="number">ID</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_skill'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_version_short'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_state'] }}</th>
+      <th scope="col" data-sort="number">{{ ui['table_col_share_exits'] }}</th>
       <th scope="col">{{ ui['table_col_actions'] }}</th>
     </tr>
   </thead>
   <tbody>
     {% for item in release_items %}
     <tr>
-      <td>{{ item.id }}</td>
-      <td>{{ item.skill_name }}</td>
-      <td>{{ item.version }}</td>
-      <td>{{ item.state }}</td>
-      <td>{{ item.exposure_count }}</td>
-      <td>
+      <td data-label="ID">{{ item.id }}</td>
+      <td data-label="{{ ui['table_col_skill'] }}">{{ item.skill_name }}</td>
+      <td data-label="{{ ui['table_col_version_short'] }}">{{ item.version }}</td>
+      <td data-label="{{ ui['table_col_state'] }}">{{ item.state }}</td>
+      <td data-label="{{ ui['table_col_share_exits'] }}">{{ item.exposure_count }}</td>
+      <td data-label="{{ ui['table_col_actions'] }}">
         <div class="flex flex-wrap items-center gap-2">
           <a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.detail_href }}">{{ ui['action_detail'] }}</a>
           <a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.share_href }}">{{ ui['action_share'] }}</a>
@@ -166,23 +166,23 @@
 <table id="share">
   <thead>
     <tr>
-      <th scope="col">ID</th>
-      <th scope="col">{{ ui['table_col_skill'] }}</th>
-      <th scope="col">{{ ui['table_col_audience'] }}</th>
-      <th scope="col">{{ ui['table_col_listing_install'] }}</th>
-      <th scope="col">{{ ui['table_col_review'] }}</th>
-      <th scope="col">{{ ui['table_col_state'] }}</th>
+      <th scope="col" data-sort="number">ID</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_skill'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_audience'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_listing_install'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_review'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_state'] }}</th>
     </tr>
   </thead>
   <tbody>
     {% for item in share_items %}
     <tr>
-      <td><a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.share_href }}">#{{ item.id }}</a></td>
-      <td>{{ item.skill_name }}</td>
-      <td>{{ item.audience }}</td>
-      <td>{{ item.listing_mode }} / {{ item.install_mode }}</td>
-      <td>{{ item.review_gate }} / {{ item.review_case_state }}</td>
-      <td>{{ item.state }}</td>
+      <td data-label="ID"><a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.share_href }}">#{{ item.id }}</a></td>
+      <td data-label="{{ ui['table_col_skill'] }}">{{ item.skill_name }}</td>
+      <td data-label="{{ ui['table_col_audience'] }}">{{ item.audience }}</td>
+      <td data-label="{{ ui['table_col_listing_install'] }}">{{ item.listing_mode }} / {{ item.install_mode }}</td>
+      <td data-label="{{ ui['table_col_review'] }}">{{ item.review_gate }} / {{ item.review_case_state }}</td>
+      <td data-label="{{ ui['table_col_state'] }}">{{ item.state }}</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -198,23 +198,23 @@
 <table id="review">
   <thead>
     <tr>
-      <th scope="col">ID</th>
-      <th scope="col">{{ ui['table_col_skill'] }}</th>
-      <th scope="col">{{ ui['table_col_audience'] }}</th>
-      <th scope="col">{{ ui['table_col_mode'] }}</th>
-      <th scope="col">{{ ui['table_col_state'] }}</th>
-      <th scope="col">{{ ui['table_col_opened'] }}</th>
+      <th scope="col" data-sort="number">ID</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_skill'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_audience'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_mode'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_state'] }}</th>
+      <th scope="col" data-sort="date">{{ ui['table_col_opened'] }}</th>
     </tr>
   </thead>
   <tbody>
     {% for item in review_items %}
     <tr>
-      <td><a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.review_href }}">#{{ item.id }}</a></td>
-      <td>{{ item.skill_name }}</td>
-      <td>{{ item.audience }}</td>
-      <td>{{ item.mode }}</td>
-      <td>{{ item.state }}</td>
-      <td>{{ item.opened_at }}</td>
+      <td data-label="ID"><a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.review_href }}">#{{ item.id }}</a></td>
+      <td data-label="{{ ui['table_col_skill'] }}">{{ item.skill_name }}</td>
+      <td data-label="{{ ui['table_col_audience'] }}">{{ item.audience }}</td>
+      <td data-label="{{ ui['table_col_mode'] }}">{{ item.mode }}</td>
+      <td data-label="{{ ui['table_col_state'] }}">{{ item.state }}</td>
+      <td data-label="{{ ui['table_col_opened'] }}">{{ item.opened_at }}</td>
     </tr>
     {% endfor %}
   </tbody>

@@ -93,21 +93,21 @@
 <table>
   <thead>
     <tr>
-      <th scope="col">ID</th>
-      <th scope="col">{{ ui['table_col_kind'] }}</th>
-      <th scope="col">SHA256</th>
-      <th scope="col">{{ ui['table_col_size'] }}</th>
-      <th scope="col">{{ ui['table_col_storage_uri'] }}</th>
+      <th scope="col" data-sort="number">ID</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_kind'] }}</th>
+      <th scope="col" data-sort="string">SHA256</th>
+      <th scope="col" data-sort="number">{{ ui['table_col_size'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_storage_uri'] }}</th>
     </tr>
   </thead>
   <tbody>
     {% for item in artifact_rows %}
     <tr>
-      <td>{{ item.id }}</td>
-      <td>{{ item.kind }}</td>
-      <td><code class="table-code">{{ item.sha256 }}</code></td>
-      <td>{{ item.size_bytes }}</td>
-      <td><code class="table-code">{{ item.storage_uri }}</code></td>
+      <td data-label="ID">{{ item.id }}</td>
+      <td data-label="{{ ui['table_col_kind'] }}">{{ item.kind }}</td>
+      <td data-label="SHA256"><code class="table-code">{{ item.sha256 }}</code></td>
+      <td data-label="{{ ui['table_col_size'] }}">{{ item.size_bytes }}</td>
+      <td data-label="{{ ui['table_col_storage_uri'] }}"><code class="table-code">{{ item.storage_uri }}</code></td>
     </tr>
     {% endfor %}
   </tbody>
@@ -124,21 +124,21 @@
 <table>
   <thead>
     <tr>
-      <th scope="col">ID</th>
-      <th scope="col">{{ ui['table_col_audience'] }}</th>
-      <th scope="col">{{ ui['table_col_state'] }}</th>
-      <th scope="col">{{ ui['table_col_listing'] }}</th>
+      <th scope="col" data-sort="number">ID</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_audience'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_state'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_listing'] }}</th>
       <th scope="col">{{ ui['table_col_open'] }}</th>
     </tr>
   </thead>
   <tbody>
     {% for item in exposure_rows %}
     <tr>
-      <td>#{{ item.id }}</td>
-      <td>{{ item.audience }}</td>
-      <td>{{ item.state }}</td>
-      <td>{{ item.listing_mode }}</td>
-      <td><a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.share_href }}">{{ ui['action_share_page'] }}</a></td>
+      <td data-label="ID">#{{ item.id }}</td>
+      <td data-label="{{ ui['table_col_audience'] }}">{{ item.audience }}</td>
+      <td data-label="{{ ui['table_col_state'] }}">{{ item.state }}</td>
+      <td data-label="{{ ui['table_col_listing'] }}">{{ item.listing_mode }}</td>
+      <td data-label="{{ ui['table_col_open'] }}"><a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.share_href }}">{{ ui['action_share_page'] }}</a></td>
     </tr>
     {% endfor %}
   </tbody>

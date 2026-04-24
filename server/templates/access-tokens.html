@@ -33,27 +33,23 @@
 <table>
   <thead>
     <tr>
-      <th scope="col">ID</th>
-      <th scope="col">{{ ui['table_col_type'] }}</th>
-      <th scope="col">{{ ui['table_col_principal'] }}</th>
-      <th scope="col">{{ ui['table_col_scopes'] }}</th>
-      <th scope="col">{{ ui['table_col_grant'] }}</th>
-      <th scope="col">{{ ui['table_col_release'] }}</th>
-      <th scope="col">{{ ui['table_col_expires'] }}</th>
-      <th scope="col">{{ ui['table_col_last_used'] }}</th>
+      <th scope="col" data-sort="number">ID</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_identity'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_scopes'] }}</th>
+      <th scope="col" data-sort="number">{{ ui['table_col_grant'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_release'] }}</th>
+      <th scope="col" data-sort="date">{{ ui['table_col_timing'] }}</th>
     </tr>
   </thead>
   <tbody>
     {% for item in credential_rows %}
     <tr>
-      <td>#{{ item.id }}</td>
-      <td>{{ item.type }}</td>
-      <td>{{ item.principal }}</td>
-      <td>{{ item.scopes }}</td>
-      <td>{{ item.grant_id }}</td>
-      <td>{{ item.release_label }}</td>
-      <td>{{ item.expires_at }}</td>
-      <td>{{ item.last_used_at }}</td>
+      <td data-label="ID">#{{ item.id }}</td>
+      <td data-label="{{ ui['table_col_identity'] }}"><span class="text-kawaii-ink-muted text-xs">{{ item.type }}</span> {{ item.principal }}</td>
+      <td data-label="{{ ui['table_col_scopes'] }}">{{ item.scopes }}</td>
+      <td data-label="{{ ui['table_col_grant'] }}">{{ item.grant_id }}</td>
+      <td data-label="{{ ui['table_col_release'] }}">{{ item.release_label }}</td>
+      <td data-label="{{ ui['table_col_timing'] }}">{{ item.expires_at }}{% if item.last_used_at and item.last_used_at != '-' %}<br><span class="text-xs text-kawaii-ink-muted">{{ item.last_used_at }}</span>{% endif %}</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -69,23 +65,23 @@
 <table>
   <thead>
     <tr>
-      <th scope="col">ID</th>
-      <th scope="col">{{ ui['table_col_type'] }}</th>
-      <th scope="col">{{ ui['table_col_subject'] }}</th>
-      <th scope="col">{{ ui['table_col_audience'] }}</th>
-      <th scope="col">{{ ui['table_col_release'] }}</th>
-      <th scope="col">{{ ui['table_col_state'] }}</th>
+      <th scope="col" data-sort="number">ID</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_type'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_subject'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_audience'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_release'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_state'] }}</th>
     </tr>
   </thead>
   <tbody>
     {% for item in grant_rows %}
     <tr>
-      <td>#{{ item.id }}</td>
-      <td>{{ item.grant_type }}</td>
-      <td>{{ item.subject_ref }}</td>
-      <td>{{ item.audience }}</td>
-      <td>{{ item.release_label }}</td>
-      <td>{{ item.state }}</td>
+      <td data-label="ID">#{{ item.id }}</td>
+      <td data-label="{{ ui['table_col_type'] }}">{{ item.grant_type }}</td>
+      <td data-label="{{ ui['table_col_subject'] }}">{{ item.subject_ref }}</td>
+      <td data-label="{{ ui['table_col_audience'] }}">{{ item.audience }}</td>
+      <td data-label="{{ ui['table_col_release'] }}">{{ item.release_label }}</td>
+      <td data-label="{{ ui['table_col_state'] }}">{{ item.state }}</td>
     </tr>
     {% endfor %}
   </tbody>

@@ -1,4 +1,4 @@
-.PHONY: bootstrap clean-local ci-fast test-fast test-full lint-maintained fmt-maintained doctor build-css watch-css
+.PHONY: bootstrap clean-local ci-fast test-fast test-full test-e2e lint-maintained fmt-maintained doctor build-css watch-css
 
 build-css:
 	npm run build
@@ -25,6 +25,9 @@ test-fast:
 
 test-full:
 	./scripts/check-all.sh
+
+test-e2e:
+	uv run pytest tests/e2e/ -q
 
 lint-maintained:
 	uv run ruff check src/infinitas_skill server/ui server/app.py tests/integration tests/unit

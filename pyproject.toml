@@ -27,6 +27,7 @@ memory = [
 [dependency-groups]
 dev = [
   "pytest>=8,<9",
+  "pytest-playwright>=0.5",
   "ruff>=0.11,<1",
 ]
 
@@ -40,6 +41,8 @@ server = [
   "templates/partials/*.html",
   "static/css/*.css",
   "static/js/*.js",
+  "static/js/modules/*.js",
+  "locales/*.json",
 ]
 
 [tool.pytest.ini_options]

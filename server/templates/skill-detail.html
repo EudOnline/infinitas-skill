@@ -58,19 +58,19 @@
 <table>
   <thead>
     <tr>
-      <th scope="col">ID</th>
-      <th scope="col">{{ ui['table_col_state'] }}</th>
-      <th scope="col">{{ ui['table_col_content_ref'] }}</th>
-      <th scope="col">{{ ui['table_col_updated'] }}</th>
+      <th scope="col" data-sort="number">ID</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_state'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_content_ref'] }}</th>
+      <th scope="col" data-sort="date">{{ ui['table_col_updated'] }}</th>
     </tr>
   </thead>
   <tbody>
     {% for item in draft_rows %}
     <tr>
-      <td><a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.detail_href }}">#{{ item.id }}</a></td>
-      <td>{{ item.state }}</td>
-      <td><code class="table-code">{{ item.content_ref }}</code></td>
-      <td>{{ item.updated_at }}</td>
+      <td data-label="ID"><a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.detail_href }}">#{{ item.id }}</a></td>
+      <td data-label="{{ ui['table_col_state'] }}">{{ item.state }}</td>
+      <td data-label="{{ ui['table_col_content_ref'] }}"><code class="table-code">{{ item.content_ref }}</code></td>
+      <td data-label="{{ ui['table_col_updated'] }}">{{ item.updated_at }}</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -86,19 +86,19 @@
 <table>
   <thead>
     <tr>
-      <th scope="col">ID</th>
-      <th scope="col">{{ ui['table_col_version'] }}</th>
-      <th scope="col">{{ ui['table_col_created'] }}</th>
+      <th scope="col" data-sort="number">ID</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_version'] }}</th>
+      <th scope="col" data-sort="date">{{ ui['table_col_created'] }}</th>
       <th scope="col">{{ ui['label_release_short'] }}</th>
     </tr>
   </thead>
   <tbody>
     {% for item in version_rows %}
     <tr>
-      <td>{{ item.id }}</td>
-      <td>{{ item.version }}</td>
-      <td>{{ item.created_at }}</td>
-      <td>
+      <td data-label="ID">{{ item.id }}</td>
+      <td data-label="{{ ui['table_col_version'] }}">{{ item.version }}</td>
+      <td data-label="{{ ui['table_col_created'] }}">{{ item.created_at }}</td>
+      <td data-label="{{ ui['label_release_short'] }}">
         {% if item.release_href %}
         <a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.release_href }}">{{ ui['action_open_release'] }}</a>
         {% else %}
@@ -120,21 +120,21 @@
 <table>
   <thead>
     <tr>
-      <th scope="col">ID</th>
-      <th scope="col">{{ ui['table_col_version_short'] }}</th>
-      <th scope="col">{{ ui['table_col_state'] }}</th>
-      <th scope="col">{{ ui['table_col_ready'] }}</th>
+      <th scope="col" data-sort="number">ID</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_version_short'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_state'] }}</th>
+      <th scope="col" data-sort="date">{{ ui['table_col_ready'] }}</th>
       <th scope="col">{{ ui['table_col_actions'] }}</th>
     </tr>
   </thead>
   <tbody>
     {% for item in release_rows %}
     <tr>
-      <td>{{ item.id }}</td>
-      <td>{{ item.version }}</td>
-      <td>{{ item.state }}</td>
-      <td>{{ item.ready_at }}</td>
-      <td>
+      <td data-label="ID">{{ item.id }}</td>
+      <td data-label="{{ ui['table_col_version_short'] }}">{{ item.version }}</td>
+      <td data-label="{{ ui['table_col_state'] }}">{{ item.state }}</td>
+      <td data-label="{{ ui['table_col_ready'] }}">{{ item.ready_at }}</td>
+      <td data-label="{{ ui['table_col_actions'] }}">
         <div class="flex flex-wrap items-center gap-2">
           <a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.detail_href }}">{{ ui['action_detail'] }}</a>
           <a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.share_href }}">{{ ui['action_share'] }}</a>

@@ -101,54 +101,56 @@
 <table>
   <thead>
     <tr>
-      <th scope="col">ID</th>
-      <th scope="col">{{ ui['table_col_audience'] }}</th>
-      <th scope="col">{{ ui['table_col_listing'] }}</th>
-      <th scope="col">{{ ui['table_col_install'] }}</th>
-      <th scope="col">{{ ui['table_col_review_requirement'] }}</th>
-      <th scope="col">{{ ui['table_col_review_state'] }}</th>
-      <th scope="col">{{ ui['label_grant_count'] }}</th>
-      <th scope="col">{{ ui['table_col_state'] }}</th>
+      <th scope="col" data-sort="number">ID</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_audience'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_listing'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_install'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_review_requirement'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_review_state'] }}</th>
+      <th scope="col" data-sort="number">{{ ui['label_grant_count'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_state'] }}</th>
       <th scope="col">{{ ui['table_col_actions'] }}</th>
     </tr>
   </thead>
   <tbody>
     {% for item in share_rows %}
     <tr>
-      <td>#{{ item.id }}</td>
-      <td>{{ item.audience }}</td>
-      <td>{{ item.listing_mode }}</td>
-      <td>{{ item.install_mode }}</td>
-      <td>{{ item.review_requirement }}</td>
-      <td>{{ item.review_case_state }}</td>
-      <td>{{ item.grant_count }}</td>
-      <td>
+      <td data-label="ID">#{{ item.id }}</td>
+      <td data-label="{{ ui['table_col_audience'] }}">{{ item.audience }}</td>
+      <td data-label="{{ ui['table_col_listing'] }}">{{ item.listing_mode }}</td>
+      <td data-label="{{ ui['table_col_install'] }}">{{ item.install_mode }}</td>
+      <td data-label="{{ ui['table_col_review_requirement'] }}">{{ item.review_requirement }}</td>
+      <td data-label="{{ ui['table_col_review_state'] }}">{{ item.review_case_state }}</td>
+      <td data-label="{{ ui['label_grant_count'] }}">{{ item.grant_count }}</td>
+      <td data-label="{{ ui['table_col_state'] }}">
         <span class="status-badge inline-flex items-center gap-1.5 rounded-full text-[0.76rem] font-bold py-1 px-[0.65rem] border border-kawaii-line bg-kawaii-panel-muted" data-status="{{ item.state_raw }}">{{ item.state }}</span>
       </td>
-      <td>
-        <div class="flex flex-wrap items-center gap-2 mt-3">
+      <td data-label="{{ ui['table_col_actions'] }}">
+        <div class="flex flex-wrap items-center gap-2">
           {% if item.can_activate %}
           <button class="kawaii-button kawaii-button--primary" type="button" data-action="activate-exposure" data-exposure-id="{{ item.id }}">{{ ui['action_activate'] }}</button>
           {% endif %}
           {% if item.can_revoke %}
           <button class="kawaii-button kawaii-button--ghost" type="button" data-action="revoke-exposure" data-exposure-id="{{ item.id }}">{{ ui['action_revoke'] }}</button>
           {% endif %}
-        </div>
-        {% if not item.can_activate and item.activation_block_reason %}
-        <div class="mb-2">
-          {% if item.activation_block_reason == 'blocking_review_open' %}
-          <span class="kawaii-badge kawaii-badge--pending">{{ ui['hint_activation_blocked_review_required'] }}</span>
-          {% elif item.activation_block_reason == 'blocking_review_rejected' %}
-          <span class="kawaii-badge kawaii-badge--pending">{{ ui['hint_activation_blocked_rejected'] }}</span>
-          {% elif item.activation_block_reason == 'blocking_review_unapproved' %}
-          <span class="kawaii-badge kawaii-badge--pending">{{ ui['hint_activation_blocked_not_approved'] }}</span>
-          {% else %}
-          <span class="kawaii-badge kawaii-badge--pending">{{ ui['hint_activation_blocked'] }}</span>
+          {% if not item.can_activate and item.activation_block_reason %}
+          <span class="kawaii-badge kawaii-badge--pending">
+            {% if item.activation_block_reason == 'blocking_review_open' %}{{ ui['hint_activation_blocked_review_required'] }}
+            {% elif item.activation_block_reason == 'blocking_review_rejected' %}{{ ui['hint_activation_blocked_rejected'] }}
+            {% elif item.activation_block_reason == 'blocking_review_unapproved' %}{{ ui['hint_activation_blocked_not_approved'] }}
+            {% else %}{{ ui['hint_activation_blocked'] }}{% endif %}
+          </span>
+          {% endif %}
+          {% if item.can_patch %}
+          <button class="kawaii-button kawaii-button--secondary text-sm" type="button" data-action="toggle-patch-form" data-exposure-id="{{ item.id }}">{{ ui['action_edit'] | default('Edit') }}</button>
           {% endif %}
         </div>
-        {% endif %}
-        {% if item.can_patch %}
-        <form class="patch-form" data-action="patch-exposure" data-exposure-id="{{ item.id }}">
+      </td>
+    </tr>
+    {% if item.can_patch %}
+    <tr class="patch-form-row" id="patch-form-row-{{ item.id }}" hidden>
+      <td colspan="9" class="py-2 border-b border-kawaii-line/50 last:border-0">
+        <form class="patch-form p-4 bg-kawaii-panel-soft rounded-kawaii-lg border border-kawaii-line" data-action="patch-exposure" data-exposure-id="{{ item.id }}">
           <div class="flex flex-wrap items-center gap-2 mb-2">
             <label class="sr-only" for="patch-listing-{{ item.id }}">{{ ui['label_listing_mode'] }}</label>
             <select class="kawaii-input" name="listing_mode" id="patch-listing-{{ item.id }}">
@@ -163,9 +165,9 @@
             <button class="kawaii-button kawaii-button--secondary" type="submit">{{ ui['action_update'] }}</button>
           </div>
         </form>
-        {% endif %}
       </td>
     </tr>
+    {% endif %}
     {% endfor %}
   </tbody>
 </table>

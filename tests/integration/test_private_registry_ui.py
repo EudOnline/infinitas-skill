@@ -16,6 +16,12 @@ ROOT = Path(__file__).resolve().parents[2]
 APP_PATH = ROOT / "server" / "app.py"
 APP_JS_PATH = ROOT / "server" / "static" / "js" / "app.js"
 AUTH_SESSION_JS_PATH = ROOT / "server" / "static" / "js" / "auth-session.js"
+MODULES_DIR = ROOT / "server" / "static" / "js" / "modules"
+SEARCH_MODULE_PATH = MODULES_DIR / "search.js"
+LIFECYCLE_MODULE_PATH = MODULES_DIR / "lifecycle.js"
+AUTH_HOME_MODULE_PATH = MODULES_DIR / "auth-home.js"
+AUTH_CONSOLE_MODULE_PATH = MODULES_DIR / "auth-console.js"
+AUTH_MODAL_MODULE_PATH = MODULES_DIR / "auth-modal.js"
 ROUTES_PATH = ROOT / "server" / "ui" / "routes.py"
 LIFECYCLE_PATH = ROOT / "server" / "ui" / "lifecycle.py"
 LAYOUT_TEMPLATE_PATH = ROOT / "server" / "templates" / "layout-kawaii.html"
@@ -200,55 +206,58 @@ def _sha256_base64(payload: str) -> str:
 
 
 def assert_private_registry_ui_js_contracts() -> None:
-    source = APP_JS_PATH.read_text(encoding="utf-8")
-    auth_session_source = AUTH_SESSION_JS_PATH.read_text(encoding="utf-8")
+    search_source = SEARCH_MODULE_PATH.read_text(encoding="utf-8")
+    lifecycle_source = LIFECYCLE_MODULE_PATH.read_text(encoding="utf-8")
+    auth_home_source = AUTH_HOME_MODULE_PATH.read_text(encoding="utf-8")
+    auth_console_source = AUTH_CONSOLE_MODULE_PATH.read_text(encoding="utf-8")
+    auth_modal_source = AUTH_MODAL_MODULE_PATH.read_text(encoding="utf-8")
     layout_template = LAYOUT_TEMPLATE_PATH.read_text(encoding="utf-8")
     home_auth_panel_template = HOME_AUTH_PANEL_TEMPLATE_PATH.read_text(encoding="utf-8")
     share_detail_template = SHARE_DETAIL_TEMPLATE_PATH.read_text(encoding="utf-8")
     security_source = SECURITY_PATH.read_text(encoding="utf-8")
     create_draft_source = _slice_top_level_function_source(
-        source,
+        lifecycle_source,
         "async function createDraft(form) {",
     )
     install_panel_source = _slice_source(
-        source,
+        search_source,
         "  renderInstallPanel(data, skill) {",
         "\n\n  selectNext()",
     )
     artifacts_table_source = _slice_top_level_function_source(
-        source,
+        lifecycle_source,
         "async function updateArtifactsTable(releaseId) {",
     )
     access_check_source = _slice_top_level_function_source(
-        source,
+        lifecycle_source,
         "async function checkReleaseAccess(releaseId) {",
     )
     review_detail_source = _slice_top_level_function_source(
-        source,
+        lifecycle_source,
         "async function toggleReviewDetail(reviewCaseId, button) {",
     )
     exposure_policy_source = _slice_top_level_function_source(
-        source,
+        lifecycle_source,
         "function syncExposureReviewModePolicy() {",
     )
     release_poll_source = _slice_top_level_function_source(
-        source,
+        lifecycle_source,
         "async function pollReleaseReady(releaseId, intervalMs = 3000) {",
     )
     auth_handle_login_source = _slice_source(
-        auth_session_source,
-        "    async function handleLogin() {",
-        "\n    }\n\n    function setLoading(loading) {",
+        auth_modal_source,
+        "  async function handleLogin() {",
+        "\n  }\n\n  function setLoading(loading) {",
     )
     auth_init_home_source = _slice_source(
-        auth_session_source,
-        "  function initHomeAuthSession() {",
-        "\n  function initConsoleAuthSession() {",
+        auth_home_source,
+        "export function initHomeAuthSession() {",
+        "\n  window.openHomeAuthModal = openAuthModal;",
     )
     auth_console_login_success_source = _slice_source(
-        auth_session_source,
-        "    const controller = createAuthModalController({",
-        "\n\n    async function init() {",
+        auth_console_source,
+        "  const controller = createAuthModalController({",
+        "\n\n  async function init() {",
     )
 
     for marker in [
@@ -259,13 +268,13 @@ def assert_private_registry_ui_js_contracts() -> None:
         assert (
             marker in artifacts_table_source
             if marker != "async function updateArtifactsTable(releaseId) {"
-            else marker in source
+            else marker in lifecycle_source
         ), (
             "expected release detail polling to refresh artifact rows from the release artifacts API; "
             f"missing marker {marker!r}"
         )
     for marker in [
-        "toast.error(uiText('invalid_json', 'JSON 格式错误'));",
+        "_toast.error(uiText('invalid_json', 'JSON 格式错误'));",
         "setButtonLoading(button, false);",
         "return;",
     ]:
@@ -298,7 +307,7 @@ def assert_private_registry_ui_js_contracts() -> None:
         "grant: { zh: '授权', en: 'Grant' }",
         "direct_only: { zh: '仅直链', en: 'Direct only' }",
     ]:
-        assert marker in source, (
+        assert marker in search_source, (
             "expected install panel formatters to humanize install scope and listing mode; "
             f"missing marker {marker!r}"
         )
@@ -332,7 +341,7 @@ def assert_private_registry_ui_js_contracts() -> None:
         "data.items || []",
     ]:
         assert (
-            marker in source if marker == "data.items || []" else marker in release_poll_source
+            marker in lifecycle_source if marker == "data.items || []" else marker in release_poll_source
         ), (
             "expected release polling UI to update summary stats and recover from empty-state "
             f"artifact sections; missing marker {marker!r}"
@@ -345,7 +354,7 @@ def assert_private_registry_ui_js_contracts() -> None:
     )
     for marker in [
         "const loginPanel = document.getElementById('login-panel');",
-        "window.location.href = sessionConfig.homeHref || '/';",
+        "window.location.href = AUTH_SESSION_CONFIG.homeHref || '/';",
     ]:
         assert marker in auth_init_home_source, (
             "expected auth-session bootstrap to initialize the standalone /login page and "
@@ -377,7 +386,7 @@ def assert_private_registry_ui_js_contracts() -> None:
     assert "style=" not in share_detail_template, (
         "expected share-detail template to avoid inline style attributes under the current CSP"
     )
-    assert ".style.colorScheme" not in source, (
+    assert ".style.colorScheme" not in search_source, (
         "expected app theme bootstrap to avoid writing inline style.colorScheme under the CSP"
     )
     assert ".style.colorScheme" not in layout_template, (
@@ -746,7 +755,7 @@ def assert_private_first_console_ui_round_trip() -> None:
         public_exposure_id = int(public_exposure["id"])
         public_exposure_row = None
         for row in share_with_html.split("<tr>"):
-            if f"<td>#{public_exposure_id}</td>" in row:
+            if f"#{public_exposure_id}</td>" in row and "data-label" in row:
                 public_exposure_row = row
                 break
         assert public_exposure_row is not None, "public exposure row not found in share page"

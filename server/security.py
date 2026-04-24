@@ -8,7 +8,7 @@ CONTENT_SECURITY_POLICY = (
     "script-src 'self' "
     "'sha256-dkACincQ35HE+JH32YH7iAxfFFDeZtankjXNpNEgklY='; "
     "style-src 'self' https://fonts.googleapis.com "
-    "'sha256-hmko9i851RvQ0mlA7h96Q19WF6J706rsgnM1W2OTMYo='; "
+    "'sha256-8iqIHeXI7vKpcWNJ+Hs0m+zIMcRd14lh0MpgkhEjZ9Y='; "
     "img-src 'self' data: https:; "
     "font-src 'self' https://fonts.gstatic.com; "
     "connect-src 'self'; "

@@ -180,6 +180,9 @@
           bottom: calc(100% + 0.5rem);
         }
       }
+      html.focus-mode .floating-decoration {
+        display: none !important;
+      }
     </style>
     <link rel="stylesheet" href="/static/css/output.css" />
   </head>
@@ -235,7 +238,8 @@
       
       <div class="topbar-controls">
       <div class="topbar-side inline-flex items-center justify-end gap-3 min-w-0 flex-wrap lg:justify-self-end md:justify-self-start md:gap-[0.55rem]">
-        <div class="inline-flex items-center gap-[0.45rem] flex-wrap justify-end md:justify-start">
+        <button class="toggle-chip md:hidden" type="button" id="mobile-settings-toggle" aria-expanded="false" aria-label="{{ ui['settings_label'] if ui and ui['settings_label'] else 'Settings' }}" title="{{ ui['settings_label'] if ui and ui['settings_label'] else 'Settings' }}">⚙️</button>
+        <div class="inline-flex items-center gap-[0.45rem] flex-wrap justify-end md:justify-start" id="topbar-settings">
           <div class="toggle-group" role="group" aria-label="{{ ui['theme_toggle_label'] }}">
             {% for option in theme_switches or [] %}
             <button class="toggle-chip" type="button" data-theme-choice="{{ option.value }}" aria-pressed="false">{{ option.label }}</button>
@@ -246,6 +250,7 @@
             <a class="toggle-chip{% if option.active %} is-active{% endif %}" href="{{ option.href }}"{% if option.active %} aria-current="true"{% endif %}>{{ option.label }}</a>
             {% endfor %}
           </div>
+          <button class="toggle-chip" type="button" id="focus-mode-toggle" aria-pressed="false" aria-label="{{ ui['focus_mode_toggle'] if ui else 'Focus mode' }}" title="{{ ui['focus_mode_toggle'] if ui else 'Focus mode' }}">🎯</button>
         </div>
         {% if show_console_session %}
         <div class="console-session" id="console-session-root">
@@ -411,7 +416,7 @@
     <div class="floating-decoration floating-music"><span aria-hidden="true">🎵</span></div>
     
     <!-- 🎊 交互 -->
-    <script src="/static/js/app.js"></script>
-    <script src="/static/js/auth-session.js"></script>
+    <script type="module" src="/static/js/app.js"></script>
+    <script type="module" src="/static/js/auth-session.js"></script>
   </body>
 </html>

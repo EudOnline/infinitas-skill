@@ -16,45 +16,52 @@
 <table>
   <thead>
     <tr>
-      <th scope="col">ID</th>
-      <th scope="col">{{ ui['table_col_skill'] }}</th>
-      <th scope="col">{{ ui['table_col_audience'] }}</th>
-      <th scope="col">{{ ui['table_col_mode'] }}</th>
-      <th scope="col">{{ ui['table_col_state'] }}</th>
-      <th scope="col">{{ ui['table_col_opened'] }}</th>
+      <th scope="col" data-sort="number">ID</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_skill'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_audience'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_mode'] }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_state'] }}</th>
+      <th scope="col" data-sort="date">{{ ui['table_col_opened'] }}</th>
       <th scope="col">{{ ui['table_col_actions'] }}</th>
     </tr>
   </thead>
   <tbody>
     {% for item in review_rows %}
     <tr>
-      <td>#{{ item.id }}</td>
-      <td>{{ item.skill_name }}</td>
-      <td>{{ item.audience }}</td>
-      <td>{{ item.mode }}</td>
-      <td>
+      <td data-label="ID">#{{ item.id }}</td>
+      <td data-label="{{ ui['table_col_skill'] }}">{{ item.skill_name }}</td>
+      <td data-label="{{ ui['table_col_audience'] }}">{{ item.audience }}</td>
+      <td data-label="{{ ui['table_col_mode'] }}">{{ item.mode }}</td>
+      <td data-label="{{ ui['table_col_state'] }}">
         <span class="status-badge inline-flex items-center gap-1.5 rounded-full text-[0.76rem] font-bold py-1 px-[0.65rem] border border-kawaii-line bg-kawaii-panel-muted" data-status="{{ item.state_raw }}">{{ item.state }}</span>
       </td>
-      <td>{{ item.opened_at }}</td>
-      <td>
-        <div class="flex flex-wrap items-center gap-2 mt-3">
+      <td data-label="{{ ui['table_col_opened'] }}">{{ item.opened_at }}</td>
+      <td data-label="{{ ui['table_col_actions'] }}">
+        <div class="flex flex-wrap items-center gap-2">
           {% if item.share_href %}
           <a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.share_href }}">{{ ui['action_share_page'] }}</a>
           {% endif %}
           <button class="kawaii-button kawaii-button--secondary text-sm font-bold hover:underline cursor-pointer" type="button" data-action="review-detail" data-review-case-id="{{ item.id }}">{{ ui['action_history'] }}</button>
           {% if item.state_raw == 'open' %}
-          <div class="p-3 bg-kawaii-panel-soft rounded-kawaii-md border border-kawaii-line">
-            <input class="kawaii-input text-xs text-kawaii-ink-muted mt-1" type="text" id="review-note-{{ item.id }}" aria-label="{{ ui['aria_review_note'] }}" placeholder="{{ ui['placeholder_review_note'] }}" />
-            <div class="flex flex-wrap items-center gap-2">
-              <button class="kawaii-button kawaii-button--primary" type="button" data-action="review-approve" data-review-case-id="{{ item.id }}">{{ ui['action_approve'] }}</button>
-              <button class="kawaii-button kawaii-button--ghost" type="button" data-action="review-reject" data-review-case-id="{{ item.id }}">{{ ui['action_reject'] }}</button>
-              <button class="kawaii-button kawaii-button--secondary" type="button" data-action="review-comment" data-review-case-id="{{ item.id }}">{{ ui['action_comment'] }}</button>
-            </div>
-          </div>
+          <button class="kawaii-button kawaii-button--primary text-sm font-bold" type="button" data-action="toggle-review-form" data-review-case-id="{{ item.id }}">{{ ui['action_review'] | default('Review') }}</button>
           {% endif %}
         </div>
       </td>
     </tr>
+    {% if item.state_raw == 'open' %}
+    <tr class="review-form-row" id="review-form-row-{{ item.id }}" hidden>
+      <td colspan="7" class="py-2 border-b border-kawaii-line/50 last:border-0">
+        <div class="p-4 bg-kawaii-panel-soft rounded-kawaii-lg border border-kawaii-line">
+          <input class="kawaii-input text-xs text-kawaii-ink-muted mb-2" type="text" id="review-note-{{ item.id }}" aria-label="{{ ui['aria_review_note'] }}" placeholder="{{ ui['placeholder_review_note'] }}" />
+          <div class="flex flex-wrap items-center gap-2">
+            <button class="kawaii-button kawaii-button--primary" type="button" data-action="review-approve" data-review-case-id="{{ item.id }}">{{ ui['action_approve'] }}</button>
+            <button class="kawaii-button kawaii-button--ghost" type="button" data-action="review-reject" data-review-case-id="{{ item.id }}">{{ ui['action_reject'] }}</button>
+            <button class="kawaii-button kawaii-button--secondary" type="button" data-action="review-comment" data-review-case-id="{{ item.id }}">{{ ui['action_comment'] }}</button>
+          </div>
+        </div>
+      </td>
+    </tr>
+    {% endif %}
     <tr class="review-detail-row" id="review-detail-row-{{ item.id }}" hidden>
       <td colspan="7" class="py-2 border-b border-kawaii-line/50 last:border-0">
         <div class="mt-3 p-4 bg-kawaii-panel-soft rounded-kawaii-lg border border-kawaii-line" data-review-case-id="{{ item.id }}">

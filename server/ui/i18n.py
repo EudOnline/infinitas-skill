@@ -1,12 +1,40 @@
 from __future__ import annotations
 
+import functools
+import json
+from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from fastapi import Request
 
+_LOCALES_DIR = Path(__file__).resolve().parent.parent / "locales"
+
 
 def pick_lang(lang: str, zh: str, en: str) -> str:
     return zh if lang == "zh" else en
+
+
+@functools.lru_cache(maxsize=4)
+def load_locale(lang: str) -> dict[str, str]:
+    path = _LOCALES_DIR / f"{lang}.json"
+    if not path.exists():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data if isinstance(data, dict) else {}
+
+
+def t(lang: str, key: str, **kwargs) -> str:
+    locale = load_locale(lang)
+    value = locale.get(key)
+    if value is None:
+        locale_en = load_locale("en")
+        value = locale_en.get(key, key)
+    if kwargs:
+        try:
+            return value.format(**kwargs)
+        except (KeyError, IndexError):
+            return value
+    return value
 
 
 def with_lang(href: str, lang: str) -> str:
@@ -61,8 +89,10 @@ __all__ = [
     "build_auth_redirect_url",
     "build_registry_base_url",
     "build_language_switches",
+    "load_locale",
     "pick_lang",
     "request_path_with_query",
     "resolve_language",
+    "t",
     "with_lang",
 ]
