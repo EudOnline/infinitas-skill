@@ -83,6 +83,11 @@ class Credential(Base):
         index=True,
     )
     type: Mapped[str] = mapped_column(String(64))
+    product_token_name: Mapped[str] = mapped_column(String(200), default="")
+    product_token_type: Mapped[str] = mapped_column(String(32), default="")
+    product_scope_type: Mapped[str] = mapped_column(String(32), default="")
+    product_scope_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    issued_for: Mapped[str] = mapped_column(String(200), default="")
     hashed_secret: Mapped[str] = mapped_column(String(255))
     scopes_json: Mapped[str] = mapped_column(Text, default="[]")
     resource_selector_json: Mapped[str] = mapped_column(Text, default="{}")

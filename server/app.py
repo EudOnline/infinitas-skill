@@ -7,9 +7,12 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from server.api.activity import router as activity_router
 from server.api.auth import router as auth_router
 from server.api.background import router as background_router
 from server.api.library import router as library_router
+from server.api.object_tokens import router as object_tokens_router
+from server.api.publish import router as publish_router
 from server.api.search import router as search_router
 from server.auth import get_current_user
 from server.db import ensure_database_ready, get_db
@@ -23,6 +26,7 @@ from server.modules.exposure.router import router as exposure_router
 from server.modules.registry.router import router as registry_router
 from server.modules.release.router import router as release_router
 from server.modules.review.router import router as review_router
+from server.modules.shares.router import router as shares_router
 from server.security import SecurityHeadersMiddleware
 from server.settings import get_settings
 from server.ui.routes import register_ui_routes
@@ -48,7 +52,10 @@ def create_app() -> FastAPI:
         return {"id": user.id, "username": user.username, "display_name": user.display_name, "role": user.role}
 
     register_ui_routes(app, templates, settings)
+    app.include_router(activity_router)
     app.include_router(library_router)
+    app.include_router(object_tokens_router)
+    app.include_router(publish_router)
     app.include_router(auth_router)
     app.include_router(background_router)
     app.include_router(search_router)
@@ -60,6 +67,7 @@ def create_app() -> FastAPI:
     app.include_router(release_router)
     app.include_router(exposure_router)
     app.include_router(review_router)
+    app.include_router(shares_router)
     app.include_router(registry_router)
     return app
 

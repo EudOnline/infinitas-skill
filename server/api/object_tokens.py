@@ -1,0 +1,97 @@
+from __future__ import annotations
+
+from typing import Literal
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+
+from server.auth import get_current_access_context
+from server.db import get_db
+from server.modules.access import token_service
+from server.modules.access.authn import AccessContext
+
+router = APIRouter(tags=["object-tokens"])
+
+
+class ObjectTokenCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    type: Literal["reader", "publisher"] = "reader"
+    scope_type: Literal["object", "release"] = "release"
+    scope_id: int = Field(gt=0)
+    issued_for: str | None = Field(default=None, max_length=200)
+    expires_in_days: int | None = Field(default=None, ge=1, le=3650)
+
+
+def _require_actor(context: AccessContext) -> token_service.ActorRef:
+    if context.user is None or context.principal is None:
+        raise HTTPException(status_code=403, detail="user session required")
+    if context.user.role not in {"maintainer", "contributor"}:
+        raise HTTPException(status_code=403, detail="insufficient role")
+    return token_service.ActorRef(
+        principal=context.principal,
+        is_maintainer=context.user.role == "maintainer",
+    )
+
+
+def _translate_error(exc: token_service.TokenServiceError) -> HTTPException:
+    if isinstance(exc, token_service.TokenNotFoundError):
+        return HTTPException(status_code=404, detail=str(exc))
+    if isinstance(exc, token_service.TokenForbiddenError):
+        return HTTPException(status_code=403, detail=str(exc))
+    return HTTPException(status_code=409, detail=str(exc))
+
+
+@router.post("/api/objects/{object_id}/tokens", status_code=status.HTTP_201_CREATED)
+def create_object_token(
+    object_id: int,
+    payload: ObjectTokenCreateRequest,
+    context: AccessContext = Depends(get_current_access_context),
+    db: Session = Depends(get_db),
+):
+    actor = _require_actor(context)
+    try:
+        raw_token, token = token_service.create_product_token(
+            db,
+            object_id=object_id,
+            name=payload.name,
+            token_type=payload.type,
+            scope_type=payload.scope_type,
+            scope_id=payload.scope_id,
+            issued_for=payload.issued_for,
+            expires_in_days=payload.expires_in_days,
+            actor=actor,
+        )
+    except token_service.TokenServiceError as exc:
+        raise _translate_error(exc) from exc
+    db.commit()
+    return {"raw_token": raw_token, "token": token}
+
+
+@router.get("/api/objects/{object_id}/tokens")
+def list_object_tokens(
+    object_id: int,
+    context: AccessContext = Depends(get_current_access_context),
+    db: Session = Depends(get_db),
+):
+    actor = _require_actor(context)
+    try:
+        items = token_service.list_product_tokens(db, object_id=object_id, actor=actor)
+    except token_service.TokenServiceError as exc:
+        raise _translate_error(exc) from exc
+    return {"items": items, "total": len(items)}
+
+
+@router.post("/api/tokens/{token_id}/revoke")
+def revoke_object_token(
+    token_id: int,
+    context: AccessContext = Depends(get_current_access_context),
+    db: Session = Depends(get_db),
+):
+    actor = _require_actor(context)
+    try:
+        token = token_service.revoke_product_token(db, token_id=token_id, actor=actor)
+    except token_service.TokenServiceError as exc:
+        raise _translate_error(exc) from exc
+    db.commit()
+    return token

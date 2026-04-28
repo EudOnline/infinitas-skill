@@ -19,7 +19,7 @@ function initAccessCenterPage() {
     if (!button) return;
     button.disabled = true;
     try {
-      await apiPost(`/api/library/tokens/${encodeURIComponent(button.dataset.credentialId)}/revoke`, {});
+      await apiPost(`/api/tokens/${encodeURIComponent(button.dataset.credentialId)}/revoke`, {});
       window.location.reload();
     } catch (error) {
       button.disabled = false;

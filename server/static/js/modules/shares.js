@@ -19,7 +19,7 @@ function initSharesPage() {
     if (!button) return;
     button.disabled = true;
     try {
-      await apiPost(`/api/library/share-links/${encodeURIComponent(button.dataset.grantId)}/revoke`, {});
+      await apiPost(`/api/share-links/${encodeURIComponent(button.dataset.grantId)}/revoke`, {});
       window.location.reload();
     } catch (error) {
       button.disabled = false;

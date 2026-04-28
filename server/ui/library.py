@@ -18,6 +18,7 @@ from server.models import (
     RegistryObject,
     Release,
     ReviewCase,
+    ShareLink,
     Skill,
     SkillVersion,
 )
@@ -244,6 +245,17 @@ def _grant_state(grant: AccessGrant, constraints: dict[str, Any]) -> str:
     expires_at = _parse_datetime(constraints.get("expires_at"))
     if expires_at is not None and expires_at <= datetime.now(timezone.utc):
         return "expired"
+    return "active"
+
+
+def _share_link_state(share: ShareLink) -> str:
+    if share.revoked_at is not None:
+        return "revoked"
+    expires_at = _parse_datetime(share.expires_at)
+    if expires_at is not None and expires_at <= datetime.now(timezone.utc):
+        return "expired"
+    if share.max_uses is not None and share.used_count >= share.max_uses:
+        return "exhausted"
     return "active"
 
 

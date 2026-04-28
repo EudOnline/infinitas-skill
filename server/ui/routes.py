@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import Depends, FastAPI, Query, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
@@ -13,11 +13,7 @@ from server.auth import maybe_get_current_user
 from server.db import get_db
 from server.models import User
 from server.ui.auth_state import (
-    is_owner,
-    require_draft_bundle_or_404,
     require_lifecycle_actor,
-    require_release_bundle_or_404,
-    require_skill_or_404,
 )
 from server.ui.console import build_console_forbidden_context
 from server.ui.formatting import build_kawaii_ui_context
@@ -31,15 +27,6 @@ from server.ui.library import (
     list_library_share_rows,
     list_library_token_activity_rows,
     list_library_token_rows,
-)
-from server.ui.lifecycle import (
-    build_access_tokens_page_context,
-    build_draft_detail_page_context,
-    build_release_detail_page_context,
-    build_release_share_page_context,
-    build_review_cases_page_context,
-    build_skill_detail_page_context,
-    build_skills_page_context,
 )
 from server.ui.navigation import build_site_nav
 from server.ui.session_bootstrap import build_session_bootstrap
@@ -421,121 +408,55 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
     @app.get("/skills", response_class=HTMLResponse)
     def skills_page(
         request: Request,
-        limit: int = Query(default=12, ge=1, le=50),
-        db: Session = Depends(get_db),
     ):
-        actor = require_lifecycle_actor(request, db, "maintainer", "contributor")
-        blocked = _blocked_actor_response(templates, request, actor)
-        if blocked is not None:
-            return blocked
-        context = build_skills_page_context(request=request, db=db, actor=actor, limit=limit)
-        return templates.TemplateResponse(request, "skills.html", context)
+        lang = resolve_language(request)
+        return RedirectResponse(url=with_lang("/library", lang), status_code=307)
 
     @app.get("/skills/{skill_id}", response_class=HTMLResponse)
     def skill_detail_page(
         skill_id: int,
         request: Request,
-        db: Session = Depends(get_db),
     ):
-        actor = require_lifecycle_actor(request, db, "maintainer", "contributor")
-        blocked = _blocked_actor_response(templates, request, actor)
-        if blocked is not None:
-            return blocked
-        skill = require_skill_or_404(db, skill_id)
-        principal_id = actor.principal.id if actor.principal else None
-        if not is_owner(actor.user, principal_id, skill.namespace_id):
-            return _forbidden_owner_response(templates, request, actor.user)
-        context = build_skill_detail_page_context(request=request, db=db, skill=skill)
-        return templates.TemplateResponse(request, "skill-detail.html", context)
+        lang = resolve_language(request)
+        return RedirectResponse(url=with_lang("/library", lang), status_code=307)
 
     @app.get("/drafts/{draft_id}", response_class=HTMLResponse)
     def draft_detail_page(
         draft_id: int,
         request: Request,
-        db: Session = Depends(get_db),
     ):
-        actor = require_lifecycle_actor(request, db, "maintainer", "contributor")
-        blocked = _blocked_actor_response(templates, request, actor)
-        if blocked is not None:
-            return blocked
-        draft, skill = require_draft_bundle_or_404(db, draft_id)
-        principal_id = actor.principal.id if actor.principal else None
-        if not is_owner(actor.user, principal_id, skill.namespace_id):
-            return _forbidden_owner_response(templates, request, actor.user)
-        context = build_draft_detail_page_context(request=request, db=db, draft=draft, skill=skill)
-        return templates.TemplateResponse(request, "draft-detail.html", context)
+        lang = resolve_language(request)
+        return RedirectResponse(url=with_lang("/library", lang), status_code=307)
 
     @app.get("/releases/{release_id}", response_class=HTMLResponse)
     def release_detail_page(
         release_id: int,
         request: Request,
-        db: Session = Depends(get_db),
     ):
-        actor = require_lifecycle_actor(request, db, "maintainer", "contributor")
-        blocked = _blocked_actor_response(templates, request, actor)
-        if blocked is not None:
-            return blocked
-        release, version, skill = require_release_bundle_or_404(db, release_id)
-        principal_id = actor.principal.id if actor.principal else None
-        if not is_owner(actor.user, principal_id, skill.namespace_id):
-            return _forbidden_owner_response(templates, request, actor.user)
-        context = build_release_detail_page_context(
-            request=request,
-            db=db,
-            release=release,
-            version=version,
-            skill=skill,
-        )
-        return templates.TemplateResponse(request, "release-detail.html", context)
+        lang = resolve_language(request)
+        return RedirectResponse(url=with_lang("/library", lang), status_code=307)
 
     @app.get("/releases/{release_id}/share", response_class=HTMLResponse)
     def release_share_page(
         release_id: int,
         request: Request,
-        db: Session = Depends(get_db),
     ):
-        actor = require_lifecycle_actor(request, db, "maintainer", "contributor")
-        blocked = _blocked_actor_response(templates, request, actor)
-        if blocked is not None:
-            return blocked
-        release, version, skill = require_release_bundle_or_404(db, release_id)
-        principal_id = actor.principal.id if actor.principal else None
-        if not is_owner(actor.user, principal_id, skill.namespace_id):
-            return _forbidden_owner_response(templates, request, actor.user)
-        context = build_release_share_page_context(
-            request=request,
-            db=db,
-            release=release,
-            version=version,
-            skill=skill,
-        )
-        return templates.TemplateResponse(request, "share-detail.html", context)
+        lang = resolve_language(request)
+        return RedirectResponse(url=with_lang("/shares", lang), status_code=307)
 
     @app.get("/access/tokens", response_class=HTMLResponse)
     def access_tokens_page(
         request: Request,
-        limit: int = Query(default=20, ge=1, le=100),
-        db: Session = Depends(get_db),
     ):
-        actor = require_lifecycle_actor(request, db, "maintainer", "contributor")
-        blocked = _blocked_actor_response(templates, request, actor)
-        if blocked is not None:
-            return blocked
-        context = build_access_tokens_page_context(request=request, db=db, actor=actor, limit=limit)
-        return templates.TemplateResponse(request, "access-tokens.html", context)
+        lang = resolve_language(request)
+        return RedirectResponse(url=with_lang("/access", lang), status_code=307)
 
     @app.get("/review-cases", response_class=HTMLResponse)
     def review_cases_page(
         request: Request,
-        limit: int = Query(default=20, ge=1, le=100),
-        db: Session = Depends(get_db),
     ):
-        actor = require_lifecycle_actor(request, db, "maintainer", "contributor")
-        blocked = _blocked_actor_response(templates, request, actor)
-        if blocked is not None:
-            return blocked
-        context = build_review_cases_page_context(request=request, db=db, actor=actor, limit=limit)
-        return templates.TemplateResponse(request, "review-cases.html", context)
+        lang = resolve_language(request)
+        return RedirectResponse(url=with_lang("/activity", lang), status_code=307)
 
     @app.get("/login", response_class=HTMLResponse)
     def login(request: Request):

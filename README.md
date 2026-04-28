@@ -11,7 +11,9 @@ status: maintained
 Private-first skill registry and hosted control plane.
 
 This repository is production-oriented and in an active maintainability hardening phase. The hosted backend remains private-first, while the maintained agent runtime model now follows OpenClaw-first semantics and the code and docs continue consolidating around one Python package, one maintained CLI, and one role-based documentation tree.
-The registry/release/install backend remains the durable control plane.
+The registry/release/install backend remains the durable control plane. Human operators now use
+the Library web admin surface for distribution work, while agents and automation publish through
+object-centric APIs.
 
 ## Start here
 
@@ -35,6 +37,40 @@ The registry/release/install backend remains the durable control plane.
 - package-owned: `src/infinitas_skill/install/...`, `src/infinitas_skill/policy/...`, `src/infinitas_skill/release/...`, and `src/infinitas_skill/server/...` own maintained CLI logic.
 - runtime-owned: `server/modules/...` and `server/ui/...` own hosted API, UI, and presentation logic, while `server/app.py` stays focused on app assembly.
 - automation-owned: remaining top-level scripts exist for repository automation, catalog generation, release packaging, and targeted regression coverage; canonical user-facing command surfaces live under `infinitas`.
+
+## Hosted web admin
+
+The maintained browser product is the distribution admin, not the legacy authoring console.
+Primary routes:
+
+- `/library`
+- `/library/{object_id}`
+- `/library/{object_id}/releases/{release_id}`
+- `/access`
+- `/shares`
+- `/activity`
+- `/settings`
+
+The web UI uses product vocabulary: Object, Release, Visibility, Token, Share Link, and Activity.
+Legacy `/skills`, `/drafts`, `/releases/{id}`, `/access/tokens`, and `/review-cases` UI routes
+redirect to the Library, Shares, Access, or Activity surfaces. Low-level authoring routes remain
+available for API and CLI workflows.
+
+Agent and automation workflows use these product APIs:
+
+- `GET /api/library`, `GET /api/library/{object_id}`, `GET /api/library/{object_id}/releases`
+- `PUT /api/publish/objects/{slug}`
+- `POST /api/publish/objects/{object_id}/releases`
+- `GET /api/publish/releases/{release_id}/status`
+- `POST /api/objects/{object_id}/tokens`, `GET /api/objects/{object_id}/tokens`
+- `POST /api/tokens/{token_id}/revoke`
+- `POST /api/releases/{release_id}/share-links`, `GET /api/releases/{release_id}/share-links`
+- `POST /api/share-links/{share_id}/resolve`, `POST /api/share-links/{share_id}/revoke`
+- `GET /api/activity`, `GET /api/tokens/{token_id}/activity`, `GET /api/share-links/{share_id}/activity`
+
+Net-new web admin templates are generated or iterated from the Kimi CLI spec in
+[docs/specs/kimi-library-ui-spec.md](docs/specs/kimi-library-ui-spec.md); hand edits should stay
+limited to integration glue, route wiring, and bug fixes.
 
 ## Maintained CLI surface
 
@@ -151,9 +187,13 @@ Local runs default to `INFINITAS_SERVER_ENV=development`. Use `INFINITAS_SERVER_
 
 OpenClaw is now the canonical agent runtime.
 
-The supported backend lifecycle remains:
+The internal backend lifecycle remains:
 
 `skill -> draft -> sealed version -> release -> exposure -> review case -> grant/credential -> discovery/install`
+
+That lifecycle is an implementation detail for the web product. Human admins should see the
+Library distribution model, and agents should use the object-centric publish API instead of
+manually driving draft/seal routes for the happy path.
 
 Use these canonical docs for the current model:
 

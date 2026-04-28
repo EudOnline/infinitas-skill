@@ -173,6 +173,33 @@ def test_home_and_login_pages_promote_library_as_admin_entry(
     assert "Admin distribution" in login_html
 
 
+def test_old_maintainer_console_routes_redirect_to_library(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    client = _prepare_library_client(
+        monkeypatch,
+        tmp_path=tmp_path,
+        temp_repo_copy=temp_repo_copy,
+        signing_key=signing_key,
+    )
+    headers = {"Authorization": "Bearer fixture-maintainer-token"}
+
+    skills = client.get("/skills?lang=en", headers=headers, follow_redirects=False)
+    assert skills.status_code == 307
+    assert skills.headers["location"] == "/library?lang=en"
+
+    skill_detail = client.get("/skills/1?lang=en", headers=headers, follow_redirects=False)
+    assert skill_detail.status_code == 307
+    assert skill_detail.headers["location"] == "/library?lang=en"
+
+    draft_detail = client.get("/drafts/1?lang=en", headers=headers, follow_redirects=False)
+    assert draft_detail.status_code == 307
+    assert draft_detail.headers["location"] == "/library?lang=en"
+
+
 def test_library_object_and_release_pages_render(
     monkeypatch,
     tmp_path: Path,

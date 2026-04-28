@@ -819,7 +819,38 @@ def test_server_app_delegates_html_routes_and_respects_size_budget() -> None:
 
 
 def test_private_first_console_ui_round_trip() -> None:
-    assert_private_first_console_ui_round_trip()
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-library-cutover-test-"))
+    try:
+        configure_env(tmpdir)
+        from fastapi.testclient import TestClient
+
+        from server.app import create_app
+
+        client = TestClient(create_app())
+        headers = {"Authorization": "Bearer fixture-maintainer-token"}
+
+        login_response = client.get("/login?lang=en")
+        assert login_response.status_code == 200, login_response.text
+        assert "/library" in login_response.text
+        assert "/skills" not in login_response.text
+
+        library_response = client.get("/library?lang=en", headers=headers)
+        assert library_response.status_code == 200, library_response.text
+        assert "Library" in library_response.text
+
+        skills_response = client.get("/skills?lang=en", headers=headers, follow_redirects=False)
+        assert skills_response.status_code == 307
+        assert skills_response.headers["location"] == "/library?lang=en"
+
+        review_response = client.get(
+            "/review-cases?lang=en",
+            headers=headers,
+            follow_redirects=False,
+        )
+        assert review_response.status_code == 307
+        assert review_response.headers["location"] == "/activity?lang=en"
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 def test_private_registry_ui_rejects_untrusted_host_headers() -> None:
@@ -845,7 +876,7 @@ def main() -> None:
     assert_lifecycle_size_budget()
     assert_template_response_request_first()
     assert_alembic_config_declares_path_separator()
-    assert_private_first_console_ui_round_trip()
+    test_private_first_console_ui_round_trip()
     assert_ui_rejects_untrusted_host_headers()
     assert_private_registry_ui_js_contracts()
     assert_home_auth_modal_initial_state_is_explicit()

@@ -2,7 +2,7 @@
 audience: contributors, frontend maintainers, integrators
 owner: repository maintainers
 source_of_truth: frontend implementation checklist
-last_reviewed: 2026-04-08
+last_reviewed: 2026-04-28
 status: maintained
 ---
 
@@ -10,19 +10,20 @@ status: maintained
 
 Use this checklist after reading [Frontend control-plane alignment](frontend-control-plane-alignment.md).
 
-This page turns the lifecycle model into concrete frontend work items. The goal is to let a frontend engineer move page by page, endpoint by endpoint, without having to rediscover the backend contract first.
+This page turns the Library distribution model into concrete frontend work items. The goal is to
+let a frontend engineer move page by page, endpoint by endpoint, without rediscovering the backend
+contract first.
 
 ## Target outcome
 
-When this checklist is complete, a maintainer should be able to finish the full hosted lifecycle from the browser:
+When this checklist is complete, a human admin should be able to manage distribution from the browser:
 
-1. create a skill
-2. create and edit a draft
-3. seal the draft into a version
-4. create a release and wait for materialization
-5. create private, grant, or public exposures
-6. approve or reject public review cases
-7. validate discovery and install behavior from the correct audience path
+1. browse Objects in `/library`
+2. inspect Object and Release detail pages
+3. issue and revoke reader or publisher Tokens
+4. create and revoke Share Links with passwords, expiry, and usage limits
+5. inspect normalized Activity
+6. use agent-facing publish APIs for Object upsert and Release creation
 
 ## Current frontend baseline
 
@@ -32,50 +33,47 @@ The current frontend already has:
 - session probing
 - background preferences
 - global search
-- read-only lifecycle pages for skills, drafts, releases, sharing, access, and review
+- Library, Object detail, Release detail, Access, Shares, Activity, and Settings pages
+- redirect coverage from legacy maintainer-console UI routes to the new distribution surfaces
 
-The current frontend still lacks:
+The current frontend should not reintroduce:
 
-- lifecycle mutation forms
-- lifecycle action buttons
-- asynchronous action feedback for release materialization
-- review decision submission
-- exposure management controls
-- browser-based end-to-end completion of the private-first flow
+- primary Create Skill, Create Draft, Seal Draft, or Create Release buttons
+- Draft, Seal, Exposure, Grant, Credential, or Review Case vocabulary in primary navigation
+- raw Token display outside the one-time creation response
 
 ## Backend contract map
 
-### Authoring
+### Library
 
-- `POST /api/v1/skills`
-- `GET /api/v1/skills/{skill_id}`
-- `POST /api/v1/skills/{skill_id}/drafts`
-- `PATCH /api/v1/drafts/{draft_id}`
-- `POST /api/v1/drafts/{draft_id}/seal`
+- `GET /api/library`
+- `GET /api/library/{object_id}`
+- `GET /api/library/{object_id}/releases`
 
-### Release
+### Publish
 
-- `POST /api/v1/versions/{version_id}/releases`
-- `GET /api/v1/releases/{release_id}`
-- `GET /api/v1/releases/{release_id}/artifacts`
+- `PUT /api/publish/objects/{slug}`
+- `POST /api/publish/objects/{object_id}/releases`
+- `GET /api/publish/releases/{release_id}/status`
 
-### Exposure
+### Tokens
 
-- `POST /api/v1/releases/{release_id}/exposures`
-- `PATCH /api/v1/exposures/{exposure_id}`
-- `POST /api/v1/exposures/{exposure_id}/activate`
-- `POST /api/v1/exposures/{exposure_id}/revoke`
+- `POST /api/objects/{object_id}/tokens`
+- `GET /api/objects/{object_id}/tokens`
+- `POST /api/tokens/{token_id}/revoke`
 
-### Review
+### Share Links
 
-- `POST /api/v1/exposures/{exposure_id}/review-cases`
-- `GET /api/v1/review-cases/{review_case_id}`
-- `POST /api/v1/review-cases/{review_case_id}/decisions`
+- `POST /api/releases/{release_id}/share-links`
+- `GET /api/releases/{release_id}/share-links`
+- `POST /api/share-links/{share_id}/resolve`
+- `POST /api/share-links/{share_id}/revoke`
 
-### Access
+### Activity
 
-- `GET /api/v1/access/me`
-- `GET /api/v1/access/releases/{release_id}/check`
+- `GET /api/activity`
+- `GET /api/tokens/{token_id}/activity`
+- `GET /api/share-links/{share_id}/activity`
 
 ### Discovery and install
 
@@ -166,7 +164,71 @@ Acceptance check:
 - release UI highlights OpenClaw canonical readiness rather than triple-platform parity
 - no new UI copy presents `required_platforms` as the preferred field name
 
-## Phase 1: authoring flow
+## Phase 1: Library admin flow
+
+Files most likely to change:
+
+- [server/templates/library.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/library.html)
+- [server/templates/object-detail.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/object-detail.html)
+- [server/templates/release-detail-v2.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/release-detail-v2.html)
+- [server/ui/library.py](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/ui/library.py)
+- [server/static/js/modules/library.js](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/static/js/modules/library.js)
+
+Checklist:
+
+- show `skill`, `agent_preset`, and `agent_code` as first-class Object kinds
+- keep Release history and artifact summary readable
+- route legacy `/skills`, `/drafts`, `/releases/{id}`, `/access/tokens`, and `/review-cases` UI paths to the new surfaces
+- do not expose authoring-first actions as primary browser controls
+
+Acceptance check:
+
+- `tests/integration/test_library_pages.py`
+- `tests/e2e/test_library_admin_flow.py`
+
+## Phase 2: Token, Share Link, and Activity flow
+
+Files most likely to change:
+
+- [server/templates/access-center.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/access-center.html)
+- [server/templates/shares.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/shares.html)
+- [server/templates/activity.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/activity.html)
+- [server/static/js/modules/access-center.js](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/static/js/modules/access-center.js)
+- [server/static/js/modules/shares.js](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/static/js/modules/shares.js)
+- [server/static/js/modules/activity.js](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/static/js/modules/activity.js)
+
+Checklist:
+
+- Token creation uses `POST /api/objects/{object_id}/tokens`
+- Token lists never include raw secrets
+- Share Links show password, expiry, usage-limit, revoked, expired, and exhausted states
+- Activity uses normalized actor/action/object/release/outcome/timestamp records
+
+Acceptance check:
+
+- `tests/integration/test_object_tokens_api.py`
+- `tests/integration/test_share_links_api.py`
+- `tests/integration/test_activity_api.py`
+
+## Phase 3: Agent publish flow
+
+Checklist:
+
+- agents upsert Objects with `PUT /api/publish/objects/{slug}`
+- agents publish Releases with `POST /api/publish/objects/{object_id}/releases`
+- agents poll `GET /api/publish/releases/{release_id}/status`
+- UI copy does not present Draft or Seal as the primary happy path
+
+Acceptance check:
+
+- `tests/integration/test_publish_api.py`
+
+## Archived lifecycle UI checklist
+
+The older checklist below is retained as historical implementation context for low-level API/CLI
+surfaces. It is not the primary browser product direction.
+
+## Legacy Phase 1: authoring flow
 
 ### Page: skills overview
 

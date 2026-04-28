@@ -40,9 +40,14 @@ The product is split into two surfaces:
 - `PATCH /api/releases/{release_id}/visibility`
 - `POST /api/objects/{object_id}/tokens`
 - `GET /api/objects/{object_id}/tokens`
+- `POST /api/tokens/{token_id}/revoke`
 - `POST /api/releases/{release_id}/share-links`
 - `GET /api/releases/{release_id}/share-links`
+- `POST /api/share-links/{share_id}/resolve`
+- `POST /api/share-links/{share_id}/revoke`
 - `GET /api/activity`
+- `GET /api/tokens/{token_id}/activity`
+- `GET /api/share-links/{share_id}/activity`
 
 ### Agent publish
 

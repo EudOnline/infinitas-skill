@@ -2,7 +2,7 @@
 audience: contributors, frontend maintainers, integrators
 owner: repository maintainers
 source_of_truth: frontend alignment guide
-last_reviewed: 2026-04-08
+last_reviewed: 2026-04-28
 status: maintained
 ---
 
@@ -12,11 +12,13 @@ This guide explains how the frontend should align with the current hosted contro
 
 For page-by-page execution work, continue with [Frontend control-plane checklist](frontend-control-plane-checklist.md).
 
-The backend already supports the full private-first lifecycle:
+The backend still supports the full private-first lifecycle internally:
 
 `skill -> draft -> sealed version -> release -> exposure -> review case -> grant/credential -> discovery/install`
 
-The current frontend is only partially aligned with that lifecycle. It has strong read-only coverage for browsing and console visibility, but it does not yet expose most of the lifecycle write actions that the backend already supports.
+The browser product is no longer a lifecycle authoring console. It is a human-admin distribution
+console that exposes Objects, Releases, Visibility, Tokens, Share Links, and Activity. Agent
+creation and publishing are API/CLI workflows that use the publish facade.
 
 ## Current assessment
 
@@ -103,13 +105,12 @@ Frontend guidance:
 
 The frontend and backend agree on the main domain objects:
 
-- skills
-- drafts
-- versions
-- releases
-- exposures
-- review cases
-- access credentials and grants
+- Objects: `skill`, `agent_preset`, and `agent_code`
+- Releases
+- Visibility
+- Tokens
+- Share Links
+- Activity
 
 The current maintained web admin flow is:
 
@@ -128,25 +129,26 @@ The frontend also correctly uses the supported browser-facing APIs for:
 - background preferences
 - search
 
-### Where the frontend is drifting
+### Current product API surface
 
-The main drift is not conceptual. It is behavioral.
+The web and agent product contract is:
 
-The backend already supports lifecycle mutations, but the frontend mostly stops at read-only views.
-
-Missing or underrepresented frontend capabilities include:
-
-- create skill
-- create draft
-- edit draft
-- seal draft into a version
-- create release
-- create exposure for a release
-- patch exposure settings
-- activate exposure
-- revoke exposure
-- review approve/reject/comment actions
-- access grant and credential management workflows
+- `GET /api/library`
+- `GET /api/library/{object_id}`
+- `GET /api/library/{object_id}/releases`
+- `PUT /api/publish/objects/{slug}`
+- `POST /api/publish/objects/{object_id}/releases`
+- `GET /api/publish/releases/{release_id}/status`
+- `POST /api/objects/{object_id}/tokens`
+- `GET /api/objects/{object_id}/tokens`
+- `POST /api/tokens/{token_id}/revoke`
+- `POST /api/releases/{release_id}/share-links`
+- `GET /api/releases/{release_id}/share-links`
+- `POST /api/share-links/{share_id}/resolve`
+- `POST /api/share-links/{share_id}/revoke`
+- `GET /api/activity`
+- `GET /api/tokens/{token_id}/activity`
+- `GET /api/share-links/{share_id}/activity`
 
 There is also at least one concrete API mismatch in the frontend code:
 
@@ -156,127 +158,107 @@ There is also at least one concrete API mismatch in the frontend code:
 
 ## Product rule the frontend must preserve
 
-The frontend should model the backend as a private-first lifecycle system, not as a generic CRUD dashboard.
+The frontend should model the product as a private-first distribution system, not as a generic
+CRUD dashboard and not as an authoring-first lifecycle console.
 
 That means:
 
-- a release is immutable
-- sharing does not modify release contents; it creates or updates exposures around a release
-- public exposure is review-gated
-- private and authenticated paths can activate directly according to policy
-- install and discovery must resolve from materialized release artifacts, not from mutable draft state
+- a Release is immutable
+- sharing does not modify Release contents
+- Tokens are scoped managed objects and raw secrets are shown only once
+- Share Links can have passwords, expiry, usage limits, and revocation
+- Activity should be human-readable and normalized across Tokens, Share Links, Visibility, and Releases
+- install and discovery must resolve from materialized Release artifacts, not from mutable draft state
 
 If the frontend hides these distinctions, users will misunderstand the system and create invalid expectations.
 
 ## What the frontend should do
 
-The frontend should be organized around the actual lifecycle, in this order.
+The frontend should be organized around distribution workflows, in this order.
 
-### 1. Authoring flow
+### 1. Library flow
 
 The frontend should support:
 
-- create skill
-- open skill detail
-- create draft under a skill
-- edit draft content reference and metadata
-- seal draft into a version
+- browse Objects
+- open Object detail
+- inspect Release history
+- inspect a Release detail page
 
 Use these backend endpoints:
 
-- `POST /api/v1/skills`
-- `GET /api/v1/skills/{skill_id}`
-- `POST /api/v1/skills/{skill_id}/drafts`
-- `PATCH /api/v1/drafts/{draft_id}`
-- `POST /api/v1/drafts/{draft_id}/seal`
+- `GET /api/library`
+- `GET /api/library/{object_id}`
+- `GET /api/library/{object_id}/releases`
 
 Frontend UX guidance:
 
-- skill detail should have a clear primary action to create a draft
-- draft detail should show editable fields only while state is `open`
-- sealed drafts must become read-only in the UI
-- seal should be presented as a deliberate freeze step, not a casual save action
+- keep Object kinds first-class
+- avoid Draft, Seal, Exposure, Grant, Credential, and Review Case vocabulary in primary UI
+- route old `/skills` pages to `/library`
 
-### 2. Release flow
+### 2. Agent publish flow
 
-The frontend should support:
+The frontend may show publish status, but publish initiation belongs to agents and automation:
 
-- create release from a sealed version
-- surface release materialization state
-- surface release artifacts once ready
+- upsert an Object
+- publish a Release
+- poll status
 
 Use these backend endpoints:
 
-- `POST /api/v1/versions/{version_id}/releases`
-- `GET /api/v1/releases/{release_id}`
-- `GET /api/v1/releases/{release_id}/artifacts`
+- `PUT /api/publish/objects/{slug}`
+- `POST /api/publish/objects/{object_id}/releases`
+- `GET /api/publish/releases/{release_id}/status`
 
 Frontend UX guidance:
 
-- release creation belongs on version rows and version detail areas
-- after release creation, the UI should communicate that materialization is asynchronous
-- `preparing` and `ready` must be visible states
-- artifact links should appear only when the release is actually ready
+- do not expose Draft or Seal steps as the primary happy path
+- show `preparing` and `ready` status when surfacing publish progress
 
-### 3. Exposure and sharing flow
+### 3. Token and share flow
 
 The frontend should support:
 
-- create exposure from a ready release
-- configure audience, listing mode, install mode, and requested review mode
-- patch exposure settings when allowed
-- activate exposure when policy permits
-- revoke exposure when needed
+- issue reader and publisher Tokens
+- list Token metadata without raw secrets
+- revoke Tokens
+- create passworded Share Links with expiry and usage limits
+- resolve and revoke Share Links
 
 Use these backend endpoints:
 
-- `POST /api/v1/releases/{release_id}/exposures`
-- `PATCH /api/v1/exposures/{exposure_id}`
-- `POST /api/v1/exposures/{exposure_id}/activate`
-- `POST /api/v1/exposures/{exposure_id}/revoke`
+- `POST /api/objects/{object_id}/tokens`
+- `GET /api/objects/{object_id}/tokens`
+- `POST /api/tokens/{token_id}/revoke`
+- `POST /api/releases/{release_id}/share-links`
+- `GET /api/releases/{release_id}/share-links`
+- `POST /api/share-links/{share_id}/resolve`
+- `POST /api/share-links/{share_id}/revoke`
 
 Frontend UX guidance:
 
-- sharing UI should be action-oriented, not table-only
-- audience choice must explain policy consequences
-- public exposure must explicitly warn that blocking review is required
-- private, authenticated, grant, and public exposures should be shown as distinct channels, not one shared visibility toggle
+- raw Token values are one-time display only
+- revoked, expired, and exhausted Share Links must be visible states
+- Share Link password values must never be returned after creation
 
-### 4. Review flow
+### 4. Activity flow
 
 The frontend should support:
 
-- open review case visibility from exposure state
-- view review case history and evidence
-- submit approve, reject, and comment decisions
+- list normalized Activity records
+- filter Activity by Token or Share Link
+- show actor, action, object, release, outcome, and timestamp
 
 Use these backend endpoints:
 
-- `POST /api/v1/exposures/{exposure_id}/review-cases`
-- `GET /api/v1/review-cases/{review_case_id}`
-- `POST /api/v1/review-cases/{review_case_id}/decisions`
+- `GET /api/activity`
+- `GET /api/tokens/{token_id}/activity`
+- `GET /api/share-links/{share_id}/activity`
 
 Frontend UX guidance:
 
-- review inbox should allow action, not only inspection
-- blocking review outcomes should clearly explain downstream exposure state changes
-- approving a blocking review should be presented as activating the public path
-- rejecting a blocking review should be presented as closing that public path
-
-### 5. Access flow
-
-The frontend should support:
-
-- viewing current credential identity and scopes
-- checking whether a principal can access a release
-- eventually managing grants and credentials if this becomes a supported UI workflow
-
-Supported backend endpoints today:
-
-- `GET /api/v1/access/me`
-- `GET /api/v1/access/releases/{release_id}/check`
-
-Frontend UX guidance:
+- activity copy should use product terms, not internal lifecycle terms
 
 - keep identity and access checks explicit
 - do not imply that every logged-in user can access every release

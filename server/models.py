@@ -98,6 +98,7 @@ from server.modules.review.models import (  # noqa: E402
     ReviewDecision,
     ReviewPolicy,
 )
+from server.modules.shares.models import ShareLink  # noqa: E402
 
 __all__ = [
     "AccessGrant",
@@ -117,6 +118,7 @@ __all__ = [
     "ReviewDecision",
     "ReviewPolicy",
     "ServicePrincipal",
+    "ShareLink",
     "Skill",
     "SkillDraft",
     "SkillVersion",
