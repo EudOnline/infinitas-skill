@@ -1,0 +1,102 @@
+{% extends "layout-kawaii.html" %}
+
+{% block body %}
+<section class="kawaii-card animate-in mb-4">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_settings'] or 'Settings' }}</div>
+  <h1 class="font-display text-[clamp(1.5rem,3.5vw,2.2rem)] font-extrabold leading-tight text-kawaii-ink mb-2">{{ ui['page_settings_title'] or 'Settings' }}</h1>
+  <p class="text-kawaii-ink-soft leading-relaxed max-w-prose">{{ ui['page_settings_desc'] or 'Registry configuration and environment information for administrators.' }}</p>
+</section>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <section class="kawaii-card animate-in">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-2xl" aria-hidden="true">🔑</span>
+      <h2 class="font-display text-lg font-bold text-kawaii-ink">{{ ui['heading_admin_token'] or 'Admin token' }}</h2>
+    </div>
+    <p class="text-sm text-kawaii-ink-soft leading-relaxed mb-3">{{ ui['admin_token_desc'] or 'Use INFINITAS_REGISTRY_API_TOKEN to operate the hosted control plane via API or CLI. Keep it secret and rotate it periodically.' }}</p>
+    <div class="p-3 bg-kawaii-panel-soft rounded-kawaii-lg border border-kawaii-line">
+      <code class="block text-sm break-all text-kawaii-ink">{{ admin_token_env_name or 'INFINITAS_REGISTRY_API_TOKEN' }}=&lt;your-token&gt;</code>
+    </div>
+    <dl class="detail-meta mt-3">
+      <div><dt>{{ ui['label_environment'] or 'Environment' }}</dt><dd>{{ environment or 'production' }}</dd></div>
+      <div><dt>{{ ui['label_version'] or 'Version' }}</dt><dd>{{ registry_version or '-' }}</dd></div>
+      <div><dt>{{ ui['label_bootstrap_admins'] or 'Bootstrap admins' }}</dt><dd>{{ bootstrap_user_count or 0 }}</dd></div>
+    </dl>
+  </section>
+
+  <section class="kawaii-card animate-in">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-2xl" aria-hidden="true">🛡️</span>
+      <h2 class="font-display text-lg font-bold text-kawaii-ink">{{ ui['heading_safety'] or 'Safety notes' }}</h2>
+    </div>
+    <ul class="space-y-2 text-sm text-kawaii-ink-soft">
+      <li class="flex items-start gap-2">
+        <span aria-hidden="true">•</span>
+        <span>{{ ui['safety_note_1'] or 'Do not share admin tokens in public repositories or logs.' }}</span>
+      </li>
+      <li class="flex items-start gap-2">
+        <span aria-hidden="true">•</span>
+        <span>{{ ui['safety_note_2'] or 'Scope agent tokens to the smallest object set possible.' }}</span>
+      </li>
+      <li class="flex items-start gap-2">
+        <span aria-hidden="true">•</span>
+        <span>{{ ui['safety_note_3'] or 'Review Activity regularly for unexpected changes.' }}</span>
+      </li>
+    </ul>
+  </section>
+
+  <section class="kawaii-card animate-in">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-2xl" aria-hidden="true">🚦</span>
+      <h2 class="font-display text-lg font-bold text-kawaii-ink">{{ ui['heading_distribution_flow'] or 'Distribution flow' }}</h2>
+    </div>
+    <ul class="space-y-2 text-sm text-kawaii-ink-soft">
+      <li class="flex items-start gap-2">
+        <span aria-hidden="true">•</span>
+        <span>{{ ui['distribution_flow_1'] or 'Access Center issues reader and publisher tokens for agents.' }}</span>
+      </li>
+      <li class="flex items-start gap-2">
+        <span aria-hidden="true">•</span>
+        <span>{{ ui['distribution_flow_2'] or 'Share Links can grant a specific release with a temporary password for agents that do not have a token.' }}</span>
+      </li>
+      <li class="flex items-start gap-2">
+        <span aria-hidden="true">•</span>
+        <span>{{ ui['distribution_flow_3'] or 'Public releases can be exposed without a token when visibility is set to public.' }}</span>
+      </li>
+    </ul>
+  </section>
+
+  <section class="kawaii-card animate-in">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-2xl" aria-hidden="true">🌐</span>
+      <h2 class="font-display text-lg font-bold text-kawaii-ink">{{ ui['heading_registry_scope'] or 'Registry scope' }}</h2>
+    </div>
+    <dl class="detail-meta">
+      <div><dt>{{ ui['label_object_types'] or 'Object types' }}</dt><dd>{{ object_kinds | join(', ') }}</dd></div>
+      <div><dt>{{ ui['label_read_tokens'] or 'Registry read tokens' }}</dt><dd>{{ registry_read_token_count or 0 }}</dd></div>
+      <div><dt>{{ ui['label_admin_env'] or 'Admin env var' }}</dt><dd><code class="table-code">{{ admin_token_env_name or 'INFINITAS_REGISTRY_API_TOKEN' }}</code></dd></div>
+    </dl>
+  </section>
+
+  <section class="kawaii-card animate-in">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-2xl" aria-hidden="true">🚀</span>
+      <h2 class="font-display text-lg font-bold text-kawaii-ink">{{ ui['heading_quick_links'] or 'Quick links' }}</h2>
+    </div>
+    <div class="flex flex-col gap-2">
+      <a class="kawaii-button kawaii-button--primary text-left justify-start" href="{{ library_href or '/library' }}">
+        <span aria-hidden="true">📚</span> {{ ui['action_open_library'] or 'Open Library' }}
+      </a>
+      <a class="kawaii-button kawaii-button--ghost text-left justify-start" href="{{ access_href or '/access' }}">
+        <span aria-hidden="true">🔑</span> {{ ui['action_open_access'] or 'Open Access Center' }}
+      </a>
+      <a class="kawaii-button kawaii-button--ghost text-left justify-start" href="{{ shares_href or '/shares' }}">
+        <span aria-hidden="true">🔗</span> {{ ui['action_open_shares'] or 'Open Share Links' }}
+      </a>
+      <a class="kawaii-button kawaii-button--ghost text-left justify-start" href="{{ activity_href or '/activity' }}">
+        <span aria-hidden="true">📋</span> {{ ui['action_open_activity'] or 'Open Activity' }}
+      </a>
+    </div>
+  </section>
+</div>
+{% endblock %}

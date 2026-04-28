@@ -1,0 +1,52 @@
+{% extends "layout-kawaii.html" %}
+{% from "macros.html" import console_table_shell %}
+
+{% block body %}
+<section class="kawaii-card animate-in mb-4">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_activity'] or 'Activity' }}</div>
+  <h1 class="font-display text-[clamp(1.5rem,3.5vw,2.2rem)] font-extrabold leading-tight text-kawaii-ink mb-2">{{ ui['page_activity_title'] or 'Activity' }}</h1>
+  <p class="text-kawaii-ink-soft leading-relaxed max-w-prose">{{ ui['page_activity_desc'] or 'Audit trail of visibility changes, token actions, and share link usage across the registry.' }}</p>
+
+  <div class="flex flex-wrap items-center gap-3 mt-4">
+    <div class="toggle-group" role="group" aria-label="{{ ui['aria_filter_event'] or 'Filter by event type' }}" data-activity-filter>
+      <button class="toggle-chip is-active" type="button" data-filter="all" aria-pressed="true">{{ ui['filter_all'] or 'All' }}</button>
+      <button class="toggle-chip" type="button" data-filter="visibility" aria-pressed="false">{{ ui['filter_visibility'] or 'Visibility' }}</button>
+      <button class="toggle-chip" type="button" data-filter="token" aria-pressed="false">{{ ui['filter_token'] or 'Token' }}</button>
+      <button class="toggle-chip" type="button" data-filter="share" aria-pressed="false">{{ ui['filter_share'] or 'Share' }}</button>
+    </div>
+  </div>
+</section>
+
+{% if activity_items %}
+<section class="space-y-3" data-activity-list>
+  {% for item in activity_items %}
+  <article class="kawaii-card animate-in activity-item" data-event-type="{{ item.event_type }}">
+    <div class="flex items-start gap-3">
+      <div class="shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-kawaii-primary/10 text-lg" aria-hidden="true">
+        {% if item.event_type == 'visibility' %}👁️{% elif item.event_type == 'token' %}🔑{% elif item.event_type == 'share' %}🔗{% else %}📋{% endif %}
+      </div>
+      <div class="min-w-0 flex-1">
+        <div class="flex flex-wrap items-center gap-2 mb-1">
+          <span class="text-sm font-bold text-kawaii-ink">{{ item.title or item.event_type | title }}</span>
+          <span class="kawaii-badge {% if item.event_type == 'visibility' %}kawaii-badge--pending{% elif item.event_type == 'token' %}kawaii-badge--success{% elif item.event_type == 'share' %}kawaii-badge--running{% else %}kawaii-badge--running{% endif %}">{{ item.event_type }}</span>
+        </div>
+        <p class="text-sm text-kawaii-ink-soft leading-relaxed">{{ item.description or item.detail or '-' }}</p>
+        <div class="flex flex-wrap items-center gap-3 mt-2 text-xs text-kawaii-ink-muted">
+          {% if item.object_name %}<span>{{ ui['label_object'] or 'Object' }}: {{ item.object_name }}</span>{% endif %}
+          {% if item.actor %}<span>{{ ui['label_actor'] or 'Actor' }}: {{ item.actor }}</span>{% endif %}
+          <span>{{ item.timestamp }}</span>
+        </div>
+      </div>
+    </div>
+  </article>
+  {% endfor %}
+</section>
+{% else %}
+<section class="kawaii-card animate-in text-center py-12">
+  <div class="text-4xl mb-3" aria-hidden="true">📭</div>
+  <h3 class="font-display text-lg font-bold text-kawaii-ink mb-1">{{ ui['empty_activity_title'] or 'No activity yet' }}</h3>
+  <p class="text-sm text-kawaii-ink-soft max-w-md mx-auto">{{ ui['empty_activity_desc'] or 'Events will appear here when visibility, tokens, or shares change.' }}</p>
+</section>
+{% endif %}
+<script type="module" src="/static/js/modules/activity.js"></script>
+{% endblock %}

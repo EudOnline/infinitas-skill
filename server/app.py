@@ -9,6 +9,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from server.api.auth import router as auth_router
 from server.api.background import router as background_router
+from server.api.library import router as library_router
 from server.api.search import router as search_router
 from server.auth import get_current_user
 from server.db import ensure_database_ready, get_db
@@ -47,6 +48,7 @@ def create_app() -> FastAPI:
         return {"id": user.id, "username": user.username, "display_name": user.display_name, "role": user.role}
 
     register_ui_routes(app, templates, settings)
+    app.include_router(library_router)
     app.include_router(auth_router)
     app.include_router(background_router)
     app.include_router(search_router)

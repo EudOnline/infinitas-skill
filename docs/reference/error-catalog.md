@@ -2,13 +2,32 @@
 audience: operators, automation authors
 owner: repository maintainers
 source_of_truth: error catalog
-last_reviewed: 2026-04-22
+last_reviewed: 2026-04-24
 status: maintained
 ---
 
 # Error Catalog
 
 Common error patterns, exit codes, HTTP status codes, and remediation for `infinitas` CLI and hosted registry operations.
+
+## Current product surface
+
+The primary admin experience is the web console:
+
+- `/library`
+- `/access`
+- `/shares`
+- `/activity`
+- `/settings`
+
+The primary agent experience is the API and CLI surface for Object, Release, Visibility, Token, Share Link, and Activity operations.
+
+## Token and share-link guidance
+
+- `INFINITAS_REGISTRY_API_TOKEN` is the admin token for the hosted control plane.
+- Agent tokens should be treated separately from admin credentials.
+- Minimum agent token types are `reader` and `publisher`.
+- Share Links may fail because a password is missing, the link expired, or the link is limited to a specific Release or usage count.
 
 ## CLI exit codes
 

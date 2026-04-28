@@ -162,12 +162,21 @@ def load_registry_scope(
     }
 
 
-def build_site_nav(*, home: bool, lang: str) -> list[dict[str, str]]:
+def build_site_nav(*, home: bool, lang: str, variant: str = "console") -> list[dict[str, str]]:
     if home:
         return [
             {"href": "#start", "label": pick_lang(lang, "开始", "Home base")},
             {"href": "#handoff", "label": pick_lang(lang, "交接", "Handoff")},
             {"href": "#console", "label": pick_lang(lang, "维护台", "Console")},
+        ]
+    if variant == "library":
+        return [
+            {"href": with_lang("/", lang), "label": pick_lang(lang, "首页", "Home")},
+            {"href": with_lang("/library", lang), "label": pick_lang(lang, "对象库", "Library")},
+            {"href": with_lang("/access", lang), "label": pick_lang(lang, "访问", "Access")},
+            {"href": with_lang("/shares", lang), "label": pick_lang(lang, "分享", "Shares")},
+            {"href": with_lang("/activity", lang), "label": pick_lang(lang, "活动", "Activity")},
+            {"href": with_lang("/settings", lang), "label": pick_lang(lang, "设置", "Settings")},
         ]
     return [
         {"href": with_lang("/", lang), "label": pick_lang(lang, "首页", "Home")},

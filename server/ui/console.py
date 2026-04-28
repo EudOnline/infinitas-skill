@@ -30,8 +30,8 @@ def build_console_context(
     nav_links: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     lang = resolve_language(request)
-    page_eyebrow = pick_lang(lang, "维护控制台", "Maintainer-only console")
-    page_kicker = pick_lang(lang, "维护模式", "Maintainer mode")
+    page_eyebrow = pick_lang(lang, "作者控制台", "Authoring console")
+    page_kicker = pick_lang(lang, "兼容模式", "Compatibility mode")
     context = {
         "request": request,
         "title": title,
@@ -68,7 +68,7 @@ def build_console_forbidden_context(
     )
     context = build_console_context(
         request=request,
-        title=pick_lang(lang, "维护台访问受限", "Console access denied"),
+        title=pick_lang(lang, "作者台访问受限", "Authoring console access denied"),
         content=pick_lang(
             lang,
             f"当前账号角色是{humanize_role(user.role, lang)}，此页面仅允许{allowed_text}访问。",
@@ -87,13 +87,13 @@ def build_console_forbidden_context(
     context.update(
         {
             "page_kicker": pick_lang(lang, "访问受限", "Access limited"),
-            "page_eyebrow": pick_lang(lang, "受限控制台", "Protected console"),
-            "denied_title": pick_lang(lang, "维护台访问受限", "Console access denied"),
+            "page_eyebrow": pick_lang(lang, "受限作者台", "Protected authoring console"),
+            "denied_title": pick_lang(lang, "作者台访问受限", "Authoring console access denied"),
             "denied_body": pick_lang(
                 lang,
-                f"需要{allowed_text}权限才能继续访问维护台。你可以先返回首页，或者切换到有权限的账号。",
+                f"需要{allowed_text}权限才能继续访问作者台。你可以先返回首页，或者切换到有权限的账号。",
                 (
-                    "Maintainer role required before you can continue into the console. "
+                    "Maintainer role required before you can continue into the authoring console. "
                     "Head back home or switch to an authorized account."
                 ),
             ),

@@ -36,3 +36,11 @@ def test_build_site_nav_assembles_language_aware_home_and_console_links() -> Non
         {"href": "/access/tokens?lang=en", "label": "Access"},
         {"href": "/review-cases?lang=en", "label": "Review"},
     ]
+    assert build_site_nav(home=False, lang="en", variant="library") == [
+        {"href": "/?lang=en", "label": "Home"},
+        {"href": "/library?lang=en", "label": "Library"},
+        {"href": "/access?lang=en", "label": "Access"},
+        {"href": "/shares?lang=en", "label": "Shares"},
+        {"href": "/activity?lang=en", "label": "Activity"},
+        {"href": "/settings?lang=en", "label": "Settings"},
+    ]

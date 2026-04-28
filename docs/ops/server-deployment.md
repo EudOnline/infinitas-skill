@@ -63,9 +63,10 @@ The built-in hosted app now serves immutable distribution artifacts directly fro
 - `https://skills.example.com/api/v1/...`
 - `https://skills.example.com/registry/ai-index.json`
 - `https://skills.example.com/registry/skills/<publisher>/<skill>/<version>/manifest.json`
-- `https://skills.example.com/skills`
-- `https://skills.example.com/access/tokens`
-- `https://skills.example.com/review-cases`
+- `https://skills.example.com/library`
+- `https://skills.example.com/access`
+- `https://skills.example.com/shares`
+- `https://skills.example.com/activity`
 
 If `INFINITAS_REGISTRY_READ_TOKENS` is unset or empty, `/registry/*` stays public for local/dev compatibility.
 If it is set to a JSON array of bearer tokens, hosted installers must send one of those tokens when reading `/registry/*`.
@@ -186,7 +187,7 @@ Phase 1 automation validates SQLite deployments only. PostgreSQL health probes c
 For hosted installs on other machines, point the registry source `base_url` at the `/registry` prefix, not the app root.
 If the hosted registry requires bearer auth, set the registry source `auth.mode` to `token` and point `auth.env` at the local environment variable that holds one of the configured read tokens.
 
-For operators inspecting queue state manually, the hosted app now exposes private-first maintainer HTML views at `/skills`, `/access/tokens`, and `/review-cases`, and the matching CLI surface is available through:
+For operators inspecting queue state manually, the hosted app now exposes the human-admin distribution views at `/library`, `/access`, `/shares`, and `/activity`, and the matching CLI surface is available through:
 
 ```bash
 uv run infinitas registry --base-url https://skills.example.com --token <maintainer-token> skills get <skill-id>

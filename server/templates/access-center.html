@@ -1,0 +1,109 @@
+{% extends "layout-kawaii.html" %}
+{% from "macros.html" import console_table_shell %}
+
+{% block body %}
+<section class="kawaii-card animate-in mb-4">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_access'] or 'Access' }}</div>
+  <h1 class="font-display text-[clamp(1.5rem,3.5vw,2.2rem)] font-extrabold leading-tight text-kawaii-ink mb-2">{{ ui['page_access_title'] or 'Access Center' }}</h1>
+  <p class="text-kawaii-ink-soft leading-relaxed max-w-prose">{{ ui['page_access_desc'] or 'Issue and review Tokens that let agents read or publish to Objects.' }}</p>
+</section>
+
+<section class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+  <article class="kawaii-card animate-in">
+    <div class="flex items-center gap-2 mb-2">
+      <span class="text-2xl" aria-hidden="true">📖</span>
+      <h2 class="font-display text-lg font-bold text-kawaii-ink">{{ ui['token_type_reader'] or 'Reader' }}</h2>
+    </div>
+    <p class="text-sm text-kawaii-ink-soft leading-relaxed">{{ ui['token_type_reader_desc'] or 'Can read Library metadata and fetch authorized Releases. Safe for install-only agents.' }}</p>
+  </article>
+  <article class="kawaii-card animate-in">
+    <div class="flex items-center gap-2 mb-2">
+      <span class="text-2xl" aria-hidden="true">🚀</span>
+      <h2 class="font-display text-lg font-bold text-kawaii-ink">{{ ui['token_type_publisher'] or 'Publisher' }}</h2>
+    </div>
+    <p class="text-sm text-kawaii-ink-soft leading-relaxed">{{ ui['token_type_publisher_desc'] or 'Can publish Object changes and create Releases. Keep scoped to specific objects when possible.' }}</p>
+  </article>
+</section>
+
+{% call console_table_shell(
+  ui['section_tokens'] or 'Token inventory',
+  ui['empty_tokens'] or 'No tokens issued yet.',
+  token_items,
+  page_language,
+  filterable=True
+) %}
+<table>
+  <thead>
+    <tr>
+      <th scope="col" data-sort="number">ID</th>
+      <th scope="col" data-sort="string">{{ ui['label_agent_name'] or 'Agent label' }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_type'] or 'Type' }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_object'] or 'Object' }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_release'] or 'Release' }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_state'] or 'State' }}</th>
+      <th scope="col" data-sort="date">{{ ui['table_col_created'] or 'Created' }}</th>
+      <th scope="col" data-sort="date">{{ ui['table_col_last_used'] or 'Last used' }}</th>
+      <th scope="col">{{ ui['table_col_actions'] or 'Actions' }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in token_items %}
+    <tr>
+      <td data-label="ID">#{{ item.id }}</td>
+      <td data-label="{{ ui['label_agent_name'] or 'Agent label' }}">{{ item.label or '-' }}</td>
+      <td data-label="{{ ui['table_col_type'] or 'Type' }}">
+        <span class="kawaii-badge {% if item.token_type == 'reader' %}kawaii-badge--success{% elif item.token_type == 'publisher' %}kawaii-badge--pending{% else %}kawaii-badge--running{% endif %}">{{ item.token_type }}</span>
+      </td>
+      <td data-label="{{ ui['table_col_object'] or 'Object' }}">
+        {% if item.object_href %}<a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.object_href }}">{{ item.object_name or '-' }}</a>{% else %}{{ item.object_name or '-' }}{% endif %}
+      </td>
+      <td data-label="{{ ui['table_col_release'] or 'Release' }}">{{ item.release_version or '-' }}</td>
+      <td data-label="{{ ui['table_col_state'] or 'State' }}">
+        <span class="kawaii-badge {% if item.state == 'active' %}kawaii-badge--success{% else %}kawaii-badge--pending{% endif %}">{{ item.state }}</span>
+      </td>
+      <td data-label="{{ ui['table_col_created'] or 'Created' }}">{{ item.created_at }}</td>
+      <td data-label="{{ ui['table_col_last_used'] or 'Last used' }}">{{ item.last_used_at or '-' }}</td>
+      <td data-label="{{ ui['table_col_actions'] or 'Actions' }}">
+        {% if item.can_revoke %}
+        <button class="kawaii-button kawaii-button--ghost text-sm" type="button" data-action="revoke-token" data-credential-id="{{ item.id }}">{{ ui['action_revoke'] or 'Revoke' }}</button>
+        {% else %}
+        <span class="text-sm text-kawaii-ink-soft">-</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endcall %}
+
+{% if token_activity_items %}
+{% call console_table_shell(
+  ui['section_token_activity'] or 'Token activity',
+  ui['empty_token_activity'] or 'No recent token activity.',
+  token_activity_items,
+  page_language
+) %}
+<table>
+  <thead>
+    <tr>
+      <th scope="col" data-sort="string">{{ ui['table_col_event'] or 'Event' }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_token'] or 'Token' }}</th>
+      <th scope="col" data-sort="date">{{ ui['table_col_timestamp'] or 'Timestamp' }}</th>
+      <th scope="col">{{ ui['table_col_detail'] or 'Detail' }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in token_activity_items %}
+    <tr>
+      <td data-label="{{ ui['table_col_event'] or 'Event' }}">{{ item.event_type }}</td>
+      <td data-label="{{ ui['table_col_token'] or 'Token' }}">#{{ item.token_id }}</td>
+      <td data-label="{{ ui['table_col_timestamp'] or 'Timestamp' }}">{{ item.timestamp }}</td>
+      <td data-label="{{ ui['table_col_detail'] or 'Detail' }}"><span class="text-sm text-kawaii-ink-soft">{{ item.detail or '-' }}</span></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endcall %}
+{% endif %}
+<script type="module" src="/static/js/modules/access-center.js"></script>
+{% endblock %}

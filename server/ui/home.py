@@ -8,15 +8,14 @@ from fastapi import Request
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from server import __version__ as server_version
 from server.models import (
     AccessGrant,
     Credential,
-    Exposure,
     Job,
+    RegistryObject,
     Release,
     ReviewCase,
-    Skill,
-    SkillDraft,
 )
 from server.ui.formatting import build_kawaii_ui_context, localized_stamp
 from server.ui.i18n import pick_lang, resolve_language, with_lang
@@ -99,12 +98,23 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
             }
         )
 
-    total_skills = int(db.scalar(select(func.count()).select_from(Skill)) or 0)
-    total_drafts = int(db.scalar(select(func.count()).select_from(SkillDraft)) or 0)
+    total_objects = int(db.scalar(select(func.count()).select_from(RegistryObject)) or 0)
     total_releases = int(db.scalar(select(func.count()).select_from(Release)) or 0)
-    total_exposures = int(db.scalar(select(func.count()).select_from(Exposure)) or 0)
-    total_access = int(db.scalar(select(func.count()).select_from(Credential)) or 0) + int(
-        db.scalar(select(func.count()).select_from(AccessGrant)) or 0
+    total_share_links = int(
+        db.scalar(
+            select(func.count())
+            .select_from(AccessGrant)
+            .where(AccessGrant.grant_type == "link")
+        )
+        or 0
+    )
+    total_access = int(
+        db.scalar(
+            select(func.count())
+            .select_from(Credential)
+            .where(Credential.type == "grant_token")
+        )
+        or 0
     )
     pending_reviews = int(
         db.scalar(select(func.count()).select_from(ReviewCase).where(ReviewCase.state == "open"))
@@ -189,46 +199,46 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
     )
     console_links = [
         {
-            "href": with_lang("/skills", lang),
-            "icon": "📦",
-            "title": pick_lang(lang, "技能", "Skills"),
-            "value": str(total_skills),
+            "href": with_lang("/library", lang),
+            "icon": "📚",
+            "title": pick_lang(lang, "对象库", "Library"),
+            "value": str(total_objects),
             "detail": "",
         },
         {
-            "href": with_lang("/skills#drafts", lang),
-            "icon": "✨",
-            "title": pick_lang(lang, "草稿", "Drafts"),
-            "value": str(total_drafts),
-            "detail": "",
-        },
-        {
-            "href": with_lang("/skills#releases", lang),
-            "icon": "⚙️",
+            "href": with_lang("/library", lang),
+            "icon": "🚀",
             "title": pick_lang(lang, "发布", "Releases"),
             "value": str(total_releases),
             "detail": "",
         },
         {
-            "href": with_lang("/skills#share", lang),
-            "icon": "🌐",
-            "title": pick_lang(lang, "分享", "Share"),
-            "value": str(total_exposures),
+            "href": with_lang("/shares", lang),
+            "icon": "🔗",
+            "title": pick_lang(lang, "分享链接", "Share Links"),
+            "value": str(total_share_links),
             "detail": "",
         },
         {
-            "href": with_lang("/access/tokens", lang),
+            "href": with_lang("/access", lang),
             "icon": "🗝️",
             "title": pick_lang(lang, "访问", "Access"),
             "value": str(total_access),
             "detail": "",
         },
         {
-            "href": with_lang("/review-cases", lang),
-            "icon": "📝",
-            "title": pick_lang(lang, "审核", "Review"),
-            "value": str(pending_reviews),
+            "href": with_lang("/activity", lang),
+            "icon": "📋",
+            "title": pick_lang(lang, "活动", "Activity"),
+            "value": str(pending_reviews + queued_jobs + running_jobs),
             "detail": "",
+        },
+        {
+            "href": with_lang("/settings", lang),
+            "icon": "⚙️",
+            "title": pick_lang(lang, "设置", "Settings"),
+            "value": settings.environment,
+            "detail": f"v{server_version}",
         },
     ]
     page_eyebrow = pick_lang(lang, "私人技能工作台", "Private agent workspace")
@@ -257,7 +267,7 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
         },
         "hero_secondary_link": {
             "href": "#console",
-            "label": pick_lang(lang, "查看维护台", "Open console"),
+            "label": pick_lang(lang, "查看对象库", "Open Library"),
         },
         "hero_primary_copy": human_prompts[0]["prompt"] if human_prompts else "",
         "operating_states": operating_states,
@@ -267,8 +277,8 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
         "console_links": console_links,
         "featured_skills": featured_skills,
         "maintainer_primary_link": {
-            "href": with_lang("/skills", lang),
-            "label": pick_lang(lang, "打开维护台", "Open console"),
+            "href": with_lang("/library", lang),
+            "label": pick_lang(lang, "打开对象库", "Open Library"),
         },
         "maintainer_body": pick_lang(
             lang,

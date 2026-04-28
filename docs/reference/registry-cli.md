@@ -2,7 +2,7 @@
 audience: operators, automation authors
 owner: repository maintainers
 source_of_truth: hosted registry CLI reference
-last_reviewed: 2026-04-22
+last_reviewed: 2026-04-24
 status: maintained
 ---
 
@@ -10,12 +10,96 @@ status: maintained
 
 Complete reference for `infinitas registry` subcommands that interact with the hosted control plane. All commands accept `--base-url` and `--token` flags (or their environment variable equivalents `INFINITAS_REGISTRY_API_BASE_URL` and `INFINITAS_REGISTRY_API_TOKEN`). Every command outputs JSON to stdout on success and error text to stderr on failure (exit code 1).
 
+## Current product contract
+
+The product is split into two surfaces:
+
+- Web admin for human operators: `/library`, `/access`, `/shares`, `/activity`, `/settings`
+- Agent workflows for automation: publish, read, Visibility, Token, Share Link, and Activity APIs
+
+`INFINITAS_REGISTRY_API_TOKEN` is the admin token used to operate the hosted control plane. Agent-facing tokens are minted from the access surface and should be scoped separately, with at least `reader` and `publisher` capabilities.
+
+## Canonical route map
+
+### Web admin
+
+- `/library`
+- `/library/{object_id}`
+- `/library/{object_id}/releases/{release_id}`
+- `/access`
+- `/shares`
+- `/activity`
+- `/settings`
+
+### Agent read and governance
+
+- `GET /api/library`
+- `GET /api/library/{object_id}`
+- `GET /api/library/{object_id}/releases`
+- `GET /api/releases/{release_id}`
+- `PATCH /api/releases/{release_id}/visibility`
+- `POST /api/objects/{object_id}/tokens`
+- `GET /api/objects/{object_id}/tokens`
+- `POST /api/releases/{release_id}/share-links`
+- `GET /api/releases/{release_id}/share-links`
+- `GET /api/activity`
+
+### Agent publish
+
+- `PUT /api/publish/objects/{slug}`
+- `POST /api/publish/objects/{object_id}/releases`
+- `GET /api/publish/releases/{release_id}/status`
+
+The underlying lifecycle may still use draft or sealing mechanics internally, but those internals are not the primary control-plane story for operators.
+
+## Preferred workflow by persona
+
+### Human admin
+
+Use the web app to:
+
+- browse the Library
+- inspect Object details and Release history
+- change Visibility
+- issue and revoke Tokens
+- create Share Links
+- inspect Activity
+
+### Agent
+
+Use the API or CLI to:
+
+- upsert an Object
+- publish a Release
+- poll release status
+- read the Library
+- fetch a Release through a Token or Share Link
+
 ## Global Flags
 
 | Flag | Environment Variable | Default | Description |
 |---|---|---|---|
 | `--base-url` | `INFINITAS_REGISTRY_API_BASE_URL` | `http://127.0.0.1:8000` | Registry API base URL |
 | `--token` | `INFINITAS_REGISTRY_API_TOKEN` | *(empty)* | Authentication token |
+
+## Object model
+
+The unified product vocabulary is:
+
+- Object
+- Release
+- Visibility
+- Token
+- Share Link
+- Activity
+
+The shared Object kinds are:
+
+- `skill`
+- `agent_preset`
+- `agent_code`
+
+Type-specific payload can vary, but read surfaces should stay centered on the Object and Release model.
 
 ---
 

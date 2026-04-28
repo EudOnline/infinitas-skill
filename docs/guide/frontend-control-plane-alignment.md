@@ -111,15 +111,15 @@ The frontend and backend agree on the main domain objects:
 - review cases
 - access credentials and grants
 
-The current console pages already reflect that model:
+The current maintained web admin flow is:
 
-- `/skills`
-- `/skills/{skill_id}`
-- `/drafts/{draft_id}`
-- `/releases/{release_id}`
-- `/releases/{release_id}/share`
-- `/access/tokens`
-- `/review-cases`
+- `/library`
+- `/library/{object_id}`
+- `/library/{object_id}/releases/{release_id}`
+- `/access`
+- `/shares`
+- `/activity`
+- `/settings`
 
 The frontend also correctly uses the supported browser-facing APIs for:
 

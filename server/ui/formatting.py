@@ -114,6 +114,18 @@ def humanize_role(role: str | None, lang: str) -> str:
     )
 
 
+def humanize_object_kind(kind: str | None, lang: str) -> str:
+    return _humanize_with_mapping(
+        kind,
+        lang,
+        {
+            "skill": ("技能", "Skill"),
+            "agent_preset": ("Agent 预设", "Agent preset"),
+            "agent_code": ("Agent 代码", "Agent code"),
+        },
+    )
+
+
 def humanize_audience_type(audience_type: str | None, lang: str) -> str:
     return _humanize_with_mapping(
         audience_type,

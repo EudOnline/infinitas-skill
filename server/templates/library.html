@@ -1,0 +1,88 @@
+{% extends "layout-kawaii.html" %}
+
+{% block body %}
+<section class="kawaii-card animate-in mb-4">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_library'] or 'Library' }}</div>
+  <h1 class="font-display text-[clamp(1.5rem,3.5vw,2.2rem)] font-extrabold leading-tight text-kawaii-ink mb-2">{{ ui['title_library'] or 'Library' }}</h1>
+  <p class="text-kawaii-ink-soft leading-relaxed max-w-prose mb-4">{{ ui['desc_library'] or 'Inspect releases, visibility, tokens, and shares for objects in your registry.' }}</p>
+
+  <div class="flex flex-col md:flex-row md:items-center gap-3 mb-4">
+    <div class="flex flex-wrap items-center gap-2" role="group" aria-label="{{ ui['aria_filter_kind'] or 'Filter by kind' }}" data-library-filter>
+      <button type="button" class="toggle-chip is-active" data-filter="all" aria-pressed="true">{{ ui['filter_all'] or 'All' }}</button>
+      <button type="button" class="toggle-chip" data-filter="skill" aria-pressed="false">{{ ui['filter_skills'] or 'Skills' }}</button>
+      <button type="button" class="toggle-chip" data-filter="agent_preset" aria-pressed="false">{{ ui['filter_agent_presets'] or 'Agent Presets' }}</button>
+      <button type="button" class="toggle-chip" data-filter="agent_code" aria-pressed="false">{{ ui['filter_agent_code'] or 'Agent Code' }}</button>
+    </div>
+    <div class="flex-1 min-w-[12rem]">
+      <div class="search-bar-wrapper" role="search">
+        <span class="search-icon" aria-hidden="true">🔍</span>
+        <input
+          type="search"
+          class="search-input"
+          data-library-search
+          placeholder="{{ ui['placeholder_search_objects'] or 'Search objects…' }}"
+          autocomplete="off"
+          aria-label="{{ ui['aria_search_objects'] or 'Search objects' }}"
+        />
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="library-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="library-grid" data-reveal>
+  {% if library_items %}
+    {% for item in library_items %}
+    <article
+      class="kawaii-card animate-in object-card"
+      data-kind="{{ item.kind }}"
+      data-name="{{ (item.display_name or item.slug or '') | lower }}"
+      data-summary="{{ (item.summary or '') | lower }}"
+    >
+      <div class="flex items-start justify-between gap-3 mb-2">
+        <div class="min-w-0">
+          <h3 class="font-display text-lg font-bold text-kawaii-ink truncate">
+            <a class="no-underline text-kawaii-ink hover:text-kawaii-primary-deep transition-colors" href="{{ item.detail_href }}">{{ item.display_name or item.slug }}</a>
+          </h3>
+          <p class="text-sm text-kawaii-ink-muted truncate">{{ item.slug }}</p>
+        </div>
+        <span class="kawaii-badge kawaii-badge--soft shrink-0">{{ item.kind }}</span>
+      </div>
+      <p class="text-sm text-kawaii-ink-soft leading-relaxed mb-3 line-clamp-2">{{ item.summary or ui['text_no_summary'] or 'No summary' }}</p>
+      <div class="flex flex-wrap items-center gap-2 mb-3">
+        {% if item.default_release %}
+        <span class="text-xs font-semibold text-kawaii-ink-soft bg-kawaii-panel-soft border border-kawaii-line rounded-full px-2.5 py-1">{{ ui['label_version'] or 'Version' }} {{ item.default_release }}</span>
+        {% endif %}
+        <span class="text-xs font-semibold text-kawaii-ink-soft bg-kawaii-panel-soft border border-kawaii-line rounded-full px-2.5 py-1">{{ item.current_visibility or 'private' }}</span>
+      </div>
+      <div class="flex items-center justify-between pt-3 border-t border-kawaii-line">
+        <div class="flex items-center gap-3 text-xs text-kawaii-ink-muted">
+          <span class="inline-flex items-center gap-1" title="{{ ui['label_tokens'] or 'Tokens' }}"><span aria-hidden="true">🔑</span> {{ item.token_count or 0 }}</span>
+          <span class="inline-flex items-center gap-1" title="{{ ui['label_share_links'] or 'Share Links' }}"><span aria-hidden="true">🔗</span> {{ item.share_link_count or 0 }}</span>
+        </div>
+        <a class="text-kawaii-primary-deep font-bold text-sm no-underline" href="{{ item.detail_href }}">{{ ui['action_open'] or 'Open' }} →</a>
+      </div>
+    </article>
+    {% endfor %}
+  {% else %}
+    <div class="col-span-full">
+      <div class="kawaii-card animate-in text-center py-12 md:py-16">
+        <div class="text-4xl mb-3" aria-hidden="true">📚</div>
+        <h3 class="font-display text-lg font-bold text-kawaii-ink mb-1">{{ ui['empty_library_title'] or 'No objects yet' }}</h3>
+        <p class="text-sm text-kawaii-ink-soft max-w-xs mx-auto">{{ ui['empty_library_desc'] or 'Objects appear here when they are published to the registry.' }}</p>
+      </div>
+    </div>
+  {% endif %}
+</section>
+
+{% if library_items %}
+<div id="library-empty-state" class="hidden">
+  <div class="kawaii-card animate-in text-center py-12 md:py-16">
+    <div class="text-4xl mb-3" aria-hidden="true">🔍</div>
+    <h3 class="font-display text-lg font-bold text-kawaii-ink mb-1">{{ ui['empty_search_title'] or 'No matches' }}</h3>
+    <p class="text-sm text-kawaii-ink-soft max-w-xs mx-auto">{{ ui['empty_search_desc'] or 'Try adjusting your filters or search terms.' }}</p>
+  </div>
+</div>
+{% endif %}
+
+<script type="module" src="/static/js/modules/library.js"></script>
+{% endblock %}

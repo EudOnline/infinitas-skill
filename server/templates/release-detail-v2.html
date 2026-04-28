@@ -1,0 +1,298 @@
+{% extends "layout-kawaii.html" %}
+{% from "macros.html" import console_table_shell %}
+
+{% block body %}
+<section class="kawaii-card animate-in mb-4">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_release'] or 'Release' }}</div>
+  <div class="detail-grid detail-grid--release">
+    <article>
+      <div class="flex items-center gap-2 mb-2">
+        <h1 class="font-display text-[clamp(1.5rem,3.5vw,2.2rem)] font-extrabold leading-tight text-kawaii-ink">{{ object.display_name }} {{ release.version }}</h1>
+        <span class="kawaii-badge {% if release.readiness_state == 'ready' %}kawaii-badge--success{% elif release.readiness_state == 'preparing' %}kawaii-badge--pending{% else %}kawaii-badge--running{% endif %}">{{ release.readiness_state or 'unknown' }}</span>
+      </div>
+      <p class="text-kawaii-ink-soft leading-relaxed max-w-prose">{{ ui['hint_release_immutable'] or 'Releases are immutable. Change visibility or create share links to control access.' }}</p>
+      <div class="flex flex-wrap items-center gap-2 mt-4">
+        <a class="kawaii-button kawaii-button--ghost text-sm" href="{{ object.detail_href }}">{{ ui['action_back_to_object'] or 'Back to Object' }}</a>
+        <a class="kawaii-button kawaii-button--primary text-sm" href="{{ release.shares_href or object.shares_href }}">{{ ui['action_open_shares'] or 'Open Shares' }}</a>
+        <a class="kawaii-button kawaii-button--ghost text-sm" href="{{ release.access_href or object.access_href }}">{{ ui['action_inspect_access'] or 'Inspect Access' }}</a>
+      </div>
+    </article>
+    <dl class="detail-meta">
+      <div><dt>ID</dt><dd>#{{ release.id }}</dd></div>
+      <div><dt>{{ ui['label_version'] or 'Version' }}</dt><dd>{{ release.version }}</dd></div>
+      <div><dt>{{ ui['label_visibility'] or 'Visibility' }}</dt><dd>{{ release.visibility or 'private' }}</dd></div>
+      <div><dt>{{ ui['label_created_at'] or 'Created' }}</dt><dd>{{ release.created_at }}</dd></div>
+      <div><dt>{{ ui['label_ready_at'] or 'Ready at' }}</dt><dd>{{ release.ready_at or '-' }}</dd></div>
+      <div><dt>{{ ui['label_install_target'] or 'Install target' }}</dt><dd>{{ release.install_target or '-' }}</dd></div>
+      <div><dt>{{ ui['label_install_readiness'] or 'Install readiness' }}</dt>
+        <dd>
+          {% if release.install_readiness %}
+            <span class="kawaii-badge {% if release.install_readiness == 'fresh' %}kawaii-badge--success{% elif release.install_readiness == 'stale' %}kawaii-badge--pending{% else %}kawaii-badge--running{% endif %}">
+              {{ release.install_readiness }}
+            </span>
+          {% else %}
+            <span class="kawaii-badge kawaii-badge--running">-</span>
+          {% endif %}
+        </dd>
+      </div>
+      <div><dt>{{ ui['label_blocking'] or 'Blocking' }}</dt>
+        <dd>
+          {% if release.blocking_platforms %}
+            {% for item in release.blocking_platforms %}
+              <span class="kawaii-badge kawaii-badge--pending">{{ item.platform or item.name or 'unknown' }}</span>
+            {% endfor %}
+          {% else %}
+            <span class="kawaii-badge kawaii-badge--success">{{ ui['text_none'] or 'None' }}</span>
+          {% endif %}
+        </dd>
+      </div>
+    </dl>
+  </div>
+</section>
+
+<section class="kawaii-card animate-in mb-4">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['badge_distribution_summary'] or 'Distribution summary' }}</div>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <article class="p-4 bg-kawaii-panel-soft rounded-kawaii-lg border border-kawaii-line">
+      <div class="text-xs font-bold text-kawaii-ink-soft mb-1">{{ ui['label_visibility_channels'] or 'Visibility channels' }}</div>
+      <div class="font-display text-lg font-extrabold text-kawaii-ink">{{ release.visibility_count or 0 }}</div>
+    </article>
+    <article class="p-4 bg-kawaii-panel-soft rounded-kawaii-lg border border-kawaii-line">
+      <div class="text-xs font-bold text-kawaii-ink-soft mb-1">{{ ui['label_agent_tokens'] or 'Agent tokens' }}</div>
+      <div class="font-display text-lg font-extrabold text-kawaii-ink">{{ release.token_count or 0 }}</div>
+    </article>
+    <article class="p-4 bg-kawaii-panel-soft rounded-kawaii-lg border border-kawaii-line">
+      <div class="text-xs font-bold text-kawaii-ink-soft mb-1">{{ ui['label_share_links'] or 'Share links' }}</div>
+      <div class="font-display text-lg font-extrabold text-kawaii-ink">{{ release.share_count or 0 }}</div>
+    </article>
+  </div>
+</section>
+
+<section class="kawaii-card animate-in mb-4">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <article class="p-4 bg-kawaii-panel-soft rounded-kawaii-lg border border-kawaii-line">
+      <div class="text-xs font-bold text-kawaii-ink-soft mb-1">{{ ui['label_artifacts'] or 'Artifacts' }}</div>
+      <div class="font-display text-lg font-extrabold text-kawaii-ink">{{ release.artifacts_count or 0 }}</div>
+    </article>
+    <article class="p-4 bg-kawaii-panel-soft rounded-kawaii-lg border border-kawaii-line">
+      <div class="text-xs font-bold text-kawaii-ink-soft mb-1">{{ ui['label_blocking_count'] or 'Blocking issues' }}</div>
+      <div class="font-display text-lg font-extrabold text-kawaii-ink">{{ release.blocking_count or 0 }}</div>
+    </article>
+  </div>
+</section>
+
+<section class="kawaii-card animate-in mb-4">
+  <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['section_manage_visibility'] or 'Manage visibility' }}</div>
+  <p class="text-kawaii-ink-soft leading-relaxed max-w-prose mb-4">{{ ui['hint_manage_visibility'] or 'Choose who can discover or install this release, then activate the visibility channel when it is ready.' }}</p>
+  <form id="create-exposure-form" class="lifecycle-form" data-release-id="{{ release.id }}">
+    <div hidden id="exposure-policy-data" data-json="{{ release.exposure_policy | tojson | forceescape }}"></div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <label for="exposure-audience-type">
+        <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['table_col_visibility'] or 'Visibility' }}</span>
+        <select class="kawaii-input" name="audience_type" id="exposure-audience-type">
+          <option value="private">{{ ui['option_private'] or 'Private' }}</option>
+          <option value="authenticated">{{ ui['option_authenticated'] or 'Authenticated' }}</option>
+          <option value="grant">{{ ui['option_grant'] or 'Grant' }}</option>
+          <option value="public">{{ ui['option_public'] or 'Public' }}</option>
+        </select>
+      </label>
+      <label for="exposure-listing-mode">
+        <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['table_col_listing'] or 'Listing' }}</span>
+        <select class="kawaii-input" name="listing_mode" id="exposure-listing-mode">
+          <option value="listed">{{ ui['option_listed'] or 'Listed' }}</option>
+          <option value="direct_only">{{ ui['option_direct_only'] or 'Direct only' }}</option>
+        </select>
+      </label>
+      <label for="exposure-install-mode">
+        <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['table_col_install'] or 'Install' }}</span>
+        <select class="kawaii-input" name="install_mode" id="exposure-install-mode">
+          <option value="enabled">{{ ui['option_install_enabled'] or 'Enabled' }}</option>
+          <option value="disabled">{{ ui['option_install_disabled'] or 'Disabled' }}</option>
+        </select>
+      </label>
+      <label for="exposure-review-mode">
+        <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['label_review_mode'] or 'Review mode' }}</span>
+        <select class="kawaii-input" name="requested_review_mode" id="exposure-review-mode">
+          <option value="none">{{ ui['option_no_review'] or 'No review' }}</option>
+          <option value="advisory">{{ ui['option_advisory'] or 'Advisory' }}</option>
+          <option value="blocking">{{ ui['option_blocking'] or 'Blocking' }}</option>
+        </select>
+      </label>
+    </div>
+    <div id="public-exposure-warning" class="mt-1" hidden>
+      <span class="kawaii-badge kawaii-badge--pending"><span aria-hidden="true">⚠️</span> {{ ui['hint_public_review_required'] or 'Public visibility requires blocking review.' }}</span>
+    </div>
+    <div id="exposure-review-policy-hint" class="mb-2" hidden></div>
+    <div class="flex flex-wrap items-center gap-2 mt-4">
+      <button class="kawaii-button kawaii-button--primary" type="submit">{{ ui['action_create_visibility'] or 'Create visibility' }}</button>
+    </div>
+  </form>
+</section>
+
+{% if visibility_rows %}
+{% call console_table_shell(
+  ui['section_visibility_channels'] or 'Visibility channels',
+  ui['empty_visibility_channels'] or 'No visibility channels.',
+  visibility_rows,
+  page_language
+) %}
+<table>
+  <thead>
+    <tr>
+      <th scope="col" data-sort="number">ID</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_visibility'] or 'Visibility' }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_listing'] or 'Listing' }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_install'] or 'Install' }}</th>
+      <th scope="col" data-sort="number">{{ ui['label_agent_tokens'] or 'Agent tokens' }}</th>
+      <th scope="col" data-sort="number">{{ ui['label_share_links'] or 'Share links' }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_state'] or 'State' }}</th>
+      <th scope="col">{{ ui['table_col_actions'] or 'Actions' }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in visibility_rows %}
+    <tr>
+      <td data-label="ID">#{{ item.id }}</td>
+      <td data-label="{{ ui['table_col_visibility'] or 'Visibility' }}">{{ item.visibility }}</td>
+      <td data-label="{{ ui['table_col_listing'] or 'Listing' }}">{{ item.listing_mode }}</td>
+      <td data-label="{{ ui['table_col_install'] or 'Install' }}">{{ item.install_mode }}</td>
+      <td data-label="{{ ui['label_agent_tokens'] or 'Agent tokens' }}">{{ item.token_count }}</td>
+      <td data-label="{{ ui['label_share_links'] or 'Share links' }}">{{ item.share_count }}</td>
+      <td data-label="{{ ui['table_col_state'] or 'State' }}">{{ item.state }}</td>
+      <td data-label="{{ ui['table_col_actions'] or 'Actions' }}">
+        <div class="flex flex-wrap items-center gap-2">
+          {% if item.can_activate %}
+          <button class="kawaii-button kawaii-button--primary" type="button" data-action="activate-exposure" data-exposure-id="{{ item.id }}">{{ ui['action_activate'] or 'Activate' }}</button>
+          {% endif %}
+          {% if item.can_revoke %}
+          <button class="kawaii-button kawaii-button--ghost" type="button" data-action="revoke-exposure" data-exposure-id="{{ item.id }}">{{ ui['action_revoke'] or 'Revoke' }}</button>
+          {% endif %}
+          {% if not item.can_activate and item.activation_block_reason %}
+          <span class="kawaii-badge kawaii-badge--pending">
+            {% if item.activation_block_reason == 'blocking_review_open' %}{{ ui['hint_activation_blocked_review_required'] or 'Review approval is still required.' }}
+            {% elif item.activation_block_reason == 'blocking_review_rejected' %}{{ ui['hint_activation_blocked_rejected'] or 'This visibility cannot be activated because review was rejected.' }}
+            {% elif item.activation_block_reason == 'blocking_review_unapproved' %}{{ ui['hint_activation_blocked_not_approved'] or 'This visibility cannot be activated until review is approved.' }}
+            {% else %}{{ ui['hint_activation_blocked'] or 'This visibility cannot be activated yet.' }}{% endif %}
+          </span>
+          {% endif %}
+          {% if item.can_patch %}
+          <button class="kawaii-button kawaii-button--secondary text-sm" type="button" data-action="toggle-patch-form" data-exposure-id="{{ item.id }}">{{ ui['action_edit'] or 'Edit' }}</button>
+          {% endif %}
+        </div>
+      </td>
+    </tr>
+    {% if item.can_patch %}
+    <tr class="patch-form-row" id="patch-form-row-{{ item.id }}" hidden>
+      <td colspan="8" class="py-2 border-b border-kawaii-line/50 last:border-0">
+        <form class="patch-form p-4 bg-kawaii-panel-soft rounded-kawaii-lg border border-kawaii-line" data-action="patch-exposure" data-exposure-id="{{ item.id }}">
+          <div class="flex flex-wrap items-center gap-2 mb-2">
+            <label class="sr-only" for="patch-listing-{{ item.id }}">{{ ui['table_col_listing'] or 'Listing' }}</label>
+            <select class="kawaii-input" name="listing_mode" id="patch-listing-{{ item.id }}">
+              <option value="listed" {% if item.listing_mode_raw == 'listed' %}selected{% endif %}>{{ ui['option_listed'] or 'Listed' }}</option>
+              <option value="direct_only" {% if item.listing_mode_raw == 'direct_only' %}selected{% endif %}>{{ ui['option_direct_only'] or 'Direct only' }}</option>
+            </select>
+            <label class="sr-only" for="patch-install-{{ item.id }}">{{ ui['table_col_install'] or 'Install' }}</label>
+            <select class="kawaii-input" name="install_mode" id="patch-install-{{ item.id }}">
+              <option value="enabled" {% if item.install_mode_raw == 'enabled' %}selected{% endif %}>{{ ui['option_enabled'] or 'Enabled' }}</option>
+              <option value="disabled" {% if item.install_mode_raw == 'disabled' %}selected{% endif %}>{{ ui['option_disabled'] or 'Disabled' }}</option>
+            </select>
+            <button class="kawaii-button kawaii-button--secondary" type="submit">{{ ui['action_update'] or 'Update' }}</button>
+          </div>
+        </form>
+      </td>
+    </tr>
+    {% endif %}
+    {% endfor %}
+  </tbody>
+</table>
+{% endcall %}
+{% endif %}
+
+<section class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+  <article class="kawaii-card animate-in">
+    <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['section_issue_agent_token'] or 'Issue agent token' }}</div>
+    <p class="text-kawaii-ink-soft leading-relaxed max-w-prose mb-4">{{ ui['hint_issue_agent_token'] or 'Create a reader or publisher token for agents that should use this release through the grant channel.' }}</p>
+    {% if not release.grant_access_ready %}
+    <p class="text-sm text-kawaii-ink-soft mb-3">{{ ui['hint_grant_visibility_required'] or 'Create and activate a grant visibility channel before issuing agent tokens or share links.' }}</p>
+    {% endif %}
+    <form id="issue-token-form" class="space-y-3" data-release-id="{{ release.id }}">
+      <label for="issue-token-type">
+        <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['table_col_type'] or 'Type' }}</span>
+        <select class="kawaii-input" name="token_type" id="issue-token-type" {% if not release.grant_access_ready %}disabled{% endif %}>
+          <option value="reader">{{ ui['token_type_reader'] or 'Reader' }}</option>
+          <option value="publisher">{{ ui['token_type_publisher'] or 'Publisher' }}</option>
+        </select>
+      </label>
+      <label for="issue-token-label">
+        <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['label_agent_name'] or 'Agent label' }}</span>
+        <input class="kawaii-input" type="text" name="label" id="issue-token-label" placeholder="{{ ui['placeholder_agent_label'] or 'Deploy Bot' }}" {% if not release.grant_access_ready %}disabled{% endif %} />
+      </label>
+      <button class="kawaii-button kawaii-button--primary" type="submit" {% if not release.grant_access_ready %}disabled{% endif %}>{{ ui['action_issue_token'] or 'Issue token' }}</button>
+    </form>
+    <div id="issue-token-result" class="mt-4 p-4 bg-kawaii-panel-soft rounded-kawaii-lg border border-kawaii-line" hidden></div>
+  </article>
+
+  <article class="kawaii-card animate-in">
+    <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui['section_create_share_link'] or 'Create share link' }}</div>
+    <p class="text-kawaii-ink-soft leading-relaxed max-w-prose mb-4">{{ ui['hint_create_share_link'] or 'Generate a share link and temporary password for agents that do not have their own token.' }}</p>
+    {% if not release.grant_access_ready %}
+    <p class="text-sm text-kawaii-ink-soft mb-3">{{ ui['hint_grant_visibility_required'] or 'Create and activate a grant visibility channel before issuing agent tokens or share links.' }}</p>
+    {% endif %}
+    <form id="create-share-form" class="space-y-3" data-release-id="{{ release.id }}">
+      <label for="share-link-label">
+        <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['label_share_name'] or 'Share label' }}</span>
+        <input class="kawaii-input" type="text" name="label" id="share-link-label" placeholder="{{ ui['placeholder_share_label'] or 'QA share' }}" {% if not release.grant_access_ready %}disabled{% endif %} />
+      </label>
+      <label for="share-link-password">
+        <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['table_col_password'] or 'Password' }}</span>
+        <input class="kawaii-input" type="text" name="temporary_password" id="share-link-password" placeholder="{{ ui['placeholder_share_password'] or 'Leave blank to auto-generate' }}" {% if not release.grant_access_ready %}disabled{% endif %} />
+      </label>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <label for="share-link-expiry">
+          <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['table_col_expiry'] or 'Expiry' }}</span>
+          <input class="kawaii-input" type="number" min="1" max="365" name="expires_in_days" id="share-link-expiry" value="7" {% if not release.grant_access_ready %}disabled{% endif %} />
+        </label>
+        <label for="share-link-usage-limit">
+          <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['table_col_usage'] or 'Usage' }}</span>
+          <input class="kawaii-input" type="number" min="1" max="100000" name="usage_limit" id="share-link-usage-limit" value="5" {% if not release.grant_access_ready %}disabled{% endif %} />
+        </label>
+      </div>
+      <button class="kawaii-button kawaii-button--primary" type="submit" {% if not release.grant_access_ready %}disabled{% endif %}>{{ ui['action_create_share_link'] or 'Create share link' }}</button>
+    </form>
+    <div id="create-share-result" class="mt-4 p-4 bg-kawaii-panel-soft rounded-kawaii-lg border border-kawaii-line" hidden></div>
+  </article>
+</section>
+
+<div id="artifact-section" {% if release.readiness_state != 'ready' %}hidden{% endif %}>
+{% call console_table_shell(
+  ui['section_artifacts'] or 'Artifacts',
+  ui['empty_artifacts'] or 'No artifacts.',
+  artifact_rows,
+  page_language
+) %}
+<table>
+  <thead>
+    <tr>
+      <th scope="col" data-sort="number">ID</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_kind'] or 'Kind' }}</th>
+      <th scope="col" data-sort="string">SHA256</th>
+      <th scope="col" data-sort="number">{{ ui['table_col_size'] or 'Size' }}</th>
+      <th scope="col" data-sort="string">{{ ui['table_col_storage_uri'] or 'Storage URI' }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in artifact_rows %}
+    <tr>
+      <td data-label="ID">{{ item.id }}</td>
+      <td data-label="{{ ui['table_col_kind'] or 'Kind' }}">{{ item.kind }}</td>
+      <td data-label="SHA256"><code class="table-code">{{ item.sha256 }}</code></td>
+      <td data-label="{{ ui['table_col_size'] or 'Size' }}">{{ item.size_bytes }}</td>
+      <td data-label="{{ ui['table_col_storage_uri'] or 'Storage URI' }}"><code class="table-code">{{ item.storage_uri }}</code></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endcall %}
+</div>
+<script type="module" src="/static/js/modules/release-admin.js"></script>
+{% endblock %}
