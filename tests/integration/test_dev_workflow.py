@@ -101,7 +101,6 @@ def test_make_targets_and_docs_expose_dev_workflow_entrypoints() -> None:
     ), "release service should keep the targeted E501 carveout"
     for path in [
         "server/app.py",
-        "server/ui/lifecycle.py",
         "src/infinitas_skill/server/ops.py",
     ]:
         assert re.search(rf'"{re.escape(path)}"\s*=\s*\[[^\]]*"E501"[^\]]*\]', pyproject), (

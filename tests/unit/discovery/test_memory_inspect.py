@@ -117,11 +117,7 @@ class FakeMemoryProvider:
                 memory=item["memory"],
                 memory_type=item.get("memory_type", "generic"),
                 score=item.get("score"),
-                metadata={
-                    key: item[key]
-                    for key in ("confidence", "ttl_seconds")
-                    if key in item
-                },
+                metadata={key: item[key] for key in ("confidence", "ttl_seconds") if key in item},
             )
             for item in records
         ]

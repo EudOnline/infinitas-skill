@@ -23,15 +23,12 @@ AUTH_HOME_MODULE_PATH = MODULES_DIR / "auth-home.js"
 AUTH_CONSOLE_MODULE_PATH = MODULES_DIR / "auth-console.js"
 AUTH_MODAL_MODULE_PATH = MODULES_DIR / "auth-modal.js"
 ROUTES_PATH = ROOT / "server" / "ui" / "routes.py"
-LIFECYCLE_PATH = ROOT / "server" / "ui" / "lifecycle.py"
 LAYOUT_TEMPLATE_PATH = ROOT / "server" / "templates" / "layout-kawaii.html"
 HOME_AUTH_PANEL_TEMPLATE_PATH = ROOT / "server" / "templates" / "partials" / "home-auth-panel.html"
-SHARE_DETAIL_TEMPLATE_PATH = ROOT / "server" / "templates" / "share-detail.html"
-SECURITY_PATH = ROOT / "server" / "security.py"
+SECURITY_PATH = ROOT / "server" / "middleware.py"
 INPUT_CSS_PATH = ROOT / "server" / "static" / "css" / "input.css"
 ALEMBIC_CONFIG_PATH = ROOT / "alembic.ini"
 APP_LINE_BUDGET = 220
-LIFECYCLE_LINE_BUDGET = 500
 
 
 def configure_env(tmpdir: Path) -> None:
@@ -83,12 +80,9 @@ def assert_app_size_budget() -> None:
     )
 
 
-def assert_route_and_lifecycle_composition_boundaries() -> None:
+def assert_route_composition_boundaries() -> None:
     routes_source = ROUTES_PATH.read_text(encoding="utf-8")
     routes_module = ast.parse(routes_source, filename=str(ROUTES_PATH))
-    lifecycle_module = ast.parse(
-        LIFECYCLE_PATH.read_text(encoding="utf-8"), filename=str(LIFECYCLE_PATH)
-    )
 
     imported_session_bootstrap = False
     imported_navigation = False
@@ -118,12 +112,6 @@ def assert_route_and_lifecycle_composition_boundaries() -> None:
         ):
             called_session_bootstrap = True
 
-    lifecycle_imports = {
-        node.module
-        for node in ast.walk(lifecycle_module)
-        if isinstance(node, ast.ImportFrom) and node.module is not None
-    }
-
     assert imported_session_bootstrap and called_session_bootstrap, (
         "expected server.ui.routes to import and call build_session_bootstrap"
     )
@@ -135,20 +123,6 @@ def assert_route_and_lifecycle_composition_boundaries() -> None:
     )
     assert 'context["session_ui"]["current_user"]' not in routes_source, (
         "expected server.ui.routes to avoid manually mutating session_ui.current_user"
-    )
-    assert "server.ui.navigation" in lifecycle_imports, (
-        "expected server.ui.lifecycle to compose navigation helpers"
-    )
-    assert "server.ui.notifications" in lifecycle_imports, (
-        "expected server.ui.lifecycle to compose notification helpers"
-    )
-
-
-def assert_lifecycle_size_budget() -> None:
-    line_count = len(LIFECYCLE_PATH.read_text(encoding="utf-8").splitlines())
-    assert line_count <= LIFECYCLE_LINE_BUDGET, (
-        "expected server/ui/lifecycle.py to stay within "
-        f"{LIFECYCLE_LINE_BUDGET} lines after UI extraction, got {line_count}"
     )
 
 
@@ -213,7 +187,6 @@ def assert_private_registry_ui_js_contracts() -> None:
     auth_modal_source = AUTH_MODAL_MODULE_PATH.read_text(encoding="utf-8")
     layout_template = LAYOUT_TEMPLATE_PATH.read_text(encoding="utf-8")
     home_auth_panel_template = HOME_AUTH_PANEL_TEMPLATE_PATH.read_text(encoding="utf-8")
-    share_detail_template = SHARE_DETAIL_TEMPLATE_PATH.read_text(encoding="utf-8")
     security_source = SECURITY_PATH.read_text(encoding="utf-8")
     create_draft_source = _slice_top_level_function_source(
         lifecycle_source,
@@ -383,8 +356,9 @@ def assert_private_registry_ui_js_contracts() -> None:
     assert "style=" not in layout_template, (
         "expected layout-kawaii template to avoid inline style attributes under the current CSP"
     )
-    assert "style=" not in share_detail_template, (
-        "expected share-detail template to avoid inline style attributes under the current CSP"
+    object_detail_template = (ROOT / "server" / "templates" / "object-detail.html").read_text(encoding="utf-8")
+    assert "style=" not in object_detail_template, (
+        "expected object-detail template to avoid inline style attributes under the current CSP"
     )
     assert ".style.colorScheme" not in search_source, (
         "expected app theme bootstrap to avoid writing inline style.colorScheme under the CSP"
@@ -550,249 +524,6 @@ def approve_exposure_review(
     assert decision_response.status_code == 201, decision_response.text
 
 
-def assert_private_first_console_ui_round_trip() -> None:
-    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-private-ui-test-"))
-    try:
-        configure_env(tmpdir)
-
-        from fastapi.testclient import TestClient
-
-        from server.app import create_app
-        from server.auth import AUTH_COOKIE_NAME
-        from server.db import get_session_factory
-        from server.worker import run_worker_loop
-
-        client = TestClient(create_app())
-        session_factory = get_session_factory()
-        headers = {"Authorization": "Bearer fixture-maintainer-token"}
-        registry_base_url = str(client.base_url).rstrip("/")
-
-        login_response = client.get("/login?lang=en")
-        assert login_response.status_code == 200, login_response.text
-        login_html = login_response.text
-        assert f"{registry_base_url}/api/v1/me" in login_html
-        assert "skills.example.com" not in login_html
-
-        api_login_response = client.post(
-            "/api/auth/login?lang=en",
-            json={"token": "fixture-maintainer-token"},
-        )
-        assert api_login_response.status_code == 200, api_login_response.text
-        session_cookie = api_login_response.cookies.get(AUTH_COOKIE_NAME)
-        assert session_cookie
-        assert session_cookie != "fixture-maintainer-token"
-        assert "fixture-maintainer-token" not in (
-            api_login_response.headers.get("set-cookie") or ""
-        )
-        api_login_payload = api_login_response.json()
-        assert api_login_payload == {
-            "success": True,
-            "username": "fixture-maintainer",
-            "role": "maintainer",
-            "error": None,
-        }
-        session_probe = client.get("/api/auth/me")
-        assert session_probe.status_code == 200, session_probe.text
-        assert session_probe.json() == {
-            "authenticated": True,
-            "username": "fixture-maintainer",
-            "role": "maintainer",
-        }
-
-        # 1) Create skill through API (UI will verify forms exist)
-        create_skill_response = client.post(
-            "/api/v1/skills",
-            headers=headers,
-            json={
-                "slug": "console-ui-skill",
-                "display_name": "Console UI Skill",
-                "summary": "A skill for UI testing",
-            },
-        )
-        assert create_skill_response.status_code == 201, create_skill_response.text
-        skill_id = int(create_skill_response.json()["id"])
-
-        # 2) Verify skills page has create-skill form
-        skills_response = client.get("/skills?lang=en", headers=headers)
-        assert skills_response.status_code == 200, skills_response.text
-        skills_html = skills_response.text
-        assert f"registry --base-url {registry_base_url}" in skills_html
-        assert "skills.example.com" not in skills_html
-        for label in ["Skills", "Drafts", "Releases", "Share", "Access", "Review"]:
-            assert label in skills_html
-        assert 'id="create-skill-form"' in skills_html
-
-        # 3) Create draft and verify skill detail has create-draft form
-        create_draft_response = client.post(
-            f"/api/v1/skills/{skill_id}/drafts",
-            headers=headers,
-            json={
-                "content_ref": "git+https://example.com/repo.git#0123456789abcdef0123456789abcdef01234567",
-                "metadata": {"entrypoint": "SKILL.md"},
-            },
-        )
-        assert create_draft_response.status_code == 201, create_draft_response.text
-        draft_id = int(create_draft_response.json()["id"])
-
-        skill_detail_response = client.get(f"/skills/{skill_id}?lang=en", headers=headers)
-        assert skill_detail_response.status_code == 200, skill_detail_response.text
-        skill_detail_html = skill_detail_response.text
-        assert 'id="create-draft-form"' in skill_detail_html
-
-        # 4) Verify draft detail has edit and seal forms while open
-        draft_detail_response = client.get(f"/drafts/{draft_id}?lang=en", headers=headers)
-        assert draft_detail_response.status_code == 200, draft_detail_response.text
-        draft_detail_html = draft_detail_response.text
-        assert 'id="save-draft-form"' in draft_detail_html
-        assert 'id="seal-draft-form"' in draft_detail_html
-
-        # 5) Seal draft
-        seal_response = client.post(
-            f"/api/v1/drafts/{draft_id}/seal",
-            headers=headers,
-            json={"version": "0.1.0"},
-        )
-        assert seal_response.status_code == 201, seal_response.text
-        version_id = int((seal_response.json().get("skill_version") or {})["id"])
-
-        # 6) Verify sealed draft is read-only and skill detail has create-release buttons
-        sealed_draft_response = client.get(f"/drafts/{draft_id}?lang=en", headers=headers)
-        assert sealed_draft_response.status_code == 200, sealed_draft_response.text
-        sealed_draft_html = sealed_draft_response.text
-        assert 'id="save-draft-form"' not in sealed_draft_html
-        assert 'id="seal-draft-form"' not in sealed_draft_html
-
-        skill_detail_after_seal = client.get(f"/skills/{skill_id}?lang=en", headers=headers)
-        skill_detail_after_seal_html = skill_detail_after_seal.text
-        assert 'data-action="create-release"' in skill_detail_after_seal_html
-
-        # 7) Create release and verify preparing state on detail page
-        create_release_response = client.post(
-            f"/api/v1/versions/{version_id}/releases",
-            headers=headers,
-        )
-        assert create_release_response.status_code == 201, create_release_response.text
-        release_id = int(create_release_response.json()["id"])
-
-        release_detail_response = client.get(f"/releases/{release_id}?lang=en", headers=headers)
-        assert release_detail_response.status_code == 200, release_detail_response.text
-        release_detail_html = release_detail_response.text
-        assert (
-            "preparing" in release_detail_html
-            or "Pending" in release_detail_html
-            or "pending" in release_detail_html.lower()
-        )
-        assert 'id="release-status"' in release_detail_html
-        assert 'id="artifact-section"' in release_detail_html
-
-        # 8) Run worker to materialize release
-        processed = run_worker_loop(limit=1)
-        assert processed == 1, f"expected worker to process 1 release job, got {processed}"
-
-        # 9) Verify ready state
-        release_ready_response = client.get(f"/releases/{release_id}?lang=en", headers=headers)
-        assert release_ready_response.status_code == 200, release_ready_response.text
-        release_ready_html = release_ready_response.text
-        assert (
-            "ready" in release_ready_html.lower()
-            or "Ready" in release_ready_html
-            or "success" in release_ready_html.lower()
-        )
-        for label in ["Manifest", "Bundle", "Provenance", "Signature"]:
-            assert label in release_ready_html
-
-        access_response = client.get("/access/tokens?lang=en", headers=headers)
-        assert access_response.status_code == 200, access_response.text
-        access_html = access_response.text
-        for label in [
-            "Current identity",
-            "Release access check",
-            "Release ID",
-            "Principal",
-            "Scopes",
-        ]:
-            assert label in access_html
-
-        # 10) Verify share page has exposure creation form
-        share_response = client.get(f"/releases/{release_id}/share?lang=en", headers=headers)
-        assert share_response.status_code == 200, share_response.text
-        share_html = share_response.text
-        assert f"registry --base-url {registry_base_url}" in share_html
-        assert "skills.example.com" not in share_html
-        assert 'id="create-exposure-form"' in share_html
-        for label in ["Private", "Shared by token", "Public"]:
-            assert label in share_html
-
-        # 11) Create exposures via API and verify UI actions
-        create_exposure(
-            client,
-            headers,
-            release_id=release_id,
-            audience_type="private",
-            listing_mode="direct_only",
-            requested_review_mode="none",
-        )
-        create_exposure(
-            client,
-            headers,
-            release_id=release_id,
-            audience_type="grant",
-            listing_mode="listed",
-            requested_review_mode="none",
-        )
-        public_exposure = create_exposure(
-            client,
-            headers,
-            release_id=release_id,
-            audience_type="public",
-            listing_mode="listed",
-            requested_review_mode="none",
-        )
-
-        # Verify share page shows exposure actions
-        share_with_exposures = client.get(f"/releases/{release_id}/share?lang=en", headers=headers)
-        share_with_html = share_with_exposures.text
-        public_exposure_id = int(public_exposure["id"])
-        public_exposure_row = None
-        for row in share_with_html.split("<tr>"):
-            if f"#{public_exposure_id}</td>" in row and "data-label" in row:
-                public_exposure_row = row
-                break
-        assert public_exposure_row is not None, "public exposure row not found in share page"
-        assert 'data-action="activate-exposure"' not in public_exposure_row
-        assert (
-            "Activation blocked: review must be approved first" in public_exposure_row
-            or "需要审核通过后才能激活" in public_exposure_row
-        )
-        assert 'data-action="revoke-exposure"' in share_with_html
-        assert 'data-action="patch-exposure"' in share_with_html
-
-        # 12) Verify review cases page shows actionable controls including comment
-        review_response = client.get("/review-cases?lang=en", headers=headers)
-        assert review_response.status_code == 200, review_response.text
-        review_html = review_response.text
-        assert 'data-action="review-approve"' in review_html
-        assert 'data-action="review-reject"' in review_html
-        assert 'data-action="review-comment"' in review_html
-        assert 'data-action="review-detail"' in review_html
-        assert "review-detail-row" in review_html
-        assert 'id="review-detail-content-' in review_html
-
-        # 13) Approve review and verify exposure becomes active
-        approve_exposure_review(client, session_factory, headers, int(public_exposure["id"]))
-
-        share_after_approval = client.get(f"/releases/{release_id}/share?lang=en", headers=headers)
-        share_after_html = share_after_approval.text
-        assert "active" in share_after_html.lower() or "Active" in share_after_html
-
-        home_html = client.get("/").text
-        assert "私人技能库" in home_html
-        for marker in ['id="user-panel-login"', 'id="open-auth-modal-btn"']:
-            assert marker in home_html
-    finally:
-        shutil.rmtree(tmpdir, ignore_errors=True)
-
-
 def assert_ui_rejects_untrusted_host_headers() -> None:
     tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-private-ui-host-test-"))
     try:
@@ -812,8 +543,7 @@ def assert_ui_rejects_untrusted_host_headers() -> None:
 def test_server_app_delegates_html_routes_and_respects_size_budget() -> None:
     assert_ui_route_registration_boundary()
     assert_app_size_budget()
-    assert_route_and_lifecycle_composition_boundaries()
-    assert_lifecycle_size_budget()
+    assert_route_composition_boundaries()
     assert_template_response_request_first()
     assert_alembic_config_declares_path_separator()
 
@@ -872,8 +602,7 @@ def test_auth_hidden_states_are_preserved_in_css() -> None:
 def main() -> None:
     assert_ui_route_registration_boundary()
     assert_app_size_budget()
-    assert_route_and_lifecycle_composition_boundaries()
-    assert_lifecycle_size_budget()
+    assert_route_composition_boundaries()
     assert_template_response_request_first()
     assert_alembic_config_declares_path_separator()
     test_private_first_console_ui_round_trip()

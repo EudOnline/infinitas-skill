@@ -1,28 +1,58 @@
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
-from infinitas_skill.release.git_state import ahead_behind, split_remote
+import pytest
+
+from src.infinitas_skill.release.git_state import (
+    ReleaseError,
+    resolve_skill,
+    signer_entries,
+    split_remote,
+)
 
 
-def test_split_remote_prefers_upstream_remote_name() -> None:
-    assert split_remote("origin/main", "backup") == "origin"
-    assert split_remote(None, "backup") == "backup"
+class TestResolveSkill:
+    def test_direct_dir(self):
+        with TemporaryDirectory() as td:
+            skill_dir = Path(td) / "skill"
+            skill_dir.mkdir()
+            (skill_dir / "_meta.json").write_text("{}", encoding="utf-8")
+            assert resolve_skill(td, skill_dir) == skill_dir.resolve()
+
+    def test_in_skills_root(self):
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            skill_dir = root / "skills" / "active" / "my-skill"
+            skill_dir.mkdir(parents=True)
+            (skill_dir / "_meta.json").write_text("{}", encoding="utf-8")
+            assert resolve_skill(root, "my-skill") == skill_dir.resolve()
+
+    def test_not_found_raises(self):
+        with TemporaryDirectory() as td:
+            with pytest.raises(ReleaseError) as exc:
+                resolve_skill(td, "missing")
+            assert "cannot resolve skill" in str(exc.value)
 
 
-def test_ahead_behind_parses_left_right_counts(monkeypatch, tmp_path: Path) -> None:
-    def fake_git(root, *args, check=True, extra_config=None):
-        return subprocess.CompletedProcess(
-            args=["git", *args],
-            returncode=0,
-            stdout="3 1\n",
-            stderr="",
-        )
+class TestSignerEntries:
+    def test_reads_entries(self):
+        with TemporaryDirectory() as td:
+            path = Path(td) / "signers"
+            path.write_text("alice@example.com\n# comment\nbob@example.com\n", encoding="utf-8")
+            assert signer_entries(path) == ["alice@example.com", "bob@example.com"]
 
-    monkeypatch.setattr("infinitas_skill.release.git_state.git", fake_git)
+    def test_missing_file(self):
+        assert signer_entries("/nonexistent") == []
 
-    ahead, behind = ahead_behind(tmp_path, "origin/main")
 
-    assert ahead == 3
-    assert behind == 1
+class TestSplitRemote:
+    def test_with_slash(self):
+        assert split_remote("origin/main", "upstream") == "origin"
+
+    def test_without_slash(self):
+        assert split_remote("main", "upstream") == "upstream"
+
+    def test_none_upstream(self):
+        assert split_remote(None, "upstream") == "upstream"

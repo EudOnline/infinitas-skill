@@ -75,4 +75,3 @@ def test_build_ai_index_chooses_latest_version_and_preserves_trust_metadata(tmp_
     assert skill["trust_state"] == "verified"
     assert skill["versions"]["1.2.0"]["trust_state"] == "verified"
     assert skill["versions"]["1.2.0"]["distribution_manifest_path"].endswith("1.2.0/manifest.json")
-

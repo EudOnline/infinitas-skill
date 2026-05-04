@@ -297,9 +297,10 @@ def test_recommendation_prefers_higher_quality_matched_memory_when_base_scores_t
         memory_context_enabled=True,
     )
     assert payload["results"][0]["qualified_name"] == "team/beta-preferred"
-    assert payload["results"][0]["memory_signals"]["applied_boost"] > payload["results"][1][
-        "memory_signals"
-    ]["applied_boost"]
+    assert (
+        payload["results"][0]["memory_signals"]["applied_boost"]
+        > payload["results"][1]["memory_signals"]["applied_boost"]
+    )
 
 
 def test_recommendation_can_emit_memory_usage_audit_entry(tmp_path: Path):

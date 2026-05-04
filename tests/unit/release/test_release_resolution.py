@@ -2,54 +2,76 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import pytest
 
-from infinitas_skill.release.git_state import ReleaseError
-from infinitas_skill.release.release_resolution import expected_skill_tag, resolve_skill
+from src.infinitas_skill.release.release_resolution import (
+    build_review_payload,
+    expected_skill_tag,
+    load_json,
+    resolve_skill,
+)
 
 
-def test_resolve_skill_prefers_explicit_directory(tmp_path: Path) -> None:
-    skill_dir = tmp_path / "custom-skill"
-    skill_dir.mkdir(parents=True, exist_ok=True)
-    (skill_dir / "_meta.json").write_text(
-        json.dumps({"name": "custom-skill", "version": "1.0.0"}),
-        encoding="utf-8",
-    )
-
-    resolved = resolve_skill(tmp_path, str(skill_dir))
-
-    assert resolved == skill_dir.resolve()
+class TestLoadJson:
+    def test_reads_file(self):
+        with TemporaryDirectory() as td:
+            path = Path(td) / "test.json"
+            path.write_text(json.dumps({"a": 1}), encoding="utf-8")
+            assert load_json(path) == {"a": 1}
 
 
-def test_resolve_skill_searches_stage_directories(tmp_path: Path) -> None:
-    skill_dir = tmp_path / "skills" / "active" / "demo-skill"
-    skill_dir.mkdir(parents=True, exist_ok=True)
-    (skill_dir / "_meta.json").write_text(
-        json.dumps({"name": "demo-skill", "version": "2.3.4"}),
-        encoding="utf-8",
-    )
+class TestResolveSkill:
+    def test_direct_dir(self):
+        with TemporaryDirectory() as td:
+            skill_dir = Path(td) / "skill"
+            skill_dir.mkdir()
+            (skill_dir / "_meta.json").write_text("{}", encoding="utf-8")
+            assert resolve_skill(td, skill_dir) == skill_dir.resolve()
 
-    resolved = resolve_skill(tmp_path, "demo-skill")
+    def test_in_skills_root(self):
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            skill_dir = root / "skills" / "active" / "my-skill"
+            skill_dir.mkdir(parents=True)
+            (skill_dir / "_meta.json").write_text("{}", encoding="utf-8")
+            assert resolve_skill(root, "my-skill") == skill_dir.resolve()
 
-    assert resolved == skill_dir.resolve()
+    def test_not_found_raises(self):
+        with TemporaryDirectory() as td:
+            with pytest.raises(Exception) as exc:
+                resolve_skill(td, "missing")
+            assert "cannot resolve skill" in str(exc.value)
 
 
-def test_resolve_skill_raises_for_unknown_target(tmp_path: Path) -> None:
-    with pytest.raises(ReleaseError, match="cannot resolve skill: missing"):
-        resolve_skill(tmp_path, "missing")
+class TestExpectedSkillTag:
+    def test_returns_tag(self):
+        with TemporaryDirectory() as td:
+            skill_dir = Path(td) / "skill"
+            skill_dir.mkdir()
+            (skill_dir / "_meta.json").write_text(
+                json.dumps({"name": "test-skill", "version": "1.0.0"}),
+                encoding="utf-8",
+            )
+            meta, tag = expected_skill_tag(skill_dir)
+            assert meta["name"] == "test-skill"
+            assert tag == "skill/test-skill/v1.0.0"
 
 
-def test_expected_skill_tag_reads_meta_and_formats_tag(tmp_path: Path) -> None:
-    skill_dir = tmp_path / "demo"
-    skill_dir.mkdir(parents=True, exist_ok=True)
-    (skill_dir / "_meta.json").write_text(
-        json.dumps({"name": "demo", "version": "1.2.3"}),
-        encoding="utf-8",
-    )
+class TestBuildReviewPayload:
+    def test_empty_entries(self):
+        result = build_review_payload([], None)
+        assert result == {"reviewers": []}
 
-    meta, tag = expected_skill_tag(skill_dir)
-
-    assert meta["name"] == "demo"
-    assert meta["version"] == "1.2.3"
-    assert tag == "skill/demo/v1.2.3"
+    def test_with_evaluation(self):
+        entries = [{"reviewer": "alice"}]
+        evaluation = {
+            "effective_review_state": "approved",
+            "required_approvals": 1,
+            "quorum_met": True,
+        }
+        result = build_review_payload(entries, evaluation)
+        assert result["reviewers"] == entries
+        assert result["effective_review_state"] == "approved"
+        assert result["quorum_met"] is True

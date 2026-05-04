@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import socket
 import tempfile
 from pathlib import Path
 
@@ -14,6 +15,14 @@ def tmpdir_session():
     d = Path(tempfile.mkdtemp(prefix="infinitas-e2e-"))
     yield d
     shutil.rmtree(d, ignore_errors=True)
+
+
+def _find_free_port() -> int:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("127.0.0.1", 0))
+    port = sock.getsockname()[1]
+    sock.close()
+    return port
 
 
 @pytest.fixture(scope="session")
@@ -40,7 +49,7 @@ def live_server(tmpdir_session):
     from server.app import create_app
 
     app = create_app()
-    port = 18923
+    port = _find_free_port()
     server = threading.Thread(
         target=uvicorn.run,
         args=(app,),

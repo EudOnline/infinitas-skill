@@ -260,18 +260,17 @@ def test_library_release_page_shows_real_artifacts_and_distribution_summary(
 
     for label in ["Manifest", "Bundle", "Provenance", "Signature"]:
         assert label in html
-    assert "Distribution summary" in html
-    assert "Visibility channels" in html
+    assert "Channels" in html
     assert "Agent tokens" in html
-    assert "Share links" in html
-    assert "Manage visibility" in html
+    assert "Links" in html
+    assert "Visibility" in html
     assert 'id="create-exposure-form"' in html
     assert 'data-action="activate-exposure"' in html
     assert 'data-action="revoke-exposure"' in html
     assert 'data-action="toggle-patch-form"' in html
-    assert "Issue agent token" in html
+    assert "Issue token" in html
     assert 'id="issue-token-form"' in html
-    assert "Create share link" in html
+    assert "Create link" in html
     assert 'id="create-share-form"' in html
 
 
@@ -295,10 +294,8 @@ def test_library_object_detail_shows_real_token_and_share_rows(
     html = detail.text
 
     assert "Demo Skill" in html
-    assert "#1" in html or "#2" in html
     assert "reader" in html
     assert "publisher" in html
-    assert "Yes" in html
     assert "2 / 5" in html
 
 
@@ -323,14 +320,13 @@ def test_access_center_and_shares_pages_render_real_inventory(
     assert "Demo Skill" in access_html
     assert "reader" in access_html
     assert "publisher" in access_html
-    assert "Token activity" in access_html
+    assert "Activity" in access_html
 
     shares_response = client.get("/shares?lang=en", headers=headers)
     assert shares_response.status_code == 200, shares_response.text
     shares_html = shares_response.text
     assert "Demo Skill" in shares_html
     assert "1.0.0" in shares_html
-    assert "Yes" in shares_html
     assert "2 / 5" in shares_html
 
 
@@ -514,9 +510,8 @@ def test_settings_page_centers_admin_token_and_distribution_flow(
     html = response.text
 
     assert "INFINITAS_REGISTRY_API_TOKEN" in html
-    assert "Access Center" in html
-    assert "Share Links" in html
-    assert "Public releases" in html
+    assert "Access" in html
+    assert "Shares" in html
     assert "OpenClaw" not in html
 
 

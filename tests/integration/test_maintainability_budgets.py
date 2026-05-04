@@ -13,7 +13,6 @@ MAX_LINES = {
     "src/infinitas_skill/server/ops.py": 550,
     "src/infinitas_skill/install/service.py": 650,
     "src/infinitas_skill/release/service.py": 650,
-    "server/ui/lifecycle.py": 500,
 }
 MAX_TOP_LEVEL_SCRIPT_FILES = 221
 

@@ -121,9 +121,10 @@ def _write_tar_gz(path: Path, entries: dict[str, bytes]):
 def test_verify_distribution_manifest_rejects_invalid_json(tmp_path: Path):
     manifest = tmp_path / "manifest.json"
     manifest.write_text("not json", encoding="utf-8")
-    with patch(
-        "infinitas_skill.install.distribution.verify_attestation"
-    ), patch("infinitas_skill.install.distribution.ROOT", tmp_path):
+    with (
+        patch("infinitas_skill.install.distribution.verify_attestation"),
+        patch("infinitas_skill.install.distribution.ROOT", tmp_path),
+    ):
         try:
             verify_distribution_manifest(str(manifest), root=tmp_path)
         except DistributionError as exc:
@@ -133,9 +134,10 @@ def test_verify_distribution_manifest_rejects_invalid_json(tmp_path: Path):
 def test_verify_distribution_manifest_rejects_bad_schema(tmp_path: Path):
     manifest = tmp_path / "manifest.json"
     manifest.write_text(json.dumps({"kind": "wrong"}), encoding="utf-8")
-    with patch(
-        "infinitas_skill.install.distribution.verify_attestation"
-    ), patch("infinitas_skill.install.distribution.ROOT", tmp_path):
+    with (
+        patch("infinitas_skill.install.distribution.verify_attestation"),
+        patch("infinitas_skill.install.distribution.ROOT", tmp_path),
+    ):
         try:
             verify_distribution_manifest(str(manifest), root=tmp_path)
         except DistributionError as exc:
@@ -145,9 +147,10 @@ def test_verify_distribution_manifest_rejects_bad_schema(tmp_path: Path):
 def test_verify_distribution_manifest_rejects_missing_provenance(tmp_path: Path):
     payload = _make_minimal_manifest()
     (tmp_path / "manifest.json").write_text(json.dumps(payload), encoding="utf-8")
-    with patch(
-        "infinitas_skill.install.distribution.verify_attestation"
-    ), patch("infinitas_skill.install.distribution.ROOT", tmp_path):
+    with (
+        patch("infinitas_skill.install.distribution.verify_attestation"),
+        patch("infinitas_skill.install.distribution.ROOT", tmp_path),
+    ):
         try:
             verify_distribution_manifest("manifest.json", root=tmp_path)
         except DistributionError as exc:
@@ -160,9 +163,10 @@ def test_verify_distribution_manifest_rejects_missing_signature(tmp_path: Path):
     provenance = _make_minimal_provenance()
     provenance_bytes = json.dumps(provenance).encode("utf-8")
     (tmp_path / "provenance.json").write_bytes(provenance_bytes)
-    with patch(
-        "infinitas_skill.install.distribution.verify_attestation"
-    ), patch("infinitas_skill.install.distribution.ROOT", tmp_path):
+    with (
+        patch("infinitas_skill.install.distribution.verify_attestation"),
+        patch("infinitas_skill.install.distribution.ROOT", tmp_path),
+    ):
         try:
             verify_distribution_manifest("manifest.json", root=tmp_path)
         except DistributionError as exc:
@@ -185,9 +189,10 @@ def test_verify_distribution_manifest_rejects_missing_bundle(tmp_path: Path):
     (tmp_path / "provenance.json").write_bytes(provenance_bytes)
     (tmp_path / "provenance.json.ssig").write_bytes(sig_bytes)
 
-    with patch(
-        "infinitas_skill.install.distribution.verify_attestation"
-    ), patch("infinitas_skill.install.distribution.ROOT", tmp_path):
+    with (
+        patch("infinitas_skill.install.distribution.verify_attestation"),
+        patch("infinitas_skill.install.distribution.ROOT", tmp_path),
+    ):
         try:
             verify_distribution_manifest("manifest.json", root=tmp_path)
         except DistributionError as exc:
@@ -211,9 +216,10 @@ def test_verify_distribution_manifest_rejects_digest_mismatch(tmp_path: Path):
     (tmp_path / "provenance.json.ssig").write_bytes(sig_bytes)
     (tmp_path / "bundle.tar.gz").write_bytes(bundle_bytes)
 
-    with patch(
-        "infinitas_skill.install.distribution.verify_attestation"
-    ), patch("infinitas_skill.install.distribution.ROOT", tmp_path):
+    with (
+        patch("infinitas_skill.install.distribution.verify_attestation"),
+        patch("infinitas_skill.install.distribution.ROOT", tmp_path),
+    ):
         try:
             verify_distribution_manifest("manifest.json", root=tmp_path)
         except DistributionError as exc:
@@ -238,9 +244,10 @@ def test_verify_distribution_manifest_rejects_bundle_size_mismatch(tmp_path: Pat
     (tmp_path / "provenance.json.ssig").write_bytes(sig_bytes)
     (tmp_path / "bundle.tar.gz").write_bytes(bundle_content)
 
-    with patch(
-        "infinitas_skill.install.distribution.verify_attestation"
-    ), patch("infinitas_skill.install.distribution.ROOT", tmp_path):
+    with (
+        patch("infinitas_skill.install.distribution.verify_attestation"),
+        patch("infinitas_skill.install.distribution.ROOT", tmp_path),
+    ):
         try:
             verify_distribution_manifest("manifest.json", root=tmp_path)
         except DistributionError as exc:
@@ -265,10 +272,13 @@ def test_verify_distribution_manifest_rejects_attestation_error(tmp_path: Path):
     (tmp_path / "provenance.json.ssig").write_bytes(sig_bytes)
     (tmp_path / "bundle.tar.gz").write_bytes(bundle_content)
 
-    with patch(
-        "infinitas_skill.install.distribution.verify_attestation",
-        side_effect=AttestationError("SSH verification failed"),
-    ), patch("infinitas_skill.install.distribution.ROOT", tmp_path):
+    with (
+        patch(
+            "infinitas_skill.install.distribution.verify_attestation",
+            side_effect=AttestationError("SSH verification failed"),
+        ),
+        patch("infinitas_skill.install.distribution.ROOT", tmp_path),
+    ):
         try:
             verify_distribution_manifest("manifest.json", root=tmp_path)
         except DistributionError as exc:
@@ -295,10 +305,13 @@ def test_verify_distribution_manifest_rejects_name_mismatch(tmp_path: Path):
     (tmp_path / "bundle.tar.gz").write_bytes(bundle_content)
 
     mock_result = {"verified": True, "formats_verified": ["ssh"]}
-    with patch(
-        "infinitas_skill.install.distribution.verify_attestation",
-        return_value=mock_result,
-    ), patch("infinitas_skill.install.distribution.ROOT", tmp_path):
+    with (
+        patch(
+            "infinitas_skill.install.distribution.verify_attestation",
+            return_value=mock_result,
+        ),
+        patch("infinitas_skill.install.distribution.ROOT", tmp_path),
+    ):
         try:
             verify_distribution_manifest("manifest.json", root=tmp_path)
         except DistributionError as exc:
@@ -326,10 +339,13 @@ def test_verify_distribution_manifest_rejects_registry_mismatch(tmp_path: Path):
     (tmp_path / "bundle.tar.gz").write_bytes(bundle_content)
 
     mock_result = {"verified": True, "formats_verified": ["ssh"]}
-    with patch(
-        "infinitas_skill.install.distribution.verify_attestation",
-        return_value=mock_result,
-    ), patch("infinitas_skill.install.distribution.ROOT", tmp_path):
+    with (
+        patch(
+            "infinitas_skill.install.distribution.verify_attestation",
+            return_value=mock_result,
+        ),
+        patch("infinitas_skill.install.distribution.ROOT", tmp_path),
+    ):
         try:
             verify_distribution_manifest("manifest.json", root=tmp_path)
         except DistributionError as exc:
@@ -358,10 +374,13 @@ def test_verify_distribution_manifest_rejects_missing_distribution_bundle_metada
     (tmp_path / "bundle.tar.gz").write_bytes(bundle_content)
 
     mock_result = {"verified": True, "formats_verified": ["ssh"]}
-    with patch(
-        "infinitas_skill.install.distribution.verify_attestation",
-        return_value=mock_result,
-    ), patch("infinitas_skill.install.distribution.ROOT", tmp_path):
+    with (
+        patch(
+            "infinitas_skill.install.distribution.verify_attestation",
+            return_value=mock_result,
+        ),
+        patch("infinitas_skill.install.distribution.ROOT", tmp_path),
+    ):
         try:
             verify_distribution_manifest("manifest.json", root=tmp_path)
         except DistributionError as exc:
@@ -385,9 +404,7 @@ def test_normalize_build_returns_none_for_non_dict():
 
 
 def test_normalize_build_strips_builder_when_requested():
-    result = _normalize_build(
-        {"builder": "uv", "archive_format": "tar.gz"}, include_builder=False
-    )
+    result = _normalize_build({"builder": "uv", "archive_format": "tar.gz"}, include_builder=False)
     assert "builder" not in result
     assert result["archive_format"] == "tar.gz"
 

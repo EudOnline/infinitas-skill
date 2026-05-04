@@ -77,10 +77,7 @@ def test_init_db_applies_job_lease_columns(monkeypatch, tmp_path) -> None:
 
     init_db()
 
-    columns = {
-        str(column["name"]): column
-        for column in inspect(get_engine()).get_columns("jobs")
-    }
+    columns = {str(column["name"]): column for column in inspect(get_engine()).get_columns("jobs")}
     assert "heartbeat_at" in columns
     assert "lease_expires_at" in columns
     assert "attempt_count" in columns
