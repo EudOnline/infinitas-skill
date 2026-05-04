@@ -11,7 +11,9 @@ from sqlalchemy.orm import Session
 from server.auth import (
     AUTH_COOKIE_MAX_AGE,
     AUTH_COOKIE_NAME,
+    CSRF_COOKIE_NAME,
     create_auth_session_cookie,
+    generate_csrf_token,
     maybe_get_current_user,
 )
 from server.db import get_db
@@ -75,6 +77,32 @@ def _secure_cookie_requested(request: Request) -> bool:
     return request.url.scheme == "https" or forwarded_proto == "https"
 
 
+def _set_csrf_cookie(response: Response, request: Request) -> str:
+    token = generate_csrf_token()
+    secure = _secure_cookie_requested(request)
+    response.set_cookie(
+        key=CSRF_COOKIE_NAME,
+        value=token,
+        max_age=AUTH_COOKIE_MAX_AGE,
+        path="/",
+        samesite="lax",
+        secure=secure,
+        httponly=False,  # Must be readable by JS for double-submit pattern
+    )
+    return token
+
+
+def _clear_csrf_cookie(response: Response, request: Request) -> None:
+    secure = _secure_cookie_requested(request)
+    response.delete_cookie(
+        key=CSRF_COOKIE_NAME,
+        path="/",
+        samesite="lax",
+        secure=secure,
+        httponly=False,
+    )
+
+
 @router.post("/login", response_model=TokenLoginResponse)
 async def login(
     payload: TokenLoginRequest,
@@ -109,6 +137,7 @@ async def login(
         secure=secure_cookie,
         httponly=True,
     )
+    _set_csrf_cookie(response, request)
     return TokenLoginResponse(success=True, username=user.username, role=user.role)
 
 
@@ -122,7 +151,15 @@ async def logout(response: Response, request: Request):
         secure=_secure_cookie_requested(request),
         httponly=True,
     )
+    _clear_csrf_cookie(response, request)
     return {"success": True}
+
+
+@router.get("/csrf")
+async def get_csrf_token(request: Request, response: Response):
+    """Refresh and return a new CSRF token for the current session."""
+    token = _set_csrf_cookie(response, request)
+    return {"csrf_token": token}
 
 
 @router.get("/me")

@@ -11,20 +11,20 @@ from server.models import User
 router = APIRouter(prefix="/api/background", tags=["background"])
 
 
-# 预置背景图库
+# Preset backgrounds using CSS gradients only (no external URLs)
 BACKGROUND_PRESETS = {
     "light": [
-        {"id": "sakura-street", "name": "樱花街道", "url": "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1920&q=80"},
-        {"id": "anime-sky", "name": "动漫天空", "url": "https://images.unsplash.com/photo-1560972550-aba3456b5564?w=1920&q=80"},
-        {"id": "city-sunset", "name": "城市日落", "url": "https://images.unsplash.com/photo-1514565131-fce0801e5785?w=1920&q=80"},
-        {"id": "cherry-blossom", "name": "樱花盛开", "url": "https://images.unsplash.com/photo-1522383225653-ed111181a951?w=1920&q=80"},
+        {"id": "sakura-street", "name": "樱花街道", "url": None},
+        {"id": "anime-sky", "name": "动漫天空", "url": None},
+        {"id": "city-sunset", "name": "城市日落", "url": None},
+        {"id": "cherry-blossom", "name": "樱花盛开", "url": None},
         {"id": "gradient-pink", "name": "粉色渐变", "url": None},
     ],
     "dark": [
-        {"id": "starry-night", "name": "星空夜景", "url": "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1920&q=80"},
-        {"id": "neon-city", "name": "霓虹城市", "url": "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1920&q=80"},
-        {"id": "aurora", "name": "极光", "url": "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=1920&q=80"},
-        {"id": "cyberpunk", "name": "赛博朋克", "url": "https://images.unsplash.com/photo-1555680202-c86f0e12f086?w=1920&q=80"},
+        {"id": "starry-night", "name": "星空夜景", "url": None},
+        {"id": "neon-city", "name": "霓虹城市", "url": None},
+        {"id": "aurora", "name": "极光", "url": None},
+        {"id": "cyberpunk", "name": "赛博朋克", "url": None},
         {"id": "gradient-dark", "name": "深色渐变", "url": None},
     ]
 }

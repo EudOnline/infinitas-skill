@@ -4,6 +4,7 @@ import base64
 import hashlib
 import hmac
 import json
+import secrets
 import time
 
 from fastapi import Cookie, Depends, Header, HTTPException, Request
@@ -18,6 +19,9 @@ from server.settings import get_settings
 AUTH_COOKIE_NAME = 'infinitas_auth_token'
 AUTH_COOKIE_MAX_AGE = 30 * 24 * 60 * 60
 AUTH_SESSION_PREFIX = 'session:'
+
+CSRF_COOKIE_NAME = 'csrf_token'
+CSRF_HEADER_NAME = 'x-csrf-token'
 
 
 def _extract_bearer_token(authorization: str | None) -> str | None:
@@ -164,3 +168,40 @@ def require_role(*allowed_roles: str):
         return user
 
     return dependency
+
+
+# ── CSRF Protection ────────────────────────────────────────────────────────
+
+def generate_csrf_token() -> str:
+    """Generate a cryptographically secure random CSRF token."""
+    return secrets.token_urlsafe(32)
+
+
+def validate_csrf_token(request: Request) -> None:
+    """
+    Validate CSRF token for cookie-authenticated state-changing requests.
+
+    Skips validation when:
+    - Request method is safe (GET, HEAD, OPTIONS, TRACE)
+    - Bearer token authentication is used
+    - No auth cookie is present (not logged in)
+    """
+    if request.method in {'GET', 'HEAD', 'OPTIONS', 'TRACE'}:
+        return
+
+    # Bearer token auth is not vulnerable to CSRF
+    if _resolve_request_token(request):
+        return
+
+    # No auth cookie means no session to protect
+    if not request.cookies.get(AUTH_COOKIE_NAME):
+        return
+
+    csrf_cookie = request.cookies.get(CSRF_COOKIE_NAME)
+    csrf_header = request.headers.get(CSRF_HEADER_NAME)
+
+    if not csrf_cookie or not csrf_header:
+        raise HTTPException(status_code=403, detail='CSRF token missing')
+
+    if not hmac.compare_digest(csrf_cookie, csrf_header):
+        raise HTTPException(status_code=403, detail='CSRF token mismatch')
