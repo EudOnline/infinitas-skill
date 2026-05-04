@@ -10,6 +10,10 @@ status: maintained
 
 Reference docs describe exact behavior, contracts, schemas, and maintained command surfaces. Use this section when precision matters more than narrative.
 
+## API and web surface
+
+- [API reference](api-reference.md) — HTTP endpoints, authentication, and OpenAPI schema
+
 ## CLI and command surfaces
 
 - [CLI reference](cli-reference.md)

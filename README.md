@@ -199,6 +199,7 @@ Use these canonical docs for the current model:
 
 - [Private-first cutover](docs/guide/private-first-cutover.md)
 - [OpenClaw runtime contract](docs/reference/openclaw-runtime-contract.md)
+- [API reference](docs/reference/api-reference.md) documents the HTTP endpoints, authentication schemes, and OpenAPI schema
 - [CLI reference](docs/reference/cli-reference.md) documents `uv run infinitas discovery ...`, `uv run infinitas registry ...`, and the maintained operator command surface.
 - [Release attestation](docs/reference/release-attestation.md) covers `release_trust_mode`, CI-native attestation, `scripts/verify-ci-attestation.py`, and `.github/workflows/release-attestation.yml`.
 - [Platform drift playbook](docs/ops/platform-drift-playbook.md)

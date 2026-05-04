@@ -96,8 +96,8 @@ Before shipping page-specific features, complete these shared tasks.
 
 Files to touch first:
 
-- [server/static/js/app.js](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/static/js/app.js)
-- [server/templates/layout-kawaii.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/layout-kawaii.html)
+- [server/static/js/app.js](../../server/static/js/app.js)
+- [server/templates/layout-kawaii.html](../../server/templates/layout-kawaii.html)
 
 Checklist:
 
@@ -116,14 +116,14 @@ Acceptance check:
 
 Files likely involved:
 
-- [server/ui/formatting.py](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/ui/formatting.py)
-- [server/ui/navigation.py](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/ui/navigation.py)
-- [server/templates/skills.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/skills.html)
-- [server/templates/skill-detail.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/skill-detail.html)
-- [server/templates/draft-detail.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/draft-detail.html)
-- [server/templates/release-detail.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/release-detail.html)
-- [server/templates/share-detail.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/share-detail.html)
-- [server/templates/review-cases.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/review-cases.html)
+- [server/ui/formatting.py](../../server/ui/formatting.py)
+- [server/ui/navigation.py](../../server/ui/navigation.py)
+- ~~server/templates/skills.html~~ (removed)
+- ~~server/templates/skill-detail.html~~ (removed)
+- ~~server/templates/draft-detail.html~~ (removed)
+- ~~server/templates/release-detail.html~~ (removed)
+- ~~server/templates/share-detail.html~~ (removed)
+- ~~server/templates/review-cases.html~~ (removed)
 
 Checklist:
 
@@ -142,11 +142,11 @@ Acceptance check:
 
 Files most likely to change:
 
-- [server/static/js/app.js](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/static/js/app.js)
-- [server/templates/skills.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/skills.html)
-- [server/templates/skill-detail.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/skill-detail.html)
-- [server/templates/release-detail.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/release-detail.html)
-- [server/templates/share-detail.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/share-detail.html)
+- [server/static/js/app.js](../../server/static/js/app.js)
+- ~~server/templates/skills.html~~ (removed)
+- ~~server/templates/skill-detail.html~~ (removed)
+- ~~server/templates/release-detail.html~~ (removed)
+- ~~server/templates/share-detail.html~~ (removed)
 
 Checklist:
 
@@ -168,11 +168,11 @@ Acceptance check:
 
 Files most likely to change:
 
-- [server/templates/library.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/library.html)
-- [server/templates/object-detail.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/object-detail.html)
-- [server/templates/release-detail-v2.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/release-detail-v2.html)
-- [server/ui/library.py](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/ui/library.py)
-- [server/static/js/modules/library.js](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/static/js/modules/library.js)
+- [server/templates/library.html](../../server/templates/library.html)
+- [server/templates/object-detail.html](../../server/templates/object-detail.html)
+- [server/templates/release-detail-v2.html](../../server/templates/release-detail-v2.html)
+- [server/ui/library.py](../../server/ui/library.py)
+- [server/static/js/modules/library.js](../../server/static/js/modules/library.js)
 
 Checklist:
 
@@ -190,12 +190,12 @@ Acceptance check:
 
 Files most likely to change:
 
-- [server/templates/access-center.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/access-center.html)
-- [server/templates/shares.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/shares.html)
-- [server/templates/activity.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/activity.html)
-- [server/static/js/modules/access-center.js](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/static/js/modules/access-center.js)
-- [server/static/js/modules/shares.js](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/static/js/modules/shares.js)
-- [server/static/js/modules/activity.js](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/static/js/modules/activity.js)
+- [server/templates/access-center.html](../../server/templates/access-center.html)
+- [server/templates/shares.html](../../server/templates/shares.html)
+- [server/templates/activity.html](../../server/templates/activity.html)
+- [server/static/js/modules/access-center.js](../../server/static/js/modules/access-center.js)
+- [server/static/js/modules/shares.js](../../server/static/js/modules/shares.js)
+- [server/static/js/modules/activity.js](../../server/static/js/modules/activity.js)
 
 Checklist:
 
@@ -234,10 +234,10 @@ surfaces. It is not the primary browser product direction.
 
 Files most likely to change:
 
-- [server/templates/skills.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/skills.html)
-- [server/ui/lifecycle.py](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/ui/lifecycle.py)
-- [server/ui/lifecycle_actions.py](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/ui/lifecycle_actions.py)
-- [server/ui/navigation.py](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/ui/navigation.py)
+- ~~server/templates/skills.html~~ (removed)
+- ~~server/ui/lifecycle.py~~ (removed)
+- ~~server/ui/lifecycle_actions.py~~ (removed)
+- [server/ui/navigation.py](../../server/ui/navigation.py)
 
 Checklist:
 
@@ -253,8 +253,8 @@ Acceptance check:
 
 Files most likely to change:
 
-- [server/templates/skill-detail.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/skill-detail.html)
-- [server/ui/navigation.py](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/ui/navigation.py)
+- ~~server/templates/skill-detail.html~~ (removed)
+- [server/ui/navigation.py](../../server/ui/navigation.py)
 
 Checklist:
 
@@ -271,8 +271,8 @@ Acceptance check:
 
 Files most likely to change:
 
-- [server/templates/draft-detail.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/draft-detail.html)
-- [server/ui/navigation.py](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/ui/navigation.py)
+- ~~server/templates/draft-detail.html~~ (removed)
+- [server/ui/navigation.py](../../server/ui/navigation.py)
 
 Checklist:
 
@@ -292,8 +292,8 @@ Acceptance check:
 
 Files most likely to change:
 
-- [server/templates/skill-detail.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/skill-detail.html)
-- [server/ui/navigation.py](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/ui/navigation.py)
+- ~~server/templates/skill-detail.html~~ (removed)
+- [server/ui/navigation.py](../../server/ui/navigation.py)
 
 Checklist:
 
@@ -309,8 +309,8 @@ Acceptance check:
 
 Files most likely to change:
 
-- [server/templates/release-detail.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/release-detail.html)
-- [server/ui/navigation.py](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/ui/navigation.py)
+- ~~server/templates/release-detail.html~~ (removed)
+- [server/ui/navigation.py](../../server/ui/navigation.py)
 
 Checklist:
 
@@ -329,8 +329,8 @@ Acceptance check:
 
 Files most likely to change:
 
-- [server/templates/share-detail.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/share-detail.html)
-- [server/ui/navigation.py](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/ui/navigation.py)
+- ~~server/templates/share-detail.html~~ (removed)
+- [server/ui/navigation.py](../../server/ui/navigation.py)
 
 Checklist:
 
@@ -353,8 +353,8 @@ Acceptance check:
 
 Files most likely to change:
 
-- [server/templates/share-detail.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/share-detail.html)
-- [server/static/js/app.js](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/static/js/app.js)
+- ~~server/templates/share-detail.html~~ (removed)
+- [server/static/js/app.js](../../server/static/js/app.js)
 
 Checklist:
 
@@ -373,8 +373,8 @@ Acceptance check:
 
 Files most likely to change:
 
-- [server/templates/review-cases.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/review-cases.html)
-- [server/ui/navigation.py](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/ui/navigation.py)
+- ~~server/templates/review-cases.html~~ (removed)
+- [server/ui/navigation.py](../../server/ui/navigation.py)
 
 Checklist:
 
@@ -396,8 +396,8 @@ Acceptance check:
 
 Files most likely to change:
 
-- [server/templates/access-tokens.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/access-tokens.html)
-- [server/ui/navigation.py](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/ui/navigation.py)
+- ~~server/templates/access-tokens.html~~ (removed)
+- [server/ui/navigation.py](../../server/ui/navigation.py)
 
 Checklist:
 
@@ -413,8 +413,8 @@ Acceptance check:
 
 Files most likely to change:
 
-- [server/templates/index-kawaii.html](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/templates/index-kawaii.html)
-- [server/static/js/app.js](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/server/static/js/app.js)
+- [server/templates/index-kawaii.html](../../server/templates/index-kawaii.html)
+- [server/static/js/app.js](../../server/static/js/app.js)
 
 Checklist:
 
@@ -461,7 +461,7 @@ Tests should expand from the current read-only UI round-trip into action flows.
 
 Files to extend first:
 
-- [tests/integration/test_private_registry_ui.py](/Users/lvxiaoer/Documents/codeWork/infinitas-skill/tests/integration/test_private_registry_ui.py)
+- [tests/integration/test_private_registry_ui.py](tests/integration/test_private_registry_ui.py)
 
 Add coverage for:
 

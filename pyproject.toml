@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=69"]
+requires = [ "setuptools>=69",]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,74 +7,72 @@ name = "infinitas-hosted-registry"
 version = "0.1.0"
 description = "Hosted control plane for the infinitas private skill registry"
 requires-python = ">=3.11"
-dependencies = [
-  "alembic>=1.16,<2",
-  "fastapi>=0.116,<1",
-  "httpx>=0.28,<1",
-  "jinja2>=3.1,<4",
-  "sqlalchemy>=2.0,<3",
-  "uvicorn>=0.35,<1",
-]
+dependencies = [ "alembic>=1.16,<2", "fastapi>=0.116,<1", "httpx>=0.28,<1", "jinja2>=3.1,<4", "sqlalchemy>=2.0,<3", "uvicorn>=0.35,<1",]
+
+[dependency-groups]
+dev = [ "pytest>=8,<9", "pytest-playwright>=0.5", "ruff>=0.11,<1", "pytest-cov>=6,<7",]
 
 [project.scripts]
 infinitas = "infinitas_skill.cli.main:main"
 
 [project.optional-dependencies]
-memory = [
-  "mem0ai>=0.1,<1",
-]
-
-[dependency-groups]
-dev = [
-  "pytest>=8,<9",
-  "pytest-playwright>=0.5",
-  "ruff>=0.11,<1",
-]
-
-[tool.setuptools.packages.find]
-where = [".", "src"]
-include = ["server*", "infinitas_skill*"]
-
-[tool.setuptools.package-data]
-server = [
-  "templates/*.html",
-  "templates/partials/*.html",
-  "static/css/*.css",
-  "static/js/*.js",
-  "static/js/modules/*.js",
-  "locales/*.json",
-]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
+memory = [ "mem0ai>=0.1,<1",]
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+exclude = ["LICENSE", "openapi.json", ".venv", "node_modules"]
+
+[tool.setuptools.package-data]
+server = [ "templates/*.html", "templates/partials/*.html", "static/css/*.css", "static/js/*.js", "static/js/modules/*.js", "locales/*.json",]
+
+[tool.pytest.ini_options]
+testpaths = [ "tests",]
+addopts = "--cov=src --cov=server --cov-report=term-missing --cov-report=xml"
 
 [tool.ruff.lint]
-select = ["E", "F", "I"]
+select = [ "E", "W", "F", "I", "C90", "S",]
+ignore = [ "S101", "S603", "S607", "S112",]
+
+[tool.coverage.run]
+source = [ "src", "server",]
+omit = [ "*/tests/*", "*/test_*", "*/conftest.py",]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [ "pragma: no cover", "if TYPE_CHECKING:", "raise NotImplementedError", "pass",]
+show_missing = true
+skip_covered = false
+
+[tool.setuptools.packages.find]
+where = [ ".", "src",]
+include = [ "server*", "infinitas_skill*",]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 20
 
 [tool.ruff.lint.per-file-ignores]
-"server/app.py" = ["E501"]
-"server/ui/formatting.py" = ["E501"]
-"server/ui/home.py" = ["E501"]
-"server/ui/lifecycle.py" = ["E501"]
-"server/ui/routes.py" = ["E501"]
-"src/infinitas_skill/cli/reference.py" = ["E501"]
-"src/infinitas_skill/compatibility/checks.py" = ["E501"]
-"src/infinitas_skill/compatibility/contracts.py" = ["E501"]
-"src/infinitas_skill/compatibility/policy.py" = ["E501"]
-"src/infinitas_skill/install/planning.py" = ["E501"]
-"src/infinitas_skill/install/service.py" = ["E402", "E501"]
-"src/infinitas_skill/policy/cli.py" = ["E501"]
-"src/infinitas_skill/policy/service.py" = ["E501"]
-"src/infinitas_skill/registry/cli.py" = ["E501"]
-"src/infinitas_skill/release/service.py" = ["E501"]
-"src/infinitas_skill/release/state.py" = ["E501"]
-"src/infinitas_skill/server/backup.py" = ["E501"]
-"src/infinitas_skill/server/ops.py" = ["E501"]
-"src/infinitas_skill/server/systemd.py" = ["E501"]
-"tests/integration/test_cli_release_state.py" = ["E501"]
-"tests/integration/test_cli_server_ops.py" = ["E501"]
-"tests/integration/test_private_registry_ui.py" = ["E501"]
+"server/app.py" = [ "E501",]
+"server/ui/formatting.py" = [ "E501",]
+"server/ui/home.py" = [ "E501",]
+"server/ui/routes.py" = [ "E501", "C901", "S105",]
+"src/infinitas_skill/cli/reference.py" = [ "E501",]
+"src/infinitas_skill/compatibility/checks.py" = [ "E501",]
+"src/infinitas_skill/compatibility/contracts.py" = [ "E501",]
+"src/infinitas_skill/compatibility/policy.py" = [ "E501",]
+"src/infinitas_skill/install/planning.py" = [ "E501",]
+"src/infinitas_skill/install/service.py" = [ "E402", "E501",]
+"src/infinitas_skill/policy/cli.py" = [ "E501",]
+"src/infinitas_skill/policy/service.py" = [ "E501",]
+"src/infinitas_skill/registry/cli.py" = [ "E501",]
+"src/infinitas_skill/release/service.py" = [ "E501",]
+"src/infinitas_skill/release/state.py" = [ "E501",]
+"src/infinitas_skill/server/backup.py" = [ "E501",]
+"src/infinitas_skill/server/ops.py" = [ "E501",]
+"src/infinitas_skill/server/systemd.py" = [ "E501",]
+"tests/**" = [ "S105", "S108", "S310",]
+"scripts/**" = [ "S105", "S108", "S310", "S603", "S607",]
+"src/infinitas_skill/**" = [ "S105", "S202", "S310", "C901",]
+"tests/integration/test_cli_release_state.py" = [ "E501",]
+"tests/integration/test_cli_server_ops.py" = [ "E501",]
+"tests/integration/test_private_registry_ui.py" = [ "E501",]
