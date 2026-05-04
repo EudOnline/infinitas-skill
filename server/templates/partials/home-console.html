@@ -1,9 +1,8 @@
 <section class="console-section animate-in" id="console">
   <div class="section-topline">
     <div class="section-header">
-      <div><span aria-hidden="true">🎮</span></div>
       <div>
-        <h2>{{ ui.console_section_title if ui else '控制台' if page_language == 'zh' else 'Console' }}</h2>
+        <h2>{{ ui.console_section_title }}</h2>
         {% if maintainer_body %}<p class="hidden md:block">{{ maintainer_body }}</p>{% endif %}
       </div>
     </div>
@@ -15,7 +14,6 @@
         data-auth-required="true"
         data-auth-target="{{ maintainer_primary_link.href }}"
       >
-        <span><span aria-hidden="true">🎮</span></span>
         <span>{{ maintainer_primary_link.label }}</span>
       </a>
     </div>

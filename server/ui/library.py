@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from html import escape
 from typing import Any
 
 from sqlalchemy import select
@@ -30,7 +29,7 @@ from server.ui.formatting import (
     load_json_list,
     load_json_object,
 )
-from server.ui.i18n import pick_lang, with_lang
+from server.ui.i18n import with_lang
 from server.ui.navigation import _build_exposure_policy, _derive_exposure_action_state
 
 
@@ -259,6 +258,17 @@ def _share_link_state(share: ShareLink) -> str:
     return "active"
 
 
+def _share_link_state_from_grant(grant: AccessGrant, constraints: dict[str, Any]) -> str:
+    """Compute share-link state from grant + constraints, checking usage exhaustion."""
+    base = _grant_state(grant, constraints)
+    if base != "active":
+        return base
+    usage_limit = constraints.get("usage_limit")
+    if usage_limit is not None and int(constraints.get("usage_count") or 0) >= int(usage_limit):
+        return "exhausted"
+    return "active"
+
+
 def _credential_is_active(credential: Credential, grant: AccessGrant | None = None) -> bool:
     return _credential_state(credential, grant) == "active"
 
@@ -383,7 +393,7 @@ def _build_share_rows_from_scope(
                             if constraints.get("usage_limit") is not None
                             else None
                         ),
-                        "state": _grant_state(grant, constraints),
+                        "state": _share_link_state_from_grant(grant, constraints),
                         "can_revoke": _grant_is_active(grant, constraints),
                         "_sort_at": _parse_datetime(grant.created_at)
                         or datetime.min.replace(tzinfo=timezone.utc),
@@ -514,7 +524,7 @@ def _build_release_artifact_rows(
             "id": artifact.id,
             "kind": humanize_identifier(artifact.kind),
             "sha256": artifact.sha256 or "-",
-            "size_bytes": str(artifact.size_bytes),
+            "size_bytes": str(artifact.size_bytes) if artifact.size_bytes is not None else "-",
             "storage_uri": artifact.storage_uri or "-",
         }
         for artifact in release_service.get_current_artifacts_for_release(db, release)
@@ -697,16 +707,13 @@ def _object_payload(scope: LibraryScope, registry_object: RegistryObject) -> dic
                     if _credential_is_active(credential, grant):
                         token_count += 1
 
-    owner = scope.principals_by_id.get(registry_object.namespace_id)
     return {
         "id": registry_object.id,
         "kind": registry_object.kind,
-        "kind_label": humanize_identifier(registry_object.kind),
         "slug": registry_object.slug,
         "display_name": registry_object.display_name,
         "summary": registry_object.summary or "",
-        "owner": owner.slug if owner is not None else None,
-        "updated_at": _iso_stamp(registry_object.updated_at),
+        "updated_at": humanize_timestamp(_iso_stamp(registry_object.updated_at)),
         "current_release": current_release,
         "current_visibility": _visibility_payload(current_exposure),
         "token_count": token_count,
@@ -724,8 +731,10 @@ def get_library_object_detail(
     *,
     actor: AccessContext,
     object_id: int,
+    scope: LibraryScope | None = None,
 ) -> dict[str, Any] | None:
-    scope = load_library_scope(db, actor=actor)
+    if scope is None:
+        scope = load_library_scope(db, actor=actor)
     registry_object = next((item for item in scope.objects if item.id == object_id), None)
     if registry_object is None:
         return None
@@ -756,7 +765,8 @@ def list_library_releases_from_scope(
                 "release_id": release.id,
                 "version": version.version if version is not None else None,
                 "state": release.state,
-                "ready_at": _iso_stamp(release.ready_at),
+                "created_at": humanize_timestamp(_iso_stamp(release.created_at)),
+                "ready_at": humanize_timestamp(_iso_stamp(release.ready_at)),
                 "visibility": _visibility_payload(exposure),
             }
         )
@@ -835,8 +845,10 @@ def list_library_token_rows(
     actor: AccessContext,
     lang: str,
     object_id: int | None = None,
+    scope: LibraryScope | None = None,
 ) -> list[dict[str, Any]]:
-    scope = load_library_scope(db, actor=actor)
+    if scope is None:
+        scope = load_library_scope(db, actor=actor)
     return _build_token_rows_from_scope(scope, lang=lang, object_id=object_id)
 
 
@@ -845,8 +857,10 @@ def list_library_token_activity_rows(
     *,
     actor: AccessContext,
     lang: str,
+    scope: LibraryScope | None = None,
 ) -> list[dict[str, Any]]:
-    scope = load_library_scope(db, actor=actor)
+    if scope is None:
+        scope = load_library_scope(db, actor=actor)
     token_rows = _build_token_rows_from_scope(scope, lang=lang)
     return _build_token_activity_rows_from_token_rows(token_rows)
 
@@ -857,8 +871,10 @@ def list_library_share_rows(
     actor: AccessContext,
     lang: str,
     object_id: int | None = None,
+    scope: LibraryScope | None = None,
 ) -> list[dict[str, Any]]:
-    scope = load_library_scope(db, actor=actor)
+    if scope is None:
+        scope = load_library_scope(db, actor=actor)
     return _build_share_rows_from_scope(scope, lang=lang, object_id=object_id)
 
 
@@ -871,74 +887,3 @@ def list_library_activity_rows(
     return _build_activity_rows_from_scope(scope)
 
 
-def _page_shell(*, title: str, body: str) -> str:
-    return (
-        "<!doctype html>"
-        "<html><head>"
-        f"<meta charset='utf-8'><title>{escape(title)}</title>"
-        "</head><body>"
-        f"{body}"
-        "</body></html>"
-    )
-
-
-def render_library_index_html(items: list[dict[str, Any]], *, lang: str) -> str:
-    heading = pick_lang(lang, "对象库", "Library")
-    cards = []
-    for item in items:
-        href = with_lang(f"/library/{item['id']}", lang)
-        cards.append(
-            "<li>"
-            f"<a href='{escape(href)}'>{escape(item['display_name'])}</a>"
-            f" <span>{escape(item['kind_label'])}</span>"
-            "</li>"
-        )
-    body = f"<main><h1>{escape(heading)}</h1><ul>{''.join(cards)}</ul></main>"
-    return _page_shell(title=heading, body=body)
-
-
-def render_library_object_html(detail: dict[str, Any], *, lang: str) -> str:
-    heading = detail["object"]["display_name"]
-    releases_label = pick_lang(lang, "发布版本", "Releases")
-    links = []
-    for release in detail["releases"]:
-        href = with_lang(
-            f"/library/{detail['object']['id']}/releases/{release['release_id']}",
-            lang,
-        )
-        label = release.get("version") or f"Release {release['release_id']}"
-        links.append(
-            "<li>"
-            f"<a href='{escape(href)}'>"
-            f"{escape(label)}"
-            "</a></li>"
-        )
-    body = (
-        "<main>"
-        f"<h1>{escape(heading)}</h1>"
-        f"<p>{escape(detail['object']['summary'] or '')}</p>"
-        f"<h2>{escape(releases_label)}</h2>"
-        f"<ul>{''.join(links)}</ul>"
-        "</main>"
-    )
-    return _page_shell(title=heading, body=body)
-
-
-def render_library_release_html(
-    detail: dict[str, Any],
-    release_payload: dict[str, Any],
-    *,
-    lang: str,
-) -> str:
-    heading = pick_lang(lang, "发布详情", "Release")
-    audience = release_payload["visibility"]["audience_type"] or "-"
-    version = release_payload.get("version") or f"Release {release_payload['release_id']}"
-    body = (
-        "<main>"
-        f"<h1>{escape(heading)}</h1>"
-        f"<p>{escape(detail['object']['display_name'])}</p>"
-        f"<p>{escape(version)}</p>"
-        f"<p>{escape(audience)}</p>"
-        "</main>"
-    )
-    return _page_shell(title=heading, body=body)

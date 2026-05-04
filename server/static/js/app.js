@@ -61,6 +61,16 @@ window.themeManager = themeManager;
 
 // Main initialization
 document.addEventListener('DOMContentLoaded', () => {
+  // Scroll nav to active item on mobile
+  const nav = document.querySelector('.nav');
+  const active = nav && nav.querySelector('a[aria-current="page"]');
+  if (nav && active) {
+    const navRect = nav.getBoundingClientRect();
+    const activeRect = active.getBoundingClientRect();
+    const scrollLeft = activeRect.left - navRect.left - (navRect.width / 2) + (activeRect.width / 2);
+    nav.scrollLeft = Math.max(0, scrollLeft + nav.scrollLeft);
+  }
+
   bindCopyTriggers();
   drainPendingToasts();
 

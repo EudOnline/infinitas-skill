@@ -1,11 +1,9 @@
 <section class="hero-section mb-4 md:mb-3.5 animate-in" id="start">
-  <div class="p-8 relative md:p-5 kawaii-card">
-    <div class="corner-decoration corner-decoration--tl"></div>
-    <div class="corner-decoration corner-decoration--br"></div>
+  <div class="p-4 sm:p-5 md:p-6 relative kawaii-card">
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-5 items-start">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 md:gap-6 items-start">
       <div>
-        <div class="hero-kicker"><span aria-hidden="true">✨</span> {{ page_eyebrow }}</div>
+        <div class="hero-kicker">{{ page_eyebrow }}</div>
 
         <h1 class="hero-title">
           {{ hero_title }}
@@ -14,34 +12,32 @@
           {% endif %}
         </h1>
 
-        <p class="text-base text-kawaii-ink-soft mb-5 leading-relaxed max-w-[26rem]">{{ hero_body }}</p>
+        <p class="text-base text-kawaii-ink-soft mb-4 sm:mb-5 leading-relaxed max-w-[26rem]">{{ hero_body }}</p>
 
         <button class="hero-cta min-h-[2.75rem] py-[0.6rem] px-[1.25rem] kawaii-button kawaii-button--primary" type="button" data-copy="{{ hero_primary_copy | forceescape }}">
-          <span><span aria-hidden="true">📋</span></span>
           <span>{{ hero_primary_link.label }}</span>
         </button>
       </div>
 
       <div class="quick-start" id="handoff">
         <div class="quick-start-header">
-          <span class="quick-start-icon"><span aria-hidden="true">🚀</span></span>
-          <span class="quick-start-title">{{ ui.quick_start_title if ui else '快速开始' if page_language == 'zh' else 'Quick Start' }}</span>
+          <span class="quick-start-title">{{ ui.quick_start_title }}</span>
         </div>
 
         <div class="quick-pills">
           {% for prompt in human_prompts[:3] %}
           <button class="quick-pill {{ 'quick-pill--primary' if loop.first }}" type="button" data-copy="{{ prompt.prompt | forceescape }}">
-            <span aria-hidden="true">{{ '🔍' if loop.first else '✨' if loop.index == 2 else '🎯' }}</span> {{ prompt.title }}
+            {{ prompt.title }}
           </button>
           {% endfor %}
           {% for cmd in command_examples[:2] %}
           <button class="quick-pill quick-pill--code" type="button" data-copy="{{ cmd.command | forceescape }}">
-            <span aria-hidden="true">⌨️</span> {{ cmd.title }}
+            {{ cmd.title }}
           </button>
           {% endfor %}
         </div>
 
-        <p class="quick-hint"><span aria-hidden="true">💡</span> {{ ui.quick_start_hint if ui else '点击复制，直接粘贴使用' if page_language == 'zh' else 'Click to copy' }}</p>
+        <p class="quick-hint">{{ ui.quick_start_hint }}</p>
       </div>
     </div>
   </div>

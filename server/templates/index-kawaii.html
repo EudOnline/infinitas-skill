@@ -5,7 +5,6 @@
 {% include "partials/home-auth-panel.html" %}
 {% include "partials/home-hero.html" %}
 
-<!-- 📊 状态条 -->
 <section class="status-section mb-2.5 md:mb-3 animate-in [animation-delay:100ms]">
   <div class="flex flex-wrap gap-2">
     {% for state in operating_states %}
@@ -16,11 +15,9 @@
 
 {% include "partials/home-console.html" %}
 
-<!-- 🌟 快捷技能 -->
 {% if featured_skills %}
 <section class="mb-2.5 md:mb-3 animate-in [animation-delay:300ms]">
   <div class="flex items-center gap-2">
-    <div class="text-[1.1rem]"><span aria-hidden="true">🌟</span></div>
     <div>
       <h2 class="font-display text-[1.1rem] font-bold text-kawaii-ink mb-0.5">{{ ui['skills_section_title'] }}</h2>
       <p class="text-[0.9rem] text-kawaii-ink-soft leading-[1.5]">{{ ui['skills_section_subtitle'] }}</p>
@@ -35,14 +32,14 @@
         <div class="flex flex-col items-end md:items-start gap-0.5">
           <span class="kawaii-tag {{ loop.cycle('kawaii-tag--pink', 'kawaii-tag--blue', 'kawaii-tag--green') }}">{{ skill.version }}</span>
           <span class="skill-stars">
-            {% if skill.rating %}<span aria-hidden="true">⭐</span> {{ skill.rating }}{% elif skill.publisher %}@{{ skill.publisher }}{% else %}<span aria-hidden="true">✨</span>{% endif %}
+            {% if skill.rating %}{{ skill.rating }}{% elif skill.publisher %}@{{ skill.publisher }}{% else %}{% endif %}
           </span>
         </div>
       </div>
       <h3 class="font-display text-[0.95rem] font-bold text-kawaii-ink mb-0.5 break-words">{{ skill.name }}</h3>
       <p class="text-sm text-kawaii-ink-soft mb-3 break-words leading-normal">{{ skill.summary }}</p>
       <button class="skill-copy" type="button" data-copy="{{ skill.inspect_command | forceescape }}" title="{{ ui['copy_icon_title'] }}">
-        <span aria-hidden="true">📋</span> {{ ui['copy_inspect_action'] }}
+        {{ ui['copy_inspect_action'] }}
       </button>
     </div>
     {% endfor %}

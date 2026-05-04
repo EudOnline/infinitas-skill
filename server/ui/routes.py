@@ -5,7 +5,6 @@ from typing import Any
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from server import __version__ as server_version
@@ -27,6 +26,7 @@ from server.ui.library import (
     list_library_share_rows,
     list_library_token_activity_rows,
     list_library_token_rows,
+    load_library_scope,
 )
 from server.ui.navigation import build_site_nav
 from server.ui.session_bootstrap import build_session_bootstrap
@@ -121,9 +121,9 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
             "home_href": with_lang("/", lang),
             "nav_links": build_site_nav(home=False, lang=lang, variant="library"),
             "show_console_session": False,
-            "session_ui": build_session_bootstrap({}, actor.user),
         }
         context.update(build_kawaii_ui_context(request, lang, page_kicker, page_eyebrow))
+        context["session_ui"] = build_session_bootstrap({}, actor.user)
         return context
 
     @app.get("/", response_class=HTMLResponse)
@@ -131,12 +131,11 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         session_user = maybe_get_current_user(request, db)
         context = {
             "request": request,
-            "app_name": settings.app_name,
         }
-        if session_user is not None:
-            context["user_count"] = db.scalar(select(func.count()).select_from(User)) or 0
         context.update(build_home_context(settings=settings, db=db, request=request))
         context["session_ui"] = build_session_bootstrap(context.get("session_ui"), session_user)
+        context["page_mode"] = "home"
+        context["show_console_session"] = False
         return templates.TemplateResponse(request, "index-kawaii.html", context)
 
     @app.get("/v2")
@@ -194,7 +193,8 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         if blocked is not None:
             return blocked
         lang = resolve_language(request)
-        detail = get_library_object_detail(db, actor=actor, object_id=object_id)
+        scope = load_library_scope(db, actor=actor)
+        detail = get_library_object_detail(db, actor=actor, object_id=object_id, scope=scope)
         if detail is None:
             return RedirectResponse(url=with_lang("/library", lang), status_code=303)
         context = _build_admin_context(
@@ -221,7 +221,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
                 "version": item.get("version") or f"release-{item['release_id']}",
                 "visibility": (item.get("visibility") or {}).get("audience_type") or "private",
                 "readiness_state": item.get("state") or "unknown",
-                "created_at": item.get("ready_at") or "-",
+                "created_at": item.get("created_at") or item.get("ready_at") or "-",
                 "detail_href": with_lang(
                     f"/library/{object_id}/releases/{item['release_id']}",
                     lang,
@@ -235,12 +235,14 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
             actor=actor,
             lang=lang,
             object_id=object_id,
+            scope=scope,
         )
         context["share_items"] = list_library_share_rows(
             db,
             actor=actor,
             lang=lang,
             object_id=object_id,
+            scope=scope,
         )
         return templates.TemplateResponse(request, "object-detail.html", context)
 
@@ -313,12 +315,17 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
             page_kicker=pick_lang(lang, "访问", "Access"),
             page_eyebrow=pick_lang(lang, "Token", "Token"),
         )
-        context["token_items"] = list_library_token_rows(db, actor=actor, lang=lang)
+        scope = load_library_scope(db, actor=actor)
+        context["token_items"] = list_library_token_rows(
+            db, actor=actor, lang=lang, scope=scope
+        )
         context["token_activity_items"] = list_library_token_activity_rows(
             db,
             actor=actor,
             lang=lang,
+            scope=scope,
         )
+        context["library_href"] = with_lang("/library", lang)
         return templates.TemplateResponse(request, "access-center.html", context)
 
     @app.get("/shares", response_class=HTMLResponse)
@@ -344,6 +351,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
             page_eyebrow=pick_lang(lang, "链接", "Links"),
         )
         context["share_items"] = list_library_share_rows(db, actor=actor, lang=lang)
+        context["library_href"] = with_lang("/library", lang)
         return templates.TemplateResponse(request, "shares.html", context)
 
     @app.get("/activity", response_class=HTMLResponse)

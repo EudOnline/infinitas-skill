@@ -1,41 +1,38 @@
 <div class="user-trigger-wrapper" id="user-trigger-wrapper">
-  <button class="user-trigger{% if session_current_user %} is-active{% endif %}" id="user-trigger" type="button" aria-label="{% if session_current_user %}{{ ui.user_menu_logged_label if ui else '用户菜单' if page_language == 'zh' else 'User menu' }}{% else %}{{ ui.user_menu_anon_label if ui else '登录' if page_language == 'zh' else 'Login' }}{% endif %}" aria-haspopup="true" aria-expanded="false" aria-controls="user-panel">
-    <span id="user-trigger-icon"><span aria-hidden="true">{{ '👤' if session_current_user else '🔒' }}</span></span>
+  <button class="user-trigger{% if session_current_user %} is-active{% endif %}" id="user-trigger" type="button" aria-label="{% if session_current_user %}{{ ui.user_menu_logged_label }}{% else %}{{ ui.user_menu_anon_label }}{% endif %}" aria-haspopup="true" aria-expanded="false" aria-controls="user-panel">
     <span class="user-trigger-pulse" id="user-trigger-pulse" {% if session_current_user %}hidden{% endif %}></span>
   </button>
 
   <div class="user-panel" id="user-panel" hidden>
     <div class="user-panel-section" id="user-panel-login" {% if session_current_user %}hidden{% endif %}>
       <div class="user-panel-header">
-        <span class="user-panel-icon"><span aria-hidden="true">🔑</span></span>
-        <span class="user-panel-title">{{ ui.user_panel_auth_title if ui else '登录' if page_language == 'zh' else 'Login' }}</span>
+        <span class="user-panel-title">{{ ui.user_panel_auth_title }}</span>
       </div>
-      <p class="user-panel-desc">{{ ui.user_panel_auth_desc if ui else '登录以管理你的技能库' if page_language == 'zh' else 'Sign in to manage your skill library' }}</p>
+      <p class="user-panel-desc">{{ ui.user_panel_auth_desc }}</p>
       <button class="kawaii-button kawaii-button--primary user-panel-btn" id="open-auth-modal-btn" type="button">
-        <span><span aria-hidden="true">🔓</span></span><span>{{ ui.user_panel_auth_action if ui else '立即登录' if page_language == 'zh' else 'Sign in' }}</span>
+        <span>{{ ui.user_panel_auth_action }}</span>
       </button>
     </div>
 
     <div class="user-panel-section" id="user-panel-logged" {% if not session_current_user %}hidden{% endif %}>
       <div class="user-panel-header">
-        <span class="user-panel-avatar" id="user-avatar">{% if session_current_user %}{{ session_current_user.username[:1]|upper }}{% else %}<span aria-hidden="true">👤</span>{% endif %}</span>
+        <span class="user-panel-avatar" id="user-avatar">{% if session_current_user %}{{ session_current_user.username[:1]|upper }}{% else %}{% endif %}</span>
         <div class="user-panel-info">
           <span class="user-panel-name" id="user-panel-username">{{ session_current_user.username if session_current_user else '-' }}</span>
-          <span class="user-panel-meta" id="user-panel-expiry">{{ ui.auth_session_active if ui else '会话有效' if page_language == 'zh' else 'Session active' }}</span>
+          <span class="user-panel-meta" id="user-panel-expiry">{{ ui.auth_session_active }}</span>
         </div>
       </div>
       <div class="user-panel-divider"></div>
       <div class="user-panel-bg-section">
         <div class="user-panel-bg-header">
-          <span><span aria-hidden="true">🎨</span></span>
-          <span>{{ ui.user_panel_background_label if ui else '背景' if page_language == 'zh' else 'Background' }}</span>
-          <span class="user-panel-bg-theme" id="bg-theme-label">{{ ui.user_panel_theme_light if ui else '浅色' if page_language == 'zh' else 'Light' }}</span>
+          <span>{{ ui.user_panel_background_label }}</span>
+          <span class="user-panel-bg-theme" id="bg-theme-label">{{ ui.user_panel_theme_light }}</span>
         </div>
         <div class="user-panel-bg-grid" id="bg-grid"></div>
       </div>
       <div class="user-panel-divider"></div>
       <button class="kawaii-button kawaii-button--ghost user-panel-btn" id="logout-btn" type="button">
-        <span><span aria-hidden="true">🚪</span></span><span>{{ ui.user_panel_logout if ui else '退出登录' if page_language == 'zh' else 'Logout' }}</span>
+        <span>{{ ui.user_panel_logout }}</span>
       </button>
     </div>
   </div>
@@ -45,30 +42,28 @@
   <div class="auth-modal-backdrop" id="auth-modal-backdrop"></div>
   <div class="auth-modal-content">
     <div class="auth-modal-header">
-      <h3 class="auth-modal-title" id="auth-modal-title"><span aria-hidden="true">🔑</span> {{ ui.auth_modal_title if ui else '访问认证' if page_language == 'zh' else 'Authentication' }}</h3>
-      <button class="auth-modal-close" id="auth-modal-close" type="button" aria-label="{{ ui.auth_close if ui else '关闭' if page_language == 'zh' else 'Close' }}"><span aria-hidden="true">✕</span></button>
+      <h3 class="auth-modal-title" id="auth-modal-title">{{ ui.auth_modal_title }}</h3>
+      <button class="auth-modal-close" id="auth-modal-close" type="button" aria-label="{{ ui.auth_close }}"></button>
     </div>
-    <form id="auth-form">
+    <form id="auth-form" action="" method="POST">
       <div class="auth-modal-body">
-        <p class="auth-modal-desc">{{ ui.auth_modal_desc if ui else '请输入你的访问令牌以继续' if page_language == 'zh' else 'Please enter your access token to continue' }}</p>
+        <p class="auth-modal-desc">{{ ui.auth_modal_desc }}</p>
         <div class="token-input-wrapper">
           <input type="password" id="token-input" class="token-input"
-                 placeholder="{{ ui.auth_modal_placeholder if ui else '访问令牌' if page_language == 'zh' else 'Access token' }}" autocomplete="off" minlength="8" maxlength="128"
-                 aria-label="{{ ui.auth_modal_placeholder if ui else '访问令牌' if page_language == 'zh' else 'Access token' }}" aria-describedby="token-hint"/>
-          <button type="button" class="token-toggle" id="token-toggle" title="{{ ui.toggle_password_visibility if ui else '显示/隐藏密码' if page_language == 'zh' else 'Show/Hide password' }}" aria-label="{{ ui.toggle_password_visibility if ui else '显示/隐藏密码' if page_language == 'zh' else 'Show/Hide password' }}">
-            <span aria-hidden="true">👁️</span>
-          </button>
+                 placeholder="{{ ui.auth_modal_placeholder }}" autocomplete="off" minlength="8" maxlength="128"
+                 aria-label="{{ ui.auth_modal_placeholder }}" aria-describedby="token-hint"/>
+          <button type="button" class="token-toggle" id="token-toggle" title="{{ ui.toggle_password_visibility }}" aria-label="{{ ui.toggle_password_visibility }}">
+            </button>
         </div>
-        <p class="auth-hint" id="token-hint"><span aria-hidden="true">💡</span> {{ ui.auth_modal_hint if ui else '令牌可在设置页面获取' if page_language == 'zh' else 'Token can be found in settings' }}</p>
+        <p class="auth-hint" id="token-hint">{{ ui.auth_modal_hint }}</p>
         <div class="auth-error" id="auth-error" role="alert" aria-live="polite" hidden>
-          <span aria-hidden="true">❌</span><span id="error-message">{{ ui.auth_invalid if ui else '令牌无效' if page_language == 'zh' else 'Invalid token' }}</span>
+          <span id="error-message">{{ ui.auth_invalid }}</span>
         </div>
       </div>
       <div class="auth-modal-footer">
-        <button class="kawaii-button kawaii-button--ghost" id="cancel-auth-btn" type="button">{{ ui.auth_cancel if ui else '取消' if page_language == 'zh' else 'Cancel' }}</button>
+        <button class="kawaii-button kawaii-button--ghost" id="cancel-auth-btn" type="button">{{ ui.auth_cancel }}</button>
         <button class="kawaii-button kawaii-button--primary" id="login-btn" type="submit">
-          <span class="btn-icon" aria-hidden="true">🔓</span>
-          <span class="btn-text">{{ ui.auth_verify if ui else '验证' if page_language == 'zh' else 'Verify' }}</span>
+          <span class="btn-text">{{ ui.auth_verify }}</span>
         </button>
       </div>
     </form>

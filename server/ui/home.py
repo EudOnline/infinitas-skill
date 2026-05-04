@@ -194,9 +194,6 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
             ),
         },
     ]
-    human_input_fields = (
-        ["目标", "安装位置", "风险偏好"] if lang == "zh" else ["Goal", "Install path", "Risk level"]
-    )
     console_links = [
         {
             "href": with_lang("/library", lang),
@@ -260,18 +257,12 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
             "搜索、检查、执行，交给 Agent 完成。",
             "Search, inspect, and execute — let the Agent handle it.",
         ),
-        "hero_support": "",
         "hero_primary_link": {
             "href": "#handoff",
             "label": pick_lang(lang, "复制任务提示", "Copy task prompt"),
         },
-        "hero_secondary_link": {
-            "href": "#console",
-            "label": pick_lang(lang, "查看对象库", "Open Library"),
-        },
         "hero_primary_copy": human_prompts[0]["prompt"] if human_prompts else "",
         "operating_states": operating_states,
-        "human_input_fields": human_input_fields,
         "human_prompts": human_prompts,
         "command_examples": command_examples,
         "console_links": console_links,

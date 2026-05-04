@@ -382,31 +382,22 @@
         inset: 0;
         pointer-events: none;
         z-index: -1;
-        /* 使用 CSS 变量支持动态背景切换 */
         background: var(--bg-image, 
-          /* 默认渐变遮罩 - 提升文字可读性 */
           linear-gradient(135deg, 
             rgba(var(--kawaii-paper-soft-rgb), 0.88) 0%, 
             rgba(var(--kawaii-backdrop-deep-rgb), 0.82) 50%,
-            rgba(var(--kawaii-backdrop-rgb), 0.88) 100%),
-          /* 默认动漫风景背景图 */
-          url('https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1920&q=80') center/cover no-repeat
+            rgba(var(--kawaii-backdrop-rgb), 0.88) 100%)
         );
-        background-size: cover;
       }
       
       /* 🌙 动漫背景图 - 深色模式（星空/夜景） */
       html[data-color-scheme="dark"] body::before {
         background: var(--bg-image-dark, 
-          /* 默认深色遮罩 - 确保文字可读 */
           linear-gradient(135deg, 
             rgba(var(--kawaii-backdrop-rgb), 0.88) 0%, 
             rgba(var(--kawaii-backdrop-rgb), 0.85) 50%,
-            rgba(var(--kawaii-backdrop-deep-rgb), 0.88) 100%),
-          /* 默认深色动漫背景图 */
-          url('https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1920&q=80') center/cover no-repeat
+            rgba(var(--kawaii-backdrop-deep-rgb), 0.88) 100%)
         );
-        background-size: cover;
       }
       
       
@@ -417,8 +408,7 @@
             linear-gradient(135deg, 
               rgba(var(--kawaii-backdrop-deep-rgb), 0.88) 0%, 
               rgba(var(--kawaii-deep-surface-rgb), 0.85) 50%,
-              rgba(var(--kawaii-backdrop-rgb), 0.88) 100%),
-            url('https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1920&q=80') center/cover no-repeat;
+              rgba(var(--kawaii-backdrop-rgb), 0.88) 100%);
         }
       }
 
@@ -458,16 +448,6 @@
 
       .brand:hover {
         @apply -translate-y-0.5;
-      }
-
-      .brand-mark {
-        @apply w-10 h-10 rounded-kawaii-md grid place-items-center text-xl;
-        background: var(--gradient-hero);
-        box-shadow: inset 0 1px 2px rgba(var(--kawaii-white-rgb),0.45), 0 6px 14px rgba(var(--kawaii-line-rgb), 0.16);
-      }
-      
-      html[data-color-scheme="dark"] .brand-mark {
-        box-shadow: inset 0 1px 2px rgba(var(--kawaii-white-rgb),0.3), 0 6px 14px rgba(var(--kawaii-accent-purple-rgb), 0.25);
       }
 
       /* 🧭 导航 */
@@ -1084,11 +1064,6 @@
         border-color: color-mix(in srgb, var(--kawaii-primary) 42%, var(--kawaii-line));
         transform: translateY(-1px);
         box-shadow: var(--shadow-soft);
-      }
-
-      .session-chip__icon {
-        font-size: 1rem;
-        flex-shrink: 0;
       }
 
       .session-chip__label {
@@ -1834,25 +1809,25 @@
       .kawaii-badge--success {
         background: rgba(var(--kawaii-mint-rgb), 0.2);
         border-color: rgba(var(--kawaii-mint-rgb), 0.4);
-        color: var(--kawaii-success);
+        color: #2e7d32;
       }
 
       .kawaii-badge--pending {
         background: rgba(var(--kawaii-gold-rgb), 0.2);
         border-color: rgba(var(--kawaii-gold-rgb), 0.4);
-        color: var(--kawaii-warning);
+        color: #bf360c;
       }
 
       .kawaii-badge--running {
         background: rgba(var(--kawaii-sky-light-rgb), 0.2);
         border-color: rgba(var(--kawaii-sky-light-rgb), 0.4);
-        color: var(--kawaii-secondary-deep);
+        color: #00695c;
       }
 
       .kawaii-badge--error {
         background: rgba(var(--kawaii-salmon-rgb), 0.15);
         border-color: rgba(var(--kawaii-salmon-rgb), 0.3);
-        color: var(--kawaii-danger);
+        color: #c62828;
       }
 
       html[data-color-scheme="dark"] .kawaii-badge--success {
@@ -1985,128 +1960,14 @@
           color: var(--kawaii-ink-soft);
         }
       }
-
-      .status-badge[data-status*="approved"],
-      .status-badge[data-status*="completed"] {
-        color: var(--kawaii-success);
-        border-color: rgba(var(--kawaii-toast-success-rgb), 0.42);
-        background: rgba(var(--kawaii-toast-success-rgb), 0.16);
-      }
-
-      .status-badge[data-status*="pending"],
-      .status-badge[data-status*="queued"],
-      .status-badge[data-status*="review_requested"] {
-        color: var(--kawaii-warning);
-        border-color: rgba(var(--kawaii-toast-warning-rgb), 0.48);
-        background: rgba(var(--kawaii-toast-warning-rgb), 0.18);
-      }
-
-      .status-badge[data-status*="running"] {
-        color: var(--kawaii-info);
-        border-color: rgba(var(--kawaii-toast-info-rgb), 0.4);
-        background: rgba(var(--kawaii-toast-info-rgb), 0.15);
-      }
-
-      .status-badge[data-status*="rejected"],
-      .status-badge[data-status*="failed"] {
-        color: var(--kawaii-danger);
-        border-color: rgba(var(--kawaii-toast-error-rgb), 0.45);
-        background: rgba(var(--kawaii-toast-error-rgb), 0.15);
-      }
       
       /* 🌙 深色模式 - 状态徽章霓虹版 */
-      html[data-color-scheme="dark"] .status-badge[data-status*="approved"],
-      html[data-color-scheme="dark"] .status-badge[data-status*="completed"] {
-        color: var(--kawaii-neon-green);
-        border-color: rgba(var(--kawaii-neon-green-rgb), 0.5);
-        background: rgba(var(--kawaii-neon-green-rgb), 0.15);
-        box-shadow: 0 0 10px rgba(var(--kawaii-neon-green-rgb), 0.2);
-      }
-
-      html[data-color-scheme="dark"] .status-badge[data-status*="pending"],
-      html[data-color-scheme="dark"] .status-badge[data-status*="queued"],
-      html[data-color-scheme="dark"] .status-badge[data-status*="review_requested"] {
-        color: var(--kawaii-neon-yellow);
-        border-color: rgba(var(--kawaii-neon-yellow-rgb), 0.5);
-        background: rgba(var(--kawaii-neon-yellow-rgb), 0.15);
-        box-shadow: 0 0 10px rgba(var(--kawaii-neon-yellow-rgb), 0.2);
-      }
-
-      html[data-color-scheme="dark"] .status-badge[data-status*="running"] {
-        color: var(--kawaii-neon-cyan);
-        border-color: rgba(var(--kawaii-neon-cyan-rgb), 0.5);
-        background: rgba(var(--kawaii-neon-cyan-rgb), 0.15);
-        box-shadow: 0 0 10px rgba(var(--kawaii-neon-cyan-rgb), 0.2);
-      }
-
-      html[data-color-scheme="dark"] .status-badge[data-status*="rejected"],
-      html[data-color-scheme="dark"] .status-badge[data-status*="failed"] {
-        color: var(--kawaii-neon-red);
-        border-color: rgba(var(--kawaii-neon-red-rgb), 0.5);
-        background: rgba(var(--kawaii-neon-red-rgb), 0.15);
-        box-shadow: 0 0 10px rgba(var(--kawaii-neon-red-rgb), 0.2);
-      }
-      
-      @media (prefers-color-scheme: dark) {
-        html:not([data-color-scheme]) .status-badge[data-status*="completed"] {
-          color: var(--kawaii-neon-green);
-          border-color: rgba(var(--kawaii-neon-green-rgb), 0.5);
-          background: rgba(var(--kawaii-neon-green-rgb), 0.15);
-          box-shadow: 0 0 10px rgba(var(--kawaii-neon-green-rgb), 0.2);
-        }
-
-        html:not([data-color-scheme]) .status-badge[data-status*="pending"],
-        html:not([data-color-scheme]) .status-badge[data-status*="queued"],
-        html:not([data-color-scheme]) .status-badge[data-status*="review_requested"] {
-          color: var(--kawaii-neon-yellow);
-          border-color: rgba(var(--kawaii-neon-yellow-rgb), 0.5);
-          background: rgba(var(--kawaii-neon-yellow-rgb), 0.15);
-          box-shadow: 0 0 10px rgba(var(--kawaii-neon-yellow-rgb), 0.2);
-        }
-
-        html:not([data-color-scheme]) .status-badge[data-status*="running"] {
-          color: var(--kawaii-neon-cyan);
-          border-color: rgba(var(--kawaii-neon-cyan-rgb), 0.5);
-          background: rgba(var(--kawaii-neon-cyan-rgb), 0.15);
-          box-shadow: 0 0 10px rgba(var(--kawaii-neon-cyan-rgb), 0.2);
-        }
-
-        html:not([data-color-scheme]) .status-badge[data-status*="rejected"],
-        html:not([data-color-scheme]) .status-badge[data-status*="failed"] {
-          color: var(--kawaii-neon-red);
-          border-color: rgba(var(--kawaii-neon-red-rgb), 0.5);
-          background: rgba(var(--kawaii-neon-red-rgb), 0.15);
-          box-shadow: 0 0 10px rgba(var(--kawaii-neon-red-rgb), 0.2);
-        }
-      }
 
       /* ========================================
          🎨 装饰元素
          ======================================== */
 
 /* 角落装饰 */
-      .corner-decoration {
-        position: absolute;
-        width: 40px;
-        height: 40px;
-        pointer-events: none;
-        opacity: 0.18;
-        z-index: 1;
-      }
-
-      .corner-decoration--tl {
-        top: 8px;
-        left: 8px;
-        background: radial-gradient(circle, var(--kawaii-primary-soft), transparent 70%);
-        border-radius: 50%;
-      }
-
-      .corner-decoration--br {
-        bottom: 8px;
-        right: 8px;
-        background: radial-gradient(circle, var(--kawaii-secondary-soft), transparent 70%);
-        border-radius: 50%;
-      }
 
       /* ========================================
          📱 响应式
@@ -2163,24 +2024,6 @@
           --radius-xl: 24px;
         }
         
-        /* 📱 移动端背景图优化 */
-        body::before {
-          background: 
-            linear-gradient(135deg, 
-              rgba(var(--kawaii-paper-soft-rgb), 0.92) 0%, 
-              rgba(var(--kawaii-backdrop-deep-rgb), 0.88) 50%,
-              rgba(var(--kawaii-backdrop-rgb), 0.92) 100%),
-            url('https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800&q=70') center/cover no-repeat;
-        }
-        
-        html[data-color-scheme="dark"] body::before {
-          background: 
-            linear-gradient(135deg, 
-              rgba(var(--kawaii-backdrop-rgb), 0.92) 0%, 
-              rgba(var(--kawaii-backdrop-rgb), 0.9) 50%,
-              rgba(var(--kawaii-backdrop-deep-rgb), 0.92) 100%),
-            url('https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&q=70') center/cover no-repeat;
-        }
         
         .topbar {
           display: flex;
@@ -2261,8 +2104,7 @@
       }
 
       @media (prefers-reduced-motion: reduce) {
-        .animate-in,
-        [class*="[animation-delay"] {
+        .animate-in {
           animation: none !important;
           opacity: 1 !important;
           transform: none !important;
@@ -2291,12 +2133,6 @@
         }
       }
 
-      :focus-visible {
-        outline: 3px solid var(--kawaii-primary);
-        outline-offset: 3px;
-        border-radius: var(--radius-sm);
-      }
-
       .kawaii-input:focus-visible {
         outline: none;
       }
@@ -2305,10 +2141,6 @@
       
 
 /* === Inline styles from share-detail.html === */
-.detail-grid p {
-    margin: 0.4rem 0 0;
-    color: var(--kawaii-ink-soft);
-  }
 
   .lifecycle-form {
     @apply grid gap-[0.85rem];
@@ -2350,24 +2182,6 @@
     color: var(--kawaii-ink-muted);
   }
 
-  .insight-card {
-    @apply border border-kawaii-line rounded-kawaii-md bg-kawaii-panel-soft py-3.5 px-4;
-  }
-
-  html[data-color-scheme="dark"] .insight-card {
-    background: var(--kawaii-panel);
-    border-color: var(--kawaii-line);
-  }
-
-  .insight-card__code {
-    @apply mt-2.5 border border-kawaii-line rounded-kawaii-sm bg-kawaii-code-surface py-2 px-1.5;
-  }
-
-  html[data-color-scheme="dark"] .insight-card__code {
-    background: var(--kawaii-code-surface);
-    border-color: var(--kawaii-line);
-  }
-
 /* === Inline styles from skills.html === */
 
   .table-code {
@@ -2379,15 +2193,6 @@
   }
 
 /* === Inline styles from skill-detail.html === */
-  .detail-grid {
-    display: grid;
-    gap: 1rem;
-  }
-
-  .detail-grid--skill {
-    grid-template-columns: minmax(0, 1.3fr) minmax(18rem, 0.8fr);
-    gap: 1.25rem;
-  }
 
   .detail-meta {
     @apply grid gap-[0.85rem] m-0;
@@ -2401,21 +2206,6 @@
   .detail-meta dd {
     margin: 0.2rem 0 0;
     font-weight: 700;
-  }
-
-
-
-  @media (max-width: 900px) {
-    .detail-grid--skill,
-    .detail-grid--release {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  @media (max-width: 767px) {
-    .detail-grid {
-      @apply grid-cols-1;
-    }
   }
 
 /* === Inline styles from review-cases.html === */
@@ -2528,21 +2318,10 @@
   }
 
 /* === Inline styles from release-detail.html === */
-  .detail-grid--release {
-    grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.85fr);
-  }
 
 
 
 /* === Inline styles from draft-detail.html === */
-  .detail-grid--draft {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  }
-
-  .detail-panel p {
-    margin: 0.4rem 0 0;
-    color: var(--kawaii-ink-soft);
-  }
 
 /* === Inline styles from access-tokens.html === */
 
@@ -2612,10 +2391,6 @@
     align-items: center;
     gap: 0.4rem;
     margin-bottom: 0.75rem;
-  }
-  
-  .quick-start-icon {
-    font-size: 1.1rem;
   }
   
   .quick-start-title {
@@ -2723,11 +2498,6 @@
     }
   }
 
-  @media (max-width: 480px) {
-    .console-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
   
   .console-card {
     text-decoration: none;
@@ -2867,10 +2637,6 @@
       padding: 0.75rem;
     }
 
-    .corner-decoration {
-      display: none;
-    }
-
     .section-action {
       width: 100%;
     }
@@ -2931,21 +2697,21 @@
     }
 
     /* Row expansion rows keep full-width block display */
-    .table-scroll tr.review-form-row,
+    
     .table-scroll tr.review-detail-row,
     .table-scroll tr.patch-form-row {
       padding: 0;
       border-bottom: none;
     }
 
-    .table-scroll tr.review-form-row td,
+    
     .table-scroll tr.review-detail-row td,
     .table-scroll tr.patch-form-row td {
       display: block;
       padding: 0;
     }
 
-    .table-scroll tr.review-form-row td::before,
+    
     .table-scroll tr.review-detail-row td::before,
     .table-scroll tr.patch-form-row td::before {
       display: none;
@@ -3199,7 +2965,7 @@
     background: var(--gradient-hero);
   }
 
-  @media (max-width: 767px) {
+  @media (max-width: 1023px) {
     .user-trigger-wrapper {
       top: auto;
       bottom: max(1rem, env(safe-area-inset-bottom));
@@ -3645,9 +3411,6 @@
   }
 
   /* brand-mark system preference */
-  html:not([data-color-scheme]) .brand-mark {
-    box-shadow: inset 0 1px 2px rgba(var(--kawaii-white-rgb),0.3), 0 6px 14px rgba(var(--kawaii-accent-purple-rgb), 0.25);
-  }
   
   /* console auth modal error system preference */
   html:not([data-color-scheme]) .console-auth-modal__error {
@@ -3717,20 +3480,6 @@
   }
 
   /* status-badge system preference dark (missing approved/rejected/failed) */
-  html:not([data-color-scheme]) .status-badge[data-status*="approved"],
-  html:not([data-color-scheme]) .status-badge[data-status*="completed"] {
-    color: var(--kawaii-neon-green);
-    border-color: rgba(var(--kawaii-neon-green-rgb), 0.5);
-    background: rgba(var(--kawaii-neon-green-rgb), 0.15);
-    box-shadow: 0 0 10px rgba(var(--kawaii-neon-green-rgb), 0.2);
-  }
-  html:not([data-color-scheme]) .status-badge[data-status*="rejected"],
-  html:not([data-color-scheme]) .status-badge[data-status*="failed"] {
-    color: var(--kawaii-neon-red);
-    border-color: rgba(var(--kawaii-neon-red-rgb), 0.5);
-    background: rgba(var(--kawaii-neon-red-rgb), 0.15);
-    box-shadow: 0 0 10px rgba(var(--kawaii-neon-red-rgb), 0.2);
-  }
 
   /* bg-option system preference dark */
   html:not([data-color-scheme]) .bg-option.is-active {
@@ -3770,12 +3519,6 @@
   }
 
 [data-reveal-index="1"] { --reveal-index: 1; }
-
-@media (max-width: 767px) {
-  .floating-decoration {
-    display: none;
-  }
-}
 
 /* Auto-generated @media (prefers-color-scheme: dark) counterparts */
 @media (prefers-color-scheme: dark) {
@@ -3918,28 +3661,6 @@
               0 6px 0 var(--kawaii-candy-depth),
               0 0 20px rgba(var(--kawaii-neon-pink-rgb), 0.5),
               0 8px 16px rgba(var(--kawaii-neon-pink-rgb), 0.3);
-  }
-  html:not([data-color-scheme]) .status-badge[data-status*="approved"],
-      html:not([data-color-scheme]) .status-badge[data-status*="completed"] {
-    color: var(--kawaii-neon-green);
-            border-color: rgba(var(--kawaii-neon-green-rgb), 0.5);
-            background: rgba(var(--kawaii-neon-green-rgb), 0.15);
-            box-shadow: 0 0 10px rgba(var(--kawaii-neon-green-rgb), 0.2);
-  }
-  html:not([data-color-scheme]) .status-badge[data-status*="pending"],
-      html:not([data-color-scheme]) .status-badge[data-status*="queued"],
-      html:not([data-color-scheme]) .status-badge[data-status*="review_requested"] {
-    color: var(--kawaii-neon-yellow);
-            border-color: rgba(var(--kawaii-neon-yellow-rgb), 0.5);
-            background: rgba(var(--kawaii-neon-yellow-rgb), 0.15);
-            box-shadow: 0 0 10px rgba(var(--kawaii-neon-yellow-rgb), 0.2);
-  }
-  html:not([data-color-scheme]) .status-badge[data-status*="rejected"],
-      html:not([data-color-scheme]) .status-badge[data-status*="failed"] {
-    color: var(--kawaii-neon-red);
-            border-color: rgba(var(--kawaii-neon-red-rgb), 0.5);
-            background: rgba(var(--kawaii-neon-red-rgb), 0.15);
-            box-shadow: 0 0 10px rgba(var(--kawaii-neon-red-rgb), 0.2);
   }
   html:not([data-color-scheme]) .user-panel-name,
   html:not([data-color-scheme]) .user-panel-title {

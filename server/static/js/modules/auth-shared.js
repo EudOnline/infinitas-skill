@@ -11,6 +11,8 @@ import {
   AUTH_SESSION_CONFIG,
   infinitasAppShell,
   uiText,
+  logError,
+  getCsrfToken,
   uiTemplate,
   currentPageLanguage,
 } from './config.js';
@@ -28,7 +30,7 @@ export const DAYS_30 = 30 * 24 * 60 * 60 * 1000;
 // backward compatibility with the call-sites in auth-session.js).
 // ---------------------------------------------------------------------------
 
-export { currentPageLanguage, uiText, uiTemplate };
+export { currentPageLanguage, uiText, uiTemplate, getCsrfToken };
 
 // ---------------------------------------------------------------------------
 // Session state helpers
@@ -121,12 +123,12 @@ export function initialSessionUser() {
  */
 export async function requestSessionCleanup(logLabel) {
   try {
-    const res = await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+    const res = await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF-Token': getCsrfToken() } });
     if (!res.ok) {
-      console.error(logLabel, res.status, res.statusText);
+      logError(logLabel, res.status, res.statusText);
     }
   } catch (error) {
-    console.error(logLabel, error);
+    logError(logLabel, error);
   } finally {
     setAuthCookieHint(false);
   }

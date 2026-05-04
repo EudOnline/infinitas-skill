@@ -16,7 +16,7 @@ import {
   requestSessionCleanup,
 } from './auth-shared.js';
 
-import { AUTH_SESSION_CONFIG } from './config.js';
+import { AUTH_SESSION_CONFIG, logError } from './config.js';
 import { createAuthModalController } from './auth-modal.js';
 
 // ---------------------------------------------------------------------------
@@ -183,7 +183,7 @@ export function initConsoleAuthSession() {
         return;
       }
     } catch (error) {
-      console.error('Console auth validation failed:', error);
+      logError('Console auth validation failed:', error);
     }
     await requestSessionCleanup('Console logout request failed:');
     clearLocalSession();

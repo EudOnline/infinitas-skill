@@ -107,25 +107,4 @@ def build_console_forbidden_context(
     return context
 
 
-def build_lifecycle_console_context(
-    *,
-    request: Request,
-    title: str,
-    content: str,
-    limit: int,
-    items: list[dict[str, Any]],
-    cli_command: str,
-    stats: list[dict[str, str]],
-    insight_cards: list[dict[str, str]] | None = None,
-) -> dict[str, Any]:
-    return build_console_context(
-        request=request,
-        title=title,
-        content=content,
-        limit=limit,
-        items=items,
-        cli_command=cli_command,
-        stats=stats,
-        insight_cards=insight_cards,
-        nav_links=build_site_nav(home=False, lang=resolve_language(request)),
-    )
+

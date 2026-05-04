@@ -7,6 +7,7 @@ import {
   uiText,
   sanitizeClassName,
   isSafeUrl,
+  logError,
 } from './config.js';
 import { copyToClipboard, bindCopyTriggers, apiGet } from './api.js';
 
@@ -203,7 +204,7 @@ export class SearchManager {
         return;
       }
 
-      console.error('Search error:', err);
+      logError('Search error:', err);
       this.render({ skills: [], commands: [] });
     }
   }
@@ -475,13 +476,13 @@ export class SearchManager {
     }
     const metaRows = [
       [uiText('search_install_audience', '受众'), formatAudienceType(data.audience_type)],
-      [uiText('search_install_publisher', lang === 'en' ? 'Publisher / 发布者' : '发布者 / Publisher'), data.publisher || '-'],
-      [uiText('search_install_install_scope', lang === 'en' ? 'Install Scope / 安装范围' : '安装范围 / Install Scope'), formatInstallScope(skill.install_scope || data.install_scope) || '-'],
-      [uiText('search_install_listing_mode', lang === 'en' ? 'Listing Mode / 列出模式' : '列出模式 / Listing Mode'), formatListingMode(skill.listing_mode || data.listing_mode) || '-'],
-      [uiText('search_install_runtime', lang === 'en' ? 'Runtime / 运行时' : '运行时 / Runtime'), (skill.runtime && skill.runtime.platform) || (data.runtime && data.runtime.platform) || '-'],
-      [uiText('search_install_readiness', lang === 'en' ? 'Readiness / 就绪状态' : '就绪状态 / Readiness'), skill.runtime_readiness || data.runtime_readiness || '-'],
-      [uiText('search_install_workspace_targets', lang === 'en' ? 'Workspace Targets / 工作区目标' : '工作区目标 / Workspace Targets'), (skill.workspace_targets || data.workspace_targets || []).join(', ') || '-'],
-      [uiText('search_install_bundle_sha256', lang === 'en' ? 'Bundle SHA256 / 包 SHA256' : '包 SHA256 / Bundle SHA256'), data.bundle_sha256 || '-'],
+      [uiText('search_install_publisher', 'Publisher'), data.publisher || '-'],
+      [uiText('search_install_install_scope', 'Install scope'), formatInstallScope(skill.install_scope || data.install_scope) || '-'],
+      [uiText('search_install_listing_mode', 'Listing mode'), formatListingMode(skill.listing_mode || data.listing_mode) || '-'],
+      [uiText('search_install_runtime', 'Runtime'), (skill.runtime && skill.runtime.platform) || (data.runtime && data.runtime.platform) || '-'],
+      [uiText('search_install_readiness', 'Readiness'), skill.runtime_readiness || data.runtime_readiness || '-'],
+      [uiText('search_install_workspace_targets', 'Workspace targets'), (skill.workspace_targets || data.workspace_targets || []).join(', ') || '-'],
+      [uiText('search_install_bundle_sha256', 'Bundle SHA256'), data.bundle_sha256 || '-'],
     ];
     metaRows.forEach(([label, value]) => {
       const row = document.createElement('div');

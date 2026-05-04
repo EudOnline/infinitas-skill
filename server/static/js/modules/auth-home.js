@@ -17,7 +17,7 @@ import {
   requestSessionCleanup,
 } from './auth-shared.js';
 
-import { AUTH_SESSION_CONFIG } from './config.js';
+import { AUTH_SESSION_CONFIG, logError, getCsrfToken } from './config.js';
 import { createAuthModalController } from './auth-modal.js';
 
 // ---------------------------------------------------------------------------
@@ -108,7 +108,7 @@ export function initHomeAuthSession() {
           return JSON.parse(saved);
         }
       } catch (error) {
-        console.error('Failed to parse background settings:', error);
+        logError('Failed to parse background settings:', error);
       }
       return { light: null, dark: null };
     },
@@ -219,14 +219,14 @@ export function initHomeAuthSession() {
         const response = await fetch('/api/background/set', {
           method: 'POST',
           credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
           body: JSON.stringify({ theme, bg_id: bgId }),
         });
         if (!response.ok) {
-          console.error('Failed to save background to server');
+          logError('Failed to save background to server');
         }
       } catch (error) {
-        console.error('Network error saving background:', error);
+        logError('Network error saving background:', error);
       }
     }
     const grid = document.getElementById('bg-grid');
@@ -380,7 +380,7 @@ export function initHomeAuthSession() {
         }
       }
     } catch (error) {
-      console.error('Failed to fetch background:', error);
+      logError('Failed to fetch background:', error);
     }
   }
 
@@ -412,7 +412,7 @@ export function initHomeAuthSession() {
         }
       }
     } catch (error) {
-      console.error('Auth validation failed:', error);
+      logError('Auth validation failed:', error);
     }
     await requestSessionCleanup('Failed to clear auth cookie on server:');
     clearLocalSession();

@@ -1,7 +1,7 @@
 /**
  * API utility functions and clipboard helpers
  */
-import { uiText } from './config.js';
+import { uiText, getCsrfToken } from './config.js';
 
 // ── Toast reference (set by the application bootstrap) ──────────────
 let toastRef = null;
@@ -65,6 +65,11 @@ async function parseApiError(response) {
   return err;
 }
 
+function _csrfHeaders() {
+  const token = getCsrfToken();
+  return token ? { 'X-CSRF-Token': token } : {};
+}
+
 async function apiGet(url, signal) {
   const response = await fetch(url, {
     method: 'GET',
@@ -81,7 +86,7 @@ async function apiGet(url, signal) {
 async function apiPost(url, body) {
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ..._csrfHeaders() },
     credentials: 'same-origin',
     body: JSON.stringify(body),
   });
@@ -95,7 +100,7 @@ async function apiPost(url, body) {
 async function apiPatch(url, body) {
   const response = await fetch(url, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ..._csrfHeaders() },
     credentials: 'same-origin',
     body: JSON.stringify(body),
   });

@@ -6,6 +6,7 @@ import {
   uiTemplate,
   currentPageLanguage,
   sanitizeClassName,
+  logError,
 } from './config.js';
 import {
   apiGet,
@@ -244,7 +245,7 @@ async function updateArtifactsTable(releaseId) {
     });
     return artifacts.length;
   } catch (err) {
-    console.error('load artifacts error:', err);
+    logError('load artifacts error:', err);
     return 0;
   }
 }
@@ -310,7 +311,7 @@ async function pollReleaseReady(releaseId, intervalMs = 3000) {
         stop();
         return;
       }
-      console.error('poll release error:', err);
+      logError('poll release error:', err);
       if (++attempts >= maxAttempts) {
         stop();
         return;

@@ -13,6 +13,7 @@ import {
   validateToken,
   markLocalSessionActive,
   setAuthCookieHint,
+  getCsrfToken,
 } from './auth-shared.js';
 
 /**
@@ -121,10 +122,11 @@ export function createAuthModalController(options) {
     loginInProgress = true;
 
     try {
+      const csrfToken = getCsrfToken();
       const res = await fetch(`/api/auth/login?lang=${encodeURIComponent(currentPageLanguage())}`, {
         method: 'POST',
         credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfToken ? { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken } : { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
       });
       let data;

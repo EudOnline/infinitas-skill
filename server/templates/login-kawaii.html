@@ -7,7 +7,6 @@
   
   <div class="login-panel" id="login-panel">
     <div class="flex items-center gap-2 mb-3">
-      <span aria-hidden="true">🔑</span>
       <span>{{ ui['login_input_label'] }}</span>
     </div>
 
@@ -18,18 +17,15 @@
                autocomplete="off" minlength="8" maxlength="128"
                aria-label="{{ ui['login_aria_label'] }}"/>
         <button type="button" class="token-toggle login-token-toggle" id="login-token-toggle" title="{{ ui['toggle_password_title'] }}" aria-label="{{ ui['toggle_password_visibility'] }}">
-          <span aria-hidden="true">👁️</span>
-        </button>
+          </button>
       </div>
-      <p class="auth-hint text-xs text-kawaii-ink-muted mb-3"><span aria-hidden="true">💡</span> {{ ui['login_hint'] }}</p>
+      <p class="auth-hint text-xs text-kawaii-ink-muted mb-3">{{ ui['login_hint'] }}</p>
       <button class="kawaii-button kawaii-button--primary" id="login-login-btn" type="submit">
-        <span class="btn-icon" aria-hidden="true"><span aria-hidden="true">🔓</span></span>
         <span class="btn-text">{{ ui['login_button'] }}</span>
       </button>
     </form>
 
     <div class="auth-error flex items-center gap-2 p-3 bg-kawaii-danger/10 dark:bg-kawaii-danger/15 border border-kawaii-danger/30 dark:border-kawaii-danger/40 rounded-kawaii-md text-kawaii-danger text-sm mt-3" id="login-auth-error" role="alert" aria-live="polite" hidden>
-      <span aria-hidden="true">❌</span>
       <span id="login-error-message">{{ ui['login_error'] }}</span>
     </div>
   </div>

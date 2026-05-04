@@ -55,6 +55,24 @@ export function uiTemplate(key, fallback, replacements = {}) {
   return template;
 }
 
+/**
+ * Log errors only in development (localhost) to avoid leaking info in production.
+ */
+export function logError(...args) {
+  const hostname = window.location.hostname;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    console.error(...args);
+  }
+}
+
+/**
+ * Read the CSRF token from the double-submit cookie.
+ */
+export function getCsrfToken() {
+  const match = document.cookie.match(/csrf_token=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : '';
+}
+
 export const infinitasAppShell = {
   currentPageLanguage,
   currentSearchScope,
