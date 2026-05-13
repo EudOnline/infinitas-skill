@@ -24,10 +24,20 @@ AUTH_CONSOLE_MODULE_PATH = MODULES_DIR / "auth-console.js"
 AUTH_MODAL_MODULE_PATH = MODULES_DIR / "auth-modal.js"
 ROUTES_PATH = ROOT / "server" / "ui" / "routes.py"
 LAYOUT_TEMPLATE_PATH = ROOT / "server" / "templates" / "layout-kawaii.html"
+LIBRARY_TEMPLATE_PATH = ROOT / "server" / "templates" / "library.html"
+OBJECT_DETAIL_TEMPLATE_PATH = ROOT / "server" / "templates" / "object-detail.html"
+ACCESS_CENTER_TEMPLATE_PATH = ROOT / "server" / "templates" / "access-center.html"
+SHARES_TEMPLATE_PATH = ROOT / "server" / "templates" / "shares.html"
+ACTIVITY_TEMPLATE_PATH = ROOT / "server" / "templates" / "activity.html"
+RELEASE_DETAIL_V2_TEMPLATE_PATH = ROOT / "server" / "templates" / "release-detail-v2.html"
 HOME_AUTH_PANEL_TEMPLATE_PATH = ROOT / "server" / "templates" / "partials" / "home-auth-panel.html"
 SECURITY_PATH = ROOT / "server" / "middleware.py"
 INPUT_CSS_PATH = ROOT / "server" / "static" / "css" / "input.css"
 ALEMBIC_CONFIG_PATH = ROOT / "alembic.ini"
+CONTROL_PLANE_BUSINESS_FLOWS_PATH = ROOT / "docs" / "guide" / "control-plane-business-flows.md"
+FRONTEND_ALIGNMENT_PATH = ROOT / "docs" / "guide" / "frontend-control-plane-alignment.md"
+FRONTEND_CHECKLIST_PATH = ROOT / "docs" / "guide" / "frontend-control-plane-checklist.md"
+API_REFERENCE_PATH = ROOT / "docs" / "reference" / "api-reference.md"
 APP_LINE_BUDGET = 220
 
 
@@ -153,6 +163,61 @@ def assert_alembic_config_declares_path_separator() -> None:
     )
 
 
+def assert_maintained_control_plane_docs_freeze_canonical_model() -> None:
+    docs = {
+        CONTROL_PLANE_BUSINESS_FLOWS_PATH: CONTROL_PLANE_BUSINESS_FLOWS_PATH.read_text(encoding="utf-8"),
+        FRONTEND_ALIGNMENT_PATH: FRONTEND_ALIGNMENT_PATH.read_text(encoding="utf-8"),
+        FRONTEND_CHECKLIST_PATH: FRONTEND_CHECKLIST_PATH.read_text(encoding="utf-8"),
+        API_REFERENCE_PATH: API_REFERENCE_PATH.read_text(encoding="utf-8"),
+    }
+
+    intros = {
+        path: "\n".join(text.splitlines()[:20]).lower()
+        for path, text in docs.items()
+    }
+
+    for path, intro in intros.items():
+        assert "not maintained" in intro, (
+            f"expected {path.name} intro to mark the old lifecycle model as not maintained"
+        )
+        assert "redirect" in intro or "migration shim" in intro, (
+            f"expected {path.name} intro to describe legacy routes as redirects or migration shims"
+        )
+
+    for path, text in docs.items():
+        assert "object/release/exposure/distribution" in text, (
+            f"expected {path.name} to name object/release/exposure/distribution as the maintained model"
+        )
+
+    for route in ("/library", "/access", "/shares", "/activity"):
+        assert route in docs[FRONTEND_ALIGNMENT_PATH], (
+            f"expected frontend alignment guide to list maintained route {route}"
+        )
+        assert route in docs[FRONTEND_CHECKLIST_PATH], (
+            f"expected frontend checklist to list maintained route {route}"
+        )
+
+    frontend_headings = "\n".join(
+        line.strip().lower()
+        for text in (
+            docs[FRONTEND_ALIGNMENT_PATH],
+            docs[FRONTEND_CHECKLIST_PATH],
+        )
+        for line in text.splitlines()
+        if line.startswith("#")
+    )
+
+    for legacy_phrase in [
+        "create skill",
+        "create draft",
+        "seal draft",
+        "lifecycle console",
+    ]:
+        assert legacy_phrase not in frontend_headings, (
+            "expected frontend alignment docs to keep legacy authoring terms out of maintained headings"
+        )
+
+
 def _slice_source(source: str, start_marker: str, end_marker: str) -> str:
     start = source.index(start_marker)
     end = source.index(end_marker, start)
@@ -180,8 +245,15 @@ def _sha256_base64(payload: str) -> str:
 
 
 def assert_private_registry_ui_js_contracts() -> None:
+    app_js_source = APP_JS_PATH.read_text(encoding="utf-8")
     search_source = SEARCH_MODULE_PATH.read_text(encoding="utf-8")
     lifecycle_source = LIFECYCLE_MODULE_PATH.read_text(encoding="utf-8")
+    library_template = LIBRARY_TEMPLATE_PATH.read_text(encoding="utf-8")
+    object_detail_template = OBJECT_DETAIL_TEMPLATE_PATH.read_text(encoding="utf-8")
+    access_center_template = ACCESS_CENTER_TEMPLATE_PATH.read_text(encoding="utf-8")
+    shares_template = SHARES_TEMPLATE_PATH.read_text(encoding="utf-8")
+    activity_template = ACTIVITY_TEMPLATE_PATH.read_text(encoding="utf-8")
+    release_detail_v2_template = RELEASE_DETAIL_V2_TEMPLATE_PATH.read_text(encoding="utf-8")
     auth_home_source = AUTH_HOME_MODULE_PATH.read_text(encoding="utf-8")
     auth_console_source = AUTH_CONSOLE_MODULE_PATH.read_text(encoding="utf-8")
     auth_modal_source = AUTH_MODAL_MODULE_PATH.read_text(encoding="utf-8")
@@ -232,6 +304,62 @@ def assert_private_registry_ui_js_contracts() -> None:
         "  const controller = createAuthModalController({",
         "\n\n  async function init() {",
     )
+    app_js_imports = set(
+        re.findall(r"""from ['"](\./modules/[^'"]+)['"]""", app_js_source)
+    )
+    expected_shell_imports = {
+        "./modules/config.js",
+        "./modules/toast.js",
+        "./modules/theme.js",
+        "./modules/search.js",
+        "./modules/api.js",
+        "./modules/table-interactions.js",
+    }
+
+    assert app_js_imports == expected_shell_imports, (
+        "expected app.js to import only shared browser-shell modules after removing global "
+        f"page-level bootstrap; got {sorted(app_js_imports)!r}"
+    )
+
+    for marker in [
+        "new SearchManager()",
+        "new ThemeManager()",
+        "initSortableTable(table);",
+        "initFilterableTable(table, filterInput);",
+    ]:
+        assert marker in app_js_source, (
+            "expected the maintained browser shell bootstrap to keep only shared shell helpers; "
+            f"missing marker {marker!r}"
+        )
+
+    for marker in [
+        "initCreateSkill",
+        "initCreateDraft",
+        "initDraftDetail",
+        "initReleaseDetail",
+        "initShareDetail",
+        "initAccessTokens",
+        "initDelegatedActions",
+        "setLifecycleToastRef",
+        "./modules/lifecycle.js",
+    ]:
+        assert marker not in app_js_source, (
+            "expected the maintained browser shell bootstrap to avoid legacy lifecycle "
+            f"entrypoints and redundant release-admin wiring; found marker {marker!r}"
+        )
+
+    for template_source, marker in [
+        (library_template, '<script type="module" src="/static/js/modules/library.js"></script>'),
+        (object_detail_template, '<script type="module" src="/static/js/modules/library.js"></script>'),
+        (access_center_template, '<script type="module" src="/static/js/modules/access-center.js"></script>'),
+        (shares_template, '<script type="module" src="/static/js/modules/shares.js"></script>'),
+        (activity_template, '<script type="module" src="/static/js/modules/activity.js"></script>'),
+        (release_detail_v2_template, '<script type="module" src="/static/js/modules/release-admin.js"></script>'),
+    ]:
+        assert marker in template_source, (
+            "expected maintained templates to own their page-level module wiring; "
+            f"missing marker {marker!r}"
+        )
 
     for marker in [
         "async function updateArtifactsTable(releaseId) {",
@@ -356,7 +484,6 @@ def assert_private_registry_ui_js_contracts() -> None:
     assert "style=" not in layout_template, (
         "expected layout-kawaii template to avoid inline style attributes under the current CSP"
     )
-    object_detail_template = (ROOT / "server" / "templates" / "object-detail.html").read_text(encoding="utf-8")
     assert "style=" not in object_detail_template, (
         "expected object-detail template to avoid inline style attributes under the current CSP"
     )
@@ -546,6 +673,10 @@ def test_server_app_delegates_html_routes_and_respects_size_budget() -> None:
     assert_route_composition_boundaries()
     assert_template_response_request_first()
     assert_alembic_config_declares_path_separator()
+
+
+def test_maintained_control_plane_docs_freeze_canonical_model() -> None:
+    assert_maintained_control_plane_docs_freeze_canonical_model()
 
 
 def test_private_first_console_ui_round_trip() -> None:

@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import json
 import secrets
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from server.models import Principal, RegistryObject, ShareLink, SkillVersion, utcnow
+from server.models import AccessGrant, Credential, Exposure, Principal, RegistryObject, SkillVersion, utcnow
 from server.modules.access import service as access_service
 from server.modules.audit import service as audit_service
 from server.modules.release import service as release_service
@@ -37,6 +39,20 @@ class ActorRef:
 
 def _actor_ref(actor: ActorRef) -> str:
     return f"principal:{actor.principal.slug}"
+
+
+def _json_object(value: str | None) -> dict[str, Any]:
+    try:
+        payload = json.loads(value or "{}")
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _as_aware(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
 
 
 def _release_context(db: Session, *, release_id: int, actor: ActorRef | None = None):
@@ -72,48 +88,101 @@ def _release_context(db: Session, *, release_id: int, actor: ActorRef | None = N
     return release, registry_object, owner, version_label
 
 
+def _active_grant_exposure(db: Session, *, release_id: int) -> Exposure:
+    exposure = db.scalar(
+        select(Exposure)
+        .where(Exposure.release_id == release_id)
+        .where(Exposure.audience_type == "grant")
+        .where(Exposure.state == "active")
+        .where(Exposure.install_mode == "enabled")
+        .order_by(Exposure.id.desc())
+    )
+    if exposure is None:
+        raise ShareLinkConflictError(
+            "active grant visibility required before issuing share links"
+        )
+    return exposure
+
+
+def _release_id_for_grant(db: Session, *, grant: AccessGrant) -> int:
+    exposure = db.get(Exposure, grant.exposure_id)
+    if exposure is None or exposure.audience_type != "grant":
+        raise ShareLinkNotFoundError("share link not found")
+    return int(exposure.release_id)
+
+
 def _install_path(*, owner: Principal, registry_object: RegistryObject, version: str) -> str:
     return f"/api/v1/install/grant/{owner.slug}/{registry_object.slug}@{version}"
 
 
-def _as_aware(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value
+def _share_credentials(db: Session, *, grant_id: int) -> list[Credential]:
+    return db.scalars(
+        select(Credential).where(Credential.grant_id == grant_id).order_by(Credential.id.desc())
+    ).all()
 
 
-def share_link_payload(
-    share: ShareLink,
+def _password_credential(credentials: list[Credential]) -> Credential | None:
+    for credential in credentials:
+        if credential.type == "share_password":
+            return credential
+    return None
+
+
+def _share_state(grant: AccessGrant, constraints: dict[str, Any]) -> str:
+    if grant.state and grant.state != "active":
+        return grant.state
+    expires_at = constraints.get("expires_at")
+    if isinstance(expires_at, str) and expires_at:
+        try:
+            parsed = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+        except ValueError:
+            parsed = None
+        if parsed is not None and _as_aware(parsed) <= utcnow():
+            return "expired"
+    max_uses = constraints.get("max_uses", constraints.get("usage_limit"))
+    used_count = int(constraints.get("used_count", constraints.get("usage_count") or 0))
+    if max_uses is not None and used_count >= int(max_uses):
+        return "exhausted"
+    return "active"
+
+
+def _share_link_payload(
+    db: Session,
+    grant: AccessGrant,
     *,
     install_path: str | None = None,
 ) -> dict:
-    now = utcnow()
-    state = "active"
-    if share.revoked_at is not None:
-        state = "revoked"
-    elif share.expires_at is not None and _as_aware(share.expires_at) <= now:
-        state = "expired"
-    elif share.max_uses is not None and share.used_count >= share.max_uses:
-        state = "exhausted"
+    release_id = _release_id_for_grant(db, grant=grant)
+    constraints = _json_object(grant.constraints_json)
+    credentials = _share_credentials(db, grant_id=grant.id)
+    password_credential = _password_credential(credentials)
+    used_count = int(constraints.get("used_count", constraints.get("usage_count") or 0))
+    max_uses = constraints.get("max_uses", constraints.get("usage_limit"))
+    expires_at = constraints.get("expires_at")
     payload = {
-        "id": share.id,
-        "release_id": share.release_id,
-        "name": share.name,
-        "slug": share.slug,
-        "has_password": bool(share.password_hash),
-        "expires_at": (
-            share.expires_at.isoformat().replace("+00:00", "Z")
-            if share.expires_at is not None
-            else None
-        ),
-        "max_uses": share.max_uses,
-        "used_count": share.used_count,
-        "state": state,
-        "created_at": share.created_at.isoformat().replace("+00:00", "Z"),
+        "id": grant.id,
+        "grant_id": grant.id,
+        "credential_id": password_credential.id if password_credential is not None else None,
+        "release_id": release_id,
+        "name": constraints.get("name") or constraints.get("label") or "",
+        "slug": grant.subject_ref.removeprefix("share://"),
+        "has_password": password_credential is not None,
+        "expires_at": expires_at.replace("+00:00", "Z") if isinstance(expires_at, str) else None,
+        "max_uses": int(max_uses) if max_uses is not None else None,
+        "used_count": used_count,
+        "state": _share_state(grant, constraints),
+        "created_at": grant.created_at.isoformat().replace("+00:00", "Z"),
     }
     if install_path is not None:
         payload["install_path"] = install_path
     return payload
+
+
+def _get_share_grant(db: Session, *, share_id: int) -> AccessGrant:
+    grant = db.get(AccessGrant, share_id)
+    if grant is None or grant.grant_type != "link":
+        raise ShareLinkNotFoundError("share link not found")
+    return grant
 
 
 def create_share_link(
@@ -131,31 +200,54 @@ def create_share_link(
         release_id=release_id,
         actor=actor,
     )
+    exposure = _active_grant_exposure(db, release_id=release_id)
     raw_password = str(password or "").strip()
     expires_at = utcnow() + timedelta(days=expires_in_days) if expires_in_days is not None else None
-    share = ShareLink(
-        release_id=release_id,
-        name=str(name or "").strip(),
-        slug=secrets.token_urlsafe(12),
-        password_hash=access_service.hash_token(raw_password) if raw_password else "",
-        expires_at=expires_at,
-        max_uses=max_uses,
-        used_count=0,
+    constraints: dict[str, Any] = {
+        "name": str(name or "").strip(),
+        "used_count": 0,
+    }
+    if expires_at is not None:
+        constraints["expires_at"] = expires_at.isoformat()
+    if max_uses is not None:
+        constraints["max_uses"] = max_uses
+
+    grant = AccessGrant(
+        exposure_id=exposure.id,
+        grant_type="link",
+        subject_ref=f"share://{registry_object.slug}/{secrets.token_urlsafe(12)}",
+        constraints_json=json.dumps(constraints, ensure_ascii=False),
+        state="active",
         created_by_principal_id=actor.principal.id,
+    )
+    db.add(grant)
+    db.flush()
+
+    credential_secret = raw_password or secrets.token_urlsafe(24)
+    credential = Credential(
+        principal_id=None,
+        grant_id=grant.id,
+        type="share_password" if raw_password else "share_secret",
+        hashed_secret=access_service.hash_token(credential_secret),
+        scopes_json=access_service.encode_scopes({"artifact:download"}),
+        resource_selector_json=json.dumps({"release_scope": "grant-bound"}, ensure_ascii=False),
+        expires_at=expires_at,
         created_at=utcnow(),
     )
-    db.add(share)
+    db.add(credential)
     db.flush()
+
     audit_service.append_audit_event(
         db,
         aggregate_type="share_link",
-        aggregate_id=str(share.id),
+        aggregate_id=str(grant.id),
         event_type="share_link.created",
         actor_ref=_actor_ref(actor),
-        payload={"release_id": release_id, "object_id": registry_object.id, "name": share.name},
+        payload={"release_id": release_id, "object_id": registry_object.id, "name": constraints["name"]},
     )
-    return share_link_payload(
-        share,
+    return _share_link_payload(
+        db,
+        grant,
         install_path=_install_path(
             owner=owner,
             registry_object=registry_object,
@@ -166,63 +258,75 @@ def create_share_link(
 
 def list_share_links(db: Session, *, release_id: int, actor: ActorRef) -> list[dict]:
     _release_context(db, release_id=release_id, actor=actor)
+    exposure = _active_grant_exposure(db, release_id=release_id)
     shares = db.scalars(
-        select(ShareLink)
-        .where(ShareLink.release_id == release_id)
-        .order_by(ShareLink.id.desc())
+        select(AccessGrant)
+        .where(AccessGrant.exposure_id == exposure.id)
+        .where(AccessGrant.grant_type == "link")
+        .order_by(AccessGrant.id.desc())
     ).all()
-    return [share_link_payload(share) for share in shares]
+    return [_share_link_payload(db, share) for share in shares]
 
 
 def revoke_share_link(db: Session, *, share_id: int, actor: ActorRef) -> dict:
-    share = db.get(ShareLink, share_id)
-    if share is None:
-        raise ShareLinkNotFoundError("share link not found")
-    _release_context(db, release_id=share.release_id, actor=actor)
-    if share.revoked_at is None:
-        share.revoked_at = utcnow()
-        db.add(share)
+    grant = _get_share_grant(db, share_id=share_id)
+    release_id = _release_id_for_grant(db, grant=grant)
+    _release_context(db, release_id=release_id, actor=actor)
+    if grant.state != "revoked":
+        grant.state = "revoked"
+        db.add(grant)
+        revoked_at = utcnow()
+        for credential in _share_credentials(db, grant_id=grant.id):
+            if credential.revoked_at is None:
+                credential.revoked_at = revoked_at
+                db.add(credential)
         audit_service.append_audit_event(
             db,
             aggregate_type="share_link",
-            aggregate_id=str(share.id),
+            aggregate_id=str(grant.id),
             event_type="share_link.revoked",
             actor_ref=_actor_ref(actor),
-            payload={"release_id": share.release_id},
+            payload={"release_id": release_id},
         )
-    return share_link_payload(share)
+    return _share_link_payload(db, grant)
 
 
 def resolve_share_link(db: Session, *, share_id: int, password: str | None) -> dict:
-    share = db.get(ShareLink, share_id)
-    if share is None:
-        raise ShareLinkNotFoundError("share link not found")
-    payload = share_link_payload(share)
+    grant = _get_share_grant(db, share_id=share_id)
+    payload = _share_link_payload(db, grant)
     if payload["state"] != "active":
         raise ShareLinkConflictError(payload["state"])
-    if share.password_hash and not access_service.token_matches_hash(
+
+    credentials = _share_credentials(db, grant_id=grant.id)
+    password_credential = _password_credential(credentials)
+    if password_credential is not None and not access_service.token_matches_hash(
         password or "",
-        share.password_hash,
+        password_credential.hashed_secret,
     ):
         raise ShareLinkForbiddenError("share link password is invalid")
 
+    release_id = _release_id_for_grant(db, grant=grant)
     _release, registry_object, owner, version_label = _release_context(
         db,
-        release_id=share.release_id,
+        release_id=release_id,
     )
-    share.used_count += 1
-    db.add(share)
+    constraints = _json_object(grant.constraints_json)
+    constraints["used_count"] = int(constraints.get("used_count", constraints.get("usage_count") or 0)) + 1
+    constraints["usage_count"] = constraints["used_count"]
+    grant.constraints_json = json.dumps(constraints, ensure_ascii=False)
+    db.add(grant)
     db.flush()
     audit_service.append_audit_event(
         db,
         aggregate_type="share_link",
-        aggregate_id=str(share.id),
+        aggregate_id=str(grant.id),
         event_type="share_link.resolved",
         actor_ref="anonymous",
-        payload={"release_id": share.release_id, "object_id": registry_object.id},
+        payload={"release_id": release_id, "object_id": registry_object.id},
     )
-    return share_link_payload(
-        share,
+    return _share_link_payload(
+        db,
+        grant,
         install_path=_install_path(
             owner=owner,
             registry_object=registry_object,

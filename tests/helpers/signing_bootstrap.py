@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -51,6 +52,12 @@ def contract_checked_at(repo: Path, platform: str):
         raise AssertionError(f"missing contract.last_verified for platform {platform!r}")
     minute = PLATFORM_EVIDENCE_MINUTES.get(platform, 0)
     return f"{last_verified}T12:{minute:02d}:00Z"
+
+
+def fresh_checked_at(platform: str):
+    minute = PLATFORM_EVIDENCE_MINUTES.get(platform, 0)
+    checked_at = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(minutes=minute)
+    return checked_at.isoformat().replace("+00:00", "Z")
 
 
 def scaffold_fixture(repo: Path):
@@ -117,9 +124,9 @@ def seed_fresh_platform_evidence(repo: Path):
     seed_platform_evidence(
         repo,
         [
-            ("codex", contract_checked_at(repo, "codex"), "adapted"),
-            ("claude", contract_checked_at(repo, "claude"), "adapted"),
-            ("openclaw", contract_checked_at(repo, "openclaw"), "adapted"),
+            ("codex", fresh_checked_at("codex"), "adapted"),
+            ("claude", fresh_checked_at("claude"), "adapted"),
+            ("openclaw", fresh_checked_at("openclaw"), "adapted"),
         ],
     )
 

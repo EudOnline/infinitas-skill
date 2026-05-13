@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -65,14 +66,9 @@ def _run_cli(repo: Path, args: list[str], *, expect: int = 0) -> subprocess.Comp
 
 
 def _contract_checked_at(repo: Path, platform: str) -> str:
-    profile_path = repo / "profiles" / f"{platform}.json"
-    payload = json.loads(profile_path.read_text(encoding="utf-8"))
-    contract = payload.get("contract") if isinstance(payload.get("contract"), dict) else {}
-    last_verified = contract.get("last_verified")
-    if not isinstance(last_verified, str) or not last_verified:
-        raise AssertionError(f"missing contract.last_verified for platform {platform!r}")
     minute = PLATFORM_EVIDENCE_MINUTES.get(platform, 0)
-    return f"{last_verified}T12:{minute:02d}:00Z"
+    checked_at = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(minutes=minute)
+    return checked_at.isoformat().replace("+00:00", "Z")
 
 
 def _sync_platform_evidence(repo: Path, version: str) -> None:

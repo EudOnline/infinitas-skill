@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from server.auth import get_current_access_context
 from server.db import get_db
 from server.models import AuditEvent, RegistryObject, Release
 from server.modules.access.authn import AccessContext
+from server.modules.audit.read_model import activity_query, json_payload
 
 router = APIRouter(tags=["activity"])
 
@@ -20,14 +19,6 @@ def _require_actor(context: AccessContext) -> None:
         raise HTTPException(status_code=403, detail="user session required")
     if context.user.role not in {"maintainer", "contributor"}:
         raise HTTPException(status_code=403, detail="insufficient role")
-
-
-def _json_payload(event: AuditEvent) -> dict[str, Any]:
-    try:
-        payload = json.loads(event.payload_json or "{}")
-    except json.JSONDecodeError:
-        return {}
-    return payload if isinstance(payload, dict) else {}
 
 
 def _object_payload(db: Session, payload: dict[str, Any]) -> dict[str, Any] | None:
@@ -55,7 +46,7 @@ def _release_payload(db: Session, payload: dict[str, Any]) -> dict[str, Any] | N
 
 
 def _normalize_event(db: Session, event: AuditEvent) -> dict[str, Any]:
-    payload = _json_payload(event)
+    payload = json_payload(event)
     return {
         "id": event.id,
         "actor": event.actor_ref or "system",
@@ -70,10 +61,6 @@ def _normalize_event(db: Session, event: AuditEvent) -> dict[str, Any]:
     }
 
 
-def _activity_query():
-    return select(AuditEvent).order_by(AuditEvent.occurred_at.desc(), AuditEvent.id.desc())
-
-
 @router.get("/api/activity")
 def list_activity(
     limit: int = 100,
@@ -82,7 +69,7 @@ def list_activity(
 ):
     _require_actor(context)
     capped_limit = max(1, min(int(limit or 100), 500))
-    events = db.scalars(_activity_query().limit(capped_limit)).all()
+    events = db.scalars(activity_query().limit(capped_limit)).all()
     items = [_normalize_event(db, event) for event in events]
     return {"items": items, "total": len(items)}
 
@@ -95,7 +82,7 @@ def token_activity(
 ):
     _require_actor(context)
     events = db.scalars(
-        _activity_query()
+        activity_query()
         .where(AuditEvent.aggregate_type == "token")
         .where(AuditEvent.aggregate_id == str(token_id))
     ).all()
@@ -111,7 +98,7 @@ def share_link_activity(
 ):
     _require_actor(context)
     events = db.scalars(
-        _activity_query()
+        activity_query()
         .where(AuditEvent.aggregate_type == "share_link")
         .where(AuditEvent.aggregate_id == str(share_id))
     ).all()

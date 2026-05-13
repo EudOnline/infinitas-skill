@@ -78,6 +78,7 @@ def authenticated_page(live_server, browser):
     pg.wait_for_selector("#login-token-input")
     pg.fill("#login-token-input", "e2e-maintainer-token")
     pg.click("#login-login-btn")
+    pg.wait_for_url(f"{live_server}/?lang=en")
     pg.wait_for_load_state("networkidle")
     yield pg
     context.close()

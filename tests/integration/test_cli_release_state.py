@@ -7,7 +7,12 @@ import sys
 from pathlib import Path
 
 from infinitas_skill.release.service import collect_release_state
-from tests.helpers.signing_bootstrap import FIXTURE_NAME, prepare_repo, seed_platform_evidence
+from tests.helpers.signing_bootstrap import (
+    FIXTURE_NAME,
+    fresh_checked_at,
+    prepare_repo,
+    seed_platform_evidence,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 SKILL_NAME = "operate-infinitas-skill"
@@ -226,7 +231,7 @@ def test_release_preflight_uses_openclaw_as_canonical_platform_gate() -> None:
         seed_platform_evidence(
             repo,
             [
-                ("openclaw", "2026-04-08T12:00:00Z", "native"),
+                ("openclaw", fresh_checked_at("openclaw"), "native"),
                 ("claude", "2026-01-01T00:00:00Z", "adapted"),
                 ("codex", "2026-01-01T00:00:00Z", "adapted"),
             ],

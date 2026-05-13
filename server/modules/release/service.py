@@ -32,7 +32,8 @@ class ReleaseSnapshot:
     skill_version: SkillVersion
     skill: Skill
     namespace: Principal
-    draft: SkillDraft
+    manifest: dict
+    draft: SkillDraft | None = None
 
 
 def get_skill_version_or_404(db: Session, version_id: int) -> SkillVersion:
@@ -102,6 +103,22 @@ def _get_sealed_draft_or_404(db: Session, draft_id: int | None) -> SkillDraft:
     return draft
 
 
+def _version_manifest(skill_version: SkillVersion) -> dict:
+    import json
+
+    try:
+        payload = json.loads(skill_version.sealed_manifest_json or "{}")
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _version_has_source_snapshot(skill_version: SkillVersion) -> bool:
+    manifest = _version_manifest(skill_version)
+    content_mode = str(manifest.get("content_mode") or "").strip()
+    return content_mode in {"external_ref", "uploaded_bundle"}
+
+
 def assert_skill_owner(skill: Skill, *, principal_id: int, is_maintainer: bool = False) -> None:
     if is_maintainer:
         return
@@ -123,7 +140,8 @@ def create_or_get_release(
         principal_id=actor_principal_id,
         is_maintainer=is_maintainer,
     )
-    _get_sealed_draft_or_404(db, skill_version.created_from_draft_id)
+    if not _version_has_source_snapshot(skill_version):
+        _get_sealed_draft_or_404(db, skill_version.created_from_draft_id)
 
     existing = db.scalar(
         select(Release)
@@ -168,12 +186,22 @@ def get_release_snapshot(db: Session, release_id: int) -> ReleaseSnapshot:
     skill_version = get_skill_version_or_404(db, release.skill_version_id)
     skill = _get_skill_or_404(db, skill_version.skill_id)
     namespace = _get_namespace_or_404(db, skill.namespace_id)
-    draft = _get_sealed_draft_or_404(db, skill_version.created_from_draft_id)
+    draft = None
+    manifest = _version_manifest(skill_version)
+    if not _version_has_source_snapshot(skill_version):
+        draft = _get_sealed_draft_or_404(db, skill_version.created_from_draft_id)
+        manifest = {
+            "content_mode": draft.content_mode,
+            "content_ref": draft.content_ref,
+            "content_artifact_id": draft.content_artifact_id,
+            "metadata": manifest.get("metadata") if isinstance(manifest.get("metadata"), dict) else {},
+        }
     return ReleaseSnapshot(
         release=release,
         skill_version=skill_version,
         skill=skill,
         namespace=namespace,
+        manifest=manifest,
         draft=draft,
     )
 

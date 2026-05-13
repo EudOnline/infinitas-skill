@@ -10,6 +10,8 @@ status: maintained
 
 The infinitas hosted registry exposes a REST API built on FastAPI. This document provides a high-level overview of the available endpoints. For the full interactive schema, see the auto-generated documentation.
 
+The old lifecycle model is not maintained as a primary API story. Legacy routes, if they still exist, should be treated only as redirects or migration shims; new integrations must follow the canonical `object/release/exposure/distribution` model.
+
 ## Interactive Documentation
 
 When the server is running, the following endpoints are available:
@@ -72,11 +74,13 @@ The web UI uses HMAC-signed session cookies (`infinitas_auth_token`). Cookie-aut
 
 ### Publishing
 
+The maintained publish surface is object-first and release-first. Do not build new integrations around legacy draft-oriented routes.
+
 | Method | Path | Auth | Description |
 |---|---|---|---|
 | PUT | `/api/publish/objects/{slug}` | Bearer | Publish or update an object |
 | POST | `/api/publish/objects/{object_id}/releases` | Bearer | Publish a release |
-| POST | `/api/publish/drafts` | Bearer | Create or update a draft |
+| POST | `/api/publish/drafts` | Bearer | Legacy migration shim for draft-based publishing; not maintained for new integrations |
 
 ### Share Links
 

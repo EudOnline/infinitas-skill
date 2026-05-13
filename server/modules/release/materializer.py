@@ -133,40 +133,84 @@ def _uploaded_bundle_data(
     return raw, len(file_manifest), _bundle_root_dir(source_path)
 
 
+def _snapshot_content_mode(snapshot) -> str:
+    value = snapshot.manifest.get("content_mode") if isinstance(snapshot.manifest, dict) else None
+    if value:
+        return str(value)
+    if snapshot.draft is not None:
+        return snapshot.draft.content_mode
+    return "external_ref"
+
+
+def _snapshot_content_ref(snapshot) -> str:
+    value = snapshot.manifest.get("content_ref") if isinstance(snapshot.manifest, dict) else None
+    if value:
+        return str(value)
+    if snapshot.draft is not None:
+        return snapshot.draft.content_ref or ""
+    return ""
+
+
+def _snapshot_content_artifact_id(snapshot) -> int | None:
+    value = (
+        snapshot.manifest.get("content_artifact_id")
+        if isinstance(snapshot.manifest, dict)
+        else None
+    )
+    if value is not None:
+        return int(value)
+    if snapshot.draft is not None:
+        return snapshot.draft.content_artifact_id
+    return None
+
+
+def _snapshot_metadata(snapshot) -> dict:
+    value = snapshot.manifest.get("metadata") if isinstance(snapshot.manifest, dict) else None
+    if isinstance(value, dict):
+        return value
+    if snapshot.draft is not None:
+        return load_metadata(snapshot.draft.metadata_json)
+    return {}
+
+
 def _materialize_bundle(
     db: Session,
     *,
     snapshot,
     artifact_root: Path,
 ) -> tuple[bytes, int, str]:
-    metadata = load_metadata(snapshot.draft.metadata_json)
-    if snapshot.draft.content_mode == "uploaded_bundle":
+    metadata = _snapshot_metadata(snapshot)
+    content_mode = _snapshot_content_mode(snapshot)
+    content_ref = _snapshot_content_ref(snapshot)
+    if content_mode == "uploaded_bundle":
         return _uploaded_bundle_data(
             db,
             artifact_root=artifact_root,
-            content_artifact_id=snapshot.draft.content_artifact_id,
+            content_artifact_id=_snapshot_content_artifact_id(snapshot),
         )
-    if snapshot.release.object_kind == "agent_code" and snapshot.draft.content_ref.startswith("git+"):
+    if snapshot.release.object_kind == "agent_code" and content_ref.startswith("git+"):
         raw, file_count = _external_ref_bundle_bytes(
-            content_ref=snapshot.draft.content_ref,
+            content_ref=content_ref,
             bundle_root_dir=snapshot.skill.slug,
         )
         return raw, file_count, snapshot.skill.slug
     return (
         *_bundle_bytes(
             skill_slug=snapshot.skill.slug,
-            content_ref=snapshot.draft.content_ref,
+            content_ref=content_ref,
             metadata=metadata,
         ),
         snapshot.skill.slug,
     )
 
 
-def _draft_source_ref(snapshot) -> str:
-    if snapshot.draft.content_ref:
-        return snapshot.draft.content_ref
-    if snapshot.draft.content_artifact_id is not None:
-        return f"artifact:{snapshot.draft.content_artifact_id}"
+def _snapshot_source_ref(snapshot) -> str:
+    content_ref = _snapshot_content_ref(snapshot)
+    if content_ref:
+        return content_ref
+    content_artifact_id = _snapshot_content_artifact_id(snapshot)
+    if content_artifact_id is not None:
+        return f"artifact:{content_artifact_id}"
     return ""
 
 
@@ -282,13 +326,14 @@ def _build_provenance_payload(
     branch = _git_value(repo_root, "branch", "--show-current")
     upstream = _git_value(repo_root, "rev-parse", "--abbrev-ref", "@{upstream}")
     head_commit = _git_value(repo_root, "rev-parse", "HEAD")
-    source_ref = _draft_source_ref(snapshot)
+    content_mode = _snapshot_content_mode(snapshot)
+    source_ref = _snapshot_source_ref(snapshot)
     source_commit = _content_ref_commit(
         source_ref,
         snapshot.skill_version.content_digest,
     )
     source_snapshot = {
-        "kind": "uploaded-bundle" if snapshot.draft.content_mode == "uploaded_bundle" else "content-ref",
+        "kind": "uploaded-bundle" if content_mode == "uploaded_bundle" else "content-ref",
         "tag": release_marker,
         "ref": source_ref,
         "commit": source_commit,
@@ -464,7 +509,8 @@ def _build_provenance_payload(
         "release_snapshot": {
             "release_id": release.id,
             "skill_version_id": snapshot.skill_version.id,
-            "draft_id": snapshot.draft.id,
+            "source": "draft" if snapshot.draft is not None else "version",
+            "draft_id": snapshot.draft.id if snapshot.draft is not None else None,
         },
     }
 

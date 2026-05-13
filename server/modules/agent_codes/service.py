@@ -109,6 +109,38 @@ def create_agent_code_draft(
     return draft
 
 
+def create_agent_code_version_snapshot(
+    db: Session,
+    *,
+    code_id: int,
+    actor_principal_id: int,
+    is_maintainer: bool,
+    payload: AgentCodeDraftCreateRequest,
+    version: str,
+):
+    record = get_agent_code_or_404(db, code_id)
+    spec = record.spec
+    skill_version = authoring_service.create_skill_version_snapshot(
+        db,
+        skill_id=record.skill.id,
+        actor_principal_id=actor_principal_id,
+        is_maintainer=is_maintainer,
+        version=version,
+        content_mode="external_ref",
+        content_ref=payload.content_ref,
+        metadata={
+            "kind": "agent_code",
+            "runtime_family": spec.runtime_family,
+            "language": spec.language,
+            "entrypoint": spec.entrypoint,
+        },
+    )
+    spec.external_source_json = _dump_json({"content_ref": payload.content_ref})
+    db.add(spec)
+    db.commit()
+    return skill_version
+
+
 def seal_agent_code_draft(
     db: Session,
     *,

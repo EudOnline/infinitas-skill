@@ -21,7 +21,7 @@ from server.modules.agent_presets.schemas import (
     AgentPresetDraftCreateRequest,
 )
 from server.modules.authoring import service as authoring_service
-from server.modules.authoring.schemas import SkillCreateRequest, SkillDraftCreateRequest
+from server.modules.authoring.schemas import SkillCreateRequest
 from server.modules.release import service as release_service
 from server.modules.release.materializer import release_requires_materialization
 from server.settings import get_settings
@@ -191,22 +191,14 @@ def _create_version_for_object(
 ) -> int:
     skill = _skill_for_object(db, registry_object)
     if registry_object.kind == "skill":
-        draft = authoring_service.create_draft(
+        version = authoring_service.create_skill_version_snapshot(
             db,
             skill_id=skill.id,
             actor_principal_id=principal_id,
             is_maintainer=is_maintainer,
-            payload=SkillDraftCreateRequest(
-                content_ref=payload.content_ref,
-                metadata=payload.metadata,
-            ),
-        )
-        _draft, version = authoring_service.seal_draft(
-            db,
-            draft_id=draft.id,
-            actor_principal_id=principal_id,
-            is_maintainer=is_maintainer,
             version=payload.version,
+            content_ref=payload.content_ref,
+            metadata=payload.metadata,
         )
         return version.id
 
@@ -216,7 +208,7 @@ def _create_version_for_object(
         )
         if spec is None:
             raise HTTPException(status_code=404, detail="agent preset backing spec not found")
-        draft = agent_preset_service.create_agent_preset_draft(
+        version = agent_preset_service.create_agent_preset_version_snapshot(
             db,
             preset_id=spec.id,
             actor_principal_id=principal_id,
@@ -226,12 +218,6 @@ def _create_version_for_object(
                 model=payload.model,
                 tools=payload.tools,
             ),
-        )
-        _draft, version = agent_preset_service.seal_agent_preset_draft(
-            db,
-            draft_id=draft.id,
-            actor_principal_id=principal_id,
-            is_maintainer=is_maintainer,
             version=payload.version,
         )
         return version.id
@@ -241,18 +227,12 @@ def _create_version_for_object(
     )
     if spec is None:
         raise HTTPException(status_code=404, detail="agent code backing spec not found")
-    draft = agent_code_service.create_agent_code_draft(
+    version = agent_code_service.create_agent_code_version_snapshot(
         db,
         code_id=spec.id,
         actor_principal_id=principal_id,
         is_maintainer=is_maintainer,
         payload=AgentCodeDraftCreateRequest(content_ref=payload.content_ref),
-    )
-    _draft, version = agent_code_service.seal_agent_code_draft(
-        db,
-        draft_id=draft.id,
-        actor_principal_id=principal_id,
-        is_maintainer=is_maintainer,
         version=payload.version,
     )
     return version.id

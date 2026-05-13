@@ -1,0 +1,101 @@
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from typing import Any
+
+from sqlalchemy.orm import Session
+
+from server.models import AccessGrant
+from server.modules.access.authn import AccessContext
+from server.ui.formatting import humanize_timestamp, load_json_object
+from server.ui.i18n import with_lang
+from server.ui.library_access import (
+    credential_is_share_secret,
+    grant_is_active,
+    grant_state,
+)
+from server.ui.library_scope import (
+    LibraryScope,
+    iter_object_release_rows,
+    load_library_scope,
+    parse_datetime,
+)
+
+
+def share_link_state_from_grant(grant: AccessGrant, constraints: dict[str, Any]) -> str:
+    base = grant_state(grant, constraints)
+    if base != "active":
+        return base
+    usage_limit = share_usage_limit(constraints)
+    if usage_limit is not None and share_usage_count(constraints) >= usage_limit:
+        return "exhausted"
+    return "active"
+
+
+def share_label(constraints: dict[str, Any]) -> str:
+    return str(constraints.get("label") or constraints.get("name") or "")
+
+
+def share_usage_count(constraints: dict[str, Any]) -> int:
+    return int(constraints.get("usage_count", constraints.get("used_count") or 0) or 0)
+
+
+def share_usage_limit(constraints: dict[str, Any]) -> int | None:
+    usage_limit = constraints.get("usage_limit", constraints.get("max_uses"))
+    return int(usage_limit) if usage_limit is not None else None
+
+
+def build_share_rows_from_scope(
+    scope: LibraryScope,
+    *,
+    lang: str,
+    object_id: int | None = None,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for registry_object, release, version in iter_object_release_rows(scope):
+        if object_id is not None and registry_object.id != object_id:
+            continue
+        for exposure in scope.exposures_by_release_id.get(release.id, []):
+            for grant in scope.grants_by_exposure_id.get(exposure.id, []):
+                if grant.grant_type != "link":
+                    continue
+                constraints = load_json_object(grant.constraints_json)
+                credentials = scope.credentials_by_grant_id.get(grant.id, [])
+                rows.append(
+                    {
+                        "id": grant.id,
+                        "object_id": registry_object.id,
+                        "object_name": registry_object.display_name,
+                        "object_href": with_lang(f"/library/{registry_object.id}", lang),
+                        "release_id": release.id,
+                        "release_version": version.version if version is not None else None,
+                        "label": share_label(constraints),
+                        "expiry": humanize_timestamp(constraints.get("expires_at")),
+                        "has_password": bool(
+                            constraints.get("temporary_password")
+                            or constraints.get("password")
+                            or any(credential_is_share_secret(item) for item in credentials)
+                        ),
+                        "usage_count": share_usage_count(constraints),
+                        "usage_limit": share_usage_limit(constraints),
+                        "state": share_link_state_from_grant(grant, constraints),
+                        "can_revoke": grant_is_active(grant, constraints),
+                        "_sort_at": parse_datetime(grant.created_at)
+                        or datetime.min.replace(tzinfo=timezone.utc),
+                    }
+                )
+    rows.sort(key=lambda item: item["_sort_at"], reverse=True)
+    return rows
+
+
+def list_library_share_rows(
+    db: Session,
+    *,
+    actor: AccessContext,
+    lang: str,
+    object_id: int | None = None,
+    scope: LibraryScope | None = None,
+) -> list[dict[str, Any]]:
+    if scope is None:
+        scope = load_library_scope(db, actor=actor)
+    return build_share_rows_from_scope(scope, lang=lang, object_id=object_id)

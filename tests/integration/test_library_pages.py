@@ -330,6 +330,47 @@ def test_access_center_and_shares_pages_render_real_inventory(
     assert "2 / 5" in shares_html
 
 
+def test_shares_page_uses_grant_share_usage_aliases(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    client = _prepare_library_client(
+        monkeypatch,
+        tmp_path=tmp_path,
+        temp_repo_copy=temp_repo_copy,
+        signing_key=signing_key,
+    )
+    seeded = _seed_library_access_data(client)
+    headers = {"Authorization": "Bearer fixture-maintainer-token"}
+
+    from server.db import get_session_factory
+    from server.models import AccessGrant
+
+    session_factory = get_session_factory()
+    with session_factory() as session:
+        share_grant = session.get(AccessGrant, seeded["share_grant_id"])
+        assert share_grant is not None
+        share_grant.constraints_json = json.dumps(
+            {
+                "name": "Grant-backed exhausted share",
+                "used_count": 1,
+                "max_uses": 1,
+            },
+            ensure_ascii=False,
+        )
+        session.add(share_grant)
+        session.commit()
+
+    shares_response = client.get("/shares?lang=en", headers=headers)
+    assert shares_response.status_code == 200, shares_response.text
+    shares_html = shares_response.text
+    assert "Grant-backed exhausted share" in shares_html
+    assert "1 / 1" in shares_html
+    assert "exhausted" in shares_html
+
+
 def test_access_center_and_shares_pages_offer_revoke_actions(
     monkeypatch,
     tmp_path: Path,
@@ -437,7 +478,7 @@ def test_access_and_shares_pages_show_labels_for_items_created_from_release_page
     assert "1.0.0" in shares_html
 
 
-def test_activity_page_derives_visibility_token_and_share_timeline(
+def test_activity_page_renders_normalized_audit_events(
     monkeypatch,
     tmp_path: Path,
     temp_repo_copy: Path,
@@ -449,16 +490,35 @@ def test_activity_page_derives_visibility_token_and_share_timeline(
         temp_repo_copy=temp_repo_copy,
         signing_key=signing_key,
     )
-    _seed_library_access_data(client)
     headers = {"Authorization": "Bearer fixture-maintainer-token"}
+    from server.db import get_session_factory
+    from server.modules.audit import service as audit_service
+
+    session_factory = get_session_factory()
+    with session_factory() as session:
+        audit_service.append_audit_event(
+            session,
+            aggregate_type="share_link",
+            aggregate_id="audit-share-1",
+            event_type="share_link.created",
+            actor_ref="principal:audit-fixture",
+            payload={
+                "object_id": 999999,
+                "release_id": 888888,
+                "object_name": "Audit Only Object",
+                "title": "Audit-only share created",
+                "description": "Rendered from audit payload, not library projection.",
+            },
+        )
+        session.commit()
 
     response = client.get("/activity?lang=en", headers=headers)
     assert response.status_code == 200, response.text
     html = response.text
 
-    assert "Demo Skill" in html
-    assert "visibility" in html
-    assert "token" in html
+    assert "Audit Only Object" in html
+    assert "Audit-only share created" in html
+    assert "audit-fixture" in html
     assert "share" in html
 
 

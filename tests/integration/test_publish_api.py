@@ -4,6 +4,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from infinitas_skill.install.distribution import verify_distribution_manifest
 from tests.integration.test_agent_code_import import _create_external_agent_repo
 from tests.integration.test_private_registry_release_materialization import (
     _configure_env,
@@ -70,12 +71,45 @@ def test_publish_facade_creates_release_without_draft_or_seal_terms(
     assert "draft" not in release_payload
     assert "seal" not in release_payload
 
+    from server.db import get_session_factory
+    from server.models import SkillDraft, SkillVersion
+    from server.modules.release.models import Release
+
+    session_factory = get_session_factory()
+    with session_factory() as session:
+        release = session.get(Release, int(release_payload["release_id"]))
+        assert release is not None
+        skill_version = session.get(SkillVersion, int(release.skill_version_id))
+        assert skill_version is not None
+        assert skill_version.created_from_draft_id is None
+        assert session.query(SkillDraft).count() == 0
+
     status = client.get(
         f"/api/publish/releases/{release_payload['release_id']}/status",
         headers=headers,
     )
     assert status.status_code == 200, status.text
     assert status.json()["release_id"] == release_payload["release_id"]
+
+    from server.worker import run_worker_loop
+
+    assert run_worker_loop(limit=1) == 1
+    manifest_path = (
+        tmp_path
+        / "artifacts"
+        / "skills"
+        / "fixture-maintainer"
+        / "demo-published-skill"
+        / "1.2.3"
+        / "manifest.json"
+    )
+    assert manifest_path.exists()
+    verified = verify_distribution_manifest(
+        manifest_path,
+        root=tmp_path / "artifacts",
+        attestation_root=temp_repo_copy,
+    )
+    assert verified["verified"] is True
 
 
 def test_publish_facade_supports_agent_preset_and_agent_code(

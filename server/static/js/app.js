@@ -5,18 +5,8 @@ import { infinitasAppShell, APP_UI, APP_SESSION, AUTH_SESSION_CONFIG } from './m
 import { ToastManager } from './modules/toast.js';
 import { ThemeManager, setToastRef as setThemeToastRef } from './modules/theme.js';
 import { SearchManager, setSearchToastRef } from './modules/search.js';
-import { copyToClipboard, bindCopyTriggers, apiGet, apiPost, apiPatch, drainPendingToasts, setApiToastRef } from './modules/api.js';
+import { bindCopyTriggers, drainPendingToasts, setApiToastRef } from './modules/api.js';
 import { initSortableTable, initFilterableTable } from './modules/table-interactions.js';
-import {
-  initDelegatedActions,
-  initCreateSkill,
-  initCreateDraft,
-  initDraftDetail,
-  initReleaseDetail,
-  initShareDetail,
-  initAccessTokens,
-  setLifecycleToastRef,
-} from './modules/lifecycle.js';
 
 // Create shared instances
 const toast = new ToastManager();
@@ -26,7 +16,6 @@ const themeManager = new ThemeManager();
 setThemeToastRef(toast);
 setSearchToastRef(toast);
 setApiToastRef(toast);
-setLifecycleToastRef(toast);
 
 // Legacy globals (backward compat for auth-session.js and inline references)
 window.APP_UI = APP_UI;
@@ -80,15 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
   } catch (err) {
     console.error('Failed to initialize search:', err);
   }
-
-  // Initialize lifecycle action pages
-  initDelegatedActions();
-  initCreateSkill();
-  initCreateDraft();
-  initDraftDetail();
-  initReleaseDetail();
-  initShareDetail();
-  initAccessTokens();
 
   // Initialize table sort and filter on all tables
   document.querySelectorAll('table').forEach((table) => {

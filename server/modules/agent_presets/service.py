@@ -167,6 +167,53 @@ def create_agent_preset_draft(
     return draft
 
 
+def create_agent_preset_version_snapshot(
+    db: Session,
+    *,
+    preset_id: int,
+    actor_principal_id: int,
+    is_maintainer: bool,
+    payload: AgentPresetDraftCreateRequest,
+    version: str,
+):
+    record = get_agent_preset_or_404(db, preset_id)
+    spec = record.spec
+
+    artifact = _stage_uploaded_bundle(
+        filename=f"{record.skill.slug}-preset.json",
+        payload={
+            "kind": "agent_preset",
+            "slug": record.skill.slug,
+            "prompt": payload.prompt,
+            "model": payload.model,
+            "tools": payload.tools,
+            "runtime_family": spec.runtime_family,
+            "supported_memory_modes": json.loads(spec.supported_memory_modes_json or "[]"),
+            "default_memory_mode": spec.default_memory_mode,
+            "pinned_skill_dependencies": json.loads(spec.pinned_skill_dependencies_json or "[]"),
+        },
+    )
+    db.add(artifact)
+    db.flush()
+
+    skill_version = authoring_service.create_skill_version_snapshot(
+        db,
+        skill_id=record.skill.id,
+        actor_principal_id=actor_principal_id,
+        is_maintainer=is_maintainer,
+        version=version,
+        content_mode="uploaded_bundle",
+        content_upload_token=str(artifact.id),
+        metadata=_serialize_preset_defaults(spec),
+    )
+    spec.default_prompt = payload.prompt
+    spec.default_model = payload.model
+    spec.default_tools_json = _dump_json(payload.tools)
+    db.add(spec)
+    db.commit()
+    return skill_version
+
+
 def seal_agent_preset_draft(
     db: Session,
     *,

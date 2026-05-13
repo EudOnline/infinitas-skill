@@ -11,6 +11,7 @@ from server import __version__ as server_version
 from server.auth import maybe_get_current_user
 from server.db import get_db
 from server.models import User
+from server.ui.activity import list_activity_rows
 from server.ui.auth_state import (
     require_lifecycle_actor,
 )
@@ -18,16 +19,11 @@ from server.ui.console import build_console_forbidden_context
 from server.ui.formatting import build_kawaii_ui_context
 from server.ui.home import build_home_context
 from server.ui.i18n import build_registry_base_url, pick_lang, resolve_language, with_lang
-from server.ui.library import (
-    get_library_object_detail,
-    get_library_release_detail,
-    list_library_activity_rows,
-    list_library_objects,
-    list_library_share_rows,
-    list_library_token_activity_rows,
-    list_library_token_rows,
-    load_library_scope,
-)
+from server.ui.library_access import list_library_token_activity_rows, list_library_token_rows
+from server.ui.library_objects import get_library_object_detail, list_library_objects
+from server.ui.library_releases import get_library_release_detail
+from server.ui.library_scope import load_library_scope
+from server.ui.library_shares import list_library_share_rows
 from server.ui.navigation import build_site_nav
 from server.ui.session_bootstrap import build_session_bootstrap
 
@@ -376,7 +372,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
             page_kicker=pick_lang(lang, "活动", "Activity"),
             page_eyebrow=pick_lang(lang, "审计", "Audit"),
         )
-        context["activity_items"] = list_library_activity_rows(db, actor=actor)
+        context["activity_items"] = list_activity_rows(db)
         return templates.TemplateResponse(request, "activity.html", context)
 
     @app.get("/settings", response_class=HTMLResponse)

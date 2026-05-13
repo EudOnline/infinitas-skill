@@ -55,7 +55,7 @@ The product is split into two surfaces:
 - `POST /api/publish/objects/{object_id}/releases`
 - `GET /api/publish/releases/{release_id}/status`
 
-The underlying lifecycle may still use draft or sealing mechanics internally, but those internals are not the primary control-plane story for operators.
+The maintained publish path creates immutable version snapshots directly from object content. Draft and seal commands may still exist as compatibility tools for older automation, but they are not the maintained publish model for new work.
 
 ## Preferred workflow by persona
 
@@ -704,15 +704,13 @@ Example response:
 
 ## ID Chaining Reference
 
-IDs produced by one command feed into the next. The full lifecycle chain:
+IDs produced by one command feed into the next. The maintained publish chain is:
 
 ```
-skills create         -> id (skill_id)               -> drafts create
-drafts create         -> id (draft_id)               -> drafts seal
-drafts seal           -> skill_version.id (version_id) -> releases create
-releases create       -> id (release_id)             -> exposures create, tokens check-release, releases get/artifacts
-exposures create      -> id (exposure_id)            -> reviews open-case
-reviews open-case     -> id (review_case_id)         -> reviews decide
+publish objects upsert -> object.id                  -> publish releases create
+publish releases create -> release_id                -> exposures create, tokens check-release, releases get/artifacts
+exposures create        -> id (exposure_id)          -> reviews open-case
+reviews open-case       -> id (review_case_id)       -> reviews decide
 ```
 
 ---

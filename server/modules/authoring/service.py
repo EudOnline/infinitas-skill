@@ -102,7 +102,7 @@ def _resolve_uploaded_content_artifact(db: Session, token: str | None) -> Artifa
     return artifact
 
 
-def resolve_draft_content(
+def resolve_version_content(
     db: Session,
     *,
     content_mode: str | None,
@@ -121,33 +121,159 @@ def resolve_draft_content(
 
     normalized_ref = (content_ref or "").strip()
     if not normalized_ref:
-        raise ConflictError("external_ref drafts require content_ref")
+        raise ConflictError("external_ref versions require content_ref")
     return normalized_mode, normalized_ref, None
 
 
-def _content_digest_for_draft(db: Session, draft: SkillDraft) -> str:
-    if draft.content_mode == "uploaded_bundle":
-        if draft.content_artifact_id is None:
-            raise ConflictError("uploaded_bundle draft is missing content_artifact_id")
-        artifact = repository.get_artifact(db, draft.content_artifact_id)
+def resolve_draft_content(
+    db: Session,
+    *,
+    content_mode: str | None,
+    content_ref: str | None,
+    content_upload_token: str | None,
+) -> tuple[str, str, int | None]:
+    return resolve_version_content(
+        db,
+        content_mode=content_mode,
+        content_ref=content_ref,
+        content_upload_token=content_upload_token,
+    )
+
+
+def _content_digest_for_snapshot(
+    db: Session,
+    *,
+    content_mode: str,
+    content_ref: str,
+    content_artifact_id: int | None,
+) -> str:
+    if content_mode == "uploaded_bundle":
+        if content_artifact_id is None:
+            raise ConflictError("uploaded_bundle version is missing content_artifact_id")
+        artifact = repository.get_artifact(db, content_artifact_id)
         if artifact is None:
             raise NotFoundError("uploaded content artifact not found")
         return f"sha256:{artifact.sha256}"
 
-    frozen_content_ref = draft.content_ref or ""
+    frozen_content_ref = content_ref or ""
     if not is_sealable_content_ref(frozen_content_ref):
-        raise ConflictError("draft content_ref must be an immutable snapshot before sealing")
+        raise ConflictError("version content_ref must be an immutable snapshot")
     return sha256_prefixed(frozen_content_ref)
 
 
-def _sealed_manifest_for_draft(draft: SkillDraft, metadata: dict) -> dict:
+def _content_digest_for_draft(db: Session, draft: SkillDraft) -> str:
+    return _content_digest_for_snapshot(
+        db,
+        content_mode=draft.content_mode,
+        content_ref=draft.content_ref,
+        content_artifact_id=draft.content_artifact_id,
+    )
+
+
+def _version_manifest(
+    *,
+    kind: str,
+    content_mode: str,
+    content_ref: str,
+    content_artifact_id: int | None,
+    metadata: dict,
+) -> dict:
     return {
-        "kind": "skill_draft_manifest",
-        "content_mode": draft.content_mode,
-        "content_ref": draft.content_ref,
-        "content_artifact_id": draft.content_artifact_id,
+        "kind": kind,
+        "content_mode": content_mode,
+        "content_ref": content_ref,
+        "content_artifact_id": content_artifact_id,
         "metadata": metadata,
     }
+
+
+def _sealed_manifest_for_draft(draft: SkillDraft, metadata: dict) -> dict:
+    return _version_manifest(
+        kind="skill_draft_manifest",
+        content_mode=draft.content_mode,
+        content_ref=draft.content_ref,
+        content_artifact_id=draft.content_artifact_id,
+        metadata=metadata,
+    )
+
+
+def create_skill_version_snapshot(
+    db: Session,
+    *,
+    skill_id: int,
+    actor_principal_id: int,
+    is_maintainer: bool = False,
+    version: str,
+    content_mode: str | None = None,
+    content_ref: str | None = None,
+    content_upload_token: str | None = None,
+    metadata: dict | None = None,
+) -> SkillVersion:
+    skill = repository.get_skill(db, skill_id)
+    if skill is None:
+        raise NotFoundError("skill not found")
+    assert_namespace_owner(
+        skill,
+        principal_id=actor_principal_id,
+        is_maintainer=is_maintainer,
+    )
+    existing_version = db.scalar(
+        select(SkillVersion)
+        .where(SkillVersion.skill_id == skill.id)
+        .where(SkillVersion.version == version)
+        .with_for_update()
+    )
+    if existing_version is not None:
+        raise ConflictError("skill version already exists")
+
+    resolved_mode, resolved_ref, content_artifact_id = resolve_version_content(
+        db,
+        content_mode=content_mode,
+        content_ref=content_ref,
+        content_upload_token=content_upload_token,
+    )
+    frozen_metadata = metadata if isinstance(metadata, dict) else {}
+    content_digest = _content_digest_for_snapshot(
+        db,
+        content_mode=resolved_mode,
+        content_ref=resolved_ref,
+        content_artifact_id=content_artifact_id,
+    )
+    metadata_digest = sha256_prefixed(canonical_metadata_json(frozen_metadata))
+    version_manifest = _version_manifest(
+        kind="skill_version_manifest",
+        content_mode=resolved_mode,
+        content_ref=resolved_ref,
+        content_artifact_id=content_artifact_id,
+        metadata=frozen_metadata,
+    )
+
+    skill_version = repository.create_skill_version(
+        db,
+        skill_id=skill.id,
+        version=version,
+        content_digest=content_digest,
+        metadata_digest=metadata_digest,
+        sealed_manifest_json=canonical_manifest_json(version_manifest),
+        created_from_draft_id=None,
+        created_by_principal_id=actor_principal_id,
+    )
+    db.commit()
+    db.refresh(skill_version)
+    record_lifecycle_memory_event_best_effort(
+        db,
+        lifecycle_event="task.authoring.create_version",
+        aggregate_type="skill_version",
+        aggregate_id=str(skill_version.id),
+        actor_ref=f"principal:{actor_principal_id}",
+        payload={
+            "skill_id": str(skill.id),
+            "skill_slug": skill.slug,
+            "version": skill_version.version,
+            "skill_version_id": str(skill_version.id),
+        },
+    )
+    return skill_version
 
 
 def create_skill(

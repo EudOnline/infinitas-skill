@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import secrets
-from datetime import timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -23,8 +22,11 @@ from server.models import (
 )
 from server.modules.access import service as access_service
 from server.modules.access.authn import AccessContext
+from server.modules.audit import service as audit_service
 from server.modules.release import service as release_service
-from server.ui import library as library_ui
+from server.modules.shares import service as share_service
+from server.ui.library_objects import get_library_object_detail, list_library_objects
+from server.ui.library_releases import list_library_releases
 
 router = APIRouter(tags=["library"])
 
@@ -54,6 +56,13 @@ def _require_library_principal(context: AccessContext) -> AccessContext:
     if actor.principal is None:
         raise HTTPException(status_code=403, detail="principal required")
     return actor
+
+
+def _share_actor(context: AccessContext) -> share_service.ActorRef:
+    return share_service.ActorRef(
+        principal=context.principal,
+        is_maintainer=context.user is not None and context.user.role == "maintainer",
+    )
 
 
 def _require_release_write_context(
@@ -116,6 +125,17 @@ def _build_install_path(*, owner: Principal, registry_object: RegistryObject, ve
     return f"/api/v1/install/grant/{owner.slug}/{registry_object.slug}@{version}"
 
 
+def _token_type_for_scopes(scopes_json: str | None) -> str:
+    scopes = access_service.parse_scopes(scopes_json)
+    if any(
+        scope.endswith(":write")
+        or scope in {"authoring:write", "publish:write", "registry:publish"}
+        for scope in scopes
+    ):
+        return "publisher"
+    return "reader"
+
+
 def _require_grant(db: Session, *, grant_id: int, grant_type: str | None = None) -> AccessGrant:
     grant = db.get(AccessGrant, grant_id)
     if grant is None:
@@ -138,7 +158,7 @@ def library_list(
     db: Session = Depends(get_db),
 ):
     actor = _require_library_actor(context)
-    items = library_ui.list_library_objects(db, actor=actor)
+    items = list_library_objects(db, actor=actor)
     return {"items": items, "total": len(items)}
 
 
@@ -149,7 +169,7 @@ def library_detail(
     db: Session = Depends(get_db),
 ):
     actor = _require_library_actor(context)
-    detail = library_ui.get_library_object_detail(db, actor=actor, object_id=object_id)
+    detail = get_library_object_detail(db, actor=actor, object_id=object_id)
     if detail is None:
         raise HTTPException(status_code=404, detail="object not found")
     return detail
@@ -162,7 +182,7 @@ def library_releases(
     db: Session = Depends(get_db),
 ):
     actor = _require_library_actor(context)
-    items = library_ui.list_library_releases(db, actor=actor, object_id=object_id)
+    items = list_library_releases(db, actor=actor, object_id=object_id)
     if items is None:
         raise HTTPException(status_code=404, detail="object not found")
     return {"items": items, "total": len(items)}
@@ -202,6 +222,20 @@ def issue_library_release_token(
         grant=grant,
         scopes=scopes,
     )
+    audit_service.append_audit_event(
+        db,
+        aggregate_type="token",
+        aggregate_id=str(credential.id),
+        event_type="token.created",
+        actor_ref=f"principal:{actor.principal.slug}",
+        payload={
+            "object_id": registry_object.id,
+            "object_name": registry_object.display_name,
+            "release_id": release_id,
+            "token_type": payload.token_type,
+            "name": payload.label,
+        },
+    )
     db.commit()
 
     return {
@@ -229,63 +263,35 @@ def create_library_release_share_link(
     db: Session = Depends(get_db),
 ):
     actor = _require_library_principal(context)
-    registry_object, owner, version_label = _require_release_write_context(
+    _registry_object, _owner, version_label = _require_release_write_context(
         db,
         actor=actor,
         release_id=release_id,
     )
-    exposure = _require_active_grant_exposure(db, release_id=release_id)
-
-    expires_at = utcnow() + timedelta(days=payload.expires_in_days)
     temporary_password = (payload.temporary_password or "").strip() or secrets.token_urlsafe(10)
-    constraints = {
-        "expires_at": expires_at.isoformat(),
-        "temporary_password": temporary_password,
-        "usage_count": 0,
-    }
-    if payload.label:
-        constraints["label"] = payload.label
-    if payload.usage_limit is not None:
-        constraints["usage_limit"] = payload.usage_limit
-
-    grant = AccessGrant(
-        exposure_id=exposure.id,
-        grant_type="link",
-        subject_ref=f"share://{registry_object.slug}/{secrets.token_hex(4)}",
-        constraints_json=json.dumps(constraints, ensure_ascii=False),
-        state="active",
-        created_by_principal_id=actor.principal.id,
-    )
-    db.add(grant)
-    db.flush()
-
-    credential = Credential(
-        principal_id=None,
-        grant_id=grant.id,
-        type="share_password",
-        hashed_secret=access_service.hash_token(temporary_password),
-        scopes_json=access_service.encode_scopes({"artifact:download"}),
-        resource_selector_json=json.dumps({"release_scope": "grant-bound"}, ensure_ascii=False),
-        expires_at=expires_at,
-        created_at=utcnow(),
-    )
-    db.add(credential)
+    try:
+        share = share_service.create_share_link(
+            db,
+            release_id=release_id,
+            name=payload.label or "",
+            password=temporary_password,
+            expires_in_days=payload.expires_in_days,
+            max_uses=payload.usage_limit,
+            actor=_share_actor(actor),
+        )
+    except share_service.ShareLinkError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     db.commit()
 
-    install_path = _build_install_path(
-        owner=owner,
-        registry_object=registry_object,
-        version=version_label,
-    )
     base_url = str(request.base_url).rstrip("/")
     return {
-        "share_id": grant.id,
-        "credential_id": credential.id,
+        "share_id": share["grant_id"],
+        "credential_id": share["credential_id"],
         "label": payload.label,
-        "install_path": install_path,
-        "install_url": f"{base_url}{install_path}",
+        "install_path": share["install_path"],
+        "install_url": f"{base_url}{share['install_path']}",
         "temporary_password": temporary_password,
-        "expires_at": expires_at.isoformat().replace("+00:00", "Z"),
+        "expires_at": share["expires_at"],
         "usage_limit": payload.usage_limit,
         "release_id": release_id,
         "release_version": version_label,
@@ -310,6 +316,26 @@ def revoke_library_token(
     if credential.revoked_at is None:
         credential.revoked_at = utcnow()
         db.add(credential)
+        registry_object, _owner, _version_label = _require_release_write_context(
+            db,
+            actor=actor,
+            release_id=release_id,
+        )
+        constraints = json.loads(grant.constraints_json or "{}")
+        audit_service.append_audit_event(
+            db,
+            aggregate_type="token",
+            aggregate_id=str(credential.id),
+            event_type="token.revoked",
+            actor_ref=f"principal:{actor.principal.slug}",
+            payload={
+                "object_id": registry_object.id,
+                "object_name": registry_object.display_name,
+                "release_id": release_id,
+                "token_type": _token_type_for_scopes(credential.scopes_json),
+                "name": constraints.get("label"),
+            },
+        )
         db.commit()
 
     return {
@@ -327,27 +353,26 @@ def revoke_library_share_link(
     db: Session = Depends(get_db),
 ):
     actor = _require_library_principal(context)
-    grant = _require_grant(db, grant_id=grant_id, grant_type="link")
-    release_id = _release_id_for_grant(db, grant=grant)
-    _require_release_write_context(db, actor=actor, release_id=release_id)
-
-    if grant.state != "revoked":
-        grant.state = "revoked"
-        db.add(grant)
-
-    credentials = db.scalars(
-        select(Credential).where(Credential.grant_id == grant.id).order_by(Credential.id.desc())
-    ).all()
-    revoked_at = utcnow()
-    for credential in credentials:
-        if credential.revoked_at is None:
-            credential.revoked_at = revoked_at
-            db.add(credential)
+    try:
+        share = share_service.revoke_share_link(
+            db,
+            share_id=grant_id,
+            actor=_share_actor(actor),
+        )
+    except share_service.ShareLinkNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except share_service.ShareLinkForbiddenError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except share_service.ShareLinkError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     db.commit()
 
+    credentials = db.scalars(
+        select(Credential).where(Credential.grant_id == grant_id).order_by(Credential.id.desc())
+    ).all()
     return {
-        "share_id": grant.id,
+        "share_id": share["grant_id"],
         "credential_ids": [credential.id for credential in credentials],
         "state": "revoked",
-        "release_id": release_id,
+        "release_id": share["release_id"],
     }
