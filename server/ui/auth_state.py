@@ -19,7 +19,9 @@ def hydrate_auth_state(
     payload = dict(session_ui or {})
     if session_user is None:
         payload.pop("current_user", None)
+        payload["has_auth_cookie_hint"] = False
         return payload
+    payload["has_auth_cookie_hint"] = True
     payload["current_user"] = {
         "username": session_user.username,
         "role": session_user.role,

@@ -21,6 +21,12 @@ def test_build_session_bootstrap_preserves_cookie_hint_and_hydrates_current_user
     }
 
 
+def test_build_session_bootstrap_exposes_false_cookie_hint_for_anonymous_user() -> None:
+    payload = build_session_bootstrap({}, None)
+
+    assert payload == {"has_auth_cookie_hint": False}
+
+
 def test_build_site_nav_assembles_language_aware_home_and_console_links() -> None:
     assert build_site_nav(home=True, lang="en") == [
         {"href": "#start", "label": "Home base"},

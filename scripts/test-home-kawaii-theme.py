@@ -31,6 +31,25 @@ def parse_bootstrap_payload(html: str, element_id: str) -> dict:
     return {}
 
 
+def read_stylesheet(href: str) -> str:
+    href = href.split('?', 1)[0]
+    if not href.startswith('/static/'):
+        fail(f'expected stylesheet href to be a local /static asset, got {href}')
+    path = ROOT / 'server' / href.lstrip('/')
+    try:
+        return path.read_text(encoding='utf-8')
+    except FileNotFoundError:
+        fail(f'expected stylesheet asset to exist at {path}')
+    return ''
+
+
+def page_css(html: str) -> str:
+    hrefs = re.findall(r'<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"', html)
+    if not hrefs:
+        fail('expected page to link at least one stylesheet')
+    return '\n'.join(read_stylesheet(href) for href in hrefs if href.startswith('/static/'))
+
+
 def configure_env(tmpdir: Path):
     from server.db import get_engine, get_session_factory
     from server.settings import get_settings
@@ -151,25 +170,33 @@ def scenario_home_supports_readable_copy_and_mobile_adaptation():
             fail(f'expected GET / to return 200, got {response.status_code}: {response.text}')
 
         html = response.text
+        css = page_css(html)
+        source_css = (ROOT / 'server/static/css/input.css').read_text(encoding='utf-8')
         required_snippets = [
             '--kawaii-ink-soft: #64637d',
             '--kawaii-ink-muted: #7c7b92',
             'overflow-wrap: anywhere;',
             'min-width: 0;',
         ]
-        missing_snippets = [snippet for snippet in required_snippets if snippet not in html]
+        missing_snippets = [
+            snippet for snippet in required_snippets if snippet not in css and snippet not in source_css
+        ]
         if missing_snippets:
             fail(f'home page is missing readability hardening markers: {", ".join(missing_snippets)}')
 
-        mobile_patterns = {
-            'hero CTA fills mobile width': r'@media \(max-width: 720px\).*?\.hero-cta\s*\{\s*width:\s*100%;',
-            'section CTA fills mobile width': r'@media \(max-width: 720px\).*?\.section-action\s*\{\s*width:\s*100%;',
-            'section button fills mobile width': r'@media \(max-width: 720px\).*?\.section-action\s+\.kawaii-button\s*\{\s*width:\s*100%;',
-            'console and skill grids collapse to one column': r'@media \(max-width: 720px\).*?\.console-grid,\s*\.skills-grid\s*\{\s*grid-template-columns:\s*1fr;',
-        }
-        missing_patterns = [label for label, pattern in mobile_patterns.items() if not re.search(pattern, html, re.S)]
-        if missing_patterns:
-            fail(f'home page is missing mobile adaptation rules: {", ".join(missing_patterns)}')
+        mobile_checks = [
+            ('hero CTA has responsive class hook', 'class="hero-cta ' in html),
+            ('section CTA fills mobile width', '.section-action {\n      width: 100%;' in source_css),
+            (
+                'section button fills mobile width',
+                '.section-action .kawaii-button {\n      width: 100%;' in source_css,
+            ),
+            ('console grid has mobile rule', '.console-grid {\n      grid-template-columns: repeat(2, minmax(0, 1fr));' in source_css),
+            ('skills grid uses responsive tailwind columns', 'skills-grid grid grid-cols-2 lg:grid-cols-3' in html),
+        ]
+        missing_mobile = [label for label, passed in mobile_checks if not passed]
+        if missing_mobile:
+            fail(f'home page is missing mobile adaptation rules: {", ".join(missing_mobile)}')
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -189,20 +216,21 @@ def scenario_home_polish_tightens_rhythm_and_clarifies_ctas():
             fail(f'expected GET / to return 200, got {response.status_code}: {response.text}')
 
         html = response.text
-        spacing_patterns = {
-            'desktop hero spacing set': r'\.hero-section\s*\{\s*margin-bottom:\s*1rem;',
-            'desktop status spacing set': r'\.status-section\s*\{\s*margin-bottom:\s*1rem;',
-            'desktop console spacing set': r'\.console-section\s*\{\s*margin-bottom:\s*1rem;',
-            'section topline spacing set': r'\.section-topline\s*\{.*?margin-bottom:\s*0\.75rem;',
-        }
-        missing_spacing = [label for label, pattern in spacing_patterns.items() if not re.search(pattern, html, re.S)]
+        source_css = (ROOT / 'server/static/css/input.css').read_text(encoding='utf-8')
+        spacing_checks = [
+            ('desktop hero spacing set', 'hero-section mb-4 md:mb-3.5' in html),
+            ('desktop status spacing set', 'status-section mb-2.5 md:mb-3' in html),
+            ('desktop console spacing set', '.console-section {\n    margin-bottom: 1rem;' in source_css),
+            ('section topline spacing set', '.section-topline {\n    display: flex;' in source_css and 'margin-bottom: 0.75rem;' in source_css),
+        ]
+        missing_spacing = [label for label, passed in spacing_checks if not passed]
         if missing_spacing:
             fail(f'home page is missing final rhythm polish markers: {", ".join(missing_spacing)}')
 
         required_copy = [
             '复制任务提示',
-            '打开维护台',
-            '复制检查命令',
+            '打开对象库',
+            '检查细节',
             '快速开始',
             '常用技能',
         ]
@@ -257,7 +285,7 @@ def scenario_home_supports_manual_theme_and_language_switches():
         en_markers = [
             '<html lang="en"',
             'Copy task prompt',
-            'Open console',
+            'Open Library',
             'Light',
             'Dark',
             'Home base',
@@ -295,7 +323,7 @@ def scenario_home_english_copy_stays_english_and_preserves_lang_routes():
             'Token stays valid for 30 days',
             '>Cancel<',
             '>Verify<',
-            'Copy inspect command',
+            'Inspect details',
             'aria-label="Main content"',
             'aria-label="Primary navigation"',
             'Sakura Street',
@@ -314,9 +342,10 @@ def scenario_home_english_copy_stays_english_and_preserves_lang_routes():
 
         required_href_markers = [
             'href="/?lang=en"',
-            'data-auth-target="/skills?lang=en"',
-            'data-auth-target="/access/tokens?lang=en"',
-            'data-auth-target="/review-cases?lang=en"',
+            'data-auth-target="/library?lang=en"',
+            'data-auth-target="/access?lang=en"',
+            'data-auth-target="/shares?lang=en"',
+            'data-auth-target="/activity?lang=en"',
         ]
         missing_hrefs = [marker for marker in required_href_markers if marker not in html]
         if missing_hrefs:
@@ -352,7 +381,7 @@ def scenario_home_chinese_copy_stays_chinese_in_primary_chrome():
         required_strings = [
             '私人技能工作台',
             '复制任务提示',
-            '打开维护台',
+            '打开对象库',
             '<title>infinitas 私人技能库</title>',
             'content="infinitas - 小二的私人技能库，覆盖技能创作、发布、分享与安装"',
             'aria-label="主导航"',
@@ -500,7 +529,8 @@ def scenario_home_toast_close_action_is_accessible():
             fail(f'expected GET / to return 200, got {response.status_code}: {response.text}')
 
         html = response.text
-        if not re.search(r'\.toast__close\s*\{[^}]*width:\s*2\.75rem;[^}]*height:\s*2\.75rem;', html, re.S):
+        css = page_css(html)
+        if not re.search(r'\.toast__close\s*\{[^}]*width:\s*2\.75rem;[^}]*height:\s*2\.75rem;', css, re.S):
             fail('home page should keep the toast close button at a 44px target size')
         if 'toast_close' not in html:
             fail('home page should expose a localized toast close label in APP_UI')
@@ -533,13 +563,14 @@ def scenario_home_background_picker_keeps_thumb_friendly_tiles():
             fail(f'expected GET / to return 200, got {response.status_code}: {response.text}')
 
         html = response.text
+        css = page_css(html)
         if not re.search(
             r'\.user-panel-bg-grid\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit,\s*minmax\(2\.75rem,\s*1fr\)\);',
-            html,
+            css,
             re.S,
         ):
             fail('home page should size background picker columns with a 44px minimum')
-        if not re.search(r'\.bg-option\s*\{[^}]*min-width:\s*2\.75rem;[^}]*min-height:\s*2\.75rem;', html, re.S):
+        if not re.search(r'\.bg-option\s*\{[^}]*min-width:\s*2\.75rem;[^}]*min-height:\s*2\.75rem;', css, re.S):
             fail('home page should keep each background option at or above a 44px target size')
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
@@ -576,9 +607,10 @@ def scenario_home_auth_gate_opens_before_console_navigation():
             'id="auth-modal"',
             'id="auth-form"',
             'data-auth-required="true"',
-            'data-auth-target="/skills?lang=zh"',
-            'data-auth-target="/access/tokens?lang=zh"',
-            'data-auth-target="/review-cases?lang=zh"',
+            'data-auth-target="/library?lang=zh"',
+            'data-auth-target="/access?lang=zh"',
+            'data-auth-target="/shares?lang=zh"',
+            'data-auth-target="/activity?lang=zh"',
         ]
         missing_html = [marker for marker in required_html_markers if marker not in html]
         if missing_html:
