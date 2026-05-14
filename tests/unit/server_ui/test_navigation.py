@@ -55,17 +55,31 @@ class TestBuildSiteNav:
         nav = build_site_nav(home=True, lang="en")
         assert nav[0]["label"] == "Home base"
 
-    def test_default_variant(self):
+    def test_default_variant_zh(self):
         nav = build_site_nav(home=False, lang="zh")
-        assert len(nav) == 6
+        assert len(nav) == 3
         assert nav[0]["href"] == "/?lang=zh"
         assert nav[0]["label"] == "首页"
+        assert nav[1]["href"] == "/profile?lang=zh"
+        assert nav[1]["label"] == "档案"
+        assert nav[2]["href"] == "/manage?lang=zh"
+        assert nav[2]["label"] == "管理"
 
-    def test_library_variant(self):
+    def test_default_variant_en(self):
+        nav = build_site_nav(home=False, lang="en")
+        assert len(nav) == 3
+        assert nav[0]["href"] == "/?lang=en"
+        assert nav[0]["label"] == "Home"
+        assert nav[1]["href"] == "/profile?lang=en"
+        assert nav[1]["label"] == "Profile"
+        assert nav[2]["href"] == "/manage?lang=en"
+        assert nav[2]["label"] == "Management"
+
+    def test_variant_param_ignored(self):
+        """variant no longer changes the nav items; always 3 tabs."""
         nav = build_site_nav(home=False, lang="en", variant="library")
-        assert len(nav) == 6
-        assert nav[1]["href"] == "/library?lang=en"
-        assert nav[1]["label"] == "Library"
+        assert len(nav) == 3
+        assert nav[1]["label"] == "Profile"
 
 
 class TestBuildExposurePolicy:
