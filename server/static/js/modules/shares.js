@@ -8,7 +8,7 @@ function initSharesPage() {
     const idCell = row.querySelector('td[data-label="ID"]');
     if (!idCell) return;
     idCell.title = uiText('copy_share_id', 'Click to copy ID');
-    idCell.style.cursor = 'copy';
+    idCell.classList.add('cursor-copy');
     idCell.addEventListener('click', async () => {
       await copyToClipboard(idCell.textContent.trim());
     });

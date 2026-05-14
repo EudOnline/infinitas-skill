@@ -167,8 +167,6 @@ export function createAuthModalController(options) {
       dom.loginBtn.setAttribute('aria-busy', 'true');
       dom.loginBtn.disabled = true;
       dom.loginBtn.classList.add('kawaii-button--loading');
-      dom.loginBtn.style.opacity = '0.7';
-      dom.loginBtn.style.pointerEvents = 'none';
       const icon = dom.loginBtn.querySelector('.btn-icon');
       const text = dom.loginBtn.querySelector('.btn-text');
       if (icon) icon.textContent = '⏳';
@@ -177,8 +175,6 @@ export function createAuthModalController(options) {
       dom.loginBtn.removeAttribute('aria-busy');
       dom.loginBtn.disabled = false;
       dom.loginBtn.classList.remove('kawaii-button--loading');
-      dom.loginBtn.style.opacity = '';
-      dom.loginBtn.style.pointerEvents = '';
       const icon = dom.loginBtn.querySelector('.btn-icon');
       const text = dom.loginBtn.querySelector('.btn-text');
       if (icon) icon.textContent = '🔓';
@@ -199,7 +195,7 @@ export function createAuthModalController(options) {
       dom.modal.setAttribute('aria-labelledby', title.id);
     }
     isOpen = true;
-    document.body.style.overflow = 'hidden';
+    document.body.classList.add('scroll-locked');
     document.addEventListener('click', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
     if (dom.input) {
@@ -222,7 +218,7 @@ export function createAuthModalController(options) {
     dom.modal.removeAttribute('aria-modal');
     dom.modal.removeAttribute('role');
     isOpen = false;
-    document.body.style.overflow = '';
+    document.body.classList.remove('scroll-locked');
     document.removeEventListener('click', handleClickOutside);
     document.removeEventListener('keydown', handleKeyDown);
     if (!preserveRedirect) {

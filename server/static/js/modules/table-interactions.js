@@ -18,8 +18,7 @@ export function initSortableTable(tableEl) {
   }
 
   headers.forEach((th) => {
-    th.style.cursor = 'pointer';
-    th.style.userSelect = 'none';
+    th.classList.add('cursor-pointer', 'select-none');
     th.setAttribute('tabindex', '0');
     th.setAttribute('role', 'columnheader');
     th.setAttribute('scope', 'col');

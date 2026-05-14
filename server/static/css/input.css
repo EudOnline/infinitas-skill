@@ -143,14 +143,10 @@
         --kawaii-neon-red: #ff3366;
         --kawaii-neon-red-rgb: 255, 51, 102;
         
-        /* Toast 系统色 token */
-        --kawaii-toast-success: #4caf50;
+        /* Toast 系统色 token (RGB variants only - used by rgba()) */
         --kawaii-toast-success-rgb: 76, 175, 80;
-        --kawaii-toast-error: #f44336;
         --kawaii-toast-error-rgb: 244, 67, 54;
-        --kawaii-toast-warning: #ffc107;
         --kawaii-toast-warning-rgb: 255, 193, 7;
-        --kawaii-toast-info: #2196f3;
         --kawaii-toast-info-rgb: 33, 150, 243;
 
         /* Extended tokens - light */
@@ -297,14 +293,10 @@
         --kawaii-neon-red: #ff3366;
         --kawaii-neon-red-rgb: 255, 51, 102;
         
-        /* Toast 系统色 token */
-        --kawaii-toast-success: #4caf50;
+        /* Toast 系统色 token (RGB variants only - used by rgba()) */
         --kawaii-toast-success-rgb: 76, 175, 80;
-        --kawaii-toast-error: #f44336;
         --kawaii-toast-error-rgb: 244, 67, 54;
-        --kawaii-toast-warning: #ffc107;
         --kawaii-toast-warning-rgb: 255, 193, 7;
-        --kawaii-toast-info: #2196f3;
         --kawaii-toast-info-rgb: 33, 150, 243;
 
         /* Extended tokens - dark */
@@ -359,9 +351,14 @@
       /* [hidden] handled by Tailwind base */
 
       html {
-        scroll-behavior: smooth;
         -webkit-text-size-adjust: 100%; /* 防止 iOS 横屏时字体自动调整 */
         touch-action: manipulation; /* 优化触摸响应 */
+      }
+
+      @media (prefers-reduced-motion: no-preference) {
+        html {
+          scroll-behavior: smooth;
+        }
       }
 
       body {
@@ -871,7 +868,12 @@
         gap: 0.5rem;
         align-items: center;
       }
-      
+
+      .search-install-btn-sm {
+        font-size: 0.78rem;
+        padding: 0.45rem 0.9rem;
+      }
+
       .search-empty-action {
         font-size: 0.85rem;
         padding: 0.5rem 1rem;
@@ -1267,6 +1269,7 @@
       .kawaii-button {
         @apply inline-flex items-center justify-center gap-2 px-6 py-3 font-body text-[0.9rem] font-bold border-none rounded-full cursor-pointer no-underline relative select-none;
         min-width: 8rem;
+        min-height: 2.75rem;
         transition: transform 180ms var(--ease-out-quiet), background-color 180ms var(--ease-out-quiet), border-color 180ms var(--ease-out-quiet);
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
@@ -2349,6 +2352,19 @@
     font-size: 0.9rem;
   }
 
+  .access-check-meta {
+    display: inline-block;
+    vertical-align: top;
+    margin-left: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--kawaii-ink-soft);
+    line-height: 1.5;
+  }
+
+  .access-check-meta > span {
+    display: block;
+  }
+
 /* === Inline styles from index-kawaii.html === */
 /* Hero Section */
   
@@ -2990,6 +3006,11 @@
     }
   }
 
+  /* ===== Scroll Lock (used by modals) ===== */
+  .scroll-locked {
+    overflow: hidden;
+  }
+
   /* ===== Auth Modal ===== */
   .auth-modal {
     position: fixed;
@@ -3520,161 +3541,6 @@
 
 [data-reveal-index="1"] { --reveal-index: 1; }
 
-/* Auto-generated @media (prefers-color-scheme: dark) counterparts */
-@media (prefers-color-scheme: dark) {
-  html:not([data-color-scheme]) {
-    color-scheme: dark;
-            
-            /* 🌌 深空背景系 */
-            --kawaii-paper: #0a0a14;              /* 深空黑 */
-            --kawaii-paper-soft: #121220;         /* 午夜蓝 */
-            --kawaii-surface: rgba(var(--kawaii-deep-surface-rgb), 0.9);
-            --kawaii-surface-elevated: rgba(var(--kawaii-panel-elevated-rgb), 0.95);
-            --kawaii-panel: rgba(var(--kawaii-panel-dark-rgb), 0.92);
-            --kawaii-panel-soft: rgba(var(--kawaii-panel-dim-rgb), 0.85);
-            --kawaii-panel-muted: rgba(var(--kawaii-panel-deep-rgb), 0.8);
-            --kawaii-line: rgba(var(--kawaii-accent-purple-rgb), 0.3);
-            --kawaii-line-soft: rgba(var(--kawaii-accent-purple-rgb), 0.18);
-            --kawaii-accent-soft: rgba(var(--kawaii-neon-pink-rgb), 0.25);
-            --kawaii-toggle-surface: rgba(var(--kawaii-neon-pink-rgb), 0.1);
-            --kawaii-toggle-inset: rgba(var(--kawaii-white-rgb), 0.05);
-            --kawaii-code-surface: rgba(var(--kawaii-neon-cyan-rgb), 0.08);
-            --kawaii-code-surface-hover: rgba(var(--kawaii-neon-cyan-rgb), 0.12);
-            
-            /* ✨ 荧光文字系 */
-            --kawaii-ink: #ffffff;                /* 纯白 */
-            --kawaii-ink-soft: #e8e8ff;           /* 淡紫白 */
-            --kawaii-ink-muted: #a0a0c8;          /* 星尘灰 */
-            
-            /* 💗 霓虹主色 - 荧光粉 */
-            --kawaii-primary: var(--kawaii-neon-pink);            /* 荧光粉 */
-            --kawaii-primary-soft: #ff69b4;       /* 热粉红 */
-            --kawaii-primary-deep: #ff1493;       /* 深粉 */
-            --kawaii-primary-glow: rgba(var(--kawaii-neon-pink-rgb), 0.6);
-            
-            /* 💠 霓虹辅色 - 青色 */
-            --kawaii-secondary: var(--kawaii-neon-cyan);          /* 青色 */
-            --kawaii-secondary-soft: #00d4ff;     /* 电光蓝 */
-            --kawaii-secondary-deep: #0099cc;     /* 深蓝 */
-            --kawaii-secondary-glow: rgba(var(--kawaii-neon-cyan-rgb), 0.5);
-            
-            /* 🌈 霓虹彩虹 */
-            --kawaii-mint: var(--kawaii-neon-green);               /* 荧光绿 */
-            --kawaii-lavender: #bf00ff;           /* 紫色 */
-            --kawaii-lemon: var(--kawaii-neon-yellow);              /* 荧光黄 */
-            --kawaii-coral: var(--kawaii-neon-red);              /* 霓虹红 */
-            --kawaii-rose: #ff1493;               /* 玫瑰 */
-            --kawaii-peach: #ff9966;              /* 蜜桃 */
-            --kawaii-sky: #00ccff;                /* 天空 */
-            
-            /* ✨ 功能色 - 霓虹版 */
-            --kawaii-success: var(--kawaii-neon-green);            /* 荧光绿 */
-            --kawaii-warning: var(--kawaii-neon-yellow);            /* 荧光黄 */
-            --kawaii-danger: var(--kawaii-neon-red);             /* 霓虹红 */
-            --kawaii-info: var(--kawaii-neon-cyan);               /* 青色 */
-            
-            /* 💫 霓虹阴影 */
-            --shadow-soft:
-              0 12px 28px rgba(var(--kawaii-neon-pink-rgb), 0.15),
-              0 2px 6px rgba(var(--kawaii-neon-cyan-rgb), 0.1);
-            --shadow-elevated:
-              0 16px 36px rgba(var(--kawaii-neon-pink-rgb), 0.22),
-              0 4px 12px rgba(var(--kawaii-neon-cyan-rgb), 0.15);
-            --shadow-glow:
-              0 0 20px var(--kawaii-primary-glow),
-              0 0 40px var(--kawaii-primary-soft);
-            
-            /* 🎀 3D糖果效果 - 霓虹版 */
-            --candy-3d:
-              0 6px 0 var(--kawaii-candy-depth),
-              0 8px 10px rgba(var(--kawaii-neon-pink-rgb), 0.4),
-              inset 0 2px 5px rgba(var(--kawaii-white-rgb), 0.3);
-            --candy-3d-active:
-              0 0 0 var(--kawaii-candy-depth),
-              inset 0 2px 5px rgba(var(--kawaii-black-rgb), 0.2);
-            
-            /* 🌈 霓虹渐变 */
-            --gradient-hero: linear-gradient(135deg, 
-              var(--kawaii-galaxy-1) 0%,     /* 深紫 */
-              var(--kawaii-galaxy-2) 25%,    /* 深蓝 */
-              var(--kawaii-galaxy-3) 50%,    /* 海蓝 */
-              var(--kawaii-galaxy-1) 75%,    /* 深紫 */
-              var(--kawaii-galaxy-4) 100%    /* 紫罗兰 */
-            );
-            --gradient-card: linear-gradient(145deg, 
-              rgba(var(--kawaii-white-rgb), 0.08) 0%, 
-              rgba(var(--kawaii-white-rgb), 0.04) 100%
-            );
-            --gradient-button-primary: linear-gradient(135deg, 
-              var(--kawaii-neon-pink) 0%, 
-              var(--kawaii-primary-deep) 50%,
-              var(--kawaii-primary-soft) 100%
-            );
-            --gradient-button-secondary: linear-gradient(135deg, 
-              var(--kawaii-neon-cyan) 0%, 
-              var(--kawaii-secondary-soft) 50%,
-              var(--kawaii-secondary-deep) 100%
-            );
-            --bg-gradient-dark: linear-gradient(135deg, rgba(var(--kawaii-backdrop-deep-rgb), 0.92) 0%, rgba(var(--kawaii-deep-surface-rgb), 0.9) 50%, rgba(var(--kawaii-backdrop-rgb), 0.92) 100%);
-            
-            /* 🌈 霓虹色系 token */
-            --kawaii-neon-pink: #ff00ff;
-            --kawaii-neon-pink-rgb: 255, 0, 255;
-            --kawaii-neon-cyan: #00ffff;
-            --kawaii-neon-cyan-rgb: 0, 255, 255;
-            --kawaii-neon-green: #39ff14;
-            --kawaii-neon-green-rgb: 57, 255, 20;
-            --kawaii-neon-yellow: #ffff00;
-            --kawaii-neon-yellow-rgb: 255, 255, 0;
-            --kawaii-neon-red: #ff3366;
-            --kawaii-neon-red-rgb: 255, 51, 102;
-            
-            /* Toast 系统色 token */
-            --kawaii-toast-success: #4caf50;
-            --kawaii-toast-success-rgb: 76, 175, 80;
-            --kawaii-toast-error: #f44336;
-            --kawaii-toast-error-rgb: 244, 67, 54;
-            --kawaii-toast-warning: #ffc107;
-            --kawaii-toast-warning-rgb: 255, 193, 7;
-            --kawaii-toast-info: #2196f3;
-            --kawaii-toast-info-rgb: 33, 150, 243;
-  }
-  html:not([data-color-scheme]) .search-result__platform,
-      html:not([data-color-scheme]) .search-result__targets {
-    background: rgba(var(--kawaii-neon-cyan-rgb), 0.08);
-            border-color: rgba(var(--kawaii-neon-cyan-rgb), 0.25);
-            color: var(--kawaii-neon-cyan);
-  }
-  html:not([data-color-scheme]) .search-input:focus + .search-icon,
-      html:not([data-color-scheme]) .search-bar-wrapper:focus-within .search-icon {
-    @apply text-[var(--kawaii-neon-pink)];
-            filter: drop-shadow(0 0 8px rgba(var(--kawaii-neon-pink-rgb), 0.8));
-  }
-  html:not([data-color-scheme]) .nav a[aria-current="page"] {
-    background: rgba(var(--kawaii-neon-pink-rgb), 0.2);
-            box-shadow: 
-              inset 0 0 0 1px rgba(var(--kawaii-neon-pink-rgb), 0.4),
-              0 0 15px rgba(var(--kawaii-neon-pink-rgb), 0.2);
-  }
-  html:not([data-color-scheme]) .section-topline .kawaii-button--primary {
-    box-shadow: 
-              0 6px 0 var(--kawaii-candy-depth),
-              0 0 20px rgba(var(--kawaii-neon-pink-rgb), 0.5),
-              0 8px 16px rgba(var(--kawaii-neon-pink-rgb), 0.3);
-  }
-  html:not([data-color-scheme]) .user-panel-name,
-  html:not([data-color-scheme]) .user-panel-title {
-    color: var(--kawaii-ink);
-  }
-  html:not([data-color-scheme]) .login-token-input {
-    @apply bg-[rgba(var(--kawaii-dark-surface-rgb),0.9)] border-[rgba(var(--kawaii-accent-purple-rgb),0.35)] text-white;
-  }
-  html:not([data-color-scheme]) .login-token-input:focus {
-    border-color: var(--kawaii-primary-soft);
-        box-shadow: 0 0 0 3px rgba(var(--kawaii-primary-rgb), 0.25);
-  }
-}
-
 .safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -3685,4 +3551,9 @@
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+.scroll-fade-right {
+  mask-image: linear-gradient(to right, black 90%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black 90%, transparent 100%);
 }

@@ -9,7 +9,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = e.target.closest('[data-view]');
     if (!btn) return;
     tabs.querySelectorAll('[data-view]').forEach((b) => {
-      b.classList.toggle('is-active', b === btn);
+      const isActive = b === btn;
+      b.classList.toggle('is-active', isActive);
+      b.setAttribute('aria-selected', String(isActive));
     });
     document.querySelectorAll('[data-view-panel]').forEach((panel) => {
       panel.classList.toggle('hidden', panel.dataset.viewPanel !== btn.dataset.view);
@@ -32,7 +34,11 @@ document.addEventListener('DOMContentLoaded', () => {
     filterGroup.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-filter]');
       if (!btn) return;
-      filterGroup.querySelectorAll('[data-filter]').forEach((b) => b.classList.toggle('is-active', b === btn));
+      filterGroup.querySelectorAll('[data-filter]').forEach((b) => {
+        const isActive = b === btn;
+        b.classList.toggle('is-active', isActive);
+        b.setAttribute('aria-pressed', String(isActive));
+      });
       filterCards(btn.dataset.filter, searchInput?.value.toLowerCase() || '');
     });
   }

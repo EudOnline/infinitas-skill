@@ -7,7 +7,7 @@
 
 {# Stats summary #}
 {% if stats %}
-<section class="kawaii-card animate-in mb-4" style="animation-delay:50ms">
+<section class="kawaii-card animate-in mb-4 [animation-delay:50ms]">
   <p class="text-kawaii-ink-muted text-sm">
     {{ stats.active_tokens }} {{ ui.get('stat_active_tokens', '个活跃 Token') }} ·
     {{ stats.accessible_skills }} {{ ui.get('stat_accessible_skills', '个可访问技能') }} ·
@@ -35,8 +35,7 @@
     </div>
   </div>
 
-  <div class="skills-grid flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4 scrollbar-hide relative"
-       style="mask-image: linear-gradient(to right, black 90%, transparent 100%); -webkit-mask-image: linear-gradient(to right, black 90%, transparent 100%);">
+  <div class="skills-grid flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4 scrollbar-hide scroll-fade-right relative">
     {% for skill in featured_skills %}
     <div class="skill-card flex-shrink-0 w-64 snap-start">
       <div class="flex justify-between items-start mb-2 gap-2 min-w-0">

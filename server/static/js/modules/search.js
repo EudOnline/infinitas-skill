@@ -81,7 +81,7 @@ export class SearchManager {
       clearTimeout(this.debounceTimer);
       this.debounceTimer = setTimeout(() => {
         this.search(e.target.value);
-      }, 150);
+      }, 250);
     };
 
     this._handlers.keydown = (e) => {
@@ -529,8 +529,7 @@ export class SearchManager {
     if (installRef) {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'kawaii-button kawaii-button--secondary';
-      btn.style.cssText = 'font-size:0.78rem;padding:0.45rem 0.9rem;';
+      btn.className = 'kawaii-button kawaii-button--secondary search-install-btn-sm';
       btn.dataset.copy = installRef;
       btn.textContent = uiText('search_install_copy_ref', '复制 install_ref');
       actions.appendChild(btn);
@@ -538,8 +537,7 @@ export class SearchManager {
     if (installApiPath) {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'kawaii-button kawaii-button--ghost';
-      btn.style.cssText = 'font-size:0.78rem;padding:0.45rem 0.9rem;';
+      btn.className = 'kawaii-button kawaii-button--ghost search-install-btn-sm';
       btn.dataset.copy = installApiPath;
       btn.textContent = uiText('search_install_copy_api', '复制 API 路径');
       actions.appendChild(btn);
@@ -549,8 +547,7 @@ export class SearchManager {
       a.href = data.bundle_url;
       a.target = '_blank';
       a.rel = 'noopener';
-      a.className = 'kawaii-button kawaii-button--primary';
-      a.style.cssText = 'font-size:0.78rem;padding:0.45rem 0.9rem;';
+      a.className = 'kawaii-button kawaii-button--primary search-install-btn-sm';
       a.textContent = uiText('search_install_open_artifact', '打开产物');
       actions.appendChild(a);
     }

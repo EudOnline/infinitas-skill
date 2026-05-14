@@ -21,20 +21,20 @@
   </section>
 
   {# Sub-tab navigation #}
-  <div class="flex gap-2" role="tablist" data-profile-tabs>
-    <button class="toggle-chip is-active" data-tab="skills" role="tab" aria-selected="true">
+  <div class="flex gap-2" role="tablist" aria-label="{{ ui.get('profile_title', '智能体档案') }}" data-profile-tabs>
+    <button class="toggle-chip is-active" id="profile-tab-skills" role="tab" aria-selected="true" aria-controls="profile-panel-skills" data-tab="skills">
       {{ ui.get('profile_tab_skills', '可访问技能') }}
     </button>
-    <button class="toggle-chip" data-tab="history" role="tab" aria-selected="false">
+    <button class="toggle-chip" id="profile-tab-history" role="tab" aria-selected="false" aria-controls="profile-panel-history" tabindex="-1" data-tab="history">
       {{ ui.get('profile_tab_history', '操作记录') }}
     </button>
-    <button class="toggle-chip" data-tab="policy" role="tab" aria-selected="false">
+    <button class="toggle-chip" id="profile-tab-policy" role="tab" aria-selected="false" aria-controls="profile-panel-policy" tabindex="-1" data-tab="policy">
       {{ ui.get('profile_tab_policy', '策略') }}
     </button>
   </div>
 
   {# Skills tab #}
-  <section class="space-y-3" data-tab-panel="skills">
+  <section class="space-y-3" role="tabpanel" id="profile-panel-skills" aria-labelledby="profile-tab-skills" data-tab-panel="skills">
     <div id="profile-skills-list" class="space-y-2">
       <div class="kawaii-card animate-in text-center py-8 text-kawaii-ink-muted text-sm">
         {{ ui.get('profile_loading', '加载中...') }}
@@ -43,7 +43,7 @@
   </section>
 
   {# History tab #}
-  <section class="space-y-3 hidden" data-tab-panel="history">
+  <section class="space-y-3 hidden" role="tabpanel" id="profile-panel-history" aria-labelledby="profile-tab-history" data-tab-panel="history">
     <div id="profile-history-list" class="space-y-2">
       <div class="kawaii-card animate-in text-center py-8 text-kawaii-ink-muted text-sm">
         {{ ui.get('profile_no_history', '暂无操作记录') }}
@@ -52,7 +52,7 @@
   </section>
 
   {# Policy tab #}
-  <section class="space-y-3 hidden" data-tab-panel="policy">
+  <section class="space-y-3 hidden" role="tabpanel" id="profile-panel-policy" aria-labelledby="profile-tab-policy" data-tab-panel="policy">
     <div id="profile-policy-list">
       <div class="kawaii-card animate-in text-center py-8 text-kawaii-ink-muted text-sm">
         {{ ui.get('profile_no_policy', '暂无策略约束') }}

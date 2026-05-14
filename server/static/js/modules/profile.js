@@ -26,14 +26,25 @@ function createSkillCard(s) {
 function createHistoryCard(e) {
   const article = document.createElement('article');
   article.className = 'kawaii-card animate-in';
-  article.innerHTML = `
-    <div class="flex items-center gap-2">
-      <span class="text-xs text-kawaii-ink-muted"></span>
-      <span class="kawaii-badge kawaii-badge--soft"></span>
-    </div>`;
-  article.querySelector('span').textContent = new Date(e.occurred_at).toLocaleString();
-  article.querySelectorAll('span')[1].textContent = e.event_type;
+  const timeEl = document.createElement('span');
+  timeEl.className = 'text-xs text-kawaii-ink-muted';
+  timeEl.textContent = new Date(e.occurred_at).toLocaleString();
+  const badgeEl = document.createElement('span');
+  badgeEl.className = 'kawaii-badge kawaii-badge--soft';
+  badgeEl.textContent = e.event_type;
+  const wrapper = document.createElement('div');
+  wrapper.className = 'flex items-center gap-2';
+  wrapper.append(timeEl, badgeEl);
+  article.appendChild(wrapper);
   return article;
+}
+
+function showError(container, message) {
+  if (!container) return;
+  const el = document.createElement('div');
+  el.className = 'kawaii-card animate-in text-center py-8 text-kawaii-danger text-sm';
+  el.textContent = message;
+  container.replaceChildren(el);
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -54,9 +65,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
+  const skillsList = document.getElementById('profile-skills-list');
+  const historyList = document.getElementById('profile-history-list');
+  const policyList = document.getElementById('profile-policy-list');
+
   try {
     const data = await apiGet('/api/v1/profile/me');
-    if (!data) return;
+    if (!data) {
+      showError(skillsList, uiText('profile_load_error', '加载失败，请刷新重试'));
+      return;
+    }
 
     const scopes = data.identity?.scopes?.join(', ') || '-';
     const expiry = data.identity?.expires_at
@@ -68,7 +86,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (scopesEl) scopesEl.textContent = `${uiText('profile_scopes', '权限')}: ${scopes}`;
     if (expiryEl) expiryEl.textContent = `${uiText('profile_token_expiry', 'Token 有效期')}: ${expiry}`;
 
-    const skillsList = document.getElementById('profile-skills-list');
     if (skillsList && data.accessible_skills?.length) {
       skillsList.replaceChildren(...data.accessible_skills.map(createSkillCard));
     } else if (skillsList) {
@@ -78,12 +95,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>`;
     }
 
-    const historyList = document.getElementById('profile-history-list');
     if (historyList && data.operation_history?.length) {
       historyList.replaceChildren(...data.operation_history.map(createHistoryCard));
     }
 
-    const policyList = document.getElementById('profile-policy-list');
     if (policyList && data.policy && Object.keys(data.policy).length) {
       const pre = document.createElement('pre');
       pre.className = 'text-xs text-kawaii-ink-soft overflow-x-auto';
@@ -95,5 +110,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   } catch (err) {
     console.error('Failed to load profile:', err);
+    showError(skillsList, uiText('profile_load_error', '加载失败，请刷新重试'));
   }
 });

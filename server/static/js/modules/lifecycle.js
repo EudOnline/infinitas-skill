@@ -42,15 +42,11 @@ function setButtonLoading(button, loading) {
     }
     button.setAttribute('aria-busy', 'true');
     button.classList.add('kawaii-button--loading');
-    button.style.opacity = '0.7';
-    button.style.pointerEvents = 'none';
     if (btnIcon) btnIcon.textContent = '⏳';
     if (btnText) btnText.textContent = uiText('loading', '处理中…');
   } else {
     button.removeAttribute('aria-busy');
     button.classList.remove('kawaii-button--loading');
-    button.style.opacity = '';
-    button.style.pointerEvents = '';
     if (btnIcon) btnIcon.textContent = button.dataset.originalIcon || '';
     if (btnText) btnText.textContent = button.dataset.originalText || '';
   }
@@ -644,7 +640,7 @@ async function checkReleaseAccess(releaseId) {
     okBadge.className = 'kawaii-badge kawaii-badge--success';
     okBadge.textContent = okText;
     const metaSpan = document.createElement('span');
-    metaSpan.style.cssText = 'display:inline-block;vertical-align:top;margin-left:0.5rem;font-size:0.85rem;color:var(--kawaii-ink-soft);line-height:1.5;';
+    metaSpan.className = 'access-check-meta';
     const metaItems = [
       [labelOk, data.ok === true ? 'true' : (data.ok === false ? 'false' : '-')],
       [labelCredentialType, data.credential_type || '-'],
@@ -653,7 +649,6 @@ async function checkReleaseAccess(releaseId) {
     ];
     metaItems.forEach(([label, value]) => {
       const line = document.createElement('span');
-      line.style.display = 'block';
       const strong = document.createElement('strong');
       strong.textContent = label + ':';
       line.appendChild(strong);
