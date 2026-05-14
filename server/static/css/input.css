@@ -3674,3 +3674,7 @@
         box-shadow: 0 0 0 3px rgba(var(--kawaii-primary-rgb), 0.25);
   }
 }
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
