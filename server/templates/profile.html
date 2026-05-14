@@ -1,0 +1,65 @@
+{% extends "layout-kawaii.html" %}
+
+{% block body %}
+<div class="space-y-4">
+  {# Identity card #}
+  <section class="kawaii-card animate-in">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-12 h-12 rounded-full bg-kawaii-primary/20 flex items-center justify-center text-kawaii-primary-deep text-lg font-bold">
+        {{ session_ui.get('current_user', {}).get('username', '?')[:1] | upper }}
+      </div>
+      <div>
+        <h1 class="font-display text-lg font-bold text-kawaii-ink">{{ ui.get('profile_title', '智能体档案') }}</h1>
+        <p class="text-xs text-kawaii-ink-muted">{{ session_ui.get('current_user', {}).get('username', ui.get('anonymous', '匿名')) }}</p>
+      </div>
+    </div>
+    <div class="text-sm text-kawaii-ink-soft space-y-1">
+      <p>{{ ui.get('profile_role', '角色') }}: {{ session_ui.get('current_user', {}).get('role', '-') }}</p>
+      <p id="profile-token-expiry">{{ ui.get('profile_token_expiry', 'Token 有效期') }}: -</p>
+      <p id="profile-scopes">{{ ui.get('profile_scopes', '权限') }}: -</p>
+    </div>
+  </section>
+
+  {# Sub-tab navigation #}
+  <div class="flex gap-2" role="tablist" data-profile-tabs>
+    <button class="toggle-chip is-active" data-tab="skills" role="tab" aria-selected="true">
+      {{ ui.get('profile_tab_skills', '可访问技能') }}
+    </button>
+    <button class="toggle-chip" data-tab="history" role="tab" aria-selected="false">
+      {{ ui.get('profile_tab_history', '操作记录') }}
+    </button>
+    <button class="toggle-chip" data-tab="policy" role="tab" aria-selected="false">
+      {{ ui.get('profile_tab_policy', '策略') }}
+    </button>
+  </div>
+
+  {# Skills tab #}
+  <section class="space-y-3" data-tab-panel="skills">
+    <div id="profile-skills-list" class="space-y-2">
+      <div class="kawaii-card animate-in text-center py-8 text-kawaii-ink-muted text-sm">
+        {{ ui.get('profile_loading', '加载中...') }}
+      </div>
+    </div>
+  </section>
+
+  {# History tab #}
+  <section class="space-y-3 hidden" data-tab-panel="history">
+    <div id="profile-history-list" class="space-y-2">
+      <div class="kawaii-card animate-in text-center py-8 text-kawaii-ink-muted text-sm">
+        {{ ui.get('profile_no_history', '暂无操作记录') }}
+      </div>
+    </div>
+  </section>
+
+  {# Policy tab #}
+  <section class="space-y-3 hidden" data-tab-panel="policy">
+    <div id="profile-policy-list">
+      <div class="kawaii-card animate-in text-center py-8 text-kawaii-ink-muted text-sm">
+        {{ ui.get('profile_no_policy', '暂无策略约束') }}
+      </div>
+    </div>
+  </section>
+</div>
+
+<script type="module" src="/static/js/modules/profile.js"></script>
+{% endblock %}
