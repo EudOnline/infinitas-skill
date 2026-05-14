@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -187,7 +187,7 @@ def profile_admin_view(
 
 
 class WritebackBody(BaseModel):
-    note: str
+    note: str = Field(max_length=4096)
     context: dict[str, Any] | None = None
 
 

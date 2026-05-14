@@ -113,10 +113,10 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
             "content": content,
             "page_kicker": page_kicker,
             "page_eyebrow": page_eyebrow,
-            "page_mode": "default",
+            "page_mode": "console",
             "home_href": with_lang("/", lang),
-            "nav_links": build_site_nav(home=False, lang=lang, variant="library"),
-            "show_console_session": False,
+            "nav_links": build_site_nav(home=False, lang=lang),
+            "show_console_session": True,
         }
         context.update(build_kawaii_ui_context(request, lang, page_kicker, page_eyebrow))
         context["session_ui"] = build_session_bootstrap({}, actor.user)
@@ -316,7 +316,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
             page_kicker=pick_lang(lang, "管理", "Management"),
             page_eyebrow=pick_lang(lang, "技能与访问管理", "Skill & Access Management"),
         )
-        context["library_items"] = list_library_objects(db, actor=actor)
+        context["object_items"] = list_library_objects(db, actor=actor)
         context["token_items"] = list_library_token_rows(db, actor=actor, lang=lang, scope=scope)
         context["share_items"] = list_library_share_rows(db, actor=actor, lang=lang, scope=scope)
         context["activity_items"] = list_activity_rows(db, limit=50)

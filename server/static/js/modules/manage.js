@@ -1,3 +1,6 @@
+import { initCardSwipe } from './card-swipe.js';
+import { apiPost } from './api.js';
+
 document.addEventListener('DOMContentLoaded', () => {
   const tabs = document.querySelector('[data-manage-tabs]');
   if (!tabs) return;
@@ -40,4 +43,32 @@ document.addEventListener('DOMContentLoaded', () => {
       filterCards(active?.dataset.filter || 'all', searchInput.value.toLowerCase());
     });
   }
+
+  // Revoke token handler
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-action="revoke-token"]');
+    if (!btn) return;
+    const credId = btn.dataset.credentialId;
+    if (!credId) return;
+    btn.disabled = true;
+    btn.textContent = '...';
+    try {
+      await apiPost(`/api/library/tokens/${credId}/revoke`);
+      const card = btn.closest('article');
+      if (card) {
+        card.style.transition = 'opacity 0.3s';
+        card.style.opacity = '0';
+        setTimeout(() => card.remove(), 300);
+      } else {
+        const row = btn.closest('tr');
+        if (row) row.remove();
+      }
+    } catch {
+      btn.disabled = false;
+      btn.textContent = btn.dataset.label || 'Revoke';
+    }
+  });
+
+  // Card swipe for mobile token cards
+  initCardSwipe('[data-view-panel="tokens"]');
 });
