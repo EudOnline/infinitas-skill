@@ -21,13 +21,16 @@
 
   <div class="console-grid">
     {% for link in console_links %}
-    <a href="{{ link.href }}" class="console-card" data-auth-required="true" data-auth-target="{{ link.href }}">
+    <a href="{{ link.href }}" class="console-card relative" data-auth-required="true" data-auth-target="{{ link.href }}">
       <div class="console-card-header">
         <span class="console-emoji"><span aria-hidden="true">{{ link.icon }}</span></span>
         <span class="console-count">{{ link.value }}</span>
       </div>
       <h3 class="console-name">{{ link.title }}</h3>
       {% if link.detail %}<p class="console-desc">{{ link.detail }}</p>{% endif %}
+      <span class="absolute top-2 right-2 text-kawaii-ink-muted opacity-50" title="{{ ui.get('auth_required_hint', '需要登录') }}">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+      </span>
     </a>
     {% endfor %}
   </div>
