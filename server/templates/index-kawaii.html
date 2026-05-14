@@ -5,6 +5,17 @@
 {% include "partials/home-auth-panel.html" %}
 {% include "partials/home-hero.html" %}
 
+{# Stats summary #}
+{% if stats %}
+<section class="kawaii-card animate-in mb-4" style="animation-delay:50ms">
+  <p class="text-kawaii-ink-muted text-sm">
+    {{ stats.active_tokens }} {{ ui.get('stat_active_tokens', '个活跃 Token') }} ·
+    {{ stats.accessible_skills }} {{ ui.get('stat_accessible_skills', '个可访问技能') }} ·
+    {{ stats.new_activity }} {{ ui.get('stat_new_activity', '条新活动') }}
+  </p>
+</section>
+{% endif %}
+
 <section class="status-section mb-2.5 md:mb-3 animate-in [animation-delay:100ms]">
   <div class="flex flex-wrap gap-2">
     {% for state in operating_states %}
@@ -23,10 +34,10 @@
       <p class="text-[0.9rem] text-kawaii-ink-soft leading-[1.5]">{{ ui['skills_section_subtitle'] }}</p>
     </div>
   </div>
-  
-  <div class="skills-grid grid grid-cols-2 lg:grid-cols-3 gap-3">
+
+  <div class="skills-grid flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4 scrollbar-hide">
     {% for skill in featured_skills %}
-    <div class="skill-card">
+    <div class="skill-card flex-shrink-0 w-64 snap-start">
       <div class="flex justify-between items-start mb-2 gap-2 min-w-0">
         <span class="text-xl"><span aria-hidden="true">{{ skill.icon }}</span></span>
         <div class="flex flex-col items-end md:items-start gap-0.5">

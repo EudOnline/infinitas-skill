@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,7 @@ from sqlalchemy.orm import Session
 from server import __version__ as server_version
 from server.models import (
     AccessGrant,
+    AuditEvent,
     Credential,
     Job,
     RegistryObject,
@@ -238,6 +240,40 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
             "detail": f"v{server_version}",
         },
     ]
+    # --- Dashboard stats (only computed for authenticated users) ---
+    stats = None
+    from server.auth import maybe_get_current_user as _get_user
+
+    _session_user = _get_user(request, db)
+    if _session_user is not None:
+        now = datetime.now(timezone.utc)
+        active_tokens = int(
+            db.scalar(
+                select(func.count())
+                .select_from(Credential)
+                .where(
+                    Credential.revoked_at.is_(None),
+                    (Credential.expires_at.is_(None)) | (Credential.expires_at > now),
+                )
+            )
+            or 0
+        )
+        accessible_skills = int(db.scalar(select(func.count()).select_from(RegistryObject)) or 0)
+        week_ago = now - timedelta(days=7)
+        new_activity = int(
+            db.scalar(
+                select(func.count())
+                .select_from(AuditEvent)
+                .where(AuditEvent.occurred_at >= week_ago)
+            )
+            or 0
+        )
+        stats = {
+            "active_tokens": active_tokens,
+            "accessible_skills": accessible_skills,
+            "new_activity": new_activity,
+        }
+
     page_eyebrow = pick_lang(lang, "私人技能工作台", "Private agent workspace")
     context = {
         "title": pick_lang(lang, "infinitas 私人技能库", "infinitas private skill library"),
@@ -277,6 +313,7 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
             "",
         ),
         "registry_reader_tokens_enabled": bool(settings.registry_read_tokens),
+        "stats": stats,
     }
     context.update(build_kawaii_ui_context(request, lang, lifecycle_mode, page_eyebrow))
     return context
