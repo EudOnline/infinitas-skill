@@ -3,31 +3,38 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
+from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from server.auth import get_current_access_context
+from server.auth import get_current_access_context, require_role
 from server.db import get_db
 from server.models import (
     AccessGrant,
     AuditEvent,
     Credential,
     Exposure,
+    Principal,
     RegistryObject,
     Release,
+    User,
 )
+from server.modules.access import service as access_service
 from server.modules.access.authn import AccessContext
 
 router = APIRouter(prefix="/api/v1/profile", tags=["profile"])
+credentials_router = APIRouter(prefix="/api/v1/credentials", tags=["credentials"])
 
 
-@router.get("/me")
-def profile_me(
-    context: AccessContext = Depends(get_current_access_context),
-    db: Session = Depends(get_db),
-):
+# ── Shared helper ────────────────────────────────────────────────────────────
+
+
+def _build_profile(db: Session, context: AccessContext) -> dict[str, Any]:
+    """Build the full profile dict for a given access context."""
     credential = context.credential
     principal = context.principal
 
@@ -135,3 +142,171 @@ def profile_me(
         "operation_history": operation_history,
         "policy": policy,
     }
+
+
+# ── Endpoints ────────────────────────────────────────────────────────────────
+
+
+@router.get("/me")
+def profile_me(
+    context: AccessContext = Depends(get_current_access_context),
+    db: Session = Depends(get_db),
+):
+    """Return the profile for the currently authenticated user."""
+    return _build_profile(db, context)
+
+
+@router.get("/{credential_id}")
+def profile_admin_view(
+    credential_id: int,
+    user: User = Depends(require_role("maintainer", "contributor")),
+    db: Session = Depends(get_db),
+):
+    """Return the profile for a specified credential (admin view).
+
+    Only accessible by users with maintainer or contributor role.
+    """
+    credential = access_service.resolve_credential_by_id(db, credential_id)
+    if credential is None:
+        raise HTTPException(status_code=404, detail="credential not found")
+
+    principal = access_service.get_principal(db, credential.principal_id)
+    resolved_user = access_service.get_user_for_principal(db, principal)
+    scopes = access_service.parse_scopes(credential.scopes_json)
+
+    synthetic_context = AccessContext(
+        credential=credential,
+        principal=principal,
+        user=resolved_user,
+        scopes=scopes,
+    )
+    return _build_profile(db, synthetic_context)
+
+
+# ── Writeback ────────────────────────────────────────────────────────────────
+
+
+class WritebackBody(BaseModel):
+    note: str
+    context: dict[str, Any] | None = None
+
+
+@router.post("/writeback")
+def profile_writeback(
+    body: WritebackBody,
+    context: AccessContext = Depends(get_current_access_context),
+    db: Session = Depends(get_db),
+):
+    """Record a memory writeback event for the authenticated credential."""
+    credential = context.credential
+    actor_ref = context.principal.slug if context.principal else str(credential.id)
+
+    payload = {"note": body.note, "context": body.context}
+
+    event = AuditEvent(
+        aggregate_type="memory_writeback",
+        aggregate_id=str(credential.id),
+        event_type="memory.writeback",
+        actor_ref=actor_ref,
+        payload_json=json.dumps(payload, ensure_ascii=False),
+        occurred_at=datetime.now(timezone.utc),
+    )
+    db.add(event)
+    db.commit()
+
+    return {"status": "recorded"}
+
+
+# ── Policy Update ────────────────────────────────────────────────────────────
+
+
+class PolicyUpdateBody(BaseModel):
+    max_daily_publishes: int | None = None
+    allowed_object_kinds: list[str] | None = None
+    readonly: bool | None = None
+
+
+@credentials_router.patch("/{credential_id}/policy")
+def credential_policy_update(
+    credential_id: int,
+    body: PolicyUpdateBody,
+    user: User = Depends(require_role("maintainer", "contributor")),
+    db: Session = Depends(get_db),
+):
+    """Update policy constraints on a credential's associated AccessGrant.
+
+    If no grant is associated, stores the policy in the credential's
+    resource_selector_json under the ``_policy`` key.
+    """
+    credential = access_service.resolve_credential_by_id(db, credential_id)
+    if credential is None:
+        raise HTTPException(status_code=404, detail="credential not found")
+
+    updates: dict[str, Any] = {}
+    if body.max_daily_publishes is not None:
+        updates["max_daily_publishes"] = body.max_daily_publishes
+    if body.allowed_object_kinds is not None:
+        updates["allowed_object_kinds"] = body.allowed_object_kinds
+    if body.readonly is not None:
+        updates["readonly"] = body.readonly
+
+    if not updates:
+        # Nothing to update — return current policy
+        current = _get_current_policy(db, credential)
+        return {"status": "updated", "policy": current}
+
+    if credential.grant_id is not None:
+        grant = db.get(AccessGrant, credential.grant_id)
+        if grant is not None:
+            existing: dict[str, Any] = {}
+            if grant.constraints_json:
+                try:
+                    existing = json.loads(grant.constraints_json)
+                except (json.JSONDecodeError, TypeError):
+                    existing = {}
+            existing.update(updates)
+            grant.constraints_json = json.dumps(existing, ensure_ascii=False)
+            db.add(grant)
+            db.commit()
+            db.refresh(grant)
+            policy = json.loads(grant.constraints_json)
+            return {"status": "updated", "policy": policy}
+
+    # No grant — store in credential.resource_selector_json under _policy
+    rs: dict[str, Any] = {}
+    if credential.resource_selector_json:
+        try:
+            rs = json.loads(credential.resource_selector_json)
+        except (json.JSONDecodeError, TypeError):
+            rs = {}
+
+    current_policy = rs.get("_policy", {})
+    current_policy.update(updates)
+    rs["_policy"] = current_policy
+
+    credential.resource_selector_json = json.dumps(rs, ensure_ascii=False)
+    db.add(credential)
+    db.commit()
+    db.refresh(credential)
+
+    updated_rs = json.loads(credential.resource_selector_json)
+    return {"status": "updated", "policy": updated_rs.get("_policy")}
+
+
+def _get_current_policy(db: Session, credential: Credential) -> dict[str, Any] | None:
+    """Return the current policy dict for a credential, or None."""
+    if credential.grant_id is not None:
+        grant = db.get(AccessGrant, credential.grant_id)
+        if grant is not None and grant.constraints_json:
+            try:
+                return json.loads(grant.constraints_json)
+            except (json.JSONDecodeError, TypeError):
+                return None
+    # Check resource_selector_json._policy
+    if credential.resource_selector_json:
+        try:
+            rs = json.loads(credential.resource_selector_json)
+            return rs.get("_policy")
+        except (json.JSONDecodeError, TypeError):
+            return None
+    return None
