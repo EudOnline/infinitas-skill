@@ -68,15 +68,13 @@ class TestProfileMeIdentity:
         assert "credential_type" in identity
         assert identity["credential_type"] == "personal_token"
 
-        assert "principal" in identity
-        principal = identity["principal"]
-        assert "id" in principal
-        assert "slug" in principal
-        assert "kind" in principal
-        assert "display_name" in principal
-        assert principal["slug"] == "profile-tester"
-        assert principal["kind"] == "user"
-        assert principal["display_name"] == "Profile Tester"
+        assert "principal_id" in identity
+        assert "principal_slug" in identity
+        assert "principal_kind" in identity
+        assert "principal_display_name" in identity
+        assert identity["principal_slug"] == "profile-tester"
+        assert identity["principal_kind"] == "user"
+        assert identity["principal_display_name"] == "Profile Tester"
 
         assert "scopes" in identity
         assert isinstance(identity["scopes"], list)
@@ -269,7 +267,7 @@ class TestProfileMePolicy:
             "/api/v1/profile/me",
             headers={"Authorization": "Bearer profile-test-token"},
         )
-        principal_id = profile.json()["identity"]["principal"]["id"]
+        principal_id = profile.json()["identity"]["principal_id"]
 
         from server.db import get_session_factory
         from server.models import (

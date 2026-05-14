@@ -34,42 +34,61 @@ def profile_me(
     # ── Identity ──────────────────────────────────────────────────────────
     scopes = sorted(context.scopes)
 
-    principal_info = None
-    if principal is not None:
-        principal_info = {
-            "id": principal.id,
-            "slug": principal.slug,
-            "kind": principal.kind,
-            "display_name": principal.display_name,
-        }
-
     identity = {
         "credential_id": credential.id,
         "credential_type": credential.type,
-        "principal": principal_info,
+        "principal_id": principal.id if principal else None,
+        "principal_slug": principal.slug if principal else None,
+        "principal_kind": principal.kind if principal else None,
+        "principal_display_name": principal.display_name if principal else None,
         "scopes": scopes,
         "expires_at": credential.expires_at.isoformat() if credential.expires_at else None,
     }
 
     # ── Accessible Skills ─────────────────────────────────────────────────
-    # If credential has a grant_id, find RegistryObjects reachable via the
-    # active grant -> exposure -> release -> registry_object chain.
+    # Find all active grants for this credential, then resolve RegistryObjects
+    # via grant -> exposure -> release -> registry_object chain.
     accessible_skills: list[dict] = []
+    seen_obj_ids: set[int] = set()
+
+    grant_query = select(AccessGrant).where(
+        AccessGrant.state == "active",
+    )
     if credential.grant_id is not None:
-        grant = db.get(AccessGrant, credential.grant_id)
-        if grant is not None and grant.state == "active":
-            exposure = db.get(Exposure, grant.exposure_id)
-            if exposure is not None and exposure.state == "active":
-                release = db.get(Release, exposure.release_id)
-                if release is not None and release.registry_object_id is not None:
-                    obj = db.get(RegistryObject, release.registry_object_id)
-                    if obj is not None:
-                        accessible_skills.append({
-                            "id": obj.id,
-                            "slug": obj.slug,
-                            "display_name": obj.display_name,
-                            "kind": obj.kind,
-                        })
+        grant_query = grant_query.where(AccessGrant.id == credential.grant_id)
+    else:
+        # Credentials without a grant can still be matched by finding grants
+        # whose associated credential (via resource_selector_json) points here.
+        grant_query = grant_query.where(
+            AccessGrant.id.in_(
+                select(Credential.grant_id).where(
+                    Credential.id == credential.id,
+                    Credential.grant_id.is_not(None),
+                )
+            )
+        )
+
+    for grant in db.scalars(grant_query).all():
+        if grant.exposure_id is None:
+            continue
+        exposure = db.get(Exposure, grant.exposure_id)
+        if exposure is None or exposure.state != "active":
+            continue
+        release = db.get(Release, exposure.release_id)
+        if release is None or release.registry_object_id is None:
+            continue
+        if release.registry_object_id in seen_obj_ids:
+            continue
+        obj = db.get(RegistryObject, release.registry_object_id)
+        if obj is None:
+            continue
+        seen_obj_ids.add(obj.id)
+        accessible_skills.append({
+            "id": obj.id,
+            "slug": obj.slug,
+            "display_name": obj.display_name,
+            "kind": obj.kind,
+        })
 
     # ── Operation History ─────────────────────────────────────────────────
     # Last 50 AuditEvents where aggregate_id == str(credential.id)
