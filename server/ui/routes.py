@@ -375,6 +375,63 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         context["activity_items"] = list_activity_rows(db)
         return templates.TemplateResponse(request, "activity.html", context)
 
+    @app.get("/profile", response_class=HTMLResponse)
+    def profile_page(
+        request: Request,
+        db: Session = Depends(get_db),
+    ):
+        actor = require_lifecycle_actor(request, db, "maintainer", "contributor")
+        blocked = _blocked_actor_response(templates, request, actor)
+        if blocked is not None:
+            return blocked
+        lang = resolve_language(request)
+        context = _build_admin_context(
+            request,
+            actor,
+            title=pick_lang(lang, "档案", "Profile"),
+            content=pick_lang(
+                lang,
+                "查看智能体档案与身份信息。",
+                "View the agent archive and identity information.",
+            ),
+            page_kicker=pick_lang(lang, "档案", "Profile"),
+            page_eyebrow=pick_lang(lang, "智能体档案", "Agent Archive"),
+        )
+        return templates.TemplateResponse(request, "profile.html", context)
+
+    @app.get("/manage", response_class=HTMLResponse)
+    def manage_page(
+        request: Request,
+        db: Session = Depends(get_db),
+    ):
+        actor = require_lifecycle_actor(request, db, "maintainer", "contributor")
+        blocked = _blocked_actor_response(templates, request, actor)
+        if blocked is not None:
+            return blocked
+        lang = resolve_language(request)
+        scope = load_library_scope(db, actor=actor)
+        context = _build_admin_context(
+            request,
+            actor,
+            title=pick_lang(lang, "管理", "Management"),
+            content=pick_lang(
+                lang,
+                "集中管理技能对象、访问令牌、分享链接和活动记录。",
+                "Centrally manage skill objects, access tokens, share links, and activity.",
+            ),
+            page_kicker=pick_lang(lang, "管理", "Management"),
+            page_eyebrow=pick_lang(lang, "技能与访问管理", "Skill & Access Management"),
+        )
+        context["library_items"] = list_library_objects(db, actor=actor)
+        context["token_items"] = list_library_token_rows(db, actor=actor, lang=lang, scope=scope)
+        context["share_items"] = list_library_share_rows(db, actor=actor, lang=lang, scope=scope)
+        context["activity_items"] = list_activity_rows(db, limit=50)
+        context["library_href"] = with_lang("/library", lang)
+        context["access_href"] = with_lang("/access", lang)
+        context["shares_href"] = with_lang("/shares", lang)
+        context["activity_href"] = with_lang("/activity", lang)
+        return templates.TemplateResponse(request, "manage.html", context)
+
     @app.get("/settings", response_class=HTMLResponse)
     def settings_page(
         request: Request,
