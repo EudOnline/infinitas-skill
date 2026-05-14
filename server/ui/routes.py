@@ -138,45 +138,10 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
     def index_v2_redirect():
         return RedirectResponse(url="/", status_code=307)
 
-    @app.get("/library", response_class=HTMLResponse)
-    def library_page(
-        request: Request,
-        db: Session = Depends(get_db),
-    ):
-        actor = require_lifecycle_actor(request, db, "maintainer", "contributor")
-        blocked = _blocked_actor_response(templates, request, actor)
-        if blocked is not None:
-            return blocked
+    @app.get("/library")
+    def library_redirect(request: Request):
         lang = resolve_language(request)
-        items = list_library_objects(db, actor=actor)
-        context = _build_admin_context(
-            request,
-            actor,
-            title=pick_lang(lang, "对象库", "Library"),
-            content=pick_lang(
-                lang,
-                "查看对象、发布版本、可见范围和访问分发。",
-                "Inspect objects, releases, visibility, and access distribution.",
-            ),
-            page_kicker=pick_lang(lang, "管理", "Admin"),
-            page_eyebrow=pick_lang(lang, "对象库", "Library"),
-        )
-        context["library_items"] = [
-            {
-                **item,
-                "default_release": (
-                    (item.get("current_release") or {}).get("version")
-                    if item.get("current_release")
-                    else None
-                ),
-                "current_visibility": (
-                    (item.get("current_visibility") or {}).get("audience_type") or "private"
-                ),
-                "detail_href": with_lang(f"/library/{item['id']}", lang),
-            }
-            for item in items
-        ]
-        return templates.TemplateResponse(request, "library.html", context)
+        return RedirectResponse(url=with_lang("/manage", lang), status_code=307)
 
     @app.get("/library/{object_id}", response_class=HTMLResponse)
     def library_object_page(
@@ -289,91 +254,20 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         context["visibility_rows"] = release_detail["visibility_rows"]
         return templates.TemplateResponse(request, "release-detail-v2.html", context)
 
-    @app.get("/access", response_class=HTMLResponse)
-    def access_center_page(
-        request: Request,
-        db: Session = Depends(get_db),
-    ):
-        actor = require_lifecycle_actor(request, db, "maintainer", "contributor")
-        blocked = _blocked_actor_response(templates, request, actor)
-        if blocked is not None:
-            return blocked
+    @app.get("/access")
+    def access_redirect(request: Request):
         lang = resolve_language(request)
-        context = _build_admin_context(
-            request,
-            actor,
-            title=pick_lang(lang, "访问中心", "Access Center"),
-            content=pick_lang(
-                lang,
-                "给 agent 分发读取或发布 Token，并查看使用情况。",
-                "Issue reader or publisher tokens for agents and inspect usage.",
-            ),
-            page_kicker=pick_lang(lang, "访问", "Access"),
-            page_eyebrow=pick_lang(lang, "Token", "Token"),
-        )
-        scope = load_library_scope(db, actor=actor)
-        context["token_items"] = list_library_token_rows(
-            db, actor=actor, lang=lang, scope=scope
-        )
-        context["token_activity_items"] = list_library_token_activity_rows(
-            db,
-            actor=actor,
-            lang=lang,
-            scope=scope,
-        )
-        context["library_href"] = with_lang("/library", lang)
-        return templates.TemplateResponse(request, "access-center.html", context)
+        return RedirectResponse(url=with_lang("/manage#tokens", lang), status_code=307)
 
-    @app.get("/shares", response_class=HTMLResponse)
-    def shares_page(
-        request: Request,
-        db: Session = Depends(get_db),
-    ):
-        actor = require_lifecycle_actor(request, db, "maintainer", "contributor")
-        blocked = _blocked_actor_response(templates, request, actor)
-        if blocked is not None:
-            return blocked
+    @app.get("/shares")
+    def shares_redirect(request: Request):
         lang = resolve_language(request)
-        context = _build_admin_context(
-            request,
-            actor,
-            title=pick_lang(lang, "分享链接", "Share Links"),
-            content=pick_lang(
-                lang,
-                "管理无需 Token 即可访问指定发布版本的分享链接。",
-                "Manage links that allow release access without a token.",
-            ),
-            page_kicker=pick_lang(lang, "分享", "Shares"),
-            page_eyebrow=pick_lang(lang, "链接", "Links"),
-        )
-        context["share_items"] = list_library_share_rows(db, actor=actor, lang=lang)
-        context["library_href"] = with_lang("/library", lang)
-        return templates.TemplateResponse(request, "shares.html", context)
+        return RedirectResponse(url=with_lang("/manage#shares", lang), status_code=307)
 
-    @app.get("/activity", response_class=HTMLResponse)
-    def activity_page(
-        request: Request,
-        db: Session = Depends(get_db),
-    ):
-        actor = require_lifecycle_actor(request, db, "maintainer", "contributor")
-        blocked = _blocked_actor_response(templates, request, actor)
-        if blocked is not None:
-            return blocked
+    @app.get("/activity")
+    def activity_redirect(request: Request):
         lang = resolve_language(request)
-        context = _build_admin_context(
-            request,
-            actor,
-            title=pick_lang(lang, "活动记录", "Activity"),
-            content=pick_lang(
-                lang,
-                "查看对象、分享和访问相关的审计轨迹。",
-                "Inspect the audit trail for objects, shares, and access.",
-            ),
-            page_kicker=pick_lang(lang, "活动", "Activity"),
-            page_eyebrow=pick_lang(lang, "审计", "Audit"),
-        )
-        context["activity_items"] = list_activity_rows(db)
-        return templates.TemplateResponse(request, "activity.html", context)
+        return RedirectResponse(url=with_lang("/manage#activity", lang), status_code=307)
 
     @app.get("/profile", response_class=HTMLResponse)
     def profile_page(
