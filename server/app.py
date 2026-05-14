@@ -13,6 +13,7 @@ from server.api.auth import router as auth_router
 from server.api.background import router as background_router
 from server.api.library import router as library_router
 from server.api.object_tokens import router as object_tokens_router
+from server.api.profile import router as profile_router
 from server.api.publish import router as publish_router
 from server.api.search import router as search_router
 from server.auth import get_current_user
@@ -59,6 +60,7 @@ def create_app() -> FastAPI:
     register_exception_handlers(app, templates)
     register_ui_routes(app, templates, settings)
     app.include_router(activity_router)
+    app.include_router(profile_router)
     app.include_router(library_router)
     app.include_router(object_tokens_router)
     app.include_router(publish_router)
