@@ -34,4 +34,5 @@ def test_login_with_invalid_token(live_server, browser):
     pg.click("#login-login-btn")
     pg.wait_for_timeout(1000)
     error = pg.query_selector("#login-auth-error:not([hidden])")
+    assert error is not None
     context.close()

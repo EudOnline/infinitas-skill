@@ -42,9 +42,10 @@ def live_server(tmpdir_session):
         ]
     )
 
-    import uvicorn
     import threading
     import time
+
+    import uvicorn
 
     from server.app import create_app
 

@@ -69,19 +69,19 @@ async def set_background(
     # Validate theme
     if request.theme not in ["light", "dark"]:
         raise HTTPException(status_code=400, detail="Invalid theme")
-    
+
     # Validate bg_id exists in presets
     presets = BACKGROUND_PRESETS.get(request.theme, [])
     valid_ids = [p["id"] for p in presets]
     if request.bg_id not in valid_ids:
         raise HTTPException(status_code=400, detail="Invalid background ID")
-    
+
     # Update user background
     if request.theme == "light":
         user.light_bg_id = request.bg_id
     else:
         user.dark_bg_id = request.bg_id
-    
+
     db.commit()
-    
+
     return {"success": True, "message": "Background updated"}

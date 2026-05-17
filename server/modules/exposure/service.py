@@ -109,6 +109,7 @@ def create_exposure(
         .where(Exposure.audience_type == outcome.audience_type)
         .where(Exposure.state.notin_(["revoked", "rejected"]))
         .where(Exposure.id != exposure.id)
+        .with_for_update()
     )
     if existing is not None:
         db.rollback()

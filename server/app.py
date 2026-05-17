@@ -13,8 +13,7 @@ from server.api.auth import router as auth_router
 from server.api.background import router as background_router
 from server.api.library import router as library_router
 from server.api.object_tokens import router as object_tokens_router
-from server.api.profile import credentials_router as credentials_router
-from server.api.profile import router as profile_router
+from server.api.profile import credentials_router as credentials_router, router as profile_router
 from server.api.publish import router as publish_router
 from server.api.search import router as search_router
 from server.auth import get_current_user
@@ -60,25 +59,14 @@ def create_app() -> FastAPI:
 
     register_exception_handlers(app, templates)
     register_ui_routes(app, templates, settings)
-    app.include_router(activity_router)
-    app.include_router(profile_router)
-    app.include_router(credentials_router)
-    app.include_router(library_router)
-    app.include_router(object_tokens_router)
-    app.include_router(publish_router)
-    app.include_router(auth_router)
-    app.include_router(background_router)
-    app.include_router(search_router)
-    app.include_router(access_router)
-    app.include_router(agent_code_router)
-    app.include_router(agent_preset_router)
-    app.include_router(authoring_router)
-    app.include_router(discovery_router)
-    app.include_router(release_router)
-    app.include_router(exposure_router)
-    app.include_router(review_router)
-    app.include_router(shares_router)
-    app.include_router(registry_router)
+    for router in (
+        activity_router, profile_router, credentials_router, library_router,
+        object_tokens_router, publish_router, auth_router, background_router,
+        search_router, access_router, agent_code_router, agent_preset_router,
+        authoring_router, discovery_router, release_router, exposure_router,
+        review_router, shares_router, registry_router,
+    ):
+        app.include_router(router)
     return app
 
 app = create_app()

@@ -4,6 +4,7 @@ from __future__ import annotations
 def test_theme_toggle_persists(authenticated_page):
     html = authenticated_page.query_selector("html")
     initial_scheme = html.get_attribute("data-color-scheme") if html else None
+    assert initial_scheme in ("light", "dark", None)
 
     toggle = authenticated_page.query_selector("[data-theme-choice='dark']")
     if toggle:

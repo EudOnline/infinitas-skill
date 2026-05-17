@@ -60,6 +60,7 @@ def get_skill(
     try:
         skill = service.get_skill_or_404(db, skill_id)
         service.assert_namespace_owner(
+            db,
             skill,
             principal_id=principal_id,
             is_maintainer=is_maintainer,

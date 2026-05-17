@@ -110,7 +110,9 @@ def _resolve_registry_audience(db: Session, request: Request) -> RegistryAudienc
     if not has_auth_input:
         raise UnauthorizedError("missing registry bearer token")
 
-    if allowed_reader_tokens and _matches_registry_reader_token(bearer_token, allowed_reader_tokens):
+    if allowed_reader_tokens and _matches_registry_reader_token(
+        bearer_token, allowed_reader_tokens
+    ):
         return RegistryAudience(mode="public", context=None)
 
     if bearer_token:

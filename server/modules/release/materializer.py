@@ -8,7 +8,6 @@ import tarfile
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-import shutil
 
 from sqlalchemy.orm import Session
 
@@ -124,7 +123,9 @@ def _uploaded_bundle_data(
     artifact = db.get(Artifact, int(content_artifact_id))
     if artifact is None:
         raise RuntimeError(f"uploaded bundle artifact {content_artifact_id} not found")
-    source_path = _artifact_object_path(artifact_root=artifact_root, storage_uri=artifact.storage_uri)
+    source_path = _artifact_object_path(
+        artifact_root=artifact_root, storage_uri=artifact.storage_uri
+    )
     if not source_path.is_file():
         raise RuntimeError(f"uploaded bundle artifact payload missing: {source_path}")
     raw = source_path.read_bytes()

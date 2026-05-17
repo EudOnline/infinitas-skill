@@ -37,7 +37,9 @@ class Artifact(Base):
     __tablename__ = "artifacts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    release_id: Mapped[int | None] = mapped_column(ForeignKey("releases.id"), index=True, nullable=True)
+    release_id: Mapped[int | None] = mapped_column(
+        ForeignKey("releases.id"), index=True, nullable=True
+    )
     kind: Mapped[str] = mapped_column(String(32))
     storage_uri: Mapped[str] = mapped_column(Text, default="")
     sha256: Mapped[str] = mapped_column(String(128), default="")

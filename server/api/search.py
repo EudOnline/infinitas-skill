@@ -121,7 +121,10 @@ def _search_payload(entries, *, scope: str) -> dict:
                 version=entry.version,
                 audience_type=entry.audience_type,
                 listing_mode=entry.listing_mode,
-                install_api_path=f"/api/v1/install/{scope}/{_install_ref(entry.qualified_name, entry.version)}",
+                install_api_path=(
+                    f"/api/v1/install/{scope}/"
+                    f"{_install_ref(entry.qualified_name, entry.version)}"
+                ),
                 runtime=runtime,
                 runtime_readiness=runtime_readiness,
                 workspace_targets=workspace_targets,
@@ -216,7 +219,10 @@ def _search_catalog_snapshot(*, query: str, limit: int) -> list[dict]:
             listing_mode="listed",
             install_api_path=(
                 "/api/v1/install/public/"
-                f"{_install_ref(item.get('qualified_name') or item.get('name') or '', item.get('latest_version') or item.get('default_install_version') or '')}"
+                + _install_ref(
+                    item.get("qualified_name") or item.get("name") or "",
+                    item.get("latest_version") or item.get("default_install_version") or "",
+                )
             ),
             runtime=item.get("runtime") if isinstance(item.get("runtime"), dict) else None,
             runtime_readiness=item.get("runtime_readiness"),

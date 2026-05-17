@@ -216,7 +216,9 @@ def _catalog_snapshot_projections() -> list[DiscoveryProjection]:
     projections: list[DiscoveryProjection] = []
     for item in _load_catalog_snapshot_skill_entries():
         qualified_name = str(item.get("qualified_name") or item.get("name") or "").strip()
-        version = str(item.get("latest_version") or item.get("default_install_version") or "").strip()
+        version = str(
+            item.get("latest_version") or item.get("default_install_version") or ""
+        ).strip()
         if not qualified_name or not version:
             continue
         publisher, _, name = qualified_name.partition("/")
