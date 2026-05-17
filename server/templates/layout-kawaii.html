@@ -40,6 +40,7 @@
         }
       })();
     </script>
+    <meta name="color-scheme" content="light dark" />
     <style>
       html { color-scheme: light; }
       html[data-color-scheme="dark"] { color-scheme: dark; }
@@ -77,13 +78,13 @@
       
       <div class="search-bar-wrapper" role="search">
         <span class="search-icon" aria-hidden="true">🔍</span>
-        <input 
-          type="search" 
-          id="global-search" 
-          class="search-input" 
+        <label for="global-search" class="sr-only">{{ ui["search_aria_label"] }}</label>
+        <input
+          type="search"
+          id="global-search"
+          class="search-input"
           placeholder="{{ ui['search_placeholder'] }}"
           autocomplete="off"
-          aria-label="{{ ui['search_aria_label'] }}"
           aria-autocomplete="list"
           aria-controls="search-dropdown"
           aria-expanded="false"
@@ -225,6 +226,7 @@
         <p class="console-auth-modal__desc">{{ ui.auth_modal_desc }}</p>
         <form id="console-auth-form" action="" method="POST">
           <div class="console-auth-modal__input-row">
+            <label for="console-token-input" class="sr-only">{{ ui.auth_modal_placeholder }}</label>
             <input
               type="password"
               id="console-token-input"
@@ -233,7 +235,6 @@
               autocomplete="off"
               minlength="8"
               maxlength="128"
-              aria-label="{{ ui.auth_modal_placeholder }}"
               aria-describedby="console-token-hint"
             />
             <button

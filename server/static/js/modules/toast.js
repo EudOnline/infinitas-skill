@@ -3,8 +3,15 @@
  */
 import { uiText } from './config.js';
 
+let _sharedInstance = null;
+
+export function getSharedToast() {
+  return _sharedInstance;
+}
+
 export class ToastManager {
   constructor() {
+    _sharedInstance = this;
     this.container = document.getElementById('toast-container');
     if (!this.container) {
       this.container = document.createElement('div');

@@ -1,68 +1,9 @@
 {% extends "layout-kawaii.html" %}
-{% from "macros.html" import console_table_shell %}
 
 {% block body %}
-<section class="kawaii-card animate-in mb-4">
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <div class="flex flex-wrap items-center gap-3">
-      <h1 class="font-display text-[clamp(1.25rem,3vw,1.8rem)] font-extrabold leading-tight text-kawaii-ink">{{ ui['page_activity_title'] }}</h1>
-      <span class="text-xs text-kawaii-ink-soft">{{ activity_items | length }} events</span>
-    </div>
-  </div>
-
-  <div class="flex flex-wrap items-center gap-3 mt-3">
-    <div class="toggle-group" role="group" aria-label="{{ ui['aria_filter_event'] }}" data-activity-filter>
-      <button class="toggle-chip is-active" type="button" data-filter="all" aria-pressed="true">{{ ui['filter_all'] }}</button>
-      <button class="toggle-chip" type="button" data-filter="visibility" aria-pressed="false">{{ ui['filter_visibility'] }}</button>
-      <button class="toggle-chip" type="button" data-filter="token" aria-pressed="false">{{ ui['filter_token'] }}</button>
-      <button class="toggle-chip" type="button" data-filter="share" aria-pressed="false">{{ ui['filter_share'] }}</button>
-    </div>
-  </div>
+<section class="kawaii-card animate-in">
+  <h1 class="font-display text-[clamp(1.25rem,3vw,1.8rem)] font-extrabold leading-tight text-kawaii-ink">Activity</h1>
+  <p class="text-sm text-kawaii-ink-soft mt-2">View audit activity and events.</p>
 </section>
-
-{% if activity_items %}
-<section class="kawaii-card animate-in" data-activity-list>
-  <div class="overflow-x-auto -mx-4 px-4 table-scroll">
-    <table>
-      <thead>
-        <tr>
-          <th scope="col" data-sort="string">{{ ui['table_col_event'] }}</th>
-          <th scope="col" data-sort="string">{{ ui['label_object'] }}</th>
-          <th scope="col" data-sort="string">{{ ui['label_actor'] }}</th>
-          <th scope="col" data-sort="date">{{ ui['table_col_timestamp'] }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in activity_items %}
-        <tr class="activity-item" data-event-type="{{ item.event_type }}">
-          <td data-label="{{ ui['table_col_event'] }}">
-            <div class="flex items-center gap-2">
-              <span class="shrink-0 text-sm" aria-hidden="true">
-                {% if item.event_type == 'visibility' %}👁️{% elif item.event_type == 'token' %}🔑{% elif item.event_type == 'share' %}🔗{% else %}📋{% endif %}
-              </span>
-              <div>
-                <div class="text-sm font-bold text-kawaii-ink">{{ item.title or item.event_type | title }}</div>
-                <div class="text-xs text-kawaii-ink-soft">{{ item.description or item.detail or '-' }}</div>
-              </div>
-            </div>
-          </td>
-          <td data-label="{{ ui['label_object'] }}">
-            <span class="text-sm text-kawaii-ink">{{ item.object_name or '-' }}</span>
-          </td>
-          <td data-label="{{ ui['label_actor'] }}">
-            <span class="text-sm text-kawaii-ink-soft">{{ item.actor or '-' }}</span>
-          </td>
-          <td data-label="{{ ui['table_col_timestamp'] }}">
-            <span class="text-xs text-kawaii-ink-muted">{{ item.timestamp }}</span>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</section>
-{% else %}
-<p class="text-sm text-kawaii-ink-soft py-8 text-center">{{ ui['empty_activity_desc'] }}</p>
-{% endif %}
 <script type="module" src="/static/js/modules/activity.js"></script>
 {% endblock %}

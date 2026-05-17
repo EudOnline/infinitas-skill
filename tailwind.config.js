@@ -34,7 +34,6 @@ module.exports = {
         'kawaii-mint': 'var(--kawaii-mint)',
         'kawaii-lavender': 'var(--kawaii-lavender)',
         'kawaii-lemon': 'var(--kawaii-lemon)',
-        'kawaii-lemonade': 'var(--kawaii-lemonade)',
         'kawaii-coral': 'var(--kawaii-coral)',
         'kawaii-rose': 'var(--kawaii-rose)',
         'kawaii-peach': 'var(--kawaii-peach)',

@@ -29,7 +29,6 @@ import {
 export function createAuthModalController(options) {
   const {
     prefix = '',
-    modalTitle = uiText('auth_modal_title', 'Authentication'),
     onLoginSuccess = null,
   } = options || {};
 

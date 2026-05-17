@@ -1,7 +1,6 @@
 /**
  * infinitas-skill v2 - Core JavaScript (ES module orchestrator)
  */
-import { infinitasAppShell, APP_UI, APP_SESSION, AUTH_SESSION_CONFIG } from './modules/config.js';
 import { ToastManager } from './modules/toast.js';
 import { ThemeManager, setToastRef as setThemeToastRef } from './modules/theme.js';
 import { SearchManager, setSearchToastRef } from './modules/search.js';
@@ -17,19 +16,12 @@ setThemeToastRef(toast);
 setSearchToastRef(toast);
 setApiToastRef(toast);
 
-// Legacy globals (backward compat for auth-session.js and inline references)
-window.APP_UI = APP_UI;
-window.APP_SESSION = APP_SESSION;
-window.AUTH_SESSION_CONFIG = AUTH_SESSION_CONFIG;
-window.infinitasAppShell = infinitasAppShell;
-window.toast = toast;
-window.themeManager = themeManager;
-
 // Focus mode toggle
 (function initFocusMode() {
   const STORAGE_KEY = 'infinitas-focus-mode';
   const root = document.documentElement;
-  const saved = localStorage.getItem(STORAGE_KEY);
+  let saved = null;
+  try { saved = localStorage.getItem(STORAGE_KEY); } catch (_) {}
   if (saved === 'true') {
     root.classList.add('focus-mode');
   }
@@ -42,7 +34,7 @@ window.themeManager = themeManager;
     }
     btn.addEventListener('click', () => {
       const active = root.classList.toggle('focus-mode');
-      localStorage.setItem(STORAGE_KEY, String(active));
+      try { localStorage.setItem(STORAGE_KEY, String(active)); } catch (_) {}
       btn.setAttribute('aria-pressed', String(active));
     });
   });
@@ -65,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize search
   try {
-    window.searchManager = new SearchManager();
+    new SearchManager();
   } catch (err) {
     console.error('Failed to initialize search:', err);
   }
@@ -87,9 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (revealElements.length > 0) {
       revealElements.forEach(el => {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(14px)';
-        el.style.transition = `opacity 520ms var(--ease-out-gentle), transform 520ms var(--ease-out-gentle)`;
+        el.classList.add('reveal-pending');
         const delay = getComputedStyle(el).getPropertyValue('--reveal-index');
         if (delay) {
           el.style.transitionDelay = `${parseInt(delay, 10) * 100}ms`;
@@ -99,8 +89,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
-            entry.target.style.opacity = '1';
-            entry.target.style.transform = 'translateY(0)';
+            entry.target.classList.remove('reveal-pending');
+            entry.target.classList.add('reveal-visible');
             observer.unobserve(entry.target);
           }
         });
@@ -110,7 +100,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       revealElements.forEach(el => observer.observe(el));
-      window._revealObserver = observer;
     }
   }
 });

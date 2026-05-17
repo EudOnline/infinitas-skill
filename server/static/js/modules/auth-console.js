@@ -262,6 +262,5 @@ export function initConsoleAuthSession() {
     });
   }
 
-  window.openConsoleAuthModal = controller.openModal;
   init();
 }

@@ -1,5 +1,11 @@
 import { apiPost, copyToClipboard } from './api.js';
 import { uiText } from './config.js';
+import { getSharedToast } from './toast.js';
+import {
+  initDelegatedActions,
+  initShareDetail,
+  setLifecycleToastRef,
+} from './lifecycle.js';
 
 function setButtonBusy(button, busy) {
   if (!button) return;
@@ -57,11 +63,11 @@ function renderResult(container, title, rows) {
 }
 
 function showSuccess(message) {
-  window.toast?.success?.(message);
+  getSharedToast()?.success(message);
 }
 
 function showError(message) {
-  window.toast?.error?.(message);
+  getSharedToast()?.error(message);
 }
 
 function initIssueTokenForm() {
@@ -160,6 +166,9 @@ function initCreateShareForm() {
 }
 
 function initReleaseAdminPage() {
+  setLifecycleToastRef(getSharedToast());
+  initDelegatedActions();
+  initShareDetail();
   initIssueTokenForm();
   initCreateShareForm();
 }

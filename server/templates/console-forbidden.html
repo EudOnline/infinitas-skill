@@ -6,7 +6,7 @@
   <h2 class="font-display text-[clamp(1.5rem,3.5vw,2.2rem)] font-extrabold leading-tight text-kawaii-ink mb-2 mt-2">{{ denied_title }}</h2>
   <p class="text-kawaii-ink-soft leading-relaxed max-w-prose max-w-[42rem] mt-3">{{ denied_body }}</p>
   <div class="mt-4">
-    <a class="kawaii-button kawaii-button--primary" href="{{ denied_home_href }}">
+    <a class="kawaii-button kawaii-button--primary" href="{{ denied_home_href or '/' }}">
       <span>{{ denied_home_label }}</span>
     </a>
   </div>

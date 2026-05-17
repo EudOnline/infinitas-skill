@@ -526,6 +526,5 @@ export function initHomeAuthSession() {
     openAuthModal(protectedTarget);
   }
 
-  window.openHomeAuthModal = openAuthModal;
   init();
 }

@@ -1,90 +1,9 @@
 {% extends "layout-kawaii.html" %}
-{% from "macros.html" import console_table_shell %}
 
 {% block body %}
-<section class="kawaii-card animate-in mb-4">
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <div class="flex flex-wrap items-center gap-3">
-      <h1 class="font-display text-[clamp(1.25rem,3vw,1.8rem)] font-extrabold leading-tight text-kawaii-ink">{{ ui['page_access_title'] }}</h1>
-      <span class="text-xs text-kawaii-ink-soft">{{ token_items | length }} tokens</span>
-    </div>
-    <a class="kawaii-button kawaii-button--ghost text-sm" href="{{ library_href or '/library' }}">{{ ui['action_open_library'] }} →</a>
-  </div>
+<section class="kawaii-card animate-in">
+  <h1 class="font-display text-[clamp(1.25rem,3vw,1.8rem)] font-extrabold leading-tight text-kawaii-ink">Access Center</h1>
+  <p class="text-sm text-kawaii-ink-soft mt-2">Manage access tokens and permissions.</p>
 </section>
-
-{% call console_table_shell(
-  ui['section_tokens'],
-  ui['empty_tokens_hint'],
-  token_items,
-  filterable=True
-) %}
-<table>
-  <thead>
-    <tr>
-      <th scope="col" data-sort="string">{{ ui['label_agent_name'] }}</th>
-      <th scope="col" data-sort="string">{{ ui['table_col_type'] }}</th>
-      <th scope="col" data-sort="string">{{ ui['table_col_object'] }}</th>
-      <th scope="col" data-sort="string">{{ ui['table_col_release'] }}</th>
-      <th scope="col" data-sort="string">{{ ui['table_col_state'] }}</th>
-      <th scope="col" data-sort="date">{{ ui['table_col_created'] }}</th>
-      <th scope="col">{{ ui['table_col_actions'] }}</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for item in token_items %}
-    <tr>
-      <td data-label="{{ ui['label_agent_name'] }}">{{ item.label or '-' }}</td>
-      <td data-label="{{ ui['table_col_type'] }}">
-        <span class="kawaii-badge {% if item.token_type == 'reader' %}kawaii-badge--success{% elif item.token_type == 'publisher' %}kawaii-badge--pending{% else %}kawaii-badge--running{% endif %}">{{ item.token_type }}</span>
-      </td>
-      <td data-label="{{ ui['table_col_object'] }}">
-        {% if item.object_href %}<a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.object_href }}">{{ item.object_name or '-' }}</a>{% else %}{{ item.object_name or '-' }}{% endif %}
-      </td>
-      <td data-label="{{ ui['table_col_release'] }}">{{ item.release_version or '-' }}</td>
-      <td data-label="{{ ui['table_col_state'] }}">
-        <span class="kawaii-badge {% if item.state == 'active' %}kawaii-badge--success{% else %}kawaii-badge--pending{% endif %}">{{ item.state }}</span>
-      </td>
-      <td data-label="{{ ui['table_col_created'] }}">{{ item.created_at }}</td>
-      <td data-label="{{ ui['table_col_actions'] }}">
-        {% if item.can_revoke %}
-        <button class="kawaii-button kawaii-button--ghost text-sm" type="button" data-action="revoke-token" data-credential-id="{{ item.id }}">{{ ui['action_revoke'] }}</button>
-        {% else %}
-        <span class="text-sm text-kawaii-ink-soft">-</span>
-        {% endif %}
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-{% endcall %}
-
-{% if token_activity_items %}
-{% call console_table_shell(
-  ui['section_token_activity'],
-  ui['empty_token_activity'],
-  token_activity_items
-) %}
-<table>
-  <thead>
-    <tr>
-      <th scope="col" data-sort="string">{{ ui['table_col_event'] }}</th>
-      <th scope="col" data-sort="string">{{ ui['table_col_token'] }}</th>
-      <th scope="col" data-sort="date">{{ ui['table_col_timestamp'] }}</th>
-      <th scope="col">{{ ui['table_col_detail'] }}</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for item in token_activity_items %}
-    <tr>
-      <td data-label="{{ ui['table_col_event'] }}">{{ item.event_type }}</td>
-      <td data-label="{{ ui['table_col_token'] }}">#{{ item.token_id }}</td>
-      <td data-label="{{ ui['table_col_timestamp'] }}">{{ item.timestamp }}</td>
-      <td data-label="{{ ui['table_col_detail'] }}"><span class="text-sm text-kawaii-ink-soft">{{ item.detail or '-' }}</span></td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-{% endcall %}
-{% endif %}
 <script type="module" src="/static/js/modules/access-center.js"></script>
 {% endblock %}

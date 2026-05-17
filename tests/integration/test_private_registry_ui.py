@@ -297,7 +297,7 @@ def assert_private_registry_ui_js_contracts() -> None:
     auth_init_home_source = _slice_source(
         auth_home_source,
         "export function initHomeAuthSession() {",
-        "\n  window.openHomeAuthModal = openAuthModal;",
+        "\n  init();\n}",
     )
     auth_console_login_success_source = _slice_source(
         auth_console_source,
@@ -308,7 +308,6 @@ def assert_private_registry_ui_js_contracts() -> None:
         re.findall(r"""from ['"](\./modules/[^'"]+)['"]""", app_js_source)
     )
     expected_shell_imports = {
-        "./modules/config.js",
         "./modules/toast.js",
         "./modules/theme.js",
         "./modules/search.js",

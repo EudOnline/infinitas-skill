@@ -10,12 +10,13 @@
       <span>{{ ui['login_input_label'] }}</span>
     </div>
 
-    <form id="login-auth-form" autocomplete="off">
+    <form id="login-auth-form" action="/api/auth/login" method="POST" autocomplete="off">
       <div class="token-input-wrapper login-token-wrapper">
+        <label for="login-token-input" class="sr-only">{{ ui['login_aria_label'] }}</label>
         <input type="password" id="login-token-input" class="token-input login-token-input"
                placeholder="{{ ui['login_placeholder'] }}"
                autocomplete="off" minlength="8" maxlength="128"
-               aria-label="{{ ui['login_aria_label'] }}"/>
+            />
         <button type="button" class="token-toggle login-token-toggle" id="login-token-toggle" title="{{ ui['toggle_password_title'] }}" aria-label="{{ ui['toggle_password_visibility'] }}">
           </button>
       </div>

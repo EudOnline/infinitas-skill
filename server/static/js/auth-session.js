@@ -1,12 +1,12 @@
 /**
- * Auth session initialization (ES module thin wrapper)
+ * Auth session initialization (ES module)
  */
 import { initHomeAuthSession, setToastRef as setHomeToastRef } from './modules/auth-home.js';
 import { initConsoleAuthSession, setToastRef as setConsoleToastRef } from './modules/auth-console.js';
+import { getSharedToast } from './modules/toast.js';
 
 function initAll() {
-  // Wait for app.js globals to be available
-  const toast = window.toast || null;
+  const toast = getSharedToast();
   setHomeToastRef(toast);
   setConsoleToastRef(toast);
 
@@ -15,11 +15,7 @@ function initAll() {
 
   // Listen for auth-required events from search module
   document.addEventListener('infinitas:auth-required', () => {
-    if (typeof window.openConsoleAuthModal === 'function') {
-      window.openConsoleAuthModal();
-    } else if (typeof window.openHomeAuthModal === 'function') {
-      window.openHomeAuthModal();
-    }
+    document.dispatchEvent(new CustomEvent('infinitas:open-auth-modal'));
   });
 }
 

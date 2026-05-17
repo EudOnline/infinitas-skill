@@ -19,7 +19,7 @@ from server.ui.console import build_console_forbidden_context
 from server.ui.formatting import build_kawaii_ui_context
 from server.ui.home import build_home_context
 from server.ui.i18n import build_registry_base_url, pick_lang, resolve_language, with_lang
-from server.ui.library_access import list_library_token_activity_rows, list_library_token_rows
+from server.ui.library_access import list_library_token_rows
 from server.ui.library_objects import get_library_object_detail, list_library_objects
 from server.ui.library_releases import get_library_release_detail
 from server.ui.library_scope import load_library_scope

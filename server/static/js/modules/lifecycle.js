@@ -793,7 +793,7 @@ export function initReleaseDetail() {
   const statusEl = document.getElementById('release-status');
   const releaseId = statusEl?.dataset.releaseId;
   if (statusEl && releaseId && statusEl.dataset.state === 'preparing') {
-    window._releasePollStop = pollReleaseReady(releaseId);
+    pollReleaseReady(releaseId);
   }
 }
 

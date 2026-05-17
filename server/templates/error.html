@@ -1,9 +1,9 @@
 {% extends "layout-kawaii.html" %}
 {% block body %}
 <section class="kawaii-card animate-in text-center py-12">
-  <div class="font-display text-[clamp(3rem,8vw,6rem)] font-extrabold text-kawaii-primary opacity-60 mb-4">{{ status_code }}</div>
-  <h1 class="font-display text-[clamp(1.25rem,3vw,1.8rem)] font-bold text-kawaii-ink mb-3">{{ title }}</h1>
-  <p class="text-kawaii-ink-soft max-w-md mx-auto mb-6">{{ message }}</p>
+  <div class="font-display text-[clamp(3rem,8vw,6rem)] font-extrabold text-kawaii-primary opacity-60 mb-4">{{ status_code or '?' }}</div>
+  <h1 class="font-display text-[clamp(1.25rem,3vw,1.8rem)] font-bold text-kawaii-ink mb-3">{{ title or 'Error' }}</h1>
+  <p class="text-kawaii-ink-soft max-w-md mx-auto mb-6">{{ message or 'Something went wrong.' }}</p>
   <a href="{{ home_href or '/' }}" class="kawaii-button kawaii-button--primary">{{ ui['back_home'] or 'Back Home' }}</a>
 </section>
 {% endblock %}

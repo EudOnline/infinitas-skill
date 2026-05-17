@@ -49,9 +49,10 @@
       <div class="auth-modal-body">
         <p class="auth-modal-desc">{{ ui.auth_modal_desc }}</p>
         <div class="token-input-wrapper">
+          <label for="token-input" class="sr-only">{{ ui.auth_modal_placeholder }}</label>
           <input type="password" id="token-input" class="token-input"
                  placeholder="{{ ui.auth_modal_placeholder }}" autocomplete="off" minlength="8" maxlength="128"
-                 aria-label="{{ ui.auth_modal_placeholder }}" aria-describedby="token-hint"/>
+                 aria-describedby="token-hint"/>
           <button type="button" class="token-toggle" id="token-toggle" title="{{ ui.toggle_password_visibility }}" aria-label="{{ ui.toggle_password_visibility }}">
             </button>
         </div>

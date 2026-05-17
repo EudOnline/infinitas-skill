@@ -1,5 +1,6 @@
 import { initCardSwipe } from './card-swipe.js';
 import { apiPost } from './api.js';
+import { getSharedToast } from './toast.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   const tabs = document.querySelector('[data-manage-tabs]');
@@ -69,7 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const row = btn.closest('tr');
         if (row) row.remove();
       }
-    } catch {
+    } catch (err) {
+      getSharedToast()?.error(err.message || 'Revoke failed');
       btn.disabled = false;
       btn.textContent = btn.dataset.label || 'Revoke';
     }

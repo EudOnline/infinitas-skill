@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -679,6 +679,7 @@ class TestProfileWritebackData:
         # Verify the audit event uses credential id as actor_ref
         with factory() as session:
             from sqlalchemy import select
+
             from server.models import AuditEvent
             event = session.scalar(
                 select(AuditEvent).where(

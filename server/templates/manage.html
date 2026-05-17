@@ -20,9 +20,9 @@
   <section data-view-panel="library" id="manage-panel-library" role="tabpanel">
     <div class="flex gap-2 mb-3 flex-wrap">
       <div class="search-bar-wrapper flex-1 min-w-[12rem]" role="search">
-        <input class="search-input" data-manage-search type="search"
-               placeholder="{{ ui.get('search_placeholder', '搜索...') }}"
-               aria-label="{{ ui.get('search_placeholder', '搜索...') }}">
+        <label for="manage-search-input" class="sr-only">{{ ui.get('search_placeholder', '搜索...') }}</label>
+        <input id="manage-search-input" class="search-input" data-manage-search type="search"
+               placeholder="{{ ui.get('search_placeholder', '搜索...') }}">
       </div>
       <div class="flex gap-1 flex-wrap" data-manage-filter role="group" aria-label="{{ ui.get('filter_all', '全部') }}">
         <button class="toggle-chip is-active" data-filter="all" aria-pressed="true">{{ ui.get('filter_all', '全部') }}</button>
@@ -97,12 +97,12 @@
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead><tr class="border-b border-kawaii-line text-left text-xs text-kawaii-ink-muted">
-            <th class="pb-2 pr-4">{{ ui.get('col_agent', 'Agent') }}</th>
-            <th class="pb-2 pr-4">{{ ui.get('col_type', '类型') }}</th>
-            <th class="pb-2 pr-4">{{ ui.get('col_object', '对象') }}</th>
-            <th class="pb-2 pr-4">{{ ui.get('col_state', '状态') }}</th>
-            <th class="pb-2 pr-4">{{ ui.get('col_created', '创建') }}</th>
-            <th class="pb-2">{{ ui.get('col_actions', '操作') }}</th>
+            <th scope="col" class="pb-2 pr-4">{{ ui.get('col_agent', 'Agent') }}</th>
+            <th scope="col" class="pb-2 pr-4">{{ ui.get('col_type', '类型') }}</th>
+            <th scope="col" class="pb-2 pr-4">{{ ui.get('col_object', '对象') }}</th>
+            <th scope="col" class="pb-2 pr-4">{{ ui.get('col_state', '状态') }}</th>
+            <th scope="col" class="pb-2 pr-4">{{ ui.get('col_created', '创建') }}</th>
+            <th scope="col" class="pb-2">{{ ui.get('col_actions', '操作') }}</th>
           </tr></thead>
           <tbody>
             {% for item in token_items %}

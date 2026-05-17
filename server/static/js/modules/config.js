@@ -2,7 +2,7 @@
  * Core configuration and data parsing
  */
 
-export function parseJsonData(id) {
+function parseJsonData(id) {
   try {
     const el = document.getElementById(id);
     return el && el.dataset.json ? JSON.parse(el.dataset.json) : {};
@@ -70,12 +70,10 @@ export function logError(...args) {
  */
 export function getCsrfToken() {
   const match = document.cookie.match(/csrf_token=([^;]+)/);
-  return match ? decodeURIComponent(match[1]) : '';
+  if (!match) return '';
+  try {
+    return decodeURIComponent(match[1]);
+  } catch (_e) {
+    return match[1];
+  }
 }
-
-export const infinitasAppShell = {
-  currentPageLanguage,
-  currentSearchScope,
-  uiText,
-  uiTemplate,
-};

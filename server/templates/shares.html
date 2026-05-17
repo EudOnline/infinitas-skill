@@ -1,62 +1,9 @@
 {% extends "layout-kawaii.html" %}
-{% from "macros.html" import console_table_shell %}
 
 {% block body %}
-<section class="kawaii-card animate-in mb-4">
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <div class="flex flex-wrap items-center gap-3">
-      <h1 class="font-display text-[clamp(1.25rem,3vw,1.8rem)] font-extrabold leading-tight text-kawaii-ink">{{ ui['page_shares_title'] }}</h1>
-      <span class="text-xs text-kawaii-ink-soft">{{ share_items | length }} links</span>
-    </div>
-    <a class="kawaii-button kawaii-button--ghost text-sm" href="{{ library_href or '/library' }}">{{ ui['action_open_library'] }} →</a>
-  </div>
+<section class="kawaii-card animate-in">
+  <h1 class="font-display text-[clamp(1.25rem,3vw,1.8rem)] font-extrabold leading-tight text-kawaii-ink">Shares</h1>
+  <p class="text-sm text-kawaii-ink-soft mt-2">Manage share links and distributions.</p>
 </section>
-
-{% call console_table_shell(
-  ui['section_share_links'],
-  ui['empty_share_links_hint'],
-  share_items,
-  filterable=True
-) %}
-<table>
-  <thead>
-    <tr>
-      <th scope="col" data-sort="string">{{ ui['label_share_name'] }}</th>
-      <th scope="col" data-sort="string">{{ ui['table_col_object'] }}</th>
-      <th scope="col" data-sort="string">{{ ui['table_col_release'] }}</th>
-      <th scope="col" data-sort="string">{{ ui['table_col_expiry'] }}</th>
-      <th scope="col" data-sort="string">{{ ui['table_col_password'] }}</th>
-      <th scope="col" data-sort="number">{{ ui['table_col_usage'] }}</th>
-      <th scope="col" data-sort="string">{{ ui['table_col_state'] }}</th>
-      <th scope="col">{{ ui['table_col_actions'] }}</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for item in share_items %}
-    <tr>
-      <td data-label="{{ ui['label_share_name'] }}">{{ item.label or '-' }}</td>
-      <td data-label="{{ ui['table_col_object'] }}">
-        {% if item.object_href %}<a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.object_href }}">{{ item.object_name or '-' }}</a>{% else %}{{ item.object_name or '-' }}{% endif %}
-      </td>
-      <td data-label="{{ ui['table_col_release'] }}">{{ item.release_version or '-' }}</td>
-      <td data-label="{{ ui['table_col_expiry'] }}">{{ item.expiry or '-' }}</td>
-      <td data-label="{{ ui['table_col_password'] }}">
-        {% if item.has_password %}<span class="kawaii-badge kawaii-badge--success">●</span>{% else %}<span class="kawaii-badge kawaii-badge--running">○</span>{% endif %}
-      </td>
-      <td data-label="{{ ui['table_col_usage'] }}">{{ item.usage_count or 0 }}{% if item.usage_limit %} / {{ item.usage_limit }}{% endif %}</td>
-      <td data-label="{{ ui['table_col_state'] }}">
-        <span class="kawaii-badge {% if item.state == 'active' %}kawaii-badge--success{% elif item.state == 'expired' %}kawaii-badge--pending{% else %}kawaii-badge--running{% endif %}">{{ item.state }}</span>
-      </td>
-      <td data-label="{{ ui['table_col_actions'] }}">
-        {% if item.can_revoke %}
-        <button class="kawaii-button kawaii-button--ghost text-sm" type="button" data-action="revoke-share-link" data-grant-id="{{ item.id }}">{{ ui['action_revoke'] }}</button>
-        {% endif %}
-        {% if item.object_href %}<a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.object_href }}">{{ ui['action_open_object'] }}</a>{% endif %}
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-{% endcall %}
 <script type="module" src="/static/js/modules/shares.js"></script>
 {% endblock %}

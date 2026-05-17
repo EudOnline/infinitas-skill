@@ -9,7 +9,6 @@
 import {
   APP_SESSION,
   AUTH_SESSION_CONFIG,
-  infinitasAppShell,
   uiText,
   logError,
   getCsrfToken,
@@ -21,9 +20,9 @@ import {
 // Constants
 // ---------------------------------------------------------------------------
 
-export const STORAGE_KEY = 'infinitas_auth_token';
-export const EXPIRY_KEY = 'infinitas_auth_expiry';
-export const DAYS_30 = 30 * 24 * 60 * 60 * 1000;
+const STORAGE_KEY = 'infinitas_auth_token';
+const EXPIRY_KEY = 'infinitas_auth_expiry';
+const DAYS_30 = 30 * 24 * 60 * 60 * 1000;
 
 // ---------------------------------------------------------------------------
 // Convenience re-exports from config (kept as wrapper functions for
