@@ -119,11 +119,23 @@ def _version_has_source_snapshot(skill_version: SkillVersion) -> bool:
     return content_mode in {"external_ref", "uploaded_bundle"}
 
 
-def assert_skill_owner(skill: Skill, *, principal_id: int, is_maintainer: bool = False) -> None:
+def assert_skill_owner(
+    db: Session, skill: Skill, *, principal_id: int, is_maintainer: bool = False
+) -> None:
     if is_maintainer:
         return
-    if skill.namespace_id != principal_id:
-        raise ForbiddenError("release namespace access denied")
+    if skill.namespace_id == principal_id:
+        return
+    from server.modules.access.models import Team, TeamMembership
+
+    if db.scalar(
+        select(TeamMembership.id)
+        .join(Team, Team.id == TeamMembership.team_id)
+        .where(Team.principal_id == skill.namespace_id)
+        .where(TeamMembership.user_id == principal_id)
+    ) is not None:
+        return
+    raise ForbiddenError("release namespace access denied")
 
 
 def create_or_get_release(
@@ -136,6 +148,7 @@ def create_or_get_release(
     skill_version = get_skill_version_or_404(db, version_id)
     skill = _get_skill_or_404(db, skill_version.skill_id)
     assert_skill_owner(
+        db,
         skill,
         principal_id=actor_principal_id,
         is_maintainer=is_maintainer,
@@ -156,9 +169,9 @@ def create_or_get_release(
         skill_version_id=skill_version.id,
         registry_object_id=skill.registry_object_id,
         object_kind=(
-            db.get(RegistryObject, skill.registry_object_id).kind
+            _ro.kind
             if skill.registry_object_id is not None
-            and db.get(RegistryObject, skill.registry_object_id) is not None
+            and (_ro := db.get(RegistryObject, skill.registry_object_id)) is not None
             else "skill"
         ),
         state="preparing",
@@ -169,7 +182,7 @@ def create_or_get_release(
     try:
         db.flush()
     except IntegrityError:
-        db.begin_nested().rollback()
+        db.rollback()
         existing = db.scalar(
             select(Release)
             .where(Release.skill_version_id == skill_version.id)
@@ -194,7 +207,11 @@ def get_release_snapshot(db: Session, release_id: int) -> ReleaseSnapshot:
             "content_mode": draft.content_mode,
             "content_ref": draft.content_ref,
             "content_artifact_id": draft.content_artifact_id,
-            "metadata": manifest.get("metadata") if isinstance(manifest.get("metadata"), dict) else {},
+            "metadata": (
+                manifest.get("metadata")
+                if isinstance(manifest.get("metadata"), dict)
+                else {}
+            ),
         }
     return ReleaseSnapshot(
         release=release,
@@ -215,6 +232,7 @@ def assert_release_owner(
 ) -> None:
     snapshot = get_release_snapshot(db, release.id)
     assert_skill_owner(
+        db,
         snapshot.skill,
         principal_id=principal_id,
         is_maintainer=is_maintainer,

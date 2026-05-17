@@ -9,7 +9,15 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from server.models import AccessGrant, Credential, Exposure, Principal, RegistryObject, SkillVersion, utcnow
+from server.models import (
+    AccessGrant,
+    Credential,
+    Exposure,
+    Principal,
+    RegistryObject,
+    SkillVersion,
+    utcnow,
+)
 from server.modules.access import service as access_service
 from server.modules.audit import service as audit_service
 from server.modules.release import service as release_service
@@ -243,7 +251,11 @@ def create_share_link(
         aggregate_id=str(grant.id),
         event_type="share_link.created",
         actor_ref=_actor_ref(actor),
-        payload={"release_id": release_id, "object_id": registry_object.id, "name": constraints["name"]},
+        payload={
+            "release_id": release_id,
+            "object_id": registry_object.id,
+            "name": constraints["name"],
+        },
     )
     return _share_link_payload(
         db,
@@ -311,7 +323,9 @@ def resolve_share_link(db: Session, *, share_id: int, password: str | None) -> d
         release_id=release_id,
     )
     constraints = _json_object(grant.constraints_json)
-    constraints["used_count"] = int(constraints.get("used_count", constraints.get("usage_count") or 0)) + 1
+    constraints["used_count"] = (
+        int(constraints.get("used_count", constraints.get("usage_count") or 0)) + 1
+    )
     constraints["usage_count"] = constraints["used_count"]
     grant.constraints_json = json.dumps(constraints, ensure_ascii=False)
     db.add(grant)

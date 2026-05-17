@@ -401,6 +401,9 @@ def record_lifecycle_memory_event_best_effort(
     except Exception:
         try:
             nested.rollback()
-        except Exception:
-            pass
+        except Exception as exc:
+            import logging
+            logging.getLogger("infinitas.memory").warning(
+                "Memory write rollback failed: %s", exc, exc_info=True
+            )
         return None

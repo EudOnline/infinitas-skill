@@ -30,14 +30,18 @@ _RATE_LIMIT_MAX = 10  # attempts per window
 def _check_login_rate_limit(client_ip: str) -> None:
     now = time.monotonic()
     cutoff = now - _RATE_LIMIT_WINDOW
-    attempts = _login_attempts[client_ip]
-    _login_attempts[client_ip] = [t for t in attempts if t > cutoff]
-    if len(_login_attempts[client_ip]) >= _RATE_LIMIT_MAX:
+    attempts = [t for t in _login_attempts.get(client_ip, []) if t > cutoff]
+    if len(attempts) >= _RATE_LIMIT_MAX:
         raise HTTPException(
             status_code=429,
             detail="Too many login attempts. Please try again later.",
         )
-    _login_attempts[client_ip].append(now)
+    if attempts:
+        _login_attempts[client_ip] = attempts
+        _login_attempts[client_ip].append(now)
+    else:
+        _login_attempts.pop(client_ip, None)
+        _login_attempts[client_ip] = [now]
 
 
 class TokenLoginRequest(BaseModel):

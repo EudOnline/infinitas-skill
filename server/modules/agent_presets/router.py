@@ -76,6 +76,7 @@ def get_agent_preset(
     try:
         record = service.get_agent_preset_or_404(db, preset_id)
         authoring_service.assert_namespace_owner(
+            db,
             record.skill,
             principal_id=principal_id,
             is_maintainer=is_maintainer,
@@ -200,7 +201,7 @@ def create_agent_preset_release(
             db.refresh(release)
         except Exception:
             db.rollback()
-            db.refresh(release)
+            release = release_service.get_release_or_404(db, release.id)
     else:
         settings = get_settings()
         if release_requires_materialization(

@@ -7,9 +7,10 @@ from sqlalchemy.orm import Session
 
 from server.auth import get_current_access_context
 from server.db import get_db
-from server.models import AuditEvent, RegistryObject, Release
+from server.models import AuditEvent, Credential, RegistryObject, Release
 from server.modules.access.authn import AccessContext
 from server.modules.audit.read_model import activity_query, json_payload
+from server.modules.shares.models import ShareLink
 
 router = APIRouter(tags=["activity"])
 
@@ -74,6 +75,16 @@ def list_activity(
     return {"items": items, "total": len(items)}
 
 
+def _assert_token_owner(
+    db: Session, token_id: int, principal_id: int, is_maintainer: bool
+) -> None:
+    if is_maintainer:
+        return
+    credential = db.get(Credential, token_id)
+    if credential is None or credential.principal_id != principal_id:
+        raise HTTPException(status_code=403, detail="token access denied")
+
+
 @router.get("/api/tokens/{token_id}/activity")
 def token_activity(
     token_id: int,
@@ -81,6 +92,12 @@ def token_activity(
     db: Session = Depends(get_db),
 ):
     _require_actor(context)
+    _assert_token_owner(
+        db,
+        token_id,
+        context.principal.id if context.principal else 0,
+        context.user.role == "maintainer" if context.user else False,
+    )
     events = db.scalars(
         activity_query()
         .where(AuditEvent.aggregate_type == "token")
@@ -90,6 +107,16 @@ def token_activity(
     return {"items": items, "total": len(items)}
 
 
+def _assert_share_owner(
+    db: Session, share_id: int, principal_id: int, is_maintainer: bool
+) -> None:
+    if is_maintainer:
+        return
+    share = db.get(ShareLink, share_id)
+    if share is None or share.created_by_principal_id != principal_id:
+        raise HTTPException(status_code=403, detail="share link access denied")
+
+
 @router.get("/api/share-links/{share_id}/activity")
 def share_link_activity(
     share_id: int,
@@ -97,6 +124,12 @@ def share_link_activity(
     db: Session = Depends(get_db),
 ):
     _require_actor(context)
+    _assert_share_owner(
+        db,
+        share_id,
+        context.principal.id if context.principal else 0,
+        context.user.role == "maintainer" if context.user else False,
+    )
     events = db.scalars(
         activity_query()
         .where(AuditEvent.aggregate_type == "share_link")

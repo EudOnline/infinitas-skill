@@ -18,7 +18,6 @@ from server.models import (
     AuditEvent,
     Credential,
     Exposure,
-    Principal,
     RegistryObject,
     Release,
     User,
@@ -170,6 +169,12 @@ def profile_admin_view(
     if credential is None:
         raise HTTPException(status_code=404, detail="credential not found")
 
+    # Only the credential owner or a maintainer may modify its policy
+    caller_principal_id = user.principal_id if user.principal_id is not None else 0
+    is_maintainer = user.role == "maintainer"
+    if not is_maintainer and credential.principal_id != caller_principal_id:
+        raise HTTPException(status_code=403, detail="credential access denied")
+
     principal = access_service.get_principal(db, credential.principal_id)
     resolved_user = access_service.get_user_for_principal(db, principal)
     scopes = access_service.parse_scopes(credential.scopes_json)
@@ -198,6 +203,13 @@ def profile_writeback(
     db: Session = Depends(get_db),
 ):
     """Record a memory writeback event for the authenticated credential."""
+    from server.modules.access.authz import require_any_scope
+
+    if not require_any_scope(context, {"api:user", "authoring:write", "skill:write"}):
+        raise HTTPException(
+            status_code=403, detail="insufficient scope for writeback"
+        )
+
     credential = context.credential
     actor_ref = context.principal.slug if context.principal else str(credential.id)
 

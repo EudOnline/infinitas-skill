@@ -21,7 +21,9 @@ def register_exception_handlers(app, templates: Jinja2Templates) -> None:
                 "request": request,
                 "status_code": 404,
                 "title": pick_lang(lang, "未找到", "Not Found"),
-                "message": pick_lang(lang, "您访问的页面不存在。", "The page you are looking for does not exist."),
+                "message": pick_lang(
+                    lang, "您访问的页面不存在。", "The page you are looking for does not exist."
+                ),
                 **build_kawaii_ui_context(request, lang, "", ""),
             },
             status_code=404,
@@ -39,7 +41,11 @@ def register_exception_handlers(app, templates: Jinja2Templates) -> None:
                 "request": request,
                 "status_code": 500,
                 "title": pick_lang(lang, "服务器错误", "Server Error"),
-                "message": pick_lang(lang, "出了点问题，请稍后再试。", "Something went wrong. Please try again later."),
+                "message": pick_lang(
+                    lang,
+                    "出了点问题，请稍后再试。",
+                    "Something went wrong. Please try again later.",
+                ),
                 **build_kawaii_ui_context(request, lang, "", ""),
             },
             status_code=500,

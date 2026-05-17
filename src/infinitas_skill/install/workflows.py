@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import shutil
 import subprocess
 import sys
@@ -56,7 +57,9 @@ def _failure_payload_from_result(
             if isinstance(payload, dict):
                 return payload
         except json.JSONDecodeError:
-            pass
+            logging.getLogger("infinitas.install").debug(
+                "JSON decode failed for stdout in %s", error_code
+            )
     stderr = (result.stderr or "").strip()
     return {
         "ok": False,
@@ -122,7 +125,9 @@ def _resolve_source(
         try:
             return 0, json.loads(stdout)
         except json.JSONDecodeError:
-            pass
+            logging.getLogger("infinitas.install").debug(
+                "JSON decode failed for resolve-skill-source.py stdout"
+            )
     stderr = (result.stderr or "").strip()
     return result.returncode or 1, {
         "ok": False,
@@ -147,7 +152,9 @@ def _materialize_source(
         try:
             return 0, json.loads(stdout)
         except json.JSONDecodeError:
-            pass
+            logging.getLogger("infinitas.install").debug(
+                "JSON decode failed for materialize-skill-source.py stdout"
+            )
     stderr = (result.stderr or "").strip()
     return result.returncode or 1, {
         "ok": False,
@@ -622,7 +629,9 @@ def _run_pull_skill(
         try:
             return result.returncode, json.loads(stdout)
         except json.JSONDecodeError:
-            pass
+            logging.getLogger("infinitas.install").debug(
+                "JSON decode failed for pull-skill.sh stdout"
+            )
     stderr = (result.stderr or "").strip()
     payload = {
         "ok": False,

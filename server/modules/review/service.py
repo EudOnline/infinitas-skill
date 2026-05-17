@@ -133,8 +133,8 @@ def record_decision(
     if review_case.state != "open":
         raise ConflictError("review case is already closed")
 
-    if reviewer_user is not None and reviewer_user.role not in ("maintainer", "contributor"):
-        raise ConflictError("only maintainers or contributors can record review decisions")
+    # Authorization is the caller's responsibility; router layer verifies
+    # ownership via assert_release_owner before invoking this function.
 
     normalized_decision = str(decision or "").strip().lower()
     if normalized_decision not in {"approve", "reject", "comment"}:

@@ -9,13 +9,13 @@ from sqlalchemy.orm import Session
 
 from server.modules.authoring import repository
 from server.modules.authoring.models import Skill, SkillDraft, SkillVersion
-from server.modules.release.models import Artifact
 from server.modules.authoring.schemas import (
     SkillCreateRequest,
     SkillDraftCreateRequest,
     SkillDraftPatchRequest,
 )
 from server.modules.memory.service import record_lifecycle_memory_event_best_effort
+from server.modules.release.models import Artifact
 
 
 class AuthoringError(Exception):
@@ -84,7 +84,9 @@ def _parse_artifact_token(token: str | None) -> int | None:
     try:
         artifact_id = int(candidate)
     except ValueError as exc:
-        raise ConflictError("content_upload_token must reference a numeric uploaded artifact") from exc
+        raise ConflictError(
+            "content_upload_token must reference a numeric uploaded artifact"
+        ) from exc
     if artifact_id <= 0:
         raise ConflictError("content_upload_token must reference a positive artifact id")
     return artifact_id
@@ -213,6 +215,7 @@ def create_skill_version_snapshot(
     if skill is None:
         raise NotFoundError("skill not found")
     assert_namespace_owner(
+        db,
         skill,
         principal_id=actor_principal_id,
         is_maintainer=is_maintainer,
@@ -321,13 +324,31 @@ def get_skill_or_404(db: Session, skill_id: int) -> Skill:
     return skill
 
 
+def _check_team_access(db: Session, namespace_id: int, principal_id: int) -> bool:
+    from server.modules.access.models import Team, TeamMembership
+
+    return db.scalar(
+        select(TeamMembership.id)
+        .join(Team, Team.id == TeamMembership.team_id)
+        .where(Team.principal_id == namespace_id)
+        .where(TeamMembership.user_id == principal_id)
+    ) is not None
+
+
 def assert_namespace_owner(
-    skill: Skill, *, principal_id: int, is_maintainer: bool = False
+    db: Session,
+    skill: Skill,
+    *,
+    principal_id: int,
+    is_maintainer: bool = False,
 ) -> None:
     if is_maintainer:
         return
-    if skill.namespace_id != principal_id:
-        raise ForbiddenError("skill namespace access denied")
+    if skill.namespace_id == principal_id:
+        return
+    if _check_team_access(db, skill.namespace_id, principal_id):
+        return
+    raise ForbiddenError("skill namespace access denied")
 
 
 def create_draft(
@@ -342,6 +363,7 @@ def create_draft(
     if skill is None:
         raise NotFoundError("skill not found")
     assert_namespace_owner(
+        db,
         skill,
         principal_id=actor_principal_id,
         is_maintainer=is_maintainer,
@@ -402,6 +424,7 @@ def patch_draft(
     if skill is None:
         raise NotFoundError("skill not found")
     assert_namespace_owner(
+        db,
         skill,
         principal_id=actor_principal_id,
         is_maintainer=is_maintainer,
@@ -415,11 +438,19 @@ def patch_draft(
         content_mode, content_ref, content_artifact_id = resolve_draft_content(
             db,
             content_mode=payload.content_mode or draft.content_mode,
-            content_ref=payload.content_ref if payload.content_ref is not None else draft.content_ref,
+            content_ref=(
+                payload.content_ref
+                if payload.content_ref is not None
+                else draft.content_ref
+            ),
             content_upload_token=(
                 payload.content_upload_token
                 if payload.content_upload_token is not None
-                else (str(draft.content_artifact_id) if draft.content_artifact_id is not None else None)
+                else (
+                    str(draft.content_artifact_id)
+                    if draft.content_artifact_id is not None
+                    else None
+                )
             ),
         )
         draft.content_mode = content_mode
@@ -457,6 +488,7 @@ def seal_draft(
     if skill is None:
         raise NotFoundError("skill not found")
     assert_namespace_owner(
+        db,
         skill,
         principal_id=actor_principal_id,
         is_maintainer=is_maintainer,
