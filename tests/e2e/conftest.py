@@ -38,6 +38,7 @@ def live_server(tmpdir_session):
                 "display_name": "E2E Maintainer",
                 "role": "maintainer",
                 "token": "e2e-maintainer-token",
+                "password": "e2e-maintainer-password",
             },
         ]
     )
@@ -76,8 +77,9 @@ def authenticated_page(live_server, browser):
     context = browser.new_context()
     pg = context.new_page()
     pg.goto(f"{live_server}/login?lang=en")
-    pg.wait_for_selector("#login-token-input")
-    pg.fill("#login-token-input", "e2e-maintainer-token")
+    pg.wait_for_selector("#login-username-input")
+    pg.fill("#login-username-input", "e2e-maintainer")
+    pg.fill("#login-password-input", "e2e-maintainer-password")
     pg.click("#login-login-btn")
     pg.wait_for_url(f"{live_server}/?lang=en")
     pg.wait_for_load_state("networkidle")

@@ -14,7 +14,7 @@ def _security_client(tmp_path: Path) -> TestClient:
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(tmp_path / "artifacts")
     os.environ["INFINITAS_SERVER_BOOTSTRAP_USERS"] = (
         '[{"username":"security-tester","display_name":"Security Tester",'
-        '"role":"maintainer","token":"security-test-token"}]'
+        '"role":"maintainer","token":"security-test-token","password":"security-test-password"}]'
     )
     os.environ["INFINITAS_SERVER_ALLOWED_HOSTS"] = '["localhost","127.0.0.1","testserver"]'
     return TestClient(create_app())
@@ -82,7 +82,7 @@ class TestCsrfProtection:
         client = _security_client(tmp_path)
         login = client.post(
             "/api/auth/login",
-            json={"username": "security-tester", "token": "security-test-token"},
+            json={"username": "security-tester", "password": "security-test-password"},
         )
         assert login.status_code == 200
         assert "csrf_token" in login.cookies
@@ -95,7 +95,7 @@ class TestCsrfProtection:
         client = _security_client(tmp_path)
         login = client.post(
             "/api/auth/login",
-            json={"username": "security-tester", "token": "security-test-token"},
+            json={"username": "security-tester", "password": "security-test-password"},
         )
         assert login.status_code == 200
 
@@ -110,7 +110,7 @@ class TestCsrfProtection:
         client = _security_client(tmp_path)
         login = client.post(
             "/api/auth/login",
-            json={"username": "security-tester", "token": "security-test-token"},
+            json={"username": "security-tester", "password": "security-test-password"},
         )
         assert login.status_code == 200
         csrf_cookie = login.cookies["csrf_token"]
@@ -128,7 +128,7 @@ class TestCookieSecurity:
         client = _security_client(tmp_path)
         response = client.post(
             "/api/auth/login",
-            json={"username": "security-tester", "token": "security-test-token"},
+            json={"username": "security-tester", "password": "security-test-password"},
         )
         assert response.status_code == 200
         set_cookie = response.headers.get("set-cookie", "")
@@ -139,7 +139,7 @@ class TestCookieSecurity:
         client = _security_client(tmp_path)
         response = client.post(
             "/api/auth/login",
-            json={"username": "security-tester", "token": "security-test-token"},
+            json={"username": "security-tester", "password": "security-test-password"},
         )
         assert response.status_code == 200
         set_cookie = response.headers.get("set-cookie", "")

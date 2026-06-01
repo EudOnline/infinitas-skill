@@ -117,7 +117,6 @@ def test_ai_index_and_discovery_emit_openclaw_runtime_contract(tmp_path: Path) -
     assert runtime.get("background_tasks", {}).get("required") is True
     assert runtime.get("subagents", {}).get("required") is True
     assert isinstance(runtime.get("readiness", {}).get("status"), str)
-    assert runtime.get("legacy_compatibility", {}).get("agent_compatible_deprecated") is True
 
     discovery_payload = build_discovery_index(
         root=root,

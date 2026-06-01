@@ -56,6 +56,7 @@ def _configure_env(monkeypatch, *, tmp_path: Path, repo: Path) -> Path:
                     "display_name": "Fixture Maintainer",
                     "role": "maintainer",
                     "token": "fixture-maintainer-token",
+                    "password": "fixture-maintainer-password",
                 },
                 {
                     "username": "fixture-reviewer",
@@ -233,7 +234,8 @@ def test_registry_read_tokens_gate_registry_routes_without_breaking_user_credent
     assert maintainer_token.status_code == 200, maintainer_token.text
 
     login_response = client.post(
-        "/api/auth/login?lang=en", json={"token": "fixture-maintainer-token"}
+        "/api/auth/login?lang=en",
+        json={"username": "fixture-maintainer", "password": "fixture-maintainer-password"},
     )
     assert login_response.status_code == 200, login_response.text
     session_cookie = login_response.cookies.get(AUTH_COOKIE_NAME)
