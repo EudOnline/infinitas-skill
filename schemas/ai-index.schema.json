@@ -299,21 +299,6 @@
                 },
                 "additionalProperties": true
               },
-              "legacy_compatibility": {
-                "type": "object",
-                "properties": {
-                  "agent_compatible": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "agent_compatible_deprecated": {
-                    "type": "boolean"
-                  }
-                },
-                "additionalProperties": true
-              }
             },
             "additionalProperties": true
           },

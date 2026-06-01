@@ -3,7 +3,7 @@
  *
  * Re-exports thin wrappers around config.js helpers so that the auth
  * sub-modules (auth-modal, auth-home, auth-console) share a single source
- * of truth for session storage keys, token validation, and cookie-hint state.
+ * of truth for session storage keys, credential validation, and cookie-hint state.
  */
 
 import {
@@ -20,7 +20,6 @@ import {
 // Constants
 // ---------------------------------------------------------------------------
 
-const STORAGE_KEY = 'infinitas_auth_token';
 const EXPIRY_KEY = 'infinitas_auth_expiry';
 const DAYS_30 = 30 * 24 * 60 * 60 * 1000;
 
@@ -51,7 +50,6 @@ export function markLocalSessionActive() {
  */
 export function clearLocalSession() {
   try {
-    window.localStorage.removeItem(STORAGE_KEY);
     window.localStorage.removeItem(EXPIRY_KEY);
   } catch (_error) {
     // Ignore storage cleanup failures.
@@ -98,61 +96,59 @@ export function setAuthCookieHint(present) {
 // ---------------------------------------------------------------------------
 
 /**
- * Extract the initial user object from the server-rendered APP_SESSION data.
- * Returns `null` when no valid user information is present.
+ * Try to read the current user from the server-rendered session bootstrap.
  */
 export function initialSessionUser() {
-  const raw = APP_SESSION.current_user || APP_SESSION.currentUser;
-  if (!raw || typeof raw.username !== 'string' || !raw.username) {
+  try {
+    const el = document.getElementById('session-bootstrap-data');
+    if (!el || !el.dataset.json) return null;
+    const parsed = JSON.parse(el.dataset.json);
+    return parsed.current_user || null;
+  } catch (_error) {
     return null;
   }
-  return {
-    username: raw.username,
-    role: raw.role || null,
-  };
 }
 
-// ---------------------------------------------------------------------------
-// Network helpers
-// ---------------------------------------------------------------------------
-
 /**
- * POST to the server-side logout endpoint to clear the auth cookie, then
- * clear the local cookie hint regardless of outcome.
+ * Send a POST to /api/auth/logout and clear local state.
  */
-export async function requestSessionCleanup(logLabel) {
+export async function requestSessionCleanup() {
   try {
-    const res = await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF-Token': getCsrfToken() } });
-    if (!res.ok) {
-      logError(logLabel, res.status, res.statusText);
-    }
-  } catch (error) {
-    logError(logLabel, error);
-  } finally {
-    setAuthCookieHint(false);
+    const csrfToken = getCsrfToken();
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : {},
+    });
+  } catch (_error) {
+    // Best-effort logout
   }
+  clearLocalSession();
+  setAuthCookieHint(false);
 }
 
 // ---------------------------------------------------------------------------
-// Token validation
+// Credential validation
 // ---------------------------------------------------------------------------
 
-/**
- * Validate an auth token string.  Returns an error message (string) when the
- * token is invalid, or `null` when it passes all checks.
- */
-export function validateToken(token) {
-  if (!token) {
-    return uiText('auth_enter_token', 'Please enter token');
+export function validateCredentials(username, password) {
+  if (!username || !username.trim()) {
+    return uiText('auth_enter_username', 'Please enter username');
   }
-  if (token.length < 8) {
-    return uiText('auth_token_min', 'Token must be at least 8 characters');
+  if (username.length < 1) {
+    return uiText('auth_username_min', 'Username must be at least 1 character');
   }
-  if (token.length > 128) {
-    return uiText('auth_token_max', 'Token must not exceed 128 characters');
+  if (username.length > 100) {
+    return uiText('auth_username_max', 'Username must not exceed 100 characters');
   }
-  if (/[<>"'&]/.test(token)) {
-    return uiText('auth_invalid_characters', 'Token contains invalid characters');
+  if (!password || !password.trim()) {
+    return uiText('auth_enter_password', 'Please enter password');
+  }
+  if (password.length < 1) {
+    return uiText('auth_password_min', 'Password must be at least 1 character');
+  }
+  if (password.length > 128) {
+    return uiText('auth_password_max', 'Password must not exceed 128 characters');
   }
   return null;
 }

@@ -348,12 +348,12 @@ def assert_private_registry_ui_js_contracts() -> None:
         )
 
     for template_source, marker in [
-        (library_template, '<script type="module" src="/static/js/modules/library.js"></script>'),
-        (object_detail_template, '<script type="module" src="/static/js/modules/library.js"></script>'),
-        (access_center_template, '<script type="module" src="/static/js/modules/access-center.js"></script>'),
-        (shares_template, '<script type="module" src="/static/js/modules/shares.js"></script>'),
-        (activity_template, '<script type="module" src="/static/js/modules/activity.js"></script>'),
-        (release_detail_v2_template, '<script type="module" src="/static/js/modules/release-admin.js"></script>'),
+        (library_template, "static_url('/static/js/modules/library.js')"),
+        (object_detail_template, "static_url('/static/js/modules/library.js')"),
+        (access_center_template, "static_url('/static/js/modules/access-center.js')"),
+        (shares_template, "static_url('/static/js/modules/shares.js')"),
+        (activity_template, "static_url('/static/js/modules/activity.js')"),
+        (release_detail_v2_template, "static_url('/static/js/modules/release-admin.js')"),
     ]:
         assert marker in template_source, (
             "expected maintained templates to own their page-level module wiring; "
@@ -700,7 +700,7 @@ def test_private_first_console_ui_round_trip() -> None:
 
         skills_response = client.get("/skills?lang=en", headers=headers, follow_redirects=False)
         assert skills_response.status_code == 307
-        assert skills_response.headers["location"] == "/library?lang=en"
+        assert skills_response.headers["location"] == "/manage?lang=en"
 
         review_response = client.get(
             "/review-cases?lang=en",
@@ -708,7 +708,7 @@ def test_private_first_console_ui_round_trip() -> None:
             follow_redirects=False,
         )
         assert review_response.status_code == 307
-        assert review_response.headers["location"] == "/activity?lang=en"
+        assert review_response.headers["location"] == "/manage?lang=en#activity"
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 

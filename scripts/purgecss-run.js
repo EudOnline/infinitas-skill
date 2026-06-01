@@ -64,9 +64,10 @@ async function run() {
     },
   });
 
-  fs.writeFileSync('server/static/css/input.css', result[0].css);
+  const purgedPath = 'server/static/css/.input.purged.css';
+  fs.writeFileSync(purgedPath, result[0].css);
   const saved = result[0].rejected?.length || 0;
-  console.log(`PurgeCSS complete. Removed ${saved} unused selectors.`);
+  console.log(`PurgeCSS complete. Removed ${saved} unused selectors. Written to ${purgedPath}`);
 }
 
 run().catch(err => {

@@ -173,7 +173,7 @@ def validate_ai_index_payload(payload: dict) -> list:
             plugin_capabilities = runtime.get("plugin_capabilities")
             if not isinstance(plugin_capabilities, dict):
                 errors.append(f"{prefix}.runtime.plugin_capabilities must be an object")
-            for field in ["background_tasks", "subagents", "legacy_compatibility"]:
+            for field in ["background_tasks", "subagents"]:
                 if not isinstance(runtime.get(field), dict):
                     errors.append(f"{prefix}.runtime.{field} must be an object")
             readiness = runtime.get("readiness")

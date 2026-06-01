@@ -14,7 +14,7 @@ from infinitas_skill.openclaw.runtime_model import build_openclaw_runtime_model
 from infinitas_skill.root import ROOT
 from server.auth import AUTH_COOKIE_NAME, maybe_get_current_access_context
 from server.modules.access.authn import AccessContext, resolve_access_context
-from server.modules.access.authz import can_access_release
+from server.modules.access.authz import can_access_releases
 from server.modules.discovery.projections import (
     DiscoveryProjection,
     build_release_projections,
@@ -116,7 +116,7 @@ def _resolve_registry_audience(db: Session, request: Request) -> RegistryAudienc
         return RegistryAudience(mode="public", context=None)
 
     if bearer_token:
-        context = resolve_access_context(db, bearer_token, allow_user_bridge=True)
+        context = resolve_access_context(db, bearer_token)
     else:
         context = maybe_get_current_access_context(request, db)
     if context is None and not allowed_reader_tokens:
@@ -196,10 +196,7 @@ def _registry_runtime_payload() -> dict:
             "supports_subagents": capabilities.get("supports_subagents") is True,
             "status": "ready",
         },
-        "legacy_compatibility": {
-            "agent_compatible": ["openclaw"],
-            "agent_compatible_deprecated": True,
-        },
+
     }
 
 
@@ -248,21 +245,19 @@ def _all_accessible_entries(db: Session, request: Request) -> list[DiscoveryProj
         return []
 
     if audience.mode == "grant":
+        grant_entries = [entry for entry in entries if entry.audience_type == "grant"]
+        accessible_ids = can_access_releases(
+            db, context=context, release_ids=[e.release_id for e in grant_entries]
+        )
         return _dedupe_entries(
-            [
-                entry
-                for entry in entries
-                if entry.audience_type == "grant"
-                and can_access_release(db, context=context, release_id=entry.release_id)
-            ]
+            [entry for entry in grant_entries if entry.release_id in accessible_ids]
         )
 
+    accessible_ids = can_access_releases(
+        db, context=context, release_ids=[e.release_id for e in entries]
+    )
     return _dedupe_entries(
-        [
-            entry
-            for entry in entries
-            if can_access_release(db, context=context, release_id=entry.release_id)
-        ]
+        [entry for entry in entries if entry.release_id in accessible_ids]
     )
 
 

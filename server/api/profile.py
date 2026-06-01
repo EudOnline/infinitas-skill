@@ -170,7 +170,8 @@ def profile_admin_view(
         raise HTTPException(status_code=404, detail="credential not found")
 
     # Only the credential owner or a maintainer may modify its policy
-    caller_principal_id = user.principal_id if user.principal_id is not None else 0
+    caller_principal = access_service.get_principal_for_user(db, user)
+    caller_principal_id = caller_principal.id if caller_principal is not None else 0
     is_maintainer = user.role == "maintainer"
     if not is_maintainer and credential.principal_id != caller_principal_id:
         raise HTTPException(status_code=403, detail="credential access denied")

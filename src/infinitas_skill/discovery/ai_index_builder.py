@@ -345,10 +345,7 @@ def _openclaw_runtime_payload(
             background_tasks_required=background_tasks_required,
             subagents_required=subagents_required,
         ),
-        "legacy_compatibility": {
-            "agent_compatible": legacy_agents,
-            "agent_compatible_deprecated": True,
-        },
+
     }
 
 
