@@ -1,11 +1,10 @@
-"""Auth API for token-based authentication."""
+"""Auth API for username/password authentication."""
 
 import os
-import time
-from collections import defaultdict
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from server.auth import (
@@ -17,38 +16,32 @@ from server.auth import (
     maybe_get_current_user,
 )
 from server.db import get_db
-from server.modules.access.authn import resolve_access_context
+from server.models import Credential, utcnow
+from server.modules.access import service as access_service
+from server.rate_limit import get_rate_limiter
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-# Simple in-memory rate limiter for login attempts
-_login_attempts: dict[str, list[float]] = defaultdict(list)
 _RATE_LIMIT_WINDOW = 60  # seconds
 _RATE_LIMIT_MAX = 10  # attempts per window
 
 
 def _check_login_rate_limit(client_ip: str) -> None:
-    now = time.monotonic()
-    cutoff = now - _RATE_LIMIT_WINDOW
-    attempts = [t for t in _login_attempts.get(client_ip, []) if t > cutoff]
-    if len(attempts) >= _RATE_LIMIT_MAX:
+    limiter = get_rate_limiter()
+    if not limiter.check(client_ip, max_attempts=_RATE_LIMIT_MAX, window_seconds=_RATE_LIMIT_WINDOW):
         raise HTTPException(
             status_code=429,
             detail="Too many login attempts. Please try again later.",
         )
-    if attempts:
-        _login_attempts[client_ip] = attempts
-        _login_attempts[client_ip].append(now)
-    else:
-        _login_attempts.pop(client_ip, None)
-        _login_attempts[client_ip] = [now]
+    limiter.record(client_ip)
 
 
-class TokenLoginRequest(BaseModel):
-    token: str
+class LoginRequest(BaseModel):
+    username: str
+    password: str
 
 
-class TokenLoginResponse(BaseModel):
+class LoginResponse(BaseModel):
     success: bool
     username: str | None = None
     role: str | None = None
@@ -107,33 +100,58 @@ def _clear_csrf_cookie(response: Response, request: Request) -> None:
     )
 
 
-@router.post("/login", response_model=TokenLoginResponse)
+@router.post("/login", response_model=LoginResponse)
 async def login(
-    payload: TokenLoginRequest,
+    payload: LoginRequest,
     response: Response,
     request: Request,
     db: Session = Depends(get_db),
 ):
-    """Validate token and return user info."""
+    """Validate username/password and return user info."""
     client_ip = request.client.host if request.client else "unknown"
     _check_login_rate_limit(client_ip)
     lang = _resolve_language(request)
-    context = resolve_access_context(db, payload.token, allow_user_bridge=True)
-    if context is not None and context.credential is not None:
-        from server.models import utcnow
-        context.credential.last_used_at = utcnow()
-        db.add(context.credential)
-    if context is None or context.user is None:
+
+    result = access_service.resolve_user_by_password(
+        db, payload.username, payload.password
+    )
+    if result is None:
         response.status_code = 401
-        return TokenLoginResponse(
+        return LoginResponse(
             success=False,
-            error=_pick_lang(lang, "无效的 Token", "Invalid token"),
+            error=_pick_lang(lang, "用户名或密码错误", "Invalid username or password"),
         )
-    user = context.user
+
+    user, principal = result
+
+    # Ensure a personal_token credential exists for session cookie creation
+    credential = db.scalar(
+        select(Credential)
+        .where(Credential.type == "personal_token")
+        .where(Credential.principal_id == principal.id)
+        .order_by(Credential.id.desc())
+    )
+    if credential is None:
+        # Create a synthetic credential for password-based login users
+        credential = Credential(
+            principal_id=principal.id,
+            grant_id=None,
+            type="personal_token",
+            hashed_secret="password-auth",
+            scopes_json=access_service.encode_scopes({"session:user", "api:user"}),
+            resource_selector_json="{}",
+            created_at=utcnow(),
+        )
+        db.add(credential)
+        db.flush()
+
+    credential.last_used_at = utcnow()
+    db.add(credential)
+
     secure_cookie = _secure_cookie_requested(request)
     response.set_cookie(
         key=AUTH_COOKIE_NAME,
-        value=create_auth_session_cookie(context.credential.id),
+        value=create_auth_session_cookie(credential.id),
         max_age=AUTH_COOKIE_MAX_AGE,
         expires=AUTH_COOKIE_MAX_AGE,
         path="/",
@@ -142,7 +160,7 @@ async def login(
         httponly=True,
     )
     _set_csrf_cookie(response, request)
-    return TokenLoginResponse(success=True, username=user.username, role=user.role)
+    return LoginResponse(success=True, username=user.username, role=user.role)
 
 
 @router.post("/logout")

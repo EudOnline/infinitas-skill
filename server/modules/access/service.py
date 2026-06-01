@@ -4,7 +4,6 @@ import hashlib
 import hmac
 import json
 import secrets
-from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from sqlalchemy import select
@@ -12,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from server.models import AccessGrant, Credential, Exposure, Principal, User, utcnow
 
-TOKEN_HASH_PREFIX = "sha256:"
+TOKEN_HASH_PREFIX = "sha256:"  # noqa: S105
 
 
 def _utcnow() -> datetime:
@@ -145,19 +144,6 @@ def ensure_personal_credential_for_user(
     return credential
 
 
-@dataclass
-class BridgedUserCredential:
-    user: User
-    principal: Principal
-    credential: Credential
-
-
-def bridge_legacy_user_token(db: Session, token: str) -> BridgedUserCredential | None:
-    # Plaintext user tokens are migrated during schema upgrades and no longer act as
-    # a runtime authentication fallback. Records that bypassed migration are rejected.
-    return None
-
-
 def get_principal(db: Session, principal_id: int | None) -> Principal | None:
     if principal_id is None:
         return None
@@ -168,6 +154,28 @@ def get_user_for_principal(db: Session, principal: Principal | None) -> User | N
     if principal is None or principal.kind != "user":
         return None
     return db.scalar(select(User).where(User.username == principal.slug))
+
+
+def get_principal_for_user(db: Session, user: User | None) -> Principal | None:
+    if user is None:
+        return None
+    return db.scalar(
+        select(Principal).where(Principal.kind == "user").where(Principal.slug == user.username)
+    )
+
+
+def resolve_user_by_password(
+    db: Session,
+    username: str,
+    password: str,
+) -> tuple[User, Principal] | None:
+    from server.auth import verify_password
+
+    user = db.scalar(select(User).where(User.username == username))
+    if user is None or not verify_password(password, user.password_hash):
+        return None
+    principal = ensure_user_principal(db, user)
+    return user, principal
 
 
 def has_scope(credential: Credential, scope: str) -> bool:

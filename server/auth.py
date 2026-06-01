@@ -7,6 +7,7 @@ import json
 import secrets
 import time
 
+import bcrypt
 from fastapi import Cookie, Depends, Header, HTTPException, Request
 from sqlalchemy.orm import Session
 
@@ -116,7 +117,7 @@ def _resolve_session_access_context(db: Session, auth_cookie: str | None) -> Acc
 def maybe_get_current_access_context(request: Request, db: Session) -> AccessContext | None:
     bearer = _resolve_request_token(request)
     if bearer:
-        return resolve_access_context(db, bearer, allow_user_bridge=True)
+        return resolve_access_context(db, bearer)
     return _resolve_session_access_context(db, request.cookies.get(AUTH_COOKIE_NAME))
 
 
@@ -134,7 +135,7 @@ def get_current_access_context(
 ) -> AccessContext:
     token = _extract_bearer_token(authorization)
     if token:
-        context = resolve_access_context(db, token, allow_user_bridge=True)
+        context = resolve_access_context(db, token)
     else:
         context = _resolve_session_access_context(db, auth_cookie)
     if not token and not auth_cookie:
@@ -168,6 +169,20 @@ def require_role(*allowed_roles: str):
         return user
 
     return dependency
+
+
+# ── Password hashing ───────────────────────────────────────────────────────
+
+def hash_password(plain: str) -> str:
+    """Hash a plaintext password using bcrypt."""
+    return bcrypt.hashpw(plain.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+
+def verify_password(plain: str, hashed: str | None) -> bool:
+    """Verify a plaintext password against a bcrypt hash."""
+    if not hashed:
+        return False
+    return bcrypt.checkpw(plain.encode('utf-8'), hashed.encode('utf-8'))
 
 
 # ── CSRF Protection ────────────────────────────────────────────────────────

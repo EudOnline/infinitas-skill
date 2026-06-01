@@ -7,7 +7,7 @@ name = "infinitas-hosted-registry"
 version = "0.1.0"
 description = "Hosted control plane for the infinitas private skill registry"
 requires-python = ">=3.11"
-dependencies = [ "alembic>=1.16,<2", "fastapi>=0.116,<1", "httpx>=0.28,<1", "jinja2>=3.1,<4", "sqlalchemy>=2.0,<3", "uvicorn>=0.35,<1",]
+dependencies = [ "alembic>=1.16,<2", "bcrypt>=4.1,<5", "fastapi>=0.116,<1", "httpx>=0.28,<1", "jinja2>=3.1,<4", "sqlalchemy>=2.0,<3", "uvicorn>=0.35,<1",]
 
 [dependency-groups]
 dev = [ "pytest>=8,<9", "pytest-playwright>=0.5", "ruff>=0.11,<1", "pytest-cov>=6,<7",]
@@ -70,7 +70,7 @@ max-complexity = 20
 "src/infinitas_skill/server/backup.py" = [ "E501",]
 "src/infinitas_skill/server/ops.py" = [ "E501",]
 "src/infinitas_skill/server/systemd.py" = [ "E501",]
-"tests/**" = [ "S105", "S108", "S310",]
+"tests/**" = [ "S105", "S106", "S108", "S310",]
 "scripts/**" = [ "S105", "S108", "S310", "S603", "S607",]
 "src/infinitas_skill/**" = [ "S105", "S202", "S310", "C901",]
 "tests/integration/test_cli_release_state.py" = [ "E501",]

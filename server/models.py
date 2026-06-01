@@ -28,6 +28,11 @@ class User(Base):
         nullable=True,
         default=None,
     )
+    password_hash: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+        default=None,
+    )
     light_bg_id: Mapped[str | None] = mapped_column(String(64), nullable=True, default=None)
     dark_bg_id: Mapped[str | None] = mapped_column(String(64), nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

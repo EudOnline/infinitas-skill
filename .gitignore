@@ -47,3 +47,4 @@ build/*
 .coverage.*
 htmlcov/
 coverage.xml
+tmp/
