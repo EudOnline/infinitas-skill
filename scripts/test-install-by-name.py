@@ -38,7 +38,6 @@ OPENCLAW_RUNTIME = {
     'plugin_capabilities': {},
     'background_tasks': {'required': False},
     'subagents': {'required': False},
-    'legacy_compatibility': {'agent_compatible': ['openclaw', 'claude-code', 'codex'], 'agent_compatible_deprecated': True},
     'readiness': {
         'ready': True,
         'supports_background_tasks': True,

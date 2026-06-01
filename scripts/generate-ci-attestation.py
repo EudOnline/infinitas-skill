@@ -6,7 +6,11 @@ import sys
 from datetime import datetime, timezone
 
 from attestation_lib import load_attestation_config
-from provenance_payload_lib import build_common_payload, build_distribution_payload, collect_release_context
+from provenance_payload_lib import (
+    build_common_payload,
+    build_distribution_payload,
+    collect_release_context,
+)
 from release_lib import ROOT, ReleaseError
 
 

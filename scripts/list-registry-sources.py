@@ -2,7 +2,13 @@
 from pathlib import Path
 
 from registry_snapshot_lib import snapshot_catalog_summary
-from registry_source_lib import load_registry_config, registry_identity, registry_is_resolution_candidate, resolve_registry_root, short_pin_value
+from registry_source_lib import (
+    load_registry_config,
+    registry_identity,
+    registry_is_resolution_candidate,
+    resolve_registry_root,
+    short_pin_value,
+)
 
 root = Path(__file__).resolve().parent.parent
 cfg = load_registry_config(root)

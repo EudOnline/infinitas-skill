@@ -9,6 +9,5 @@ if str(SRC) not in sys.path:
 
 from infinitas_skill.release.signing_readiness import signing_readiness_main  # noqa: E402
 
-
 if __name__ == "__main__":
     raise SystemExit(signing_readiness_main())

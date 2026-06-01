@@ -7,8 +7,8 @@ from pathlib import Path
 from install_integrity_policy_lib import load_install_integrity_policy
 from install_manifest_lib import load_install_manifest, write_install_manifest
 from installed_integrity_lib import (
-    apply_integrity_history_retention,
     append_integrity_event,
+    apply_integrity_history_retention,
     build_install_integrity_snapshot,
     build_installed_integrity_report_item,
     normalize_integrity_events,

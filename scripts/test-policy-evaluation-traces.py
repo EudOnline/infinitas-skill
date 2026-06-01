@@ -7,7 +7,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parent.parent
 ACTIVE_SKILL = ROOT / "skills" / "active" / "operate-infinitas-skill"
 PROMOTION_FIXTURE = "promotion-trace-break-glass-fixture"

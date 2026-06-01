@@ -5,7 +5,11 @@ from pathlib import Path
 
 from distribution_lib import load_distribution_index
 from http_registry_lib import HostedRegistryError, fetch_json, registry_catalog_path
-from registry_refresh_state_lib import evaluate_refresh_status, refresh_resolution_message, refresh_status_blocks_resolution
+from registry_refresh_state_lib import (
+    evaluate_refresh_status,
+    refresh_resolution_message,
+    refresh_status_blocks_resolution,
+)
 from registry_snapshot_lib import resolve_snapshot_selector
 from registry_source_lib import (
     apply_registry_federation,

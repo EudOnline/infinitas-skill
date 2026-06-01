@@ -9,6 +9,5 @@ if str(SRC) not in sys.path:
 
 from infinitas_skill.policy.review_commands import review_status_main  # noqa: E402
 
-
 if __name__ == "__main__":
     raise SystemExit(review_status_main())

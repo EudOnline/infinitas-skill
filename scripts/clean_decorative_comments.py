@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Remove decorative CSS comments (emojis, section banners, Chinese descriptions)."""
 import re
-import sys
 
 CSS_FILE = "server/static/css/input.css"
 

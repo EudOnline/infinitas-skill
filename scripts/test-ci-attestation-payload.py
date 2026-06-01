@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 import importlib.util
 import json
-import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parent.parent
 HELPER_PATH = ROOT / 'scripts' / 'test-attestation-verification.py'
