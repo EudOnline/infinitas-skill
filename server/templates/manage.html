@@ -11,9 +11,9 @@
   {# Sub-view filter chips #}
   <div class="flex gap-2 flex-wrap" data-manage-tabs role="tablist" aria-label="{{ ui.get('manage_title', '管理') }}">
     <button class="toggle-chip is-active" data-view="library" role="tab" aria-selected="true" aria-controls="manage-panel-library">{{ ui.get('tab_library', '对象库') }}</button>
-    <button class="toggle-chip" data-view="tokens" role="tab" aria-selected="false" aria-controls="manage-panel-tokens">{{ ui.get('tab_tokens', 'Token') }}</button>
-    <button class="toggle-chip" data-view="shares" role="tab" aria-selected="false" aria-controls="manage-panel-shares">{{ ui.get('tab_shares', '分享') }}</button>
-    <button class="toggle-chip" data-view="activity" role="tab" aria-selected="false" aria-controls="manage-panel-activity">{{ ui.get('tab_activity', '活动') }}</button>
+    <button class="toggle-chip" data-view="tokens" role="tab" aria-selected="false" aria-controls="manage-panel-tokens" tabindex="-1">{{ ui.get('tab_tokens', 'Token') }}</button>
+    <button class="toggle-chip" data-view="shares" role="tab" aria-selected="false" aria-controls="manage-panel-shares" tabindex="-1">{{ ui.get('tab_shares', '分享') }}</button>
+    <button class="toggle-chip" data-view="activity" role="tab" aria-selected="false" aria-controls="manage-panel-activity" tabindex="-1">{{ ui.get('tab_activity', '活动') }}</button>
   </div>
 
   {# Library view #}
@@ -36,7 +36,7 @@
       {% for item in object_items %}
       <article class="kawaii-card animate-in"
                data-kind="{{ item.kind }}" data-name="{{ item.name | lower }}" data-summary="{{ (item.summary or '') | lower }}">
-        <a href="{{ item.detail_href }}" class="font-display text-sm font-bold text-kawaii-ink hover:text-kawaii-primary-deep transition-colors">
+        <a href="{{ item.detail_href }}" class="font-display text-sm font-bold text-kawaii-ink hover:text-kawaii-primary-deep transition-colors inline-block py-1.5 min-h-[2.75rem]">
           {{ item.name }}
         </a>
         <p class="text-xs text-kawaii-ink-muted mt-1">{{ item.slug }}</p>
@@ -81,7 +81,7 @@
         <p class="text-xs text-kawaii-ink-soft mt-1">{{ item.created }}</p>
         <div class="flex gap-2 mt-3">
           {% if item.can_revoke %}
-          <button class="text-xs text-kawaii-danger hover:text-kawaii-danger transition-colors"
+          <button class="text-xs text-kawaii-danger hover:text-kawaii-danger transition-colors px-2 py-2 min-h-[2.75rem] rounded-kawaii-md"
                   data-action="revoke-token" data-credential-id="{{ item.credential_id }}">
             {{ ui.get('btn_revoke', '撤销') }}
           </button>
@@ -94,7 +94,7 @@
       {% endif %}
     </div>
     <div class="hidden md:block">
-      <div class="overflow-x-auto">
+      <div class="overflow-x-auto table-scroll">
         <table class="w-full text-sm">
           <thead><tr class="border-b border-kawaii-line text-left text-xs text-kawaii-ink-muted">
             <th scope="col" class="pb-2 pr-4">{{ ui.get('col_agent', 'Agent') }}</th>
@@ -107,14 +107,14 @@
           <tbody>
             {% for item in token_items %}
             <tr class="border-b border-kawaii-line/50">
-              <td class="py-2 pr-4 font-medium">{{ item.agent_name or item.credential_id }}</td>
-              <td class="py-2 pr-4"><span class="kawaii-badge kawaii-badge--soft">{{ item.type }}</span></td>
-              <td class="py-2 pr-4 text-kawaii-ink-soft">{{ item.object_name or '-' }}</td>
-              <td class="py-2 pr-4"><span class="kawaii-badge {{ 'kawaii-badge--success' if item.state == 'active' else 'kawaii-badge--pending' }}">{{ item.state }}</span></td>
-              <td class="py-2 pr-4 text-kawaii-ink-muted">{{ item.created }}</td>
-              <td class="py-2">
+              <td data-label="{{ ui.get('col_agent', 'Agent') }}" class="py-2 pr-4 font-medium">{{ item.agent_name or item.credential_id }}</td>
+              <td data-label="{{ ui.get('col_type', '类型') }}" class="py-2 pr-4"><span class="kawaii-badge kawaii-badge--soft">{{ item.type }}</span></td>
+              <td data-label="{{ ui.get('col_object', '对象') }}" class="py-2 pr-4 text-kawaii-ink-soft">{{ item.object_name or '-' }}</td>
+              <td data-label="{{ ui.get('col_state', '状态') }}" class="py-2 pr-4"><span class="kawaii-badge {{ 'kawaii-badge--success' if item.state == 'active' else 'kawaii-badge--pending' }}">{{ item.state }}</span></td>
+              <td data-label="{{ ui.get('col_created', '创建') }}" class="py-2 pr-4 text-kawaii-ink-muted">{{ item.created }}</td>
+              <td data-label="{{ ui.get('col_actions', '操作') }}" class="py-2">
                 {% if item.can_revoke %}
-                <button class="text-xs text-kawaii-danger" data-action="revoke-token" data-credential-id="{{ item.credential_id }}">{{ ui.get('btn_revoke', '撤销') }}</button>
+                <button class="text-xs text-kawaii-danger px-2 py-2 min-h-[2.75rem] rounded-kawaii-md" data-action="revoke-token" data-credential-id="{{ item.credential_id }}">{{ ui.get('btn_revoke', '撤销') }}</button>
                 {% endif %}
               </td>
             </tr>
@@ -125,7 +125,7 @@
     </div>
   </section>
 
-  {# Shares view — mobile cards #}
+  {# Shares view — mobile cards, desktop table #}
   <section data-view-panel="shares" id="manage-panel-shares" role="tabpanel" class="hidden">
     <div class="md:hidden space-y-3">
       {% for item in share_items %}
@@ -138,6 +138,33 @@
         {% if item.max_uses %}<p class="text-xs text-kawaii-ink-soft mt-1">{{ item.used_count or 0 }}/{{ item.max_uses }}</p>{% endif %}
       </article>
       {% endfor %}
+      {% if not share_items %}
+        <p class="text-center text-kawaii-ink-muted text-sm py-8">{{ ui.get('empty_shares', '暂无分享链接') }}</p>
+      {% endif %}
+    </div>
+    <div class="hidden md:block">
+      <div class="overflow-x-auto table-scroll">
+        <table class="w-full text-sm">
+          <thead><tr class="border-b border-kawaii-line text-left text-xs text-kawaii-ink-muted">
+            <th scope="col" class="pb-2 pr-4">{{ ui.get('col_object', '对象') }}</th>
+            <th scope="col" class="pb-2 pr-4">{{ ui.get('col_release', '发布') }}</th>
+            <th scope="col" class="pb-2 pr-4">{{ ui.get('col_state', '状态') }}</th>
+            <th scope="col" class="pb-2 pr-4">{{ ui.get('col_created', '创建') }}</th>
+            <th scope="col" class="pb-2">{{ ui.get('col_usage', '用量') }}</th>
+          </tr></thead>
+          <tbody>
+            {% for item in share_items %}
+            <tr class="border-b border-kawaii-line/50">
+              <td data-label="{{ ui.get('col_object', '对象') }}" class="py-2 pr-4 font-medium">{{ item.object_name or item.grant_id }}</td>
+              <td data-label="{{ ui.get('col_release', '发布') }}" class="py-2 pr-4 text-kawaii-ink-soft">{{ item.release_name or '-' }}</td>
+              <td data-label="{{ ui.get('col_state', '状态') }}" class="py-2 pr-4"><span class="kawaii-badge {{ 'kawaii-badge--success' if item.state == 'active' else 'kawaii-badge--pending' }}">{{ item.state }}</span></td>
+              <td data-label="{{ ui.get('col_created', '创建') }}" class="py-2 pr-4 text-kawaii-ink-muted">{{ item.created }}</td>
+              <td data-label="{{ ui.get('col_usage', '用量') }}" class="py-2">{% if item.max_uses %}{{ item.used_count or 0 }}/{{ item.max_uses }}{% else %}-{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
       {% if not share_items %}
         <p class="text-center text-kawaii-ink-muted text-sm py-8">{{ ui.get('empty_shares', '暂无分享链接') }}</p>
       {% endif %}
@@ -163,5 +190,5 @@
   </section>
 </div>
 
-<script type="module" src="/static/js/modules/manage.js"></script>
+<script type="module" src="{{ static_url('/static/js/modules/manage.js') }}"></script>
 {% endblock %}

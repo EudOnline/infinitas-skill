@@ -71,7 +71,8 @@ def _normalize_bootstrap_users(payload: object) -> list[dict]:
         display_name = str(item.get('display_name') or username).strip()
         role = str(item.get('role') or 'contributor').strip() or 'contributor'
         token = str(item.get('token') or '').strip()
-        if not username or not token:
+        password = str(item.get('password') or '').strip()
+        if not username or not (token or password):
             continue
         normalized.append(
             {
@@ -79,6 +80,7 @@ def _normalize_bootstrap_users(payload: object) -> list[dict]:
                 'display_name': display_name or username,
                 'role': role,
                 'token': token,
+                'password': password,
             }
         )
     return normalized

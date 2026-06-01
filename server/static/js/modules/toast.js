@@ -79,11 +79,13 @@ export class ToastManager {
       }
     };
 
-    // Pause on hover / focus
+    // Pause on hover / focus / touch
     toast.addEventListener('mouseenter', pauseTimer);
     toast.addEventListener('mouseleave', startTimer);
     toast.addEventListener('focusin', pauseTimer);
     toast.addEventListener('focusout', startTimer);
+    toast.addEventListener('touchstart', pauseTimer, { passive: true });
+    toast.addEventListener('touchend', startTimer, { passive: true });
 
     toast.appendChild(icon);
     toast.appendChild(content);

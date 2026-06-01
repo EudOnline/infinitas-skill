@@ -10,7 +10,7 @@
 import {
   currentPageLanguage,
   uiText,
-  validateToken,
+  validateCredentials,
   markLocalSessionActive,
   setAuthCookieHint,
   getCsrfToken,
@@ -39,11 +39,12 @@ export function createAuthModalController(options) {
     close: prefix + 'auth-modal-close',
     cancel: prefix + 'cancel-auth-btn',
     form: prefix + 'auth-form',
-    input: prefix + 'token-input',
-    toggle: prefix + 'token-toggle',
+    usernameInput: prefix + 'username-input',
+    passwordInput: prefix + 'password-input',
+    passwordToggle: prefix + 'password-toggle',
     error: prefix + 'auth-error',
     errorMessage: prefix + 'error-message',
-    hint: prefix + 'token-hint',
+    hint: prefix + 'auth-hint',
     loginBtn: prefix + 'login-btn',
   };
 
@@ -69,9 +70,11 @@ export function createAuthModalController(options) {
     if (!dom.errorMessage || !dom.error) return;
     dom.errorMessage.textContent = message;
     dom.error.hidden = false;
-    if (dom.input) {
-      dom.input.setAttribute('aria-invalid', 'true');
-      dom.input.setAttribute('aria-describedby', dom.error.id);
+    if (dom.usernameInput) {
+      dom.usernameInput.setAttribute('aria-invalid', 'true');
+    }
+    if (dom.passwordInput) {
+      dom.passwordInput.setAttribute('aria-invalid', 'true');
     }
     if (errorTimeout) clearTimeout(errorTimeout);
     errorTimeout = setTimeout(() => {
@@ -83,12 +86,11 @@ export function createAuthModalController(options) {
   function hideError() {
     if (!dom.error) return;
     dom.error.hidden = true;
-    if (dom.input) {
-      dom.input.removeAttribute('aria-invalid');
-      const describedBy = dom.input.getAttribute('aria-describedby');
-      if (describedBy && describedBy.includes(dom.error.id)) {
-        dom.input.removeAttribute('aria-describedby');
-      }
+    if (dom.usernameInput) {
+      dom.usernameInput.removeAttribute('aria-invalid');
+    }
+    if (dom.passwordInput) {
+      dom.passwordInput.removeAttribute('aria-invalid');
     }
     if (errorTimeout) {
       clearTimeout(errorTimeout);
@@ -97,20 +99,21 @@ export function createAuthModalController(options) {
   }
 
   function togglePasswordVisibility() {
-    if (!dom.input || !dom.toggle) return;
-    const isPassword = dom.input.type === 'password';
-    dom.input.type = isPassword ? 'text' : 'password';
-    const span = dom.toggle.querySelector('span');
+    if (!dom.passwordInput || !dom.passwordToggle) return;
+    const isPassword = dom.passwordInput.type === 'password';
+    dom.passwordInput.type = isPassword ? 'text' : 'password';
+    const span = dom.passwordToggle.querySelector('span');
     if (span) span.textContent = isPassword ? '🙈' : '👁️';
-    dom.toggle.setAttribute('aria-label', isPassword ?
+    dom.passwordToggle.setAttribute('aria-label', isPassword ?
       uiText('hide_password', '隐藏密码') :
       uiText('show_password', '显示密码'));
   }
 
   async function handleLogin() {
-    if (!dom.input || !dom.loginBtn || loginInProgress) return;
-    const token = dom.input.value.trim();
-    const validationError = validateToken(token);
+    if (!dom.usernameInput || !dom.passwordInput || !dom.loginBtn || loginInProgress) return;
+    const username = dom.usernameInput.value.trim();
+    const password = dom.passwordInput.value;
+    const validationError = validateCredentials(username, password);
     if (validationError) {
       showError(validationError);
       return;
@@ -126,7 +129,7 @@ export function createAuthModalController(options) {
         method: 'POST',
         credentials: 'same-origin',
         headers: csrfToken ? { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken } : { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({ username, password }),
       });
       let data;
       try {
@@ -135,7 +138,7 @@ export function createAuthModalController(options) {
         throw new Error(uiText('auth_bad_server_data', '服务器返回无效数据'));
       }
       if (!res.ok || data.success !== true) {
-        showError(data.error || uiText('auth_verify_failed', '验证失败，请检查访问令牌是否正确'));
+        showError(data.error || uiText('auth_verify_failed', '验证失败，请检查用户名和密码'));
         setLoading(false);
         return;
       }
@@ -197,15 +200,23 @@ export function createAuthModalController(options) {
     document.body.classList.add('scroll-locked');
     document.addEventListener('click', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
-    if (dom.input) {
-      dom.input.value = '';
-      dom.input.type = 'password';
-      if (focusTimer) clearTimeout(focusTimer);
-      focusTimer = setTimeout(() => {
-        dom.input?.focus();
-        focusTimer = null;
-      }, 50);
+    if (dom.usernameInput) {
+      dom.usernameInput.value = '';
+      dom.usernameInput.type = 'text';
     }
+    if (dom.passwordInput) {
+      dom.passwordInput.value = '';
+      dom.passwordInput.type = 'password';
+    }
+    if (focusTimer) clearTimeout(focusTimer);
+    focusTimer = setTimeout(() => {
+      // Avoid autofocus on touch devices to prevent virtual keyboard from hijacking viewport
+      const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+      if (!isTouchDevice && dom.usernameInput) {
+        dom.usernameInput.focus();
+      }
+      focusTimer = null;
+    }, 50);
     hideError();
   }
 
@@ -225,14 +236,17 @@ export function createAuthModalController(options) {
     }
     hideError();
     setLoading(false);
-    if (dom.input) {
-      dom.input.value = '';
-      dom.input.type = 'password';
+    if (dom.usernameInput) {
+      dom.usernameInput.value = '';
     }
-    if (dom.toggle) {
-      const span = dom.toggle.querySelector('span');
+    if (dom.passwordInput) {
+      dom.passwordInput.value = '';
+      dom.passwordInput.type = 'password';
+    }
+    if (dom.passwordToggle) {
+      const span = dom.passwordToggle.querySelector('span');
       if (span) span.textContent = '👁️';
-      dom.toggle.setAttribute('aria-label', uiText('show_password', '显示密码'));
+      dom.passwordToggle.setAttribute('aria-label', uiText('show_password', '显示密码'));
     }
     if (prefix === '') {
       const homePanel = document.getElementById('user-panel');
@@ -308,17 +322,26 @@ export function createAuthModalController(options) {
           handleLogin();
         });
       }
-      if (dom.input) {
-        dom.input.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            handleLogin();
-          }
-        });
-      }
     }
-    if (dom.input) dom.input.addEventListener('input', hideError);
-    if (dom.toggle) dom.toggle.addEventListener('click', togglePasswordVisibility);
+    if (dom.usernameInput) {
+      dom.usernameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleLogin();
+        }
+      });
+      dom.usernameInput.addEventListener('input', hideError);
+    }
+    if (dom.passwordInput) {
+      dom.passwordInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleLogin();
+        }
+      });
+      dom.passwordInput.addEventListener('input', hideError);
+    }
+    if (dom.passwordToggle) dom.passwordToggle.addEventListener('click', togglePasswordVisibility);
   }
 
   cacheElements();

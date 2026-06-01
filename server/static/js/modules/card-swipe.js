@@ -47,7 +47,7 @@ export function initCardSwipe(containerSelector) {
   const containers = document.querySelectorAll(containerSelector);
   containers.forEach((container) => {
     container.addEventListener('touchstart', onTouchStart, { passive: true });
-    container.addEventListener('touchmove', onTouchMove, { passive: false });
+    container.addEventListener('touchmove', onTouchMove, { passive: true });
     container.addEventListener('touchend', onTouchEnd, { passive: true });
   });
 }

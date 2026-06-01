@@ -80,6 +80,7 @@ def scenario_home_uses_kawaii_theme_with_live_context():
         sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
 
         from fastapi.testclient import TestClient
+
         from server.app import create_app
 
         client = TestClient(create_app())
@@ -132,6 +133,7 @@ def scenario_home_uses_refined_kawaii_presentation():
         sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
 
         from fastapi.testclient import TestClient
+
         from server.app import create_app
 
         client = TestClient(create_app())
@@ -162,6 +164,7 @@ def scenario_home_supports_readable_copy_and_mobile_adaptation():
         sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
 
         from fastapi.testclient import TestClient
+
         from server.app import create_app
 
         client = TestClient(create_app())
@@ -208,6 +211,7 @@ def scenario_home_polish_tightens_rhythm_and_clarifies_ctas():
         sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
 
         from fastapi.testclient import TestClient
+
         from server.app import create_app
 
         client = TestClient(create_app())
@@ -248,6 +252,7 @@ def scenario_home_supports_manual_theme_and_language_switches():
         sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
 
         from fastapi.testclient import TestClient
+
         from server.app import create_app
 
         client = TestClient(create_app())
@@ -304,6 +309,7 @@ def scenario_home_english_copy_stays_english_and_preserves_lang_routes():
         sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
 
         from fastapi.testclient import TestClient
+
         from server.app import create_app
 
         client = TestClient(create_app())
@@ -370,6 +376,7 @@ def scenario_home_chinese_copy_stays_chinese_in_primary_chrome():
         sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
 
         from fastapi.testclient import TestClient
+
         from server.app import create_app
 
         client = TestClient(create_app())
@@ -412,6 +419,7 @@ def scenario_home_chinese_auth_copy_uses_access_token_terms():
         sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
 
         from fastapi.testclient import TestClient
+
         from server.app import create_app
 
         client = TestClient(create_app())
@@ -452,6 +460,7 @@ def scenario_home_mobile_touch_targets_stay_thumb_friendly():
         sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
 
         from fastapi.testclient import TestClient
+
         from server.app import create_app
 
         client = TestClient(create_app())
@@ -491,6 +500,7 @@ def scenario_home_auth_controls_keep_thumb_friendly_targets():
         sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
 
         from fastapi.testclient import TestClient
+
         from server.app import create_app
 
         client = TestClient(create_app())
@@ -521,6 +531,7 @@ def scenario_home_toast_close_action_is_accessible():
         sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
 
         from fastapi.testclient import TestClient
+
         from server.app import create_app
 
         client = TestClient(create_app())
@@ -555,6 +566,7 @@ def scenario_home_background_picker_keeps_thumb_friendly_tiles():
         sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
 
         from fastapi.testclient import TestClient
+
         from server.app import create_app
 
         client = TestClient(create_app())
@@ -595,6 +607,7 @@ def scenario_home_auth_gate_opens_before_console_navigation():
         sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
 
         from fastapi.testclient import TestClient
+
         from server.app import create_app
 
         client = TestClient(create_app())
@@ -638,6 +651,7 @@ def scenario_home_user_entry_floats_clear_of_content_cards():
         sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
 
         from fastapi.testclient import TestClient
+
         from server.app import create_app
 
         client = TestClient(create_app())
@@ -684,6 +698,7 @@ def scenario_home_dark_mode_uses_dark_aware_surface_tokens():
         sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
 
         from fastapi.testclient import TestClient
+
         from server.app import create_app
 
         client = TestClient(create_app())
@@ -715,6 +730,7 @@ def scenario_home_dark_mode_softens_card_highlights():
         sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
 
         from fastapi.testclient import TestClient
+
         from server.app import create_app
 
         client = TestClient(create_app())
@@ -748,6 +764,7 @@ def scenario_static_app_js_is_served_without_legacy_theme_conflicts():
         sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
 
         from fastapi.testclient import TestClient
+
         from server.app import create_app
 
         client = TestClient(create_app())
@@ -784,6 +801,7 @@ def scenario_static_app_js_binds_copy_triggers_and_avoids_dead_create_route():
         sync_catalog_artifacts(ROOT, tmpdir / 'artifacts')
 
         from fastapi.testclient import TestClient
+
         from server.app import create_app
 
         client = TestClient(create_app())

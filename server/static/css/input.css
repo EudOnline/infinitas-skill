@@ -376,8 +376,14 @@
         @apply sticky z-[100] w-[min(1200px,calc(100vw-2rem))] mx-auto grid gap-4 items-center px-5 py-3 bg-kawaii-surface border border-kawaii-line rounded-kawaii-xl shadow-kawaii-soft;
         top: 12px;
         grid-template-columns: auto 1fr auto;
+        grid-template-areas: "brand nav side";
         backdrop-filter: blur(14px) saturate(135%);
         transition: border-color 220ms var(--ease-out-quiet), transform 220ms var(--ease-out-quiet);
+      }
+
+      .topbar-controls {
+        grid-area: side;
+        display: contents;
       }
 
       @media (max-width: 640px) {
@@ -397,6 +403,7 @@
       /* 🏠 品牌区域 */
       .brand {
         @apply inline-flex items-center gap-3 no-underline text-inherit;
+        grid-area: brand;
         transition: transform 160ms var(--ease-out-quiet);
       }
 
@@ -410,6 +417,7 @@
         gap: 0.5rem;
         justify-content: center;
         flex-wrap: wrap;
+        grid-area: nav;
       }
 
       .nav a {
@@ -452,6 +460,7 @@
       /* 🔍 搜索栏 - 可爱风格 */
       .search-bar-wrapper {
         @apply relative flex-1 max-w-[260px] min-w-[180px];
+        grid-area: search;
       }
       
       .search-input {
@@ -855,7 +864,7 @@
         position: fixed;
         top: 1.25rem;
         right: 1.25rem;
-        z-index: 60;
+        z-index: 110;
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
@@ -957,6 +966,7 @@
       .toggle-group {
         @apply inline-flex items-center gap-[0.22rem] p-[0.22rem] bg-kawaii-toggle-surface border border-kawaii-line rounded-full;
         box-shadow: inset 0 1px 0 var(--kawaii-toggle-inset);
+        flex-wrap: wrap;
       }
 
       .toggle-chip {
@@ -982,7 +992,7 @@
       }
 
       .session-chip {
-        @apply inline-flex items-center gap-[0.55rem] min-h-[2.35rem] max-w-[min(14rem,calc(100vw-2rem))] px-[0.9rem] py-[0.48rem] border border-kawaii-line rounded-full bg-kawaii-panel-soft text-kawaii-ink font-body text-[0.82rem] font-bold cursor-pointer;
+        @apply inline-flex items-center gap-[0.55rem] min-h-[2.75rem] max-w-[min(14rem,calc(100vw-2rem))] px-[0.9rem] py-[0.48rem] border border-kawaii-line rounded-full bg-kawaii-panel-soft text-kawaii-ink font-body text-[0.82rem] font-bold cursor-pointer;
         transition: background-color 180ms var(--ease-out-quiet), border-color 180ms var(--ease-out-quiet), transform 180ms var(--ease-out-quiet);
       }
 
@@ -1071,7 +1081,7 @@
       }
 
       .console-auth-modal__close {
-        @apply w-9 h-9 grid place-items-center border border-kawaii-line rounded-full bg-kawaii-panel-soft text-kawaii-ink text-base cursor-pointer;
+        @apply w-11 h-11 grid place-items-center border border-kawaii-line rounded-full bg-kawaii-panel-soft text-kawaii-ink text-base cursor-pointer;
         transition: background-color 180ms var(--ease-out-quiet), transform 180ms var(--ease-out-quiet);
       }
 
@@ -1093,7 +1103,7 @@
       }
 
       .console-auth-modal__toggle {
-        @apply absolute top-1/2 right-2 -translate-y-1/2 w-9 h-9 grid place-items-center border-none rounded-full bg-transparent text-kawaii-ink-soft cursor-pointer;
+        @apply absolute top-1/2 right-2 -translate-y-1/2 w-11 h-11 grid place-items-center border-none rounded-full bg-transparent text-kawaii-ink-soft cursor-pointer;
       }
 
       .console-auth-modal__hint {
@@ -1367,8 +1377,24 @@
       html[data-color-scheme="dark"] .search-input:focus {
         border-color: var(--kawaii-neon-pink);
         background: rgba(var(--kawaii-panel-elevated-rgb), 0.95);
-        box-shadow: 
+        box-shadow:
           0 0 0 4px rgba(var(--kawaii-neon-pink-rgb), 0.2);
+      }
+
+      html[data-color-scheme="dark"] .kawaii-input {
+        border-color: rgba(var(--kawaii-accent-purple-rgb), 0.4);
+        background: rgba(var(--kawaii-deep-surface-rgb), 0.9);
+        color: var(--kawaii-ink);
+      }
+
+      html[data-color-scheme="dark"] .kawaii-input:focus-visible {
+        border-color: var(--kawaii-primary-soft);
+        box-shadow: 0 0 0 4px rgba(var(--kawaii-primary-rgb), 0.25);
+        background: rgba(var(--kawaii-panel-elevated-rgb), 0.95);
+      }
+
+      html[data-color-scheme="dark"] .kawaii-input::placeholder {
+        color: var(--kawaii-ink-muted);
       }
       
       html[data-color-scheme="dark"] .search-icon {
@@ -1736,6 +1762,7 @@
       @media (min-width: 1024px) {
         .topbar {
           grid-template-columns: auto 1fr auto auto;
+          grid-template-areas: "brand nav search side";
         }
         .nav {
           justify-self: center;
@@ -1748,14 +1775,14 @@
 
       @media (max-width: 1023px) {
         .topbar {
-          grid-template-columns: auto minmax(240px, 2fr) auto;
+          grid-template-columns: auto minmax(200px, 2fr) auto;
           grid-template-areas: 
             "brand search side"
             "nav nav nav";
         }
-        
-        .brand {
-          grid-area: brand;
+
+        .topbar-controls {
+          display: contents;
         }
         
         .topbar-side {
@@ -1765,13 +1792,14 @@
         .search-bar-wrapper { 
           grid-area: search;
           max-width: 320px;
-          min-width: 200px;
+          min-width: 160px;
         }
         .nav { 
           grid-area: nav;
           overflow-x: auto;
           gap: 0.25rem;
           padding-bottom: 0.25rem;
+          scrollbar-width: none;
         }
         
         .nav::-webkit-scrollbar {
@@ -1784,7 +1812,10 @@
           --radius-lg: 20px;
           --radius-xl: 24px;
         }
-        
+
+        .kawaii-button {
+          min-width: auto;
+        }
         
         .topbar {
           display: flex;
@@ -1794,6 +1825,15 @@
           position: static;
           margin-top: 0.5rem;
           padding: 0.875rem 1rem;
+          grid-template-columns: none;
+          grid-template-areas: none;
+        }
+
+        .topbar-controls {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+          width: 100%;
         }
         
         .search-bar-wrapper {
@@ -1808,6 +1848,7 @@
 
         .brand {
           min-width: 0;
+          align-self: flex-start;
         }
 
         #mobile-settings-toggle {
@@ -1838,6 +1879,7 @@
           padding-bottom: 0.25rem;
           scrollbar-width: thin;
           justify-content: flex-start;
+          order: 99;
         }
 
         .nav::-webkit-scrollbar {
@@ -1854,6 +1896,24 @@
         
         .kawaii-card {
           @apply p-4;
+        }
+
+        /* Mobile table card layout: fix code overflow */
+        .table-scroll td .table-code {
+          max-width: 100%;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          display: block;
+        }
+
+        /* Patch form row on mobile */
+        .table-scroll tr.patch-form-row td {
+          padding: 0.5rem 0;
+        }
+
+        .table-scroll .patch-form {
+          padding: 0.75rem;
         }
       }
 
@@ -2480,9 +2540,14 @@
 
     
     .table-scroll tr.review-detail-row td,
-    .table-scroll tr.patch-form-row td {
+    .table-scroll tr.patch-form-row td,
+    .table-scroll tbody th {
       display: block;
       padding: 0;
+    }
+
+    .table-scroll tbody th::before {
+      display: none;
     }
 
     

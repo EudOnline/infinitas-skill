@@ -22,11 +22,11 @@
 </section>
 
 <nav class="mb-4" aria-label="{{ ui['aria_object_tabs'] }}">
-  <div class="toggle-group" role="tablist">
+  <div class="toggle-group flex-wrap" role="tablist">
     <button type="button" class="toggle-chip is-active" role="tab" aria-selected="true" aria-controls="overview-panel" id="tab-overview">{{ ui['tab_overview'] }}</button>
-    <button type="button" class="toggle-chip" role="tab" aria-selected="false" aria-controls="releases-panel" id="tab-releases">{{ ui['tab_releases'] }} <span class="text-xs text-kawaii-ink-muted ml-0.5">{{ release_items | length }}</span></button>
-    <button type="button" class="toggle-chip" role="tab" aria-selected="false" aria-controls="access-panel" id="tab-access">{{ ui['tab_access'] }} <span class="text-xs text-kawaii-ink-muted ml-0.5">{{ token_items | length }}</span></button>
-    <button type="button" class="toggle-chip" role="tab" aria-selected="false" aria-controls="shares-panel" id="tab-shares">{{ ui['tab_shares'] }} <span class="text-xs text-kawaii-ink-muted ml-0.5">{{ share_items | length }}</span></button>
+    <button type="button" class="toggle-chip" role="tab" aria-selected="false" aria-controls="releases-panel" id="tab-releases" tabindex="-1">{{ ui['tab_releases'] }} <span class="text-xs text-kawaii-ink-muted ml-0.5">{{ release_items | length }}</span></button>
+    <button type="button" class="toggle-chip" role="tab" aria-selected="false" aria-controls="access-panel" id="tab-access" tabindex="-1">{{ ui['tab_access'] }} <span class="text-xs text-kawaii-ink-muted ml-0.5">{{ token_items | length }}</span></button>
+    <button type="button" class="toggle-chip" role="tab" aria-selected="false" aria-controls="shares-panel" id="tab-shares" tabindex="-1">{{ ui['tab_shares'] }} <span class="text-xs text-kawaii-ink-muted ml-0.5">{{ share_items | length }}</span></button>
   </div>
 </nav>
 
@@ -71,7 +71,7 @@
         </td>
         <td data-label="{{ ui['table_col_created'] }}">{{ item.created_at }}</td>
         <td data-label="{{ ui['table_col_actions'] }}">
-          <a class="text-kawaii-primary-deep font-bold no-underline text-sm" href="{{ item.shares_href }}">{{ ui['action_shares'] }}</a>
+          <a class="text-kawaii-primary-deep font-bold no-underline text-sm inline-block py-1.5 min-h-[2.75rem]" href="{{ item.shares_href }}">{{ ui['action_shares'] }}</a>
         </td>
       </tr>
       {% endfor %}
@@ -155,5 +155,5 @@
   </table>
   {% endcall %}
 </section>
-<script type="module" src="/static/js/modules/library.js"></script>
+<script type="module" src="{{ static_url('/static/js/modules/library.js') }}"></script>
 {% endblock %}

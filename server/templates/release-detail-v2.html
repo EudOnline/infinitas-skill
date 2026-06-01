@@ -173,7 +173,7 @@
         </label>
         <label for="issue-token-label">
           <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['label_agent_name'] }}</span>
-          <input class="kawaii-input" type="text" name="label" id="issue-token-label" placeholder="{{ ui['placeholder_agent_label'] }}" />
+          <input class="kawaii-input" type="text" name="label" id="issue-token-label" placeholder="{{ ui['placeholder_agent_label'] }}" required />
         </label>
         <button class="kawaii-button kawaii-button--primary" type="submit">{{ ui['action_issue_token'] }}</button>
       </form>
@@ -185,7 +185,7 @@
       <form id="create-share-form" class="space-y-3" data-release-id="{{ release.id }}" action="" method="POST">
         <label for="share-link-label">
           <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['label_share_name'] }}</span>
-          <input class="kawaii-input" type="text" name="label" id="share-link-label" placeholder="{{ ui['placeholder_share_label'] }}" />
+          <input class="kawaii-input" type="text" name="label" id="share-link-label" placeholder="{{ ui['placeholder_share_label'] }}" required />
         </label>
         <label for="share-link-password">
           <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['table_col_password'] }}</span>
@@ -194,11 +194,11 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <label for="share-link-expiry">
             <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['table_col_expiry'] }}</span>
-            <input class="kawaii-input" type="number" min="1" max="365" name="expires_in_days" id="share-link-expiry" value="7" />
+            <input class="kawaii-input" type="number" min="1" max="365" name="expires_in_days" id="share-link-expiry" value="7" required />
           </label>
           <label for="share-link-usage-limit">
             <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['table_col_usage'] }}</span>
-            <input class="kawaii-input" type="number" min="1" max="100000" name="usage_limit" id="share-link-usage-limit" value="5" />
+            <input class="kawaii-input" type="number" min="1" max="100000" name="usage_limit" id="share-link-usage-limit" value="5" required />
           </label>
         </div>
         <button class="kawaii-button kawaii-button--primary" type="submit">{{ ui['action_create_share_link'] }}</button>
@@ -248,5 +248,5 @@
   {% endif %}
 </section>
 
-<script type="module" src="/static/js/modules/release-admin.js"></script>
+<script type="module" src="{{ static_url('/static/js/modules/release-admin.js') }}"></script>
 {% endblock %}

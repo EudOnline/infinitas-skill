@@ -45,7 +45,7 @@
       html { color-scheme: light; }
       html[data-color-scheme="dark"] { color-scheme: dark; }
     </style>
-    <link rel="stylesheet" href="/static/css/output.css" />
+    <link rel="stylesheet" href="{{ static_url('/static/css/output.css') }}" />
   </head>
   
   <body
@@ -96,7 +96,7 @@
       
       <div class="topbar-controls">
       <div class="topbar-side inline-flex items-center justify-end gap-3 min-w-0 flex-wrap lg:justify-self-end md:justify-self-start md:gap-[0.55rem]">
-        <button class="toggle-chip md:hidden" type="button" id="mobile-settings-toggle" aria-expanded="false" aria-label="{{ ui['settings_label'] }}" title="{{ ui['settings_label'] }}">⚙️</button>
+        <button class="toggle-chip md:hidden" type="button" id="mobile-settings-toggle" aria-expanded="false" aria-controls="topbar-settings" aria-label="{{ ui['settings_label'] }}" title="{{ ui['settings_label'] }}">⚙️</button>
         <div class="inline-flex items-center gap-[0.45rem] flex-wrap justify-end md:justify-start" id="topbar-settings">
           <div class="toggle-group" role="group" aria-label="{{ ui['theme_toggle_label'] }}">
             {% for option in theme_switches or [] %}
@@ -177,7 +177,7 @@
                 <div class="inline-block px-4 py-1.5 bg-kawaii-primary/20 dark:bg-kawaii-primary/30 rounded-full text-sm font-bold text-kawaii-ink-soft dark:text-kawaii-ink-soft mb-3">{{ ui.cli_mirror_label }}</div>
                 <code class="block break-all">{{ cli_command }}</code>
               </div>
-              <button class="px-3 py-1.5 bg-kawaii-primary/10 hover:bg-kawaii-primary/20 border border-kawaii-primary/30 rounded-kawaii-md text-sm font-bold text-kawaii-primary transition-colors shrink-0" type="button" data-copy="{{ cli_command | forceescape }}">{{ ui.copy_button_label }}</button>
+              <button class="px-4 py-2 min-h-[2.75rem] bg-kawaii-primary/10 hover:bg-kawaii-primary/20 border border-kawaii-primary/30 rounded-kawaii-md text-sm font-bold text-kawaii-primary transition-colors shrink-0" type="button" data-copy="{{ cli_command | forceescape }}">{{ ui.copy_button_label }}</button>
             </div>
             {% endif %}
           </div>
@@ -225,28 +225,45 @@
         </div>
         <p class="console-auth-modal__desc">{{ ui.auth_modal_desc }}</p>
         <form id="console-auth-form" action="" method="POST">
-          <div class="console-auth-modal__input-row">
-            <label for="console-token-input" class="sr-only">{{ ui.auth_modal_placeholder }}</label>
-            <input
-              type="password"
-              id="console-token-input"
-              class="kawaii-input console-auth-modal__input"
-              placeholder="{{ ui.auth_modal_placeholder }}"
-              autocomplete="off"
-              minlength="8"
-              maxlength="128"
-              aria-describedby="console-token-hint"
-            />
-            <button
-              type="button"
-              class="console-auth-modal__toggle"
-              id="console-token-toggle"
-              title="{{ ui.toggle_password_visibility }}"
-              aria-label="{{ ui.toggle_password_visibility }}"
-            >
-              </button>
+          <div class="console-auth-modal__body flex flex-col gap-3">
+            <div>
+              <label for="console-username-input" class="sr-only">{{ ui.auth_modal_username_placeholder }}</label>
+              <input
+                type="text"
+                id="console-username-input"
+                class="kawaii-input console-auth-modal__input"
+                placeholder="{{ ui.auth_modal_username_placeholder }}"
+                autocomplete="username"
+                minlength="1"
+                maxlength="100"
+                required
+                aria-describedby="console-auth-hint"
+              />
+            </div>
+            <div class="console-auth-modal__input-row">
+              <label for="console-password-input" class="sr-only">{{ ui.auth_modal_password_placeholder }}</label>
+              <input
+                type="password"
+                id="console-password-input"
+                class="kawaii-input console-auth-modal__input"
+                placeholder="{{ ui.auth_modal_password_placeholder }}"
+                autocomplete="current-password"
+                minlength="1"
+                maxlength="128"
+                required
+                aria-describedby="console-auth-hint"
+              />
+              <button
+                type="button"
+                class="console-auth-modal__toggle"
+                id="console-password-toggle"
+                title="{{ ui.toggle_password_visibility }}"
+                aria-label="{{ ui.toggle_password_visibility }}"
+              >
+                </button>
+            </div>
           </div>
-          <p class="console-auth-modal__hint" id="console-token-hint">{{ ui.auth_modal_hint }}</p>
+          <p class="console-auth-modal__hint" id="console-auth-hint">{{ ui.auth_modal_hint }}</p>
           <div class="console-auth-modal__error" id="console-auth-error" role="alert" aria-live="polite" hidden>
             <span id="console-error-message">{{ ui.auth_invalid }}</span>
           </div>
@@ -264,7 +281,7 @@
     <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div>
 
     {% include "partials/tab-bar.html" %}
-    <script type="module" src="/static/js/app.js"></script>
-    <script type="module" src="/static/js/auth-session.js"></script>
+    <script type="module" src="{{ static_url('/static/js/app.js') }}"></script>
+    <script type="module" src="{{ static_url('/static/js/auth-session.js') }}"></script>
   </body>
 </html>

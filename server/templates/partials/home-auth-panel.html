@@ -48,15 +48,25 @@
     <form id="auth-form" action="" method="POST">
       <div class="auth-modal-body">
         <p class="auth-modal-desc">{{ ui.auth_modal_desc }}</p>
-        <div class="token-input-wrapper">
-          <label for="token-input" class="sr-only">{{ ui.auth_modal_placeholder }}</label>
-          <input type="password" id="token-input" class="token-input"
-                 placeholder="{{ ui.auth_modal_placeholder }}" autocomplete="off" minlength="8" maxlength="128"
-                 aria-describedby="token-hint"/>
-          <button type="button" class="token-toggle" id="token-toggle" title="{{ ui.toggle_password_visibility }}" aria-label="{{ ui.toggle_password_visibility }}">
+        <div class="flex flex-col gap-3">
+          <div>
+            <label for="username-input" class="sr-only">{{ ui.auth_modal_username_placeholder }}</label>
+            <input type="text" id="username-input" class="token-input"
+                   placeholder="{{ ui.auth_modal_username_placeholder }}" autocomplete="username" minlength="1" maxlength="100"
+                   required
+                   aria-describedby="password-hint"/>
+          </div>
+          <div class="token-input-wrapper">
+            <label for="password-input" class="sr-only">{{ ui.auth_modal_password_placeholder }}</label>
+            <input type="password" id="password-input" class="token-input"
+                   placeholder="{{ ui.auth_modal_password_placeholder }}" autocomplete="current-password" minlength="1" maxlength="128"
+                   required
+                   aria-describedby="password-hint"/>
+            <button type="button" class="token-toggle" id="password-toggle" title="{{ ui.toggle_password_visibility }}" aria-label="{{ ui.toggle_password_visibility }}">
             </button>
+          </div>
         </div>
-        <p class="auth-hint" id="token-hint">{{ ui.auth_modal_hint }}</p>
+        <p class="auth-hint" id="password-hint">{{ ui.auth_modal_hint }}</p>
         <div class="auth-error" id="auth-error" role="alert" aria-live="polite" hidden>
           <span id="error-message">{{ ui.auth_invalid }}</span>
         </div>

@@ -21,7 +21,7 @@
   </section>
 
   {# Sub-tab navigation #}
-  <div class="flex gap-2" role="tablist" aria-label="{{ ui.get('profile_title', '智能体档案') }}" data-profile-tabs>
+  <div class="flex gap-2 flex-wrap" role="tablist" aria-label="{{ ui.get('profile_title', '智能体档案') }}" data-profile-tabs>
     <button class="toggle-chip is-active" id="profile-tab-skills" role="tab" aria-selected="true" aria-controls="profile-panel-skills" data-tab="skills">
       {{ ui.get('profile_tab_skills', '可访问技能') }}
     </button>
@@ -61,5 +61,5 @@
   </section>
 </div>
 
-<script type="module" src="/static/js/modules/profile.js"></script>
+<script type="module" src="{{ static_url('/static/js/modules/profile.js') }}"></script>
 {% endblock %}

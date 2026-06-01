@@ -134,14 +134,22 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         context["show_console_session"] = False
         return templates.TemplateResponse(request, "index-kawaii.html", context)
 
-    @app.get("/v2")
-    def index_v2_redirect():
-        return RedirectResponse(url="/", status_code=307)
-
-    @app.get("/library")
-    def library_redirect(request: Request):
-        lang = resolve_language(request)
-        return RedirectResponse(url=with_lang("/manage", lang), status_code=307)
+    # Simple no-argument redirects consolidated into one mapping.
+    _SIMPLE_REDIRECTS: dict[str, str] = {
+        "/v2": "/",
+        "/library": "/manage",
+        "/access": "/manage#tokens",
+        "/shares": "/manage#shares",
+        "/activity": "/manage#activity",
+    }
+    for _src, _dst in _SIMPLE_REDIRECTS.items():
+        def _make_redirect(dst: str = _dst):
+            def _redirect(request: Request):
+                return RedirectResponse(
+                    url=with_lang(dst, resolve_language(request)), status_code=307
+                )
+            return _redirect
+        app.get(_src)(_make_redirect())
 
     @app.get("/library/{object_id}", response_class=HTMLResponse)
     def library_object_page(
@@ -157,7 +165,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         scope = load_library_scope(db, actor=actor)
         detail = get_library_object_detail(db, actor=actor, object_id=object_id, scope=scope)
         if detail is None:
-            return RedirectResponse(url=with_lang("/library", lang), status_code=303)
+            return RedirectResponse(url=with_lang("/manage", lang), status_code=303)
         context = _build_admin_context(
             request,
             actor,
@@ -170,7 +178,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
             page_kicker=pick_lang(lang, "对象", "Object"),
             page_eyebrow=pick_lang(lang, "详情", "Detail"),
         )
-        context["library_href"] = with_lang("/library", lang)
+        context["library_href"] = with_lang("/manage", lang)
         context["object"] = {
             **detail["object"],
             "current_visibility": (
@@ -187,7 +195,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
                     f"/library/{object_id}/releases/{item['release_id']}",
                     lang,
                 ),
-                "shares_href": with_lang("/shares", lang),
+                "shares_href": with_lang("/manage#shares", lang),
             }
             for item in detail["releases"]
         ]
@@ -226,7 +234,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
             release_id=release_id,
         )
         if release_detail is None:
-            return RedirectResponse(url=with_lang("/library", lang), status_code=303)
+            return RedirectResponse(url=with_lang("/manage", lang), status_code=303)
         context = _build_admin_context(
             request,
             actor,
@@ -242,32 +250,17 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         context["object"] = {
             **release_detail["object"],
             "detail_href": with_lang(f"/library/{object_id}", lang),
-            "shares_href": with_lang("/shares", lang),
-            "access_href": with_lang("/access", lang),
+            "shares_href": with_lang("/manage#shares", lang),
+            "access_href": with_lang("/manage#tokens", lang),
         }
         context["release"] = {
             **release_detail["release"],
-            "shares_href": with_lang("/shares", lang),
-            "access_href": with_lang("/access", lang),
+            "shares_href": with_lang("/manage#shares", lang),
+            "access_href": with_lang("/manage#tokens", lang),
         }
         context["artifact_rows"] = release_detail["artifact_rows"]
         context["visibility_rows"] = release_detail["visibility_rows"]
         return templates.TemplateResponse(request, "release-detail-v2.html", context)
-
-    @app.get("/access")
-    def access_redirect(request: Request):
-        lang = resolve_language(request)
-        return RedirectResponse(url=with_lang("/manage#tokens", lang), status_code=307)
-
-    @app.get("/shares")
-    def shares_redirect(request: Request):
-        lang = resolve_language(request)
-        return RedirectResponse(url=with_lang("/manage#shares", lang), status_code=307)
-
-    @app.get("/activity")
-    def activity_redirect(request: Request):
-        lang = resolve_language(request)
-        return RedirectResponse(url=with_lang("/manage#activity", lang), status_code=307)
 
     @app.get("/profile", response_class=HTMLResponse)
     def profile_page(
@@ -360,58 +353,44 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         context["activity_href"] = with_lang("/activity", lang)
         return templates.TemplateResponse(request, "settings.html", context)
 
-    @app.get("/skills", response_class=HTMLResponse)
-    def skills_page(
-        request: Request,
-    ):
-        lang = resolve_language(request)
-        return RedirectResponse(url=with_lang("/library", lang), status_code=307)
+    # Redirects for old URL paths consolidated below.
+    _LEGACY_REDIRECTS: dict[str, str] = {
+        "/skills": "/manage",
+        "/access/tokens": "/manage#tokens",
+        "/review-cases": "/manage#activity",
+    }
+    for _src, _dst in _LEGACY_REDIRECTS.items():
+        def _make_redirect(dst: str = _dst):
+            def _redirect(request: Request):
+                return RedirectResponse(
+                    url=with_lang(dst, resolve_language(request)), status_code=307
+                )
+            return _redirect
+        app.get(_src)(_make_redirect())
 
     @app.get("/skills/{skill_id}", response_class=HTMLResponse)
-    def skill_detail_page(
-        skill_id: int,
-        request: Request,
-    ):
-        lang = resolve_language(request)
-        return RedirectResponse(url=with_lang("/library", lang), status_code=307)
+    def skill_detail_page(skill_id: int, request: Request):
+        return RedirectResponse(
+            url=with_lang("/manage", resolve_language(request)), status_code=307
+        )
 
     @app.get("/drafts/{draft_id}", response_class=HTMLResponse)
-    def draft_detail_page(
-        draft_id: int,
-        request: Request,
-    ):
-        lang = resolve_language(request)
-        return RedirectResponse(url=with_lang("/library", lang), status_code=307)
+    def draft_detail_page(draft_id: int, request: Request):
+        return RedirectResponse(
+            url=with_lang("/manage", resolve_language(request)), status_code=307
+        )
 
     @app.get("/releases/{release_id}", response_class=HTMLResponse)
-    def release_detail_page(
-        release_id: int,
-        request: Request,
-    ):
-        lang = resolve_language(request)
-        return RedirectResponse(url=with_lang("/library", lang), status_code=307)
+    def release_detail_page(release_id: int, request: Request):
+        return RedirectResponse(
+            url=with_lang("/manage", resolve_language(request)), status_code=307
+        )
 
     @app.get("/releases/{release_id}/share", response_class=HTMLResponse)
-    def release_share_page(
-        release_id: int,
-        request: Request,
-    ):
-        lang = resolve_language(request)
-        return RedirectResponse(url=with_lang("/shares", lang), status_code=307)
-
-    @app.get("/access/tokens", response_class=HTMLResponse)
-    def access_tokens_page(
-        request: Request,
-    ):
-        lang = resolve_language(request)
-        return RedirectResponse(url=with_lang("/access", lang), status_code=307)
-
-    @app.get("/review-cases", response_class=HTMLResponse)
-    def review_cases_page(
-        request: Request,
-    ):
-        lang = resolve_language(request)
-        return RedirectResponse(url=with_lang("/activity", lang), status_code=307)
+    def release_share_page(release_id: int, request: Request):
+        return RedirectResponse(
+            url=with_lang("/manage#shares", resolve_language(request)), status_code=307
+        )
 
     @app.get("/login", response_class=HTMLResponse)
     def login(request: Request):

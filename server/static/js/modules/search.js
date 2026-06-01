@@ -96,7 +96,10 @@ export class SearchManager {
         if (this.dropdown && this.dropdown.getAttribute('role') === 'dialog' && this.lastSearchData) {
           this.render(this.lastSearchData);
           this.open();
-          if (this.input) this.input.focus();
+          // Avoid forcing focus on touch devices to prevent virtual keyboard
+          if (this.input && !window.matchMedia('(pointer: coarse)').matches) {
+            this.input.focus();
+          }
           return;
         }
         this.close();
@@ -436,7 +439,10 @@ export class SearchManager {
       if (this.lastSearchData) {
         this.render(this.lastSearchData);
         this.open();
-        if (this.input) this.input.focus();
+        // Avoid forcing focus on touch devices to prevent virtual keyboard
+        if (this.input && !window.matchMedia('(pointer: coarse)').matches) {
+          this.input.focus();
+        }
       } else {
         this.close();
       }
