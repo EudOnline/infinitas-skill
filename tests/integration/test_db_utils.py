@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import text
+from sqlalchemy.pool import StaticPool
 
 from server.db import _engine_kwargs
 
@@ -11,11 +12,13 @@ from server.db import _engine_kwargs
 class TestEngineKwargs:
     def test_sqlite_returns_check_same_thread_false(self):
         kwargs = _engine_kwargs("sqlite:///test.db")
-        assert kwargs == {"connect_args": {"check_same_thread": False}}
+        assert kwargs["connect_args"] == {"check_same_thread": False}
+        assert kwargs["poolclass"] is StaticPool
 
-    def test_non_sqlite_returns_empty(self):
+    def test_non_sqlite_returns_pool_settings(self):
         kwargs = _engine_kwargs("postgresql://user:pass@localhost/db")
-        assert kwargs == {}
+        assert kwargs["pool_pre_ping"] is True
+        assert kwargs["pool_recycle"] == 3600
 
 
 class TestGetDb:

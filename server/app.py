@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import Depends, FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from jinja2 import FileSystemBytecodeCache
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
@@ -13,7 +14,8 @@ from server.api.auth import router as auth_router
 from server.api.background import router as background_router
 from server.api.library import router as library_router
 from server.api.object_tokens import router as object_tokens_router
-from server.api.profile import credentials_router as credentials_router, router as profile_router
+from server.api.profile import credentials_router as credentials_router
+from server.api.profile import router as profile_router
 from server.api.publish import router as publish_router
 from server.api.search import router as search_router
 from server.auth import get_current_user
@@ -32,12 +34,20 @@ from server.modules.release.router import router as release_router
 from server.modules.review.router import router as review_router
 from server.modules.shares.router import router as shares_router
 from server.settings import get_settings
+from server.ui.assets import load_asset_hashes, static_url_factory
 from server.ui.routes import register_ui_routes
 
 
 def create_app() -> FastAPI:
     settings = get_settings()
     templates = Jinja2Templates(directory=str(settings.template_dir))
+    asset_hashes = load_asset_hashes(settings.template_dir.parent / "static")
+    templates.env.globals["asset_hashes"] = asset_hashes
+    templates.env.globals["static_url"] = static_url_factory(asset_hashes)
+    if settings.environment == "production":
+        cache_dir = settings.root_dir / ".cache" / "jinja2"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        templates.env.bytecode_cache = FileSystemBytecodeCache(str(cache_dir))
     ensure_database_ready()
 
     app = FastAPI(title="infinitas hosted registry", docs_url="/api/docs", redoc_url="/api/redoc")
@@ -68,5 +78,6 @@ def create_app() -> FastAPI:
     ):
         app.include_router(router)
     return app
+
 
 app = create_app()

@@ -1,0 +1,21 @@
+{
+  "css/output.css": "9ee776a67a66",
+  "app.js": "c6667eeb4e41",
+  "auth-session.js": "f39613af168a",
+  "modules/api.js": "81c9b423467b",
+  "modules/auth-console.js": "783e8fa7b3c2",
+  "modules/auth-home.js": "de247a52f819",
+  "modules/auth-modal.js": "bc2b97115fb2",
+  "modules/auth-shared.js": "3b23d54a6a14",
+  "modules/card-swipe.js": "723ead600f32",
+  "modules/config.js": "8e5cbfa62702",
+  "modules/library.js": "ab3f969e2ee4",
+  "modules/lifecycle.js": "8c13266173fb",
+  "modules/manage.js": "eb065f2185fe",
+  "modules/profile.js": "78c1d9ce9cbf",
+  "modules/release-admin.js": "b5ca3e6994f2",
+  "modules/search.js": "8a86257df335",
+  "modules/table-interactions.js": "c7132cccbb78",
+  "modules/theme.js": "98677430642a",
+  "modules/toast.js": "ea270f4ccbcc"
+}

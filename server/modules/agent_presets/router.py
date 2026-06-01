@@ -199,9 +199,16 @@ def create_agent_preset_release(
             )
             db.commit()
             db.refresh(release)
-        except Exception:
+        except Exception as exc:
             db.rollback()
-            release = release_service.get_release_or_404(db, release.id)
+            existing = db.get(release_service.Release, release.id)
+            if existing is not None:
+                release = existing
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to enqueue materialization job: {exc}",
+                ) from exc
     else:
         settings = get_settings()
         if release_requires_materialization(

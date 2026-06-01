@@ -7,6 +7,7 @@ from pathlib import Path
 from alembic.config import Config
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from alembic import command
 from server.models import Base, User
@@ -15,8 +16,14 @@ from server.settings import get_settings
 
 def _engine_kwargs(database_url: str) -> dict:
     if database_url.startswith("sqlite:///"):
-        return {"connect_args": {"check_same_thread": False}}
-    return {}
+        return {
+            "connect_args": {"check_same_thread": False},
+            "poolclass": StaticPool,
+        }
+    return {
+        "pool_pre_ping": True,
+        "pool_recycle": 3600,
+    }
 
 
 @lru_cache(maxsize=1)
@@ -69,6 +76,7 @@ def init_db():
 
 
 def seed_bootstrap_users():
+    from server.auth import hash_password
     from server.modules.access.service import (
         ensure_personal_credential_for_user,
         ensure_user_principal,
@@ -92,15 +100,17 @@ def seed_bootstrap_users():
             if user.display_name != item["display_name"] or user.role != item["role"]:
                 user.display_name = item["display_name"]
                 user.role = item["role"]
-            if user.token is not None:
-                user.token = None
+            password = item.get("password", "")
+            if password and not user.password_hash:
+                user.password_hash = hash_password(password)
             principal = ensure_user_principal(session, user)
-            ensure_personal_credential_for_user(
-                session,
-                user=user,
-                principal=principal,
-                raw_token=item["token"],
-            )
+            if item.get("token"):
+                ensure_personal_credential_for_user(
+                    session,
+                    user=user,
+                    principal=principal,
+                    raw_token=item["token"],
+                )
         if settings.bootstrap_users:
             session.commit()
 

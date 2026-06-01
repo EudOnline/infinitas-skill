@@ -8,7 +8,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from server.modules.access.authn import AccessContext
-from server.modules.access.authz import can_access_release
+from server.modules.access.authz import can_access_releases
 from server.modules.discovery import search
 from server.modules.discovery.projections import (
     DiscoveryProjection,
@@ -314,23 +314,25 @@ def list_public_catalog(db: Session) -> list[DiscoveryProjection]:
 
 def list_me_catalog(db: Session, *, context: AccessContext) -> list[DiscoveryProjection]:
     _ensure_user_context(context)
-    rows = [
-        entry
-        for entry in _available_release_projections(db)
-        if can_access_release(db, context=context, release_id=entry.release_id)
-    ]
+    entries = _available_release_projections(db)
+    accessible_ids = can_access_releases(
+        db, context=context, release_ids=[e.release_id for e in entries]
+    )
+    rows = [entry for entry in entries if entry.release_id in accessible_ids]
     return _dedupe(rows)
 
 
 def list_grant_catalog(db: Session, *, context: AccessContext) -> list[DiscoveryProjection]:
     _ensure_grant_context(context)
-    rows = [
+    entries = [
         entry
         for entry in _available_release_projections(db)
-        if entry.audience_type == "grant"
-        and context.credential.grant_id is not None
-        and can_access_release(db, context=context, release_id=entry.release_id)
+        if entry.audience_type == "grant" and context.credential.grant_id is not None
     ]
+    accessible_ids = can_access_releases(
+        db, context=context, release_ids=[e.release_id for e in entries]
+    )
+    rows = [entry for entry in entries if entry.release_id in accessible_ids]
     return _dedupe(rows)
 
 
@@ -371,11 +373,10 @@ def resolve_me_install(
     matches = _filter_install_candidates(all_rows, skill_ref)
     if not matches:
         raise NotFoundError("install target not found")
-    rows = [
-        entry
-        for entry in matches
-        if can_access_release(db, context=context, release_id=entry.release_id)
-    ]
+    accessible_ids = can_access_releases(
+        db, context=context, release_ids=[e.release_id for e in matches]
+    )
+    rows = [entry for entry in matches if entry.release_id in accessible_ids]
     if not rows:
         raise ForbiddenError("release access denied")
     return _resolve_install_candidate(rows, skill_ref)
@@ -391,11 +392,10 @@ def resolve_grant_install(
     matches = _filter_install_candidates(all_rows, skill_ref)
     if not matches:
         raise NotFoundError("install target not found")
-    rows = [
-        entry
-        for entry in matches
-        if can_access_release(db, context=context, release_id=entry.release_id)
-    ]
+    accessible_ids = can_access_releases(
+        db, context=context, release_ids=[e.release_id for e in matches]
+    )
+    rows = [entry for entry in matches if entry.release_id in accessible_ids]
     if not rows:
         raise ForbiddenError("release access denied")
     return _resolve_install_candidate(rows, skill_ref)
