@@ -168,7 +168,6 @@ Hard maintainability budgets now backstop the maintained reset:
 - `src/infinitas_skill/server/ops.py` must stay at or below 550 lines
 - `src/infinitas_skill/install/service.py` must stay at or below 650 lines
 - `src/infinitas_skill/release/service.py` must stay at or below 650 lines
-- `server/ui/lifecycle.py` must stay at or below 500 lines
 - top-level files under `scripts/` must stay at or below 231 until a deliberate cleanup changes the ceiling
 
 `tests/integration/test_maintainability_budgets.py` and `scripts/check-all.sh focused-integration` enforce these limits.

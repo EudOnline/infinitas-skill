@@ -3,12 +3,11 @@ from __future__ import annotations
 from logging.config import fileConfig
 from pathlib import Path
 
-from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+from alembic import context
 from server.models import Base
 from server.settings import get_settings
-
 
 config = context.config
 

@@ -11,10 +11,10 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "build:css": "tailwindcss -i server/static/css/input.css -o server/static/css/output.css --minify",
+    "build:css": "tailwindcss -i server/static/css/.input.purged.css -o server/static/css/output.css --minify",
     "watch:css": "tailwindcss -i server/static/css/input.css -o server/static/css/output.css --watch",
     "purge:css": "node scripts/purgecss-run.js",
-    "build": "npm run purge:css && npm run build:css",
+    "build": "npm run purge:css && npm run build:css && node scripts/build-asset-hashes.js",
     "watch": "npm run watch:css",
     "test": "npm run build:css && node -e \"console.log('note: npm test only verifies the frontend asset build; run make ci-fast or scripts/check-all.sh for real validation')\""
   },
