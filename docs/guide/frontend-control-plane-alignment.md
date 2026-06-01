@@ -2,7 +2,7 @@
 audience: contributors, frontend maintainers, integrators
 owner: repository maintainers
 source_of_truth: frontend alignment guide
-last_reviewed: 2026-04-28
+last_reviewed: 2026-06-01
 status: maintained
 ---
 
@@ -31,12 +31,9 @@ Frontend work should present these first-class concepts:
 
 The maintained routes are:
 
-- `/library`
-- `/library/{object_id}`
-- `/library/{object_id}/releases/{release_id}`
-- `/access`
-- `/shares`
-- `/activity`
+- `/manage` — consolidated admin console
+- `/library/{object_id}` — object detail
+- `/library/{object_id}/releases/{release_id}` — release detail
 - `/settings`
 
 ## Maintained API contract

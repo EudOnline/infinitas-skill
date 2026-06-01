@@ -48,7 +48,7 @@ skills/active/*/             → 真实技能定义，被 Agent 消费
 
 | 路由类型 | 认证方式 | 说明 |
 |---------|---------|------|
-| UI 路由 (`server/ui/`) | Cookie + CSRF Token | 浏览器会话认证 |
+| UI 路由 (`server/ui/`) | Cookie + CSRF Token | 浏览器会话认证（用户名/密码登录） |
 | API 路由 (`server/api/`, `server/modules/*/router.py`) | Bearer Token / Credential | Agent/程序认证 |
 | Registry 文件 (`/registry/*`) | Registry Read Token | 业务层认证（`UnauthorizedError` → 401） |
 | Share Link (`/api/share-links/*/resolve`) | Share Password | 匿名访问，通过 payload 密码认证 |

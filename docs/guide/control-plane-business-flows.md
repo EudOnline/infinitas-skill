@@ -97,10 +97,7 @@ flowchart LR
   end
 
   subgraph Admin["Browser Admin Surface"]
-    F1["/library"]
-    F2["/access"]
-    F3["/shares"]
-    F4["/activity"]
+    F1["/manage"]
   end
 
   R1 --> C1
@@ -113,9 +110,8 @@ flowchart LR
   F1 --> C1
   F1 --> C2
   F1 --> C3
-  F2 --> C4
-  F3 --> C4
-  F4 --> C5
+  F1 --> C4
+  F1 --> C5
 ```
 
 ## Agent Version
@@ -167,16 +163,13 @@ This means the agent-facing happy path deliberately hides lifecycle complexity w
 
 ### Primary goal
 
-The browser product is a human-admin distribution console. The old lifecycle model is not maintained for browser work, and any legacy browser routes are temporary redirects or migration shims into the maintained `/library`, `/access`, `/shares`, and `/activity` surfaces.
+The browser product is a human-admin distribution console. The old lifecycle model is not maintained for browser work, and any legacy browser routes redirect to the maintained `/manage` surface.
 
 The maintained browser routes are:
 
-- `/library`
-- `/library/{object_id}`
-- `/library/{object_id}/releases/{release_id}`
-- `/access`
-- `/shares`
-- `/activity`
+- `/manage` — consolidated admin console
+- `/library/{object_id}` — object detail
+- `/library/{object_id}/releases/{release_id}` — release detail
 - `/settings`
 
 ### Flow summary

@@ -2,7 +2,7 @@
 audience: contributors, operators, integrators
 owner: repository maintainers
 source_of_truth: repo entry page
-last_reviewed: 2026-04-08
+last_reviewed: 2026-06-01
 status: maintained
 ---
 
@@ -43,18 +43,18 @@ object-centric APIs.
 The maintained browser product is the distribution admin, not the legacy authoring console.
 Primary routes:
 
-- `/library`
-- `/library/{object_id}`
-- `/library/{object_id}/releases/{release_id}`
-- `/access`
-- `/shares`
-- `/activity`
+- `/manage` — consolidated admin console (Library, Access, Shares, Activity)
+- `/library/{object_id}` — object detail
+- `/library/{object_id}/releases/{release_id}` — release detail
 - `/settings`
 
 The web UI uses product vocabulary: Object, Release, Visibility, Token, Share Link, and Activity.
+Old `/library`, `/access`, `/shares`, and `/activity` routes redirect to `/manage`.
 Legacy `/skills`, `/drafts`, `/releases/{id}`, `/access/tokens`, and `/review-cases` UI routes
-redirect to the Library, Shares, Access, or Activity surfaces. Low-level authoring routes remain
-available for API and CLI workflows.
+also redirect to `/manage`. Low-level authoring routes remain available for API and CLI workflows.
+
+Human operators authenticate through the web UI with username + password (session cookie).
+Agents and automation use Bearer tokens via the API.
 
 Agent and automation workflows use these product APIs:
 

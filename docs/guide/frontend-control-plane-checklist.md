@@ -2,7 +2,7 @@
 audience: contributors, frontend maintainers, integrators
 owner: repository maintainers
 source_of_truth: frontend implementation checklist
-last_reviewed: 2026-04-28
+last_reviewed: 2026-06-01
 status: maintained
 ---
 
@@ -18,15 +18,12 @@ This page keeps frontend execution focused on the maintained browser surface.
 
 New browser work should land on:
 
-- `/library`
-- `/library/{object_id}`
-- `/library/{object_id}/releases/{release_id}`
-- `/access`
-- `/shares`
-- `/activity`
+- `/manage` — consolidated admin console
+- `/library/{object_id}` — object detail
+- `/library/{object_id}/releases/{release_id}` — release detail
 - `/settings`
 
-Old browser routes may survive temporarily only as redirects or migration shims into these maintained pages.
+Old `/library`, `/access`, `/shares`, and `/activity` routes redirect to `/manage`.
 
 ## Maintained API checklist
 
@@ -53,10 +50,7 @@ Use these endpoints for new frontend work:
 
 For maintained browser work, keep these checks true:
 
-- `/library` stays focused on object and release distribution views
-- `/access` stays focused on token management
-- `/shares` stays focused on share-link management
-- `/activity` stays focused on normalized audit history
+- `/manage` stays focused on object/release distribution, token management, share-link management, and audit history
 - `/settings` stays focused on environment and operator settings
 
 ## Never reintroduce

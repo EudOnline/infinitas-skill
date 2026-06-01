@@ -1,3 +1,11 @@
+---
+audience: contributors
+owner: repository maintainers
+source_of_truth: contribution guide
+last_reviewed: 2026-06-01
+status: maintained
+---
+
 # Contributing to infinitas
 
 Thank you for your interest in improving infinitas! This document covers how to set up your environment, run tests, and submit changes.
@@ -33,7 +41,7 @@ make test-full          # full regression suite (~10min)
 2. **Make your changes** with tests
 3. **Run the fast gate**: `make ci-fast`
 4. **Run the full suite** for significant changes: `make test-full`
-5. **Format your code**: `make fmt-maintained`
+5. **Lint your code**: `make lint-maintained`
 6. **Open a pull request** — CI will run `validate.yml`
 
 ## Testing Guidelines

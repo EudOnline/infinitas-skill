@@ -2,7 +2,7 @@
 audience: operators and release maintainers
 owner: repository maintainers
 source_of_truth: hosted deployment runbook
-last_reviewed: 2026-04-03
+last_reviewed: 2026-06-01
 status: maintained
 ---
 
@@ -19,7 +19,7 @@ The recommended single-node deployment shape now includes a generated `systemd` 
 - **Worker**: run the maintained `infinitas server worker` entrypoint on the same host or a trusted sibling process
 - **Repo path**: a writable checkout of the private source-of-truth repository
 - **Artifact path**: a filesystem directory served over HTTPS for `ai-index.json`, `catalog/`, provenance, and bundles
-- **Secrets**: bootstrap user tokens, SSH signing key wiring, and any database credentials
+- **Secrets**: bootstrap user credentials (username/password or token), SSH signing key wiring, and any database credentials
 
 ## Required environment
 
@@ -63,10 +63,9 @@ The built-in hosted app now serves immutable distribution artifacts directly fro
 - `https://skills.example.com/api/v1/...`
 - `https://skills.example.com/registry/ai-index.json`
 - `https://skills.example.com/registry/skills/<publisher>/<skill>/<version>/manifest.json`
-- `https://skills.example.com/library`
-- `https://skills.example.com/access`
-- `https://skills.example.com/shares`
-- `https://skills.example.com/activity`
+- `https://skills.example.com/manage`
+- `https://skills.example.com/library/{object_id}`
+- `https://skills.example.com/library/{object_id}/releases/{release_id}`
 
 If `INFINITAS_REGISTRY_READ_TOKENS` is unset or empty, `/registry/*` stays public for local/dev compatibility.
 If it is set to a JSON array of bearer tokens, hosted installers must send one of those tokens when reading `/registry/*`.
@@ -104,7 +103,7 @@ mkdir -p .deploy/{repo,data,artifacts,backups,home}
 # - keep INFINITAS_SERVER_ENV=production
 # - set INFINITAS_SERVER_ALLOWED_HOSTS for local access, for example ["127.0.0.1","localhost"]
 # - replace INFINITAS_SERVER_SECRET_KEY=change-me
-# - replace the bootstrap operator tokens in INFINITAS_SERVER_BOOTSTRAP_USERS
+# - replace the bootstrap operator credentials in INFINITAS_SERVER_BOOTSTRAP_USERS
 
 # If git push uses SSH, place credentials under .deploy/home/.ssh and ensure permissions are strict.
 # Optionally copy or create .deploy/home/.gitconfig for user.name / user.email / signing policy.
@@ -187,7 +186,9 @@ Phase 1 automation validates SQLite deployments only. PostgreSQL health probes c
 For hosted installs on other machines, point the registry source `base_url` at the `/registry` prefix, not the app root.
 If the hosted registry requires bearer auth, set the registry source `auth.mode` to `token` and point `auth.env` at the local environment variable that holds one of the configured read tokens.
 
-For operators inspecting queue state manually, the hosted app now exposes the human-admin distribution views at `/library`, `/access`, `/shares`, and `/activity`, and the matching CLI surface is available through:
+For operators inspecting queue state manually, the hosted app exposes the human-admin
+console at `/manage` (consolidating Library, Access, Shares, and Activity), and the matching
+CLI surface is available through:
 
 ```bash
 uv run infinitas registry --base-url https://skills.example.com --token <maintainer-token> skills get <skill-id>
@@ -434,7 +435,7 @@ Suggested install flow:
 
 1. Copy `*.service` and `*.timer` into `/etc/systemd/system/`
 2. Copy `infinitas-hosted.env.example` to `/etc/infinitas/hosted-registry.env`
-3. Replace placeholder secrets and bootstrap tokens in the env file, then set `INFINITAS_SERVER_ALLOWED_HOSTS` for the hostnames that will reach the service
+3. Replace placeholder secrets and bootstrap credentials in the env file, then set `INFINITAS_SERVER_ALLOWED_HOSTS` for the hostnames that will reach the service
 4. Run `sudo systemctl daemon-reload`
 5. Enable and start:
    - `sudo systemctl enable --now infinitas-hosted-api.service`

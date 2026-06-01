@@ -2,7 +2,7 @@
 audience: contributors, automation authors
 owner: repository maintainers
 source_of_truth: quickstart walkthrough
-last_reviewed: 2026-04-24
+last_reviewed: 2026-06-01
 status: maintained
 ---
 
@@ -29,13 +29,14 @@ Human admins start in the web app, not in the lifecycle internals.
 
 Primary routes:
 
-- `/library`
-- `/access`
-- `/shares`
-- `/activity`
+- `/manage` — consolidated admin console with Library, Access, Shares, and Activity sections
+- `/library/{object_id}` — object detail
+- `/library/{object_id}/releases/{release_id}` — release detail
 - `/settings`
 
-Use `/library` to browse each Object, inspect its Releases, search by name, and change Visibility. The web app should focus on distribution and governance, not on object creation.
+Old `/library`, `/access`, `/shares`, and `/activity` routes redirect to `/manage`.
+Use the manage console to browse Objects, inspect Releases, search by name, and change Visibility.
+The web app should focus on distribution and governance, not on object creation.
 
 ## Step 2: Inspect an Object and its Releases
 

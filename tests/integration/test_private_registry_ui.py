@@ -189,7 +189,7 @@ def assert_maintained_control_plane_docs_freeze_canonical_model() -> None:
             f"expected {path.name} to name object/release/exposure/distribution as the maintained model"
         )
 
-    for route in ("/library", "/access", "/shares", "/activity"):
+    for route in ("/manage", "/library/{object_id}", "/library/{object_id}/releases/{release_id}"):
         assert route in docs[FRONTEND_ALIGNMENT_PATH], (
             f"expected frontend alignment guide to list maintained route {route}"
         )

@@ -2,7 +2,7 @@
 audience: operators, automation authors
 owner: repository maintainers
 source_of_truth: hosted registry CLI reference
-last_reviewed: 2026-04-24
+last_reviewed: 2026-06-01
 status: maintained
 ---
 
@@ -14,7 +14,7 @@ Complete reference for `infinitas registry` subcommands that interact with the h
 
 The product is split into two surfaces:
 
-- Web admin for human operators: `/library`, `/access`, `/shares`, `/activity`, `/settings`
+- Web admin for human operators: `/manage` (consolidated console), `/settings`
 - Agent workflows for automation: publish, read, Visibility, Token, Share Link, and Activity APIs
 
 `INFINITAS_REGISTRY_API_TOKEN` is the admin token used to operate the hosted control plane. Agent-facing tokens are minted from the access surface and should be scoped separately, with at least `reader` and `publisher` capabilities.
@@ -23,12 +23,9 @@ The product is split into two surfaces:
 
 ### Web admin
 
-- `/library`
-- `/library/{object_id}`
-- `/library/{object_id}/releases/{release_id}`
-- `/access`
-- `/shares`
-- `/activity`
+- `/manage` — consolidated admin console
+- `/library/{object_id}` — object detail
+- `/library/{object_id}/releases/{release_id}` — release detail
 - `/settings`
 
 ### Agent read and governance

@@ -2,7 +2,7 @@
 audience: operators, automation authors
 owner: repository maintainers
 source_of_truth: error catalog
-last_reviewed: 2026-04-24
+last_reviewed: 2026-06-01
 status: maintained
 ---
 
@@ -14,10 +14,7 @@ Common error patterns, exit codes, HTTP status codes, and remediation for `infin
 
 The primary admin experience is the web console:
 
-- `/library`
-- `/access`
-- `/shares`
-- `/activity`
+- `/manage` — consolidated admin console
 - `/settings`
 
 The primary agent experience is the API and CLI surface for Object, Release, Visibility, Token, Share Link, and Activity operations.
@@ -47,6 +44,7 @@ These are returned as HTTP status codes in API responses. The CLI surface conver
 |---|---|---|
 | `missing bearer token` | No `Authorization` header or cookie | Provide `--token` flag or set `INFINITAS_REGISTRY_API_TOKEN` |
 | `invalid bearer token` | Token does not match any active credential | Verify token value; check for typos or revoked tokens |
+| `invalid username or password` | Web login credentials do not match | Verify username and password; check for typos or inactive account |
 | `search requires authentication` | Search endpoint accessed without credentials for a non-public registry | Provide authentication credentials |
 
 ### Authorization (403)

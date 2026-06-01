@@ -2,7 +2,7 @@
 audience: integrators, API consumers, frontend developers
 owner: repository maintainers
 source_of_truth: API reference
-last_reviewed: 2026-04-29
+last_reviewed: 2026-06-01
 status: maintained
 ---
 
@@ -58,7 +58,7 @@ The web UI uses HMAC-signed session cookies (`infinitas_auth_token`). Cookie-aut
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/api/auth/login` | None | Exchange username + token for session |
+| POST | `/api/auth/login` | None | Exchange username + password for session |
 | POST | `/api/auth/logout` | Cookie | Clear session cookies |
 | GET | `/api/auth/csrf` | None | Refresh CSRF token cookie |
 
@@ -144,7 +144,10 @@ For a detailed error catalog, see [`error-catalog.md`](error-catalog.md).
 
 ## Rate Limiting
 
-The login endpoint (`POST /api/auth/login`) has an in-memory rate limiter. For high-traffic deployments, consider adding a reverse-proxy rate limit (e.g., nginx `limit_req` or Cloudflare).
+The login endpoint (`POST /api/auth/login`) is protected by a pluggable rate limiter. The default
+`MemoryRateLimiter` keeps attempt counts in memory; for multi-node deployments, switch to
+`DBRateLimiter` which stores counts in the `rate_limit_entries` table. For additional protection,
+consider adding a reverse-proxy rate limit (e.g., nginx `limit_req` or Cloudflare).
 
 ## OpenAPI Schema
 

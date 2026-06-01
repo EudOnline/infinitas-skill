@@ -2,7 +2,7 @@
 audience: contributors, operators, reviewers
 owner: repository maintainers
 source_of_truth: docs landing page
-last_reviewed: 2026-04-21
+last_reviewed: 2026-06-01
 status: maintained
 ---
 
