@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-from copy import deepcopy
 import sys
+from copy import deepcopy
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent

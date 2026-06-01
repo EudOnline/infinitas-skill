@@ -12,7 +12,13 @@ SCRIPTS = ROOT / 'scripts'
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-from test_support.server_ops import HealthServer, prepare_artifacts, prepare_repo, prepare_sqlite_db, run_command
+from test_support.server_ops import (
+    HealthServer,
+    prepare_artifacts,
+    prepare_repo,
+    prepare_sqlite_db,
+    run_command,
+)
 
 
 def fail(message):

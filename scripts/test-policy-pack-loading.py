@@ -5,7 +5,11 @@ import sys
 import tempfile
 from pathlib import Path
 
-from policy_pack_lib import PolicyPackError, load_effective_policy_domain, load_policy_domain_resolution
+from policy_pack_lib import (
+    PolicyPackError,
+    load_effective_policy_domain,
+    load_policy_domain_resolution,
+)
 
 
 def fail(message):

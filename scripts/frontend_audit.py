@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-import json, os, subprocess, sys, time, urllib.request
+import json
+import os
+import subprocess
+import sys
+import time
+import urllib.request
 from pathlib import Path
 
 os.environ["INFINITAS_REGISTRY_API_TOKEN"] = "audit-test-token"
@@ -25,6 +30,7 @@ pages = [("home", "/?lang=en"), ("library", "/library?lang=en"), ("settings", "/
 breakpoints = [("mobile", 390, 844), ("tablet", 768, 1024), ("desktop", 1280, 720)]
 
 from playwright.sync_api import sync_playwright
+
 with sync_playwright() as p:
     browser = p.chromium.launch()
     context = browser.new_context(viewport={"width": 1280, "height": 720})

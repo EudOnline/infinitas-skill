@@ -4,7 +4,13 @@ import json
 import sys
 from pathlib import Path
 
-from install_manifest_lib import InstallManifestError, MANIFEST_FILENAME, manifest_path_for, normalize_install_manifest, write_install_manifest
+from install_manifest_lib import (
+    MANIFEST_FILENAME,
+    InstallManifestError,
+    manifest_path_for,
+    normalize_install_manifest,
+    write_install_manifest,
+)
 from schema_version_lib import SUPPORTED_SCHEMA_VERSION, validate_schema_version
 
 

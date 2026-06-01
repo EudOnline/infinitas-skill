@@ -7,9 +7,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from install_integrity_policy_lib import load_install_integrity_policy
-from installed_integrity_lib import append_integrity_event, build_install_integrity_snapshot, normalize_integrity_events
-from installed_integrity_lib import apply_integrity_history_retention, installed_integrity_snapshot_path, write_installed_integrity_snapshot
 from install_manifest_lib import load_install_manifest, write_install_manifest
+from installed_integrity_lib import (
+    append_integrity_event,
+    apply_integrity_history_retention,
+    build_install_integrity_snapshot,
+    installed_integrity_snapshot_path,
+    normalize_integrity_events,
+    write_installed_integrity_snapshot,
+)
 from skill_identity_lib import normalize_skill_identity
 
 

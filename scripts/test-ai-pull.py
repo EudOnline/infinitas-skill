@@ -15,7 +15,11 @@ if str(ROOT) not in sys.path:
 
 from tests.helpers.env import make_test_env
 from tests.helpers.repo_copy import copy_repo_without_local_state
-from tests.helpers.signing import add_allowed_signer, configure_git_ssh_signing, generate_signing_key
+from tests.helpers.signing import (
+    add_allowed_signer,
+    configure_git_ssh_signing,
+    generate_signing_key,
+)
 
 FIXTURE_NAME = 'release-fixture'
 FIXTURE_VERSION = '1.2.3'
@@ -36,7 +40,6 @@ OPENCLAW_RUNTIME = {
     'plugin_capabilities': {},
     'background_tasks': {'required': False},
     'subagents': {'required': False},
-    'legacy_compatibility': {'agent_compatible': ['openclaw', 'claude-code', 'codex'], 'agent_compatible_deprecated': True},
     'readiness': {
         'ready': True,
         'supports_background_tasks': True,

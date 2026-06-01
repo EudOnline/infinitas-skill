@@ -5,7 +5,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'scripts'))
 
-from registry_source_lib import find_registry, registry_identity, resolve_registry_root, validate_registry_config
+from registry_source_lib import (
+    find_registry,
+    registry_identity,
+    resolve_registry_root,
+    validate_registry_config,
+)
 
 
 def fail(message):

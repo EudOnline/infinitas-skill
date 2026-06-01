@@ -4,7 +4,6 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -16,7 +15,9 @@ def fail(message: str) -> None:
 
 
 def main() -> None:
-    from tests.integration.test_private_registry_ui import main as run_focused_private_registry_ui_checks
+    from tests.integration.test_private_registry_ui import (
+        main as run_focused_private_registry_ui_checks,
+    )
 
     try:
         run_focused_private_registry_ui_checks()

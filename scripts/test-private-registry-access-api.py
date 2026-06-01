@@ -3,15 +3,14 @@ from __future__ import annotations
 
 import json
 import os
-import sqlite3
 import shutil
+import sqlite3
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -87,7 +86,16 @@ def scenario_access_credentials_and_release_scope() -> None:
 
         from server.app import create_app
         from server.db import get_session_factory
-        from server.models import AccessGrant, Credential, Exposure, Principal, Release, Skill, SkillVersion, User
+        from server.models import (
+            AccessGrant,
+            Credential,
+            Exposure,
+            Principal,
+            Release,
+            Skill,
+            SkillVersion,
+            User,
+        )
         from server.modules.access.service import hash_token
 
         client = TestClient(create_app())
