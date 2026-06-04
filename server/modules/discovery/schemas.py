@@ -88,7 +88,6 @@ class InstallResolutionView(BaseModel):
     signature_url: str
     supported_memory_modes: list[str] = Field(default_factory=list)
     default_memory_mode: str | None = None
-    selected_memory_mode: str | None = None
 
 
 class ProjectionArtifactPaths(BaseModel):

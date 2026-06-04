@@ -2,10 +2,6 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from server.jobs import enqueue_job, load_job_payload
-from server.models import Job
-from server.settings import get_settings
-
 
 def resolve_memory_curation_job_options(
     *,
@@ -17,6 +13,7 @@ def resolve_memory_curation_job_options(
     use_server_policy: bool = False,
 ) -> dict[str, object]:
     if use_server_policy:
+        from server.settings import get_settings
         settings = get_settings()
         return {
             "action": settings.memory_curation_action,
@@ -50,7 +47,8 @@ def enqueue_memory_curation_job(
     actor_ref: str,
     note: str = "",
     commit: bool = True,
-) -> Job:
+):
+    from server.jobs import enqueue_job
     payload = resolve_memory_curation_job_options(
         action=action,
         apply=apply,
@@ -68,7 +66,8 @@ def enqueue_memory_curation_job(
     )
 
 
-def build_memory_curation_job_summary(job: Job) -> dict[str, object]:
+def build_memory_curation_job_summary(job) -> dict[str, object]:
+    from server.jobs import load_job_payload
     return {
         "id": int(job.id),
         "kind": str(job.kind),

@@ -6,19 +6,60 @@ multiple worker processes without adding Redis as a dependency.
 """
 from __future__ import annotations
 
+import hashlib
 import time
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime
 
+from fastapi import Request
 from sqlalchemy import DateTime, Integer, String, delete, func, select
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
-from server.models import Base
+from server.models import Base, utcnow
 
 
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+def resolve_client_ip(request: Request) -> str:
+    """Extract the real client IP from a request, respecting reverse proxies.
+
+    Checks ``X-Forwarded-For`` (first entry) and ``X-Real-IP`` headers
+    before falling back to ``request.client.host``.  Only the first
+    ``X-Forwarded-For`` entry is trusted — downstream deployments should
+    ensure only their reverse proxy can set this header.
+    """
+    forwarded = (request.headers.get("x-forwarded-for") or "").split(",", 1)[0].strip()
+    if forwarded:
+        return forwarded
+    real_ip = (request.headers.get("x-real-ip") or "").strip()
+    if real_ip:
+        return real_ip
+    return request.client.host if request.client else "unknown"
+
+
+def resolve_rate_limit_key(request: Request, user_id: int | None = None) -> str:
+    """Generate a rate limit key that combines multiple identifiers.
+
+    For authenticated users, uses the user_id to prevent IP spoofing.
+    For unauthenticated requests, combines IP + User-Agent for basic
+    protection against simple IP rotation attacks.
+
+    Args:
+        request: The FastAPI request object
+        user_id: Optional authenticated user ID
+
+    Returns:
+        A string key suitable for rate limiting
+    """
+    if user_id is not None:
+        # For authenticated users, use user_id as the primary key
+        return f"user:{user_id}"
+
+    # For unauthenticated requests, combine IP and User-Agent
+    client_ip = resolve_client_ip(request)
+    user_agent = (request.headers.get("user-agent") or "")[:128]
+    # Hash the combination to avoid leaking user agent in logs
+    combined = f"{client_ip}:{user_agent}"
+    return f"anon:{hashlib.sha256(combined.encode()).hexdigest()[:32]}"
 
 
 class RateLimitEntry(Base):
@@ -30,9 +71,9 @@ class RateLimitEntry(Base):
     key: Mapped[str] = mapped_column(String(255), index=True)
     window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     attempt_count: Mapped[int] = mapped_column(Integer, default=1)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
     )
 
 
@@ -59,8 +100,29 @@ class RateLimiter(ABC):
 class MemoryRateLimiter(RateLimiter):
     """In-memory rate limiter using sliding window (default)."""
 
+    # Prune stale keys once this many total entries accumulate across all keys.
+    _PRUNE_THRESHOLD = 10_000
+
     def __init__(self) -> None:
         self._attempts: dict[str, list[float]] = defaultdict(list)
+        self._total_entries = 0
+
+    def _prune_all_stale(self) -> None:
+        """Remove expired entries across all keys to bound memory usage."""
+        now = time.monotonic()
+        surviving: dict[str, list[float]] = defaultdict(list)
+        count = 0
+        for key, timestamps in self._attempts.items():
+            fresh = [t for t in timestamps if t > now - 3600]  # 1h hard floor
+            if fresh:
+                surviving[key] = fresh
+                count += len(fresh)
+        self._attempts = surviving
+        self._total_entries = count
+
+    def _maybe_prune(self) -> None:
+        if self._total_entries > self._PRUNE_THRESHOLD:
+            self._prune_all_stale()
 
     def check(self, key: str, *, max_attempts: int, window_seconds: int) -> bool:
         now = time.monotonic()
@@ -71,12 +133,17 @@ class MemoryRateLimiter(RateLimiter):
     def record(self, key: str) -> None:
         now = time.monotonic()
         self._attempts[key].append(now)
+        self._total_entries += 1
+        self._maybe_prune()
 
     def reset(self, key: str) -> None:
-        self._attempts.pop(key, None)
+        removed = self._attempts.pop(key, None)
+        if removed:
+            self._total_entries -= len(removed)
 
     def reset_all(self) -> None:
         self._attempts.clear()
+        self._total_entries = 0
 
 
 class DBRateLimiter(RateLimiter):
@@ -95,7 +162,7 @@ class DBRateLimiter(RateLimiter):
     def check(self, key: str, *, max_attempts: int, window_seconds: int) -> bool:
         from datetime import timedelta
 
-        cutoff = _utcnow() - timedelta(seconds=window_seconds)
+        cutoff = utcnow() - timedelta(seconds=window_seconds)
 
         # Prune old entries.
         self._db.execute(
@@ -114,7 +181,7 @@ class DBRateLimiter(RateLimiter):
         return int(total) < max_attempts
 
     def record(self, key: str) -> None:
-        window_start = _utcnow().replace(second=0, microsecond=0)
+        window_start = utcnow().replace(second=0, microsecond=0)
 
         entry = self._db.scalar(
             select(RateLimitEntry)

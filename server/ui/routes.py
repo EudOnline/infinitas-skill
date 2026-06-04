@@ -346,7 +346,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         context["admin_token_env_name"] = "INFINITAS_REGISTRY_API_TOKEN"
         context["bootstrap_user_count"] = len(settings.bootstrap_users)
         context["registry_read_token_count"] = len(settings.registry_read_tokens)
-        context["object_kinds"] = ["Skill", "Agent preset", "Agent code"]
+        context["object_kinds"] = ["Skill"]
         context["library_href"] = with_lang("/library", lang)
         context["access_href"] = with_lang("/access", lang)
         context["shares_href"] = with_lang("/shares", lang)

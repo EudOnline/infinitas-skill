@@ -9,19 +9,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from infinitas_skill.memory.policy import resolve_memory_policy
-from server.models import AuditEvent
-from server.modules.audit.service import append_audit_event
+from infinitas_skill.server.data import get_audit_event_model, parse_json_payload
 
 CURATION_ACTIONS = {"plan", "archive", "prune"}
 CURATION_RECORDED_STATUSES = {"archived", "pruned"}
 
 
-def _payload(event: AuditEvent) -> dict[str, Any]:
-    try:
-        payload = json.loads(event.payload_json or "{}")
-    except Exception:
-        return {}
-    return payload if isinstance(payload, dict) else {}
+def _payload(event) -> dict[str, Any]:
+    return parse_json_payload(event.payload_json)
 
 
 def _parse_datetime(value: Any) -> datetime | None:
@@ -62,7 +57,8 @@ def _normalized_action(action: str) -> str:
     return normalized if normalized in CURATION_ACTIONS else "plan"
 
 
-def _memory_writeback_events(session: Session, *, limit: int) -> list[AuditEvent]:
+def _memory_writeback_events(session: Session, *, limit: int) -> list:
+    AuditEvent = get_audit_event_model()
     return session.scalars(
         select(AuditEvent)
         .where(AuditEvent.aggregate_type == "memory_writeback")
@@ -72,6 +68,7 @@ def _memory_writeback_events(session: Session, *, limit: int) -> list[AuditEvent
 
 
 def _curated_candidate_refs(session: Session) -> set[str]:
+    AuditEvent = get_audit_event_model()
     events = session.scalars(
         select(AuditEvent).where(AuditEvent.aggregate_type == "memory_curation")
     ).all()
@@ -83,7 +80,7 @@ def _curated_candidate_refs(session: Session) -> set[str]:
     return curated
 
 
-def _candidate_ref(event: AuditEvent) -> str:
+def _candidate_ref(event) -> str:
     return f"memory_writeback:{int(event.id)}"
 
 
@@ -108,7 +105,8 @@ def _append_curation_audit_event(
     status: str,
     actor_ref: str,
     error: str | None = None,
-) -> AuditEvent:
+):
+    from server.modules.audit.service import append_audit_event
     payload = {
         "action": action,
         "status": status,

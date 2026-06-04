@@ -151,7 +151,7 @@
   "login_hint": "请输入用户名和密码。",
   "login_button": "登录",
   "empty_releases": "暂无发布。",
-  "empty_tokens": "暂无令牌。",
+  "empty_tokens": "暂无 Token",
   "empty_artifacts": "暂无产物。",
   "action_activate": "激活",
   "action_revoke": "撤销",
@@ -218,8 +218,6 @@
   "empty_token_activity": "近期无活动。",
   "empty_tokens_hint": "暂无令牌。",
   "empty_visibility_channels": "暂无可见性通道。",
-  "filter_agent_code": "代码",
-  "filter_agent_presets": "预设",
   "filter_all": "全部",
   "filter_aria_label": "筛选",
   "filter_placeholder": "筛选...",
@@ -308,7 +306,6 @@
   "empty_activity": "暂无活动",
   "empty_library": "还没有技能，agent 会通过 API 自动创建",
   "empty_shares": "暂无分享链接",
-  "empty_tokens": "暂无 Token",
   "manage_subtitle": "技能与访问管理",
   "manage_title": "管理",
   "profile_loading": "加载中...",
@@ -329,7 +326,6 @@
   "tab_activity": "活动",
   "tab_library": "对象库",
   "tab_nav_label": "主导航",
-  "tab_shares": "分享",
   "tab_tokens": "Token",
   "back_home": "返回首页"
 }

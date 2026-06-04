@@ -10,7 +10,7 @@ from server.app import create_app
 def _background_client(tmp_path: Path) -> TestClient:
     import os
     os.environ["INFINITAS_SERVER_DATABASE_URL"] = f"sqlite:///{tmp_path / 'bg.db'}"
-    os.environ["INFINITAS_SERVER_SECRET_KEY"] = "bg-test-secret"
+    os.environ["INFINITAS_SERVER_SECRET_KEY"] = "bg-test-secret-32chars-long-minimum"
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(tmp_path / "artifacts")
     os.environ["INFINITAS_SERVER_BOOTSTRAP_USERS"] = (
         '[{"username":"bg-tester","display_name":"BG Tester",'
@@ -23,7 +23,7 @@ def _background_client(tmp_path: Path) -> TestClient:
 class TestBackgroundPresets:
     def test_get_presets_no_auth(self, tmp_path: Path):
         client = _background_client(tmp_path)
-        response = client.get("/api/background/presets")
+        response = client.get("/api/v1/background/presets")
         assert response.status_code == 200
         data = response.json()
         assert "presets" in data
@@ -38,7 +38,7 @@ class TestBackgroundPresets:
 
     def test_get_presets_structure(self, tmp_path: Path):
         client = _background_client(tmp_path)
-        response = client.get("/api/background/presets")
+        response = client.get("/api/v1/background/presets")
         data = response.json()
         for preset in data["presets"]["light"]:
             assert "id" in preset
@@ -49,13 +49,13 @@ class TestBackgroundPresets:
 class TestUserBackground:
     def test_get_user_background_requires_auth(self, tmp_path: Path):
         client = _background_client(tmp_path)
-        response = client.get("/api/background/me")
+        response = client.get("/api/v1/background/me")
         assert response.status_code == 401
 
     def test_get_user_background(self, tmp_path: Path):
         client = _background_client(tmp_path)
         headers = {"Authorization": "Bearer bg-test-token"}
-        response = client.get("/api/background/me", headers=headers)
+        response = client.get("/api/v1/background/me", headers=headers)
         assert response.status_code == 200
         data = response.json()
         assert "light_bg_id" in data
@@ -65,7 +65,7 @@ class TestUserBackground:
         client = _background_client(tmp_path)
         headers = {"Authorization": "Bearer bg-test-token"}
         response = client.post(
-            "/api/background/set",
+            "/api/v1/background/set",
             headers=headers,
             json={"theme": "light", "bg_id": "sakura-street"},
         )
@@ -73,14 +73,14 @@ class TestUserBackground:
         assert response.json()["success"] is True
 
         # Verify it persisted
-        me = client.get("/api/background/me", headers=headers)
+        me = client.get("/api/v1/background/me", headers=headers)
         assert me.json()["light_bg_id"] == "sakura-street"
 
     def test_set_background_invalid_theme(self, tmp_path: Path):
         client = _background_client(tmp_path)
         headers = {"Authorization": "Bearer bg-test-token"}
         response = client.post(
-            "/api/background/set",
+            "/api/v1/background/set",
             headers=headers,
             json={"theme": "invalid", "bg_id": "sakura-street"},
         )
@@ -91,7 +91,7 @@ class TestUserBackground:
         client = _background_client(tmp_path)
         headers = {"Authorization": "Bearer bg-test-token"}
         response = client.post(
-            "/api/background/set",
+            "/api/v1/background/set",
             headers=headers,
             json={"theme": "light", "bg_id": "nonexistent"},
         )
@@ -102,11 +102,11 @@ class TestUserBackground:
         client = _background_client(tmp_path)
         headers = {"Authorization": "Bearer bg-test-token"}
         response = client.post(
-            "/api/background/set",
+            "/api/v1/background/set",
             headers=headers,
             json={"theme": "dark", "bg_id": "starry-night"},
         )
         assert response.status_code == 200
 
-        me = client.get("/api/background/me", headers=headers)
+        me = client.get("/api/v1/background/me", headers=headers)
         assert me.json()["dark_bg_id"] == "starry-night"

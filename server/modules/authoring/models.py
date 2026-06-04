@@ -22,42 +22,6 @@ class Skill(Base):
         ForeignKey("principals.id"),
         nullable=True,
     )
-    registry_object_id: Mapped[int | None] = mapped_column(
-        ForeignKey("registry_objects.id"),
-        nullable=True,
-        index=True,
-    )
-    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True),
-        default=utcnow,
-        onupdate=utcnow,
-    )
-
-
-class RegistryObject(Base):
-    __tablename__ = "registry_objects"
-    __table_args__ = (
-        UniqueConstraint(
-            "namespace_id",
-            "kind",
-            "slug",
-            name="uq_registry_objects_namespace_id_kind_slug",
-        ),
-    )
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    kind: Mapped[str] = mapped_column(String(64))
-    namespace_id: Mapped[int] = mapped_column(ForeignKey("principals.id"), index=True)
-    slug: Mapped[str] = mapped_column(String(200))
-    display_name: Mapped[str] = mapped_column(String(200))
-    summary: Mapped[str] = mapped_column(Text, default="")
-    status: Mapped[str] = mapped_column(String(32), default="active")
-    default_visibility_profile: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    created_by_principal_id: Mapped[int | None] = mapped_column(
-        ForeignKey("principals.id"),
-        nullable=True,
-    )
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),

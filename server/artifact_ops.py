@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import shutil
+import tempfile
 from pathlib import Path
 
 
@@ -46,11 +48,33 @@ def sha256_bytes(data: bytes) -> str:
 
 
 def ensure_file_bytes(path: Path, data: bytes):
+    """Write bytes to *path* atomically (write-to-temp then rename).
+
+    If the file already exists with identical content, the write is skipped.
+    The temp file is created in the same directory as the target to ensure
+    the rename is atomic (same filesystem).
+    """
     path = Path(path).resolve()
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists() and path.read_bytes() == data:
         return
-    path.write_bytes(data)
+    fd, tmp_path = tempfile.mkstemp(
+        dir=str(path.parent), prefix=".tmp-", suffix=".partial"
+    )
+    try:
+        os.write(fd, data)
+        os.close(fd)
+        fd = None
+        os.replace(tmp_path, str(path))
+    except BaseException:
+        if fd is not None:
+            os.close(fd)
+        # Clean up the temp file on any failure
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
 
 
 def ensure_file_copy(source: Path, target: Path):

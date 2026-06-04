@@ -10,7 +10,7 @@ from server.app import create_app
 
 def _auth_client(tmp_path: Path) -> TestClient:
     os.environ["INFINITAS_SERVER_DATABASE_URL"] = f"sqlite:///{tmp_path / 'auth_edge.db'}"
-    os.environ["INFINITAS_SERVER_SECRET_KEY"] = "auth-edge-test-secret"
+    os.environ["INFINITAS_SERVER_SECRET_KEY"] = "auth-edge-test-secret-32chars-long-min"
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(tmp_path / "artifacts")
     os.environ["INFINITAS_SERVER_BOOTSTRAP_USERS"] = (
         '[{"username":"edge-tester","display_name":"Edge Tester",'
@@ -26,13 +26,13 @@ def _auth_client(tmp_path: Path) -> TestClient:
 class TestLoginEdgeCases:
     def test_login_with_empty_credentials(self, tmp_path: Path):
         client = _auth_client(tmp_path)
-        response = client.post("/api/auth/login", json={"username": "", "password": ""})
+        response = client.post("/api/v1/auth/login", json={"username": "", "password": ""})
         assert response.status_code == 401
 
     def test_login_with_wrong_password(self, tmp_path: Path):
         client = _auth_client(tmp_path)
         response = client.post(
-            "/api/auth/login",
+            "/api/v1/auth/login",
             json={"username": "edge-tester", "password": "wrong-password"},
         )
         assert response.status_code == 401
@@ -42,7 +42,7 @@ class TestLoginEdgeCases:
         # Make multiple failed login attempts quickly
         for _ in range(12):
             response = client.post(
-                "/api/auth/login",
+                "/api/v1/auth/login",
                 json={"username": "edge-tester", "password": "wrong"},
             )
         # After rate limit, should get 429
@@ -54,7 +54,7 @@ class TestLoginEdgeCases:
     def test_login_sets_csrf_cookie(self, tmp_path: Path):
         client = _auth_client(tmp_path)
         response = client.post(
-            "/api/auth/login",
+            "/api/v1/auth/login",
             json={"username": "edge-tester", "password": "edge-test-password"},
         )
         assert response.status_code == 200
@@ -65,7 +65,7 @@ class TestLoginEdgeCases:
     def test_login_sets_auth_cookie(self, tmp_path: Path):
         client = _auth_client(tmp_path)
         response = client.post(
-            "/api/auth/login",
+            "/api/v1/auth/login",
             json={"username": "edge-tester", "password": "edge-test-password"},
         )
         assert response.status_code == 200
@@ -75,21 +75,21 @@ class TestLoginEdgeCases:
 class TestLogoutEdgeCases:
     def test_logout_without_cookie(self, tmp_path: Path):
         client = _auth_client(tmp_path)
-        response = client.post("/api/auth/logout")
+        response = client.post("/api/v1/auth/logout")
         assert response.status_code == 200
 
     def test_logout_clears_cookies(self, tmp_path: Path):
         client = _auth_client(tmp_path)
         # Login first
         login = client.post(
-            "/api/auth/login",
+            "/api/v1/auth/login",
             json={"username": "edge-tester", "password": "edge-test-password"},
         )
         assert login.status_code == 200
         csrf = login.cookies.get("csrf_token")
 
         # Logout with CSRF token (cookie auth requires double-submit)
-        response = client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
+        response = client.post("/api/v1/auth/logout", headers={"X-CSRF-Token": csrf})
         assert response.status_code == 200
         set_cookie = response.headers.get("set-cookie", "")
         assert "infinitas_auth_token" in set_cookie or "Max-Age=0" in set_cookie
@@ -98,7 +98,7 @@ class TestLogoutEdgeCases:
 class TestCsrfEndpoint:
     def test_csrf_returns_token(self, tmp_path: Path):
         client = _auth_client(tmp_path)
-        response = client.get("/api/auth/csrf")
+        response = client.get("/api/v1/auth/csrf")
         assert response.status_code == 200
         data = response.json()
         assert "csrf_token" in data
@@ -108,26 +108,26 @@ class TestCsrfEndpoint:
 
     def test_csrf_refreshes_on_each_call(self, tmp_path: Path):
         client = _auth_client(tmp_path)
-        r1 = client.get("/api/auth/csrf")
-        r2 = client.get("/api/auth/csrf")
+        r1 = client.get("/api/v1/auth/csrf")
+        r2 = client.get("/api/v1/auth/csrf")
         assert r1.json()["csrf_token"] != r2.json()["csrf_token"]
 
 
 class TestMeEndpoint:
     def test_me_unauthenticated(self, tmp_path: Path):
         client = _auth_client(tmp_path)
-        response = client.get("/api/auth/me")
+        response = client.get("/api/v1/auth/me")
         assert response.status_code == 200
         assert response.json()["authenticated"] is False
 
     def test_me_authenticated(self, tmp_path: Path):
         client = _auth_client(tmp_path)
         login = client.post(
-            "/api/auth/login",
+            "/api/v1/auth/login",
             json={"username": "edge-tester", "password": "edge-test-password"},
         )
         assert login.status_code == 200
-        response = client.get("/api/auth/me")
+        response = client.get("/api/v1/auth/me")
         assert response.status_code == 200
         assert response.json()["authenticated"] is True
         assert response.json()["username"] == "edge-tester"

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from tests.integration.test_library_api import _prepare_library_client
+from tests.integration.conftest import _prepare_library_client
 
 
 def _prepared_object_and_release(
@@ -12,7 +12,7 @@ def _prepared_object_and_release(
     *,
     headers: dict[str, str],
 ) -> tuple[int, int]:
-    listing = client.get("/api/library", headers=headers)
+    listing = client.get("/api/v1/library", headers=headers)
     assert listing.status_code == 200, listing.text
     skill_object = next(item for item in listing.json()["items"] if item["kind"] == "skill")
     object_id = int(skill_object["id"])

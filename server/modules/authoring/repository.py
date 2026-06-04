@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from server.modules.authoring.models import RegistryObject, Skill, SkillDraft, SkillVersion
+from server.modules.authoring.models import Skill, SkillDraft, SkillVersion
 from server.modules.release.models import Artifact
 
 
@@ -22,7 +22,6 @@ def get_skill_by_namespace_and_slug(db: Session, *, namespace_id: int, slug: str
 def create_skill(
     db: Session,
     *,
-    registry_object_id: int | None,
     namespace_id: int,
     slug: str,
     display_name: str,
@@ -31,7 +30,6 @@ def create_skill(
     created_by_principal_id: int | None,
 ) -> Skill:
     skill = Skill(
-        registry_object_id=registry_object_id,
         namespace_id=namespace_id,
         slug=slug,
         display_name=display_name,
@@ -43,32 +41,6 @@ def create_skill(
     db.add(skill)
     db.flush()
     return skill
-
-
-def create_registry_object(
-    db: Session,
-    *,
-    kind: str,
-    namespace_id: int,
-    slug: str,
-    display_name: str,
-    summary: str,
-    default_visibility_profile: str | None,
-    created_by_principal_id: int | None,
-) -> RegistryObject:
-    registry_object = RegistryObject(
-        kind=kind,
-        namespace_id=namespace_id,
-        slug=slug,
-        display_name=display_name,
-        summary=summary,
-        status="active",
-        default_visibility_profile=default_visibility_profile,
-        created_by_principal_id=created_by_principal_id,
-    )
-    db.add(registry_object)
-    db.flush()
-    return registry_object
 
 
 def get_draft(db: Session, draft_id: int) -> SkillDraft | None:

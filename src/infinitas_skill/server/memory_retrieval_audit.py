@@ -4,17 +4,10 @@ import hashlib
 import json
 from typing import Any, Callable
 
-from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from infinitas_skill.server.db_utils import standalone_session
 from infinitas_skill.server.repo_checks import require_sqlite_db
-from server.models import AuditEvent
-
-
-def _server_engine_kwargs(database_url: str) -> dict[str, Any]:
-    if database_url.startswith("sqlite:///"):
-        return {"connect_args": {"check_same_thread": False}}
-    return {}
 
 
 def _aggregate_id(entry: dict[str, Any]) -> str:
@@ -47,6 +40,8 @@ def record_memory_retrieval_audit(
     actor_ref: str,
     entry: dict[str, Any],
 ):
+    from infinitas_skill.server.data import get_audit_event_model
+    AuditEvent = get_audit_event_model()
     operation = str(entry.get("operation") or "unknown").strip().lower() or "unknown"
     event = AuditEvent(
         aggregate_type="memory_retrieval",
@@ -66,10 +61,9 @@ def build_memory_retrieval_audit_recorder(
     actor_ref: str,
 ) -> Callable[[dict[str, Any]], None]:
     require_sqlite_db(database_url)
-    engine = create_engine(database_url, future=True, **_server_engine_kwargs(database_url))
 
     def recorder(entry: dict[str, Any]) -> None:
-        with Session(engine) as session:
+        with standalone_session(database_url) as session:
             record_memory_retrieval_audit(session, actor_ref=actor_ref, entry=entry)
             session.commit()
 

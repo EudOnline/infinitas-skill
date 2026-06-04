@@ -269,7 +269,7 @@ def _listed_entries(db: Session, request: Request) -> list[DiscoveryProjection]:
 
 def _distribution_entry(entry: DiscoveryProjection) -> dict:
     payload = {
-        "kind": entry.kind,
+        "kind": "skill",
         "name": entry.name,
         "publisher": entry.publisher,
         "qualified_name": entry.qualified_name,
@@ -299,7 +299,7 @@ def _distribution_entry(entry: DiscoveryProjection) -> dict:
 
 def _skill_defaults(entry: dict) -> dict:
     return {
-        "kind": entry.get("kind") or "skill",
+        "kind": "skill",
         "publisher": entry.get("publisher"),
         "summary": entry.get("summary") or "",
         "tags": [],

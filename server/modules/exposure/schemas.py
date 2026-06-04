@@ -26,16 +26,16 @@ def _load_policy_snapshot(raw: str | None) -> dict:
 
 
 class ExposureCreateRequest(BaseModel):
-    audience_type: str
+    audience_type: Literal["public", "grant", "authenticated", "private"]
     listing_mode: Literal["listed", "direct_only"] = "listed"
     install_mode: Literal["enabled", "disabled"] = "enabled"
-    requested_review_mode: str = "none"
+    requested_review_mode: Literal["none", "advisory", "blocking"] = "none"
 
 
 class ExposurePatchRequest(BaseModel):
     listing_mode: Literal["listed", "direct_only"] | None = None
     install_mode: Literal["enabled", "disabled"] | None = None
-    requested_review_mode: str | None = None
+    requested_review_mode: Literal["none", "advisory", "blocking"] | None = None
 
 
 class ExposureView(BaseModel):

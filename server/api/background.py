@@ -8,7 +8,7 @@ from server.auth import get_current_user
 from server.db import get_db
 from server.models import User
 
-router = APIRouter(prefix="/api/background", tags=["background"])
+router = APIRouter(prefix="/api/v1/background", tags=["background"])
 
 
 # Preset backgrounds using CSS gradients only (no external URLs)
@@ -45,13 +45,13 @@ class SetBackgroundRequest(BaseModel):
 
 
 @router.get("/presets", response_model=BackgroundListResponse)
-async def get_background_presets():
+def get_background_presets():
     """Get available background presets."""
     return {"presets": BACKGROUND_PRESETS}
 
 
 @router.get("/me", response_model=UserBackgroundResponse)
-async def get_user_background(user: User = Depends(get_current_user)):
+def get_user_background(user: User = Depends(get_current_user)):
     """Get current user's background settings."""
     return {
         "light_bg_id": user.light_bg_id,
@@ -60,7 +60,7 @@ async def get_user_background(user: User = Depends(get_current_user)):
 
 
 @router.post("/set")
-async def set_background(
+def set_background(
     request: SetBackgroundRequest,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

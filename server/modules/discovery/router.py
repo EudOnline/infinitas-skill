@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from infinitas_skill.install.service import DependencyError, resolve_memory_mode_selection
+from infinitas_skill.install.service import DependencyError
 from server.auth import get_current_access_context
 from server.db import get_db
 from server.modules.access.authn import AccessContext
@@ -61,14 +61,6 @@ def _install_payload(
     ready_at = None
     if entry.ready_at is not None:
         ready_at = entry.ready_at.isoformat().replace("+00:00", "Z")
-    selected_memory_mode = None
-    if entry.kind == "agent_preset":
-        selection = resolve_memory_mode_selection(
-            supported_modes=entry.supported_memory_modes,
-            default_mode=entry.default_memory_mode,
-            requested_mode=memory_mode,
-        )
-        selected_memory_mode = selection["selected_memory_mode"]
     return InstallResolutionView(
         exposure_id=entry.exposure_id,
         release_id=entry.release_id,
@@ -95,7 +87,6 @@ def _install_payload(
         signature_url=links.signature_url,
         supported_memory_modes=list(entry.supported_memory_modes or []),
         default_memory_mode=entry.default_memory_mode,
-        selected_memory_mode=selected_memory_mode,
     )
 
 

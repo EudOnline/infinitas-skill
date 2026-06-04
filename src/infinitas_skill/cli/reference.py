@@ -39,8 +39,6 @@ from infinitas_skill.policy.review_commands import (
     build_review_status_parser,
 )
 from infinitas_skill.registry.cli import (
-    build_registry_agent_codes_parser,
-    build_registry_agent_presets_parser,
     build_registry_drafts_parser,
     build_registry_exposures_parser,
     build_registry_grants_parser,
@@ -140,8 +138,6 @@ def render_cli_reference() -> str:
     registry_help = build_registry_parser(prog="infinitas registry").format_help()
     registry_skills_help = build_registry_skills_parser().format_help()
     registry_drafts_help = build_registry_drafts_parser().format_help()
-    registry_agent_presets_help = build_registry_agent_presets_parser().format_help()
-    registry_agent_codes_help = build_registry_agent_codes_parser().format_help()
     registry_releases_help = build_registry_releases_parser().format_help()
     registry_exposures_help = build_registry_exposures_parser().format_help()
     registry_grants_help = build_registry_grants_parser().format_help()
@@ -309,14 +305,6 @@ def render_cli_reference() -> str:
         "## `infinitas registry drafts`",
         "",
         _render_help_block(registry_drafts_help).rstrip(),
-        "",
-        "## `infinitas registry agent-presets`",
-        "",
-        _render_help_block(registry_agent_presets_help).rstrip(),
-        "",
-        "## `infinitas registry agent-codes`",
-        "",
-        _render_help_block(registry_agent_codes_help).rstrip(),
         "",
         "## `infinitas registry releases`",
         "",

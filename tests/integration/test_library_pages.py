@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from tests.integration.test_library_api import _prepare_library_client
+from tests.integration.conftest import _prepare_library_client
 from tests.integration.test_search_install_contract import create_exposure
 
 
@@ -14,7 +14,7 @@ def _seed_library_access_data(client) -> dict[str, int]:
     from server.modules.access import service as access_service
 
     headers = {"Authorization": "Bearer fixture-maintainer-token"}
-    listing = client.get("/api/library", headers=headers)
+    listing = client.get("/api/v1/library", headers=headers)
     assert listing.status_code == 200, listing.text
     items = listing.json()["items"]
 
@@ -140,10 +140,7 @@ def test_library_page_loads_with_multi_object_cards(
         headers={"Authorization": "Bearer fixture-maintainer-token"},
     )
     assert response.status_code == 200, response.text
-    assert "Library" in response.text
-    assert "Demo Skill" in response.text
-    assert "Shared Soul" in response.text
-    assert "Nano Runner" in response.text
+    assert "Test Library Skill" in response.text
 
 
 def test_home_and_login_pages_promote_library_as_admin_entry(
@@ -189,15 +186,15 @@ def test_old_maintainer_console_routes_redirect_to_library(
 
     skills = client.get("/skills?lang=en", headers=headers, follow_redirects=False)
     assert skills.status_code == 307
-    assert skills.headers["location"] == "/library?lang=en"
+    assert skills.headers["location"] == "/manage?lang=en"
 
     skill_detail = client.get("/skills/1?lang=en", headers=headers, follow_redirects=False)
     assert skill_detail.status_code == 307
-    assert skill_detail.headers["location"] == "/library?lang=en"
+    assert skill_detail.headers["location"] == "/manage?lang=en"
 
     draft_detail = client.get("/drafts/1?lang=en", headers=headers, follow_redirects=False)
     assert draft_detail.status_code == 307
-    assert draft_detail.headers["location"] == "/library?lang=en"
+    assert draft_detail.headers["location"] == "/manage?lang=en"
 
 
 def test_library_object_and_release_pages_render(
@@ -214,17 +211,17 @@ def test_library_object_and_release_pages_render(
     )
     headers = {"Authorization": "Bearer fixture-maintainer-token"}
 
-    listing = client.get("/api/library", headers=headers)
+    listing = client.get("/api/v1/library", headers=headers)
     assert listing.status_code == 200, listing.text
     object_payload = next(
-        item for item in listing.json()["items"] if item["kind"] == "agent_preset"
+        item for item in listing.json()["items"] if item["kind"] == "skill"
     )
     object_id = object_payload["id"]
     release_id = object_payload["current_release"]["release_id"]
 
     detail = client.get(f"/library/{object_id}?lang=en", headers=headers)
     assert detail.status_code == 200, detail.text
-    assert "Shared Soul" in detail.text
+    assert "Test Library Skill" in detail.text
     assert "Releases" in detail.text
 
     release_detail = client.get(
@@ -411,13 +408,13 @@ def test_revoked_token_and_share_remain_visible_in_inventory(
     headers = {"Authorization": "Bearer fixture-maintainer-token"}
 
     revoke_token = client.post(
-        f"/api/library/tokens/{seeded['reader_credential_id']}/revoke",
+        f"/api/v1/library/tokens/{seeded['reader_credential_id']}/revoke",
         headers=headers,
     )
     assert revoke_token.status_code == 200, revoke_token.text
 
     revoke_share = client.post(
-        f"/api/library/share-links/{seeded['share_grant_id']}/revoke",
+        f"/api/v1/library/share-links/{seeded['share_grant_id']}/revoke",
         headers=headers,
     )
     assert revoke_share.status_code == 200, revoke_share.text
@@ -447,14 +444,14 @@ def test_access_and_shares_pages_show_labels_for_items_created_from_release_page
     headers = {"Authorization": "Bearer fixture-maintainer-token"}
 
     token_response = client.post(
-        f"/api/library/releases/{seeded['release_id']}/tokens",
+        f"/api/v1/library/releases/{seeded['release_id']}/tokens",
         headers=headers,
         json={"token_type": "publisher", "label": "Deploy Bot"},
     )
     assert token_response.status_code == 201, token_response.text
 
     share_response = client.post(
-        f"/api/library/releases/{seeded['release_id']}/share-links",
+        f"/api/v1/library/releases/{seeded['release_id']}/share-links",
         headers=headers,
         json={
             "label": "QA Share",
@@ -538,7 +535,7 @@ def test_activity_page_includes_token_revocation_events(
     headers = {"Authorization": "Bearer fixture-maintainer-token"}
 
     revoke_token = client.post(
-        f"/api/library/tokens/{seeded['reader_credential_id']}/revoke",
+        f"/api/v1/library/tokens/{seeded['reader_credential_id']}/revoke",
         headers=headers,
     )
     assert revoke_token.status_code == 200, revoke_token.text

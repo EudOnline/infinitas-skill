@@ -151,7 +151,7 @@
   "login_hint": "Enter your username and password.",
   "login_button": "Sign in",
   "empty_releases": "No releases.",
-  "empty_tokens": "No tokens.",
+  "empty_tokens": "No tokens",
   "empty_artifacts": "No artifacts.",
   "action_activate": "Activate",
   "action_revoke": "Revoke",
@@ -218,8 +218,6 @@
   "empty_token_activity": "No recent activity.",
   "empty_tokens_hint": "No tokens yet.",
   "empty_visibility_channels": "No visibility channels.",
-  "filter_agent_code": "Code",
-  "filter_agent_presets": "Presets",
   "filter_all": "All",
   "filter_aria_label": "Filter",
   "filter_placeholder": "Filter...",
@@ -308,7 +306,6 @@
   "empty_activity": "No activity",
   "empty_library": "No skills yet. Agents create them via API",
   "empty_shares": "No share links",
-  "empty_tokens": "No tokens",
   "manage_subtitle": "Skill & Access Management",
   "manage_title": "Management",
   "profile_loading": "Loading...",
@@ -329,7 +326,6 @@
   "tab_activity": "Activity",
   "tab_library": "Library",
   "tab_nav_label": "Main navigation",
-  "tab_shares": "Shares",
   "tab_tokens": "Tokens",
   "back_home": "Back Home"
 }

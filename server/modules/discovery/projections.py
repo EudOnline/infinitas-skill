@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -10,6 +11,92 @@ from sqlalchemy.orm import Session
 
 from infinitas_skill.install.distribution import DistributionError, verify_distribution_manifest
 from server.models import Artifact, Exposure, Principal, Release, Skill, SkillVersion
+
+# Cache configuration
+_PROJECTION_CACHE_MAXSIZE = 128
+_PROJECTION_CACHE_TTL = 300  # 5 minutes
+_MAX_PROJECTION_BATCH_SIZE = 1000  # Maximum projections to process in one batch
+
+
+# In-memory cache with timestamp tracking
+_projection_cache: dict[str, CacheEntry] = {}
+_cache_access_order: list[str] = []  # For LRU eviction
+
+
+def _get_cache_key(
+    audience_type: str | None = None,
+    listing_mode: str | None = None,
+    limit: int | None = None,
+) -> str:
+    """Generate cache key for projection queries."""
+    parts = ["projections"]
+    if audience_type:
+        parts.append(f"audience:{audience_type}")
+    if listing_mode:
+        parts.append(f"listing:{listing_mode}")
+    if limit:
+        parts.append(f"limit:{limit}")
+    return ":".join(parts)
+
+
+def _get_cached_projections(cache_key: str) -> list[DiscoveryProjection] | None:
+    """Get projections from cache if valid."""
+    entry = _projection_cache.get(cache_key)
+    if _is_cache_entry_valid(entry):
+        # Update access order for LRU
+        if cache_key in _cache_access_order:
+            _cache_access_order.remove(cache_key)
+        _cache_access_order.append(cache_key)
+        return entry.projections
+    return None
+
+
+def _set_cached_projections(cache_key: str, projections: list[DiscoveryProjection]) -> None:
+    """Store projections in cache with LRU eviction."""
+    # Evict oldest entries if cache is full
+    while len(_projection_cache) >= _PROJECTION_CACHE_MAXSIZE and _cache_access_order:
+        oldest_key = _cache_access_order.pop(0)
+        _projection_cache.pop(oldest_key, None)
+
+    _projection_cache[cache_key] = CacheEntry(
+        projections=projections,
+        timestamp=time.time(),
+    )
+    if cache_key in _cache_access_order:
+        _cache_access_order.remove(cache_key)
+    _cache_access_order.append(cache_key)
+
+
+def cleanup_expired_cache_entries(ttl: int = _PROJECTION_CACHE_TTL) -> int:
+    """Remove expired entries from the projection cache.
+
+    Returns:
+        Number of entries removed.
+    """
+    now = time.time()
+    expired_keys = [
+        key for key, entry in _projection_cache.items()
+        if now - entry.timestamp >= ttl
+    ]
+    for key in expired_keys:
+        _projection_cache.pop(key, None)
+        if key in _cache_access_order:
+            _cache_access_order.remove(key)
+    return len(expired_keys)
+
+
+@dataclass(frozen=True)
+class CacheEntry:
+    """Cache entry with timestamp for TTL expiration."""
+    projections: list[DiscoveryProjection]
+    timestamp: float
+
+
+def _is_cache_entry_valid(entry: CacheEntry | None, ttl: int = _PROJECTION_CACHE_TTL) -> bool:
+    """Check if cache entry is still valid based on TTL."""
+    if entry is None:
+        return False
+    return time.time() - entry.timestamp < ttl
 
 
 @dataclass(frozen=True)
@@ -23,7 +110,6 @@ class DiscoveryProjection:
     exposure_state: str
     release_state: str
     publisher: str
-    kind: str
     name: str
     qualified_name: str
     display_name: str
@@ -110,8 +196,45 @@ def projection_has_materialized_artifacts(
     return bool(verified.get("verified"))
 
 
-def build_release_projections(db: Session) -> list[DiscoveryProjection]:
-    rows = db.execute(
+def build_release_projections(
+    db: Session,
+    *,
+    audience_type: str | None = None,
+    listing_mode: str | None = None,
+    limit: int | None = None,
+    offset: int = 0,
+    use_cache: bool = True,
+) -> list[DiscoveryProjection]:
+    """Build release projections with optional filtering and pagination.
+
+    Args:
+        db: Database session
+        audience_type: Filter by audience type (e.g., 'public', 'grant', 'authenticated')
+        listing_mode: Filter by listing mode (e.g., 'listed', 'unlisted')
+        limit: Maximum number of projections to return (None for unlimited, capped at MAX)
+        offset: Number of projections to skip (for pagination)
+        use_cache: Whether to use in-memory cache for results
+
+    Returns:
+        List of DiscoveryProjection objects
+    """
+    # Apply safety cap on limit to prevent unbounded memory usage
+    if limit is None:
+        limit = _MAX_PROJECTION_BATCH_SIZE
+    else:
+        limit = min(limit, _MAX_PROJECTION_BATCH_SIZE)
+
+    # Check cache first if enabled
+    if use_cache:
+        cache_key = _get_cache_key(
+            audience_type=audience_type, listing_mode=listing_mode, limit=limit
+        )
+        cached = _get_cached_projections(cache_key)
+        if cached is not None:
+            return cached[offset : offset + limit]
+
+    # Build query with filters
+    query = (
         select(
             Exposure.id.label("exposure_id"),
             Exposure.release_id.label("release_id"),
@@ -122,7 +245,6 @@ def build_release_projections(db: Session) -> list[DiscoveryProjection]:
             Exposure.state.label("exposure_state"),
             Release.state.label("release_state"),
             Release.bundle_artifact_id.label("bundle_artifact_id"),
-            Release.object_kind.label("kind"),
             Release.ready_at.label("ready_at"),
             Principal.slug.label("publisher"),
             Skill.slug.label("name"),
@@ -138,13 +260,25 @@ def build_release_projections(db: Session) -> list[DiscoveryProjection]:
         .where(Release.state == "ready")
         .where(Exposure.state == "active")
         .where(Exposure.install_mode == "enabled")
-        .order_by(
-            Principal.slug.asc(),
-            Skill.slug.asc(),
-            SkillVersion.version.desc(),
-            Exposure.id.desc(),
-        )
-    ).all()
+    )
+
+    # Apply optional filters
+    if audience_type:
+        query = query.where(Exposure.audience_type == audience_type)
+    if listing_mode:
+        query = query.where(Exposure.listing_mode == listing_mode)
+
+    query = query.order_by(
+        Principal.slug.asc(),
+        Skill.slug.asc(),
+        SkillVersion.version.desc(),
+        Exposure.id.desc(),
+    )
+
+    # Apply pagination at database level
+    query = query.offset(offset).limit(limit)
+
+    rows = db.execute(query).all()
 
     bundle_artifact_ids = {
         int(row.bundle_artifact_id)
@@ -181,7 +315,6 @@ def build_release_projections(db: Session) -> list[DiscoveryProjection]:
                 exposure_state=str(row.exposure_state),
                 release_state=str(row.release_state),
                 publisher=publisher,
-                kind=str(row.kind or "skill"),
                 name=name,
                 qualified_name=f"{publisher}/{name}",
                 display_name=str(row.display_name),
@@ -197,7 +330,23 @@ def build_release_projections(db: Session) -> list[DiscoveryProjection]:
                 default_memory_mode=default_memory_mode,
             )
         )
+
+    # Store in cache if enabled
+    if use_cache:
+        cache_key = _get_cache_key(
+            audience_type=audience_type, listing_mode=listing_mode, limit=limit
+        )
+        _set_cached_projections(cache_key, projections)
+
     return projections
+
+
+def build_release_projections_legacy(db: Session) -> list[DiscoveryProjection]:
+    """Legacy version for backward compatibility - loads all projections.
+
+    Deprecated: Use build_release_projections() with explicit limit instead.
+    """
+    return build_release_projections(db, limit=None, offset=0, use_cache=False)
 
 
 def refresh_projection_snapshot(db: Session, artifact_root: Path) -> Path:

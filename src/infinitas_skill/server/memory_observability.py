@@ -1,26 +1,21 @@
 from __future__ import annotations
 
-import json
 from collections import Counter
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from infinitas_skill.server.data import get_audit_event_model, get_job_model, parse_json_payload
 from infinitas_skill.server.memory_baselines import summarize_memory_baselines
 from infinitas_skill.server.memory_health import summarize_memory_writeback
-from server.models import AuditEvent, Job
 
 
 def _payload(raw: str | None) -> dict[str, Any]:
-    try:
-        payload = json.loads(raw or "{}")
-    except Exception:
-        return {}
-    return payload if isinstance(payload, dict) else {}
+    return parse_json_payload(raw)
 
 
-def _curation_status(event: AuditEvent) -> str:
+def _curation_status(event) -> str:
     event_type = str(event.event_type or "").strip().lower()
     if event_type.startswith("memory.curation."):
         return event_type.removeprefix("memory.curation.")
@@ -48,6 +43,8 @@ def summarize_memory_observability(
     now: str | None = None,
     window_hours: int = 24,
 ) -> dict[str, Any]:
+    AuditEvent = get_audit_event_model()
+    Job = get_job_model()
     normalized_limit = limit if isinstance(limit, int) and limit > 0 else 20
     normalized_job_limit = job_limit if isinstance(job_limit, int) and job_limit > 0 else 10
     writeback = summarize_memory_writeback(session, limit=normalized_limit)

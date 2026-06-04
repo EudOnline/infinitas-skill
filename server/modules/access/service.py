@@ -4,18 +4,40 @@ import hashlib
 import hmac
 import json
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from server.models import AccessGrant, Credential, Exposure, Principal, User, utcnow
 
+
+def require_active_grant_exposure(db: Session, *, release_id: int) -> Exposure:
+    """Return the active grant-type exposure for a release, or raise ValueError."""
+    exposure = db.scalar(
+        select(Exposure)
+        .where(Exposure.release_id == release_id)
+        .where(Exposure.audience_type == "grant")
+        .where(Exposure.state == "active")
+        .where(Exposure.install_mode == "enabled")
+        .order_by(Exposure.id.desc())
+    )
+    if exposure is None:
+        raise ValueError("active grant visibility required before issuing tokens")
+    return exposure
+
+
+def token_type_for_scopes(scopes_json: str | None) -> str:
+    """Classify a credential as 'publisher' or 'reader' based on its scopes."""
+    scopes = parse_scopes(scopes_json)
+    if any(
+        scope.endswith(":write") or scope in {"authoring:write", "publish:write", "registry:publish"}
+        for scope in scopes
+    ):
+        return "publisher"
+    return "reader"
+
 TOKEN_HASH_PREFIX = "sha256:"  # noqa: S105
-
-
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 def normalize_token(raw: str | None) -> str:
@@ -69,7 +91,7 @@ def resolve_credential_by_token(db: Session, token: str) -> Credential | None:
     normalized = normalize_token(token)
     if not normalized:
         return None
-    now = _utcnow()
+    now = utcnow()
     return db.scalar(
         _active_credentials_query(now).where(Credential.hashed_secret == hash_token(normalized))
     )
@@ -78,7 +100,7 @@ def resolve_credential_by_token(db: Session, token: str) -> Credential | None:
 def resolve_credential_by_id(db: Session, credential_id: int | None) -> Credential | None:
     if not isinstance(credential_id, int) or credential_id <= 0:
         return None
-    now = _utcnow()
+    now = utcnow()
     return db.scalar(_active_credentials_query(now).where(Credential.id == credential_id))
 
 

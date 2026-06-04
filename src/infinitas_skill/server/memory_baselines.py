@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -8,15 +7,11 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from server.models import AuditEvent, Job
+from infinitas_skill.server.data import get_audit_event_model, get_job_model, parse_json_payload
 
 
 def _payload(raw: str | None) -> dict[str, Any]:
-    try:
-        payload = json.loads(raw or "{}")
-    except Exception:
-        return {}
-    return payload if isinstance(payload, dict) else {}
+    return parse_json_payload(raw)
 
 
 def _as_datetime(value: str | datetime | None) -> datetime:
@@ -106,6 +101,8 @@ def summarize_memory_baselines(
         "retrieval": {"recent": [], "previous": []},
     }
 
+    AuditEvent = get_audit_event_model()
+    Job = get_job_model()
     writeback_events = session.scalars(
         select(AuditEvent).where(AuditEvent.aggregate_type == "memory_writeback")
     ).all()

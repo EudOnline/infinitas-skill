@@ -8,12 +8,9 @@ from sqlalchemy.orm import Session
 
 from server.models import (
     AccessGrant,
-    AgentCodeSpec,
-    AgentPresetSpec,
     Credential,
     Exposure,
     Principal,
-    RegistryObject,
     Release,
     ReviewCase,
     Skill,
@@ -24,17 +21,14 @@ from server.modules.access.authn import AccessContext
 
 @dataclass(frozen=True)
 class LibraryScope:
-    objects: list[RegistryObject]
+    skills: list[Skill]
     principals_by_id: dict[int, Principal]
-    skills_by_object_id: dict[int, Skill]
     versions_by_skill_id: dict[int, list[SkillVersion]]
-    releases_by_object_id: dict[int, list[Release]]
+    releases_by_skill_id: dict[int, list[Release]]
     exposures_by_release_id: dict[int, list[Exposure]]
     review_cases_by_exposure_id: dict[int, list[ReviewCase]]
     grants_by_exposure_id: dict[int, list[AccessGrant]]
     credentials_by_grant_id: dict[int, list[Credential]]
-    preset_specs_by_object_id: dict[int, AgentPresetSpec]
-    code_specs_by_object_id: dict[int, AgentCodeSpec]
 
 
 def group_by(items: list[object], key_name: str) -> dict[int, list[object]]:
@@ -72,16 +66,13 @@ def parse_datetime(value: object) -> datetime | None:
     return parsed
 
 
-def iter_object_release_rows(scope: LibraryScope):
-    for registry_object in scope.objects:
-        skill = scope.skills_by_object_id.get(registry_object.id)
-        version_map = (
-            {version.id: version for version in scope.versions_by_skill_id.get(skill.id, [])}
-            if skill is not None
-            else {}
-        )
-        for release in scope.releases_by_object_id.get(registry_object.id, []):
-            yield registry_object, release, version_map.get(release.skill_version_id)
+def iter_skill_release_rows(scope: LibraryScope):
+    for skill in scope.skills:
+        version_map = {
+            version.id: version for version in scope.versions_by_skill_id.get(skill.id, [])
+        }
+        for release in scope.releases_by_skill_id.get(skill.id, []):
+            yield skill, release, version_map.get(release.skill_version_id)
 
 
 def _scope_filter_for_actor(query, *, actor: AccessContext):
@@ -89,18 +80,18 @@ def _scope_filter_for_actor(query, *, actor: AccessContext):
         return query
     principal_id = actor.principal.id if actor.principal is not None else None
     if principal_id is None:
-        return query.where(RegistryObject.id < 0)
-    return query.where(RegistryObject.namespace_id == principal_id)
+        return query.where(Skill.id < 0)
+    return query.where(Skill.namespace_id == principal_id)
 
 
 def load_library_scope(db: Session, *, actor: AccessContext) -> LibraryScope:
-    object_query = select(RegistryObject).order_by(
-        RegistryObject.updated_at.desc(),
-        RegistryObject.id.desc(),
+    skill_query = select(Skill).order_by(
+        Skill.updated_at.desc(),
+        Skill.id.desc(),
     )
-    objects = db.scalars(_scope_filter_for_actor(object_query, actor=actor)).all()
-    object_ids = [item.id for item in objects]
-    principal_ids = sorted({item.namespace_id for item in objects})
+    skills = db.scalars(_scope_filter_for_actor(skill_query, actor=actor)).all()
+    skill_ids = [item.id for item in skills]
+    principal_ids = sorted({item.namespace_id for item in skills})
 
     principals = []
     if principal_ids:
@@ -109,20 +100,6 @@ def load_library_scope(db: Session, *, actor: AccessContext) -> LibraryScope:
             .where(Principal.id.in_(principal_ids))
             .order_by(Principal.id.asc())
         ).all()
-
-    skills = []
-    if object_ids:
-        skills = db.scalars(
-            select(Skill)
-            .where(Skill.registry_object_id.in_(object_ids))
-            .order_by(Skill.id.desc())
-        ).all()
-    skills_by_object_id = {
-        int(skill.registry_object_id): skill
-        for skill in skills
-        if skill.registry_object_id
-    }
-    skill_ids = [skill.id for skill in skills]
 
     versions = []
     if skill_ids:
@@ -135,33 +112,18 @@ def load_library_scope(db: Session, *, actor: AccessContext) -> LibraryScope:
 
     version_ids = [version.id for version in versions]
     releases = []
-    if object_ids or version_ids:
-        release_query = select(Release).order_by(Release.created_at.desc(), Release.id.desc())
-        if object_ids and version_ids:
-            release_query = release_query.where(
-                (Release.registry_object_id.in_(object_ids))
-                | (Release.skill_version_id.in_(version_ids))
-            )
-        elif object_ids:
-            release_query = release_query.where(Release.registry_object_id.in_(object_ids))
-        else:
-            release_query = release_query.where(Release.skill_version_id.in_(version_ids))
-        releases = db.scalars(release_query).all()
+    if version_ids:
+        releases = db.scalars(
+            select(Release)
+            .where(Release.skill_version_id.in_(version_ids))
+            .order_by(Release.created_at.desc(), Release.id.desc())
+        ).all()
 
-    inferred_object_ids_by_version: dict[int, int] = {}
-    for version in versions:
-        skill = next((item for item in skills if item.id == version.skill_id), None)
-        if skill is not None and skill.registry_object_id is not None:
-            inferred_object_ids_by_version[version.id] = int(skill.registry_object_id)
-
-    releases_by_object_id: dict[int, list[Release]] = {}
+    releases_by_skill_id: dict[int, list[Release]] = {}
     for release in releases:
-        object_id = release.registry_object_id or inferred_object_ids_by_version.get(
-            release.skill_version_id
-        )
-        if object_id is None:
-            continue
-        releases_by_object_id.setdefault(int(object_id), []).append(release)
+        version = next((v for v in versions if v.id == release.skill_version_id), None)
+        if version is not None:
+            releases_by_skill_id.setdefault(int(version.skill_id), []).append(release)
 
     release_ids = [release.id for release in releases]
     exposures = []
@@ -202,26 +164,13 @@ def load_library_scope(db: Session, *, actor: AccessContext) -> LibraryScope:
         ).all()
     credentials_by_grant_id = group_by(credentials, "grant_id")
 
-    preset_specs = []
-    code_specs = []
-    if object_ids:
-        preset_specs = db.scalars(
-            select(AgentPresetSpec).where(AgentPresetSpec.registry_object_id.in_(object_ids))
-        ).all()
-        code_specs = db.scalars(
-            select(AgentCodeSpec).where(AgentCodeSpec.registry_object_id.in_(object_ids))
-        ).all()
-
     return LibraryScope(
-        objects=objects,
+        skills=skills,
         principals_by_id={principal.id: principal for principal in principals},
-        skills_by_object_id=skills_by_object_id,
         versions_by_skill_id=versions_by_skill_id,
-        releases_by_object_id=releases_by_object_id,
+        releases_by_skill_id=releases_by_skill_id,
         exposures_by_release_id=exposures_by_release_id,
         review_cases_by_exposure_id=review_cases_by_exposure_id,
         grants_by_exposure_id=grants_by_exposure_id,
         credentials_by_grant_id=credentials_by_grant_id,
-        preset_specs_by_object_id={spec.registry_object_id: spec for spec in preset_specs},
-        code_specs_by_object_id={spec.registry_object_id: spec for spec in code_specs},
     )

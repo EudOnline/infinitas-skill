@@ -1,24 +1,20 @@
 from __future__ import annotations
 
-import json
 from collections import Counter
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from server.models import AuditEvent
+from infinitas_skill.server.data import get_audit_event_model, parse_json_payload
 
 
-def _payload(event: AuditEvent) -> dict[str, Any]:
-    try:
-        payload = json.loads(event.payload_json or "{}")
-    except Exception:
-        return {}
-    return payload if isinstance(payload, dict) else {}
+def _payload(event) -> dict[str, Any]:
+    return parse_json_payload(event.payload_json)
 
 
 def summarize_memory_writeback(session: Session, *, limit: int = 20) -> dict[str, Any]:
+    AuditEvent = get_audit_event_model()
     normalized_limit = limit if isinstance(limit, int) and limit > 0 else 20
     events = session.scalars(
         select(AuditEvent)

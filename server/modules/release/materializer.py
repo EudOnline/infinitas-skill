@@ -1,12 +1,17 @@
+"""Release materializer — public orchestration entry point.
+
+This module coordinates the full release materialization pipeline:
+bundle creation, provenance generation, SSH signing, and artifact storage.
+
+The implementation is split across focused sub-modules:
+
+- :mod:`snapshot_accessors` — snapshot field accessors
+- :mod:`bundle` — bundle construction and artifact path helpers
+- :mod:`provenance` — provenance JSON document building
+- :mod:`signing` — SSH signing and identity resolution
+"""
 from __future__ import annotations
 
-import gzip
-import io
-import json
-import subprocess
-import tarfile
-import tempfile
-from datetime import datetime, timezone
 from pathlib import Path
 
 from sqlalchemy.orm import Session
@@ -14,164 +19,32 @@ from sqlalchemy.orm import Session
 from infinitas_skill.install.distribution import (
     DistributionError,
     build_distribution_manifest_payload,
-    deterministic_bundle,
-    inspect_distribution_bundle,
     verify_distribution_manifest,
 )
 from infinitas_skill.release.attestation import (
     load_attestation_config,
     resolve_attestation_key,
 )
-from infinitas_skill.release.policy_state import resolve_releaser_identity
-from infinitas_skill.release.release_resolution import resolve_skill
-from infinitas_skill.release.service import collect_release_state
-from infinitas_skill.release.signing_bootstrap import (
-    parse_allowed_signers,
-    public_key_from_key_path,
-    signer_identities_for_key,
-)
 from server.artifact_ops import sha256_bytes
-from server.modules.authoring.service import load_metadata
 from server.modules.release import service
+
+# Sub-modules — the actual implementations
+from server.modules.release.bundle import bundle_bytes, uploaded_bundle_data
 from server.modules.release.models import Artifact, Release
+from server.modules.release.provenance import build_provenance_payload
+from server.modules.release.signing import resolve_signer_identity, sign_provenance
+from server.modules.release.snapshot_accessors import (
+    snapshot_content_artifact_id,
+    snapshot_content_mode,
+    snapshot_content_ref,
+    snapshot_metadata,
+)
 from server.modules.release.storage import ArtifactStorage, build_artifact_storage
 
-
-def _canonical_json_bytes(payload: dict) -> bytes:
-    return (
-        json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
-    ).encode("utf-8")
-
-
-def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-
-
-def _git_value(repo_root: Path, *args: str) -> str | None:
-    result = subprocess.run(
-        ["git", "-C", str(repo_root), *args],
-        text=True,
-        capture_output=True,
-    )
-    if result.returncode != 0:
-        return None
-    value = result.stdout.strip()
-    return value or None
-
-
-def _content_ref_commit(content_ref: str, fallback: str) -> str:
-    ref = str(content_ref or "")
-    if "#" in ref:
-        candidate = ref.rsplit("#", 1)[-1].strip()
-        if candidate:
-            return candidate
-    return fallback
-
-
-def _bundle_bytes(*, skill_slug: str, content_ref: str, metadata: dict) -> tuple[bytes, int]:
-    buffer = io.BytesIO()
-    file_count = 0
-    with gzip.GzipFile(fileobj=buffer, mode="wb", mtime=0) as gzip_file:
-        with tarfile.open(fileobj=gzip_file, mode="w", format=tarfile.PAX_FORMAT) as archive:
-            entries = {
-                f"{skill_slug}/snapshot/content-ref.txt": (
-                    content_ref.rstrip("\n") + "\n"
-                ).encode("utf-8"),
-                f"{skill_slug}/snapshot/metadata.json": _canonical_json_bytes(metadata),
-            }
-            file_count = len(entries)
-            for path, raw in entries.items():
-                info = tarfile.TarInfo(name=path)
-                info.size = len(raw)
-                info.mtime = 0
-                info.mode = 0o644
-                info.uid = 0
-                info.gid = 0
-                info.uname = ""
-                info.gname = ""
-                archive.addfile(info, io.BytesIO(raw))
-    return buffer.getvalue(), file_count
-
-
-def _artifact_object_path(*, artifact_root: Path, storage_uri: str) -> Path:
-    root = Path(artifact_root).resolve()
-    candidate = (root / str(storage_uri or "")).resolve()
-    try:
-        candidate.relative_to(root)
-    except ValueError as exc:
-        raise RuntimeError(f"artifact storage_uri escapes artifact root: {storage_uri!r}") from exc
-    return candidate
-
-
-def _bundle_root_dir(bundle_path: Path) -> str:
-    with tarfile.open(bundle_path, mode="r:gz") as archive:
-        for member in archive.getmembers():
-            member_path = Path(member.name)
-            if member_path.parts:
-                return str(member_path.parts[0])
-    raise RuntimeError(f"bundle has no archive members: {bundle_path}")
-
-
-def _uploaded_bundle_data(
-    db: Session,
-    *,
-    artifact_root: Path,
-    content_artifact_id: int | None,
-) -> tuple[bytes, int, str]:
-    if content_artifact_id is None:
-        raise RuntimeError("uploaded_bundle draft is missing content_artifact_id")
-    artifact = db.get(Artifact, int(content_artifact_id))
-    if artifact is None:
-        raise RuntimeError(f"uploaded bundle artifact {content_artifact_id} not found")
-    source_path = _artifact_object_path(
-        artifact_root=artifact_root, storage_uri=artifact.storage_uri
-    )
-    if not source_path.is_file():
-        raise RuntimeError(f"uploaded bundle artifact payload missing: {source_path}")
-    raw = source_path.read_bytes()
-    bundle_metadata = inspect_distribution_bundle(source_path, expected_root=None)
-    file_manifest = bundle_metadata.get("file_manifest") or []
-    return raw, len(file_manifest), _bundle_root_dir(source_path)
-
-
-def _snapshot_content_mode(snapshot) -> str:
-    value = snapshot.manifest.get("content_mode") if isinstance(snapshot.manifest, dict) else None
-    if value:
-        return str(value)
-    if snapshot.draft is not None:
-        return snapshot.draft.content_mode
-    return "external_ref"
-
-
-def _snapshot_content_ref(snapshot) -> str:
-    value = snapshot.manifest.get("content_ref") if isinstance(snapshot.manifest, dict) else None
-    if value:
-        return str(value)
-    if snapshot.draft is not None:
-        return snapshot.draft.content_ref or ""
-    return ""
-
-
-def _snapshot_content_artifact_id(snapshot) -> int | None:
-    value = (
-        snapshot.manifest.get("content_artifact_id")
-        if isinstance(snapshot.manifest, dict)
-        else None
-    )
-    if value is not None:
-        return int(value)
-    if snapshot.draft is not None:
-        return snapshot.draft.content_artifact_id
-    return None
-
-
-def _snapshot_metadata(snapshot) -> dict:
-    value = snapshot.manifest.get("metadata") if isinstance(snapshot.manifest, dict) else None
-    if isinstance(value, dict):
-        return value
-    if snapshot.draft is not None:
-        return load_metadata(snapshot.draft.metadata_json)
-    return {}
+# Backward-compatible re-exports for any code that imported these from materializer
+# We use a leading underscore convention for private helpers that moved.
+# Public API remains: materialize_release(), release_requires_materialization()
+__all__ = ["materialize_release", "release_requires_materialization"]
 
 
 def _materialize_bundle(
@@ -180,340 +53,23 @@ def _materialize_bundle(
     snapshot,
     artifact_root: Path,
 ) -> tuple[bytes, int, str]:
-    metadata = _snapshot_metadata(snapshot)
-    content_mode = _snapshot_content_mode(snapshot)
-    content_ref = _snapshot_content_ref(snapshot)
+    metadata = snapshot_metadata(snapshot)
+    content_mode = snapshot_content_mode(snapshot)
+    content_ref = snapshot_content_ref(snapshot)
     if content_mode == "uploaded_bundle":
-        return _uploaded_bundle_data(
+        return uploaded_bundle_data(
             db,
             artifact_root=artifact_root,
-            content_artifact_id=_snapshot_content_artifact_id(snapshot),
+            content_artifact_id=snapshot_content_artifact_id(snapshot),
         )
-    if snapshot.release.object_kind == "agent_code" and content_ref.startswith("git+"):
-        raw, file_count = _external_ref_bundle_bytes(
-            content_ref=content_ref,
-            bundle_root_dir=snapshot.skill.slug,
-        )
-        return raw, file_count, snapshot.skill.slug
     return (
-        *_bundle_bytes(
+        *bundle_bytes(
             skill_slug=snapshot.skill.slug,
             content_ref=content_ref,
             metadata=metadata,
         ),
         snapshot.skill.slug,
     )
-
-
-def _snapshot_source_ref(snapshot) -> str:
-    content_ref = _snapshot_content_ref(snapshot)
-    if content_ref:
-        return content_ref
-    content_artifact_id = _snapshot_content_artifact_id(snapshot)
-    if content_artifact_id is not None:
-        return f"artifact:{content_artifact_id}"
-    return ""
-
-
-def _external_ref_bundle_bytes(*, content_ref: str, bundle_root_dir: str) -> tuple[bytes, int]:
-    ref = str(content_ref or "").strip()
-    if not ref.startswith("git+"):
-        raise RuntimeError(f"unsupported external content_ref: {content_ref!r}")
-    remote, separator, commit = ref[len("git+") :].partition("#")
-    if not separator or not commit.strip():
-        raise RuntimeError(f"external git content_ref must pin a commit: {content_ref!r}")
-
-    with tempfile.TemporaryDirectory(prefix="infinitas-agent-code-import-") as temp_dir:
-        repo_dir = Path(temp_dir) / "repo"
-        subprocess.run(
-            ["git", "clone", "--quiet", remote, str(repo_dir)],
-            check=True,
-            text=True,
-            capture_output=True,
-        )
-        subprocess.run(
-            ["git", "-C", str(repo_dir), "checkout", "--quiet", commit.strip()],
-            check=True,
-            text=True,
-            capture_output=True,
-        )
-        output_path = Path(temp_dir) / "bundle.tar.gz"
-        bundle_info = deterministic_bundle(repo_dir, output_path, root_dir=bundle_root_dir)
-        return output_path.read_bytes(), int(bundle_info["file_count"])
-
-
-def _resolve_signer_identity(
-    *,
-    repo_root: Path,
-    allowed_signers_path: Path,
-    signing_key: str,
-) -> str:
-    entries = parse_allowed_signers(allowed_signers_path)
-    if not entries:
-        raise RuntimeError(
-            f"{allowed_signers_path.relative_to(repo_root)} has no signer entries; "
-            "materialized releases require trusted SSH signers"
-        )
-    public_key = public_key_from_key_path(signing_key)
-    identities = signer_identities_for_key(entries, public_key)
-    if not identities:
-        raise RuntimeError(
-            f"configured signing key {signing_key} is not trusted by "
-            f"{allowed_signers_path.relative_to(repo_root)}"
-        )
-    return identities[0]
-
-
-def _sign_provenance(
-    *,
-    provenance_bytes: bytes,
-    provenance_filename: str,
-    signing_key: str,
-    namespace: str,
-    signature_ext: str,
-) -> bytes:
-    with tempfile.TemporaryDirectory(prefix="infinitas-release-provenance-") as temp_dir:
-        provenance_path = Path(temp_dir) / provenance_filename
-        provenance_path.write_bytes(provenance_bytes)
-        signature_path = Path(f"{provenance_path}{signature_ext}")
-        signature_path.unlink(missing_ok=True)
-        result = subprocess.run(
-            [
-                "ssh-keygen",
-                "-Y",
-                "sign",
-                "-f",
-                str(Path(signing_key).expanduser()),
-                "-n",
-                namespace,
-                str(provenance_path),
-            ],
-            text=True,
-            capture_output=True,
-        )
-        if result.returncode != 0:
-            message = result.stderr.strip() or result.stdout.strip() or "ssh-keygen failed"
-            raise RuntimeError(f"could not sign release provenance: {message}")
-        generated_signature = Path(f"{provenance_path}.sig")
-        if generated_signature.exists():
-            generated_signature.replace(signature_path)
-        if not signature_path.exists():
-            raise RuntimeError("ssh-keygen did not produce a provenance signature file")
-        return signature_path.read_bytes()
-
-
-def _build_provenance_payload(
-    *,
-    snapshot,
-    release: Release,
-    repo_root: Path,
-    bundle_public_path: str,
-    manifest_public_path: str,
-    bundle_sha256: str,
-    bundle_size: int,
-    bundle_root_dir: str,
-    bundle_file_count: int,
-    signature_filename: str,
-    attestation_cfg: dict,
-    signer_identity: str,
-) -> dict:
-    publisher = snapshot.namespace.slug
-    skill_slug = snapshot.skill.slug
-    version = snapshot.skill_version.version
-    qualified_name = f"{publisher}/{skill_slug}"
-    release_marker = f"registry/{qualified_name}/v{version}"
-    release_ref = f"refs/registry-releases/{qualified_name}/{version}"
-    repo_url = _git_value(repo_root, "config", "--get", "remote.origin.url")
-    branch = _git_value(repo_root, "branch", "--show-current")
-    upstream = _git_value(repo_root, "rev-parse", "--abbrev-ref", "@{upstream}")
-    head_commit = _git_value(repo_root, "rev-parse", "HEAD")
-    content_mode = _snapshot_content_mode(snapshot)
-    source_ref = _snapshot_source_ref(snapshot)
-    source_commit = _content_ref_commit(
-        source_ref,
-        snapshot.skill_version.content_digest,
-    )
-    source_snapshot = {
-        "kind": "uploaded-bundle" if content_mode == "uploaded_bundle" else "content-ref",
-        "tag": release_marker,
-        "ref": source_ref,
-        "commit": source_commit,
-        "remote": repo_url,
-        "upstream": upstream,
-        "immutable": True,
-        "pushed": False,
-    }
-    registry_payload = {
-        "default_registry": "hosted",
-        "registries_consulted": ["hosted"],
-        "resolved": [
-            {
-                "registry_name": "hosted",
-                "registry_kind": "http",
-                "registry_url": None,
-                "registry_host": None,
-                "registry_priority": 100,
-                "registry_trust": "private",
-                "registry_root": str(repo_root),
-                "registry_pin_mode": "server-generated",
-                "registry_pin_value": release_marker,
-                "registry_ref": release_ref,
-                "registry_allowed_refs": [],
-                "registry_allowed_hosts": [],
-                "registry_update_mode": "server-managed",
-                "registry_commit": head_commit or source_commit,
-                "registry_tag": release_marker,
-                "registry_branch": branch,
-                "registry_origin_url": repo_url,
-                "registry_origin_host": None,
-            }
-        ],
-    }
-    dependency_step = {
-        "order": 1,
-        "name": skill_slug,
-        "publisher": publisher,
-        "qualified_name": qualified_name,
-        "identity_mode": "qualified",
-        "version": version,
-        "registry": "hosted",
-        "stage": "sealed",
-        "path": source_ref,
-        "skill_path": source_ref,
-        "relative_path": None,
-        "source_type": source_snapshot["kind"],
-        "distribution_manifest": manifest_public_path,
-        "distribution_bundle": bundle_public_path,
-        "distribution_bundle_sha256": bundle_sha256,
-        "distribution_attestation": None,
-        "distribution_attestation_signature": None,
-        "action": "install",
-        "needs_apply": True,
-        "requested_by": [],
-        "depends_on": [],
-        "conflicts_with": [],
-        "root": True,
-        "source_commit": source_commit,
-        "source_ref": source_ref,
-        "source_tag": release_marker,
-        "source_snapshot_kind": source_snapshot["kind"],
-        "source_snapshot_tag": source_snapshot["tag"],
-        "source_snapshot_ref": source_snapshot["ref"],
-        "source_snapshot_commit": source_snapshot["commit"],
-    }
-    releaser_identity = resolve_releaser_identity(repo_root)
-    return {
-        "$schema": "schemas/provenance.schema.json",
-        "schema_version": 1,
-        "kind": "skill-release-attestation",
-        "generated_at": _utc_now_iso(),
-        "skill": {
-            "name": skill_slug,
-            "publisher": publisher,
-            "qualified_name": qualified_name,
-            "identity_mode": "qualified",
-            "version": version,
-            "status": "active",
-            "summary": snapshot.skill.summary,
-            "path": f"server-generated/{publisher}/{skill_slug}",
-            "author": publisher,
-            "owners": [publisher],
-            "maintainers": [publisher],
-            "depends_on": [],
-            "conflicts_with": [],
-        },
-        "git": {
-            "repo_url": repo_url,
-            "branch": branch,
-            "upstream": upstream,
-            "commit": source_commit,
-            "head_commit": head_commit,
-            "expected_tag": release_marker,
-            "release_ref": release_ref,
-            "remote": None,
-            "remote_tag_object": None,
-            "remote_tag_commit": None,
-            "signed_tag_verified": True,
-            "tag_signer": signer_identity,
-        },
-        "source_snapshot": source_snapshot,
-        "registry": registry_payload,
-        "dependencies": {
-            "mode": "install",
-            "root": {
-                "name": skill_slug,
-                "publisher": publisher,
-                "qualified_name": qualified_name,
-                "version": version,
-                "registry": "hosted",
-                "stage": "sealed",
-                "path": source_ref,
-                "source_type": source_snapshot["kind"],
-                "distribution_manifest": manifest_public_path,
-                "source_snapshot_tag": source_snapshot["tag"],
-                "source_snapshot_commit": source_snapshot["commit"],
-            },
-            "steps": [dependency_step],
-            "registries_consulted": ["hosted"],
-        },
-        "review": {
-            "reviewers": [],
-            "effective_review_state": "not_applicable",
-            "required_approvals": 0,
-            "required_groups": [],
-            "covered_groups": [],
-            "missing_groups": [],
-            "approval_count": 0,
-            "blocking_rejection_count": 0,
-            "quorum_met": True,
-            "review_gate_pass": True,
-            "latest_decisions": [],
-            "ignored_decisions": [],
-            "configured_groups": {},
-        },
-        "release": {
-            "releaser_identity": releaser_identity,
-            "release_mode": "local-tag",
-            "transfer_required": False,
-            "transfer_authorized": True,
-            "authorized_signers": [signer_identity],
-            "authorized_releasers": [releaser_identity] if releaser_identity else [],
-            "transfer_matches": [],
-            "competing_claims": [],
-        },
-        "attestation": {
-            "format": attestation_cfg["format"],
-            "namespace": attestation_cfg["namespace"],
-            "allowed_signers": attestation_cfg["allowed_signers_rel"],
-            "signature_file": signature_filename,
-            "signature_ext": attestation_cfg["signature_ext"],
-            "signer_identity": signer_identity,
-            "policy_mode": attestation_cfg["policy_mode"],
-            "require_verified_attestation_for_release_output": attestation_cfg[
-                "require_release_output"
-            ],
-            "require_verified_attestation_for_distribution": attestation_cfg[
-                "require_distribution"
-            ],
-        },
-        "distribution": {
-            "manifest_path": manifest_public_path,
-            "bundle": {
-                "path": bundle_public_path,
-                "format": "tar.gz",
-                "sha256": bundle_sha256,
-                "size": bundle_size,
-                "root_dir": bundle_root_dir,
-                "file_count": bundle_file_count,
-            },
-        },
-        "release_snapshot": {
-            "release_id": release.id,
-            "skill_version_id": snapshot.skill_version.id,
-            "source": "draft" if snapshot.draft is not None else "version",
-            "draft_id": snapshot.draft.id if snapshot.draft is not None else None,
-        },
-    }
 
 
 def materialize_release(
@@ -527,119 +83,155 @@ def materialize_release(
     snapshot = service.get_release_snapshot(db, release_id)
     release = snapshot.release
     existing_artifacts = service.get_artifacts_for_release(db, release.id)
-    repo_root = Path(repo_root).resolve()
-    if _existing_materialization_is_current(
-        snapshot=snapshot,
-        release=release,
-        existing_artifacts=existing_artifacts,
-        artifact_root=artifact_root,
-        repo_root=repo_root,
+
+    # Check if existing materialization is still current
+    if (
+        release.state == "ready"
+        and release.manifest_artifact_id is not None
+        and release.bundle_artifact_id is not None
+        and release.signature_artifact_id is not None
+        and release.provenance_artifact_id is not None
+        and len(existing_artifacts) >= 4
+        and _existing_materialization_is_current(
+            snapshot=snapshot,
+            release=release,
+            existing_artifacts=existing_artifacts,
+            artifact_root=artifact_root,
+            repo_root=Path(repo_root).resolve(),
+        )
     ):
         return release, existing_artifacts
 
     publisher = snapshot.namespace.slug
-    version = snapshot.skill_version.version
     skill_slug = snapshot.skill.slug
-    provenance_basename = f"{publisher}--{skill_slug}-{version}.json"
-
-    bundle_public_path = f"skills/{publisher}/{skill_slug}/{version}/skill.tar.gz"
-    manifest_public_path = f"skills/{publisher}/{skill_slug}/{version}/manifest.json"
-    provenance_public_path = f"provenance/{provenance_basename}"
-    signature_public_path = f"provenance/{provenance_basename}.ssig"
-
+    version = snapshot.skill_version.version
     storage = storage_backend or build_artifact_storage(artifact_root)
-    bundle_bytes, bundle_file_count, bundle_root_dir = _materialize_bundle(
-        db,
-        snapshot=snapshot,
-        artifact_root=artifact_root,
+
+    # Build bundle
+    bundle_data, bundle_file_count, bundle_root_dir = _materialize_bundle(
+        db, snapshot=snapshot, artifact_root=artifact_root
     )
-    stored_bundle = storage.put_bytes(bundle_bytes, public_path=bundle_public_path)
+    bundle_sha256 = sha256_bytes(bundle_data)
+
+    # Public paths
+    skill_dir = Path("skills") / publisher / skill_slug / version
+    bundle_public_path = skill_dir / "skill.tar.gz"
+    manifest_public_path = skill_dir / "manifest.json"
+
+    # Store bundle
+    storage.put_bytes(bundle_data, public_path=str(bundle_public_path))
+
+    # Load attestation config and signing key
+    repo_root = Path(repo_root).resolve()
     attestation_cfg = load_attestation_config(repo_root)
-    signing_key = resolve_attestation_key(root=repo_root, config=attestation_cfg)
-    signer_identity = _resolve_signer_identity(
+    signing_key = resolve_attestation_key(repo_root, attestation_cfg)
+    signer_identity = resolve_signer_identity(
         repo_root=repo_root,
-        allowed_signers_path=attestation_cfg["allowed_signers_path"],
+        allowed_signers_path=repo_root / attestation_cfg["allowed_signers_rel"],
         signing_key=signing_key,
     )
-    provenance_payload = _build_provenance_payload(
+
+    # Build and sign provenance
+    signature_filename = (
+        f"{publisher}--{skill_slug}-{version}.json"
+        + attestation_cfg["signature_ext"]
+    )
+    provenance = build_provenance_payload(
         snapshot=snapshot,
         release=release,
         repo_root=repo_root,
-        bundle_public_path=bundle_public_path,
-        manifest_public_path=manifest_public_path,
-        bundle_sha256=stored_bundle.sha256,
-        bundle_size=stored_bundle.size_bytes,
+        bundle_public_path=str(bundle_public_path),
+        manifest_public_path=str(manifest_public_path),
+        bundle_sha256=bundle_sha256,
+        bundle_size=len(bundle_data),
         bundle_root_dir=bundle_root_dir,
         bundle_file_count=bundle_file_count,
-        signature_filename=Path(signature_public_path).name,
+        signature_filename=signature_filename,
         attestation_cfg=attestation_cfg,
         signer_identity=signer_identity,
     )
-    provenance_bytes = _canonical_json_bytes(provenance_payload)
-    signature_bytes = _sign_provenance(
+
+    from server.modules.release.bundle import canonical_json_bytes as _canonical_json
+    provenance_bytes = _canonical_json(provenance)
+
+    signature_bytes = sign_provenance(
         provenance_bytes=provenance_bytes,
-        provenance_filename=provenance_basename,
+        provenance_filename=f"{publisher}--{skill_slug}-{version}.json",
         signing_key=signing_key,
         namespace=attestation_cfg["namespace"],
         signature_ext=attestation_cfg["signature_ext"],
     )
-    stored_provenance = storage.put_bytes(provenance_bytes, public_path=provenance_public_path)
-    stored_signature = storage.put_bytes(signature_bytes, public_path=signature_public_path)
-    manifest_payload = build_distribution_manifest_payload(
-        artifact_root / provenance_public_path,
-        artifact_root / bundle_public_path,
+
+    # Store provenance and signature
+    provenance_public_path = (
+        Path("provenance") / f"{publisher}--{skill_slug}-{version}.json"
+    )
+    signature_public_path = Path(
+        f"provenance/{publisher}--{skill_slug}-{version}.json"
+        + attestation_cfg["signature_ext"]
+    )
+    storage.put_bytes(provenance_bytes, public_path=str(provenance_public_path))
+    storage.put_bytes(signature_bytes, public_path=str(signature_public_path))
+
+    # Build distribution manifest from on-disk provenance and bundle
+    provenance_disk_path = artifact_root / provenance_public_path
+    bundle_disk_path = artifact_root / bundle_public_path
+    manifest = build_distribution_manifest_payload(
+        provenance_disk_path,
+        bundle_disk_path,
         root=artifact_root,
         attestation_root=repo_root,
     )
-    manifest_bytes = _canonical_json_bytes(manifest_payload)
-    stored_manifest = storage.put_bytes(manifest_bytes, public_path=manifest_public_path)
+    manifest_bytes = _canonical_json(manifest)
+    storage.put_bytes(manifest_bytes, public_path=str(manifest_public_path))
 
+    # Upsert artifacts in DB
     bundle_artifact = service.upsert_artifact(
         db,
         release_id=release.id,
         kind="bundle",
-        storage_uri=stored_bundle.storage_uri,
-        sha256=stored_bundle.sha256,
-        size_bytes=stored_bundle.size_bytes,
+        storage_uri=str(bundle_public_path),
+        sha256=bundle_sha256,
+        size_bytes=len(bundle_data),
     )
     manifest_artifact = service.upsert_artifact(
         db,
         release_id=release.id,
         kind="manifest",
-        storage_uri=stored_manifest.storage_uri,
-        sha256=stored_manifest.sha256,
-        size_bytes=stored_manifest.size_bytes,
+        storage_uri=str(manifest_public_path),
+        sha256=sha256_bytes(manifest_bytes),
+        size_bytes=len(manifest_bytes),
     )
     provenance_artifact = service.upsert_artifact(
         db,
         release_id=release.id,
         kind="provenance",
-        storage_uri=stored_provenance.storage_uri,
-        sha256=stored_provenance.sha256,
-        size_bytes=stored_provenance.size_bytes,
+        storage_uri=str(provenance_public_path),
+        sha256=sha256_bytes(provenance_bytes),
+        size_bytes=len(provenance_bytes),
     )
     signature_artifact = service.upsert_artifact(
         db,
         release_id=release.id,
         kind="signature",
-        storage_uri=stored_signature.storage_uri,
-        sha256=stored_signature.sha256,
-        size_bytes=stored_signature.size_bytes,
+        storage_uri=str(signature_public_path),
+        sha256=sha256_bytes(signature_bytes),
+        size_bytes=len(signature_bytes),
     )
-    try:
-        skill_dir = resolve_skill(repo_root, skill_slug)
-        release_state = collect_release_state(skill_dir, mode="stable-release", root=repo_root)
-        platform_compatibility = release_state.get("release", {}).get("platform_compatibility", {})
-    except Exception:
-        platform_compatibility = {
-            "canonical_runtime_platform": "openclaw",
-            "canonical_runtime": {},
-            "blocking_platforms": [],
-        }
-    release.platform_compatibility_json = json.dumps(platform_compatibility, ensure_ascii=False)
-    db.add(release)
-    db.flush()
 
+    # Collect platform compatibility (optional — hosted skills may not exist on disk)
+    from infinitas_skill.release.release_resolution import resolve_skill
+    from infinitas_skill.release.service import collect_release_state
+
+    platform_compat = None
+    try:
+        resolved_skill = resolve_skill(repo_root, skill_slug)
+        release_state = collect_release_state(resolved_skill, root=repo_root)
+        platform_compat = release_state.get("platform_compatibility")
+    except Exception:
+        pass
+
+    db.refresh(release)
     service.mark_release_ready(
         db,
         release=release,
@@ -648,7 +240,10 @@ def materialize_release(
         signature_artifact_id=signature_artifact.id,
         provenance_artifact_id=provenance_artifact.id,
     )
-    return release, service.get_artifacts_for_release(db, release.id)
+
+    return service.get_release_or_404(db, release.id), service.get_artifacts_for_release(
+        db, release.id
+    )
 
 
 def release_requires_materialization(

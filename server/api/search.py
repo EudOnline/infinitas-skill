@@ -14,7 +14,7 @@ from server.db import get_db
 from server.modules.discovery import service as discovery_service
 from server.settings import get_settings
 
-router = APIRouter(prefix="/api/search", tags=["search"])
+router = APIRouter(prefix="/api/v1/search", tags=["search"])
 
 
 def _publisher_from_qualified_name(qualified_name: str) -> str:

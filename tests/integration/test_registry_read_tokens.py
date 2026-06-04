@@ -40,7 +40,7 @@ def _configure_env(monkeypatch, *, tmp_path: Path, repo: Path) -> Path:
     artifact_root = tmp_path / "artifacts"
     monkeypatch.setenv("INFINITAS_SERVER_ENV", "test")
     monkeypatch.setenv("INFINITAS_SERVER_DATABASE_URL", f"sqlite:///{tmp_path / 'server.db'}")
-    monkeypatch.setenv("INFINITAS_SERVER_SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("INFINITAS_SERVER_SECRET_KEY", "test-secret-key-32chars-long-minimum")
     monkeypatch.setenv("INFINITAS_SERVER_ARTIFACT_PATH", str(artifact_root))
     monkeypatch.setenv("INFINITAS_SERVER_REPO_PATH", str(repo))
     monkeypatch.setenv(
@@ -74,7 +74,7 @@ def _configure_public_env(monkeypatch, *, tmp_path: Path, repo: Path) -> Path:
     artifact_root = tmp_path / "artifacts"
     monkeypatch.setenv("INFINITAS_SERVER_ENV", "test")
     monkeypatch.setenv("INFINITAS_SERVER_DATABASE_URL", f"sqlite:///{tmp_path / 'server.db'}")
-    monkeypatch.setenv("INFINITAS_SERVER_SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("INFINITAS_SERVER_SECRET_KEY", "test-secret-key-32chars-long-minimum")
     monkeypatch.setenv("INFINITAS_SERVER_ARTIFACT_PATH", str(artifact_root))
     monkeypatch.setenv("INFINITAS_SERVER_REPO_PATH", str(repo))
     monkeypatch.delenv("INFINITAS_REGISTRY_READ_TOKENS", raising=False)
@@ -234,7 +234,7 @@ def test_registry_read_tokens_gate_registry_routes_without_breaking_user_credent
     assert maintainer_token.status_code == 200, maintainer_token.text
 
     login_response = client.post(
-        "/api/auth/login?lang=en",
+        "/api/v1/auth/login?lang=en",
         json={"username": "fixture-maintainer", "password": "fixture-maintainer-password"},
     )
     assert login_response.status_code == 200, login_response.text

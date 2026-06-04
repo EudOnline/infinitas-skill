@@ -10,7 +10,7 @@ from server.app import create_app
 def _middleware_client(tmp_path: Path) -> TestClient:
     import os
     os.environ["INFINITAS_SERVER_DATABASE_URL"] = f"sqlite:///{tmp_path / 'mw.db'}"
-    os.environ["INFINITAS_SERVER_SECRET_KEY"] = "mw-test-secret"
+    os.environ["INFINITAS_SERVER_SECRET_KEY"] = "mw-test-secret-32chars-long-minimum"
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(tmp_path / "artifacts")
     os.environ["INFINITAS_SERVER_BOOTSTRAP_USERS"] = "[]"
     os.environ["INFINITAS_SERVER_ALLOWED_HOSTS"] = '["localhost","127.0.0.1","testserver"]'

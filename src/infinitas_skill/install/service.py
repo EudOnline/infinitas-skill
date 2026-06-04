@@ -369,9 +369,7 @@ def plan_from_registry_entry(entry: dict, *, memory_mode: str | None = None) -> 
     )
     supported_memory_modes = list(memory_selection["supported_memory_modes"])
     default_memory_mode = memory_selection["default_memory_mode"]
-    selected_memory_mode = None
-    if kind == "agent_preset":
-        selected_memory_mode = memory_selection["selected_memory_mode"]
+    selected_memory_mode = memory_selection.get("selected_memory_mode")
 
     root = {
         "kind": kind,

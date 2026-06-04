@@ -566,7 +566,7 @@ def test_server_memory_curation_command_can_enqueue_using_server_policy(tmp_path
         expect=0,
         env={
             "INFINITAS_SERVER_ENV": "test",
-            "INFINITAS_SERVER_SECRET_KEY": "test-secret-key",
+            "INFINITAS_SERVER_SECRET_KEY": "test-secret-key-32chars-long-minimum",
             "INFINITAS_SERVER_BOOTSTRAP_USERS": "[]",
             "INFINITAS_SERVER_MEMORY_CURATION_ACTION": "prune",
             "INFINITAS_SERVER_MEMORY_CURATION_APPLY": "1",

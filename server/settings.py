@@ -10,8 +10,66 @@ from infinitas_skill.memory.config import load_memory_config
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SERVER_ENV = 'development'
-DEFAULT_SECRET_KEY = 'change-me'
+DEFAULT_SECRET_KEY = 'dev-only-insecure-key'  # noqa: S105
 DEFAULT_ALLOWED_HOSTS = ['testserver', 'localhost', '127.0.0.1', '::1']
+MIN_SECRET_KEY_LENGTH = 32  # Minimum secure key length in bytes
+
+
+def validate_secret_key_strength(secret_key: str, environment: str) -> None:
+    """Validate secret key meets security requirements.
+
+    Args:
+        secret_key: The secret key to validate
+        environment: Current server environment
+
+    Raises:
+        RuntimeError: If the key doesn't meet security requirements
+    """
+    if not secret_key:
+        raise RuntimeError('INFINITAS_SERVER_SECRET_KEY cannot be empty')
+
+    # In test mode, allow shorter keys for convenience
+    if environment == 'test':
+        if len(secret_key) < 8:
+            raise RuntimeError(
+                f'INFINITAS_SERVER_SECRET_KEY must be at least 8 characters in test mode. '
+                f'Current length: {len(secret_key)}.'
+            )
+        return
+
+    if len(secret_key) < MIN_SECRET_KEY_LENGTH:
+        raise RuntimeError(
+            f'INFINITAS_SERVER_SECRET_KEY must be at least {MIN_SECRET_KEY_LENGTH} characters. '
+            f'Current length: {len(secret_key)}. '
+            f'Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"'
+        )
+
+    # Check for obviously weak keys in production
+    if environment == 'production':
+        weak_patterns = [
+            DEFAULT_SECRET_KEY,
+            'secret',
+            'password',
+            'key',
+            'test',
+            'dev',
+            '123456',
+            'password123',
+        ]
+        lower_key = secret_key.lower()
+        for pattern in weak_patterns:
+            if pattern in lower_key:
+                raise RuntimeError(
+                    f'INFINITAS_SERVER_SECRET_KEY contains weak pattern "{pattern}". '
+                    f'Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"'
+                )
+
+        # Check for repeated characters (indicates poor randomness)
+        if len(set(secret_key)) < len(secret_key) * 0.5:
+            raise RuntimeError(
+                'INFINITAS_SERVER_SECRET_KEY appears to have low entropy. '
+                'Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"'
+            )
 
 DEFAULT_BOOTSTRAP_USERS = [
     {
@@ -178,10 +236,14 @@ def get_settings() -> Settings:
     if not secret_key or secret_key == DEFAULT_SECRET_KEY:
         if not allow_insecure_defaults:
             raise RuntimeError(
-                'INFINITAS_SERVER_SECRET_KEY must be set to a non-default value when '
-                'INFINITAS_SERVER_ENV=production'
+                'INFINITAS_SERVER_SECRET_KEY must be set to a secure, non-default value '
+                'when INFINITAS_SERVER_ENV=production. '
+                'Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"'
             )
         secret_key = DEFAULT_SECRET_KEY
+    else:
+        # Validate secret key strength for non-default keys
+        validate_secret_key_strength(secret_key, environment)
     allowed_hosts = _load_allowed_hosts(environment)
 
     bootstrap_raw = os.environ.get('INFINITAS_SERVER_BOOTSTRAP_USERS')

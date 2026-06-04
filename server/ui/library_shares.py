@@ -16,7 +16,7 @@ from server.ui.library_access import (
 )
 from server.ui.library_scope import (
     LibraryScope,
-    iter_object_release_rows,
+    iter_skill_release_rows,
     load_library_scope,
     parse_datetime,
 )
@@ -52,8 +52,8 @@ def build_share_rows_from_scope(
     object_id: int | None = None,
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    for registry_object, release, version in iter_object_release_rows(scope):
-        if object_id is not None and registry_object.id != object_id:
+    for skill, release, version in iter_skill_release_rows(scope):
+        if object_id is not None and skill.id != object_id:
             continue
         for exposure in scope.exposures_by_release_id.get(release.id, []):
             for grant in scope.grants_by_exposure_id.get(exposure.id, []):
@@ -64,9 +64,9 @@ def build_share_rows_from_scope(
                 rows.append(
                     {
                         "id": grant.id,
-                        "object_id": registry_object.id,
-                        "object_name": registry_object.display_name,
-                        "object_href": with_lang(f"/library/{registry_object.id}", lang),
+                        "object_id": skill.id,
+                        "object_name": skill.display_name,
+                        "object_href": with_lang(f"/library/{skill.id}", lang),
                         "release_id": release.id,
                         "release_version": version.version if version is not None else None,
                         "label": share_label(constraints),

@@ -7,12 +7,12 @@ from sqlalchemy.orm import Session
 
 from server.auth import get_current_access_context
 from server.db import get_db
-from server.models import AuditEvent, Credential, RegistryObject, Release
+from server.models import AuditEvent, Credential, Release, Skill
 from server.modules.access.authn import AccessContext
+from server.modules.access.models import AccessGrant
 from server.modules.audit.read_model import activity_query, json_payload
-from server.modules.shares.models import ShareLink
 
-router = APIRouter(tags=["activity"])
+router = APIRouter(prefix="/api/v1/activity", tags=["activity"])
 
 
 def _require_actor(context: AccessContext) -> None:
@@ -26,13 +26,13 @@ def _object_payload(db: Session, payload: dict[str, Any]) -> dict[str, Any] | No
     object_id = payload.get("object_id")
     if not object_id:
         return None
-    registry_object = db.get(RegistryObject, int(object_id))
-    if registry_object is None:
+    skill = db.get(Skill, int(object_id))
+    if skill is None:
         return {"id": int(object_id), "name": None, "kind": None}
     return {
-        "id": registry_object.id,
-        "name": registry_object.display_name,
-        "kind": registry_object.kind,
+        "id": skill.id,
+        "name": skill.display_name,
+        "kind": "skill",
     }
 
 
@@ -62,7 +62,7 @@ def _normalize_event(db: Session, event: AuditEvent) -> dict[str, Any]:
     }
 
 
-@router.get("/api/activity")
+@router.get("/")
 def list_activity(
     limit: int = 100,
     context: AccessContext = Depends(get_current_access_context),
@@ -85,7 +85,7 @@ def _assert_token_owner(
         raise HTTPException(status_code=403, detail="token access denied")
 
 
-@router.get("/api/tokens/{token_id}/activity")
+@router.get("/tokens/{token_id}/activity")
 def token_activity(
     token_id: int,
     context: AccessContext = Depends(get_current_access_context),
@@ -112,12 +112,12 @@ def _assert_share_owner(
 ) -> None:
     if is_maintainer:
         return
-    share = db.get(ShareLink, share_id)
-    if share is None or share.created_by_principal_id != principal_id:
+    grant = db.get(AccessGrant, share_id)
+    if grant is None or grant.grant_type != "link" or grant.created_by_principal_id != principal_id:
         raise HTTPException(status_code=403, detail="share link access denied")
 
 
-@router.get("/api/share-links/{share_id}/activity")
+@router.get("/share-links/{share_id}/activity")
 def share_link_activity(
     share_id: int,
     context: AccessContext = Depends(get_current_access_context),

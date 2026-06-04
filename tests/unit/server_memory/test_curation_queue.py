@@ -37,7 +37,7 @@ class TestResolveMemoryCurationJobOptions:
 
     def test_use_server_policy(self):
         with patch(
-            "src.infinitas_skill.server.memory_curation_queue.get_settings"
+            "server.settings.get_settings"
         ) as mock_settings:
             settings = MagicMock()
             settings.memory_curation_action = "execute"

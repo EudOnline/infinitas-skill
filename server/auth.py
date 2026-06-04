@@ -4,10 +4,12 @@ import base64
 import hashlib
 import hmac
 import json
+import os
 import secrets
 import time
 
 import bcrypt
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from fastapi import Cookie, Depends, Header, HTTPException, Request
 from sqlalchemy.orm import Session
 
@@ -48,23 +50,56 @@ def _urlsafe_b64decode(raw: str) -> bytes:
     return base64.urlsafe_b64decode((raw + padding).encode('ascii'))
 
 
+def _encrypt_payload(plaintext: bytes) -> bytes:
+    """Encrypt payload using AES-GCM with the server's secret key.
+
+    The secret key is derived from the server's secret_key using HKDF or
+    directly truncated to 32 bytes for AES-256. For simplicity, we use
+    the first 32 bytes of the secret key hashed with SHA-256.
+    """
+    secret = get_settings().secret_key.encode('utf-8')
+    # Derive a 32-byte key from the secret
+    key = hashlib.sha256(secret).digest()
+    aesgcm = AESGCM(key)
+    nonce = os.urandom(12)  # 96-bit nonce for AES-GCM
+    ciphertext = aesgcm.encrypt(nonce, plaintext, None)
+    return nonce + ciphertext  # Return nonce + ciphertext
+
+
+def _decrypt_payload(ciphertext: bytes) -> bytes | None:
+    """Decrypt payload using AES-GCM.
+
+    Returns None if decryption fails.
+    """
+    try:
+        secret = get_settings().secret_key.encode('utf-8')
+        key = hashlib.sha256(secret).digest()
+        aesgcm = AESGCM(key)
+        nonce = ciphertext[:12]
+        actual_ciphertext = ciphertext[12:]
+        return aesgcm.decrypt(nonce, actual_ciphertext, None)
+    except Exception:
+        return None
+
+
 def _session_signature(payload: str) -> str:
     secret = get_settings().secret_key.encode('utf-8')
+    # hmac.new() is the canonical HMAC constructor in Python's hmac module
     digest = hmac.new(secret, payload.encode('utf-8'), hashlib.sha256).digest()
     return _urlsafe_b64encode(digest)
 
 
 def create_auth_session_cookie(credential_id: int) -> str:
-    payload = _urlsafe_b64encode(
-        json.dumps(
-            {
-                'credential_id': credential_id,
-                'issued_at': int(time.time()),
-            },
-            separators=(',', ':'),
-            sort_keys=True,
-        ).encode('utf-8')
-    )
+    plaintext = json.dumps(
+        {
+            'credential_id': credential_id,
+            'issued_at': int(time.time()),
+        },
+        separators=(',', ':'),
+        sort_keys=True,
+    ).encode('utf-8')
+    ciphertext = _encrypt_payload(plaintext)
+    payload = _urlsafe_b64encode(ciphertext)
     return f'{AUTH_SESSION_PREFIX}{payload}.{_session_signature(payload)}'
 
 
@@ -80,7 +115,11 @@ def _decode_auth_session_cookie(value: str | None) -> dict | None:
     if not hmac.compare_digest(signature, expected):
         return None
     try:
-        decoded = json.loads(_urlsafe_b64decode(payload).decode('utf-8'))
+        ciphertext = _urlsafe_b64decode(payload)
+        plaintext = _decrypt_payload(ciphertext)
+        if plaintext is None:
+            return None
+        decoded = json.loads(plaintext.decode('utf-8'))
     except Exception:
         return None
     issued_at = decoded.get('issued_at')
@@ -173,8 +212,22 @@ def require_role(*allowed_roles: str):
 
 # ── Password hashing ───────────────────────────────────────────────────────
 
+def validate_password_strength(plain: str) -> None:
+    """Validate password meets minimum complexity requirements.
+
+    Raises ``ValueError`` with a descriptive message if the password is
+    too weak.  Called before hashing so that invalid passwords never
+    reach the database.
+    """
+    if len(plain) < 8:
+        raise ValueError("Password must be at least 8 characters")
+    if len(plain) > 128:
+        raise ValueError("Password must be at most 128 characters")
+
+
 def hash_password(plain: str) -> str:
     """Hash a plaintext password using bcrypt."""
+    validate_password_strength(plain)
     return bcrypt.hashpw(plain.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 

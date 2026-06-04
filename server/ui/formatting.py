@@ -82,14 +82,6 @@ def humanize_role(role: str | None, lang: str) -> str:
         },
     )
 
-def humanize_object_kind(kind: str | None, lang: str) -> str:
-    return _humanize_with_mapping(
-        kind,
-        lang,
-        {
-        },
-    )
-
 def humanize_audience_type(audience_type: str | None, lang: str) -> str:
     return _humanize_with_mapping(
         audience_type,
@@ -369,8 +361,6 @@ def build_kawaii_ui_context(
             "empty_token_activity": t(lang, "empty_token_activity"),
             "empty_tokens_hint": t(lang, "empty_tokens_hint"),
             "empty_visibility_channels": t(lang, "empty_visibility_channels"),
-            "filter_agent_code": t(lang, "filter_agent_code"),
-            "filter_agent_presets": t(lang, "filter_agent_presets"),
             "filter_all": t(lang, "filter_all"),
             "filter_aria_label": t(lang, "filter_aria_label"),
             "filter_placeholder": t(lang, "filter_placeholder"),

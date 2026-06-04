@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import time
+
 from infinitas_skill.memory import build_memory_provider
 from infinitas_skill.server.memory_curation import execute_memory_curation
 from server.db import get_session_factory
 from server.jobs import (
+    MAX_RETRY_ATTEMPTS,
     append_job_log,
     claim_next_job,
     complete_job,
@@ -11,6 +14,7 @@ from server.jobs import (
     heartbeat_job,
     load_job_payload,
 )
+from server.logging import get_logger
 from server.models import Job
 from server.modules.discovery.projections import refresh_projection_snapshot
 from server.modules.memory.service import record_lifecycle_memory_event_best_effort
@@ -18,6 +22,8 @@ from server.modules.release.materializer import materialize_release
 from server.modules.release.service import get_release_snapshot
 from server.repo_ops import RepoOpError
 from server.settings import get_settings
+
+log = get_logger(__name__)
 
 
 def _resolve_release_id(job: Job) -> int:
@@ -83,6 +89,24 @@ def _process_memory_curation_job(session, job: Job):
     return summary
 
 
+def _is_retryable_error(exc: Exception) -> bool:
+    """Determine if a job failure is transient and worth retrying."""
+    message = str(exc).lower()
+    # Network/git transient failures
+    retryable_patterns = [
+        'timeout',
+        'timed out',
+        'connection refused',
+        'connection reset',
+        'temporary failure',
+        'could not resolve host',
+        'name or service not known',
+        'network is unreachable',
+        'no space left on device',  # may resolve if other jobs free space
+    ]
+    return any(pattern in message for pattern in retryable_patterns)
+
+
 def process_job(job_id: int):
     settings = get_settings()
     factory = get_session_factory()
@@ -100,6 +124,11 @@ def process_job(job_id: int):
                 raise RepoOpError(f'unsupported job kind: {job.kind}')
             complete_job(session, job, commit=False)
             session.commit()
+            log.info(
+                "job completed id=%d kind=%s",
+                job.id,
+                job.kind,
+            )
             if job.kind == 'materialize_release':
                 snapshot = get_release_snapshot(session, release.id)
                 record_lifecycle_memory_event_best_effort(
@@ -116,20 +145,71 @@ def process_job(job_id: int):
                     },
                 )
         except Exception as exc:
-            fail_job(session, job, error_message=str(exc), commit=False)
+            retryable = _is_retryable_error(exc)
+            if retryable and (job.attempt_count or 0) < MAX_RETRY_ATTEMPTS:
+                log.warning(
+                    "job failed (retryable) id=%d kind=%s attempt=%d error=%s",
+                    job.id,
+                    job.kind,
+                    job.attempt_count,
+                    exc,
+                )
+            else:
+                log.error(
+                    "job failed (permanent) id=%d kind=%s error=%s",
+                    job.id,
+                    job.kind,
+                    exc,
+                )
+            fail_job(
+                session,
+                job,
+                error_message=str(exc),
+                commit=False,
+                retryable=retryable,
+            )
             session.commit()
             raise
 
 
-def run_worker_loop(limit: int | None = None) -> int:
+def run_worker_loop(
+    limit: int | None = None,
+    *,
+    poll_interval: float = 5.0,
+    daemon: bool = False,
+) -> int:
+    """Process jobs from the queue.
+
+    Parameters
+    ----------
+    limit:
+        Maximum number of jobs to process. ``None`` means unlimited.
+    poll_interval:
+        Seconds to sleep between empty-queue checks when *daemon* is True.
+    daemon:
+        If True, keep polling even when the queue is empty (supervisor mode).
+        If False (default), exit when no jobs are available (original batch mode).
+    """
     processed = 0
     factory = get_session_factory()
+    consecutive_empty = 0
     while limit is None or processed < limit:
         with factory() as session:
             job = claim_next_job(session)
             if job is None:
-                break
+                if not daemon:
+                    break
+                consecutive_empty += 1
+                if consecutive_empty == 1:
+                    log.info("worker idle, polling every %.1fs", poll_interval)
+                time.sleep(poll_interval)
+                continue
+            consecutive_empty = 0
             job_id = job.id
-        process_job(job_id)
+        try:
+            process_job(job_id)
+        except Exception as _job_exc:
+            # process_job already marks the job failed/retried; log and continue
+            log.debug("job %d error suppressed in loop: %s", job_id, _job_exc)
         processed += 1
     return processed

@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from server.models import Principal, RegistryObject, Skill, SkillDraft, SkillVersion, utcnow
+from server.models import Principal, Skill, SkillDraft, SkillVersion, utcnow
 from server.modules.release.models import Artifact, Release
 
 
@@ -167,13 +167,7 @@ def create_or_get_release(
 
     release = Release(
         skill_version_id=skill_version.id,
-        registry_object_id=skill.registry_object_id,
-        object_kind=(
-            _ro.kind
-            if skill.registry_object_id is not None
-            and (_ro := db.get(RegistryObject, skill.registry_object_id)) is not None
-            else "skill"
-        ),
+        skill_id=skill.id,
         state="preparing",
         format_version="1",
         created_by_principal_id=actor_principal_id,

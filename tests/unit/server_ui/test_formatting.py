@@ -6,7 +6,6 @@ from server.ui.formatting import (
     humanize_install_mode,
     humanize_job_kind,
     humanize_listing_mode,
-    humanize_object_kind,
     humanize_review_gate,
     humanize_role,
     humanize_status,
@@ -105,15 +104,6 @@ class TestHumanizeRole:
 
     def test_unknown_role(self):
         assert humanize_role("guest", "en") == "Guest"
-
-
-class TestHumanizeObjectKind:
-    def test_skill(self):
-        # Mapping is empty, falls back to humanize_identifier
-        assert humanize_object_kind("skill", "zh") == "Skill"
-
-    def test_agent_preset(self):
-        assert humanize_object_kind("agent_preset", "en") == "Agent Preset"
 
 
 class TestHumanizeAudienceType:

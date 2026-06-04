@@ -41,7 +41,11 @@ def _configure_env(monkeypatch, *, tmp_path: Path, repo: Path) -> Path:
     artifact_root = tmp_path / "artifacts"
     monkeypatch.setenv("INFINITAS_SERVER_ENV", "test")
     monkeypatch.setenv("INFINITAS_SERVER_DATABASE_URL", f"sqlite:///{tmp_path / 'server.db'}")
-    monkeypatch.setenv("INFINITAS_SERVER_SECRET_KEY", "test-secret-key")
+    # Use a 32-character secret key to meet security requirements
+    monkeypatch.setenv(
+        "INFINITAS_SERVER_SECRET_KEY",
+        "test-secret-key-for-integration-tests-32chars",
+    )
     monkeypatch.setenv("INFINITAS_SERVER_ARTIFACT_PATH", str(artifact_root))
     monkeypatch.setenv("INFINITAS_SERVER_REPO_PATH", str(repo))
     monkeypatch.setenv(

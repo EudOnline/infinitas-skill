@@ -295,16 +295,6 @@ def create_skill(
         raise ConflictError("skill slug already exists in namespace")
     skill = repository.create_skill(
         db,
-        registry_object_id=repository.create_registry_object(
-            db,
-            kind="skill",
-            namespace_id=namespace_id,
-            slug=payload.slug,
-            display_name=payload.display_name,
-            summary=payload.summary,
-            default_visibility_profile=payload.default_visibility_profile,
-            created_by_principal_id=actor_principal_id,
-        ).id,
         namespace_id=namespace_id,
         slug=payload.slug,
         display_name=payload.display_name,

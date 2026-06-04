@@ -2,14 +2,19 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import HTTPException, Request
+from fastapi import Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from server.auth import maybe_get_current_access_context
-from server.models import Principal, Release, Skill, SkillDraft, SkillVersion, User
+from server.models import Principal, User
 from server.modules.access.authn import AccessContext
 from server.ui.i18n import build_auth_redirect_url, resolve_language
+from server.ui_service import (
+    get_draft_bundle_or_404,
+    get_release_bundle_or_404,
+    get_skill_or_404,
+)
 
 
 def hydrate_auth_state(
@@ -65,36 +70,28 @@ def require_lifecycle_actor(
     return context
 
 
-def require_skill_or_404(db: Session, skill_id: int) -> Skill:
-    skill = db.get(Skill, skill_id)
-    if skill is None:
-        raise HTTPException(status_code=404, detail="skill not found")
-    return skill
+def require_skill_or_404(db: Session, skill_id: int):
+    """Get a skill by ID or raise 404.
+
+    Delegates to ui_service layer for database access.
+    """
+    return get_skill_or_404(db, skill_id)
 
 
-def require_draft_bundle_or_404(db: Session, draft_id: int) -> tuple[SkillDraft, Skill]:
-    draft = db.get(SkillDraft, draft_id)
-    if draft is None:
-        raise HTTPException(status_code=404, detail="draft not found")
-    skill = db.get(Skill, draft.skill_id)
-    if skill is None:
-        raise HTTPException(status_code=404, detail="skill not found")
-    return draft, skill
+def require_draft_bundle_or_404(db: Session, draft_id: int):
+    """Get a draft and its associated skill.
+
+    Delegates to ui_service layer for database access.
+    """
+    return get_draft_bundle_or_404(db, draft_id)
 
 
-def require_release_bundle_or_404(
-    db: Session, release_id: int
-) -> tuple[Release, SkillVersion, Skill]:
-    release = db.get(Release, release_id)
-    if release is None:
-        raise HTTPException(status_code=404, detail="release not found")
-    version = db.get(SkillVersion, release.skill_version_id)
-    if version is None:
-        raise HTTPException(status_code=404, detail="skill version not found")
-    skill = db.get(Skill, version.skill_id)
-    if skill is None:
-        raise HTTPException(status_code=404, detail="skill not found")
-    return release, version, skill
+def require_release_bundle_or_404(db: Session, release_id: int):
+    """Get a release with its version and skill.
+
+    Delegates to ui_service layer for database access.
+    """
+    return get_release_bundle_or_404(db, release_id)
 
 
 __all__ = [
@@ -105,4 +102,7 @@ __all__ = [
     "require_lifecycle_actor",
     "require_release_bundle_or_404",
     "require_skill_or_404",
+    "get_skill_or_404",
+    "get_draft_bundle_or_404",
+    "get_release_bundle_or_404",
 ]

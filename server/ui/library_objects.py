@@ -4,7 +4,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from server.models import Exposure, RegistryObject
+from server.models import Exposure, Skill
 from server.modules.access.authn import AccessContext
 from server.ui.formatting import humanize_timestamp, load_json_list, load_json_object
 from server.ui.library_access import (
@@ -34,20 +34,18 @@ def visibility_payload(exposure: Exposure | None) -> dict[str, Any]:
 def current_release_payload(
     scope: LibraryScope,
     *,
-    object_id: int,
-    skill_id: int | None,
+    skill_id: int,
 ) -> dict[str, Any] | None:
-    releases = scope.releases_by_object_id.get(object_id, [])
+    releases = scope.releases_by_skill_id.get(skill_id, [])
     if not releases:
         return None
     release = releases[0]
     version_label = None
-    if skill_id is not None:
-        versions = scope.versions_by_skill_id.get(skill_id, [])
-        version_map = {version.id: version for version in versions}
-        version = version_map.get(release.skill_version_id)
-        if version is not None:
-            version_label = version.version
+    versions = scope.versions_by_skill_id.get(skill_id, [])
+    version_map = {version.id: version for version in versions}
+    version = version_map.get(release.skill_version_id)
+    if version is not None:
+        version_label = version.version
     return {
         "release_id": release.id,
         "version": version_label,
@@ -56,44 +54,17 @@ def current_release_payload(
     }
 
 
-def type_details(scope: LibraryScope, registry_object: RegistryObject) -> dict[str, Any]:
-    if registry_object.kind == "agent_preset":
-        spec = scope.preset_specs_by_object_id.get(registry_object.id)
-        if spec is None:
-            return {"kind": "agent_preset"}
-        return {
-            "kind": "agent_preset",
-            "runtime_family": spec.runtime_family,
-            "supported_memory_modes": load_json_list(spec.supported_memory_modes_json),
-            "default_memory_mode": spec.default_memory_mode,
-            "pinned_skill_dependencies": load_json_list(spec.pinned_skill_dependencies_json),
-        }
-    if registry_object.kind == "agent_code":
-        spec = scope.code_specs_by_object_id.get(registry_object.id)
-        if spec is None:
-            return {"kind": "agent_code"}
-        return {
-            "kind": "agent_code",
-            "runtime_family": spec.runtime_family,
-            "language": spec.language,
-            "entrypoint": spec.entrypoint,
-            "external_source": load_json_object(spec.external_source_json),
-        }
-    skill = scope.skills_by_object_id.get(registry_object.id)
+def type_details(scope: LibraryScope, skill: Skill) -> dict[str, Any]:
     return {
         "kind": "skill",
-        "default_visibility_profile": (
-            skill.default_visibility_profile if skill is not None else None
-        ),
+        "default_visibility_profile": skill.default_visibility_profile,
     }
 
 
-def object_payload(scope: LibraryScope, registry_object: RegistryObject) -> dict[str, Any]:
-    skill = scope.skills_by_object_id.get(registry_object.id)
+def object_payload(scope: LibraryScope, skill: Skill) -> dict[str, Any]:
     current_release = current_release_payload(
         scope,
-        object_id=registry_object.id,
-        skill_id=skill.id if skill is not None else None,
+        skill_id=skill.id,
     )
     release_id = current_release["release_id"] if current_release is not None else None
     current_exposure = None
@@ -103,7 +74,7 @@ def object_payload(scope: LibraryScope, registry_object: RegistryObject) -> dict
 
     share_link_count = 0
     token_count = 0
-    for release in scope.releases_by_object_id.get(registry_object.id, []):
+    for release in scope.releases_by_skill_id.get(skill.id, []):
         for exposure in scope.exposures_by_release_id.get(release.id, []):
             grants = scope.grants_by_exposure_id.get(exposure.id, [])
             for grant in grants:
@@ -118,12 +89,12 @@ def object_payload(scope: LibraryScope, registry_object: RegistryObject) -> dict
                         token_count += 1
 
     return {
-        "id": registry_object.id,
-        "kind": registry_object.kind,
-        "slug": registry_object.slug,
-        "display_name": registry_object.display_name,
-        "summary": registry_object.summary or "",
-        "updated_at": humanize_timestamp(iso_stamp(registry_object.updated_at)),
+        "id": skill.id,
+        "kind": "skill",
+        "slug": skill.slug,
+        "display_name": skill.display_name,
+        "summary": skill.summary or "",
+        "updated_at": humanize_timestamp(iso_stamp(skill.updated_at)),
         "current_release": current_release,
         "current_visibility": visibility_payload(current_exposure),
         "token_count": token_count,
@@ -133,7 +104,7 @@ def object_payload(scope: LibraryScope, registry_object: RegistryObject) -> dict
 
 def list_library_objects(db: Session, *, actor: AccessContext) -> list[dict[str, Any]]:
     scope = load_library_scope(db, actor=actor)
-    return [object_payload(scope, item) for item in scope.objects]
+    return [object_payload(scope, item) for item in scope.skills]
 
 
 def get_library_object_detail(
@@ -147,11 +118,11 @@ def get_library_object_detail(
 
     if scope is None:
         scope = load_library_scope(db, actor=actor)
-    registry_object = next((item for item in scope.objects if item.id == object_id), None)
-    if registry_object is None:
+    skill = next((item for item in scope.skills if item.id == object_id), None)
+    if skill is None:
         return None
     return {
-        "object": object_payload(scope, registry_object),
-        "details": type_details(scope, registry_object),
-        "releases": list_library_releases_from_scope(scope, object_id=object_id),
+        "object": object_payload(scope, skill),
+        "details": type_details(scope, skill),
+        "releases": list_library_releases_from_scope(scope, skill_id=object_id),
     }

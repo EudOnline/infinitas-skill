@@ -16,7 +16,7 @@ from server.models import (
     Credential,
     Exposure,
     Principal,
-    RegistryObject,
+    Skill,
     SkillVersion,
     utcnow,
 )
@@ -25,10 +25,15 @@ from server.modules.access.authn import AccessContext
 from server.modules.audit import service as audit_service
 from server.modules.release import service as release_service
 from server.modules.shares import service as share_service
+from server.pagination import (
+    PaginationParams,
+    create_paginated_response,
+    query_pagination_params,
+)
 from server.ui.library_objects import get_library_object_detail, list_library_objects
 from server.ui.library_releases import list_library_releases
 
-router = APIRouter(tags=["library"])
+router = APIRouter(prefix="/api/v1/library", tags=["library"])
 
 
 def _require_library_actor(context: AccessContext) -> AccessContext:
@@ -70,7 +75,7 @@ def _require_release_write_context(
     *,
     actor: AccessContext,
     release_id: int,
-) -> tuple[RegistryObject, Principal, str]:
+) -> tuple[Skill, Principal, str]:
     try:
         release = release_service.get_release_or_404(db, release_id)
     except release_service.NotFoundError as exc:
@@ -88,10 +93,10 @@ def _require_release_write_context(
     except release_service.NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    registry_object = db.get(RegistryObject, release.registry_object_id)
-    if registry_object is None:
-        raise HTTPException(status_code=409, detail="release object metadata missing")
-    owner = db.get(Principal, registry_object.namespace_id)
+    skill = db.get(Skill, release.skill_id)
+    if skill is None:
+        raise HTTPException(status_code=409, detail="release skill metadata missing")
+    owner = db.get(Principal, skill.namespace_id)
     if owner is None:
         raise HTTPException(status_code=409, detail="release owner metadata missing")
 
@@ -101,39 +106,25 @@ def _require_release_write_context(
         if version is not None and version.version:
             version_label = version.version
 
-    return registry_object, owner, version_label
+    return skill, owner, version_label
 
 
 def _require_active_grant_exposure(db: Session, *, release_id: int) -> Exposure:
-    exposure = db.scalar(
-        select(Exposure)
-        .where(Exposure.release_id == release_id)
-        .where(Exposure.audience_type == "grant")
-        .where(Exposure.state == "active")
-        .where(Exposure.install_mode == "enabled")
-        .order_by(Exposure.id.desc())
-    )
-    if exposure is None:
+    try:
+        return access_service.require_active_grant_exposure(db, release_id=release_id)
+    except ValueError:
         raise HTTPException(
             status_code=409,
             detail="active grant visibility required before issuing tokens or share links",
         )
-    return exposure
 
 
-def _build_install_path(*, owner: Principal, registry_object: RegistryObject, version: str) -> str:
-    return f"/api/v1/install/grant/{owner.slug}/{registry_object.slug}@{version}"
+def _build_install_path(*, owner: Principal, skill: Skill, version: str) -> str:
+    return f"/api/v1/install/grant/{owner.slug}/{skill.slug}@{version}"
 
 
 def _token_type_for_scopes(scopes_json: str | None) -> str:
-    scopes = access_service.parse_scopes(scopes_json)
-    if any(
-        scope.endswith(":write")
-        or scope in {"authoring:write", "publish:write", "registry:publish"}
-        for scope in scopes
-    ):
-        return "publisher"
-    return "reader"
+    return access_service.token_type_for_scopes(scopes_json)
 
 
 def _require_grant(db: Session, *, grant_id: int, grant_type: str | None = None) -> AccessGrant:
@@ -152,17 +143,34 @@ def _release_id_for_grant(db: Session, *, grant: AccessGrant) -> int:
     return int(exposure.release_id)
 
 
-@router.get("/api/library")
+@router.get("/")
 def library_list(
+    pagination: PaginationParams = Depends(query_pagination_params),
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
 ):
+    """List library objects with pagination.
+
+    Query Parameters:
+        skip: Number of items to skip (default: 0, max: 10000)
+        limit: Maximum items to return (default: 20, max: 100)
+    """
     actor = _require_library_actor(context)
-    items = list_library_objects(db, actor=actor)
-    return {"items": items, "total": len(items)}
+    all_items = list_library_objects(db, actor=actor)
+    total = len(all_items)
+
+    # Apply pagination
+    paginated_items = all_items[pagination.skip : pagination.skip + pagination.limit]
+
+    return create_paginated_response(
+        items=paginated_items,
+        total=total,
+        skip=pagination.skip,
+        limit=pagination.limit,
+    )
 
 
-@router.get("/api/library/{object_id}")
+@router.get("/{object_id}")
 def library_detail(
     object_id: int,
     context: AccessContext = Depends(get_current_access_context),
@@ -175,20 +183,39 @@ def library_detail(
     return detail
 
 
-@router.get("/api/library/{object_id}/releases")
+@router.get("/{object_id}/releases")
 def library_releases(
     object_id: int,
+    pagination: PaginationParams = Depends(query_pagination_params),
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
 ):
+    """List releases for a library object with pagination.
+
+    Path Parameters:
+        object_id: The library object ID
+
+    Query Parameters:
+        skip: Number of items to skip (default: 0, max: 10000)
+        limit: Maximum items to return (default: 20, max: 100)
+    """
     actor = _require_library_actor(context)
-    items = list_library_releases(db, actor=actor, object_id=object_id)
-    if items is None:
+    all_items = list_library_releases(db, actor=actor, object_id=object_id)
+    if all_items is None:
         raise HTTPException(status_code=404, detail="object not found")
-    return {"items": items, "total": len(items)}
+
+    total = len(all_items)
+    paginated_items = all_items[pagination.skip : pagination.skip + pagination.limit]
+
+    return create_paginated_response(
+        items=paginated_items,
+        total=total,
+        skip=pagination.skip,
+        limit=pagination.limit,
+    )
 
 
-@router.post("/api/library/releases/{release_id}/tokens", status_code=status.HTTP_201_CREATED)
+@router.post("/releases/{release_id}/tokens", status_code=status.HTTP_201_CREATED)
 def issue_library_release_token(
     release_id: int,
     payload: LibraryTokenCreateRequest,
@@ -196,7 +223,7 @@ def issue_library_release_token(
     db: Session = Depends(get_db),
 ):
     actor = _require_library_principal(context)
-    registry_object, _owner, version_label = _require_release_write_context(
+    skill, _owner, version_label = _require_release_write_context(
         db,
         actor=actor,
         release_id=release_id,
@@ -206,7 +233,7 @@ def issue_library_release_token(
     grant = AccessGrant(
         exposure_id=exposure.id,
         grant_type="token",
-        subject_ref=f"agent://{registry_object.slug}/{payload.token_type}-{secrets.token_hex(4)}",
+        subject_ref=f"agent://{skill.slug}/{payload.token_type}-{secrets.token_hex(4)}",
         constraints_json=json.dumps({"label": payload.label} if payload.label else {}),
         state="active",
         created_by_principal_id=actor.principal.id,
@@ -229,8 +256,8 @@ def issue_library_release_token(
         event_type="token.created",
         actor_ref=f"principal:{actor.principal.slug}",
         payload={
-            "object_id": registry_object.id,
-            "object_name": registry_object.display_name,
+            "object_id": skill.id,
+            "object_name": skill.display_name,
             "release_id": release_id,
             "token_type": payload.token_type,
             "name": payload.label,
@@ -245,14 +272,14 @@ def issue_library_release_token(
         "token_type": payload.token_type,
         "label": payload.label,
         "scopes": sorted(scopes),
-        "object_name": registry_object.display_name,
+        "object_name": skill.display_name,
         "release_id": release_id,
         "release_version": version_label,
     }
 
 
 @router.post(
-    "/api/library/releases/{release_id}/share-links",
+    "/releases/{release_id}/share-links",
     status_code=status.HTTP_201_CREATED,
 )
 def create_library_release_share_link(
@@ -263,7 +290,7 @@ def create_library_release_share_link(
     db: Session = Depends(get_db),
 ):
     actor = _require_library_principal(context)
-    _registry_object, _owner, version_label = _require_release_write_context(
+    _skill, _owner, version_label = _require_release_write_context(
         db,
         actor=actor,
         release_id=release_id,
@@ -298,7 +325,7 @@ def create_library_release_share_link(
     }
 
 
-@router.post("/api/library/tokens/{credential_id}/revoke")
+@router.post("/tokens/{credential_id}/revoke")
 def revoke_library_token(
     credential_id: int,
     context: AccessContext = Depends(get_current_access_context),
@@ -316,7 +343,7 @@ def revoke_library_token(
     if credential.revoked_at is None:
         credential.revoked_at = utcnow()
         db.add(credential)
-        registry_object, _owner, _version_label = _require_release_write_context(
+        skill, _owner, _version_label = _require_release_write_context(
             db,
             actor=actor,
             release_id=release_id,
@@ -329,8 +356,8 @@ def revoke_library_token(
             event_type="token.revoked",
             actor_ref=f"principal:{actor.principal.slug}",
             payload={
-                "object_id": registry_object.id,
-                "object_name": registry_object.display_name,
+                "object_id": skill.id,
+                "object_name": skill.display_name,
                 "release_id": release_id,
                 "token_type": _token_type_for_scopes(credential.scopes_json),
                 "name": constraints.get("label"),
@@ -346,7 +373,7 @@ def revoke_library_token(
     }
 
 
-@router.post("/api/library/share-links/{grant_id}/revoke")
+@router.post("/share-links/{grant_id}/revoke")
 def revoke_library_share_link(
     grant_id: int,
     context: AccessContext = Depends(get_current_access_context),

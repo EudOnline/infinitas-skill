@@ -161,7 +161,7 @@ def configure_resolve_install_plan_parser(
     parser.add_argument("--source-json", help="Resolved source metadata JSON for the root skill")
     parser.add_argument(
         "--memory-mode",
-        help="Selected memory mode for agent_preset registry installs",
+        help="Selected memory mode for registry installs",
     )
     parser.add_argument(
         "--mode",

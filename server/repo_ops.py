@@ -1,15 +1,21 @@
 from __future__ import annotations
 
+import errno
 import fcntl
 import json
 import os
 import shutil
 import subprocess
+import time
 from contextlib import contextmanager
 from pathlib import Path
 
 
 class RepoOpError(Exception):
+    pass
+
+
+class LockTimeout(RepoOpError):
     pass
 
 
@@ -23,15 +29,55 @@ def _safe_relative_path(value: str) -> Path:
 
 
 @contextmanager
-def locked_repo(lock_path: Path):
+def locked_repo(lock_path: Path, *, timeout_seconds: float = 120):
+    """Acquire an exclusive file lock on *lock_path* with a timeout.
+
+    Parameters
+    ----------
+    lock_path:
+        Path to the lock file (will be created if missing).
+    timeout_seconds:
+        Maximum seconds to wait for the lock. Raises :class:`LockTimeout`
+        if the deadline is exceeded.
+    """
     lock_path = Path(lock_path).resolve()
     lock_path.parent.mkdir(parents=True, exist_ok=True)
+    deadline = time.monotonic() + timeout_seconds
     with lock_path.open('a+', encoding='utf-8') as handle:
-        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        while True:
+            try:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except OSError as exc:
+                if exc.errno not in (errno.EAGAIN, errno.EACCES):
+                    raise
+                if time.monotonic() >= deadline:
+                    raise LockTimeout(
+                        f'could not acquire repo lock {lock_path} '
+                        f'within {timeout_seconds}s'
+                    ) from exc
+                time.sleep(0.5)
         try:
             yield
         finally:
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+@contextmanager
+def locked_namespace(lock_dir: Path, namespace: str, *, timeout_seconds: float = 60):
+    """Acquire a per-namespace lock. Falls back to the global lock if
+    *namespace* is empty or ``lock_dir`` cannot be created.
+    """
+    if namespace:
+        ns_lock_dir = lock_dir.parent / (lock_dir.name + '.namespaces')
+        ns_lock_dir.mkdir(parents=True, exist_ok=True)
+        safe_ns = "".join(c if c.isalnum() or c in '-_' else '_' for c in namespace)
+        ns_lock_path = ns_lock_dir / f'{safe_ns}.lock'
+        with locked_repo(ns_lock_path, timeout_seconds=timeout_seconds):
+            yield
+    else:
+        with locked_repo(lock_dir, timeout_seconds=timeout_seconds):
+            yield
 
 
 def run_command(repo_path: Path, command: list[str], *, env: dict | None = None) -> str:
@@ -102,35 +148,48 @@ def materialize_submission_skill(
     skill_name: str,
     payload: dict,
     review_payload: dict | None = None,
+    lock_path: Path | None = None,
 ) -> Path:
     files = payload.get('files')
     if not isinstance(files, dict) or not files:
         raise RepoOpError('submission payload must contain a non-empty files object')
 
-    skill_dir = repo_path / 'skills' / 'incubating' / skill_name
-    if skill_dir.exists():
-        shutil.rmtree(skill_dir)
-    skill_dir.mkdir(parents=True, exist_ok=True)
+    # Use per-namespace lock if lock_path provided, otherwise proceed without lock
+    # (caller should provide lock_path for concurrent safety)
+    def _do_materialize():
+        skill_dir = repo_path / 'skills' / 'incubating' / skill_name
+        if skill_dir.exists():
+            shutil.rmtree(skill_dir)
+        skill_dir.mkdir(parents=True, exist_ok=True)
 
-    for rel_path, content in files.items():
-        if not isinstance(rel_path, str) or not rel_path.strip():
-            raise RepoOpError('submission payload file keys must be non-empty strings')
-        target = skill_dir / _safe_relative_path(rel_path.strip())
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(_normalize_file_content(content), encoding='utf-8')
+        for rel_path, content in files.items():
+            if not isinstance(rel_path, str) or not rel_path.strip():
+                raise RepoOpError(
+                    'submission payload file keys must be non-empty strings'
+                )
+            target = skill_dir / _safe_relative_path(rel_path.strip())
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(_normalize_file_content(content), encoding='utf-8')
 
-    meta_path = skill_dir / '_meta.json'
-    if not meta_path.exists():
-        raise RepoOpError('submission payload must provide _meta.json')
-    meta = json.loads(meta_path.read_text(encoding='utf-8'))
-    meta['name'] = meta.get('name') or skill_name
-    meta['status'] = 'incubating'
-    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-
-    if review_payload is not None:
-        (skill_dir / 'reviews.json').write_text(
-            json.dumps(review_payload, ensure_ascii=False, indent=2) + '\n',
-            encoding='utf-8',
+        meta_path = skill_dir / '_meta.json'
+        if not meta_path.exists():
+            raise RepoOpError('submission payload must provide _meta.json')
+        meta = json.loads(meta_path.read_text(encoding='utf-8'))
+        meta['name'] = meta.get('name') or skill_name
+        meta['status'] = 'incubating'
+        meta_path.write_text(
+            json.dumps(meta, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
         )
 
-    return skill_dir
+        if review_payload is not None:
+            (skill_dir / 'reviews.json').write_text(
+                json.dumps(review_payload, ensure_ascii=False, indent=2) + '\n',
+                encoding='utf-8',
+            )
+
+        return skill_dir
+
+    if lock_path is not None:
+        with locked_namespace(lock_path, skill_name):
+            return _do_materialize()
+    return _do_materialize()

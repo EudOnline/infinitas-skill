@@ -30,8 +30,8 @@ class ReviewCaseCreateRequest(BaseModel):
 
 
 class ReviewDecisionCreateRequest(BaseModel):
-    decision: str
-    note: str = ""
+    decision: Literal["approve", "reject", "comment"]
+    note: str = Field(default="", max_length=5000)
     evidence: dict = Field(default_factory=dict)
 
 

@@ -10,6 +10,7 @@ from server.models import Job, User, utcnow
 
 DEFAULT_JOB_LEASE_SECONDS = 300
 MAX_JOB_ATTEMPTS = 10
+MAX_RETRY_ATTEMPTS = 3  # auto-retry for transient failures (distinct from stale-lease reclaim)
 
 
 def _iso(value) -> str | None:
@@ -247,15 +248,31 @@ def fail_job(
     error_message: str,
     finished_at: datetime | None = None,
     commit: bool = True,
+    retryable: bool = False,
 ) -> Job:
     failed_at = finished_at or utcnow()
-    job.status = 'failed'
-    job.finished_at = failed_at
-    job.heartbeat_at = None
-    job.lease_expires_at = None
-    job.error_message = str(error_message)
-    job.updated_at = failed_at
-    append_job_log(job, f'ERROR: {error_message}')
+    should_retry = retryable and (job.attempt_count or 0) < MAX_RETRY_ATTEMPTS
+    if should_retry:
+        job.status = 'queued'
+        job.started_at = None
+        job.heartbeat_at = None
+        job.lease_expires_at = None
+        job.finished_at = None
+        job.error_message = str(error_message)
+        job.updated_at = failed_at
+        append_job_log(
+            job,
+            f'RETRYABLE ERROR (attempt {job.attempt_count}/{MAX_RETRY_ATTEMPTS}): {error_message}',
+            f're-queued at {_iso(failed_at)}',
+        )
+    else:
+        job.status = 'failed'
+        job.finished_at = failed_at
+        job.heartbeat_at = None
+        job.lease_expires_at = None
+        job.error_message = str(error_message)
+        job.updated_at = failed_at
+        append_job_log(job, f'ERROR: {error_message}')
     db.add(job)
     if commit:
         db.commit()

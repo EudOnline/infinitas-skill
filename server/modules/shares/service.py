@@ -14,7 +14,7 @@ from server.models import (
     Credential,
     Exposure,
     Principal,
-    RegistryObject,
+    Skill,
     SkillVersion,
     utcnow,
 )
@@ -81,10 +81,10 @@ def _release_context(db: Session, *, release_id: int, actor: ActorRef | None = N
         except release_service.NotFoundError as exc:
             raise ShareLinkNotFoundError(str(exc)) from exc
 
-    registry_object = db.get(RegistryObject, release.registry_object_id)
-    if registry_object is None:
-        raise ShareLinkConflictError("release object metadata missing")
-    owner = db.get(Principal, registry_object.namespace_id)
+    skill = db.get(Skill, release.skill_id)
+    if skill is None:
+        raise ShareLinkConflictError("release skill metadata missing")
+    owner = db.get(Principal, skill.namespace_id)
     if owner is None:
         raise ShareLinkConflictError("release owner metadata missing")
 
@@ -93,7 +93,7 @@ def _release_context(db: Session, *, release_id: int, actor: ActorRef | None = N
         version = db.get(SkillVersion, release.skill_version_id)
         if version is not None and version.version:
             version_label = version.version
-    return release, registry_object, owner, version_label
+    return release, skill, owner, version_label
 
 
 def _active_grant_exposure(db: Session, *, release_id: int) -> Exposure:
@@ -119,8 +119,8 @@ def _release_id_for_grant(db: Session, *, grant: AccessGrant) -> int:
     return int(exposure.release_id)
 
 
-def _install_path(*, owner: Principal, registry_object: RegistryObject, version: str) -> str:
-    return f"/api/v1/install/grant/{owner.slug}/{registry_object.slug}@{version}"
+def _install_path(*, owner: Principal, skill: Skill, version: str) -> str:
+    return f"/api/v1/install/grant/{owner.slug}/{skill.slug}@{version}"
 
 
 def _share_credentials(db: Session, *, grant_id: int) -> list[Credential]:
@@ -203,7 +203,7 @@ def create_share_link(
     max_uses: int | None,
     actor: ActorRef,
 ) -> dict:
-    _release, registry_object, owner, version_label = _release_context(
+    _release, skill, owner, version_label = _release_context(
         db,
         release_id=release_id,
         actor=actor,
@@ -223,7 +223,7 @@ def create_share_link(
     grant = AccessGrant(
         exposure_id=exposure.id,
         grant_type="link",
-        subject_ref=f"share://{registry_object.slug}/{secrets.token_urlsafe(12)}",
+        subject_ref=f"share://{skill.slug}/{secrets.token_urlsafe(12)}",
         constraints_json=json.dumps(constraints, ensure_ascii=False),
         state="active",
         created_by_principal_id=actor.principal.id,
@@ -253,7 +253,7 @@ def create_share_link(
         actor_ref=_actor_ref(actor),
         payload={
             "release_id": release_id,
-            "object_id": registry_object.id,
+            "object_id": skill.id,
             "name": constraints["name"],
         },
     )
@@ -262,7 +262,7 @@ def create_share_link(
         grant,
         install_path=_install_path(
             owner=owner,
-            registry_object=registry_object,
+            skill=skill,
             version=version_label,
         ),
     )
@@ -318,7 +318,7 @@ def resolve_share_link(db: Session, *, share_id: int, password: str | None) -> d
         raise ShareLinkForbiddenError("share link password is invalid")
 
     release_id = _release_id_for_grant(db, grant=grant)
-    _release, registry_object, owner, version_label = _release_context(
+    _release, skill, owner, version_label = _release_context(
         db,
         release_id=release_id,
     )
@@ -336,14 +336,14 @@ def resolve_share_link(db: Session, *, share_id: int, password: str | None) -> d
         aggregate_id=str(grant.id),
         event_type="share_link.resolved",
         actor_ref="anonymous",
-        payload={"release_id": release_id, "object_id": registry_object.id},
+        payload={"release_id": release_id, "object_id": skill.id},
     )
     return _share_link_payload(
         db,
         grant,
         install_path=_install_path(
             owner=owner,
-            registry_object=registry_object,
+            skill=skill,
             version=version_label,
         ),
     )

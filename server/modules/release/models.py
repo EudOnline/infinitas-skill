@@ -12,12 +12,11 @@ class Release(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     skill_version_id: Mapped[int] = mapped_column(ForeignKey("skill_versions.id"), index=True)
-    registry_object_id: Mapped[int | None] = mapped_column(
-        ForeignKey("registry_objects.id"),
+    skill_id: Mapped[int | None] = mapped_column(
+        ForeignKey("skills.id"),
         nullable=True,
         index=True,
     )
-    object_kind: Mapped[str] = mapped_column(String(64), default="skill")
     state: Mapped[str] = mapped_column(String(32), default="preparing")
     format_version: Mapped[str] = mapped_column(String(32), default="1")
     manifest_artifact_id: Mapped[int | None] = mapped_column(Integer, nullable=True)

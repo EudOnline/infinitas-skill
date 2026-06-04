@@ -116,16 +116,14 @@ def release_distribution_summary(
 def list_library_releases_from_scope(
     scope: LibraryScope,
     *,
-    object_id: int,
+    skill_id: int,
 ) -> list[dict[str, Any]]:
-    skill = scope.skills_by_object_id.get(object_id)
-    versions = (
-        {version.id: version for version in scope.versions_by_skill_id.get(skill.id, [])}
-        if skill
-        else {}
-    )
+    versions = {
+        version.id: version
+        for version in scope.versions_by_skill_id.get(skill_id, [])
+    }
     rows: list[dict[str, Any]] = []
-    for release in scope.releases_by_object_id.get(object_id, []):
+    for release in scope.releases_by_skill_id.get(skill_id, []):
         exposure = next(iter(scope.exposures_by_release_id.get(release.id, [])), None)
         version = versions.get(release.skill_version_id)
         rows.append(
@@ -148,9 +146,9 @@ def list_library_releases(
     object_id: int,
 ) -> list[dict[str, Any]] | None:
     scope = load_library_scope(db, actor=actor)
-    if not any(item.id == object_id for item in scope.objects):
+    if not any(item.id == object_id for item in scope.skills):
         return None
-    return list_library_releases_from_scope(scope, object_id=object_id)
+    return list_library_releases_from_scope(scope, skill_id=object_id)
 
 
 def get_library_release_detail(
@@ -161,17 +159,15 @@ def get_library_release_detail(
     release_id: int,
 ) -> dict[str, Any] | None:
     scope = load_library_scope(db, actor=actor)
-    registry_object = next((item for item in scope.objects if item.id == object_id), None)
-    if registry_object is None:
+    skill = next((item for item in scope.skills if item.id == object_id), None)
+    if skill is None:
         return None
-    skill = scope.skills_by_object_id.get(object_id)
-    version_map = (
-        {version.id: version for version in scope.versions_by_skill_id.get(skill.id, [])}
-        if skill is not None
-        else {}
-    )
+    version_map = {
+        version.id: version
+        for version in scope.versions_by_skill_id.get(skill.id, [])
+    }
     release = next(
-        (item for item in scope.releases_by_object_id.get(object_id, []) if item.id == release_id),
+        (item for item in scope.releases_by_skill_id.get(object_id, []) if item.id == release_id),
         None,
     )
     if release is None:
@@ -187,7 +183,7 @@ def get_library_release_detail(
         visibility_rows=visibility_rows,
     )
     return {
-        "object": object_payload(scope, registry_object),
+        "object": object_payload(scope, skill),
         "release": {
             "id": release.id,
             "version": version.version if version is not None else f"release-{release.id}",

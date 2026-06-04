@@ -18,8 +18,8 @@ from server.models import (
     AuditEvent,
     Credential,
     Exposure,
-    RegistryObject,
     Release,
+    Skill,
     User,
 )
 from server.modules.access import service as access_service
@@ -52,10 +52,10 @@ def _build_profile(db: Session, context: AccessContext) -> dict[str, Any]:
     }
 
     # ── Accessible Skills ─────────────────────────────────────────────────
-    # Find all active grants for this credential, then resolve RegistryObjects
-    # via grant -> exposure -> release -> registry_object chain.
+    # Find all active grants for this credential, then resolve Skills
+    # via grant -> exposure -> release -> skill chain.
     accessible_skills: list[dict] = []
-    seen_obj_ids: set[int] = set()
+    seen_skill_ids: set[int] = set()
 
     grant_query = select(AccessGrant).where(
         AccessGrant.state == "active",
@@ -81,19 +81,19 @@ def _build_profile(db: Session, context: AccessContext) -> dict[str, Any]:
         if exposure is None or exposure.state != "active":
             continue
         release = db.get(Release, exposure.release_id)
-        if release is None or release.registry_object_id is None:
+        if release is None or release.skill_id is None:
             continue
-        if release.registry_object_id in seen_obj_ids:
+        if release.skill_id in seen_skill_ids:
             continue
-        obj = db.get(RegistryObject, release.registry_object_id)
-        if obj is None:
+        skill = db.get(Skill, release.skill_id)
+        if skill is None:
             continue
-        seen_obj_ids.add(obj.id)
+        seen_skill_ids.add(skill.id)
         accessible_skills.append({
-            "id": obj.id,
-            "slug": obj.slug,
-            "display_name": obj.display_name,
-            "kind": obj.kind,
+            "id": skill.id,
+            "slug": skill.slug,
+            "display_name": skill.display_name,
+            "kind": "skill",
         })
 
     # ── Operation History ─────────────────────────────────────────────────
@@ -235,8 +235,8 @@ def profile_writeback(
 
 class PolicyUpdateBody(BaseModel):
     max_daily_publishes: int | None = None
-    allowed_object_kinds: list[str] | None = None
     readonly: bool | None = None
+    allowed_object_kinds: list[str] | None = None
 
 
 @credentials_router.patch("/{credential_id}/policy")
@@ -258,10 +258,10 @@ def credential_policy_update(
     updates: dict[str, Any] = {}
     if body.max_daily_publishes is not None:
         updates["max_daily_publishes"] = body.max_daily_publishes
-    if body.allowed_object_kinds is not None:
-        updates["allowed_object_kinds"] = body.allowed_object_kinds
     if body.readonly is not None:
         updates["readonly"] = body.readonly
+    if body.allowed_object_kinds is not None:
+        updates["allowed_object_kinds"] = body.allowed_object_kinds
 
     if not updates:
         # Nothing to update — return current policy

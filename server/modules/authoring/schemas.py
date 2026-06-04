@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -81,17 +82,17 @@ class SkillView(BaseModel):
 
 
 class SkillDraftCreateRequest(BaseModel):
-    content_mode: str | None = None
+    content_mode: Literal["external_ref", "uploaded_bundle"] | None = None
     base_version_id: int | None = None
-    content_ref: str = ""
-    content_upload_token: str | None = None
+    content_ref: str = Field(default="", max_length=2000)
+    content_upload_token: str | None = Field(default=None, max_length=500)
     metadata: dict = Field(default_factory=dict)
 
 
 class SkillDraftPatchRequest(BaseModel):
-    content_mode: str | None = None
-    content_ref: str | None = None
-    content_upload_token: str | None = None
+    content_mode: Literal["external_ref", "uploaded_bundle"] | None = None
+    content_ref: str | None = Field(default=None, max_length=2000)
+    content_upload_token: str | None = Field(default=None, max_length=500)
     metadata: dict | None = None
 
 

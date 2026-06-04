@@ -48,3 +48,6 @@ build/*
 htmlcov/
 coverage.xml
 tmp/
+
+# Generated OpenAPI schema (rebuild with: python -m uvicorn server.app:app & curl -s http://localhost:8000/openapi.json > openapi.json)
+openapi.json

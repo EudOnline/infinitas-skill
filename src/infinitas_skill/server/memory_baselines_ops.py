@@ -2,19 +2,10 @@ from __future__ import annotations
 
 import argparse
 import json
-from typing import Any
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
-
+from infinitas_skill.server.db_utils import standalone_session
 from infinitas_skill.server.memory_baselines import summarize_memory_baselines
 from infinitas_skill.server.repo_checks import require_sqlite_db
-
-
-def server_engine_kwargs(database_url: str) -> dict[str, Any]:
-    if database_url.startswith('sqlite:///'):
-        return {'connect_args': {'check_same_thread': False}}
-    return {}
 
 
 def configure_server_memory_baselines_parser(
@@ -53,16 +44,12 @@ def run_server_memory_baselines(
     as_json: bool = False,
 ) -> int:
     require_sqlite_db(database_url)
-    engine = create_engine(database_url, future=True, **server_engine_kwargs(database_url))
-    try:
-        with Session(engine) as session:
-            summary = summarize_memory_baselines(
-                session,
-                now=now or None,
-                window_hours=window_hours,
-            )
-    finally:
-        engine.dispose()
+    with standalone_session(database_url) as session:
+        summary = summarize_memory_baselines(
+            session,
+            now=now or None,
+            window_hours=window_hours,
+        )
 
     if as_json:
         print(json.dumps(summary, ensure_ascii=False, indent=2))

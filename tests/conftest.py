@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
 import pytest
+from sqlalchemy.orm import Session, close_all_sessions
 
 ROOT = Path(__file__).resolve().parents[1]
 for path in (ROOT, ROOT / "src", ROOT / "scripts"):
@@ -52,3 +54,44 @@ def allowed_signers_file(tmp_path: Path, signing_key: Path) -> Path:
     allowed_signers = tmp_path / "allowed_signers"
     add_allowed_signer(allowed_signers, identity="release-test", key_path=signing_key)
     return allowed_signers
+
+
+@pytest.fixture
+def db(tmp_path: Path) -> Session:
+    """Create a test database session with migrations.
+
+    This fixture sets up an in-memory SQLite database for testing
+    repository operations. The database is migrated and isolated
+    for each test.
+    """
+    # Set up test environment
+    db_path = tmp_path / "test.db"
+    os.environ["INFINITAS_SERVER_DATABASE_URL"] = f"sqlite:///{db_path}"
+    os.environ["INFINITAS_SERVER_SECRET_KEY"] = "test-secret-key-32chars-long-minimum"
+    os.environ["INFINITAS_SERVER_ENV"] = "test"
+
+    from server.db import get_engine, get_session_factory
+
+    # Create engine and run migrations
+    engine = get_engine()
+    session_factory = get_session_factory()
+
+    # Run migrations
+    from alembic import command
+    from alembic.config import Config
+
+    alembic_dir = ROOT / "alembic"
+    if alembic_dir.exists():
+        alembic_cfg = Config(str(ROOT / "alembic.ini"))
+        alembic_cfg.set_main_option("script_location", str(alembic_dir))
+        command.upgrade(alembic_cfg, "head")
+
+    # Create and yield session
+    session = session_factory()
+    yield session
+
+    # Cleanup
+    session.close()
+    close_all_sessions()
+    if db_path.exists():
+        db_path.unlink()

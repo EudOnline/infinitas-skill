@@ -236,7 +236,6 @@ def _catalog_snapshot_projections() -> list[DiscoveryProjection]:
                 exposure_state="active",
                 release_state="ready",
                 publisher=str(item.get("publisher") or publisher),
-                kind=str(item.get("kind") or distribution.get("kind") or "skill"),
                 name=name,
                 qualified_name=qualified_name,
                 display_name=str(item.get("display_name") or name),
@@ -291,23 +290,52 @@ def _catalog_snapshot_projections() -> list[DiscoveryProjection]:
     return projections
 
 
-def _available_release_projections(db: Session) -> list[DiscoveryProjection]:
+def _available_release_projections(
+    db: Session,
+    *,
+    audience_type: str | None = None,
+    limit: int = _CATALOG_MAX_ENTRIES,
+    use_cache: bool = True,
+) -> list[DiscoveryProjection]:
+    """Get available release projections with materialized artifacts.
+
+    Args:
+        db: Database session
+        audience_type: Optional audience type filter
+        limit: Maximum number of entries to return
+        use_cache: Whether to use projection cache
+
+    Returns:
+        List of projections with materialized artifacts
+    """
     settings = get_settings()
     artifact_root = settings.artifact_path
     repo_root = settings.repo_path
-    entries = [
+
+    # Use database-level pagination for better performance
+    entries = build_release_projections(
+        db,
+        audience_type=audience_type,
+        limit=limit,
+        use_cache=use_cache,
+    )
+
+    # Filter by materialized artifacts (this is I/O bound, so do it after limiting)
+    materialized = [
         entry
-        for entry in build_release_projections(db)
+        for entry in entries
         if projection_has_materialized_artifacts(entry, artifact_root, repo_root)
     ]
-    return entries[:_CATALOG_MAX_ENTRIES]
+
+    return materialized[:limit]
 
 
 def list_public_catalog(db: Session) -> list[DiscoveryProjection]:
+    # Use audience_type filter for database-level filtering
     rows = [
         entry
-        for entry in _available_release_projections(db)
-        if entry.audience_type == "public" and entry.listing_mode == "listed"
+        for entry in _available_release_projections(db, audience_type="public")
+        if entry.listing_mode == "listed"
     ]
     return _dedupe(rows)
 
@@ -324,10 +352,11 @@ def list_me_catalog(db: Session, *, context: AccessContext) -> list[DiscoveryPro
 
 def list_grant_catalog(db: Session, *, context: AccessContext) -> list[DiscoveryProjection]:
     _ensure_grant_context(context)
+    # Use audience_type filter for database-level filtering
     entries = [
         entry
-        for entry in _available_release_projections(db)
-        if entry.audience_type == "grant" and context.credential.grant_id is not None
+        for entry in _available_release_projections(db, audience_type="grant")
+        if context.credential.grant_id is not None
     ]
     accessible_ids = can_access_releases(
         db, context=context, release_ids=[e.release_id for e in entries]
@@ -353,9 +382,8 @@ def search_grant_catalog(
 
 
 def resolve_public_install(db: Session, *, skill_ref: str) -> DiscoveryProjection:
-    rows = [
-        entry for entry in _available_release_projections(db) if entry.audience_type == "public"
-    ]
+    # Use audience_type filter for database-level filtering
+    rows = _available_release_projections(db, audience_type="public", limit=1000)
     try:
         return _resolve_install_candidate(rows, skill_ref)
     except NotFoundError:
@@ -386,9 +414,8 @@ def resolve_grant_install(
     db: Session, *, context: AccessContext, skill_ref: str
 ) -> DiscoveryProjection:
     _ensure_grant_context(context)
-    all_rows = [
-        entry for entry in _available_release_projections(db) if entry.audience_type == "grant"
-    ]
+    # Use audience_type filter for database-level filtering
+    all_rows = _available_release_projections(db, audience_type="grant", limit=1000)
     matches = _filter_install_candidates(all_rows, skill_ref)
     if not matches:
         raise NotFoundError("install target not found")

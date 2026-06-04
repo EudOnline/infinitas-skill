@@ -5,7 +5,7 @@
 <section class="kawaii-card animate-in mb-4">
   <div class="flex flex-wrap items-center gap-2 mb-1">
     <h1 class="font-display text-[clamp(1.25rem,3vw,1.8rem)] font-extrabold leading-tight text-kawaii-ink">{{ object.display_name or object.slug or 'Untitled' }}</h1>
-    <span class="kawaii-badge {% if object.kind == 'skill' %}kawaii-badge--success{% elif object.kind == 'agent_preset' %}kawaii-badge--pending{% else %}kawaii-badge--running{% endif %}">{{ object.kind }}</span>
+    <span class="kawaii-badge kawaii-badge--success">{{ object.kind }}</span>
   </div>
   <p class="text-sm text-kawaii-ink-soft mb-2">{{ object.summary or ui['text_no_summary'] }}</p>
   <div class="flex flex-wrap items-center gap-2 text-xs text-kawaii-ink-muted">

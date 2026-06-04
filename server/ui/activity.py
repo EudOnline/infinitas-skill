@@ -5,9 +5,10 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from server.models import AuditEvent, RegistryObject, Release
-from server.modules.audit.read_model import activity_query, json_payload
+from server.models import AuditEvent
+from server.modules.audit.read_model import json_payload
 from server.ui.formatting import humanize_identifier, humanize_timestamp
+from server.ui_service import get_audit_events, get_release_label, get_skill_name
 
 
 def _iso_stamp(value: object) -> str | None:
@@ -41,32 +42,28 @@ def _actor_label(actor_ref: str | None) -> str | None:
 
 
 def _object_name(db: Session, payload: dict[str, Any]) -> str | None:
+    """Get object name from payload.
+
+    Delegates to ui_service layer for database access.
+    """
     explicit = payload.get("object_name") or payload.get("name")
     if explicit:
         return str(explicit)
     object_id = payload.get("object_id")
     if object_id is None:
         return None
-    try:
-        registry_object = db.get(RegistryObject, int(object_id))
-    except (TypeError, ValueError):
-        return None
-    if registry_object is not None:
-        return registry_object.display_name
-    return str(object_id)
+    return get_skill_name(db, int(object_id)) or str(object_id)
 
 
 def _release_label(db: Session, payload: dict[str, Any]) -> str | None:
+    """Get release label from payload.
+
+    Delegates to ui_service layer for database access.
+    """
     release_id = payload.get("release_id")
     if release_id is None:
         return None
-    try:
-        release = db.get(Release, int(release_id))
-    except (TypeError, ValueError):
-        return str(release_id)
-    if release is None:
-        return str(release_id)
-    return f"release-{release.id}"
+    return get_release_label(db, int(release_id))
 
 
 def _title_for_event(event: AuditEvent, payload: dict[str, Any]) -> str:
@@ -145,6 +142,10 @@ def normalize_audit_event_for_ui(db: Session, event: AuditEvent) -> dict[str, An
 
 
 def list_activity_rows(db: Session, *, limit: int = 100) -> list[dict[str, Any]]:
+    """List activity rows for the UI.
+
+    Delegates to ui_service layer for database access.
+    """
     capped_limit = max(1, min(int(limit or 100), 500))
-    events = db.scalars(activity_query().limit(capped_limit)).all()
+    events = get_audit_events(db, limit=capped_limit)
     return [normalize_audit_event_for_ui(db, event) for event in events]

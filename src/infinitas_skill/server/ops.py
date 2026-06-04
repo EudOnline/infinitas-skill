@@ -7,10 +7,8 @@ import json
 import time
 from typing import Any
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
-
 from infinitas_skill.server.backup import run_server_backup, run_server_prune_backups
+from infinitas_skill.server.db_utils import standalone_session
 from infinitas_skill.server.health import run_server_healthcheck
 from infinitas_skill.server.inspection_notifications import (
     deliver_inspect_webhook,
@@ -44,12 +42,6 @@ SERVER_TOP_LEVEL_HELP = 'Hosted server operations tools'
 SERVER_PARSER_DESCRIPTION = 'Hosted server operations CLI'
 
 
-def server_engine_kwargs(database_url: str) -> dict[str, Any]:
-    if database_url.startswith('sqlite:///'):
-        return {'connect_args': {'check_same_thread': False}}
-    return {}
-
-
 def build_inspection_summary(
     *,
     database_url: str,
@@ -62,13 +54,9 @@ def build_inspection_summary(
     alert_fallback_file: str = '',
 ) -> dict[str, Any]:
     require_sqlite_db(database_url)
-    engine = create_engine(database_url, future=True, **server_engine_kwargs(database_url))
-    try:
-        with Session(engine) as session:
-            jobs = build_jobs_inspection_summary(session, limit=limit)
-            releases = build_release_inspection_summary(session)
-    finally:
-        engine.dispose()
+    with standalone_session(database_url) as session:
+        jobs = build_jobs_inspection_summary(session, limit=limit)
+        releases = build_release_inspection_summary(session)
 
     alerts: list[dict[str, Any]] = []
     maybe_add_alert(alerts, kind='queued_jobs', label='queued jobs', actual=jobs['counts']['queued'], maximum=max_queued_jobs)
@@ -312,12 +300,8 @@ def run_server_memory_health(
     as_json: bool = False,
 ) -> int:
     require_sqlite_db(database_url)
-    engine = create_engine(database_url, future=True, **server_engine_kwargs(database_url))
-    try:
-        with Session(engine) as session:
-            summary = summarize_memory_writeback(session, limit=limit)
-    finally:
-        engine.dispose()
+    with standalone_session(database_url) as session:
+        summary = summarize_memory_writeback(session, limit=limit)
 
     if as_json:
         print(json.dumps(summary, ensure_ascii=False, indent=2))

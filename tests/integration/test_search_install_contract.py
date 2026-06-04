@@ -12,7 +12,7 @@ from sqlalchemy import select
 def configure_env(tmpdir: Path) -> Path:
     artifact_root = tmpdir / "artifacts"
     os.environ["INFINITAS_SERVER_DATABASE_URL"] = f"sqlite:///{tmpdir / 'server.db'}"
-    os.environ["INFINITAS_SERVER_SECRET_KEY"] = "test-secret-key"
+    os.environ["INFINITAS_SERVER_SECRET_KEY"] = "test-secret-key-32chars-long-minimum"
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(artifact_root)
     os.environ["INFINITAS_REGISTRY_READ_TOKENS"] = json.dumps(["registry-reader-token"])
     os.environ["INFINITAS_SERVER_BOOTSTRAP_USERS"] = json.dumps(
@@ -186,7 +186,7 @@ def test_public_search_snapshot_results_include_install_resolution_targets() -> 
 
         client = TestClient(create_app())
 
-        response = client.get("/api/search?q=snapshot&scope=public")
+        response = client.get("/api/v1/search?q=snapshot&scope=public")
         assert response.status_code == 200, response.text
 
         payload = response.json()
@@ -340,7 +340,7 @@ def test_me_search_results_include_install_resolution_targets_for_private_entrie
         )
 
         response = client.get(
-            "/api/search?q=private-search&scope=me",
+            "/api/v1/search?q=private-search&scope=me",
             headers=headers,
         )
         assert response.status_code == 200, response.text
@@ -403,7 +403,7 @@ def test_me_search_accepts_browser_session_cookie_authentication() -> None:
         )
 
         login_response = client.post(
-            "/api/auth/login?lang=en",
+            "/api/v1/auth/login?lang=en",
             json={"username": "fixture-maintainer", "password": "fixture-maintainer-password"},
         )
         assert login_response.status_code == 200, login_response.text
@@ -412,7 +412,7 @@ def test_me_search_accepts_browser_session_cookie_authentication() -> None:
         assert session_cookie, "expected login to issue a browser session cookie"
 
         client.cookies.set(AUTH_COOKIE_NAME, session_cookie)
-        response = client.get("/api/search?q=cookie-search&scope=me")
+        response = client.get("/api/v1/search?q=cookie-search&scope=me")
         assert response.status_code == 200, response.text
 
         payload = response.json()
@@ -459,7 +459,7 @@ def test_grant_search_uses_grant_install_scope_for_grant_credentials() -> None:
         grant_token = create_grant_token(session_factory, exposure_id=int(exposure["id"]))
 
         response = client.get(
-            "/api/search?q=grant-search&scope=me",
+            "/api/v1/search?q=grant-search&scope=me",
             headers={"Authorization": f"Bearer {grant_token}"},
         )
         assert response.status_code == 200, response.text
@@ -483,7 +483,7 @@ def test_grant_search_uses_grant_install_scope_for_grant_credentials() -> None:
         assert grant_entry["workspace_targets"] == ["skills", ".agents/skills"]
 
         explicit_grant_response = client.get(
-            "/api/search?q=grant-search&scope=grant",
+            "/api/v1/search?q=grant-search&scope=grant",
             headers={"Authorization": f"Bearer {grant_token}"},
         )
         assert explicit_grant_response.status_code == 200, explicit_grant_response.text

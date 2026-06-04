@@ -9,7 +9,7 @@ from typing import Literal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from server.models import AccessGrant, Credential, Exposure, Principal, RegistryObject, utcnow
+from server.models import AccessGrant, Credential, Exposure, Principal, Skill, utcnow
 from server.modules.access import service as access_service
 from server.modules.audit import service as audit_service
 from server.modules.release import service as release_service
@@ -55,7 +55,7 @@ def _find_release_for_scope(
 
     if scope_type == "release":
         release = release_service.get_release_or_404(db, scope_id)
-        if release.registry_object_id != object_id:
+        if release.skill_id != object_id:
             raise TokenForbiddenError("release does not belong to object")
         return int(release.id)
 
@@ -64,7 +64,7 @@ def _find_release_for_scope(
 
     release = db.scalar(
         select(Release)
-        .where(Release.registry_object_id == object_id)
+        .where(Release.skill_id == object_id)
         .where(Release.state == "ready")
         .order_by(Release.ready_at.desc(), Release.id.desc())
     )
@@ -74,28 +74,21 @@ def _find_release_for_scope(
 
 
 def _require_active_grant_exposure(db: Session, *, release_id: int) -> Exposure:
-    exposure = db.scalar(
-        select(Exposure)
-        .where(Exposure.release_id == release_id)
-        .where(Exposure.audience_type == "grant")
-        .where(Exposure.state == "active")
-        .where(Exposure.install_mode == "enabled")
-        .order_by(Exposure.id.desc())
-    )
-    if exposure is None:
+    try:
+        return access_service.require_active_grant_exposure(db, release_id=release_id)
+    except ValueError:
         raise TokenConflictError("active grant visibility required before issuing tokens")
-    return exposure
 
 
 def _assert_object_owner(
     db: Session,
     *,
-    registry_object: RegistryObject,
+    skill: Skill,
     actor: ActorRef,
 ) -> None:
     if actor.is_maintainer:
         return
-    if registry_object.namespace_id != actor.principal.id:
+    if skill.namespace_id != actor.principal.id:
         raise TokenForbiddenError("object namespace access denied")
 
 
@@ -144,10 +137,10 @@ def create_product_token(
     expires_in_days: int | None,
     actor: ActorRef,
 ) -> tuple[str, dict]:
-    registry_object = db.get(RegistryObject, object_id)
-    if registry_object is None:
+    skill = db.get(Skill, object_id)
+    if skill is None:
         raise TokenNotFoundError("object not found")
-    _assert_object_owner(db, registry_object=registry_object, actor=actor)
+    _assert_object_owner(db, skill=skill, actor=actor)
 
     release_id = _find_release_for_scope(
         db,
@@ -164,7 +157,7 @@ def create_product_token(
     grant = AccessGrant(
         exposure_id=exposure.id,
         grant_type="token",
-        subject_ref=f"agent://{registry_object.slug}/{token_type}-{secrets.token_hex(4)}",
+        subject_ref=f"agent://{skill.slug}/{token_type}-{secrets.token_hex(4)}",
         constraints_json=json.dumps(
             {
                 "label": normalized_name,
@@ -231,10 +224,10 @@ def create_product_token(
 
 
 def list_product_tokens(db: Session, *, object_id: int, actor: ActorRef) -> list[dict]:
-    registry_object = db.get(RegistryObject, object_id)
-    if registry_object is None:
+    skill = db.get(Skill, object_id)
+    if skill is None:
         raise TokenNotFoundError("object not found")
-    _assert_object_owner(db, registry_object=registry_object, actor=actor)
+    _assert_object_owner(db, skill=skill, actor=actor)
 
     credentials = db.scalars(
         select(Credential)
@@ -255,10 +248,10 @@ def revoke_product_token(db: Session, *, token_id: int, actor: ActorRef) -> dict
         raise TokenNotFoundError("token not found")
     selector = json.loads(credential.resource_selector_json or "{}")
     object_id = int(selector.get("object_id") or 0)
-    registry_object = db.get(RegistryObject, object_id)
-    if registry_object is None:
+    skill = db.get(Skill, object_id)
+    if skill is None:
         raise TokenNotFoundError("object not found")
-    _assert_object_owner(db, registry_object=registry_object, actor=actor)
+    _assert_object_owner(db, skill=skill, actor=actor)
 
     if credential.revoked_at is None:
         credential.revoked_at = utcnow()

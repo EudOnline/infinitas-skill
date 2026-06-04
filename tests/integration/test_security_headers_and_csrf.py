@@ -10,7 +10,7 @@ from server.app import create_app
 
 def _security_client(tmp_path: Path) -> TestClient:
     os.environ["INFINITAS_SERVER_DATABASE_URL"] = f"sqlite:///{tmp_path / 'security.db'}"
-    os.environ["INFINITAS_SERVER_SECRET_KEY"] = "security-test-secret"
+    os.environ["INFINITAS_SERVER_SECRET_KEY"] = "security-test-secret-32chars-long-min"
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(tmp_path / "artifacts")
     os.environ["INFINITAS_SERVER_BOOTSTRAP_USERS"] = (
         '[{"username":"security-tester","display_name":"Security Tester",'
@@ -68,39 +68,39 @@ class TestCsrfProtection:
     def test_bearer_auth_skips_csrf(self, tmp_path: Path):
         client = _security_client(tmp_path)
         response = client.post(
-            "/api/auth/logout",
+            "/api/v1/auth/logout",
             headers={"Authorization": "Bearer security-test-token"},
         )
         assert response.status_code == 200
 
     def test_unauthenticated_post_skips_csrf(self, tmp_path: Path):
         client = _security_client(tmp_path)
-        response = client.post("/api/auth/logout")
+        response = client.post("/api/v1/auth/logout")
         assert response.status_code == 200
 
     def test_csrf_missing_rejected_for_cookie_auth(self, tmp_path: Path):
         client = _security_client(tmp_path)
         login = client.post(
-            "/api/auth/login",
+            "/api/v1/auth/login",
             json={"username": "security-tester", "password": "security-test-password"},
         )
         assert login.status_code == 200
         assert "csrf_token" in login.cookies
 
-        response = client.post("/api/auth/logout")
+        response = client.post("/api/v1/auth/logout")
         assert response.status_code == 403
         assert response.json()["detail"] == "CSRF token missing"
 
     def test_csrf_mismatch_rejected(self, tmp_path: Path):
         client = _security_client(tmp_path)
         login = client.post(
-            "/api/auth/login",
+            "/api/v1/auth/login",
             json={"username": "security-tester", "password": "security-test-password"},
         )
         assert login.status_code == 200
 
         response = client.post(
-            "/api/auth/logout",
+            "/api/v1/auth/logout",
             headers={"X-CSRF-Token": "wrong-token"},
         )
         assert response.status_code == 403
@@ -109,14 +109,14 @@ class TestCsrfProtection:
     def test_csrf_valid_allows_cookie_auth_post(self, tmp_path: Path):
         client = _security_client(tmp_path)
         login = client.post(
-            "/api/auth/login",
+            "/api/v1/auth/login",
             json={"username": "security-tester", "password": "security-test-password"},
         )
         assert login.status_code == 200
         csrf_cookie = login.cookies["csrf_token"]
 
         response = client.post(
-            "/api/auth/logout",
+            "/api/v1/auth/logout",
             headers={"X-CSRF-Token": csrf_cookie},
         )
         assert response.status_code == 200
@@ -127,7 +127,7 @@ class TestCookieSecurity:
     def test_auth_cookie_httponly(self, tmp_path: Path):
         client = _security_client(tmp_path)
         response = client.post(
-            "/api/auth/login",
+            "/api/v1/auth/login",
             json={"username": "security-tester", "password": "security-test-password"},
         )
         assert response.status_code == 200
@@ -138,7 +138,7 @@ class TestCookieSecurity:
     def test_csrf_cookie_not_httponly(self, tmp_path: Path):
         client = _security_client(tmp_path)
         response = client.post(
-            "/api/auth/login",
+            "/api/v1/auth/login",
             json={"username": "security-tester", "password": "security-test-password"},
         )
         assert response.status_code == 200
@@ -149,7 +149,7 @@ class TestCookieSecurity:
 
     def test_csrf_endpoint_refreshes_token(self, tmp_path: Path):
         client = _security_client(tmp_path)
-        response = client.get("/api/auth/csrf")
+        response = client.get("/api/v1/auth/csrf")
         assert response.status_code == 200
         assert "csrf_token" in response.json()
         assert "csrf_token" in response.cookies

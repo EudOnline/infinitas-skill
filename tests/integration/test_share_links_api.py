@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tests.integration.test_library_api import _prepare_library_client
+from tests.integration.conftest import _prepare_library_client
 from tests.integration.test_object_tokens_api import _prepared_object_and_release
 
 

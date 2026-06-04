@@ -1,27 +1,17 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 from fastapi import Request
-from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from server import __version__ as server_version
-from server.models import (
-    AccessGrant,
-    AuditEvent,
-    Credential,
-    Job,
-    RegistryObject,
-    Release,
-    ReviewCase,
-)
 from server.ui.formatting import build_kawaii_ui_context, localized_stamp
 from server.ui.i18n import pick_lang, resolve_language, with_lang
 from server.ui.navigation import build_site_nav
+from server.ui_service import get_dashboard_counts, get_user_stats
 
 
 def _read_json(path: Path) -> dict:
@@ -100,34 +90,8 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
             }
         )
 
-    total_objects = int(db.scalar(select(func.count()).select_from(RegistryObject)) or 0)
-    total_releases = int(db.scalar(select(func.count()).select_from(Release)) or 0)
-    total_share_links = int(
-        db.scalar(
-            select(func.count())
-            .select_from(AccessGrant)
-            .where(AccessGrant.grant_type == "link")
-        )
-        or 0
-    )
-    total_access = int(
-        db.scalar(
-            select(func.count())
-            .select_from(Credential)
-            .where(Credential.type == "grant_token")
-        )
-        or 0
-    )
-    pending_reviews = int(
-        db.scalar(select(func.count()).select_from(ReviewCase).where(ReviewCase.state == "open"))
-        or 0
-    )
-    queued_jobs = int(
-        db.scalar(select(func.count()).select_from(Job).where(Job.status == "queued")) or 0
-    )
-    running_jobs = int(
-        db.scalar(select(func.count()).select_from(Job).where(Job.status == "running")) or 0
-    )
+    # Get dashboard counts from service layer
+    counts = get_dashboard_counts(db)
 
     lifecycle_mode = pick_lang(lang, "私人优先", "Private-first")
     operating_states = [
@@ -147,11 +111,11 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
             "icon": "⚡",
             "label": pick_lang(lang, "流转", "Flow"),
             "value": (
-                f"{pending_reviews} 审核 / {queued_jobs} 待处理"
+                f"{counts.pending_reviews} 审核 / {counts.queued_jobs} 待处理"
                 if lang == "zh"
-                else f"{pending_reviews} review / {queued_jobs} pending"
+                else f"{counts.pending_reviews} review / {counts.queued_jobs} pending"
             ),
-            "detail": f"{running_jobs} 运行中" if lang == "zh" else f"{running_jobs} running",
+            "detail": f"{counts.running_jobs} 运行中" if lang == "zh" else f"{counts.running_jobs} running",
         },
     ]
     inspect_example_target = featured_skills[0]["qualified_name"] if featured_skills else "<publisher>/<skill>"
@@ -201,35 +165,35 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
             "href": with_lang("/library", lang),
             "icon": "📚",
             "title": pick_lang(lang, "对象库", "Library"),
-            "value": str(total_objects),
+            "value": str(counts.total_objects),
             "detail": "",
         },
         {
             "href": with_lang("/library", lang),
             "icon": "🚀",
             "title": pick_lang(lang, "发布", "Releases"),
-            "value": str(total_releases),
+            "value": str(counts.total_releases),
             "detail": "",
         },
         {
             "href": with_lang("/shares", lang),
             "icon": "🔗",
             "title": pick_lang(lang, "分享链接", "Share Links"),
-            "value": str(total_share_links),
+            "value": str(counts.total_share_links),
             "detail": "",
         },
         {
             "href": with_lang("/access", lang),
             "icon": "🗝️",
             "title": pick_lang(lang, "访问", "Access"),
-            "value": str(total_access),
+            "value": str(counts.total_access),
             "detail": "",
         },
         {
             "href": with_lang("/activity", lang),
             "icon": "📋",
             "title": pick_lang(lang, "活动", "Activity"),
-            "value": str(pending_reviews + queued_jobs + running_jobs),
+            "value": str(counts.pending_reviews + counts.queued_jobs + counts.running_jobs),
             "detail": "",
         },
         {
@@ -246,32 +210,12 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
 
     _session_user = _get_user(request, db)
     if _session_user is not None:
-        now = datetime.now(timezone.utc)
-        active_tokens = int(
-            db.scalar(
-                select(func.count())
-                .select_from(Credential)
-                .where(
-                    Credential.revoked_at.is_(None),
-                    (Credential.expires_at.is_(None)) | (Credential.expires_at > now),
-                )
-            )
-            or 0
-        )
-        accessible_skills = int(db.scalar(select(func.count()).select_from(RegistryObject)) or 0)
-        week_ago = now - timedelta(days=7)
-        new_activity = int(
-            db.scalar(
-                select(func.count())
-                .select_from(AuditEvent)
-                .where(AuditEvent.occurred_at >= week_ago)
-            )
-            or 0
-        )
+        # Get user stats from service layer
+        user_stats = get_user_stats(db)
         stats = {
-            "active_tokens": active_tokens,
-            "accessible_skills": accessible_skills,
-            "new_activity": new_activity,
+            "active_tokens": user_stats.active_tokens,
+            "accessible_skills": user_stats.accessible_skills,
+            "new_activity": user_stats.new_activity,
         }
 
     page_eyebrow = pick_lang(lang, "私人技能工作台", "Private agent workspace")

@@ -6,13 +6,14 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from server.models import AccessGrant, Credential
+from server.modules.access import service as access_service
 from server.modules.access.authn import AccessContext
 from server.ui.formatting import humanize_timestamp, load_json_list, load_json_object
 from server.ui.i18n import with_lang
 from server.ui.library_scope import (
     LibraryScope,
     iso_stamp,
-    iter_object_release_rows,
+    iter_skill_release_rows,
     load_library_scope,
     parse_datetime,
 )
@@ -52,14 +53,7 @@ def credential_is_share_secret(credential: Credential) -> bool:
 
 
 def token_type_for_credential(credential: Credential) -> str:
-    scopes = {item.strip() for item in load_json_list(credential.scopes_json) if item.strip()}
-    if any(
-        scope.endswith(":write")
-        or scope in {"authoring:write", "publish:write", "registry:publish"}
-        for scope in scopes
-    ):
-        return "publisher"
-    return "reader"
+    return access_service.token_type_for_scopes(credential.scopes_json)
 
 
 def build_token_rows_from_scope(
@@ -69,8 +63,8 @@ def build_token_rows_from_scope(
     object_id: int | None = None,
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    for registry_object, release, version in iter_object_release_rows(scope):
-        if object_id is not None and registry_object.id != object_id:
+    for skill, release, version in iter_skill_release_rows(scope):
+        if object_id is not None and skill.id != object_id:
             continue
         for exposure in scope.exposures_by_release_id.get(release.id, []):
             for grant in scope.grants_by_exposure_id.get(exposure.id, []):
@@ -91,9 +85,9 @@ def build_token_rows_from_scope(
                         {
                             "id": credential.id,
                             "token_type": token_type_for_credential(credential),
-                            "object_id": registry_object.id,
-                            "object_name": registry_object.display_name,
-                            "object_href": with_lang(f"/library/{registry_object.id}", lang),
+                            "object_id": skill.id,
+                            "object_name": skill.display_name,
+                            "object_href": with_lang(f"/library/{skill.id}", lang),
                             "release_id": release.id,
                             "release_version": version.version if version is not None else None,
                             "label": constraints.get("label") or "",

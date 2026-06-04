@@ -16,24 +16,32 @@ from server.auth import (
     maybe_get_current_user,
 )
 from server.db import get_db
+from server.logging import get_logger
 from server.models import Credential, utcnow
 from server.modules.access import service as access_service
-from server.rate_limit import get_rate_limiter
+from server.rate_limit import get_rate_limiter, resolve_rate_limit_key
+from server.ui.i18n import pick_lang, resolve_language
 
-router = APIRouter(prefix="/api/auth", tags=["auth"])
+router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
+
+log = get_logger(__name__)
 
 _RATE_LIMIT_WINDOW = 60  # seconds
 _RATE_LIMIT_MAX = 10  # attempts per window
 
 
-def _check_login_rate_limit(client_ip: str) -> None:
+def _check_login_rate_limit(request: Request, user_id: int | None = None) -> None:
+    rate_limit_key = resolve_rate_limit_key(request, user_id)
     limiter = get_rate_limiter()
-    if not limiter.check(client_ip, max_attempts=_RATE_LIMIT_MAX, window_seconds=_RATE_LIMIT_WINDOW):
+    if not limiter.check(
+        rate_limit_key, max_attempts=_RATE_LIMIT_MAX, window_seconds=_RATE_LIMIT_WINDOW
+    ):
+        log.warning("login rate limit exceeded for key=%s", rate_limit_key)
         raise HTTPException(
             status_code=429,
             detail="Too many login attempts. Please try again later.",
         )
-    limiter.record(client_ip)
+    limiter.record(rate_limit_key)
 
 
 class LoginRequest(BaseModel):
@@ -46,19 +54,6 @@ class LoginResponse(BaseModel):
     username: str | None = None
     role: str | None = None
     error: str | None = None
-
-
-def _resolve_language(request: Request) -> str:
-    lang = (
-        (request.query_params.get('lang') or request.headers.get('accept-language') or '')
-        .strip()
-        .lower()
-    )
-    return 'en' if lang.startswith('en') else 'zh'
-
-
-def _pick_lang(lang: str, zh: str, en: str) -> str:
-    return en if lang == 'en' else zh
 
 
 def _secure_cookie_requested(request: Request) -> bool:
@@ -101,25 +96,27 @@ def _clear_csrf_cookie(response: Response, request: Request) -> None:
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login(
+def login(
     payload: LoginRequest,
     response: Response,
     request: Request,
     db: Session = Depends(get_db),
 ):
     """Validate username/password and return user info."""
+    # Check rate limit before attempting login (unauthenticated)
+    _check_login_rate_limit(request, user_id=None)
+    lang = resolve_language(request)
     client_ip = request.client.host if request.client else "unknown"
-    _check_login_rate_limit(client_ip)
-    lang = _resolve_language(request)
 
     result = access_service.resolve_user_by_password(
         db, payload.username, payload.password
     )
     if result is None:
+        log.warning("login failed for username=%s ip=%s", payload.username, client_ip)
         response.status_code = 401
         return LoginResponse(
             success=False,
-            error=_pick_lang(lang, "用户名或密码错误", "Invalid username or password"),
+            error=pick_lang(lang, "用户名或密码错误", "Invalid username or password"),
         )
 
     user, principal = result
@@ -137,7 +134,7 @@ async def login(
             principal_id=principal.id,
             grant_id=None,
             type="personal_token",
-            hashed_secret="password-auth",
+            hashed_secret="password-auth",  # noqa: S106
             scopes_json=access_service.encode_scopes({"session:user", "api:user"}),
             resource_selector_json="{}",
             created_at=utcnow(),
@@ -160,11 +157,12 @@ async def login(
         httponly=True,
     )
     _set_csrf_cookie(response, request)
+    log.info("login success username=%s role=%s ip=%s", user.username, user.role, client_ip)
     return LoginResponse(success=True, username=user.username, role=user.role)
 
 
 @router.post("/logout")
-async def logout(response: Response, request: Request):
+def logout(response: Response, request: Request):
     """Clear the browser auth cookie."""
     response.delete_cookie(
         key=AUTH_COOKIE_NAME,
@@ -178,14 +176,14 @@ async def logout(response: Response, request: Request):
 
 
 @router.get("/csrf")
-async def get_csrf_token(request: Request, response: Response):
+def get_csrf_token(request: Request, response: Response):
     """Refresh and return a new CSRF token for the current session."""
     token = _set_csrf_cookie(response, request)
     return {"csrf_token": token}
 
 
 @router.get("/me")
-async def get_current_user_info(request: Request, db: Session = Depends(get_db)):
+def get_current_user_info(request: Request, db: Session = Depends(get_db)):
     """Get current authenticated user info for browser session probing."""
     user = maybe_get_current_user(request, db)
     if user is None:

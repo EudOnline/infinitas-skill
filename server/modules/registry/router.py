@@ -10,7 +10,7 @@ from server.db import get_db
 from server.modules.registry import service
 from server.settings import get_settings
 
-router = APIRouter(tags=["registry"])
+router = APIRouter(prefix="/api/v1/registry", tags=["registry"])
 
 
 def _file_response(artifact_root: Path, relative_path: str) -> FileResponse:
@@ -32,7 +32,7 @@ def _payload(builder, request: Request, db: Session) -> dict:
         raise HTTPException(status_code=401, detail=str(exc)) from exc
 
 
-@router.get("/registry/ai-index.json")
+@router.get("/ai-index.json")
 def registry_ai_index(
     request: Request,
     db: Session = Depends(get_db),
@@ -40,7 +40,7 @@ def registry_ai_index(
     return _payload(service.build_registry_ai_index_payload, request, db)
 
 
-@router.get("/registry/discovery-index.json")
+@router.get("/discovery-index.json")
 def registry_discovery_index(
     request: Request,
     db: Session = Depends(get_db),
@@ -48,7 +48,7 @@ def registry_discovery_index(
     return _payload(service.build_registry_discovery_payload, request, db)
 
 
-@router.get("/registry/distributions.json")
+@router.get("/distributions.json")
 def registry_distributions(
     request: Request,
     db: Session = Depends(get_db),
@@ -56,7 +56,7 @@ def registry_distributions(
     return _payload(service.build_registry_distributions_payload, request, db)
 
 
-@router.get("/registry/compatibility.json")
+@router.get("/compatibility.json")
 def registry_compatibility(
     request: Request,
     db: Session = Depends(get_db),
@@ -64,7 +64,7 @@ def registry_compatibility(
     return _payload(service.build_registry_compatibility_payload, request, db)
 
 
-@router.get("/registry/{registry_path:path}")
+@router.get("/{registry_path:path}")
 def registry_artifact(
     registry_path: str,
     request: Request,

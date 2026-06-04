@@ -77,11 +77,13 @@ def init_db():
 
 def seed_bootstrap_users():
     from server.auth import hash_password
+    from server.logging import get_logger
     from server.modules.access.service import (
         ensure_personal_credential_for_user,
         ensure_user_principal,
     )
 
+    log = get_logger("server.db")
     settings = get_settings()
     factory = get_session_factory()
     with factory() as session:
@@ -102,7 +104,12 @@ def seed_bootstrap_users():
                 user.role = item["role"]
             password = item.get("password", "")
             if password and not user.password_hash:
-                user.password_hash = hash_password(password)
+                try:
+                    user.password_hash = hash_password(password)
+                except ValueError as exc:
+                    log.warning(
+                        "bootstrap user %s password skipped: %s", item["username"], exc
+                    )
             principal = ensure_user_principal(session, user)
             if item.get("token"):
                 ensure_personal_credential_for_user(

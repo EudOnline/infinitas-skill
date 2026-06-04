@@ -14,7 +14,7 @@ from server.app import create_app
 
 def _profile_client(tmp_path: Path) -> TestClient:
     os.environ["INFINITAS_SERVER_DATABASE_URL"] = f"sqlite:///{tmp_path / 'profile.db'}"
-    os.environ["INFINITAS_SERVER_SECRET_KEY"] = "profile-test-secret"
+    os.environ["INFINITAS_SERVER_SECRET_KEY"] = "profile-test-secret-32chars-long-min"
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(tmp_path / "artifacts")
     os.environ["INFINITAS_SERVER_BOOTSTRAP_USERS"] = (
         '[{"username":"profile-tester","display_name":"Profile Tester",'
@@ -27,7 +27,7 @@ def _profile_client(tmp_path: Path) -> TestClient:
 def _contributor_client(tmp_path: Path) -> TestClient:
     """Create a client with a contributor-role user."""
     os.environ["INFINITAS_SERVER_DATABASE_URL"] = f"sqlite:///{tmp_path / 'profile.db'}"
-    os.environ["INFINITAS_SERVER_SECRET_KEY"] = "profile-test-secret"
+    os.environ["INFINITAS_SERVER_SECRET_KEY"] = "profile-test-secret-32chars-long-min"
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(tmp_path / "artifacts")
     os.environ["INFINITAS_SERVER_BOOTSTRAP_USERS"] = (
         '[{"username":"contrib-user","display_name":"Contrib User",'
@@ -40,7 +40,7 @@ def _contributor_client(tmp_path: Path) -> TestClient:
 def _viewer_client(tmp_path: Path) -> TestClient:
     """Create a client with a viewer-role user (no admin access)."""
     os.environ["INFINITAS_SERVER_DATABASE_URL"] = f"sqlite:///{tmp_path / 'profile.db'}"
-    os.environ["INFINITAS_SERVER_SECRET_KEY"] = "profile-test-secret"
+    os.environ["INFINITAS_SERVER_SECRET_KEY"] = "profile-test-secret-32chars-long-min"
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(tmp_path / "artifacts")
     os.environ["INFINITAS_SERVER_BOOTSTRAP_USERS"] = (
         '[{"username":"viewer-user","display_name":"Viewer User",'
