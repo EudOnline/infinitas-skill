@@ -35,10 +35,10 @@ from pathlib import Path
 root = Path(sys.argv[1]).resolve()
 skill_dir = Path(sys.argv[2]).resolve()
 out_dir = Path(sys.argv[3]).resolve()
-sys.path.insert(0, str(root / 'scripts'))
+sys.path.insert(0, str(root / 'src'))
 
-from canonical_skill_lib import load_skill_source  # noqa: E402
-from render_skill_lib import load_platform_profile, render_skill  # noqa: E402
+from infinitas_skill.skills.canonical import load_skill_source  # noqa: E402
+from infinitas_skill.skills.render import load_platform_profile, render_skill  # noqa: E402
 
 source = load_skill_source(skill_dir)
 profile = load_platform_profile(root, 'codex')

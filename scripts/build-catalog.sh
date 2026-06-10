@@ -14,16 +14,15 @@ from pathlib import Path
 
 root = Path(os.environ['ROOT']).resolve()
 sys.path.insert(0, str(root / 'src'))
-sys.path.insert(0, str(root / 'scripts'))
 
-from registry_source_lib import load_registry_config, registry_identity, registry_is_resolution_candidate, resolve_registry_root  # noqa: E402
-from registry_snapshot_lib import snapshot_catalog_summary  # noqa: E402
-from review_lib import ReviewPolicyError, evaluate_review_state, review_decision_entries  # noqa: E402
-from skill_identity_lib import display_name, normalize_skill_identity  # noqa: E402
-from distribution_lib import DistributionError, manifest_index_entry  # noqa: E402
-from transparency_log_lib import TransparencyLogError, summarize_transparency_log_state  # noqa: E402
-from compatibility_evidence_lib import load_compatibility_evidence, load_platform_contracts, merge_declared_and_verified_support  # noqa: E402
-from compatibility_policy_lib import load_compatibility_policy  # noqa: E402
+from infinitas_skill.install.registry_sources import load_registry_config, registry_identity, registry_is_resolution_candidate, resolve_registry_root  # noqa: E402
+from infinitas_skill.registry.snapshot import snapshot_catalog_summary  # noqa: E402
+from infinitas_skill.policy.reviews import ReviewPolicyError, evaluate_review_state, review_decision_entries  # noqa: E402
+from infinitas_skill.policy.skill_identity import display_name, normalize_skill_identity  # noqa: E402
+from infinitas_skill.install.distribution import DistributionError, manifest_index_entry  # noqa: E402
+from infinitas_skill.release.transparency_log import TransparencyLogError, summarize_transparency_log_state  # noqa: E402
+from infinitas_skill.compatibility.evidence import load_compatibility_evidence, load_platform_contracts, merge_declared_and_verified_support  # noqa: E402
+from infinitas_skill.compatibility.policy import load_compatibility_policy  # noqa: E402
 from infinitas_skill.discovery.ai_index import build_ai_index  # noqa: E402
 from infinitas_skill.discovery.index import build_discovery_index  # noqa: E402
 

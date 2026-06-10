@@ -7,7 +7,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from result_schema_lib import validate_pull_result
+from infinitas_skill.discovery.result_schema import validate_pull_result
 
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:

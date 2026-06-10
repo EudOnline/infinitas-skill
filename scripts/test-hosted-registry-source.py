@@ -3,9 +3,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / 'scripts'))
 
-from registry_source_lib import (
+from infinitas_skill.install.registry_sources import (
     find_registry,
     registry_identity,
     resolve_registry_root,

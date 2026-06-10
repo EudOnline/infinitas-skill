@@ -5,7 +5,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from policy_pack_lib import (
+from infinitas_skill.policy.policy_pack import (
     PolicyPackError,
     load_effective_policy_domain,
     load_policy_domain_resolution,

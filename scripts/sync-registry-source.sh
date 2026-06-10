@@ -39,10 +39,10 @@ root = Path(sys.argv[1])
 name = sys.argv[2]
 force = sys.argv[3] == '1'
 snapshot_selector = sys.argv[4].strip() if len(sys.argv) > 4 else ''
-sys.path.insert(0, str(root / 'scripts'))
+sys.path.insert(0, str(root / 'src'))
 
-from registry_snapshot_lib import resolve_snapshot_selector  # noqa: E402
-from registry_source_lib import (  # noqa: E402
+from infinitas_skill.registry.snapshot import resolve_snapshot_selector  # noqa: E402
+from infinitas_skill.install.registry_sources import (  # noqa: E402
     canonical_pin_ref,
     extract_git_host,
     find_registry,
@@ -55,7 +55,7 @@ from registry_source_lib import (  # noqa: E402
     short_pin_value,
     validate_registry_config,
 )
-from registry_refresh_state_lib import write_refresh_state  # noqa: E402
+from infinitas_skill.registry.refresh_state import write_refresh_state  # noqa: E402
 
 
 def fail(message):

@@ -11,10 +11,10 @@ import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, os.path.join(sys.argv[1], 'scripts'))
-from install_integrity_policy_lib import load_install_integrity_policy
-from install_manifest_lib import InstallManifestError, load_install_manifest
-from installed_integrity_lib import build_integrity_freshness
+sys.path.insert(0, os.path.join(sys.argv[1], 'src'))
+from infinitas_skill.install.integrity_policy import load_install_integrity_policy
+from infinitas_skill.install.install_manifest import InstallManifestError, load_install_manifest
+from infinitas_skill.install.installed_integrity import build_integrity_freshness
 
 manifest_path = sys.argv[2]
 root = Path(sys.argv[1]).resolve()

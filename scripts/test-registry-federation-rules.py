@@ -4,9 +4,8 @@ from copy import deepcopy
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / 'scripts'))
 
-from registry_source_lib import validate_registry_config
+from infinitas_skill.install.registry_sources import validate_registry_config
 
 
 def fail(message):

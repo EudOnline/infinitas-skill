@@ -52,9 +52,9 @@ if ! python3 - "$ROOT" "$DIR" "$BASENAME" "$PARENT_STAGE" "$NAME_LINE" <<'PY'
 import json, os, re, sys
 from pathlib import Path
 root, path, basename, parent_stage, skill_name = sys.argv[1:6]
-sys.path.insert(0, os.path.join(root, 'scripts'))
-from skill_identity_lib import NamespacePolicyError, load_namespace_policy, namespace_policy_report, validate_identity_metadata
-from schema_version_lib import validate_schema_version
+sys.path.insert(0, os.path.join(root, 'src'))
+from infinitas_skill.policy.skill_identity import NamespacePolicyError, load_namespace_policy, namespace_policy_report, validate_identity_metadata
+from infinitas_skill.skills.schema_version import validate_schema_version
 
 meta_path = os.path.join(path, '_meta.json')
 status = 0

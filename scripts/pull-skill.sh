@@ -55,14 +55,13 @@ requested_registry = sys.argv[5] or None
 mode = sys.argv[6]
 
 sys.path.insert(0, str(root / 'src'))
-sys.path.insert(0, str(root / 'scripts'))
-from http_registry_lib import HostedRegistryError, fetch_json, registry_catalog_path  # noqa: E402
+from infinitas_skill.install.http_registry import HostedRegistryError, fetch_json, registry_catalog_path  # noqa: E402
 from infinitas_skill.discovery.ai_index import validate_ai_index_payload  # noqa: E402
 from infinitas_skill.discovery.install_explanation import (  # noqa: E402
     build_pull_failure_explanation,
     build_pull_plan_explanation,
 )
-from registry_source_lib import find_registry, load_registry_config, normalized_auth, resolve_registry_root  # noqa: E402
+from infinitas_skill.install.registry_sources import find_registry, load_registry_config, normalized_auth, resolve_registry_root  # noqa: E402
 
 resolved_registry_name = 'self'
 resolved_registry_root = root
@@ -312,7 +311,6 @@ if ! "${INSTALL_ARGS[@]}" >"$INSTALL_LOG" 2>&1; then
 import json, sys
 from pathlib import Path
 sys.path.insert(0, sys.argv[1] + '/src')
-sys.path.insert(0, sys.argv[1] + '/scripts')
 from infinitas_skill.discovery.install_explanation import build_pull_result_explanation  # noqa: E402
 plan = json.loads(sys.argv[2])
 message = Path(sys.argv[3]).read_text(encoding='utf-8').strip()
@@ -339,7 +337,6 @@ rm -f "$INSTALL_LOG"
 python3 - <<'PY' "$ROOT" "$PLAN_JSON" "$LOCKFILE_PATH"
 import json, sys
 sys.path.insert(0, sys.argv[1] + '/src')
-sys.path.insert(0, sys.argv[1] + '/scripts')
 from infinitas_skill.discovery.install_explanation import build_pull_result_explanation  # noqa: E402
 plan = json.loads(sys.argv[2])
 lockfile_path = sys.argv[3]

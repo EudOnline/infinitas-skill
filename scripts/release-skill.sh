@@ -414,8 +414,8 @@ if [[ $WRITE_PROVENANCE -eq 1 ]]; then
 import sys
 from pathlib import Path
 root = Path(sys.argv[1]).resolve()
-sys.path.insert(0, str(root / 'scripts'))
-from distribution_lib import distribution_paths
+sys.path.insert(0, str(root / 'src'))
+from infinitas_skill.install.distribution import distribution_paths
 
 paths = distribution_paths(root, sys.argv[2], sys.argv[3], publisher=sys.argv[4] or None)
 print(paths['dir'])
@@ -446,8 +446,8 @@ PY
 import sys
 from pathlib import Path
 root = Path(sys.argv[1]).resolve()
-sys.path.insert(0, str(root / 'scripts'))
-from distribution_lib import deterministic_bundle
+sys.path.insert(0, str(root / 'src'))
+from infinitas_skill.install.distribution import deterministic_bundle
 
 bundle = deterministic_bundle(sys.argv[2], sys.argv[3])
 print(bundle['sha256'])
@@ -502,9 +502,9 @@ from pathlib import Path
 root = Path(sys.argv[1]).resolve()
 provenance_path = Path(sys.argv[2]).resolve()
 entry_path = Path(sys.argv[3]).resolve()
-sys.path.insert(0, str(root / 'scripts'))
+sys.path.insert(0, str(root / 'src'))
 
-from attestation_lib import AttestationError, record_attestation_transparency_log  # noqa: E402
+from infinitas_skill.release.attestation import AttestationError, record_attestation_transparency_log  # noqa: E402
 
 try:
     result = record_attestation_transparency_log(provenance_path, root=root, entry_path=entry_path)

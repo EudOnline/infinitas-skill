@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import importlib.util
 import json
 import shutil
 import subprocess
@@ -8,6 +7,7 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / 'src'))
 
 
 def fail(message):
@@ -42,13 +42,9 @@ def prepare_repo():
     return tmpdir, repo
 
 
-def load_module(path: Path):
-    spec = importlib.util.spec_from_file_location('canonical_skill_lib', path)
-    if spec is None or spec.loader is None:
-        fail(f'unable to load module from {path}')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+def load_module():
+    import infinitas_skill.skills.canonical as mod
+    return mod
 
 
 def scaffold_canonical_skill(repo: Path):
@@ -118,7 +114,7 @@ def main():
     try:
         canonical_dir = scaffold_canonical_skill(repo)
         legacy_openclaw_dir = scaffold_legacy_openclaw_skill(repo)
-        module = load_module(repo / 'scripts' / 'canonical_skill_lib.py')
+        module = load_module()
 
         canonical = module.load_skill_source(canonical_dir)
         if canonical.get('name') != 'demo-skill':

@@ -61,8 +61,7 @@ def assert_contains(text: str, pattern: str, label: str):
 def main():
     tmpdir, repo = prepare_repo()
     try:
-        sys.path.insert(0, str(repo / 'scripts'))
-        from platform_contract_lib import validate_platform_contract
+        from infinitas_skill.compatibility.contracts import validate_platform_contract
 
         schema = load_json(repo / 'schemas' / 'skill-canonical.schema.json')
         if schema.get('$schema') != 'https://json-schema.org/draft/2020-12/schema':

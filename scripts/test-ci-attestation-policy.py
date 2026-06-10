@@ -5,7 +5,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from attestation_lib import AttestationError, load_attestation_config
+from infinitas_skill.release.attestation import AttestationError, load_attestation_config
 
 ROOT = Path(__file__).resolve().parent.parent
 

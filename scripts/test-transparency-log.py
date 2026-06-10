@@ -23,9 +23,7 @@ PLATFORM_EVIDENCE_MINUTES = {
     "claude": 1,
     "openclaw": 2,
 }
-sys.path.insert(0, str(ROOT / "scripts"))
-
-from attestation_lib import AttestationError, publish_attestation_to_transparency_log  # noqa: E402
+from infinitas_skill.release.attestation import AttestationError, publish_attestation_to_transparency_log  # noqa: E402
 
 
 def fail(message):

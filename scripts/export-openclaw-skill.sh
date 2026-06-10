@@ -61,8 +61,8 @@ requested_version = sys.argv[4] or None
 mode = sys.argv[5]
 force = sys.argv[6] == '1'
 
-sys.path.insert(0, str(root / 'scripts'))
-from openclaw_bridge_lib import (  # noqa: E402
+sys.path.insert(0, str(root / 'src'))
+from infinitas_skill.skills.openclaw import (  # noqa: E402
     OpenClawBridgeError,
     export_release_to_directory,
     resolve_ai_release,

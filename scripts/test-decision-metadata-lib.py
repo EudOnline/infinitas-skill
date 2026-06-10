@@ -8,9 +8,9 @@ def fail(message):
 
 
 try:
-    from decision_metadata_lib import canonical_decision_metadata  # noqa: E402
+    from infinitas_skill.discovery.decision_metadata import canonical_decision_metadata  # noqa: E402
 except Exception as exc:
-    fail(f'could not import decision_metadata_lib: {exc}')
+    fail(f'could not import decision_metadata: {exc}')
 
 
 def scenario_normalizes_source_metadata():

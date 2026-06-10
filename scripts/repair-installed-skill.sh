@@ -18,8 +18,8 @@ INFO_JSON="$(python3 - <<'PY' "$ROOT" "$TARGET_DIR" "$NAME"
 import json
 import sys
 
-sys.path.insert(0, sys.argv[1] + '/scripts')
-from installed_skill_lib import InstalledSkillError, load_installed_skill  # noqa: E402
+sys.path.insert(0, sys.argv[1] + '/src')
+from infinitas_skill.install.installed_skill import InstalledSkillError, load_installed_skill  # noqa: E402
 
 try:
     _manifest, item = load_installed_skill(sys.argv[2], sys.argv[3])

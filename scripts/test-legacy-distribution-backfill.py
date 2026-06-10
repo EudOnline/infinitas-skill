@@ -13,8 +13,7 @@ TRUST_CONFIG_REFS = [
     Path('config/allowed_signers'),
 ]
 
-sys.path.insert(0, str(ROOT / 'scripts'))
-from distribution_lib import manifest_index_entry  # noqa: E402
+from infinitas_skill.install.distribution import manifest_index_entry
 
 
 def fail(message):

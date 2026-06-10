@@ -7,7 +7,7 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from registry_source_lib import validate_registry_config
+from infinitas_skill.install.registry_sources import validate_registry_config
 
 ROOT = Path(__file__).resolve().parent.parent
 
