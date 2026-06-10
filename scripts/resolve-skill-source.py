@@ -3,15 +3,15 @@ import argparse
 import json
 from pathlib import Path
 
-from distribution_lib import load_distribution_index
-from http_registry_lib import HostedRegistryError, fetch_json, registry_catalog_path
-from registry_refresh_state_lib import (
+from infinitas_skill.install.distribution import load_distribution_index
+from infinitas_skill.install.http_registry import HostedRegistryError, fetch_json, registry_catalog_path
+from infinitas_skill.registry.refresh_state import (
     evaluate_refresh_status,
     refresh_resolution_message,
     refresh_status_blocks_resolution,
 )
-from registry_snapshot_lib import resolve_snapshot_selector
-from registry_source_lib import (
+from infinitas_skill.registry.snapshot import resolve_snapshot_selector
+from infinitas_skill.install.registry_sources import (
     apply_registry_federation,
     find_registry,
     load_registry_config,
@@ -21,7 +21,7 @@ from registry_source_lib import (
     registry_uses_refresh_cache,
     resolve_registry_root,
 )
-from skill_identity_lib import normalize_skill_identity, parse_requested_skill
+from infinitas_skill.policy.skill_identity import normalize_skill_identity, parse_requested_skill
 
 ROOT = Path(__file__).resolve().parent.parent
 

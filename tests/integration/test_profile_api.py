@@ -306,14 +306,14 @@ class TestProfileMePolicy:
             Credential,
             Exposure,
             Principal,
-            RegistryObject,
             Release,
+            Skill,
             SkillVersion,
         )
 
         factory = get_session_factory()
         with factory() as session:
-            # Create a RegistryObject, SkillVersion, Release, Exposure chain
+            # Create a Skill, SkillVersion, Release, Exposure chain
             namespace = Principal(
                 kind="user",
                 slug="grant-tester-ns",
@@ -322,17 +322,16 @@ class TestProfileMePolicy:
             session.add(namespace)
             session.flush()
 
-            obj = RegistryObject(
-                kind="skill",
+            skill = Skill(
                 namespace_id=namespace.id,
                 slug="test-skill-for-grant",
                 display_name="Test Skill For Grant",
             )
-            session.add(obj)
+            session.add(skill)
             session.flush()
 
             sv = SkillVersion(
-                skill_id=obj.id,
+                skill_id=skill.id,
                 version="1.0.0",
                 content_digest="abc",
                 metadata_digest="def",
@@ -342,7 +341,7 @@ class TestProfileMePolicy:
 
             release = Release(
                 skill_version_id=sv.id,
-                registry_object_id=obj.id,
+                skill_id=skill.id,
                 state="ready",
             )
             session.add(release)
@@ -876,8 +875,8 @@ class TestCredentialPolicyUpdateData:
             Credential,
             Exposure,
             Principal,
-            RegistryObject,
             Release,
+            Skill,
             SkillVersion,
         )
         from server.modules.access.service import hash_token
@@ -893,17 +892,16 @@ class TestCredentialPolicyUpdateData:
             session.add(namespace)
             session.flush()
 
-            obj = RegistryObject(
-                kind="skill",
+            skill = Skill(
                 namespace_id=namespace.id,
                 slug="policy-test-skill",
                 display_name="Policy Test Skill",
             )
-            session.add(obj)
+            session.add(skill)
             session.flush()
 
             sv = SkillVersion(
-                skill_id=obj.id,
+                skill_id=skill.id,
                 version="1.0.0",
                 content_digest="abc",
                 metadata_digest="def",
@@ -913,7 +911,7 @@ class TestCredentialPolicyUpdateData:
 
             release = Release(
                 skill_version_id=sv.id,
-                registry_object_id=obj.id,
+                skill_id=skill.id,
                 state="ready",
             )
             session.add(release)

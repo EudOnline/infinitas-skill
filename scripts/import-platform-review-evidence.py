@@ -4,8 +4,8 @@ import json
 import sys
 from pathlib import Path
 
-from review_evidence_lib import ReviewEvidenceError, load_review_evidence, review_evidence_path
-from review_lib import resolve_skill
+from infinitas_skill.policy.review_evidence import ReviewEvidenceError, load_review_evidence, review_evidence_path
+from infinitas_skill.policy.reviews import resolve_skill
 
 ROOT = Path(__file__).resolve().parent.parent
 

@@ -10,6 +10,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from server.auth import get_current_access_context
+from server.auth_guards import (
+    build_actor_ref,
+    require_user_with_context as _require_library_actor,
+    require_principal_context as _require_library_principal,
+)
 from server.db import get_db
 from server.models import (
     AccessGrant,
@@ -36,14 +41,6 @@ from server.ui.library_releases import list_library_releases
 router = APIRouter(prefix="/api/v1/library", tags=["library"])
 
 
-def _require_library_actor(context: AccessContext) -> AccessContext:
-    if context.user is None:
-        raise HTTPException(status_code=403, detail="user session required")
-    if context.user.role not in {"maintainer", "contributor"}:
-        raise HTTPException(status_code=403, detail="insufficient role")
-    return context
-
-
 class LibraryTokenCreateRequest(BaseModel):
     token_type: Literal["reader", "publisher"] = "reader"
     label: str | None = Field(default=None, max_length=200)
@@ -56,18 +53,8 @@ class LibraryShareCreateRequest(BaseModel):
     usage_limit: int | None = Field(default=5, ge=1, le=100000)
 
 
-def _require_library_principal(context: AccessContext) -> AccessContext:
-    actor = _require_library_actor(context)
-    if actor.principal is None:
-        raise HTTPException(status_code=403, detail="principal required")
-    return actor
-
-
-def _share_actor(context: AccessContext) -> share_service.ActorRef:
-    return share_service.ActorRef(
-        principal=context.principal,
-        is_maintainer=context.user is not None and context.user.role == "maintainer",
-    )
+def _share_actor(context: AccessContext):
+    return build_actor_ref(context)
 
 
 def _require_release_write_context(

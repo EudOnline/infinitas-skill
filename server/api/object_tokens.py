@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from server.auth import get_current_access_context
+from server.auth_guards import require_actor_ref as _require_actor
 from server.db import get_db
 from server.modules.access import token_service
 from server.modules.access.authn import AccessContext
@@ -25,17 +26,6 @@ class ObjectTokenCreateRequest(BaseModel):
     scope_id: int = Field(gt=0)
     issued_for: str | None = Field(default=None, max_length=200)
     expires_in_days: int | None = Field(default=None, ge=1, le=3650)
-
-
-def _require_actor(context: AccessContext) -> token_service.ActorRef:
-    if context.user is None or context.principal is None:
-        raise HTTPException(status_code=403, detail="user session required")
-    if context.user.role not in {"maintainer", "contributor"}:
-        raise HTTPException(status_code=403, detail="insufficient role")
-    return token_service.ActorRef(
-        principal=context.principal,
-        is_maintainer=context.user.role == "maintainer",
-    )
 
 
 def _translate_error(exc: token_service.TokenServiceError) -> HTTPException:

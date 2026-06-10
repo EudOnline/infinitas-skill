@@ -3,7 +3,7 @@ import argparse
 import json
 from pathlib import Path
 
-from render_skill_lib import RenderSkillError, render_skill_from_dir
+from infinitas_skill.skills.render import RenderSkillError, render_skill_from_dir
 
 
 def main():

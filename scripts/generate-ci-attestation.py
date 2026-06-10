@@ -5,13 +5,13 @@ import os
 import sys
 from datetime import datetime, timezone
 
-from attestation_lib import load_attestation_config
-from provenance_payload_lib import (
+from infinitas_skill.release.attestation import load_attestation_config
+from infinitas_skill.release.provenance_payload import (
     build_common_payload,
     build_distribution_payload,
     collect_release_context,
 )
-from release_lib import ROOT, ReleaseError
+from infinitas_skill.release.state import ROOT, ReleaseError
 
 
 def parse_args():

@@ -12,7 +12,6 @@ from time import perf_counter
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from server.app import create_app
@@ -46,8 +45,9 @@ def db(tmp_path: Path) -> Session:
     session_factory = get_session_factory()
 
     # Run migrations
-    from alembic import command
     from alembic.config import Config
+
+    from alembic import command
 
     ROOT = Path(__file__).resolve().parents[2]
     alembic_dir = ROOT / "alembic"
@@ -132,8 +132,9 @@ class TestQueryPerformance:
 
     def test_count_queries_are_efficient(self, db: Session) -> None:
         """Test that count queries use indexes efficiently."""
-        from server.models import Principal, Skill
         from sqlalchemy import func, select
+
+        from server.models import Principal, Skill
 
         # Create test data
         principal = Principal(
@@ -171,8 +172,9 @@ class TestPaginationPerformance:
 
     def test_pagination_limits_large_results(self, db: Session) -> None:
         """Test that pagination properly limits result sets."""
-        from server.models import Principal, Skill
         from sqlalchemy import select
+
+        from server.models import Principal, Skill
 
         # Create test data
         principal = Principal(
@@ -211,8 +213,9 @@ class TestPaginationPerformance:
 
     def test_pagination_offset_works(self, db: Session) -> None:
         """Test that pagination offset works correctly."""
-        from server.models import Principal, Skill
         from sqlalchemy import select
+
+        from server.models import Principal, Skill
 
         # Create test data
         principal = Principal(
@@ -267,8 +270,9 @@ class TestN1QueryPrevention:
 
     def test_no_n1_queries_on_list(self, db: Session) -> None:
         """Test that listing entities doesn't cause N+1 queries."""
-        from server.models import Principal, Skill
         from sqlalchemy import select
+
+        from server.models import Principal, Skill
 
         # Create test data
         principal = Principal(

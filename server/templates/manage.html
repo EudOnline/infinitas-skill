@@ -35,7 +35,7 @@
       <article class="kawaii-card animate-in"
                data-kind="{{ item.kind }}" data-name="{{ item.name | lower }}" data-summary="{{ (item.summary or '') | lower }}">
         <a href="{{ item.detail_href }}" class="font-display text-sm font-bold text-kawaii-ink hover:text-kawaii-primary-deep transition-colors inline-block py-1.5 min-h-[2.75rem]">
-          {{ item.name }}
+          {{ item.display_name }}
         </a>
         <p class="text-xs text-kawaii-ink-muted mt-1">{{ item.slug }}</p>
         <span class="kawaii-badge kawaii-badge--soft mt-1 inline-block">{{ item.kind }}</span>
@@ -56,7 +56,7 @@
       <article class="kawaii-card animate-in object-card"
                data-kind="{{ item.kind }}" data-name="{{ item.name | lower }}" data-summary="{{ (item.summary or '') | lower }}">
         <a href="{{ item.detail_href }}" class="font-display text-sm font-bold text-kawaii-ink hover:text-kawaii-primary-deep transition-colors">
-          {{ item.name }}
+          {{ item.display_name }}
         </a>
         <p class="text-xs text-kawaii-ink-muted mt-1">{{ item.slug }}</p>
         <span class="kawaii-badge kawaii-badge--soft mt-1 inline-block">{{ item.kind }}</span>
@@ -132,8 +132,8 @@
           <span class="font-display text-sm font-bold text-kawaii-ink">{{ item.object_name or item.grant_id }}</span>
           <span class="kawaii-badge {{ 'kawaii-badge--success' if item.state == 'active' else 'kawaii-badge--pending' }}">{{ item.state }}</span>
         </div>
-        <p class="text-xs text-kawaii-ink-muted">{{ item.release_name or '-' }} · {{ item.created }}</p>
-        {% if item.max_uses %}<p class="text-xs text-kawaii-ink-soft mt-1">{{ item.used_count or 0 }}/{{ item.max_uses }}</p>{% endif %}
+        <p class="text-xs text-kawaii-ink-muted">{{ item.release_version or '-' }} · {{ item.created }}</p>
+        {% if item.usage_limit %}<p class="text-xs text-kawaii-ink-soft mt-1">{{ item.usage_count or 0 }}/{{ item.usage_limit }}</p>{% endif %}
       </article>
       {% endfor %}
       {% if not share_items %}
@@ -154,10 +154,10 @@
             {% for item in share_items %}
             <tr class="border-b border-kawaii-line/50">
               <td data-label="{{ ui.get('col_object', '对象') }}" class="py-2 pr-4 font-medium">{{ item.object_name or item.grant_id }}</td>
-              <td data-label="{{ ui.get('col_release', '发布') }}" class="py-2 pr-4 text-kawaii-ink-soft">{{ item.release_name or '-' }}</td>
+              <td data-label="{{ ui.get('col_release', '发布') }}" class="py-2 pr-4 text-kawaii-ink-soft">{{ item.release_version or '-' }}</td>
               <td data-label="{{ ui.get('col_state', '状态') }}" class="py-2 pr-4"><span class="kawaii-badge {{ 'kawaii-badge--success' if item.state == 'active' else 'kawaii-badge--pending' }}">{{ item.state }}</span></td>
               <td data-label="{{ ui.get('col_created', '创建') }}" class="py-2 pr-4 text-kawaii-ink-muted">{{ item.created }}</td>
-              <td data-label="{{ ui.get('col_usage', '用量') }}" class="py-2">{% if item.max_uses %}{{ item.used_count or 0 }}/{{ item.max_uses }}{% else %}-{% endif %}</td>
+              <td data-label="{{ ui.get('col_usage', '用量') }}" class="py-2">{% if item.usage_limit %}{{ item.usage_count or 0 }}/{{ item.usage_limit }}{% else %}-{% endif %}</td>
             </tr>
             {% endfor %}
           </tbody>

@@ -7,16 +7,11 @@ from sqlalchemy import and_, or_, select, update
 from sqlalchemy.orm import Session
 
 from server.models import Job, User, utcnow
+from server.modules.shared.formatting import iso_format as _iso
 
 DEFAULT_JOB_LEASE_SECONDS = 300
 MAX_JOB_ATTEMPTS = 10
 MAX_RETRY_ATTEMPTS = 3  # auto-retry for transient failures (distinct from stale-lease reclaim)
-
-
-def _iso(value) -> str | None:
-    if value is None:
-        return None
-    return value.isoformat().replace('+00:00', 'Z')
 
 
 def load_job_payload(job: Job) -> dict:

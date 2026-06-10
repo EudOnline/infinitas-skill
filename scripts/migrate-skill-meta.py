@@ -4,7 +4,7 @@ import json
 import sys
 from pathlib import Path
 
-from schema_version_lib import SUPPORTED_SCHEMA_VERSION, validate_schema_version
+from infinitas_skill.skills.schema_version import SUPPORTED_SCHEMA_VERSION, validate_schema_version
 
 
 class MigrationError(Exception):

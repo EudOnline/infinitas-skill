@@ -4,14 +4,14 @@ import json
 import sys
 from pathlib import Path
 
-from install_manifest_lib import (
+from infinitas_skill.install.install_manifest import (
     MANIFEST_FILENAME,
     InstallManifestError,
     manifest_path_for,
     normalize_install_manifest,
     write_install_manifest,
 )
-from schema_version_lib import SUPPORTED_SCHEMA_VERSION, validate_schema_version
+from infinitas_skill.skills.schema_version import SUPPORTED_SCHEMA_VERSION, validate_schema_version
 
 
 def load_payload(manifest_path: Path):

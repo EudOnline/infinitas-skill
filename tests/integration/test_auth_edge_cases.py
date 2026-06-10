@@ -27,7 +27,7 @@ class TestLoginEdgeCases:
     def test_login_with_empty_credentials(self, tmp_path: Path):
         client = _auth_client(tmp_path)
         response = client.post("/api/v1/auth/login", json={"username": "", "password": ""})
-        assert response.status_code == 401
+        assert response.status_code == 422
 
     def test_login_with_wrong_password(self, tmp_path: Path):
         client = _auth_client(tmp_path)

@@ -10,7 +10,7 @@ from server.auth import maybe_get_current_access_context
 from server.models import Principal, User
 from server.modules.access.authn import AccessContext
 from server.ui.i18n import build_auth_redirect_url, resolve_language
-from server.ui_service import (
+from server.ui.queries import (
     get_draft_bundle_or_404,
     get_release_bundle_or_404,
     get_skill_or_404,

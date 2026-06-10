@@ -2,7 +2,7 @@
 import sys
 from pathlib import Path
 
-from registry_source_lib import load_registry_config, validate_registry_config
+from infinitas_skill.install.registry_sources import load_registry_config, validate_registry_config
 
 root = Path(__file__).resolve().parent.parent
 try:

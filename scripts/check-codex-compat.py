@@ -4,10 +4,7 @@ import json
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / 'scripts'))
-
-from canonical_skill_lib import parse_skill_frontmatter  # noqa: E402
+from infinitas_skill.skills.canonical import parse_skill_frontmatter
 
 
 def main():

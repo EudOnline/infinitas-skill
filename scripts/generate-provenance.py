@@ -4,14 +4,14 @@ import json
 import sys
 from datetime import datetime, timezone
 
-from attestation_lib import AttestationError, load_attestation_config, resolve_attestation_signer
-from provenance_payload_lib import (
+from infinitas_skill.release.attestation import AttestationError, load_attestation_config, resolve_attestation_signer
+from infinitas_skill.release.provenance_payload import (
     build_common_payload,
     build_distribution_payload,
     build_transparency_log_payload,
     collect_release_context,
 )
-from release_lib import ROOT, ReleaseError
+from infinitas_skill.release.state import ROOT, ReleaseError
 
 
 def parse_args():

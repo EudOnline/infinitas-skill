@@ -290,7 +290,7 @@ def test_library_object_detail_shows_real_token_and_share_rows(
     assert detail.status_code == 200, detail.text
     html = detail.text
 
-    assert "Demo Skill" in html
+    assert "Test Library Skill" in html
     assert "reader" in html
     assert "publisher" in html
     assert "2 / 5" in html
@@ -314,7 +314,7 @@ def test_access_center_and_shares_pages_render_real_inventory(
     access_response = client.get("/access?lang=en", headers=headers)
     assert access_response.status_code == 200, access_response.text
     access_html = access_response.text
-    assert "Demo Skill" in access_html
+    assert "Test Library Skill" in access_html
     assert "reader" in access_html
     assert "publisher" in access_html
     assert "Activity" in access_html
@@ -322,7 +322,7 @@ def test_access_center_and_shares_pages_render_real_inventory(
     shares_response = client.get("/shares?lang=en", headers=headers)
     assert shares_response.status_code == 200, shares_response.text
     shares_html = shares_response.text
-    assert "Demo Skill" in shares_html
+    assert "Test Library Skill" in shares_html
     assert "1.0.0" in shares_html
     assert "2 / 5" in shares_html
 

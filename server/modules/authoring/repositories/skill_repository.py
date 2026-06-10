@@ -6,10 +6,7 @@ isolating the service layer from SQLAlchemy ORM details.
 
 from __future__ import annotations
 
-from typing import Any
-
 from sqlalchemy import select
-from sqlalchemy.orm import Session, joinedload
 
 from server.models import Skill
 from server.repository.base import SQLAlchemyRepository

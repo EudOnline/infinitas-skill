@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from server.auth import get_current_access_context
+from server.auth_guards import require_actor_ref as _require_actor
 from server.db import get_db
 from server.modules.access.authn import AccessContext
 from server.modules.shares import service as share_service
@@ -25,17 +26,6 @@ class ShareLinkCreateRequest(BaseModel):
 
 class ShareLinkResolveRequest(BaseModel):
     password: str | None = Field(default=None, max_length=200)
-
-
-def _require_actor(context: AccessContext) -> share_service.ActorRef:
-    if context.user is None or context.principal is None:
-        raise HTTPException(status_code=403, detail="user session required")
-    if context.user.role not in {"maintainer", "contributor"}:
-        raise HTTPException(status_code=403, detail="insufficient role")
-    return share_service.ActorRef(
-        principal=context.principal,
-        is_maintainer=context.user.role == "maintainer",
-    )
 
 
 def _translate_error(exc: share_service.ShareLinkError) -> HTTPException:

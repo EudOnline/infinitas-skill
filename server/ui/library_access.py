@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from server.models import AccessGrant, Credential
 from server.modules.access import service as access_service
 from server.modules.access.authn import AccessContext
-from server.ui.formatting import humanize_timestamp, load_json_list, load_json_object
+from server.ui.formatting import humanize_timestamp, load_json_object
 from server.ui.i18n import with_lang
 from server.ui.library_scope import (
     LibraryScope,

@@ -1,17 +1,11 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
 
 from pydantic import BaseModel, Field
 
 from server.modules.release.models import Artifact, Release
-
-
-def _iso(value: datetime | None) -> str | None:
-    if value is None:
-        return None
-    return value.isoformat().replace("+00:00", "Z")
+from server.modules.shared.formatting import iso_format as _iso
 
 
 class ReleaseView(BaseModel):

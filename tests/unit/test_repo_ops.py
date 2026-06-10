@@ -2,17 +2,16 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 import pytest
 
 from server.repo_ops import (
     LockTimeout,
     RepoOpError,
+    _normalize_file_content,
     _safe_relative_path,
     locked_repo,
     materialize_submission_skill,
-    _normalize_file_content,
 )
 
 

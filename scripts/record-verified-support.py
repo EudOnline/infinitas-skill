@@ -7,9 +7,9 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from compatibility_evidence_lib import normalize_declared_support, write_compatibility_evidence
-from release_lib import ROOT, ReleaseError, resolve_skill
-from skill_identity_lib import normalize_skill_identity
+from infinitas_skill.compatibility.evidence import normalize_declared_support, write_compatibility_evidence
+from infinitas_skill.release.state import ROOT, ReleaseError, resolve_skill
+from infinitas_skill.policy.skill_identity import normalize_skill_identity
 
 
 class VerifiedSupportError(Exception):

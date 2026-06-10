@@ -3,7 +3,7 @@ import argparse
 import json
 import sys
 
-from attestation_lib import AttestationError, verify_attestation
+from infinitas_skill.release.attestation import AttestationError, verify_attestation
 
 
 def parse_args():

@@ -10,7 +10,6 @@ import os
 from pathlib import Path
 from time import sleep
 
-import pytest
 from fastapi.testclient import TestClient
 
 from server.app import create_app

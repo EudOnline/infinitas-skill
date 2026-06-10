@@ -4,8 +4,8 @@ import json
 import sys
 from pathlib import Path
 
-from registry_snapshot_lib import create_snapshot
-from registry_source_lib import find_registry, load_registry_config, validate_registry_config
+from infinitas_skill.registry.snapshot import create_snapshot
+from infinitas_skill.install.registry_sources import find_registry, load_registry_config, validate_registry_config
 
 ROOT = Path(__file__).resolve().parent.parent
 

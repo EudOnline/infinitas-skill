@@ -154,8 +154,9 @@ class TestDatabaseTransactionBehavior:
         session_factory = get_session_factory()
 
         # Run migrations
-        from alembic import command
         from alembic.config import Config
+
+        from alembic import command
 
         ROOT = Path(__file__).resolve().parents[2]
         alembic_dir = ROOT / "alembic"
@@ -214,8 +215,9 @@ class TestDatabaseTransactionBehavior:
         session_factory = get_session_factory()
 
         # Run migrations
-        from alembic import command
         from alembic.config import Config
+
+        from alembic import command
 
         ROOT = Path(__file__).resolve().parents[2]
         alembic_dir = ROOT / "alembic"

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from functools import lru_cache
 from pathlib import Path
 
@@ -141,97 +140,33 @@ def _effective_search_scope(*, requested_scope: str, has_grant_credential: bool)
     return requested_scope
 
 
-def _read_json(path: Path) -> dict:
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
-
-
-def _catalog_search_roots() -> list[Path]:
-    settings = get_settings()
-    return [
-        settings.artifact_path,
-        settings.artifact_path / "catalog",
-    ]
-
-
-def _load_catalog_search_entries() -> list[dict]:
-    for root in _catalog_search_roots():
-        payload = _read_json(root / "discovery-index.json")
-        skills = payload.get("skills")
-        if isinstance(skills, list):
-            return [item for item in skills if isinstance(item, dict)]
-    return []
-
-
-def _catalog_entry_score(query: str, item: dict) -> float:
-    needle = str(query or "").strip().lower()
-    if not needle:
-        return 1.0
-
-    haystacks = [
-        item.get("display_name") or "",
-        item.get("name") or "",
-        item.get("qualified_name") or "",
-        item.get("summary") or "",
-        item.get("latest_version") or "",
-    ]
-    haystacks.extend(item.get("match_names") or [])
-    haystacks.extend(item.get("tags") or [])
-
-    score = 0.0
-    for index, raw in enumerate(haystacks):
-        value = str(raw or "").strip().lower()
-        if not value:
-            continue
-        if value == needle:
-            score += 100.0 - index
-        elif value.startswith(needle):
-            score += 60.0 - index
-        elif needle in value:
-            score += 30.0 - index
-    return score
-
-
-def _search_catalog_snapshot(*, query: str, limit: int) -> list[dict]:
-    scored: list[tuple[float, dict]] = []
-    for item in _load_catalog_search_entries():
-        score = _catalog_entry_score(query, item)
-        if score <= 0:
-            continue
-        scored.append((score, item))
-    scored.sort(
-        key=lambda pair: (
-            -pair[0],
-            str(pair[1].get("qualified_name") or ""),
-            str(pair[1].get("latest_version") or ""),
+def _snapshot_skill_payloads(items: list[dict], *, limit: int) -> list[dict]:
+    runtime, runtime_readiness, workspace_targets = _search_runtime_defaults()
+    results = []
+    for item in items[:limit]:
+        qualified_name = item.get("qualified_name") or item.get("name") or ""
+        version = item.get("latest_version") or item.get("default_install_version") or ""
+        results.append(
+            _search_skill_payload(
+                scope="public",
+                qualified_name=qualified_name,
+                name=item.get("display_name") or item.get("name") or qualified_name,
+                summary=item.get("summary") or "",
+                version=version,
+                audience_type="public",
+                listing_mode="listed",
+                install_api_path=(
+                    "/api/v1/install/public/"
+                    + _install_ref(qualified_name, version)
+                ),
+                runtime=item.get("runtime") if isinstance(item.get("runtime"), dict) else None,
+                runtime_readiness=item.get("runtime_readiness"),
+                workspace_targets=item.get("workspace_targets")
+                if isinstance(item.get("workspace_targets"), list)
+                else None,
+            )
         )
-    )
-    return [
-        _search_skill_payload(
-            scope="public",
-            qualified_name=item.get("qualified_name") or item.get("name") or "",
-            name=item.get("display_name") or item.get("name") or item.get("qualified_name") or "",
-            summary=item.get("summary") or "",
-            version=item.get("latest_version") or item.get("default_install_version") or "",
-            audience_type="public",
-            listing_mode="listed",
-            install_api_path=(
-                "/api/v1/install/public/"
-                + _install_ref(
-                    item.get("qualified_name") or item.get("name") or "",
-                    item.get("latest_version") or item.get("default_install_version") or "",
-                )
-            ),
-            runtime=item.get("runtime") if isinstance(item.get("runtime"), dict) else None,
-            runtime_readiness=item.get("runtime_readiness"),
-            workspace_targets=item.get("workspace_targets")
-            if isinstance(item.get("workspace_targets"), list)
-            else None,
-        )
-        for _score, item in scored[:limit]
-    ]
+    return results
 
 
 @router.get("")
@@ -261,9 +196,9 @@ def search_registry(
         except discovery_service.ForbiddenError as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from exc
 
-    snapshot_entries = _search_catalog_snapshot(query=q, limit=limit)
-    if snapshot_entries:
-        return {"skills": snapshot_entries, "commands": []}
+    snapshot_items = discovery_service.search_catalog_snapshot(query=q, limit=limit)
+    if snapshot_items:
+        return {"skills": _snapshot_skill_payloads(snapshot_items, limit=limit), "commands": []}
 
     entries = discovery_service.search_public_catalog(db, query=q, limit=limit)
     return _search_payload(entries, scope="public")

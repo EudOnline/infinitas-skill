@@ -13,6 +13,7 @@ from server.models import AccessGrant, Credential, Exposure, Principal, Skill, u
 from server.modules.access import service as access_service
 from server.modules.audit import service as audit_service
 from server.modules.release import service as release_service
+from server.modules.shared.actor import ActorRef, actor_ref_label as _actor_ref
 
 TokenType = Literal["reader", "publisher"]
 ScopeType = Literal["object", "release"]
@@ -32,16 +33,6 @@ class TokenForbiddenError(TokenServiceError):
 
 class TokenConflictError(TokenServiceError):
     pass
-
-
-@dataclass(frozen=True)
-class ActorRef:
-    principal: Principal
-    is_maintainer: bool
-
-
-def _actor_ref(actor: ActorRef) -> str:
-    return f"principal:{actor.principal.slug}"
 
 
 def _find_release_for_scope(

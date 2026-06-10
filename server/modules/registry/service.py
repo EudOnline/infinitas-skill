@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hmac
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
@@ -20,6 +20,7 @@ from server.modules.discovery.projections import (
     build_release_projections,
     projection_has_materialized_artifacts,
 )
+from server.modules.shared.formatting import iso_format as _iso, utc_now_iso as _utc_now_iso
 from server.settings import get_settings
 
 INSTALL_POLICY = {
@@ -55,16 +56,6 @@ class NotFoundError(RegistryError):
 class RegistryAudience:
     mode: str
     context: AccessContext | None
-
-
-def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-
-
-def _iso(value: datetime | None) -> str | None:
-    if value is None:
-        return None
-    return value.isoformat().replace("+00:00", "Z")
 
 
 @lru_cache(maxsize=1)

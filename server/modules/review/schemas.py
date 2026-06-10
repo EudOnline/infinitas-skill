@@ -1,18 +1,12 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
 from server.modules.review.models import ReviewCase, ReviewDecision
-
-
-def _iso(value: datetime | None) -> str | None:
-    if value is None:
-        return None
-    return value.isoformat().replace("+00:00", "Z")
+from server.modules.shared.formatting import iso_format as _iso
 
 
 def _load_evidence(raw: str | None) -> dict:

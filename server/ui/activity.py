@@ -7,8 +7,9 @@ from sqlalchemy.orm import Session
 
 from server.models import AuditEvent
 from server.modules.audit.read_model import json_payload
+from server.modules.shared.formatting import iso_format
 from server.ui.formatting import humanize_identifier, humanize_timestamp
-from server.ui_service import get_audit_events, get_release_label, get_skill_name
+from server.ui.queries import get_audit_events, get_release_label, get_skill_name
 
 
 def _iso_stamp(value: object) -> str | None:
@@ -17,7 +18,7 @@ def _iso_stamp(value: object) -> str | None:
     if isinstance(value, datetime):
         if value.tzinfo is None:
             value = value.replace(tzinfo=timezone.utc)
-        return value.isoformat().replace("+00:00", "Z")
+        return iso_format(value)
     return str(value)
 
 

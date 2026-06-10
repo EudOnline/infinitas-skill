@@ -29,7 +29,8 @@ def db(monkeypatch, tmp_path: Path):
     """Yield a managed SQLAlchemy session for tests."""
     db_path = tmp_path / "arch_fixes.db"
     monkeypatch.setenv("INFINITAS_SERVER_DATABASE_URL", f"sqlite:///{db_path}")
-    monkeypatch.setenv("INFINITAS_SERVER_SECRET_KEY", "test")
+    monkeypatch.setenv("INFINITAS_SERVER_SECRET_KEY", "test-arch-fixes-secret-key")
+    monkeypatch.setenv("INFINITAS_SERVER_ENV", "test")
     monkeypatch.setenv("INFINITAS_SERVER_ARTIFACT_PATH", str(tmp_path / "artifacts"))
     monkeypatch.setenv("INFINITAS_SERVER_BOOTSTRAP_USERS", "[]")
     monkeypatch.setenv("INFINITAS_SERVER_ALLOWED_HOSTS", '["localhost","testserver"]')
@@ -85,8 +86,7 @@ class TestBatchCanAccessReleases:
         db.flush()
         release = Release(
             skill_version_id=sv.id,
-            registry_object_id=None,
-            object_kind="skill",
+            skill_id=skill.id,
             state="ready",
             format_version="1",
             created_by_principal_id=principal.id,
@@ -140,8 +140,7 @@ class TestBatchCanAccessReleases:
         db.flush()
         release = Release(
             skill_version_id=sv.id,
-            registry_object_id=None,
-            object_kind="skill",
+            skill_id=skill.id,
             state="ready",
             format_version="1",
             created_by_principal_id=principal.id,

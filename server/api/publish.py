@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from server.auth import get_current_access_context
-from server.auth_guards import require_authoring_principal
+from server.auth_guards import require_authoring_principal as _require_actor
 from server.db import get_db
 from server.jobs import enqueue_job, has_active_job
 from server.logging import get_logger
@@ -32,10 +32,6 @@ class PublishReleaseRequest(BaseModel):
     version: str = Field(min_length=1, max_length=64)
     content_ref: str = ""
     metadata: dict = Field(default_factory=dict)
-
-
-def _require_actor(context: AccessContext) -> tuple[int, bool]:
-    return require_authoring_principal(context)
 
 
 def _object_payload(skill: Skill) -> dict:

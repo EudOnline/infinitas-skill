@@ -3,7 +3,7 @@ import argparse
 import json
 import sys
 
-from installed_integrity_lib import InstalledIntegrityError, verify_installed_skill
+from infinitas_skill.install.installed_integrity import InstalledIntegrityError, verify_installed_skill
 
 
 def parse_args():

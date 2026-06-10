@@ -9,7 +9,6 @@ from __future__ import annotations
 from typing import Any
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
 
 from server.modules.authoring.models import SkillVersion
 from server.repository.base import SQLAlchemyRepository

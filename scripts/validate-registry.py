@@ -7,24 +7,21 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / 'src'
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
 
-from canonical_skill_lib import (
+from infinitas_skill.skills.canonical import (
     is_canonical_skill_dir,
     validate_canonical_payload,
 )
-from compatibility_evidence_lib import (
+from infinitas_skill.compatibility.evidence import (
     compatibility_evidence_root,
     validate_compatibility_evidence_payload,
 )
-from dependency_lib import DependencyError, normalize_meta_dependencies
-from policy_pack_lib import PolicyPackError, load_policy_domain_resolution
-from policy_trace_lib import build_policy_trace, render_policy_trace
-from registry_source_lib import load_registry_config
-from schema_version_lib import validate_schema_version
-from skill_identity_lib import (
+from infinitas_skill.install.service import DependencyError, normalize_meta_dependencies
+from infinitas_skill.policy.policy_pack import PolicyPackError, load_policy_domain_resolution
+from infinitas_skill.policy.trace import build_policy_trace, render_policy_trace
+from infinitas_skill.install.registry_sources import load_registry_config
+from infinitas_skill.skills.schema_version import validate_schema_version
+from infinitas_skill.policy.skill_identity import (
     NamespacePolicyError,
     load_namespace_policy,
     namespace_policy_report,

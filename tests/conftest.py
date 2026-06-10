@@ -77,8 +77,9 @@ def db(tmp_path: Path) -> Session:
     session_factory = get_session_factory()
 
     # Run migrations
-    from alembic import command
     from alembic.config import Config
+
+    from alembic import command
 
     alembic_dir = ROOT / "alembic"
     if alembic_dir.exists():

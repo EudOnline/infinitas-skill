@@ -15,6 +15,7 @@ from server.modules.discovery.projections import (
     build_release_projections,
     projection_has_materialized_artifacts,
 )
+from server.modules.shared.json import read_json_file as _read_json
 from server.settings import get_settings
 
 
@@ -149,13 +150,6 @@ def _ensure_grant_context(context: AccessContext) -> None:
 
 
 _CATALOG_MAX_ENTRIES = 500
-
-
-def _read_json(path: Path) -> dict:
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
 
 
 def _catalog_snapshot_roots() -> list[Path]:
@@ -438,3 +432,54 @@ def artifact_relative_path(entry: DiscoveryProjection, *, artifact: str) -> str:
     if artifact == "signature":
         return entry.signature_path
     raise NotFoundError("artifact kind not found")
+
+
+# ── Catalog snapshot search (file-based) ──────────────────────────
+
+
+def _catalog_entry_score(query: str, item: dict) -> float:
+    needle = str(query or "").strip().lower()
+    if not needle:
+        return 1.0
+    haystacks = [
+        item.get("display_name") or "",
+        item.get("name") or "",
+        item.get("qualified_name") or "",
+        item.get("summary") or "",
+        item.get("latest_version") or "",
+    ]
+    haystacks.extend(item.get("match_names") or [])
+    haystacks.extend(item.get("tags") or [])
+    score = 0.0
+    for index, raw in enumerate(haystacks):
+        value = str(raw or "").strip().lower()
+        if not value:
+            continue
+        if value == needle:
+            score += 100.0 - index
+        elif value.startswith(needle):
+            score += 60.0 - index
+        elif needle in value:
+            score += 30.0 - index
+    return score
+
+
+def search_catalog_snapshot(*, query: str, limit: int) -> list[dict]:
+    """Search the on-disk catalog snapshot by scoring entries against *query*.
+
+    Returns a list of raw ``dict`` entries (not :class:`DiscoveryProjection`).
+    """
+    scored: list[tuple[float, dict]] = []
+    for item in _load_catalog_snapshot_skill_entries():
+        score = _catalog_entry_score(query, item)
+        if score <= 0:
+            continue
+        scored.append((score, item))
+    scored.sort(
+        key=lambda pair: (
+            -pair[0],
+            str(pair[1].get("qualified_name") or ""),
+            str(pair[1].get("latest_version") or ""),
+        ),
+    )
+    return [item for _score, item in scored[:limit]]

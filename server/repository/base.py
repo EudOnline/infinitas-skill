@@ -13,7 +13,6 @@ from typing import (
     Callable,
     Generic,
     Iterable,
-    Sequence,
     TypeVar,
 )
 
@@ -333,7 +332,6 @@ class QueryBuilder(Generic[T]):
         Returns:
             Self for chaining
         """
-        from sqlalchemy.orm import joinedload, selectinload
 
         for path in paths:
             parts = str(path).split(".")
@@ -389,7 +387,7 @@ class QueryBuilder(Generic[T]):
         if not self._eager_load_paths:
             return
 
-        from sqlalchemy.orm import joinedload, selectinload
+        from sqlalchemy.orm import joinedload
 
         for path in self._eager_load_paths:
             if len(path) == 1:

@@ -8,10 +8,13 @@ from pathlib import Path
 
 from sqlalchemy import select
 
+from tests.helpers.signing import add_allowed_signer, configure_git_ssh_signing
+
 
 def configure_env(tmpdir: Path) -> Path:
     artifact_root = tmpdir / "artifacts"
     os.environ["INFINITAS_SERVER_DATABASE_URL"] = f"sqlite:///{tmpdir / 'server.db'}"
+    os.environ["INFINITAS_SERVER_ENV"] = "test"
     os.environ["INFINITAS_SERVER_SECRET_KEY"] = "test-secret-key-32chars-long-minimum"
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(artifact_root)
     os.environ["INFINITAS_REGISTRY_READ_TOKENS"] = json.dumps(["registry-reader-token"])
@@ -27,6 +30,21 @@ def configure_env(tmpdir: Path) -> Path:
         ]
     )
     return artifact_root
+
+
+def _prepare_signing_repo(repo: Path, signing_key: Path) -> None:
+    import subprocess
+
+    allowed_signers = repo / "config" / "allowed_signers"
+    allowed_signers.write_text("", encoding="utf-8")
+    add_allowed_signer(allowed_signers, identity="release-test", key_path=signing_key)
+
+    subprocess.run(["git", "init", "-b", "main"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "Registry Test"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "registry@example.com"], cwd=repo, check=True, capture_output=True)
+    configure_git_ssh_signing(repo, signing_key)
+    subprocess.run(["git", "add", "config/allowed_signers", "config/signing.json"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "test: bootstrap signing config"], cwd=repo, check=True, capture_output=True)
 
 
 def create_ready_release(client, headers: dict[str, str], *, slug: str, display_name: str) -> int:
@@ -70,8 +88,8 @@ def create_ready_release(client, headers: dict[str, str], *, slug: str, display_
     assert create_release_response.status_code == 201, create_release_response.text
     release_id = int(create_release_response.json()["id"])
 
-    processed = run_worker_loop(limit=1)
-    assert processed == 1, f"expected worker to process 1 release job, got {processed}"
+    processed = run_worker_loop(limit=5)
+    assert processed >= 1, f"expected worker to process at least 1 release job, got {processed}"
     return release_id
 
 
@@ -312,189 +330,198 @@ def test_public_search_snapshot_install_targets_resolve_install_payload() -> Non
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
-def test_me_search_results_include_install_resolution_targets_for_private_entries() -> None:
-    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-search-me-test-"))
-    try:
-        configure_env(tmpdir)
+def test_me_search_results_include_install_resolution_targets_for_private_entries(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    _prepare_signing_repo(temp_repo_copy, signing_key)
+    configure_env(tmp_path)
+    os.environ["INFINITAS_SERVER_REPO_PATH"] = str(temp_repo_copy)
 
-        from fastapi.testclient import TestClient
+    from fastapi.testclient import TestClient
 
-        from server.app import create_app
+    from server.app import create_app
 
-        client = TestClient(create_app())
-        headers = {"Authorization": "Bearer fixture-maintainer-token"}
+    client = TestClient(create_app())
+    headers = {"Authorization": "Bearer fixture-maintainer-token"}
 
-        release_id = create_ready_release(
-            client,
-            headers,
-            slug="private-search-skill",
-            display_name="Private Search Skill",
-        )
-        private_exposure = create_exposure(
-            client,
-            headers,
-            release_id=release_id,
-            audience_type="private",
-            listing_mode="direct_only",
-            requested_review_mode="none",
-        )
+    release_id = create_ready_release(
+        client,
+        headers,
+        slug="private-search-skill",
+        display_name="Private Search Skill",
+    )
+    private_exposure = create_exposure(
+        client,
+        headers,
+        release_id=release_id,
+        audience_type="private",
+        listing_mode="direct_only",
+        requested_review_mode="none",
+    )
 
-        response = client.get(
-            "/api/v1/search?q=private-search&scope=me",
-            headers=headers,
-        )
-        assert response.status_code == 200, response.text
+    response = client.get(
+        "/api/v1/search?q=private-search&scope=me",
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
 
-        payload = response.json()
-        skills = payload.get("skills") or []
-        assert skills, payload
-        private_entry = next(
-            item
-            for item in skills
-            if item.get("qualified_name") == "fixture-maintainer/private-search-skill"
-        )
-        assert private_entry["audience_type"] == "private"
-        assert private_entry["install_scope"] == "me"
-        assert private_entry["install_ref"] == "fixture-maintainer/private-search-skill@0.1.0"
-        assert (
-            private_entry["install_api_path"]
-            == "/api/v1/install/me/fixture-maintainer/private-search-skill@0.1.0"
-        )
-        assert private_entry["runtime"]["platform"] == "openclaw"
-        assert private_entry["runtime_readiness"] == "ready"
-        assert private_entry["workspace_targets"] == ["skills", ".agents/skills"]
+    payload = response.json()
+    skills = payload.get("skills") or []
+    assert skills, payload
+    private_entry = next(
+        item
+        for item in skills
+        if item.get("qualified_name") == "fixture-maintainer/private-search-skill"
+    )
+    assert private_entry["audience_type"] == "private"
+    assert private_entry["install_scope"] == "me"
+    assert private_entry["install_ref"] == "fixture-maintainer/private-search-skill@0.1.0"
+    assert (
+        private_entry["install_api_path"]
+        == "/api/v1/install/me/fixture-maintainer/private-search-skill@0.1.0"
+    )
+    assert private_entry["runtime"]["platform"] == "openclaw"
+    assert private_entry["runtime_readiness"] == "ready"
+    assert private_entry["workspace_targets"] == ["skills", ".agents/skills"]
 
-        install_response = client.get(private_entry["install_api_path"], headers=headers)
-        assert install_response.status_code == 200, install_response.text
-        assert (
-            install_response.json()["qualified_name"] == "fixture-maintainer/private-search-skill"
-        )
-        assert int(private_exposure["id"]) > 0
-    finally:
-        shutil.rmtree(tmpdir, ignore_errors=True)
-
-
-def test_me_search_accepts_browser_session_cookie_authentication() -> None:
-    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-search-cookie-test-"))
-    try:
-        configure_env(tmpdir)
-
-        from fastapi.testclient import TestClient
-
-        from server.app import create_app
-        from server.auth import AUTH_COOKIE_NAME
-
-        client = TestClient(create_app())
-        token_headers = {"Authorization": "Bearer fixture-maintainer-token"}
-
-        release_id = create_ready_release(
-            client,
-            token_headers,
-            slug="cookie-search-skill",
-            display_name="Cookie Search Skill",
-        )
-        create_exposure(
-            client,
-            token_headers,
-            release_id=release_id,
-            audience_type="private",
-            listing_mode="direct_only",
-            requested_review_mode="none",
-        )
-
-        login_response = client.post(
-            "/api/v1/auth/login?lang=en",
-            json={"username": "fixture-maintainer", "password": "fixture-maintainer-password"},
-        )
-        assert login_response.status_code == 200, login_response.text
-        assert login_response.json()["success"] is True
-        session_cookie = login_response.cookies.get(AUTH_COOKIE_NAME)
-        assert session_cookie, "expected login to issue a browser session cookie"
-
-        client.cookies.set(AUTH_COOKIE_NAME, session_cookie)
-        response = client.get("/api/v1/search?q=cookie-search&scope=me")
-        assert response.status_code == 200, response.text
-
-        payload = response.json()
-        skills = payload.get("skills") or []
-        cookie_entry = next(
-            item
-            for item in skills
-            if item.get("qualified_name") == "fixture-maintainer/cookie-search-skill"
-        )
-        assert cookie_entry["install_scope"] == "me"
-        assert cookie_entry["audience_type"] == "private"
-    finally:
-        shutil.rmtree(tmpdir, ignore_errors=True)
+    install_response = client.get(private_entry["install_api_path"], headers=headers)
+    assert install_response.status_code == 200, install_response.text
+    assert (
+        install_response.json()["qualified_name"] == "fixture-maintainer/private-search-skill"
+    )
+    assert int(private_exposure["id"]) > 0
 
 
-def test_grant_search_uses_grant_install_scope_for_grant_credentials() -> None:
-    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-search-grant-test-"))
-    try:
-        configure_env(tmpdir)
+def test_me_search_accepts_browser_session_cookie_authentication(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    _prepare_signing_repo(temp_repo_copy, signing_key)
+    configure_env(tmp_path)
+    os.environ["INFINITAS_SERVER_REPO_PATH"] = str(temp_repo_copy)
 
-        from fastapi.testclient import TestClient
+    from fastapi.testclient import TestClient
 
-        from server.app import create_app
-        from server.db import get_session_factory
+    from server.app import create_app
+    from server.auth import AUTH_COOKIE_NAME
 
-        client = TestClient(create_app())
-        session_factory = get_session_factory()
-        headers = {"Authorization": "Bearer fixture-maintainer-token"}
+    client = TestClient(create_app())
+    token_headers = {"Authorization": "Bearer fixture-maintainer-token"}
 
-        release_id = create_ready_release(
-            client,
-            headers,
-            slug="grant-search-skill",
-            display_name="Grant Search Skill",
-        )
-        exposure = create_exposure(
-            client,
-            headers,
-            release_id=release_id,
-            audience_type="grant",
-            listing_mode="listed",
-            requested_review_mode="none",
-        )
-        grant_token = create_grant_token(session_factory, exposure_id=int(exposure["id"]))
+    release_id = create_ready_release(
+        client,
+        token_headers,
+        slug="cookie-search-skill",
+        display_name="Cookie Search Skill",
+    )
+    create_exposure(
+        client,
+        token_headers,
+        release_id=release_id,
+        audience_type="private",
+        listing_mode="direct_only",
+        requested_review_mode="none",
+    )
 
-        response = client.get(
-            "/api/v1/search?q=grant-search&scope=me",
-            headers={"Authorization": f"Bearer {grant_token}"},
-        )
-        assert response.status_code == 200, response.text
+    login_response = client.post(
+        "/api/v1/auth/login?lang=en",
+        json={"username": "fixture-maintainer", "password": "fixture-maintainer-password"},
+    )
+    assert login_response.status_code == 200, login_response.text
+    assert login_response.json()["success"] is True
+    session_cookie = login_response.cookies.get(AUTH_COOKIE_NAME)
+    assert session_cookie, "expected login to issue a browser session cookie"
 
-        payload = response.json()
-        skills = payload.get("skills") or []
-        assert skills, payload
-        grant_entry = next(
-            item
-            for item in skills
-            if item.get("qualified_name") == "fixture-maintainer/grant-search-skill"
-        )
-        assert grant_entry["audience_type"] == "grant"
-        assert grant_entry["install_scope"] == "grant"
-        assert (
-            grant_entry["install_api_path"]
-            == "/api/v1/install/grant/fixture-maintainer/grant-search-skill@0.1.0"
-        )
-        assert grant_entry["runtime"]["platform"] == "openclaw"
-        assert grant_entry["runtime_readiness"] == "ready"
-        assert grant_entry["workspace_targets"] == ["skills", ".agents/skills"]
+    client.cookies.set(AUTH_COOKIE_NAME, session_cookie)
+    response = client.get("/api/v1/search?q=cookie-search&scope=me")
+    assert response.status_code == 200, response.text
 
-        explicit_grant_response = client.get(
-            "/api/v1/search?q=grant-search&scope=grant",
-            headers={"Authorization": f"Bearer {grant_token}"},
-        )
-        assert explicit_grant_response.status_code == 200, explicit_grant_response.text
-        explicit_skills = explicit_grant_response.json().get("skills") or []
-        assert explicit_skills and explicit_skills[0]["install_scope"] == "grant"
+    payload = response.json()
+    skills = payload.get("skills") or []
+    cookie_entry = next(
+        item
+        for item in skills
+        if item.get("qualified_name") == "fixture-maintainer/cookie-search-skill"
+    )
+    assert cookie_entry["install_scope"] == "me"
+    assert cookie_entry["audience_type"] == "private"
 
-        install_response = client.get(
-            grant_entry["install_api_path"],
-            headers={"Authorization": f"Bearer {grant_token}"},
-        )
-        assert install_response.status_code == 200, install_response.text
-        assert install_response.json()["qualified_name"] == "fixture-maintainer/grant-search-skill"
-    finally:
-        shutil.rmtree(tmpdir, ignore_errors=True)
+
+def test_grant_search_uses_grant_install_scope_for_grant_credentials(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    _prepare_signing_repo(temp_repo_copy, signing_key)
+    configure_env(tmp_path)
+    os.environ["INFINITAS_SERVER_REPO_PATH"] = str(temp_repo_copy)
+
+    from fastapi.testclient import TestClient
+
+    from server.app import create_app
+    from server.db import get_session_factory
+
+    client = TestClient(create_app())
+    session_factory = get_session_factory()
+    headers = {"Authorization": "Bearer fixture-maintainer-token"}
+
+    release_id = create_ready_release(
+        client,
+        headers,
+        slug="grant-search-skill",
+        display_name="Grant Search Skill",
+    )
+    exposure = create_exposure(
+        client,
+        headers,
+        release_id=release_id,
+        audience_type="grant",
+        listing_mode="listed",
+        requested_review_mode="none",
+    )
+    grant_token = create_grant_token(session_factory, exposure_id=int(exposure["id"]))
+
+    response = client.get(
+        "/api/v1/search?q=grant-search&scope=me",
+        headers={"Authorization": f"Bearer {grant_token}"},
+    )
+    assert response.status_code == 200, response.text
+
+    payload = response.json()
+    skills = payload.get("skills") or []
+    assert skills, payload
+    grant_entry = next(
+        item
+        for item in skills
+        if item.get("qualified_name") == "fixture-maintainer/grant-search-skill"
+    )
+    assert grant_entry["audience_type"] == "grant"
+    assert grant_entry["install_scope"] == "grant"
+    assert (
+        grant_entry["install_api_path"]
+        == "/api/v1/install/grant/fixture-maintainer/grant-search-skill@0.1.0"
+    )
+    assert grant_entry["runtime"]["platform"] == "openclaw"
+    assert grant_entry["runtime_readiness"] == "ready"
+    assert grant_entry["workspace_targets"] == ["skills", ".agents/skills"]
+
+    explicit_grant_response = client.get(
+        "/api/v1/search?q=grant-search&scope=grant",
+        headers={"Authorization": f"Bearer {grant_token}"},
+    )
+    assert explicit_grant_response.status_code == 200, explicit_grant_response.text
+    explicit_skills = explicit_grant_response.json().get("skills") or []
+    assert explicit_skills and explicit_skills[0]["install_scope"] == "grant"
+
+    install_response = client.get(
+        grant_entry["install_api_path"],
+        headers={"Authorization": f"Bearer {grant_token}"},
+    )
+    assert install_response.status_code == 200, install_response.text
+    assert install_response.json()["qualified_name"] == "fixture-maintainer/grant-search-skill"

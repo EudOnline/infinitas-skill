@@ -4,8 +4,8 @@ import json
 import sys
 from pathlib import Path
 
-from distribution_lib import DistributionError, build_distribution_manifest_payload
-from release_lib import ROOT
+from infinitas_skill.install.distribution import DistributionError, build_distribution_manifest_payload
+from infinitas_skill.release.state import ROOT
 
 
 def parse_args():

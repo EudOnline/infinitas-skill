@@ -27,8 +27,9 @@ def db(tmp_path: Path) -> Session:
     session_factory = get_session_factory()
 
     # Run migrations
-    from alembic import command
     from alembic.config import Config
+
+    from alembic import command
 
     ROOT = Path(__file__).resolve().parents[2]
     alembic_dir = ROOT / "alembic"
@@ -48,8 +49,9 @@ class TestPaginationBasics:
 
     def test_empty_result_set_with_pagination(self, db: Session) -> None:
         """Test pagination with empty result set."""
-        from server.models import Principal, Skill
         from sqlalchemy import select
+
+        from server.models import Principal, Skill
 
         principal = Principal(
             slug="empty-pagination",
@@ -72,8 +74,9 @@ class TestPaginationBasics:
 
     def test_pagination_respects_limit(self, db: Session) -> None:
         """Test that pagination respects the limit parameter."""
-        from server.models import Principal, Skill
         from sqlalchemy import select
+
+        from server.models import Principal, Skill
 
         principal = Principal(
             slug="limit-pagination",
@@ -106,8 +109,9 @@ class TestPaginationBasics:
 
     def test_pagination_respects_offset(self, db: Session) -> None:
         """Test that pagination respects the offset parameter."""
-        from server.models import Principal, Skill
         from sqlalchemy import select
+
+        from server.models import Principal, Skill
 
         principal = Principal(
             slug="offset-pagination",
@@ -158,8 +162,9 @@ class TestPaginationBasics:
 
     def test_pagination_beyond_data_returns_empty(self, db: Session) -> None:
         """Test that pagination beyond available data returns empty set."""
-        from server.models import Principal, Skill
         from sqlalchemy import select
+
+        from server.models import Principal, Skill
 
         principal = Principal(
             slug="beyond-pagination",
@@ -227,9 +232,11 @@ class TestPaginationPerformance:
 
     def test_large_offset_performance(self, db: Session) -> None:
         """Test that large offsets don't cause performance issues."""
-        from server.models import Principal, Skill
-        from sqlalchemy import select
         from time import perf_counter
+
+        from sqlalchemy import select
+
+        from server.models import Principal, Skill
 
         principal = Principal(
             slug="large-offset",
@@ -267,9 +274,11 @@ class TestPaginationPerformance:
 
     def test_count_query_is_fast(self, db: Session) -> None:
         """Test that count queries for pagination are fast."""
-        from server.models import Principal, Skill
-        from sqlalchemy import func, select
         from time import perf_counter
+
+        from sqlalchemy import func, select
+
+        from server.models import Principal, Skill
 
         principal = Principal(
             slug="count-query",

@@ -1,10 +1,10 @@
 """Auth API for username/password authentication."""
+from __future__ import annotations
 
 import os
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from pydantic import BaseModel
-from sqlalchemy import select
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from server.auth import (
@@ -17,7 +17,7 @@ from server.auth import (
 )
 from server.db import get_db
 from server.logging import get_logger
-from server.models import Credential, utcnow
+from server.models import utcnow
 from server.modules.access import service as access_service
 from server.rate_limit import get_rate_limiter, resolve_rate_limit_key
 from server.ui.i18n import pick_lang, resolve_language
@@ -45,8 +45,8 @@ def _check_login_rate_limit(request: Request, user_id: int | None = None) -> Non
 
 
 class LoginRequest(BaseModel):
-    username: str
-    password: str
+    username: str = Field(min_length=1, max_length=200)
+    password: str = Field(min_length=1, max_length=1024)
 
 
 class LoginResponse(BaseModel):
@@ -122,26 +122,7 @@ def login(
     user, principal = result
 
     # Ensure a personal_token credential exists for session cookie creation
-    credential = db.scalar(
-        select(Credential)
-        .where(Credential.type == "personal_token")
-        .where(Credential.principal_id == principal.id)
-        .order_by(Credential.id.desc())
-    )
-    if credential is None:
-        # Create a synthetic credential for password-based login users
-        credential = Credential(
-            principal_id=principal.id,
-            grant_id=None,
-            type="personal_token",
-            hashed_secret="password-auth",  # noqa: S106
-            scopes_json=access_service.encode_scopes({"session:user", "api:user"}),
-            resource_selector_json="{}",
-            created_at=utcnow(),
-        )
-        db.add(credential)
-        db.flush()
-
+    credential = access_service.ensure_session_credential(db, principal_id=principal.id)
     credential.last_used_at = utcnow()
     db.add(credential)
 

@@ -7,7 +7,6 @@ attestation sections.
 from __future__ import annotations
 
 import subprocess
-from datetime import datetime, timezone
 from pathlib import Path
 
 from infinitas_skill.release.policy_state import resolve_releaser_identity
@@ -17,10 +16,7 @@ from server.modules.release.snapshot_accessors import (
     snapshot_content_mode,
     snapshot_source_ref,
 )
-
-
-def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+from server.modules.shared.formatting import utc_now_iso as _utc_now_iso
 
 
 def _git_value(repo_root: Path, *args: str) -> str | None:

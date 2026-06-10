@@ -6,9 +6,9 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from install_integrity_policy_lib import load_install_integrity_policy
-from install_manifest_lib import load_install_manifest, write_install_manifest
-from installed_integrity_lib import (
+from infinitas_skill.install.integrity_policy import load_install_integrity_policy
+from infinitas_skill.install.install_manifest import load_install_manifest, write_install_manifest
+from infinitas_skill.install.installed_integrity import (
     append_integrity_event,
     apply_integrity_history_retention,
     build_install_integrity_snapshot,
@@ -16,7 +16,7 @@ from installed_integrity_lib import (
     normalize_integrity_events,
     write_installed_integrity_snapshot,
 )
-from skill_identity_lib import normalize_skill_identity
+from infinitas_skill.policy.skill_identity import normalize_skill_identity
 
 
 def _persist_distribution_cache(target_dir: Path, source_info):

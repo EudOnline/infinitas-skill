@@ -3,13 +3,13 @@ import json
 import sys
 from pathlib import Path
 
-from dependency_lib import (
+from infinitas_skill.install.service import (
     DependencyError,
     constraint_display,
     normalize_meta_dependencies,
     plan_from_skill_dir,
 )
-from registry_source_lib import load_registry_config
+from infinitas_skill.install.registry_sources import load_registry_config
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_REGISTRY = load_registry_config(ROOT).get('default_registry') or 'self'

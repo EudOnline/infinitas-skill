@@ -200,6 +200,35 @@ def resolve_user_by_password(
     return user, principal
 
 
+def ensure_session_credential(db: Session, *, principal_id: int) -> Credential:
+    """Return an existing personal_token credential or create one for session auth.
+
+    Uses a random placeholder hash (not used for token verification) instead
+    of a predictable string, avoiding the audit finding C3.
+    """
+    credential = db.scalar(
+        select(Credential)
+        .where(Credential.type == "personal_token")
+        .where(Credential.principal_id == principal_id)
+        .order_by(Credential.id.desc())
+    )
+    if credential is not None:
+        return credential
+
+    credential = Credential(
+        principal_id=principal_id,
+        grant_id=None,
+        type="personal_token",
+        hashed_secret=f"session:{secrets.token_urlsafe(16)}",
+        scopes_json=encode_scopes({"session:user", "api:user"}),
+        resource_selector_json="{}",
+        created_at=utcnow(),
+    )
+    db.add(credential)
+    db.flush()
+    return credential
+
+
 def has_scope(credential: Credential, scope: str) -> bool:
     return scope in parse_scopes(credential.scopes_json)
 

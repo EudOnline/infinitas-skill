@@ -62,7 +62,7 @@ class TestSecurityHeaders:
 class TestCsrfProtection:
     def test_get_requests_skip_csrf(self, tmp_path: Path):
         client = _security_client(tmp_path)
-        response = client.get("/api/v1/me", headers={"Authorization": "Bearer security-test-token"})
+        response = client.get("/api/v1/profile/me", headers={"Authorization": "Bearer security-test-token"})
         assert response.status_code == 200
 
     def test_bearer_auth_skips_csrf(self, tmp_path: Path):

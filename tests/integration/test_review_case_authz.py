@@ -2,17 +2,50 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
-import tempfile
 from pathlib import Path
 
 from sqlalchemy import select
 
+from tests.helpers.signing import add_allowed_signer, configure_git_ssh_signing
+
 
 def configure_env(tmpdir: Path) -> None:
     os.environ["INFINITAS_SERVER_DATABASE_URL"] = f"sqlite:///{tmpdir / 'server.db'}"
+    os.environ["INFINITAS_SERVER_ENV"] = "test"
     os.environ["INFINITAS_SERVER_SECRET_KEY"] = "test-secret-key-32chars-long-minimum"
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(tmpdir / "artifacts")
+    os.environ["INFINITAS_REGISTRY_READ_TOKENS"] = json.dumps(["registry-reader-token"])
+    os.environ["INFINITAS_SERVER_BOOTSTRAP_USERS"] = json.dumps(
+        [
+            {
+                "username": "fixture-maintainer",
+                "display_name": "Fixture Maintainer",
+                "role": "maintainer",
+                "token": "fixture-maintainer-token",
+            },
+            {
+                "username": "outside-reviewer",
+                "display_name": "Outside Reviewer",
+                "role": "contributor",
+                "token": "outside-reviewer-token",
+            },
+        ]
+    )
+
+
+def _prepare_signing_repo(repo: Path, signing_key: Path) -> None:
+    import subprocess
+
+    allowed_signers = repo / "config" / "allowed_signers"
+    allowed_signers.write_text("", encoding="utf-8")
+    add_allowed_signer(allowed_signers, identity="release-test", key_path=signing_key)
+
+    subprocess.run(["git", "init", "-b", "main"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "Registry Test"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "registry@example.com"], cwd=repo, check=True, capture_output=True)
+    configure_git_ssh_signing(repo, signing_key)
+    subprocess.run(["git", "add", "config/allowed_signers", "config/signing.json"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "test: bootstrap signing config"], cwd=repo, check=True, capture_output=True)
     os.environ["INFINITAS_REGISTRY_READ_TOKENS"] = json.dumps(["registry-reader-token"])
     os.environ["INFINITAS_SERVER_BOOTSTRAP_USERS"] = json.dumps(
         [
@@ -78,109 +111,115 @@ def create_ready_release(client, headers: dict[str, str], *, slug: str, display_
     return release_id
 
 
-def test_review_case_api_requires_release_ownership() -> None:
-    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-review-authz-test-"))
-    try:
-        configure_env(tmpdir)
+def test_review_case_api_requires_release_ownership(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    _prepare_signing_repo(temp_repo_copy, signing_key)
+    configure_env(tmp_path)
+    os.environ["INFINITAS_SERVER_REPO_PATH"] = str(temp_repo_copy)
 
-        from fastapi.testclient import TestClient
+    from fastapi.testclient import TestClient
 
-        from server.app import create_app
-        from server.db import get_session_factory
-        from server.models import ReviewCase
+    from server.app import create_app
+    from server.db import get_session_factory
+    from server.models import ReviewCase
 
-        client = TestClient(create_app())
-        owner_headers = {"Authorization": "Bearer fixture-maintainer-token"}
-        outsider_headers = {"Authorization": "Bearer outside-reviewer-token"}
+    client = TestClient(create_app())
+    owner_headers = {"Authorization": "Bearer fixture-maintainer-token"}
+    outsider_headers = {"Authorization": "Bearer outside-reviewer-token"}
 
-        release_id = create_ready_release(
-            client,
-            owner_headers,
-            slug="review-authz-skill",
-            display_name="Review Authz Skill",
+    release_id = create_ready_release(
+        client,
+        owner_headers,
+        slug="review-authz-skill",
+        display_name="Review Authz Skill",
+    )
+    exposure_response = client.post(
+        f"/api/v1/releases/{release_id}/exposures",
+        headers=owner_headers,
+        json={
+            "audience_type": "public",
+            "listing_mode": "listed",
+            "install_mode": "enabled",
+            "requested_review_mode": "blocking",
+        },
+    )
+    assert exposure_response.status_code == 201, exposure_response.text
+    exposure_id = int(exposure_response.json()["id"])
+
+    session_factory = get_session_factory()
+    with session_factory() as session:
+        review_case = session.scalar(
+            select(ReviewCase).where(ReviewCase.exposure_id == exposure_id)
         )
-        exposure_response = client.post(
-            f"/api/v1/releases/{release_id}/exposures",
-            headers=owner_headers,
-            json={
-                "audience_type": "public",
-                "listing_mode": "listed",
-                "install_mode": "enabled",
-                "requested_review_mode": "blocking",
-            },
-        )
-        assert exposure_response.status_code == 201, exposure_response.text
-        exposure_id = int(exposure_response.json()["id"])
+        assert review_case is not None, f"expected review case for exposure {exposure_id}"
+        review_case_id = int(review_case.id)
 
-        session_factory = get_session_factory()
-        with session_factory() as session:
-            review_case = session.scalar(
-                select(ReviewCase).where(ReviewCase.exposure_id == exposure_id)
-            )
-            assert review_case is not None, f"expected review case for exposure {exposure_id}"
-            review_case_id = int(review_case.id)
+    get_response = client.get(
+        f"/api/v1/review-cases/{review_case_id}",
+        headers=outsider_headers,
+    )
+    assert get_response.status_code == 403, get_response.text
+    assert get_response.json()["detail"] == "release namespace access denied"
 
-        get_response = client.get(
-            f"/api/v1/review-cases/{review_case_id}",
-            headers=outsider_headers,
-        )
-        assert get_response.status_code == 403, get_response.text
-        assert get_response.json()["detail"] == "release namespace access denied"
+    decision_response = client.post(
+        f"/api/v1/review-cases/{review_case_id}/decisions",
+        headers=outsider_headers,
+        json={"decision": "approve", "note": "not allowed"},
+    )
+    assert decision_response.status_code == 403, decision_response.text
+    assert decision_response.json()["detail"] == "release namespace access denied"
 
-        decision_response = client.post(
-            f"/api/v1/review-cases/{review_case_id}/decisions",
-            headers=outsider_headers,
-            json={"decision": "approve", "note": "not allowed"},
-        )
-        assert decision_response.status_code == 403, decision_response.text
-        assert decision_response.json()["detail"] == "release namespace access denied"
-
-        owner_response = client.get(
-            f"/api/v1/review-cases/{review_case_id}",
-            headers=owner_headers,
-        )
-        assert owner_response.status_code == 200, owner_response.text
-        assert owner_response.json()["id"] == review_case_id
-    finally:
-        shutil.rmtree(tmpdir, ignore_errors=True)
+    owner_response = client.get(
+        f"/api/v1/review-cases/{review_case_id}",
+        headers=owner_headers,
+    )
+    assert owner_response.status_code == 200, owner_response.text
+    assert owner_response.json()["id"] == review_case_id
 
 
-def test_create_review_case_rejects_unknown_mode() -> None:
-    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-review-mode-test-"))
-    try:
-        configure_env(tmpdir)
+def test_create_review_case_rejects_unknown_mode(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    _prepare_signing_repo(temp_repo_copy, signing_key)
+    configure_env(tmp_path)
+    os.environ["INFINITAS_SERVER_REPO_PATH"] = str(temp_repo_copy)
 
-        from fastapi.testclient import TestClient
+    from fastapi.testclient import TestClient
 
-        from server.app import create_app
+    from server.app import create_app
 
-        client = TestClient(create_app())
-        owner_headers = {"Authorization": "Bearer fixture-maintainer-token"}
+    client = TestClient(create_app())
+    owner_headers = {"Authorization": "Bearer fixture-maintainer-token"}
 
-        release_id = create_ready_release(
-            client,
-            owner_headers,
-            slug="review-mode-skill",
-            display_name="Review Mode Skill",
-        )
-        exposure_response = client.post(
-            f"/api/v1/releases/{release_id}/exposures",
-            headers=owner_headers,
-            json={
-                "audience_type": "grant",
-                "listing_mode": "listed",
-                "install_mode": "enabled",
-                "requested_review_mode": "none",
-            },
-        )
-        assert exposure_response.status_code == 201, exposure_response.text
-        exposure_id = int(exposure_response.json()["id"])
+    release_id = create_ready_release(
+        client,
+        owner_headers,
+        slug="review-mode-skill",
+        display_name="Review Mode Skill",
+    )
+    exposure_response = client.post(
+        f"/api/v1/releases/{release_id}/exposures",
+        headers=owner_headers,
+        json={
+            "audience_type": "grant",
+            "listing_mode": "listed",
+            "install_mode": "enabled",
+            "requested_review_mode": "none",
+        },
+    )
+    assert exposure_response.status_code == 201, exposure_response.text
+    exposure_id = int(exposure_response.json()["id"])
 
-        response = client.post(
-            f"/api/v1/exposures/{exposure_id}/review-cases",
-            headers=owner_headers,
-            json={"mode": "mystery"},
-        )
-        assert response.status_code == 422, response.text
-    finally:
-        shutil.rmtree(tmpdir, ignore_errors=True)
+    response = client.post(
+        f"/api/v1/exposures/{exposure_id}/review-cases",
+        headers=owner_headers,
+        json={"mode": "mystery"},
+    )
+    assert response.status_code == 422, response.text

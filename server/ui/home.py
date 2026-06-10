@@ -8,17 +8,11 @@ from fastapi import Request
 from sqlalchemy.orm import Session
 
 from server import __version__ as server_version
+from server.modules.shared.json import read_json_file as _read_json
 from server.ui.formatting import build_kawaii_ui_context, localized_stamp
 from server.ui.i18n import pick_lang, resolve_language, with_lang
 from server.ui.navigation import build_site_nav
-from server.ui_service import get_dashboard_counts, get_user_stats
-
-
-def _read_json(path: Path) -> dict:
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
+from server.ui.queries import get_dashboard_counts, get_user_stats
 
 
 def _catalog_payload(settings: Any, name: str) -> dict:

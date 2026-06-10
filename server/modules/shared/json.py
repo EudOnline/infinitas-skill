@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 
@@ -13,3 +14,11 @@ def loads_json(payload: str, *, default: Any) -> Any:
         return json.loads(payload)
     except (TypeError, json.JSONDecodeError):
         return default
+
+
+def read_json_file(path: Path) -> dict:
+    """Read and parse a JSON file, returning ``{}`` on any error."""
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, ValueError):
+        return {}

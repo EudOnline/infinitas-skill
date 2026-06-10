@@ -1,15 +1,18 @@
 """Background API for managing user backgrounds."""
+from __future__ import annotations
+
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from server.auth import get_current_user
+from server.auth import get_current_access_context
+from server.auth_guards import require_user_with_context
 from server.db import get_db
-from server.models import User
+from server.modules.access.authn import AccessContext
 
 router = APIRouter(prefix="/api/v1/background", tags=["background"])
-
 
 # Preset backgrounds using CSS gradients only (no external URLs)
 BACKGROUND_PRESETS = {
@@ -26,7 +29,7 @@ BACKGROUND_PRESETS = {
         {"id": "aurora", "name": "极光", "url": None},
         {"id": "cyberpunk", "name": "赛博朋克", "url": None},
         {"id": "gradient-dark", "name": "深色渐变", "url": None},
-    ]
+    ],
 }
 
 
@@ -40,8 +43,8 @@ class UserBackgroundResponse(BaseModel):
 
 
 class SetBackgroundRequest(BaseModel):
-    theme: str  # "light" or "dark"
-    bg_id: str  # 背景ID
+    theme: Literal["light", "dark"]
+    bg_id: str = Field(min_length=1, max_length=100)
 
 
 @router.get("/presets", response_model=BackgroundListResponse)
@@ -51,37 +54,33 @@ def get_background_presets():
 
 
 @router.get("/me", response_model=UserBackgroundResponse)
-def get_user_background(user: User = Depends(get_current_user)):
+def get_user_background(context: AccessContext = Depends(get_current_access_context)):
     """Get current user's background settings."""
+    require_user_with_context(context)
     return {
-        "light_bg_id": user.light_bg_id,
-        "dark_bg_id": user.dark_bg_id
+        "light_bg_id": context.user.light_bg_id,
+        "dark_bg_id": context.user.dark_bg_id,
     }
 
 
 @router.post("/set")
 def set_background(
     request: SetBackgroundRequest,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    context: AccessContext = Depends(get_current_access_context),
+    db: Session = Depends(get_db),
 ):
     """Set user background (requires authentication)."""
-    # Validate theme
-    if request.theme not in ["light", "dark"]:
-        raise HTTPException(status_code=400, detail="Invalid theme")
+    require_user_with_context(context)
 
-    # Validate bg_id exists in presets
     presets = BACKGROUND_PRESETS.get(request.theme, [])
-    valid_ids = [p["id"] for p in presets]
+    valid_ids = {p["id"] for p in presets}
     if request.bg_id not in valid_ids:
         raise HTTPException(status_code=400, detail="Invalid background ID")
 
-    # Update user background
     if request.theme == "light":
-        user.light_bg_id = request.bg_id
+        context.user.light_bg_id = request.bg_id
     else:
-        user.dark_bg_id = request.bg_id
+        context.user.dark_bg_id = request.bg_id
 
     db.commit()
-
     return {"success": True, "message": "Background updated"}

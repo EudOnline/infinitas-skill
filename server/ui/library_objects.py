@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from server.models import Exposure, Skill
 from server.modules.access.authn import AccessContext
-from server.ui.formatting import humanize_timestamp, load_json_list, load_json_object
+from server.ui.formatting import humanize_timestamp, load_json_object
 from server.ui.library_access import (
     credential_is_active,
     credential_is_share_secret,

@@ -14,12 +14,10 @@ import gzip
 import io
 import json
 import tarfile
-from pathlib import Path
 
 # Bootstrap the model layer to break the circular import:
 # server.models must be loaded before server.modules.release.models
 import server.models  # noqa: F401
-
 from server.modules.release.bundle import (
     artifact_object_path,
     bundle_bytes,

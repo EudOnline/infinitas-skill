@@ -3,7 +3,7 @@ import argparse
 import json
 import sys
 
-from distribution_lib import DistributionError, verify_distribution_manifest
+from infinitas_skill.install.distribution import DistributionError, verify_distribution_manifest
 
 
 def parse_args():

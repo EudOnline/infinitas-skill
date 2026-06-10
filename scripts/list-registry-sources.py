@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 from pathlib import Path
 
-from registry_snapshot_lib import snapshot_catalog_summary
-from registry_source_lib import (
+from infinitas_skill.registry.snapshot import snapshot_catalog_summary
+from infinitas_skill.install.registry_sources import (
     load_registry_config,
     registry_identity,
     registry_is_resolution_candidate,

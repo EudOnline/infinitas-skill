@@ -4,10 +4,7 @@ import json
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / 'scripts'))
-
-from openclaw_bridge_lib import validate_exported_openclaw_dir  # noqa: E402
+from infinitas_skill.skills.openclaw import validate_exported_openclaw_dir
 
 
 def main():
