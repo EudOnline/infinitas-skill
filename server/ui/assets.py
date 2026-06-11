@@ -7,7 +7,10 @@ content hashes to static URLs for cache busting.
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 def load_asset_hashes(static_dir: Path) -> dict[str, str]:
@@ -16,6 +19,7 @@ def load_asset_hashes(static_dir: Path) -> dict[str, str]:
     try:
         return json.loads(manifest.read_text())
     except Exception:
+        logger.debug("asset hash manifest not found or invalid: %s", manifest)
         return {}
 
 

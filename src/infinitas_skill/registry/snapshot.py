@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import shutil
 from pathlib import Path
 
@@ -15,6 +16,8 @@ from infinitas_skill.install.registry_sources import (
 
 from ._util import utc_now_iso
 from .refresh_state import load_refresh_state
+
+logger = logging.getLogger(__name__)
 
 
 def registry_snapshots_dir(root: Path, registry_name: str) -> Path:
@@ -33,6 +36,7 @@ def _load_snapshot_metadata_file(metadata_path: Path):
     try:
         payload = json.loads(metadata_path.read_text(encoding="utf-8"))
     except Exception:
+        logger.debug("failed to load snapshot metadata: %s", metadata_path)
         return None
     if not isinstance(payload, dict):
         return None

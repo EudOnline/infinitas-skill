@@ -7,6 +7,7 @@ Canonical OpenClaw runtime semantics live under ``infinitas_skill.openclaw``.
 from __future__ import annotations
 
 import json
+import logging
 import re
 import shutil
 from pathlib import Path
@@ -18,6 +19,8 @@ from infinitas_skill.openclaw import load_openclaw_skill_contract
 
 from .canonical import load_skill_source
 from .render import load_platform_profile, render_skill
+
+logger = logging.getLogger(__name__)
 
 _TEXT_EXTENSIONS = {
     ".md",
@@ -223,6 +226,7 @@ def _is_probably_text_file(path: Path) -> bool:
     try:
         data = path.read_bytes()
     except Exception:
+        logger.debug("failed to read file for text detection: %s", path)
         return False
     if b"\x00" in data[:8192]:
         return False

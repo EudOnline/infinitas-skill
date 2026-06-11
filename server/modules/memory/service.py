@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from dataclasses import dataclass
 from typing import Any, Mapping
 
@@ -13,6 +14,8 @@ from infinitas_skill.memory.provider import build_memory_provider
 from server.models import AuditEvent
 from server.modules.audit.service import append_audit_event
 from server.settings import get_settings
+
+logger = logging.getLogger(__name__)
 
 _SENSITIVE_KEY_PARTS = {
     "token",
@@ -123,6 +126,7 @@ def _resolve_memory_write_enabled(memory_write_enabled: bool | None) -> bool:
     try:
         return bool(get_settings().memory_write_enabled)
     except Exception:
+        logger.debug("failed to resolve memory_write_enabled setting", exc_info=True)
         return False
 
 
@@ -147,6 +151,7 @@ def _existing_event_status(event: AuditEvent | None) -> str | None:
     try:
         payload = json.loads(event.payload_json or "{}")
     except Exception:
+        logger.debug("failed to parse audit event payload event_id=%s", getattr(event, 'id', None))
         return None
     status = payload.get("status")
     if not isinstance(status, str):

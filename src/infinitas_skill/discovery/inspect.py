@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
 from .inspect_memory import load_inspect_memory_hints
 from .inspect_view import build_inspect_payload, dependency_summary, derive_trust_state
 from .memory_audit import MemoryAuditRecorder, emit_inspect_memory_audit
+
+logger = logging.getLogger(__name__)
 
 
 def _load_json(path: Path):
@@ -42,6 +45,7 @@ def _load_optional_json(root: Path, relative_path: str | None):
     try:
         return _load_json(path)
     except Exception:
+        logger.debug("failed to load optional JSON: %s", path)
         return {}
 
 

@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from infinitas_skill.compatibility.contracts import load_platform_profile_contract
+
+logger = logging.getLogger(__name__)
 
 EVIDENCE_ROOT = Path("catalog") / "compatibility-evidence"
 SEMVER_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:[-+]([A-Za-z0-9_.-]+))?$")
@@ -203,6 +206,7 @@ def _evidence_sort_key(item):
     try:
         parsed = _parse_iso8601(checked_at)
     except Exception:
+        logger.debug("failed to parse evidence date: %s", checked_at)
         parsed = datetime.min
     return (parsed, item.get("evidence_path") or "")
 

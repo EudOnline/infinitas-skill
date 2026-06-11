@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -15,6 +16,8 @@ from infinitas_skill.openclaw.skill_contract import (
 from infinitas_skill.root import ROOT
 
 from .decision_metadata import canonical_decision_metadata
+
+logger = logging.getLogger(__name__)
 
 SEMVER_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:[-+]([A-Za-z0-9_.-]+))?$")
 
@@ -137,6 +140,7 @@ def _meta_for_entry(root: Path, entry):
     try:
         return _load_json(meta_path)
     except Exception:
+        logger.debug("failed to load skill metadata: %s", meta_path)
         return {}
 
 

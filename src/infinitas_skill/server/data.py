@@ -11,7 +11,10 @@ lazy accessor functions.
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 def parse_json_payload(raw: str | None) -> dict[str, Any]:
@@ -23,6 +26,7 @@ def parse_json_payload(raw: str | None) -> dict[str, Any]:
     try:
         payload = json.loads(raw or "{}")
     except Exception:
+        logger.debug("failed to parse JSON payload")
         return {}
     return payload if isinstance(payload, dict) else {}
 

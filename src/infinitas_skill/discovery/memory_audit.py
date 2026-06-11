@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import logging
 from typing import Any, Callable
+
+logger = logging.getLogger(__name__)
 
 MemoryAuditRecorder = Callable[[dict[str, Any]], None]
 
@@ -94,6 +97,7 @@ def emit_recommendation_memory_audit(
     try:
         audit_recorder(entry)
     except Exception:
+        logger.debug("memory audit recorder failed for recommendation", exc_info=True)
         return
 
 
@@ -123,6 +127,7 @@ def emit_inspect_memory_audit(
     try:
         audit_recorder(entry)
     except Exception:
+        logger.debug("memory audit recorder failed for inspect", exc_info=True)
         return
 
 

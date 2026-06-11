@@ -123,6 +123,7 @@ def _decode_auth_session_cookie(value: str | None) -> dict | None:
             return None
         decoded = json.loads(plaintext.decode('utf-8'))
     except Exception:
+        get_logger(__name__).debug("session cookie decode failed", exc_info=True)
         return None
     issued_at = decoded.get('issued_at')
     credential_id = decoded.get('credential_id')

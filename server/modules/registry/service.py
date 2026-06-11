@@ -69,6 +69,10 @@ def _openclaw_runtime_targets() -> tuple[str, ...]:
         runtime_model = build_openclaw_runtime_model(ROOT)
         runtime_targets = list(runtime_model.get("skill_dir_candidates") or [])
     except Exception:
+        import logging
+        logging.getLogger(__name__).debug(
+            "failed to load OpenClaw runtime model, using defaults", exc_info=True
+        )
         runtime_targets = ["skills", ".agents/skills", "~/.agents/skills", "~/.openclaw/skills"]
     return tuple(runtime_targets)
 

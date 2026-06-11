@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -16,6 +17,8 @@ from infinitas_skill.install.distribution import (
 from infinitas_skill.install.installed_skill import InstalledSkillError, load_installed_skill
 from infinitas_skill.install.integrity_policy import default_install_integrity_policy
 from infinitas_skill.release.state import ROOT
+
+logger = logging.getLogger(__name__)
 
 
 class InstalledIntegrityError(Exception):
@@ -173,6 +176,7 @@ def _load_snapshot_archived_events(target_dir):
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except Exception:
+        logger.debug("failed to load integrity snapshot: %s", path)
         return {}
     skills = payload.get("skills")
     if not isinstance(skills, list):
@@ -276,6 +280,7 @@ def installed_integrity_capability_for_source(source_info, *, root=None):
         )
         payload = load_json(manifest_path)
     except Exception:
+        logger.debug("failed to load distribution manifest for integrity check", exc_info=True)
         return default_integrity_capability_fields()
 
     summary = installed_integrity_capability_summary(payload)

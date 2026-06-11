@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import subprocess
 from pathlib import Path
 from urllib.parse import urlparse
 
 from infinitas_skill.policy.policy_pack import load_effective_policy_domain
+
+logger = logging.getLogger(__name__)
 
 TRUST_TIERS = {"private", "trusted", "public", "untrusted"}
 PIN_MODES = {"branch", "tag", "commit"}
@@ -264,6 +267,7 @@ def safe_git_output(repo: Path, *args):
     try:
         return _git_output(repo, *args)
     except Exception:
+        logger.debug("git command failed: git -C %s %s", repo, " ".join(args))
         return None
 
 
