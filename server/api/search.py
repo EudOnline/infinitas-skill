@@ -177,6 +177,17 @@ def search_registry(
     scope: str = Query(default="public", pattern="^(public|me|grant)$"),
     db: Session = Depends(get_db),
 ):
+    """Search the skill registry.
+
+    Returns matching skills with their latest versions, install references,
+    and OpenClaw runtime metadata.
+
+    Query Parameters:
+        q: Search query string (max 200 chars)
+        limit: Maximum results to return (1-20, default: 8)
+        scope: Search scope - "public" (no auth), "me" (authenticated),
+               or "grant" (grant-scoped, requires grant credential)
+    """
     if scope in {"me", "grant"}:
         context = maybe_get_current_access_context(request, db)
         if context is None:

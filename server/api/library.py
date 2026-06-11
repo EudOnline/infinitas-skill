@@ -161,6 +161,14 @@ def library_detail(
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
 ):
+    """Get detailed information about a library object.
+
+    Returns the object overview, current release, visibility settings,
+    token count, and share link count.
+
+    Path Parameters:
+        object_id: The library object ID
+    """
     actor = _require_library_actor(context)
     detail = get_library_object_detail(db, actor=actor, object_id=object_id)
     if detail is None:
@@ -208,6 +216,19 @@ def issue_library_release_token(
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
 ):
+    """Issue a reader or publisher token for a release.
+
+    Creates an AccessGrant and Credential with the specified scopes.
+    Reader tokens can download artifacts; publisher tokens can also
+    write new releases.
+
+    Path Parameters:
+        release_id: The release to issue a token for
+
+    Request Body:
+        token_type: "reader" or "publisher" (default: "reader")
+        label: Optional human-readable label for the token
+    """
     actor = _require_library_principal(context)
     skill, _owner, version_label = _require_release_write_context(
         db,
@@ -275,6 +296,20 @@ def create_library_release_share_link(
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
 ):
+    """Create a share link for a release.
+
+    Share links allow time-limited, password-protected access to release
+    artifacts. They can be used by agents that don't have their own token.
+
+    Path Parameters:
+        release_id: The release to create a share link for
+
+    Request Body:
+        label: Optional human-readable label
+        temporary_password: Optional password (auto-generated if omitted)
+        expires_in_days: Days until expiry (default: 7, max: 365)
+        usage_limit: Maximum number of uses (default: 5, max: 100000)
+    """
     actor = _require_library_principal(context)
     _skill, _owner, version_label = _require_release_write_context(
         db,
@@ -317,6 +352,14 @@ def revoke_library_token(
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
 ):
+    """Revoke a library token.
+
+    Marks the credential as revoked, preventing further use.
+    Only the token owner or a maintainer can revoke a token.
+
+    Path Parameters:
+        credential_id: The credential ID to revoke
+    """
     actor = _require_library_principal(context)
     credential = db.get(Credential, credential_id)
     if credential is None or credential.grant_id is None:
@@ -365,6 +408,14 @@ def revoke_library_share_link(
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
 ):
+    """Revoke a share link.
+
+    Marks the share link as revoked, preventing further resolution.
+    Only the share link owner or a maintainer can revoke it.
+
+    Path Parameters:
+        grant_id: The share link grant ID to revoke
+    """
     actor = _require_library_principal(context)
     try:
         share = share_service.revoke_share_link(

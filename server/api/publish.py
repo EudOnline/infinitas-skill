@@ -65,6 +65,18 @@ def upsert_publish_object(
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
 ):
+    """Create or update a skill object.
+
+    If a skill with the given slug exists in the caller's namespace,
+    updates it. Otherwise creates a new skill object.
+
+    Path Parameters:
+        slug: URL-safe skill identifier (no slashes, dots, or null bytes)
+
+    Request Body:
+        display_name: Human-readable skill name (1-200 chars)
+        summary: Optional skill description
+    """
     principal_id, _is_maintainer = _require_actor(context)
     # Security validation to prevent path traversal and injection attempts
     if ".." in slug or "/" in slug or "\\" in slug or "\x00" in slug:
@@ -125,6 +137,20 @@ def publish_object_release(
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
 ):
+    """Create a new release for a skill object.
+
+    Creates a draft, seals it into a version, and creates a release.
+    Automatically enqueues a background job to materialize artifacts
+    (manifest, bundle, provenance, signature).
+
+    Path Parameters:
+        object_id: The skill object ID to release
+
+    Request Body:
+        version: Semantic version string (1-64 chars)
+        content_ref: Optional content reference path
+        metadata: Optional metadata dict
+    """
     principal_id, is_maintainer = _require_actor(context)
     skill = db.get(Skill, object_id)
     if skill is None:
