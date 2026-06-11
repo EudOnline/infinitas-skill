@@ -1,4 +1,4 @@
-.PHONY: bootstrap clean-local ci-fast test-fast test-full test-e2e lint-maintained fmt-maintained doctor build-css watch-css
+.PHONY: bootstrap clean-local ci-fast test-fast test-full test-e2e lint-maintained fmt-maintained doctor build-css watch-css typecheck
 
 build-css:
 	npm run build
@@ -37,3 +37,6 @@ fmt-maintained:
 
 doctor:
 	uv run python3 scripts/test-doc-governance.py
+
+typecheck:
+	uv run mypy src/infinitas_skill server/ --ignore-missing-imports
