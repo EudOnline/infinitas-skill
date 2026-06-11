@@ -6,13 +6,17 @@ from sqlalchemy.orm import Session
 
 from server.models import Exposure, Skill
 from server.modules.access.authn import AccessContext
-from server.ui.formatting import humanize_timestamp, load_json_object
+from server.ui.formatting import humanize_timestamp
 from server.ui.library_access import (
     credential_is_active,
     credential_is_share_secret,
-    grant_is_active,
 )
-from server.ui.library_scope import LibraryScope, iso_stamp, load_library_scope
+from server.ui.library_scope import (
+    LibraryScope,
+    iso_stamp,
+    iter_grant_credentials,
+    load_library_scope,
+)
 
 
 def visibility_payload(exposure: Exposure | None) -> dict[str, Any]:
@@ -74,19 +78,14 @@ def object_payload(scope: LibraryScope, skill: Skill) -> dict[str, Any]:
 
     share_link_count = 0
     token_count = 0
-    for release in scope.releases_by_skill_id.get(skill.id, []):
-        for exposure in scope.exposures_by_release_id.get(release.id, []):
-            grants = scope.grants_by_exposure_id.get(exposure.id, [])
-            for grant in grants:
-                if grant.grant_type == "link":
-                    if grant_is_active(grant, load_json_object(grant.constraints_json)):
-                        share_link_count += 1
-                    continue
-                for credential in scope.credentials_by_grant_id.get(grant.id, []):
-                    if credential_is_share_secret(credential):
-                        continue
-                    if credential_is_active(credential, grant):
-                        token_count += 1
+    for _skill, _release, _version, _exposure, grant, credential in iter_grant_credentials(
+        scope, object_id=skill.id
+    ):
+        if grant.grant_type == "link":
+            if credential_is_active(credential, grant):
+                share_link_count += 1
+        elif not credential_is_share_secret(credential) and credential_is_active(credential, grant):
+            token_count += 1
 
     return {
         "id": skill.id,

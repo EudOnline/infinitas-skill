@@ -13,7 +13,7 @@ from server.ui.i18n import with_lang
 from server.ui.library_scope import (
     LibraryScope,
     iso_stamp,
-    iter_skill_release_rows,
+    iter_grant_credentials,
     load_library_scope,
     parse_datetime,
 )
@@ -63,43 +63,38 @@ def build_token_rows_from_scope(
     object_id: int | None = None,
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    for skill, release, version in iter_skill_release_rows(scope):
-        if object_id is not None and skill.id != object_id:
+    for skill, release, version, _exposure, grant, credential in iter_grant_credentials(
+        scope, object_id=object_id, grant_type="token"
+    ):
+        if credential_is_share_secret(credential):
             continue
-        for exposure in scope.exposures_by_release_id.get(release.id, []):
-            for grant in scope.grants_by_exposure_id.get(exposure.id, []):
-                if grant.grant_type == "link":
-                    continue
-                constraints = load_json_object(grant.constraints_json)
-                for credential in scope.credentials_by_grant_id.get(grant.id, []):
-                    if credential_is_share_secret(credential):
-                        continue
-                    state = credential_state(credential, grant)
-                    revoked_at = parse_datetime(credential.revoked_at)
-                    sort_at = (
-                        revoked_at
-                        or parse_datetime(credential.last_used_at)
-                        or parse_datetime(credential.created_at)
-                    )
-                    rows.append(
-                        {
-                            "id": credential.id,
-                            "token_type": token_type_for_credential(credential),
-                            "object_id": skill.id,
-                            "object_name": skill.display_name,
-                            "object_href": with_lang(f"/library/{skill.id}", lang),
-                            "release_id": release.id,
-                            "release_version": version.version if version is not None else None,
-                            "label": constraints.get("label") or "",
-                            "grant_id": grant.id,
-                            "state": state,
-                            "can_revoke": state == "active",
-                            "created_at": humanize_timestamp(iso_stamp(credential.created_at)),
-                            "last_used_at": humanize_timestamp(iso_stamp(credential.last_used_at)),
-                            "revoked_at": humanize_timestamp(iso_stamp(credential.revoked_at)),
-                            "_sort_at": sort_at or datetime.min.replace(tzinfo=timezone.utc),
-                        }
-                    )
+        constraints = load_json_object(grant.constraints_json)
+        state = credential_state(credential, grant)
+        revoked_at = parse_datetime(credential.revoked_at)
+        sort_at = (
+            revoked_at
+            or parse_datetime(credential.last_used_at)
+            or parse_datetime(credential.created_at)
+        )
+        rows.append(
+            {
+                "id": credential.id,
+                "token_type": token_type_for_credential(credential),
+                "object_id": skill.id,
+                "object_name": skill.display_name,
+                "object_href": with_lang(f"/library/{skill.id}", lang),
+                "release_id": release.id,
+                "release_version": version.version if version is not None else None,
+                "label": constraints.get("label") or "",
+                "grant_id": grant.id,
+                "state": state,
+                "can_revoke": state == "active",
+                "created_at": humanize_timestamp(iso_stamp(credential.created_at)),
+                "last_used_at": humanize_timestamp(iso_stamp(credential.last_used_at)),
+                "revoked_at": humanize_timestamp(iso_stamp(credential.revoked_at)),
+                "_sort_at": sort_at or datetime.min.replace(tzinfo=timezone.utc),
+            }
+        )
     rows.sort(key=lambda item: item["_sort_at"], reverse=True)
     return rows
 

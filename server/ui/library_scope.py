@@ -75,6 +75,34 @@ def iter_skill_release_rows(scope: LibraryScope):
             yield skill, release, version_map.get(release.skill_version_id)
 
 
+def iter_grant_credentials(
+    scope: LibraryScope,
+    *,
+    object_id: int | None = None,
+    grant_type: str | None = None,
+):
+    """Yield (skill, release, version, exposure, grant, credential) tuples.
+
+    Traverses the full skill -> release -> exposure -> grant -> credential
+    chain, optionally filtered by object_id and grant_type.
+
+    Args:
+        scope: The library scope to traverse.
+        object_id: If set, only yield entries for this skill ID.
+        grant_type: If set, only yield grants matching this type
+            (e.g. ``"link"`` for share links, ``None`` for tokens).
+    """
+    for skill, release, version in iter_skill_release_rows(scope):
+        if object_id is not None and skill.id != object_id:
+            continue
+        for exposure in scope.exposures_by_release_id.get(release.id, []):
+            for grant in scope.grants_by_exposure_id.get(exposure.id, []):
+                if grant_type is not None and grant.grant_type != grant_type:
+                    continue
+                for credential in scope.credentials_by_grant_id.get(grant.id, []):
+                    yield skill, release, version, exposure, grant, credential
+
+
 def _scope_filter_for_actor(query, *, actor: AccessContext):
     if actor.user is not None and actor.user.role == "maintainer":
         return query

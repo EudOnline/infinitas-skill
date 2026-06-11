@@ -16,7 +16,7 @@ from server.ui.library_access import (
 )
 from server.ui.library_scope import (
     LibraryScope,
-    iter_skill_release_rows,
+    iter_grant_credentials,
     load_library_scope,
     parse_datetime,
 )
@@ -52,38 +52,38 @@ def build_share_rows_from_scope(
     object_id: int | None = None,
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    for skill, release, version in iter_skill_release_rows(scope):
-        if object_id is not None and skill.id != object_id:
+    seen_grants: set[int] = set()
+    for skill, release, version, _exposure, grant, credential in iter_grant_credentials(
+        scope, object_id=object_id, grant_type="link"
+    ):
+        if grant.id in seen_grants:
             continue
-        for exposure in scope.exposures_by_release_id.get(release.id, []):
-            for grant in scope.grants_by_exposure_id.get(exposure.id, []):
-                if grant.grant_type != "link":
-                    continue
-                constraints = load_json_object(grant.constraints_json)
-                credentials = scope.credentials_by_grant_id.get(grant.id, [])
-                rows.append(
-                    {
-                        "id": grant.id,
-                        "object_id": skill.id,
-                        "object_name": skill.display_name,
-                        "object_href": with_lang(f"/library/{skill.id}", lang),
-                        "release_id": release.id,
-                        "release_version": version.version if version is not None else None,
-                        "label": share_label(constraints),
-                        "expiry": humanize_timestamp(constraints.get("expires_at")),
-                        "has_password": bool(
-                            constraints.get("temporary_password")
-                            or constraints.get("password")
-                            or any(credential_is_share_secret(item) for item in credentials)
-                        ),
-                        "usage_count": share_usage_count(constraints),
-                        "usage_limit": share_usage_limit(constraints),
-                        "state": share_link_state_from_grant(grant, constraints),
-                        "can_revoke": grant_is_active(grant, constraints),
-                        "_sort_at": parse_datetime(grant.created_at)
-                        or datetime.min.replace(tzinfo=timezone.utc),
-                    }
-                )
+        seen_grants.add(grant.id)
+        constraints = load_json_object(grant.constraints_json)
+        credentials = scope.credentials_by_grant_id.get(grant.id, [])
+        rows.append(
+            {
+                "id": grant.id,
+                "object_id": skill.id,
+                "object_name": skill.display_name,
+                "object_href": with_lang(f"/library/{skill.id}", lang),
+                "release_id": release.id,
+                "release_version": version.version if version is not None else None,
+                "label": share_label(constraints),
+                "expiry": humanize_timestamp(constraints.get("expires_at")),
+                "has_password": bool(
+                    constraints.get("temporary_password")
+                    or constraints.get("password")
+                    or any(credential_is_share_secret(item) for item in credentials)
+                ),
+                "usage_count": share_usage_count(constraints),
+                "usage_limit": share_usage_limit(constraints),
+                "state": share_link_state_from_grant(grant, constraints),
+                "can_revoke": grant_is_active(grant, constraints),
+                "_sort_at": parse_datetime(grant.created_at)
+                or datetime.min.replace(tzinfo=timezone.utc),
+            }
+        )
     rows.sort(key=lambda item: item["_sort_at"], reverse=True)
     return rows
 

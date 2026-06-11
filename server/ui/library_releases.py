@@ -11,10 +11,14 @@ from server.ui.formatting import humanize_identifier, humanize_timestamp, load_j
 from server.ui.library_access import (
     credential_is_active,
     credential_is_share_secret,
-    grant_is_active,
 )
 from server.ui.library_objects import object_payload, visibility_payload
-from server.ui.library_scope import LibraryScope, iso_stamp, load_library_scope
+from server.ui.library_scope import (
+    LibraryScope,
+    iso_stamp,
+    iter_grant_credentials,
+    load_library_scope,
+)
 from server.ui.navigation import _build_exposure_policy, _derive_exposure_action_state
 
 
@@ -50,16 +54,18 @@ def build_release_visibility_rows(
         review_case_state = str(getattr(review_case, "state", None) or "none")
         share_count = 0
         token_count = 0
-        for grant in scope.grants_by_exposure_id.get(exposure.id, []):
-            if grant.grant_type == "link":
-                if grant_is_active(grant, load_json_object(grant.constraints_json)):
-                    share_count += 1
+        for _skill, _rel, _ver, _exp, grant, credential in iter_grant_credentials(
+            scope, object_id=None
+        ):
+            if grant.exposure_id != exposure.id:
                 continue
-            for credential in scope.credentials_by_grant_id.get(grant.id, []):
-                if credential_is_share_secret(credential):
-                    continue
+            if grant.grant_type == "link":
                 if credential_is_active(credential, grant):
-                    token_count += 1
+                    share_count += 1
+            elif not credential_is_share_secret(credential) and credential_is_active(
+                credential, grant
+            ):
+                token_count += 1
         rows.append(
             {
                 "id": exposure.id,
