@@ -143,14 +143,12 @@ def library_list(
         limit: Maximum items to return (default: 20, max: 100)
     """
     actor = _require_library_actor(context)
-    all_items = list_library_objects(db, actor=actor)
-    total = len(all_items)
-
-    # Apply pagination
-    paginated_items = all_items[pagination.skip : pagination.skip + pagination.limit]
+    items, total = list_library_objects(
+        db, actor=actor, skip=pagination.skip, limit=pagination.limit
+    )
 
     return create_paginated_response(
-        items=paginated_items,
+        items=items,
         total=total,
         skip=pagination.skip,
         limit=pagination.limit,
@@ -191,6 +189,7 @@ def library_releases(
     if all_items is None:
         raise HTTPException(status_code=404, detail="object not found")
 
+    # Releases are already scoped to a single object — apply in-memory pagination
     total = len(all_items)
     paginated_items = all_items[pagination.skip : pagination.skip + pagination.limit]
 

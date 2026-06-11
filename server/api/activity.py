@@ -9,7 +9,7 @@ from server.db import get_db
 from server.models import AuditEvent, Credential
 from server.modules.access.authn import AccessContext
 from server.modules.access.models import AccessGrant
-from server.modules.audit.read_model import activity_query, normalize_event
+from server.modules.audit.read_model import activity_query, normalize_events
 
 router = APIRouter(prefix="/api/v1/activity", tags=["activity"])
 
@@ -43,7 +43,7 @@ def list_activity(
     require_user_role(context)
     capped_limit = max(1, min(int(limit or 100), 500))
     events = db.scalars(activity_query().limit(capped_limit)).all()
-    items = [normalize_event(db, event) for event in events]
+    items = normalize_events(db, events)
     return {"items": items, "total": len(items)}
 
 
@@ -65,7 +65,7 @@ def token_activity(
         .where(AuditEvent.aggregate_type == "token")
         .where(AuditEvent.aggregate_id == str(token_id))
     ).all()
-    items = [normalize_event(db, event) for event in events]
+    items = normalize_events(db, events)
     return {"items": items, "total": len(items)}
 
 
@@ -87,5 +87,5 @@ def share_link_activity(
         .where(AuditEvent.aggregate_type == "share_link")
         .where(AuditEvent.aggregate_id == str(share_id))
     ).all()
-    items = [normalize_event(db, event) for event in events]
+    items = normalize_events(db, events)
     return {"items": items, "total": len(items)}

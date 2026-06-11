@@ -11,13 +11,14 @@ from server.auth import (
     AUTH_COOKIE_MAX_AGE,
     AUTH_COOKIE_NAME,
     CSRF_COOKIE_NAME,
+    _decode_auth_session_cookie,
     create_auth_session_cookie,
     generate_csrf_token,
     maybe_get_current_user,
 )
 from server.db import get_db
 from server.logging import get_logger
-from server.models import utcnow
+from server.models import Credential, utcnow
 from server.modules.access import service as access_service
 from server.rate_limit import get_rate_limiter, resolve_rate_limit_key
 from server.ui.i18n import pick_lang, resolve_language
@@ -143,8 +144,19 @@ def login(
 
 
 @router.post("/logout")
-def logout(response: Response, request: Request):
-    """Clear the browser auth cookie."""
+def logout(response: Response, request: Request, db: Session = Depends(get_db)):
+    """Revoke the session credential and clear browser cookies."""
+    # Revoke the credential on the server side to prevent cookie reuse
+    cookie_value = request.cookies.get(AUTH_COOKIE_NAME)
+    decoded = _decode_auth_session_cookie(cookie_value)
+    if isinstance(decoded, dict) and isinstance(decoded.get("credential_id"), int):
+        credential = db.get(Credential, decoded["credential_id"])
+        if credential is not None and credential.revoked_at is None:
+            credential.revoked_at = utcnow()
+            db.add(credential)
+            db.commit()
+            log.info("session credential revoked on logout credential_id=%s", credential.id)
+
     response.delete_cookie(
         key=AUTH_COOKIE_NAME,
         path="/",

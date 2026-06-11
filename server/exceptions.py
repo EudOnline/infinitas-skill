@@ -60,9 +60,25 @@ def register_exception_handlers(app, templates: Jinja2Templates) -> None:
 
     @app.exception_handler(ForbiddenError)
     async def forbidden_exc_handler(request: Request, exc: ForbiddenError):
+        lang = resolve_language(request)
         if request.headers.get("accept", "").startswith("application/json"):
             return JSONResponse({"detail": str(exc) or "Forbidden"}, status_code=403)
-        return JSONResponse({"detail": str(exc) or "Forbidden"}, status_code=403)
+        return templates.TemplateResponse(
+            request,
+            "error.html",
+            {
+                "request": request,
+                "status_code": 403,
+                "title": pick_lang(lang, "禁止访问", "Forbidden"),
+                "message": pick_lang(
+                    lang,
+                    "您没有权限访问此资源。",
+                    "You do not have permission to access this resource.",
+                ),
+                **build_kawaii_ui_context(request, lang, "", ""),
+            },
+            status_code=403,
+        )
 
     @app.exception_handler(ConflictError)
     async def conflict_exc_handler(request: Request, exc: ConflictError):

@@ -233,6 +233,18 @@ def hash_password(plain: str) -> str:
     return bcrypt.hashpw(plain.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 
+def hash_share_password(plain: str) -> str:
+    """Hash a share link password using bcrypt.
+
+    Share link passwords may be shorter than login passwords (e.g. temporary
+    PINs), so the standard password strength validation is skipped.  The bcrypt
+    hashing still provides brute-force resistance.
+    """
+    if not plain:
+        raise ValueError("Share password must not be empty")
+    return bcrypt.hashpw(plain.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+
 def verify_password(plain: str, hashed: str | None) -> bool:
     """Verify a plaintext password against a bcrypt hash."""
     if not hashed:

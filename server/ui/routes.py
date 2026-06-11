@@ -162,7 +162,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         if blocked is not None:
             return blocked
         lang = resolve_language(request)
-        scope = load_library_scope(db, actor=actor)
+        scope, _total = load_library_scope(db, actor=actor)
         detail = get_library_object_detail(db, actor=actor, object_id=object_id, scope=scope)
         if detail is None:
             return RedirectResponse(url=with_lang("/manage", lang), status_code=303)
@@ -296,7 +296,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         if blocked is not None:
             return blocked
         lang = resolve_language(request)
-        scope = load_library_scope(db, actor=actor)
+        scope, _total = load_library_scope(db, actor=actor)
         context = _build_admin_context(
             request,
             actor,
@@ -309,7 +309,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
             page_kicker=pick_lang(lang, "管理", "Management"),
             page_eyebrow=pick_lang(lang, "技能与访问管理", "Skill & Access Management"),
         )
-        context["object_items"] = list_library_objects(db, actor=actor)
+        context["object_items"], _total = list_library_objects(db, actor=actor)
         context["token_items"] = list_library_token_rows(db, actor=actor, lang=lang, scope=scope)
         context["share_items"] = list_library_share_rows(db, actor=actor, lang=lang, scope=scope)
         context["activity_items"] = list_activity_rows(db, limit=50)

@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from server.auth import hash_share_password, verify_password
 from server.models import (
     AccessGrant,
     Credential,
@@ -224,11 +225,18 @@ def create_share_link(
     db.flush()
 
     credential_secret = raw_password or secrets.token_urlsafe(24)
+    # Use bcrypt for user-chosen passwords (brute-force resistant), SHA-256 for random tokens
+    if raw_password:
+        hashed_secret = hash_share_password(raw_password)
+        credential_type = "share_password"
+    else:
+        hashed_secret = access_service.hash_token(credential_secret)
+        credential_type = "share_secret"
     credential = Credential(
         principal_id=None,
         grant_id=grant.id,
-        type="share_password" if raw_password else "share_secret",
-        hashed_secret=access_service.hash_token(credential_secret),
+        type=credential_type,
+        hashed_secret=hashed_secret,
         scopes_json=access_service.encode_scopes({"artifact:download"}),
         resource_selector_json=json.dumps({"release_scope": "grant-bound"}, ensure_ascii=False),
         expires_at=expires_at,
@@ -303,11 +311,14 @@ def resolve_share_link(db: Session, *, share_id: int, password: str | None) -> d
 
     credentials = _share_credentials(db, grant_id=grant.id)
     password_credential = _password_credential(credentials)
-    if password_credential is not None and not access_service.token_matches_hash(
-        password or "",
-        password_credential.hashed_secret,
-    ):
-        raise ShareLinkForbiddenError("share link password is invalid")
+    if password_credential is not None:
+        stored_hash = password_credential.hashed_secret or ""
+        # Support both bcrypt hashes (new) and SHA-256 hashes (legacy)
+        if stored_hash.startswith("$2"):
+            if not verify_password(password or "", stored_hash):
+                raise ShareLinkForbiddenError("share link password is invalid")
+        elif not access_service.token_matches_hash(password or "", stored_hash):
+            raise ShareLinkForbiddenError("share link password is invalid")
 
     release_id = _release_id_for_grant(db, grant=grant)
     _release, skill, owner, version_label = _release_context(

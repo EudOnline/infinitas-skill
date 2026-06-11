@@ -145,7 +145,7 @@ def list_library_releases(
     actor: AccessContext,
     object_id: int,
 ) -> list[dict[str, Any]] | None:
-    scope = load_library_scope(db, actor=actor)
+    scope, _total = load_library_scope(db, actor=actor)
     if not any(item.id == object_id for item in scope.skills):
         return None
     return list_library_releases_from_scope(scope, skill_id=object_id)
@@ -158,7 +158,7 @@ def get_library_release_detail(
     object_id: int,
     release_id: int,
 ) -> dict[str, Any] | None:
-    scope = load_library_scope(db, actor=actor)
+    scope, _total = load_library_scope(db, actor=actor)
     skill = next((item for item in scope.skills if item.id == object_id), None)
     if skill is None:
         return None

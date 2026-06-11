@@ -12,6 +12,7 @@ The implementation is split across focused sub-modules:
 """
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from sqlalchemy.orm import Session
@@ -40,6 +41,8 @@ from server.modules.release.snapshot_accessors import (
     snapshot_metadata,
 )
 from server.modules.release.storage import ArtifactStorage, build_artifact_storage
+
+logger = logging.getLogger(__name__)
 
 # Backward-compatible re-exports for any code that imported these from materializer
 # We use a leading underscore convention for private helpers that moved.
@@ -107,11 +110,25 @@ def materialize_release(
     version = snapshot.skill_version.version
     storage = storage_backend or build_artifact_storage(artifact_root)
 
+    logger.info(
+        "Materializing release %s/%s v%s (release_id=%s)",
+        publisher,
+        skill_slug,
+        version,
+        release.id,
+    )
+
     # Build bundle
     bundle_data, bundle_file_count, bundle_root_dir = _materialize_bundle(
         db, snapshot=snapshot, artifact_root=artifact_root
     )
     bundle_sha256 = sha256_bytes(bundle_data)
+    logger.debug(
+        "Bundle built: %d bytes, %d files (sha256=%s…)",
+        len(bundle_data),
+        bundle_file_count,
+        bundle_sha256[:12],
+    )
 
     # Public paths
     skill_dir = Path("skills") / publisher / skill_slug / version
@@ -160,6 +177,11 @@ def materialize_release(
         signing_key=signing_key,
         namespace=attestation_cfg["namespace"],
         signature_ext=attestation_cfg["signature_ext"],
+    )
+    logger.debug(
+        "Provenance signed: %d bytes provenance, %d bytes signature",
+        len(provenance_bytes),
+        len(signature_bytes),
     )
 
     # Store provenance and signature
@@ -229,7 +251,16 @@ def materialize_release(
         release_state = collect_release_state(resolved_skill, root=repo_root)
         platform_compat = release_state.get("platform_compatibility")
     except Exception:
-        pass
+        logger.warning(
+            "Platform compatibility collection failed for %s/%s v%s "
+            "(release_id=%s) — proceeding without compatibility data. "
+            "This is expected for hosted-only skills that don't exist on disk.",
+            publisher,
+            skill_slug,
+            version,
+            release.id,
+            exc_info=True,
+        )
 
     db.refresh(release)
     service.mark_release_ready(
@@ -239,6 +270,14 @@ def materialize_release(
         bundle_artifact_id=bundle_artifact.id,
         signature_artifact_id=signature_artifact.id,
         provenance_artifact_id=provenance_artifact.id,
+    )
+    logger.info(
+        "Release %s/%s v%s (release_id=%s) materialized successfully — "
+        "4 artifacts stored, state=ready",
+        publisher,
+        skill_slug,
+        version,
+        release.id,
     )
 
     return service.get_release_or_404(db, release.id), service.get_artifacts_for_release(

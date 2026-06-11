@@ -157,7 +157,7 @@ def list_library_token_rows(
     scope: LibraryScope | None = None,
 ) -> list[dict[str, Any]]:
     if scope is None:
-        scope = load_library_scope(db, actor=actor)
+        scope, _total = load_library_scope(db, actor=actor)
     return build_token_rows_from_scope(scope, lang=lang, object_id=object_id)
 
 
@@ -169,6 +169,6 @@ def list_library_token_activity_rows(
     scope: LibraryScope | None = None,
 ) -> list[dict[str, Any]]:
     if scope is None:
-        scope = load_library_scope(db, actor=actor)
+        scope, _total = load_library_scope(db, actor=actor)
     token_rows = build_token_rows_from_scope(scope, lang=lang)
     return build_token_activity_rows_from_token_rows(token_rows)

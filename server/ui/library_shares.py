@@ -97,5 +97,5 @@ def list_library_share_rows(
     scope: LibraryScope | None = None,
 ) -> list[dict[str, Any]]:
     if scope is None:
-        scope = load_library_scope(db, actor=actor)
+        scope, _total = load_library_scope(db, actor=actor)
     return build_share_rows_from_scope(scope, lang=lang, object_id=object_id)

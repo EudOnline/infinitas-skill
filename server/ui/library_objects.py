@@ -102,9 +102,21 @@ def object_payload(scope: LibraryScope, skill: Skill) -> dict[str, Any]:
     }
 
 
-def list_library_objects(db: Session, *, actor: AccessContext) -> list[dict[str, Any]]:
-    scope = load_library_scope(db, actor=actor)
-    return [object_payload(scope, item) for item in scope.skills]
+def list_library_objects(
+    db: Session,
+    *,
+    actor: AccessContext,
+    skip: int = 0,
+    limit: int | None = None,
+) -> tuple[list[dict[str, Any]], int]:
+    """List library objects with optional pagination.
+
+    Returns:
+        Tuple of (items, total_count).
+    """
+    scope, total = load_library_scope(db, actor=actor, skip=skip, limit=limit)
+    items = [object_payload(scope, item) for item in scope.skills]
+    return items, total
 
 
 def get_library_object_detail(
@@ -117,7 +129,7 @@ def get_library_object_detail(
     from server.ui.library_releases import list_library_releases_from_scope
 
     if scope is None:
-        scope = load_library_scope(db, actor=actor)
+        scope, _total = load_library_scope(db, actor=actor)
     skill = next((item for item in scope.skills if item.id == object_id), None)
     if skill is None:
         return None

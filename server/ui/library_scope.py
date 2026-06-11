@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from server.models import (
@@ -84,12 +84,35 @@ def _scope_filter_for_actor(query, *, actor: AccessContext):
     return query.where(Skill.namespace_id == principal_id)
 
 
-def load_library_scope(db: Session, *, actor: AccessContext) -> LibraryScope:
-    skill_query = select(Skill).order_by(
+def load_library_scope(
+    db: Session,
+    *,
+    actor: AccessContext,
+    skip: int = 0,
+    limit: int | None = None,
+) -> tuple[LibraryScope, int]:
+    """Load library scope with optional pagination.
+
+    Returns:
+        Tuple of (LibraryScope, total_skill_count). When *skip*/*limit* are
+        provided the scope contains only the requested page of skills, but
+        *total_skill_count* reflects the full un-paginated count.
+    """
+    base_query = _scope_filter_for_actor(select(Skill), actor=actor)
+
+    # Count total skills (before pagination)
+    total = int(db.scalar(select(func.count()).select_from(base_query.subquery())) or 0)
+
+    # Apply ordering and pagination
+    skill_query = base_query.order_by(
         Skill.updated_at.desc(),
         Skill.id.desc(),
     )
-    skills = db.scalars(_scope_filter_for_actor(skill_query, actor=actor)).all()
+    if skip > 0:
+        skill_query = skill_query.offset(skip)
+    if limit is not None:
+        skill_query = skill_query.limit(limit)
+    skills = db.scalars(skill_query).all()
     skill_ids = [item.id for item in skills]
     principal_ids = sorted({item.namespace_id for item in skills})
 
@@ -164,7 +187,7 @@ def load_library_scope(db: Session, *, actor: AccessContext) -> LibraryScope:
         ).all()
     credentials_by_grant_id = group_by(credentials, "grant_id")
 
-    return LibraryScope(
+    scope = LibraryScope(
         skills=skills,
         principals_by_id={principal.id: principal for principal in principals},
         versions_by_skill_id=versions_by_skill_id,
@@ -174,3 +197,4 @@ def load_library_scope(db: Session, *, actor: AccessContext) -> LibraryScope:
         grants_by_exposure_id=grants_by_exposure_id,
         credentials_by_grant_id=credentials_by_grant_id,
     )
+    return scope, total
