@@ -13,6 +13,7 @@ from infinitas_skill.discovery.index import normalize_discovery_skill
 from infinitas_skill.openclaw.runtime_model import build_openclaw_runtime_model
 from infinitas_skill.root import ROOT
 from server.auth import AUTH_COOKIE_NAME, maybe_get_current_access_context
+from server.exceptions_base import NotFoundError as BaseNotFoundError
 from server.modules.access.authn import AccessContext, resolve_access_context
 from server.modules.access.authz import can_access_releases
 from server.modules.discovery.projections import (
@@ -48,7 +49,7 @@ class UnauthorizedError(RegistryError):
     pass
 
 
-class NotFoundError(RegistryError):
+class NotFoundError(RegistryError, BaseNotFoundError):
     pass
 
 

@@ -6,6 +6,11 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from server.exceptions_base import (
+    ConflictError as BaseConflictError,
+    ForbiddenError as BaseForbiddenError,
+    NotFoundError as BaseNotFoundError,
+)
 from server.models import Principal, Skill, SkillDraft, SkillVersion, utcnow
 from server.modules.release.models import Artifact, Release
 
@@ -14,15 +19,15 @@ class ReleaseError(Exception):
     pass
 
 
-class NotFoundError(ReleaseError):
+class NotFoundError(ReleaseError, BaseNotFoundError):
     pass
 
 
-class ConflictError(ReleaseError):
+class ConflictError(ReleaseError, BaseConflictError):
     pass
 
 
-class ForbiddenError(ReleaseError):
+class ForbiddenError(ReleaseError, BaseForbiddenError):
     pass
 
 

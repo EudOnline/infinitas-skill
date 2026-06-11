@@ -5,6 +5,10 @@ import json
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from server.exceptions_base import (
+    ConflictError as BaseConflictError,
+    NotFoundError as BaseNotFoundError,
+)
 from server.models import Exposure, ReviewCase, ReviewDecision, ReviewPolicy, User, utcnow
 from server.modules.memory.service import record_lifecycle_memory_event_best_effort
 from server.modules.review import default_policy
@@ -14,11 +18,11 @@ class ReviewError(Exception):
     pass
 
 
-class NotFoundError(ReviewError):
+class NotFoundError(ReviewError, BaseNotFoundError):
     pass
 
 
-class ConflictError(ReviewError):
+class ConflictError(ReviewError, BaseConflictError):
     pass
 
 

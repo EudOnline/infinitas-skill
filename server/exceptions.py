@@ -6,35 +6,17 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 
+from server.exceptions_base import (  # noqa: F401
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+    ValidationError,
+)
 from server.logging import get_logger
 from server.ui.formatting import build_kawaii_ui_context
 from server.ui.i18n import pick_lang, resolve_language
 
 log = get_logger(__name__)
-
-
-class NotFoundError(Exception):
-    """Raised when a requested entity is not found."""
-
-    pass
-
-
-class ForbiddenError(Exception):
-    """Raised when access to a resource is forbidden."""
-
-    pass
-
-
-class ValidationError(Exception):
-    """Raised when input validation fails."""
-
-    pass
-
-
-class ConflictError(Exception):
-    """Raised when a resource state conflict occurs."""
-
-    pass
 
 
 def register_exception_handlers(app, templates: Jinja2Templates) -> None:

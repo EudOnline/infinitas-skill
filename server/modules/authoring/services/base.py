@@ -7,6 +7,12 @@ from __future__ import annotations
 import json
 import re
 
+from server.exceptions_base import (
+    ConflictError as BaseConflictError,
+    ForbiddenError as BaseForbiddenError,
+    NotFoundError as BaseNotFoundError,
+)
+
 # ── Exceptions ───────────────────────────────────────────────────────────────
 
 
@@ -16,19 +22,19 @@ class AuthoringError(Exception):
     pass
 
 
-class NotFoundError(AuthoringError):
+class NotFoundError(AuthoringError, BaseNotFoundError):
     """Resource not found."""
 
     pass
 
 
-class ConflictError(AuthoringError):
+class ConflictError(AuthoringError, BaseConflictError):
     """Resource conflict or duplicate."""
 
     pass
 
 
-class ForbiddenError(AuthoringError):
+class ForbiddenError(AuthoringError, BaseForbiddenError):
     """Access denied."""
 
     pass

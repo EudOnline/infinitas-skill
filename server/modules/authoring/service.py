@@ -7,6 +7,11 @@ import re
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from server.exceptions_base import (
+    ConflictError as BaseConflictError,
+    ForbiddenError as BaseForbiddenError,
+    NotFoundError as BaseNotFoundError,
+)
 from server.modules.authoring import repository
 from server.modules.authoring.models import Skill, SkillDraft, SkillVersion
 from server.modules.authoring.schemas import (
@@ -22,15 +27,15 @@ class AuthoringError(Exception):
     pass
 
 
-class NotFoundError(AuthoringError):
+class NotFoundError(AuthoringError, BaseNotFoundError):
     pass
 
 
-class ConflictError(AuthoringError):
+class ConflictError(AuthoringError, BaseConflictError):
     pass
 
 
-class ForbiddenError(AuthoringError):
+class ForbiddenError(AuthoringError, BaseForbiddenError):
     pass
 
 

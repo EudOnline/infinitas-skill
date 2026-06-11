@@ -5,6 +5,11 @@ import json
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from server.exceptions_base import (
+    ConflictError as BaseConflictError,
+    ForbiddenError as BaseForbiddenError,
+    NotFoundError as BaseNotFoundError,
+)
 from server.models import Exposure, Release, utcnow
 from server.modules.exposure.schemas import ExposureCreateRequest, ExposurePatchRequest
 from server.modules.memory.service import record_lifecycle_memory_event_best_effort
@@ -17,15 +22,15 @@ class ExposureError(Exception):
     pass
 
 
-class NotFoundError(ExposureError):
+class NotFoundError(ExposureError, BaseNotFoundError):
     pass
 
 
-class ConflictError(ExposureError):
+class ConflictError(ExposureError, BaseConflictError):
     pass
 
 
-class ForbiddenError(ExposureError):
+class ForbiddenError(ExposureError, BaseForbiddenError):
     pass
 
 
