@@ -22,6 +22,10 @@ from server.modules.discovery.projections import (
     projection_has_materialized_artifacts,
 )
 from server.modules.shared.formatting import iso_format as _iso, utc_now_iso as _utc_now_iso
+from server.modules.shared.version_sort import (
+    dedupe_entries as _dedupe_entries,
+    version_sort_key as _version_sort_key,
+)
 from server.settings import get_settings
 
 INSTALL_POLICY = {
@@ -120,31 +124,6 @@ def _resolve_registry_audience(db: Session, request: Request) -> RegistryAudienc
     return RegistryAudience(mode="me", context=context)
 
 
-def _audience_rank(audience_type: str) -> int:
-    return {
-        "private": 4,
-        "grant": 3,
-        "authenticated": 2,
-        "public": 1,
-    }.get(str(audience_type or ""), 0)
-
-
-def _version_sort_key(version: str) -> tuple[tuple[int, int], ...]:
-    parts: list[tuple[int, int]] = []
-    buffer = ""
-    for char in str(version or ""):
-        if char.isdigit():
-            buffer += char
-            continue
-        if buffer:
-            parts.append((0, int(buffer)))
-            buffer = ""
-        parts.append((1, ord(char)))
-    if buffer:
-        parts.append((0, int(buffer)))
-    return tuple(parts)
-
-
 def _partition_runtime_targets(targets: list[str]) -> dict[str, list[str]]:
     workspace: list[str] = []
     shared: list[str] = []
@@ -190,32 +169,6 @@ def _registry_runtime_payload() -> dict:
         },
 
     }
-
-
-def _entry_ready_key(entry: DiscoveryProjection) -> tuple[int, str]:
-    if entry.ready_at is None:
-        return (0, "")
-    return (1, entry.ready_at.isoformat())
-
-
-def _dedupe_entries(entries: list[DiscoveryProjection]) -> list[DiscoveryProjection]:
-    by_release: dict[int, DiscoveryProjection] = {}
-    for entry in entries:
-        current = by_release.get(entry.release_id)
-        if current is None or (
-            _audience_rank(entry.audience_type) > _audience_rank(current.audience_type)
-        ):
-            by_release[entry.release_id] = entry
-    return sorted(
-        by_release.values(),
-        key=lambda entry: (
-            entry.qualified_name,
-            _version_sort_key(entry.version),
-            _audience_rank(entry.audience_type),
-            _entry_ready_key(entry),
-        ),
-        reverse=False,
-    )
 
 
 def _all_accessible_entries(db: Session, request: Request) -> list[DiscoveryProjection]:

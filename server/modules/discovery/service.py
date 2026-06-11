@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import re
-from datetime import datetime
 from pathlib import Path
 
 from sqlalchemy.orm import Session
@@ -16,53 +14,13 @@ from server.modules.discovery.projections import (
     projection_has_materialized_artifacts,
 )
 from server.modules.shared.json import read_json_file as _read_json
+from server.modules.shared.version_sort import (
+    audience_rank as _audience_rank,
+    dedupe_entries as _dedupe,
+    ready_sort_key as _ready_sort_key,
+    version_sort_key as _version_sort_key,
+)
 from server.settings import get_settings
-
-_VERSION_PARTS_RE = re.compile(r"(\d+|[A-Za-z]+)")
-
-
-def _version_sort_key(version: str) -> tuple:
-    parts = []
-    for item in _VERSION_PARTS_RE.findall(str(version or "")):
-        if item.isdigit():
-            parts.append((0, int(item)))
-        else:
-            parts.append((1, item.lower()))
-    return tuple(parts)
-
-
-def _audience_rank(audience_type: str) -> int:
-    return {
-        "private": 4,
-        "grant": 3,
-        "authenticated": 2,
-        "public": 1,
-    }.get(str(audience_type or ""), 0)
-
-
-def _ready_sort_key(value: datetime | None) -> tuple[int, str]:
-    if value is None:
-        return (0, "")
-    return (1, value.isoformat())
-
-
-def _dedupe(entries: list[DiscoveryProjection]) -> list[DiscoveryProjection]:
-    by_release: dict[int, DiscoveryProjection] = {}
-    for entry in entries:
-        current = by_release.get(entry.release_id)
-        if current is None or (
-            _audience_rank(entry.audience_type) < _audience_rank(current.audience_type)
-        ):
-            by_release[entry.release_id] = entry
-    return sorted(
-        by_release.values(),
-        key=lambda entry: (
-            entry.qualified_name,
-            _version_sort_key(entry.version),
-            _audience_rank(entry.audience_type),
-        ),
-        reverse=False,
-    )
 
 
 def _match_base(entry: DiscoveryProjection, base_ref: str) -> bool:
