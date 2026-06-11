@@ -36,8 +36,8 @@ class TeamMembership(Base):
     __tablename__ = "team_memberships"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("principals.id"))
-    team_id: Mapped[int] = mapped_column(ForeignKey("teams.id"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("principals.id"), index=True)
+    team_id: Mapped[int] = mapped_column(ForeignKey("teams.id"), index=True)
     role: Mapped[str] = mapped_column(String(64), default="member")
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
@@ -64,6 +64,7 @@ class AccessGrant(Base):
     created_by_principal_id: Mapped[int | None] = mapped_column(
         ForeignKey("principals.id"),
         nullable=True,
+        index=True,
     )
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)
 

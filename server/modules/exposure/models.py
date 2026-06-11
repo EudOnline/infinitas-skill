@@ -21,6 +21,7 @@ class Exposure(Base):
     requested_by_principal_id: Mapped[int | None] = mapped_column(
         ForeignKey("principals.id"),
         nullable=True,
+        index=True,
     )
     policy_snapshot_json: Mapped[str] = mapped_column(Text, default="{}")
     activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
