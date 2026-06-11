@@ -19,15 +19,28 @@ class Release(Base):
     )
     state: Mapped[str] = mapped_column(String(32), default="preparing")
     format_version: Mapped[str] = mapped_column(String(32), default="1")
-    manifest_artifact_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    bundle_artifact_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    signature_artifact_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    provenance_artifact_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    manifest_artifact_id: Mapped[int | None] = mapped_column(
+        ForeignKey("artifacts.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    bundle_artifact_id: Mapped[int | None] = mapped_column(
+        ForeignKey("artifacts.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    signature_artifact_id: Mapped[int | None] = mapped_column(
+        ForeignKey("artifacts.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    provenance_artifact_id: Mapped[int | None] = mapped_column(
+        ForeignKey("artifacts.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     ready_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     platform_compatibility_json: Mapped[str] = mapped_column(Text, default="{}")
     created_by_principal_id: Mapped[int | None] = mapped_column(
         ForeignKey("principals.id"),
         nullable=True,
+        index=True,
     )
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)
 

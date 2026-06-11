@@ -35,11 +35,19 @@ class SkillDraft(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"), index=True)
-    base_version_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    base_version_id: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        index=True,
+    )
     state: Mapped[str] = mapped_column(String(32), default="open")
     content_mode: Mapped[str] = mapped_column(String(32), default="external_ref")
     content_ref: Mapped[str] = mapped_column(Text, default="")
-    content_artifact_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    content_artifact_id: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        index=True,
+    )
     metadata_json: Mapped[str] = mapped_column(Text, default="{}")
     updated_by_principal_id: Mapped[int | None] = mapped_column(
         ForeignKey("principals.id"),
@@ -67,10 +75,12 @@ class SkillVersion(Base):
     created_from_draft_id: Mapped[int | None] = mapped_column(
         ForeignKey("skill_drafts.id"),
         nullable=True,
+        index=True,
     )
     created_by_principal_id: Mapped[int | None] = mapped_column(
         ForeignKey("principals.id"),
         nullable=True,
+        index=True,
     )
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
