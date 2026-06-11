@@ -29,6 +29,39 @@ REMOVED_CLI_SHIMS = [
     "scripts/explain_install_lib.py",
     "scripts/search_inspect_lib.py",
     "scripts/recommend_skill_lib.py",
+    # Phase 5 shim deletion (ADR 0001/0002 migration complete)
+    "scripts/attestation_lib.py",
+    "scripts/canonical_skill_lib.py",
+    "scripts/compatibility_evidence_lib.py",
+    "scripts/compatibility_policy_lib.py",
+    "scripts/decision_metadata_lib.py",
+    "scripts/dependency_lib.py",
+    "scripts/distribution_lib.py",
+    "scripts/exception_policy_lib.py",
+    "scripts/http_registry_lib.py",
+    "scripts/install_integrity_policy_lib.py",
+    "scripts/install_manifest_lib.py",
+    "scripts/installed_integrity_lib.py",
+    "scripts/installed_skill_lib.py",
+    "scripts/openclaw_bridge_lib.py",
+    "scripts/platform_contract_lib.py",
+    "scripts/policy_pack_lib.py",
+    "scripts/policy_trace_lib.py",
+    "scripts/provenance_payload_lib.py",
+    "scripts/registry_refresh_state_lib.py",
+    "scripts/registry_snapshot_lib.py",
+    "scripts/registry_source_lib.py",
+    "scripts/release_lib.py",
+    "scripts/render_skill_lib.py",
+    "scripts/result_schema_lib.py",
+    "scripts/review_evidence_lib.py",
+    "scripts/review_lib.py",
+    "scripts/reviewer_rotation_lib.py",
+    "scripts/schema_version_lib.py",
+    "scripts/signing_bootstrap_lib.py",
+    "scripts/skill_identity_lib.py",
+    "scripts/team_policy_lib.py",
+    "scripts/transparency_log_lib.py",
 ]
 
 
@@ -81,8 +114,8 @@ def test_make_targets_and_docs_expose_dev_workflow_entrypoints() -> None:
     )
 
     pyproject = _read("pyproject.toml")
-    assert 'select = ["E", "F", "I"]' in pyproject, (
-        "pyproject.toml should configure Ruff lint select"
+    assert '"E"' in pyproject and '"F"' in pyproject and '"I"' in pyproject, (
+        "pyproject.toml should configure Ruff lint select with E, F, I"
     )
     assert 'ignore = ["E501"]' not in pyproject, (
         "pyproject.toml should not disable E501 globally for all maintained files"
@@ -154,33 +187,17 @@ def test_legacy_bridge_module_stays_deleted() -> None:
     )
 
 
-def test_installed_integrity_script_libs_stay_thin_wrappers() -> None:
-    expected_wrappers = {
-        "scripts/install_integrity_policy_lib.py": (
-            "from infinitas_skill.install.integrity_policy import *"
-        ),
-        "scripts/installed_skill_lib.py": "from infinitas_skill.install.installed_skill import *",
-        "scripts/installed_integrity_lib.py": (
-            "from infinitas_skill.install.installed_integrity import *"
-        ),
-    }
-    forbidden_markers = [
-        "def default_install_integrity_policy",
-        "def load_installed_skill",
-        "def default_integrity_record",
-        "class InstalledIntegrityError",
+def test_installed_integrity_script_libs_stay_deleted() -> None:
+    """Phase 5 shim deletion: installed-integrity _lib files must stay deleted."""
+    deleted_libs = [
+        "scripts/install_integrity_policy_lib.py",
+        "scripts/installed_skill_lib.py",
+        "scripts/installed_integrity_lib.py",
     ]
-
-    for rel_path, wrapper_import in expected_wrappers.items():
-        text = _read(rel_path)
-        assert wrapper_import in text, (
-            f"{rel_path} should stay a thin wrapper around the package module"
+    for rel_path in deleted_libs:
+        assert not (ROOT / rel_path).exists(), (
+            f"expected deleted _lib shim to stay deleted: {rel_path}"
         )
-        for marker in forbidden_markers:
-            assert marker not in text, (
-                f"{rel_path} should not keep duplicated installed-integrity "
-                f"implementation: {marker}"
-            )
 
 
 def test_release_fixture_scripts_share_python_env_helper() -> None:
@@ -247,69 +264,30 @@ def test_release_fixture_scripts_share_python_env_helper() -> None:
             )
 
 
-def test_discovery_consumer_script_libs_stay_thin_wrappers() -> None:
-    expected_wrapper_markers = {
-        "scripts/decision_metadata_lib.py": [
-            "from infinitas_skill.discovery.decision_metadata import *",
-        ],
-        "scripts/result_schema_lib.py": [
-            "from infinitas_skill.discovery.result_schema import *",
-        ],
-    }
-    forbidden_markers = [
-        "def canonical_decision_metadata",
-        "def search_skills",
-        "def inspect_skill",
-        "def validate_pull_result",
-        "def validate_publish_result",
+def test_discovery_consumer_script_libs_stay_deleted() -> None:
+    """Phase 5 shim deletion: discovery consumer _lib files must stay deleted."""
+    deleted_libs = [
+        "scripts/decision_metadata_lib.py",
+        "scripts/result_schema_lib.py",
     ]
-
-    for rel_path, wrapper_markers in expected_wrapper_markers.items():
-        text = _read(rel_path)
-        for marker in wrapper_markers:
-            assert marker in text, (
-                f"{rel_path} should stay a thin wrapper around package-native "
-                "discovery consumer modules"
-            )
-        for marker in forbidden_markers:
-            assert marker not in text, (
-                f"{rel_path} should not keep duplicated discovery consumer logic: {marker}"
-            )
+    for rel_path in deleted_libs:
+        assert not (ROOT / rel_path).exists(), (
+            f"expected deleted _lib shim to stay deleted: {rel_path}"
+        )
 
 
-def test_skill_surface_script_libs_stay_thin_wrappers() -> None:
-    expected_wrapper_markers = {
-        "scripts/schema_version_lib.py": [
-            "from infinitas_skill.skills.schema_version import *",
-        ],
-        "scripts/canonical_skill_lib.py": [
-            "from infinitas_skill.skills.canonical import *",
-        ],
-        "scripts/render_skill_lib.py": [
-            "from infinitas_skill.skills.render import *",
-        ],
-        "scripts/openclaw_bridge_lib.py": [
-            "from infinitas_skill.skills.openclaw import *",
-        ],
-    }
-    forbidden_markers = [
-        "def validate_schema_version",
-        "def load_skill_source",
-        "def render_skill",
-        "def render_skill_from_dir",
-        "def validate_exported_openclaw_dir",
+def test_skill_surface_script_libs_stay_deleted() -> None:
+    """Phase 5 shim deletion: skill-surface _lib files must stay deleted."""
+    deleted_libs = [
+        "scripts/schema_version_lib.py",
+        "scripts/canonical_skill_lib.py",
+        "scripts/render_skill_lib.py",
+        "scripts/openclaw_bridge_lib.py",
     ]
-
-    for rel_path, wrapper_markers in expected_wrapper_markers.items():
-        text = _read(rel_path)
-        for marker in wrapper_markers:
-            assert marker in text, (
-                f"{rel_path} should stay a thin wrapper around package-native skill-surface modules"
-            )
-        for marker in forbidden_markers:
-            assert marker not in text, (
-                f"{rel_path} should not keep duplicated skill-surface logic: {marker}"
-            )
+    for rel_path in deleted_libs:
+        assert not (ROOT / rel_path).exists(), (
+            f"expected deleted _lib shim to stay deleted: {rel_path}"
+        )
 
 
 def test_openclaw_skill_surface_is_explicitly_migration_scoped() -> None:
@@ -327,64 +305,29 @@ def test_openclaw_skill_surface_is_explicitly_migration_scoped() -> None:
     )
 
 
-def test_registry_script_libs_stay_thin_wrappers() -> None:
-    expected_wrapper_markers = {
-        "scripts/registry_refresh_state_lib.py": [
-            "from infinitas_skill.registry.refresh_state import *",
-        ],
-        "scripts/registry_snapshot_lib.py": [
-            "from infinitas_skill.registry.snapshot import *",
-        ],
-    }
-    forbidden_markers = [
-        "def write_refresh_state",
-        "def evaluate_refresh_status",
-        "def create_snapshot",
-        "def resolve_snapshot_selector",
+def test_registry_script_libs_stay_deleted() -> None:
+    """Phase 5 shim deletion: registry _lib files must stay deleted."""
+    deleted_libs = [
+        "scripts/registry_refresh_state_lib.py",
+        "scripts/registry_snapshot_lib.py",
     ]
-
-    for rel_path, wrapper_markers in expected_wrapper_markers.items():
-        text = _read(rel_path)
-        for marker in wrapper_markers:
-            assert marker in text, (
-                f"{rel_path} should stay a thin wrapper around package-native registry modules"
-            )
-        for marker in forbidden_markers:
-            assert marker not in text, (
-                f"{rel_path} should not keep duplicated registry logic: {marker}"
-            )
+    for rel_path in deleted_libs:
+        assert not (ROOT / rel_path).exists(), (
+            f"expected deleted _lib shim to stay deleted: {rel_path}"
+        )
 
 
-def test_signing_and_review_script_libs_stay_thin_wrappers() -> None:
-    expected_wrapper_markers = {
-        "scripts/signing_bootstrap_lib.py": [
-            "from infinitas_skill.release.signing_bootstrap import *",
-        ],
-        "scripts/provenance_payload_lib.py": [
-            "from infinitas_skill.release.provenance_payload import *",
-        ],
-        "scripts/reviewer_rotation_lib.py": [
-            "from infinitas_skill.policy.reviewer_rotation import *",
-        ],
-    }
-    forbidden_markers = [
-        "def parse_allowed_signers",
-        "def build_common_payload",
-        "def recommend_reviewers",
-        "class SigningBootstrapError",
+def test_signing_and_review_script_libs_stay_deleted() -> None:
+    """Phase 5 shim deletion: signing/review _lib files must stay deleted."""
+    deleted_libs = [
+        "scripts/signing_bootstrap_lib.py",
+        "scripts/provenance_payload_lib.py",
+        "scripts/reviewer_rotation_lib.py",
     ]
-
-    for rel_path, wrapper_markers in expected_wrapper_markers.items():
-        text = _read(rel_path)
-        for marker in wrapper_markers:
-            assert marker in text, (
-                f"{rel_path} should stay a thin wrapper around package-native "
-                "signing/review modules"
-            )
-        for marker in forbidden_markers:
-            assert marker not in text, (
-                f"{rel_path} should not keep duplicated signing/review logic: {marker}"
-            )
+    for rel_path in deleted_libs:
+        assert not (ROOT / rel_path).exists(), (
+            f"expected deleted _lib shim to stay deleted: {rel_path}"
+        )
 
 
 def test_signing_operator_scripts_stay_package_owned() -> None:

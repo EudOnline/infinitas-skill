@@ -25,14 +25,6 @@ class PaginationParams:
     skip: int = 0
     limit: int = 20
 
-    @classmethod
-    def from_query(cls, skip: int = 0, limit: int = 20) -> "PaginationParams":
-        """Create from FastAPI query parameters with validation."""
-        # Clamp values to reasonable ranges
-        skip = max(0, min(skip, 10000))
-        limit = max(1, min(limit, 100))
-        return cls(skip=skip, limit=limit)
-
 
 class PaginatedResponse(BaseModel, Generic[T]):
     """Standard paginated response structure.

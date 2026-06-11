@@ -14,6 +14,7 @@ from fastapi import Cookie, Depends, Header, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from server.db import get_db
+from server.logging import get_logger
 from server.models import User
 from server.modules.access import service as access_service
 from server.modules.access.authn import AccessContext, resolve_access_context
@@ -79,6 +80,7 @@ def _decrypt_payload(ciphertext: bytes) -> bytes | None:
         actual_ciphertext = ciphertext[12:]
         return aesgcm.decrypt(nonce, actual_ciphertext, None)
     except Exception:
+        get_logger(__name__).debug("session cookie decrypt failed", exc_info=True)
         return None
 
 

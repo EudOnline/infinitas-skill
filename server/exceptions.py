@@ -38,6 +38,40 @@ class ConflictError(Exception):
 
 
 def register_exception_handlers(app, templates: Jinja2Templates) -> None:
+    @app.exception_handler(NotFoundError)
+    async def not_found_exc_handler(request: Request, exc: NotFoundError):
+        lang = resolve_language(request)
+        if request.headers.get("accept", "").startswith("application/json"):
+            return JSONResponse({"detail": str(exc) or "Not found"}, status_code=404)
+        return templates.TemplateResponse(
+            request,
+            "error.html",
+            {
+                "request": request,
+                "status_code": 404,
+                "title": pick_lang(lang, "未找到", "Not Found"),
+                "message": pick_lang(
+                    lang, "您访问的页面不存在。", "The page you are looking for does not exist."
+                ),
+                **build_kawaii_ui_context(request, lang, "", ""),
+            },
+            status_code=404,
+        )
+
+    @app.exception_handler(ForbiddenError)
+    async def forbidden_exc_handler(request: Request, exc: ForbiddenError):
+        if request.headers.get("accept", "").startswith("application/json"):
+            return JSONResponse({"detail": str(exc) or "Forbidden"}, status_code=403)
+        return JSONResponse({"detail": str(exc) or "Forbidden"}, status_code=403)
+
+    @app.exception_handler(ConflictError)
+    async def conflict_exc_handler(request: Request, exc: ConflictError):
+        return JSONResponse({"detail": str(exc) or "Conflict"}, status_code=409)
+
+    @app.exception_handler(ValidationError)
+    async def validation_exc_handler(request: Request, exc: ValidationError):
+        return JSONResponse({"detail": str(exc) or "Validation error"}, status_code=422)
+
     @app.exception_handler(404)
     async def not_found_handler(request: Request, exc):
         lang = resolve_language(request)

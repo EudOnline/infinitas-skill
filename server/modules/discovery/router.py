@@ -11,6 +11,7 @@ from server.auth import get_current_access_context
 from server.db import get_db
 from server.modules.access.authn import AccessContext
 from server.modules.discovery import service
+from server.modules.shared.formatting import iso_format
 from server.modules.discovery.schemas import (
     CatalogEntryView,
     CatalogListView,
@@ -60,7 +61,7 @@ def _install_payload(
     links = _install_links(request)
     ready_at = None
     if entry.ready_at is not None:
-        ready_at = entry.ready_at.isoformat().replace("+00:00", "Z")
+        ready_at = iso_format(entry.ready_at)
     return InstallResolutionView(
         exposure_id=entry.exposure_id,
         release_id=entry.release_id,

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import json
 import re
 from datetime import datetime
 from pathlib import Path
 
 from sqlalchemy.orm import Session
 
+from server.exceptions import ConflictError, ForbiddenError, NotFoundError
 from server.modules.access.authn import AccessContext
 from server.modules.access.authz import can_access_releases
 from server.modules.discovery import search
@@ -17,23 +17,6 @@ from server.modules.discovery.projections import (
 )
 from server.modules.shared.json import read_json_file as _read_json
 from server.settings import get_settings
-
-
-class DiscoveryError(Exception):
-    pass
-
-
-class NotFoundError(DiscoveryError):
-    pass
-
-
-class ForbiddenError(DiscoveryError):
-    pass
-
-
-class ConflictError(DiscoveryError):
-    pass
-
 
 _VERSION_PARTS_RE = re.compile(r"(\d+|[A-Za-z]+)")
 

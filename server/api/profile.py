@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from server.auth import get_current_access_context, require_role
 from server.db import get_db
+from server.exceptions import ForbiddenError, NotFoundError
 from server.models import User
 from server.modules.access.authn import AccessContext
 from server.modules.profile import service as profile_service
@@ -39,9 +40,9 @@ def profile_admin_view(
     """Return the profile for a specified credential (admin view)."""
     try:
         return profile_service.build_admin_view(db, credential_id=credential_id, user=user)
-    except LookupError:
+    except NotFoundError:
         raise HTTPException(status_code=404, detail="credential not found")
-    except PermissionError:
+    except ForbiddenError:
         raise HTTPException(status_code=403, detail="credential access denied")
 
 

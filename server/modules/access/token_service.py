@@ -14,6 +14,7 @@ from server.modules.access import service as access_service
 from server.modules.audit import service as audit_service
 from server.modules.release import service as release_service
 from server.modules.shared.actor import ActorRef, actor_ref_label as _actor_ref
+from server.modules.shared.formatting import iso_format
 
 TokenType = Literal["reader", "publisher"]
 ScopeType = Literal["object", "release"]
@@ -102,17 +103,9 @@ def _token_metadata(credential: Credential) -> dict:
         "issued_for": credential.issued_for or None,
         "state": state,
         "scopes": sorted(access_service.parse_scopes(credential.scopes_json)),
-        "expires_at": (
-            credential.expires_at.isoformat().replace("+00:00", "Z")
-            if credential.expires_at is not None
-            else None
-        ),
-        "created_at": credential.created_at.isoformat().replace("+00:00", "Z"),
-        "last_used_at": (
-            credential.last_used_at.isoformat().replace("+00:00", "Z")
-            if credential.last_used_at is not None
-            else None
-        ),
+        "expires_at": iso_format(credential.expires_at),
+        "created_at": iso_format(credential.created_at),
+        "last_used_at": iso_format(credential.last_used_at),
     }
 
 

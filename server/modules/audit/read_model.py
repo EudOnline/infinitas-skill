@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from server.models import AuditEvent, Release, Skill
+from server.modules.shared.formatting import iso_format
 
 
 def json_payload(event: AuditEvent) -> dict[str, Any]:
@@ -55,7 +56,7 @@ def normalize_event(db: Session, event: AuditEvent) -> dict[str, Any]:
         "object": _object_payload(db, payload),
         "release": _release_payload(db, payload),
         "outcome": payload.get("outcome") or "success",
-        "timestamp": event.occurred_at.isoformat().replace("+00:00", "Z"),
+        "timestamp": iso_format(event.occurred_at),
         "aggregate_type": event.aggregate_type,
         "aggregate_id": event.aggregate_id,
         "detail": payload,

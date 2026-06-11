@@ -1,4 +1,4 @@
-"""Profile service -- business logic for identity, accessible skills, operation history, and policy."""
+"""Profile service — identity, accessible skills, operation history, and policy."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from server.models import (
 )
 from server.modules.access import service as access_service
 from server.modules.access.authn import AccessContext
-
+from server.modules.shared.formatting import iso_format
 
 # ── Profile builder ───────────────────────────────────────────────────────────
 
@@ -40,7 +40,7 @@ def build_profile(db: Session, context: AccessContext) -> dict[str, Any]:
         "principal_kind": principal.kind if principal else None,
         "principal_display_name": principal.display_name if principal else None,
         "scopes": scopes,
-        "expires_at": credential.expires_at.isoformat() if credential.expires_at else None,
+        "expires_at": iso_format(credential.expires_at),
     }
 
     # ── Accessible Skills ─────────────────────────────────────────────────
@@ -66,20 +66,20 @@ def build_profile(db: Session, context: AccessContext) -> dict[str, Any]:
 def build_admin_view(db: Session, *, credential_id: int, user) -> dict[str, Any]:
     """Build a profile dict for an admin looking up another credential.
 
-    Raises ValueError with an explanatory message on authz failures.
-    Raises LookupError when the credential is not found.
+    Raises NotFoundError when the credential is not found.
+    Raises ForbiddenError when access is denied.
     """
-    from server.auth import require_role  # noqa: delayed import avoids circulars
+    from server.exceptions import ForbiddenError, NotFoundError
 
     credential = access_service.resolve_credential_by_id(db, credential_id)
     if credential is None:
-        raise LookupError("credential not found")
+        raise NotFoundError("credential not found")
 
     caller_principal = access_service.get_principal_for_user(db, user)
     caller_principal_id = caller_principal.id if caller_principal is not None else 0
     is_maintainer = user.role == "maintainer"
     if not is_maintainer and credential.principal_id != caller_principal_id:
-        raise PermissionError("credential access denied")
+        raise ForbiddenError("credential access denied")
 
     principal = access_service.get_principal(db, credential.principal_id)
     resolved_user = access_service.get_user_for_principal(db, principal)
@@ -272,7 +272,7 @@ def _resolve_operation_history(db: Session, credential: Credential) -> list[dict
             "event_type": row.event_type,
             "actor_ref": row.actor_ref,
             "payload": payload,
-            "occurred_at": row.occurred_at.isoformat() if row.occurred_at else None,
+            "occurred_at": iso_format(row.occurred_at),
         })
 
     return result

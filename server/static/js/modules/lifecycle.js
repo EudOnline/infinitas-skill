@@ -5,12 +5,7 @@ import { uiText, currentPageLanguage } from './config.js';
 import {
   setCrudToastRef,
   setCrudHelpers,
-  createSkill,
-  createDraft,
-  saveDraft,
-  sealDraft,
   createRelease,
-  pollReleaseReady,
 } from './lifecycle-crud.js';
 import {
   setExposureToastRef,
@@ -25,8 +20,6 @@ import {
 } from './lifecycle-exposure.js';
 import {
   setAccessToastRef,
-  checkAccessMe,
-  checkReleaseAccess,
 } from './lifecycle-access.js';
 
 // ── Toast reference (set by the application bootstrap) ──────────────
@@ -149,13 +142,6 @@ function handleReviewCaseClick(e) {
   }
 }
 
-function handleAccessTokensClick(e) {
-  const btn = e.target.closest('[data-action="check-release-access"]');
-  if (!btn) return;
-  const input = document.getElementById('release-access-id');
-  checkReleaseAccess(input?.value || '');
-}
-
 // ── Page initializers (exported) ────────────────────────────────────
 
 export function initDelegatedActions() {
@@ -163,54 +149,10 @@ export function initDelegatedActions() {
     handleCreateReleaseClick(e);
     handleShareDetailClick(e);
     handleReviewCaseClick(e);
-    handleAccessTokensClick(e);
   });
   document.body.addEventListener('submit', (e) => {
     handleShareDetailSubmit(e);
   });
-}
-
-export function initCreateSkill() {
-  const form = document.getElementById('create-skill-form');
-  if (!form) return;
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    createSkill(form);
-  });
-}
-
-export function initCreateDraft() {
-  const form = document.getElementById('create-draft-form');
-  if (!form) return;
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    createDraft(form);
-  });
-}
-
-export function initDraftDetail() {
-  const saveForm = document.getElementById('save-draft-form');
-  if (saveForm) {
-    saveForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      saveDraft(saveForm);
-    });
-  }
-  const sealForm = document.getElementById('seal-draft-form');
-  if (sealForm) {
-    sealForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      sealDraft(sealForm);
-    });
-  }
-}
-
-export function initReleaseDetail() {
-  const statusEl = document.getElementById('release-status');
-  const releaseId = statusEl?.dataset.releaseId;
-  if (statusEl && releaseId && statusEl.dataset.state === 'preparing') {
-    pollReleaseReady(releaseId);
-  }
 }
 
 export function initShareDetail() {
@@ -223,9 +165,4 @@ export function initShareDetail() {
   }
   // click/submit handlers registered by initDelegatedActions
   syncExposureReviewModePolicy();
-}
-
-export function initAccessTokens() {
-  checkAccessMe();
-  // click handler registered by initDelegatedActions
 }

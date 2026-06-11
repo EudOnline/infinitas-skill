@@ -42,9 +42,9 @@ def group_by(items: list[object], key_name: str) -> dict[int, list[object]]:
 
 
 def iso_stamp(value) -> str | None:
-    if value is None:
-        return None
-    return value.isoformat().replace("+00:00", "Z")
+    from server.modules.shared.formatting import iso_format
+
+    return iso_format(value)
 
 
 def parse_datetime(value: object) -> datetime | None:

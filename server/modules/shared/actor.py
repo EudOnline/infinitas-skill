@@ -6,8 +6,10 @@ modules.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from server.modules.access.models import Principal
+if TYPE_CHECKING:
+    from server.modules.access.models import Principal
 
 
 @dataclass(frozen=True)

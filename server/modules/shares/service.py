@@ -22,6 +22,7 @@ from server.modules.access import service as access_service
 from server.modules.audit import service as audit_service
 from server.modules.release import service as release_service
 from server.modules.shared.actor import ActorRef, actor_ref_label as _actor_ref
+from server.modules.shared.formatting import iso_format
 
 
 class ShareLinkError(Exception):
@@ -170,7 +171,7 @@ def _share_link_payload(
         "max_uses": int(max_uses) if max_uses is not None else None,
         "used_count": used_count,
         "state": _share_state(grant, constraints),
-        "created_at": grant.created_at.isoformat().replace("+00:00", "Z"),
+        "created_at": iso_format(grant.created_at),
     }
     if install_path is not None:
         payload["install_path"] = install_path

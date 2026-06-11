@@ -293,10 +293,10 @@ def test_library_object_detail_shows_real_token_and_share_rows(
     assert "Test Library Skill" in html
     assert "reader" in html
     assert "publisher" in html
-    assert "2 / 5" in html
+    assert "2/5" in html
 
 
-def test_access_center_and_shares_pages_render_real_inventory(
+def test_manage_page_renders_token_and_share_inventory(
     monkeypatch,
     tmp_path: Path,
     temp_repo_copy: Path,
@@ -311,23 +311,20 @@ def test_access_center_and_shares_pages_render_real_inventory(
     _seed_library_access_data(client)
     headers = {"Authorization": "Bearer fixture-maintainer-token"}
 
-    access_response = client.get("/access?lang=en", headers=headers)
-    assert access_response.status_code == 200, access_response.text
-    access_html = access_response.text
-    assert "Test Library Skill" in access_html
-    assert "reader" in access_html
-    assert "publisher" in access_html
-    assert "Activity" in access_html
+    # /access and /shares redirect to /manage; verify the consolidated page
+    access_redirect = client.get("/access?lang=en", headers=headers, follow_redirects=False)
+    assert access_redirect.status_code == 307
 
-    shares_response = client.get("/shares?lang=en", headers=headers)
-    assert shares_response.status_code == 200, shares_response.text
-    shares_html = shares_response.text
-    assert "Test Library Skill" in shares_html
-    assert "1.0.0" in shares_html
-    assert "2 / 5" in shares_html
+    manage_response = client.get("/manage?lang=en", headers=headers)
+    assert manage_response.status_code == 200, manage_response.text
+    manage_html = manage_response.text
+    assert "Test Library Skill" in manage_html
+    assert "reader" in manage_html
+    assert "publisher" in manage_html
+    assert "2/5" in manage_html
 
 
-def test_shares_page_uses_grant_share_usage_aliases(
+def test_manage_page_shows_grant_share_usage_aliases(
     monkeypatch,
     tmp_path: Path,
     temp_repo_copy: Path,
@@ -360,15 +357,15 @@ def test_shares_page_uses_grant_share_usage_aliases(
         session.add(share_grant)
         session.commit()
 
-    shares_response = client.get("/shares?lang=en", headers=headers)
-    assert shares_response.status_code == 200, shares_response.text
-    shares_html = shares_response.text
-    assert "Grant-backed exhausted share" in shares_html
-    assert "1 / 1" in shares_html
-    assert "exhausted" in shares_html
+    manage_response = client.get("/manage?lang=en", headers=headers)
+    assert manage_response.status_code == 200, manage_response.text
+    manage_html = manage_response.text
+    assert "Grant-backed exhausted share" in manage_html
+    assert "1/1" in manage_html
+    assert "exhausted" in manage_html
 
 
-def test_access_center_and_shares_pages_offer_revoke_actions(
+def test_manage_page_offers_revoke_actions(
     monkeypatch,
     tmp_path: Path,
     temp_repo_copy: Path,
@@ -383,13 +380,11 @@ def test_access_center_and_shares_pages_offer_revoke_actions(
     _seed_library_access_data(client)
     headers = {"Authorization": "Bearer fixture-maintainer-token"}
 
-    access_response = client.get("/access?lang=en", headers=headers)
-    assert access_response.status_code == 200, access_response.text
-    assert 'data-action="revoke-token"' in access_response.text
-
-    shares_response = client.get("/shares?lang=en", headers=headers)
-    assert shares_response.status_code == 200, shares_response.text
-    assert 'data-action="revoke-share-link"' in shares_response.text
+    manage_response = client.get("/manage?lang=en", headers=headers)
+    assert manage_response.status_code == 200, manage_response.text
+    manage_html = manage_response.text
+    assert 'data-action="revoke-token"' in manage_html
+    assert 'data-action="revoke-share-link"' in manage_html
 
 
 def test_revoked_token_and_share_remain_visible_in_inventory(
@@ -419,16 +414,12 @@ def test_revoked_token_and_share_remain_visible_in_inventory(
     )
     assert revoke_share.status_code == 200, revoke_share.text
 
-    access_response = client.get("/access?lang=en", headers=headers)
-    assert access_response.status_code == 200, access_response.text
-    assert "revoked" in access_response.text
-
-    shares_response = client.get("/shares?lang=en", headers=headers)
-    assert shares_response.status_code == 200, shares_response.text
-    assert "revoked" in shares_response.text
+    manage_response = client.get("/manage?lang=en", headers=headers)
+    assert manage_response.status_code == 200, manage_response.text
+    assert "revoked" in manage_response.text
 
 
-def test_access_and_shares_pages_show_labels_for_items_created_from_release_page(
+def test_manage_page_shows_labels_for_items_created_from_release_page(
     monkeypatch,
     tmp_path: Path,
     temp_repo_copy: Path,
@@ -462,20 +453,15 @@ def test_access_and_shares_pages_show_labels_for_items_created_from_release_page
     )
     assert share_response.status_code == 201, share_response.text
 
-    access_response = client.get("/access?lang=en", headers=headers)
-    assert access_response.status_code == 200, access_response.text
-    access_html = access_response.text
-    assert "Deploy Bot" in access_html
-    assert "1.0.0" in access_html
-
-    shares_response = client.get("/shares?lang=en", headers=headers)
-    assert shares_response.status_code == 200, shares_response.text
-    shares_html = shares_response.text
-    assert "QA Share" in shares_html
-    assert "1.0.0" in shares_html
+    manage_response = client.get("/manage?lang=en", headers=headers)
+    assert manage_response.status_code == 200, manage_response.text
+    manage_html = manage_response.text
+    assert "Deploy Bot" in manage_html
+    assert "QA Share" in manage_html
+    assert "1.0.0" in manage_html
 
 
-def test_activity_page_renders_normalized_audit_events(
+def test_manage_page_renders_normalized_audit_events(
     monkeypatch,
     tmp_path: Path,
     temp_repo_copy: Path,
@@ -509,7 +495,8 @@ def test_activity_page_renders_normalized_audit_events(
         )
         session.commit()
 
-    response = client.get("/activity?lang=en", headers=headers)
+    # /activity redirects to /manage#activity; verify consolidated page
+    response = client.get("/manage?lang=en", headers=headers)
     assert response.status_code == 200, response.text
     html = response.text
 
@@ -519,7 +506,7 @@ def test_activity_page_renders_normalized_audit_events(
     assert "share" in html
 
 
-def test_activity_page_includes_token_revocation_events(
+def test_manage_page_includes_token_revocation_events(
     monkeypatch,
     tmp_path: Path,
     temp_repo_copy: Path,
@@ -540,7 +527,7 @@ def test_activity_page_includes_token_revocation_events(
     )
     assert revoke_token.status_code == 200, revoke_token.text
 
-    response = client.get("/activity?lang=en", headers=headers)
+    response = client.get("/manage?lang=en", headers=headers)
     assert response.status_code == 200, response.text
     html = response.text
 

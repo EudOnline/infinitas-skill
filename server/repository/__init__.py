@@ -25,7 +25,6 @@ from server.repository.base import (
     SQLAlchemyRepository,
     SQLAlchemyUnitOfWork,
     UnitOfWork,
-    with_repository,
 )
 
 __all__ = [
@@ -34,5 +33,4 @@ __all__ = [
     "UnitOfWork",
     "SQLAlchemyUnitOfWork",
     "QueryBuilder",
-    "with_repository",
 ]

@@ -10,8 +10,8 @@ from infinitas_skill.openclaw.runtime_model import build_openclaw_runtime_model
 from infinitas_skill.root import ROOT
 from server.auth import maybe_get_current_access_context
 from server.db import get_db
+from server.exceptions import ForbiddenError
 from server.modules.discovery import service as discovery_service
-from server.settings import get_settings
 
 router = APIRouter(prefix="/api/v1/search", tags=["search"])
 
@@ -193,7 +193,7 @@ def search_registry(
                 return _search_payload(entries, scope="grant")
             entries = discovery_service.search_me_catalog(db, context=context, query=q, limit=limit)
             return _search_payload(entries, scope="me")
-        except discovery_service.ForbiddenError as exc:
+        except ForbiddenError as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from exc
 
     snapshot_items = discovery_service.search_catalog_snapshot(query=q, limit=limit)

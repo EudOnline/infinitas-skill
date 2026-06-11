@@ -10,7 +10,6 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from typing import (
     Any,
-    Callable,
     Generic,
     Iterable,
     TypeVar,
@@ -499,26 +498,3 @@ class SQLAlchemyUnitOfWork(UnitOfWork):
         except Exception:
             self.rollback()
             raise
-
-
-def with_repository(
-    repo_method: Callable[..., T],
-) -> Callable[..., T]:
-    """Decorator to ensure repository operations run within a session.
-
-    Args:
-        repo_method: A repository method to wrap
-
-    Returns:
-        The wrapped method
-
-    This decorator can be used on service layer methods to ensure
-    they have proper database session handling.
-    """
-
-    def wrapper(self, *args: Any, **kwargs: Any) -> T:
-        # The service layer should manage sessions via dependency injection
-        # This decorator is a placeholder for future session management logic
-        return repo_method(self, *args, **kwargs)
-
-    return wrapper
