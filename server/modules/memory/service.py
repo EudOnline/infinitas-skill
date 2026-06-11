@@ -388,6 +388,30 @@ def record_lifecycle_memory_event_best_effort(
     memory_write_enabled: bool | None = None,
     scope: Mapping[str, Any] | None = None,
 ) -> MemoryWritebackOutcome | None:
+    """Record a lifecycle memory event with best-effort semantics.
+
+    This is a convenience wrapper around record_lifecycle_memory_event()
+    that catches all exceptions and rolls back the nested transaction.
+    Memory writeback failures never block the primary transaction.
+
+    Use this for non-critical memory recording where failures should
+    be silently absorbed (e.g., recording that a release was created).
+
+    Args:
+        db: Database session
+        lifecycle_event: Event type (e.g., "task.release.ready")
+        aggregate_type: Type of the aggregate (e.g., "release")
+        aggregate_id: ID of the aggregate
+        actor_ref: Reference to the actor (e.g., "principal:username")
+        payload: Optional event payload data
+        provider: Optional memory provider override
+        memory_write_enabled: Optional override for memory write enabled setting
+        scope: Optional memory scope configuration
+
+    Returns:
+        MemoryWritebackOutcome if successful, None if memory write
+        was disabled, deduplicated, or failed.
+    """
     try:
         nested = db.begin_nested()
         outcome = record_lifecycle_memory_event(

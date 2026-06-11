@@ -164,6 +164,37 @@ def build_provenance_payload(
     attestation_cfg: dict,
     signer_identity: str,
 ) -> dict:
+    """Build the provenance document for a release.
+
+    Creates a comprehensive provenance payload that attests to the
+    origin, content, and signing of a release. This document is
+    signed and stored alongside the release artifacts.
+
+    The provenance includes:
+    - Release identity (publisher, skill, version)
+    - Source snapshot (git context, content digest)
+    - Registry metadata (release marker, ref)
+    - Bundle metadata (SHA-256, size, file count)
+    - Attestation config (namespace, signature extension)
+    - Signer identity
+
+    Args:
+        snapshot: Release snapshot with skill, version, and namespace info
+        release: The Release database object
+        repo_root: Root directory of the repository
+        bundle_public_path: Public path to the bundle artifact
+        manifest_public_path: Public path to the manifest artifact
+        bundle_sha256: SHA-256 hash of the bundle
+        bundle_size: Size of the bundle in bytes
+        bundle_root_dir: Root directory name inside the bundle
+        bundle_file_count: Number of files in the bundle
+        signature_filename: Filename for the signature artifact
+        attestation_cfg: Attestation configuration dict
+        signer_identity: Identity of the signer (e.g., email or key ID)
+
+    Returns:
+        Dict containing the complete provenance document
+    """
     publisher = snapshot.namespace.slug
     skill_slug = snapshot.skill.slug
     version = snapshot.skill_version.version

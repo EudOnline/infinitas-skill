@@ -83,6 +83,35 @@ def materialize_release(
     repo_root: Path,
     storage_backend: ArtifactStorage | None = None,
 ) -> tuple[Release, list[Artifact]]:
+    """Materialize a release by generating and storing all artifacts.
+
+    This is the main orchestration function for release materialization.
+    It coordinates the full pipeline:
+
+    1. Check if existing materialization is still current (skip if so)
+    2. Build the skill bundle (tar.gz)
+    3. Load attestation config and signing key
+    4. Build and sign the provenance document
+    5. Build the distribution manifest
+    6. Store all 4 artifacts (bundle, manifest, provenance, signature)
+    7. Collect platform compatibility (optional, best-effort)
+    8. Mark the release as "ready"
+
+    Args:
+        db: Database session
+        release_id: The release ID to materialize
+        artifact_root: Root directory for artifact storage
+        repo_root: Root directory of the repository
+        storage_backend: Optional custom storage backend (default: filesystem)
+
+    Returns:
+        Tuple of (Release, list[Artifact]) with the materialized release
+        and its 4 artifacts.
+
+    Raises:
+        Various exceptions from the signing and attestation subsystems
+        if critical steps fail.
+    """
     snapshot = service.get_release_snapshot(db, release_id)
     release = snapshot.release
     existing_artifacts = service.get_artifacts_for_release(db, release.id)

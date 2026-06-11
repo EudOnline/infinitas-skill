@@ -69,6 +69,27 @@ def create_exposure(
     is_maintainer: bool = False,
     payload: ExposureCreateRequest,
 ) -> Exposure:
+    """Create a new exposure for a release.
+
+    An exposure controls the visibility of a release to different audiences
+    (public, authenticated, grant, private). The exposure goes through
+    policy evaluation to determine review requirements.
+
+    Args:
+        db: Database session
+        release_id: The release to expose
+        actor_principal_id: The principal creating the exposure
+        is_maintainer: Whether the actor is a maintainer (bypasses ownership check)
+        payload: Exposure creation parameters (audience_type, listing_mode, etc.)
+
+    Returns:
+        The created Exposure object
+
+    Raises:
+        NotFoundError: If the release doesn't exist
+        ForbiddenError: If the actor doesn't own the release
+        ConflictError: If the release isn't ready or policy evaluation fails
+    """
     try:
         release = release_service.get_release_or_404(db, release_id)
     except release_service.NotFoundError as exc:
