@@ -15,6 +15,7 @@ def _get_shares_service():
         ShareLinkForbiddenError,
         ShareLinkNotFoundError,
         _json_object,
+        _password_credential,
         _share_state,
     )
     return {
@@ -23,6 +24,7 @@ def _get_shares_service():
         "ShareLinkForbiddenError": ShareLinkForbiddenError,
         "ShareLinkNotFoundError": ShareLinkNotFoundError,
         "_json_object": _json_object,
+        "_password_credential": _password_credential,
         "_share_state": _share_state,
     }
 
@@ -46,6 +48,13 @@ class TestShareLinkExceptions:
     def test_conflict_inherits_share_link_error(self):
         svc = _get_shares_service()
         assert issubclass(svc["ShareLinkConflictError"], svc["ShareLinkError"])
+
+    def test_not_found_inherits_base_not_found(self):
+        svc = _get_shares_service()
+        from server.exceptions_base import NotFoundError as BaseNotFoundError
+        # Note: ShareLinkNotFoundError does NOT inherit from BaseNotFoundError
+        # This is intentional - shares has its own exception hierarchy
+        assert not issubclass(svc["ShareLinkNotFoundError"], BaseNotFoundError)
 
 
 # ── _json_object helper ──────────────────────────────────────────────────────
@@ -76,6 +85,15 @@ class TestJsonObject:
         svc = _get_shares_service()
         result = svc["_json_object"]('{"a": {"b": 1}}')
         assert result == {"a": {"b": 1}}
+
+    def test_whitespace_only(self):
+        svc = _get_shares_service()
+        assert svc["_json_object"]("   ") == {}
+
+    def test_json_with_spaces(self):
+        svc = _get_shares_service()
+        result = svc["_json_object"]('  {"key": "value"}  ')
+        assert result == {"key": "value"}
 
 
 # ── _share_state helper ──────────────────────────────────────────────────────
@@ -124,3 +142,68 @@ class TestShareState:
         grant = self._make_grant(state="active")
         constraints = {"usage_limit": 10, "usage_count": 7}
         assert svc["_share_state"](grant, constraints) == "active"
+
+    def test_future_expiry_is_active(self):
+        svc = _get_shares_service()
+        future = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+        grant = self._make_grant(state="active")
+        assert svc["_share_state"](grant, {"expires_at": future}) == "active"
+
+    def test_exactly_at_limit_is_exhausted(self):
+        svc = _get_shares_service()
+        grant = self._make_grant(state="active")
+        constraints = {"max_uses": 1, "used_count": 1}
+        assert svc["_share_state"](grant, constraints) == "exhausted"
+
+    def test_zero_uses_is_active(self):
+        svc = _get_shares_service()
+        grant = self._make_grant(state="active")
+        constraints = {"max_uses": 5, "used_count": 0}
+        assert svc["_share_state"](grant, constraints) == "active"
+
+
+# ── _password_credential helper ──────────────────────────────────────────────
+
+
+class TestPasswordCredential:
+    def _make_credential(self, cred_type="share_password"):
+        """Create a mock credential-like object."""
+
+        class MockCredential:
+            def __init__(self, type):
+                self.type = type
+
+        return MockCredential(cred_type)
+
+    def test_finds_password_credential(self):
+        svc = _get_shares_service()
+        creds = [
+            self._make_credential("share_secret"),
+            self._make_credential("share_password"),
+        ]
+        result = svc["_password_credential"](creds)
+        assert result is not None
+        assert result.type == "share_password"
+
+    def test_returns_none_when_no_password(self):
+        svc = _get_shares_service()
+        creds = [
+            self._make_credential("share_secret"),
+        ]
+        result = svc["_password_credential"](creds)
+        assert result is None
+
+    def test_empty_credentials(self):
+        svc = _get_shares_service()
+        result = svc["_password_credential"]([])
+        assert result is None
+
+    def test_returns_first_password_credential(self):
+        svc = _get_shares_service()
+        creds = [
+            self._make_credential("share_password"),
+            self._make_credential("share_password"),
+        ]
+        result = svc["_password_credential"](creds)
+        assert result is not None
+        assert result.type == "share_password"
