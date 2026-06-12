@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+import re
 from sqlalchemy.orm import Session
 
 from server.auth import get_current_access_context
@@ -21,6 +22,8 @@ from server.settings import get_settings
 router = APIRouter(prefix="/api/v1/publish", tags=["publish"])
 
 log = get_logger(__name__)
+
+_SLUG_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]*$")
 
 
 class PublishObjectRequest(BaseModel):
@@ -78,8 +81,8 @@ def upsert_publish_object(
         summary: Optional skill description
     """
     principal_id, _is_maintainer = _require_actor(context)
-    # Security validation to prevent path traversal and injection attempts
-    if ".." in slug or "/" in slug or "\\" in slug or "\x00" in slug:
+    # Whitelist slug to alphanumeric with dots, dashes, and underscores
+    if not _SLUG_PATTERN.match(slug):
         raise HTTPException(
             status_code=422,
             detail="Invalid slug format"

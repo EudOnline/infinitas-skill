@@ -76,13 +76,11 @@ DEFAULT_BOOTSTRAP_USERS = [
         'username': 'maintainer',
         'display_name': 'Default Maintainer',
         'role': 'maintainer',
-        'token': 'dev-maintainer-token',
     },
     {
         'username': 'contributor',
         'display_name': 'Default Contributor',
         'role': 'contributor',
-        'token': 'dev-contributor-token',
     },
 ]
 
@@ -101,6 +99,7 @@ class Settings:
     artifact_path: Path
     repo_lock_path: Path
     registry_read_tokens: list[str]
+    trusted_proxies: list[str]
     mirror_remote: str
     mirror_branch: str
     memory_backend: str
@@ -130,7 +129,7 @@ def _normalize_bootstrap_users(payload: object) -> list[dict]:
         role = str(item.get('role') or 'contributor').strip() or 'contributor'
         token = str(item.get('token') or '').strip()
         password = str(item.get('password') or '').strip()
-        if not username or not (token or password):
+        if not username:
             continue
         normalized.append(
             {
@@ -284,6 +283,10 @@ def get_settings() -> Settings:
         'INFINITAS_REGISTRY_READ_TOKENS',
         strict=environment == 'production',
     )
+    trusted_proxies = _load_string_list_env(
+        'INFINITAS_SERVER_TRUSTED_PROXIES',
+        strict=False,
+    )
     mirror_remote = str(os.environ.get('INFINITAS_SERVER_MIRROR_REMOTE') or '').strip()
     mirror_branch = str(os.environ.get('INFINITAS_SERVER_MIRROR_BRANCH') or '').strip()
     memory = load_memory_config()
@@ -319,6 +322,7 @@ def get_settings() -> Settings:
         artifact_path=artifact_path,
         repo_lock_path=repo_lock_path,
         registry_read_tokens=registry_read_tokens,
+        trusted_proxies=trusted_proxies,
         mirror_remote=mirror_remote,
         mirror_branch=mirror_branch,
         memory_backend=memory.backend,

@@ -76,6 +76,8 @@ def init_db():
 
 
 def seed_bootstrap_users():
+    import secrets as _secrets
+
     from server.auth import hash_password
     from server.logging import get_logger
     from server.modules.access.service import (
@@ -111,7 +113,17 @@ def seed_bootstrap_users():
                         "bootstrap user %s password skipped: %s", item["username"], exc
                     )
             principal = ensure_user_principal(session, user)
-            if item.get("token"):
+            token = item.get("token")
+            if not token and settings.environment in {"development", "test"}:
+                # Auto-generate a token for dev/test and log it once
+                token = f"dev_{_secrets.token_urlsafe(24)}"
+                log.warning(
+                    "auto-generated token for bootstrap user %s: %s "
+                    "(save this token \u2014 it will not be shown again)",
+                    item["username"],
+                    token,
+                )
+            if token:
                 ensure_personal_credential_for_user(
                     session,
                     user=user,

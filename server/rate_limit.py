@@ -20,20 +20,29 @@ from server.models import Base, utcnow
 
 
 def resolve_client_ip(request: Request) -> str:
-    """Extract the real client IP from a request, respecting reverse proxies.
+    """Extract the real client IP from a request, respecting trusted reverse proxies.
 
-    Checks ``X-Forwarded-For`` (first entry) and ``X-Real-IP`` headers
-    before falling back to ``request.client.host``.  Only the first
-    ``X-Forwarded-For`` entry is trusted — downstream deployments should
-    ensure only their reverse proxy can set this header.
+    Only reads ``X-Forwarded-For`` and ``X-Real-IP`` headers when the
+    direct connection comes from an IP listed in ``trusted_proxies``.
+    Otherwise falls back to the direct ``request.client.host`` to prevent
+    header spoofing.
+
+    The trusted proxy list is loaded from the
+    ``INFINITAS_SERVER_TRUSTED_PROXIES`` environment variable (JSON array).
+    When empty (the default), only direct connection IPs are used.
     """
-    forwarded = (request.headers.get("x-forwarded-for") or "").split(",", 1)[0].strip()
-    if forwarded:
-        return forwarded
-    real_ip = (request.headers.get("x-real-ip") or "").strip()
-    if real_ip:
-        return real_ip
-    return request.client.host if request.client else "unknown"
+    from server.settings import get_settings
+
+    client_host = request.client.host if request.client else "unknown"
+    trusted_proxies = get_settings().trusted_proxies
+    if trusted_proxies and client_host in trusted_proxies:
+        forwarded = (request.headers.get("x-forwarded-for") or "").split(",", 1)[0].strip()
+        if forwarded:
+            return forwarded
+        real_ip = (request.headers.get("x-real-ip") or "").strip()
+        if real_ip:
+            return real_ip
+    return client_host
 
 
 def resolve_rate_limit_key(request: Request, user_id: int | None = None) -> str:

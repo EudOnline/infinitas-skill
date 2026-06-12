@@ -1,12 +1,6 @@
 import { apiGet } from './api.js';
 import { uiText } from './config.js';
 
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
-
 function createSkillCard(s) {
   const article = document.createElement('article');
   article.className = 'kawaii-card animate-in';

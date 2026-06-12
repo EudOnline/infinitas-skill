@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
@@ -122,10 +123,37 @@ def login(
 
     user, principal = result
 
-    # Ensure a personal_token credential exists for session cookie creation
-    credential = access_service.ensure_session_credential(db, principal_id=principal.id)
-    credential.last_used_at = utcnow()
+    # Revoke any existing non-revoked personal_token credential to prevent
+    # session fixation attacks.  A fresh credential is created below so that
+    # the session cookie always maps to a new credential ID on each login.
+    from sqlalchemy import select as sa_select
+
+    existing = db.scalar(
+        sa_select(Credential)
+        .where(Credential.type == "personal_token")
+        .where(Credential.principal_id == principal.id)
+        .where(Credential.revoked_at.is_(None))
+        .order_by(Credential.id.desc())
+    )
+    if existing is not None:
+        existing.revoked_at = utcnow()
+        db.add(existing)
+        db.flush()
+
+    # Create a fresh session credential for the new login
+    credential = Credential(
+        principal_id=principal.id,
+        grant_id=None,
+        type="personal_token",
+        hashed_secret=f"session:{secrets.token_urlsafe(16)}",
+        scopes_json=access_service.encode_scopes({"session:user", "api:user"}),
+        resource_selector_json="{}",
+        created_at=utcnow(),
+        last_used_at=utcnow(),
+    )
     db.add(credential)
+    db.flush()
+    db.commit()
 
     secure_cookie = _secure_cookie_requested(request)
     response.set_cookie(

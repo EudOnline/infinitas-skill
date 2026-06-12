@@ -10,6 +10,8 @@ import time
 
 import bcrypt
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.hashes import SHA256
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from fastapi import Cookie, Depends, Header, HTTPException, Request
 from sqlalchemy.orm import Session
 
@@ -51,16 +53,19 @@ def _urlsafe_b64decode(raw: str) -> bytes:
     return base64.urlsafe_b64decode((raw + padding).encode('ascii'))
 
 
-def _encrypt_payload(plaintext: bytes) -> bytes:
-    """Encrypt payload using AES-GCM with the server's secret key.
+def _derive_aes_key() -> bytes:
+    """Derive a 32-byte AES-256 key from the server secret using HKDF."""
+    return HKDF(
+        algorithm=SHA256(),
+        length=32,
+        salt=None,
+        info=b"infinitas-session-encryption",
+    ).derive(get_settings().secret_key.encode("utf-8"))
 
-    The secret key is derived from the server's secret_key using HKDF or
-    directly truncated to 32 bytes for AES-256. For simplicity, we use
-    the first 32 bytes of the secret key hashed with SHA-256.
-    """
-    secret = get_settings().secret_key.encode('utf-8')
-    # Derive a 32-byte key from the secret
-    key = hashlib.sha256(secret).digest()
+
+def _encrypt_payload(plaintext: bytes) -> bytes:
+    """Encrypt payload using AES-256-GCM with an HKDF-derived key."""
+    key = _derive_aes_key()
     aesgcm = AESGCM(key)
     nonce = os.urandom(12)  # 96-bit nonce for AES-GCM
     ciphertext = aesgcm.encrypt(nonce, plaintext, None)
@@ -68,13 +73,12 @@ def _encrypt_payload(plaintext: bytes) -> bytes:
 
 
 def _decrypt_payload(ciphertext: bytes) -> bytes | None:
-    """Decrypt payload using AES-GCM.
+    """Decrypt payload using AES-256-GCM with an HKDF-derived key.
 
     Returns None if decryption fails.
     """
     try:
-        secret = get_settings().secret_key.encode('utf-8')
-        key = hashlib.sha256(secret).digest()
+        key = _derive_aes_key()
         aesgcm = AESGCM(key)
         nonce = ciphertext[:12]
         actual_ciphertext = ciphertext[12:]
@@ -221,17 +225,35 @@ def validate_password_strength(plain: str) -> None:
     Raises ``ValueError`` with a descriptive message if the password is
     too weak.  Called before hashing so that invalid passwords never
     reach the database.
+
+    Requirements:
+    - 8 to 128 characters
+    - At least 2 of: lowercase, uppercase, digits, special characters
     """
     if len(plain) < 8:
         raise ValueError("Password must be at least 8 characters")
     if len(plain) > 128:
         raise ValueError("Password must be at most 128 characters")
+    categories = 0
+    if any(c.islower() for c in plain):
+        categories += 1
+    if any(c.isupper() for c in plain):
+        categories += 1
+    if any(c.isdigit() for c in plain):
+        categories += 1
+    if any(not c.isalnum() for c in plain):
+        categories += 1
+    if categories < 2:
+        raise ValueError(
+            "Password must contain at least 2 of: "
+            "lowercase letters, uppercase letters, digits, special characters"
+        )
 
 
 def hash_password(plain: str) -> str:
     """Hash a plaintext password using bcrypt."""
     validate_password_strength(plain)
-    return bcrypt.hashpw(plain.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    return bcrypt.hashpw(plain.encode('utf-8'), bcrypt.gensalt(rounds=12)).decode('utf-8')
 
 
 def hash_share_password(plain: str) -> str:
@@ -241,9 +263,9 @@ def hash_share_password(plain: str) -> str:
     PINs), so the standard password strength validation is skipped.  The bcrypt
     hashing still provides brute-force resistance.
     """
-    if not plain:
-        raise ValueError("Share password must not be empty")
-    return bcrypt.hashpw(plain.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    if not plain or len(plain) < 4:
+        raise ValueError("Share password must be at least 4 characters")
+    return bcrypt.hashpw(plain.encode('utf-8'), bcrypt.gensalt(rounds=12)).decode('utf-8')
 
 
 def verify_password(plain: str, hashed: str | None) -> bool:
