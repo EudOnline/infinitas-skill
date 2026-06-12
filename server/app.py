@@ -1,11 +1,36 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import FileSystemBytecodeCache
 from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from starlette.responses import Response
+from starlette.types import Scope, Receive, Send
+
+
+class CachedStaticFiles(StaticFiles):
+    """StaticFiles with Cache-Control headers for production caching.
+
+    - Hashed assets (containing ?v=): Cache-Control: max-age=31536000, immutable
+    - Other assets: Cache-Control: max-age=3600 (1 hour)
+    """
+
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        response = await super().get_response(path, scope)
+        if response.status_code == 200:
+            # Check if the request has a cache-busting query param
+            query_string = scope.get("query_string", b"").decode()
+            if "v=" in query_string:
+                # Hashed asset - cache aggressively
+                response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            else:
+                # Non-hashed asset - cache for 1 hour
+                response.headers["Cache-Control"] = "public, max-age=3600"
+        return response
 
 from server.api.activity import router as activity_router
 from server.api.auth import router as auth_router
@@ -47,7 +72,7 @@ def create_app() -> FastAPI:
     if settings.environment == "production":
         app.add_middleware(HTTPSRedirectMiddleware)
     app.add_middleware(CsrfValidationMiddleware)
-    app.mount("/static", StaticFiles(directory=str(settings.template_dir.parent / "static")), name="static")
+    app.mount("/static", CachedStaticFiles(directory=str(settings.template_dir.parent / "static")), name="static")
 
     register_exception_handlers(app, templates)
     register_ui_routes(app, templates, settings)
