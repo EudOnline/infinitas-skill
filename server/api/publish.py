@@ -25,12 +25,12 @@ log = get_logger(__name__)
 
 class PublishObjectRequest(BaseModel):
     display_name: str = Field(min_length=1, max_length=200)
-    summary: str = ""
+    summary: str = Field(default="", max_length=2000)
 
 
 class PublishReleaseRequest(BaseModel):
-    version: str = Field(min_length=1, max_length=64)
-    content_ref: str = ""
+    version: str = Field(min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9._-]+$")
+    content_ref: str = Field(default="", max_length=2000)
     metadata: dict = Field(default_factory=dict)
 
 

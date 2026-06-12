@@ -75,7 +75,7 @@ def profile_writeback(
 
 
 class PolicyUpdateBody(BaseModel):
-    max_daily_publishes: int | None = None
+    max_daily_publishes: int | None = Field(default=None, ge=0, le=10000)
     readonly: bool | None = None
     allowed_object_kinds: list[str] | None = None
 
