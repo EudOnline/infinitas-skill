@@ -66,7 +66,10 @@ def create_app() -> FastAPI:
         templates.env.bytecode_cache = FileSystemBytecodeCache(str(cache_dir))
     ensure_database_ready()
 
-    app = FastAPI(title="infinitas hosted registry", docs_url="/api/docs", redoc_url="/api/redoc")
+    # Disable API docs in production to prevent schema exposure
+    docs_url = "/api/docs" if settings.environment != "production" else None
+    redoc_url = "/api/redoc" if settings.environment != "production" else None
+    app = FastAPI(title="infinitas hosted registry", docs_url=docs_url, redoc_url=redoc_url)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
     app.add_middleware(SecurityHeadersMiddleware)
     if settings.environment == "production":
