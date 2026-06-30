@@ -3,10 +3,15 @@ audience: operators, release maintainers, contributors
 owner: repository maintainers
 source_of_truth: 2026-04-02 project health scorecard
 last_reviewed: 2026-04-03
-status: maintained
+status: legacy
 ---
 
 # 2026-04-02 Project Health Scorecard
+
+> **Legacy snapshot.** This scorecard describes the repository as of 2026-04-02,
+> including the `memory` subsystem (curation, observability, baselines, Memo0).
+> That subsystem has since been **removed**; treat the memory-related scores,
+> commands, and coverage notes here as historical, not current.
 
 ## Verdict
 

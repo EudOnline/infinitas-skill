@@ -9,11 +9,15 @@ See: `.planning/PROJECT.md` (updated 2026-03-20)
 
 ## Current Position
 
-Phase: steady-state
+Phase: steady-state (with a post-steady-state refactor pass — see note)
 Plan: `docs/plans/2026-03-20-project-completion-and-steady-state.md`
-Status: v20 complete on `main`; the repository is in steady-state until a new milestone is intentionally opened
-Last activity: 2026-03-20 — Re-ran the completion regression, installed-integrity regression matrix, distribution/install regressions, and `scripts/check-all.sh` on `main`
-Progress: [##########] 100%
+Status: v20 was complete on `main` as of 2026-03-20. Since then the tree has had
+a follow-on refactor pass not captured as a numbered milestone: security/auth
+hardening, Pydantic schema tightening, expanded test coverage, and removal of the
+`memory` subsystem and the `share_links` table (reimplemented on `AccessGrant`).
+Treat `git log` and the live tree as authoritative for current state.
+Last activity: 2026-06-30 — cleanliness audit + consolidation (see git history).
+Progress: [##########] 100% (steady-state maintenance)
 
 ## Performance Metrics
 
@@ -109,6 +113,6 @@ Decisions are logged in `PROJECT.md`.
 
 ## Session Continuity
 
-Last session: 2026-03-20 GMT+8
-Stopped at: Project complete on `main`; future work should start from a new milestone or maintenance plan
+Last session: 2026-06-30 GMT+8
+Stopped at: Cleanliness audit and consolidation pass — fixed stale test/doc drift, removed obsolete scripts, refreshed `.planning/codebase/STRUCTURE.md`. The 2026-03-20 steady-state milestone record below is retained as history; the live state is in `git log`.
 Resume file: `docs/project-closeout.md`
