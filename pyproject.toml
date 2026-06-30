@@ -26,6 +26,14 @@ server = [ "templates/*.html", "templates/partials/*.html", "static/css/*.css", 
 [tool.pytest.ini_options]
 testpaths = [ "tests",]
 addopts = "--cov=src --cov=server --cov-report=term-missing --cov-report=xml"
+markers = [
+  "governance: pure-FS doc/catalog governance checks",
+  "cli: exercises the infinitas CLI via subprocess",
+  "server: needs the fastapi/httpx/jinja2/sqlalchemy TestClient stack",
+  "e2e: needs a live uvicorn server / browser",
+  "slow: long-running (release/reproducibility/transparency)",
+  "alembic_partial: pins a non-head alembic revision",
+]
 
 [tool.ruff.lint]
 select = [ "E", "W", "F", "I", "C90", "S",]

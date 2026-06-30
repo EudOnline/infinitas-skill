@@ -10,11 +10,11 @@ from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from test_support.server_ops import HealthServer
-from test_support.server_ops import run_command as shared_run_command
 
 from server.models import Base, Job
 from tests.fixtures.repo_state import create_repo_state
+from tests.helpers.ops_support.server_ops import HealthServer
+from tests.helpers.ops_support.server_ops import run_command as shared_run_command
 
 ROOT = Path(__file__).resolve().parents[2]
 
