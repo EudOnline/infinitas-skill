@@ -39,7 +39,7 @@ fmt-maintained:
 	uv run ruff format src/infinitas_skill server/ui server/api server/modules server/auth.py server/db.py server/settings.py server/middleware.py server/app.py tests/integration tests/unit
 
 doctor:
-	uv run python3 scripts/test-doc-governance.py
+	uv run pytest tests/unit/governance/ -q --no-cov
 
 typecheck:
 	uv run mypy src/infinitas_skill server/ --ignore-missing-imports

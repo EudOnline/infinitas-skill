@@ -105,7 +105,7 @@ if should_run full-regression; then
   python3 scripts/test-team-governance-scopes.py
   python3 scripts/check-signing-config.py
   python3 scripts/validate-registry.py
-  python3 scripts/test-policy-trace-docs.py
+  uv run pytest tests/unit/governance/ -q
   python3 scripts/test-namespace-identity.py
   python3 scripts/check-registry-integrity.py
   env PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}" python3 -m infinitas_skill.cli.main policy check-promotion
@@ -174,8 +174,6 @@ PY
   python3 scripts/test-ai-pull.py
   python3 scripts/test-ai-publish.py
   python3 scripts/test-openclaw-import.py
-  python3 scripts/test-search-docs.py
-  python3 scripts/test-recommend-docs.py
   fi
   if [[ "${INFINITAS_SKIP_BOOTSTRAP_TESTS:-0}" != "1" ]]; then
   python3 scripts/test-signing-bootstrap.py

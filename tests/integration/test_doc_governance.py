@@ -1,21 +1,12 @@
 from __future__ import annotations
 
-import importlib.util
 from pathlib import Path
 
 import pytest
 
+from tests.helpers import doc_governance as dg
+
 ROOT = Path(__file__).resolve().parents[2]
-
-
-def _load_doc_governance_module():
-    path = ROOT / "scripts" / "test-doc-governance.py"
-    spec = importlib.util.spec_from_file_location("doc_governance_script", path)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def _write(path: Path, text: str) -> None:
@@ -24,10 +15,8 @@ def _write(path: Path, text: str) -> None:
 
 
 def test_doc_governance_rejects_retired_cli_wrappers_in_maintained_ops_docs(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    module = _load_doc_governance_module()
-
     fake_root = tmp_path
     fake_docs = fake_root / "docs"
     fake_ops = fake_docs / "ops"
@@ -97,22 +86,17 @@ def test_doc_governance_rejects_retired_cli_wrappers_in_maintained_ops_docs(
         "`python3 scripts/test-infinitas-cli-policy.py`\n",
     )
 
-    monkeypatch.setattr(module, "ROOT", fake_root)
-    monkeypatch.setattr(module, "DOCS_ROOT", fake_docs)
-    monkeypatch.setattr(module, "SECTION_LANDINGS", {"ops": fake_ops / "README.md"})
+    monkeypatch.setattr(dg, "ROOT", fake_root)
+    monkeypatch.setattr(dg, "DOCS_ROOT", fake_docs)
+    monkeypatch.setattr(dg, "SECTION_LANDINGS", {"ops": fake_ops / "README.md"})
     monkeypatch.setattr(
-        module, "LEGACY_SECTION_LANDINGS", {"platform-contracts": fake_platform / "README.md"}
+        dg, "LEGACY_SECTION_LANDINGS", {"platform-contracts": fake_platform / "README.md"}
     )
-    monkeypatch.setattr(
-        module, "GLOBAL_INDEXES", [fake_root / "README.md", fake_docs / "README.md"]
-    )
-    monkeypatch.setattr(module, "LEGACY_ROOT_ALLOWLIST", {"README.md"})
+    monkeypatch.setattr(dg, "GLOBAL_INDEXES", [fake_root / "README.md", fake_docs / "README.md"])
+    monkeypatch.setattr(dg, "LEGACY_ROOT_ALLOWLIST", {"README.md"})
 
-    with pytest.raises(SystemExit):
-        module.main()
-
-    captured = capsys.readouterr()
-    assert "scripts/test-infinitas-cli-policy.py" in captured.err
+    with pytest.raises(AssertionError, match="test-infinitas-cli-policy.py"):
+        dg.main()
 
 
 def test_openclaw_runtime_docs_are_canonical_entrypoints() -> None:

@@ -1,10 +1,19 @@
-#!/usr/bin/env python3
+"""Document governance rules (canonical home).
+
+Migrated from scripts/test-doc-governance.py so both the synthetic-fixture
+integration test and the real-doc inventory unit tests can import one ruleset.
+The module-level constants *are* the spec (allowed locations, required
+frontmatter fields, retired shims that must not reappear).
+"""
+
+from __future__ import annotations
+
 import re
-import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 DOCS_ROOT = ROOT / "docs"
+
 REQUIRED_FIELDS = ["audience", "owner", "source_of_truth", "last_reviewed", "status"]
 BAD_LINK_PATTERN = re.compile(r"/Users/.+?/\.worktrees/")
 LEGACY_ROOT_ALLOWLIST = {
@@ -66,23 +75,18 @@ REMOVED_OPERATOR_SHIMS = [
     Path("scripts/recommend-skill.sh"),
     Path("scripts/inspect-skill.sh"),
 ]
-REMOVED_LEGACY_DOC_ANNEXES = [
-    Path("docs/ai"),
-]
+REMOVED_LEGACY_DOC_ANNEXES = [Path("docs/ai")]
 
 
-def fail(message):
-    print(f"FAIL: {message}", file=sys.stderr)
-    raise SystemExit(1)
+def fail(message: str) -> None:
+    raise AssertionError(message)
 
 
 def parse_front_matter(path: Path) -> dict[str, str] | None:
-    text = path.read_text(encoding="utf-8")
-    lines = text.splitlines()
+    lines = path.read_text(encoding="utf-8").splitlines()
     if len(lines) < 3 or lines[0].strip() != "---":
         return None
-
-    metadata = {}
+    metadata: dict[str, str] = {}
     for line in lines[1:]:
         stripped = line.strip()
         if stripped == "---":
@@ -91,11 +95,10 @@ def parse_front_matter(path: Path) -> dict[str, str] | None:
             fail(f"invalid front matter line in {path}: {line!r}")
         key, value = stripped.split(":", 1)
         metadata[key.strip()] = value.strip()
-
     fail(f"missing front matter end marker in {path}")
 
 
-def all_doc_paths():
+def all_doc_paths() -> list[Path]:
     paths = [ROOT / "README.md"]
     for path in DOCS_ROOT.rglob("*.md"):
         if "plans" in path.parts:
@@ -104,7 +107,7 @@ def all_doc_paths():
     return sorted(paths)
 
 
-def maintained_docs():
+def maintained_docs() -> list[tuple[Path, dict[str, str]]]:
     docs = []
     for path in all_doc_paths():
         metadata = parse_front_matter(path)
@@ -113,15 +116,14 @@ def maintained_docs():
     return docs
 
 
-def legacy_docs():
-    docs = []
-    legacy_paths = []
+def legacy_docs() -> list[tuple[Path, dict[str, str]]]:
+    legacy_paths: list[Path] = []
     for section in LEGACY_SECTION_LANDINGS:
         legacy_paths.extend(sorted((DOCS_ROOT / section).glob("*.md")))
     legacy_paths.extend(
         sorted(DOCS_ROOT / name for name in LEGACY_ROOT_ALLOWLIST if name != "README.md")
     )
-
+    docs = []
     for path in legacy_paths:
         metadata = parse_front_matter(path)
         if metadata is None:
@@ -130,156 +132,129 @@ def legacy_docs():
     return docs
 
 
-def check_root_allowlist():
+def check_root_allowlist() -> None:
     root_docs = {path.name for path in DOCS_ROOT.glob("*.md")}
     unexpected = sorted(root_docs - LEGACY_ROOT_ALLOWLIST)
     if unexpected:
         fail(f"unexpected root docs outside governance allowlist: {unexpected!r}")
 
 
-def ensure_allowed_location(path: Path):
+def ensure_allowed_location(path: Path) -> None:
     if path == ROOT / "README.md" or path == DOCS_ROOT / "README.md":
         return
-    if path.is_relative_to(DOCS_ROOT / "guide"):
-        return
-    if path.is_relative_to(DOCS_ROOT / "reference"):
-        return
-    if path.is_relative_to(DOCS_ROOT / "ops"):
-        return
-    if path.is_relative_to(DOCS_ROOT / "archive"):
-        return
-    if path.is_relative_to(DOCS_ROOT / "adr"):
-        return
-    if path.is_relative_to(DOCS_ROOT / "specs"):
-        return
+    for sub in ("guide", "reference", "ops", "archive", "adr", "specs"):
+        if path.is_relative_to(DOCS_ROOT / sub):
+            return
     fail(f"maintained doc is outside allowed governance locations: {path}")
 
 
-def ensure_required_metadata(path: Path, metadata: dict[str, str]):
+def ensure_required_metadata(path: Path, metadata: dict[str, str]) -> None:
     for field in REQUIRED_FIELDS:
         if not metadata.get(field):
             fail(f"missing required metadata field {field!r} in {path}")
 
 
-def ensure_legacy_metadata(path: Path, metadata: dict[str, str]):
+def ensure_legacy_metadata(path: Path, metadata: dict[str, str]) -> None:
     ensure_required_metadata(path, metadata)
     if metadata.get("status") != "legacy":
         fail(f"indexed legacy doc must declare status: legacy in {path}")
 
 
-def linked_from_any(path: Path, sources: list[Path]):
+def linked_from_any(path: Path, sources: list[Path]) -> bool:
     basename = path.name
     for source in sources:
         if not source.exists():
             continue
-        text = source.read_text(encoding="utf-8")
-        if basename in text:
+        if basename in source.read_text(encoding="utf-8"):
             return True
     return False
 
 
-def ensure_landing_coverage(path: Path):
-    if path in GLOBAL_INDEXES:
-        return
-    if path.name == "README.md":
+def ensure_landing_coverage(path: Path) -> None:
+    if path in GLOBAL_INDEXES or path.name == "README.md":
         return
     if path.is_relative_to(DOCS_ROOT / "adr"):
         if not linked_from_any(path, GLOBAL_INDEXES):
             fail(f"maintained ADR is not linked from a global index: {path}")
         return
-
     for section, landing in SECTION_LANDINGS.items():
-        section_root = DOCS_ROOT / section
-        if path.is_relative_to(section_root):
+        if path.is_relative_to(DOCS_ROOT / section):
             if not linked_from_any(path, [landing]):
                 fail(f"maintained doc is not linked from its section landing page: {path}")
             return
 
 
-def ensure_legacy_landing_coverage(path: Path):
+def ensure_legacy_landing_coverage(path: Path) -> None:
     if path in GLOBAL_INDEXES:
         return
     if path.name == "README.md":
         relative = path.relative_to(DOCS_ROOT).as_posix()
-        docs_index_text = (DOCS_ROOT / "README.md").read_text(encoding="utf-8")
-        if relative not in docs_index_text:
+        if relative not in (DOCS_ROOT / "README.md").read_text(encoding="utf-8"):
             fail(f"legacy landing page is not linked from docs/README.md: {path}")
         return
-
     for section, landing in LEGACY_SECTION_LANDINGS.items():
-        section_root = DOCS_ROOT / section
-        if path.is_relative_to(section_root):
+        if path.is_relative_to(DOCS_ROOT / section):
             if not linked_from_any(path, [landing]):
                 fail(f"legacy doc is not linked from its legacy landing page: {path}")
             return
-
     if path.parent == DOCS_ROOT:
-        if not linked_from_any(
-            path,
-            [DOCS_ROOT / "README.md", DOCS_ROOT / "archive" / "README.md"],
-        ):
+        indexes = [DOCS_ROOT / "README.md", DOCS_ROOT / "archive" / "README.md"]
+        if not linked_from_any(path, indexes):
             fail(f"legacy root doc is not linked from docs indexes: {path}")
-        return
 
 
-def ensure_no_worktree_links(path: Path):
-    text = path.read_text(encoding="utf-8")
-    if BAD_LINK_PATTERN.search(text):
+def ensure_no_worktree_links(path: Path) -> None:
+    if BAD_LINK_PATTERN.search(path.read_text(encoding="utf-8")):
         fail(f"maintained doc must not contain absolute worktree links: {path}")
 
 
-def ensure_readme_has_maintained_surface_inventory():
+def ensure_readme_has_maintained_surface_inventory() -> None:
     text = (ROOT / "README.md").read_text(encoding="utf-8")
     for marker in REQUIRED_MAINTAINED_SURFACE_MARKERS:
         if marker not in text:
             fail(f"missing maintained surface inventory marker {marker!r} in README.md")
 
 
-def ensure_docs_index_does_not_expose_legacy_ai_landing():
-    text = (DOCS_ROOT / "README.md").read_text(encoding="utf-8")
-    if "ai/README.md" in text:
+def ensure_docs_index_does_not_expose_legacy_ai_landing() -> None:
+    if "ai/README.md" in (DOCS_ROOT / "README.md").read_text(encoding="utf-8"):
         fail("docs/README.md must not expose the legacy AI landing page")
 
 
-def ensure_removed_operator_shims_stay_deleted():
+def ensure_removed_operator_shims_stay_deleted() -> None:
     for rel_path in REMOVED_OPERATOR_SHIMS:
-        path = ROOT / rel_path
-        if path.exists():
-            fail(f"removed operator shim must stay deleted: {path}")
+        if (ROOT / rel_path).exists():
+            fail(f"removed operator shim must stay deleted: {rel_path}")
 
 
-def ensure_removed_legacy_doc_annexes_stay_deleted():
+def ensure_removed_legacy_doc_annexes_stay_deleted() -> None:
     for rel_path in REMOVED_LEGACY_DOC_ANNEXES:
-        path = ROOT / rel_path
-        if path.exists():
-            fail(f"removed legacy doc annex must stay deleted: {path}")
+        if (ROOT / rel_path).exists():
+            fail(f"removed legacy doc annex must stay deleted: {rel_path}")
 
 
-def ensure_legacy_command_mentions_have_canonical_entrypoints(path: Path):
+def ensure_legacy_command_mentions_have_canonical_entrypoints(path: Path) -> None:
     text = path.read_text(encoding="utf-8")
-    for legacy_marker, canonical_entrypoint in LEGACY_CANONICAL_ENTRYPOINTS.items():
-        if legacy_marker in text and canonical_entrypoint not in text:
+    for legacy_marker, canonical in LEGACY_CANONICAL_ENTRYPOINTS.items():
+        if legacy_marker in text and canonical not in text:
             fail(
                 "maintained surface doc mentions legacy command "
-                f"{legacy_marker!r} without canonical entrypoint "
-                f"{canonical_entrypoint!r}: {path}"
+                f"{legacy_marker!r} without canonical entrypoint {canonical!r}: {path}"
             )
-    for legacy_marker, canonical_entrypoint in RETIRED_LEGACY_SHIMS.items():
+    for legacy_marker in RETIRED_LEGACY_SHIMS:
         if legacy_marker in text:
             fail(
                 "maintained surface doc still documents retired shim "
-                f"{legacy_marker!r}; use canonical entrypoint {canonical_entrypoint!r} only: {path}"
+                f"{legacy_marker!r}; use canonical entrypoint only: {path}"
             )
-    for legacy_marker, canonical_entrypoint in RETIRED_CLI_WRAPPER_TESTS.items():
+    for legacy_marker in RETIRED_CLI_WRAPPER_TESTS:
         if legacy_marker in text:
             fail(
                 "maintained doc still documents retired CLI wrapper test "
-                f"{legacy_marker!r}; use maintained test entrypoint "
-                f"{canonical_entrypoint!r} instead: {path}"
+                f"{legacy_marker!r}; use maintained test entrypoint instead: {path}"
             )
 
 
-def main():
+def main() -> None:
     check_root_allowlist()
     docs = maintained_docs()
     legacy = legacy_docs()
@@ -305,8 +280,18 @@ def main():
         ensure_legacy_landing_coverage(path)
         ensure_no_worktree_links(path)
 
-    print("OK: document governance checks passed")
 
-
-if __name__ == "__main__":
-    main()
+__all__ = [
+    "DOCS_ROOT",
+    "ROOT",
+    "ensure_allowed_location",
+    "ensure_landing_coverage",
+    "ensure_legacy_command_mentions_have_canonical_entrypoints",
+    "ensure_legacy_landing_coverage",
+    "ensure_legacy_metadata",
+    "ensure_no_worktree_links",
+    "ensure_required_metadata",
+    "legacy_docs",
+    "maintained_docs",
+    "main",
+]
