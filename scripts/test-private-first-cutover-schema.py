@@ -63,9 +63,7 @@ def main() -> None:
         result = run([sys.executable, "-m", "alembic", "upgrade", "head"], env=env)
         if result.returncode != 0:
             fail(
-                "alembic upgrade head failed.\n"
-                f"stdout:\n{result.stdout}\n"
-                f"stderr:\n{result.stderr}"
+                f"alembic upgrade head failed.\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
             )
 
         expected_tables = {
@@ -102,9 +100,13 @@ def main() -> None:
 
             job_columns = table_columns(conn, "jobs")
             if "release_id" not in job_columns:
-                fail(f"expected jobs table to include release_id, got columns: {sorted(job_columns)}")
+                fail(
+                    f"expected jobs table to include release_id, got columns: {sorted(job_columns)}"
+                )
             if "submission_id" in job_columns:
-                fail(f"expected jobs table to drop submission_id, got columns: {sorted(job_columns)}")
+                fail(
+                    f"expected jobs table to drop submission_id, got columns: {sorted(job_columns)}"
+                )
 
     print("OK: private-first cutover schema checks passed")
 

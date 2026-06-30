@@ -255,7 +255,7 @@ def _matches_skill_target(targets, identity):
         if "/" in target:
             if target == qualified:
                 return True
-        elif target == name and qualified is None:
+        elif target == name:
             return True
     return False
 

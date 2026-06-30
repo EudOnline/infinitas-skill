@@ -6,7 +6,7 @@
     <meta name="description" content="{{ page_description or ui['meta_description'] }}" />
     <meta name="keywords" content="AI, Agent, Skill, 技能库, MCP, 工具调用, {{ page_keywords or '' }}" />
     <meta name="author" content="lvxiaoer" />
-    <meta name="robots" content="index, follow" />
+    <meta name="robots" content="{% if robots_noindex %}noindex, nofollow{% else %}index, follow{% endif %}" />
     
     <!-- Open Graph / Social Media -->
     <meta property="og:type" content="website" />
@@ -26,26 +26,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Quicksand:wght@400;500;600;700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <noscript><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Quicksand:wght@400;500;600;700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet"></noscript>
 
-    <script>
-      (() => {
-        const root = document.documentElement;
-        const storageKey = 'kawaii-color-scheme';
-        const fallback = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        try {
-          const saved = window.localStorage.getItem(storageKey);
-          const scheme = saved === 'light' || saved === 'dark' ? saved : fallback;
-          root.dataset.colorScheme = scheme;
-        } catch (_error) {
-          root.dataset.colorScheme = fallback;
-        }
-      })();
-    </script>
+    <script src="{{ static_url('/static/js/theme-init.js') }}"></script>
     <meta name="color-scheme" content="light dark" />
     <style>
       html { color-scheme: light; }
       html[data-color-scheme="dark"] { color-scheme: dark; }
     </style>
     <link rel="stylesheet" href="{{ static_url('/static/css/output.css') }}" />
+    <meta name="csrf-token" content="" />
   </head>
   
   <body
@@ -248,7 +236,7 @@
                 class="kawaii-input console-auth-modal__input"
                 placeholder="{{ ui.auth_modal_password_placeholder }}"
                 autocomplete="current-password"
-                minlength="1"
+                minlength="8"
                 maxlength="128"
                 required
                 aria-describedby="console-auth-hint"

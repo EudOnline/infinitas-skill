@@ -91,7 +91,6 @@ def _build_install_resolve_plan_parser(subparsers):
             source_json=args.source_json,
             mode=args.mode,
             as_json=args.json,
-            memory_mode=args.memory_mode,
         )
     )
 
@@ -344,7 +343,7 @@ def main(argv: list[str] | None = None) -> int:
     if handler is None:
         parser.print_help()
         return 2
-    return handler(args)
+    return int(handler(args))
 
 
 if __name__ == "__main__":

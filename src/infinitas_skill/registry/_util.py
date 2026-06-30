@@ -8,8 +8,5 @@ def utc_now_iso(now=None) -> str:
     if current.tzinfo is None:
         current = current.replace(tzinfo=timezone.utc)
     return (
-        current.astimezone(timezone.utc)
-        .replace(microsecond=0)
-        .isoformat()
-        .replace("+00:00", "Z")
+        current.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     )

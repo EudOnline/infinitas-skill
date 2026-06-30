@@ -6,12 +6,10 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-from infinitas_skill.memory.config import load_memory_config
-
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_SERVER_ENV = 'development'
-DEFAULT_SECRET_KEY = 'dev-only-insecure-key'  # noqa: S105
-DEFAULT_ALLOWED_HOSTS = ['testserver', 'localhost', '127.0.0.1', '::1']
+DEFAULT_SERVER_ENV = "development"
+DEFAULT_SECRET_KEY = "dev-only-insecure-key"  # noqa: S105
+DEFAULT_ALLOWED_HOSTS = ["testserver", "localhost", "127.0.0.1", "::1"]
 MIN_SECRET_KEY_LENGTH = 32  # Minimum secure key length in bytes
 
 
@@ -26,35 +24,35 @@ def validate_secret_key_strength(secret_key: str, environment: str) -> None:
         RuntimeError: If the key doesn't meet security requirements
     """
     if not secret_key:
-        raise RuntimeError('INFINITAS_SERVER_SECRET_KEY cannot be empty')
+        raise RuntimeError("INFINITAS_SERVER_SECRET_KEY cannot be empty")
 
     # In test mode, allow shorter keys for convenience
-    if environment == 'test':
+    if environment == "test":
         if len(secret_key) < 8:
             raise RuntimeError(
-                f'INFINITAS_SERVER_SECRET_KEY must be at least 8 characters in test mode. '
-                f'Current length: {len(secret_key)}.'
+                f"INFINITAS_SERVER_SECRET_KEY must be at least 8 characters in test mode. "
+                f"Current length: {len(secret_key)}."
             )
         return
 
     if len(secret_key) < MIN_SECRET_KEY_LENGTH:
         raise RuntimeError(
-            f'INFINITAS_SERVER_SECRET_KEY must be at least {MIN_SECRET_KEY_LENGTH} characters. '
-            f'Current length: {len(secret_key)}. '
+            f"INFINITAS_SERVER_SECRET_KEY must be at least {MIN_SECRET_KEY_LENGTH} characters. "
+            f"Current length: {len(secret_key)}. "
             f'Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"'
         )
 
     # Check for obviously weak keys in production
-    if environment == 'production':
+    if environment == "production":
         weak_patterns = [
             DEFAULT_SECRET_KEY,
-            'secret',
-            'password',
-            'key',
-            'test',
-            'dev',
-            '123456',
-            'password123',
+            "secret",
+            "password",
+            "key",
+            "test",
+            "dev",
+            "123456",
+            "password123",
         ]
         lower_key = secret_key.lower()
         for pattern in weak_patterns:
@@ -67,20 +65,21 @@ def validate_secret_key_strength(secret_key: str, environment: str) -> None:
         # Check for repeated characters (indicates poor randomness)
         if len(set(secret_key)) < len(secret_key) * 0.5:
             raise RuntimeError(
-                'INFINITAS_SERVER_SECRET_KEY appears to have low entropy. '
+                "INFINITAS_SERVER_SECRET_KEY appears to have low entropy. "
                 'Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"'
             )
 
+
 DEFAULT_BOOTSTRAP_USERS = [
     {
-        'username': 'maintainer',
-        'display_name': 'Default Maintainer',
-        'role': 'maintainer',
+        "username": "maintainer",
+        "display_name": "Default Maintainer",
+        "role": "maintainer",
     },
     {
-        'username': 'contributor',
-        'display_name': 'Default Contributor',
-        'role': 'contributor',
+        "username": "contributor",
+        "display_name": "Default Contributor",
+        "role": "contributor",
     },
 ]
 
@@ -97,23 +96,8 @@ class Settings:
     bootstrap_users: list[dict]
     repo_path: Path
     artifact_path: Path
-    repo_lock_path: Path
     registry_read_tokens: list[str]
     trusted_proxies: list[str]
-    mirror_remote: str
-    mirror_branch: str
-    memory_backend: str
-    memory_context_enabled: bool
-    memory_write_enabled: bool
-    memory_namespace: str
-    memory_top_k: int
-    memory_mem0_base_url: str | None
-    memory_mem0_api_key_env: str
-    memory_curation_action: str
-    memory_curation_apply: bool
-    memory_curation_limit: int
-    memory_curation_max_actions: int
-    memory_curation_actor_ref: str
 
 
 def _normalize_bootstrap_users(payload: object) -> list[dict]:
@@ -124,20 +108,20 @@ def _normalize_bootstrap_users(payload: object) -> list[dict]:
     for item in payload:
         if not isinstance(item, dict):
             continue
-        username = str(item.get('username') or '').strip()
-        display_name = str(item.get('display_name') or username).strip()
-        role = str(item.get('role') or 'contributor').strip() or 'contributor'
-        token = str(item.get('token') or '').strip()
-        password = str(item.get('password') or '').strip()
+        username = str(item.get("username") or "").strip()
+        display_name = str(item.get("display_name") or username).strip()
+        role = str(item.get("role") or "contributor").strip() or "contributor"
+        token = str(item.get("token") or "").strip()
+        password = str(item.get("password") or "").strip()
         if not username:
             continue
         normalized.append(
             {
-                'username': username,
-                'display_name': display_name or username,
-                'role': role,
-                'token': token,
-                'password': password,
+                "username": username,
+                "display_name": display_name or username,
+                "role": role,
+                "token": token,
+                "password": password,
             }
         )
     return normalized
@@ -145,15 +129,13 @@ def _normalize_bootstrap_users(payload: object) -> list[dict]:
 
 def _normalize_environment(raw: str | None) -> str:
     environment = str(raw or DEFAULT_SERVER_ENV).strip().lower() or DEFAULT_SERVER_ENV
-    if environment not in {'development', 'test', 'production'}:
-        raise RuntimeError(
-            'INFINITAS_SERVER_ENV must be one of development, test, or production'
-        )
+    if environment not in {"development", "test", "production"}:
+        raise RuntimeError("INFINITAS_SERVER_ENV must be one of development, test, or production")
     return environment
 
 
 def _env_flag(name: str) -> bool:
-    return str(os.environ.get(name) or '').strip().lower() in {'1', 'true', 'yes', 'on'}
+    return str(os.environ.get(name) or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _load_bootstrap_payload(raw: str | None, *, allow_default_fixture: bool) -> object:
@@ -170,7 +152,7 @@ def _normalize_string_list(payload: object) -> list[str]:
         return []
     normalized = []
     for item in payload:
-        value = str(item or '').strip()
+        value = str(item or "").strip()
         if value:
             normalized.append(value)
     return normalized
@@ -184,59 +166,46 @@ def _load_string_list_env(name: str, *, strict: bool) -> list[str]:
         payload = json.loads(raw)
     except json.JSONDecodeError as exc:
         if strict:
-            raise RuntimeError(f'{name} must be a JSON array of strings') from exc
+            raise RuntimeError(f"{name} must be a JSON array of strings") from exc
         return []
     if not isinstance(payload, list):
         if strict:
-            raise RuntimeError(f'{name} must be a JSON array of strings')
+            raise RuntimeError(f"{name} must be a JSON array of strings")
         return []
     return _normalize_string_list(payload)
 
 
-def _normalize_memory_curation_action(raw: str | None) -> str:
-    action = str(raw or '').strip().lower()
-    return action if action in {'archive', 'prune'} else 'archive'
-
-
-def _positive_int_env(name: str, *, default: int) -> int:
-    try:
-        value = int(str(os.environ.get(name) or '').strip() or default)
-    except ValueError:
-        return default
-    return value if value > 0 else default
-
-
 def _load_allowed_hosts(environment: str) -> list[str]:
     hosts = _load_string_list_env(
-        'INFINITAS_SERVER_ALLOWED_HOSTS',
-        strict=environment == 'production',
+        "INFINITAS_SERVER_ALLOWED_HOSTS",
+        strict=environment == "production",
     )
     normalized = list(dict.fromkeys(hosts))
     if normalized:
         return normalized
-    if environment == 'production':
+    if environment == "production":
         raise RuntimeError(
-            'INFINITAS_SERVER_ALLOWED_HOSTS must be set to a non-empty JSON array '
-            'when INFINITAS_SERVER_ENV=production'
+            "INFINITAS_SERVER_ALLOWED_HOSTS must be set to a non-empty JSON array "
+            "when INFINITAS_SERVER_ENV=production"
         )
     return list(DEFAULT_ALLOWED_HOSTS)
 
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    environment = _normalize_environment(os.environ.get('INFINITAS_SERVER_ENV'))
-    allow_insecure_defaults = environment in {'development', 'test'} or _env_flag(
-        'INFINITAS_SERVER_ALLOW_INSECURE_DEFAULTS'
+    environment = _normalize_environment(os.environ.get("INFINITAS_SERVER_ENV"))
+    allow_insecure_defaults = environment in {"development", "test"} or _env_flag(
+        "INFINITAS_SERVER_ALLOW_INSECURE_DEFAULTS"
     )
 
-    secret_key = str(os.environ.get('INFINITAS_SERVER_SECRET_KEY') or '').strip()
+    secret_key = str(os.environ.get("INFINITAS_SERVER_SECRET_KEY") or "").strip()
     if not secret_key and allow_insecure_defaults:
         secret_key = DEFAULT_SECRET_KEY
     if not secret_key or secret_key == DEFAULT_SECRET_KEY:
         if not allow_insecure_defaults:
             raise RuntimeError(
-                'INFINITAS_SERVER_SECRET_KEY must be set to a secure, non-default value '
-                'when INFINITAS_SERVER_ENV=production. '
+                "INFINITAS_SERVER_SECRET_KEY must be set to a secure, non-default value "
+                "when INFINITAS_SERVER_ENV=production. "
                 'Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"'
             )
         secret_key = DEFAULT_SECRET_KEY
@@ -245,7 +214,7 @@ def get_settings() -> Settings:
         validate_secret_key_strength(secret_key, environment)
     allowed_hosts = _load_allowed_hosts(environment)
 
-    bootstrap_raw = os.environ.get('INFINITAS_SERVER_BOOTSTRAP_USERS')
+    bootstrap_raw = os.environ.get("INFINITAS_SERVER_BOOTSTRAP_USERS")
     bootstrap_payload = _load_bootstrap_payload(
         bootstrap_raw,
         allow_default_fixture=allow_insecure_defaults,
@@ -254,87 +223,39 @@ def get_settings() -> Settings:
     if not bootstrap_users:
         if not allow_insecure_defaults:
             raise RuntimeError(
-                'INFINITAS_SERVER_BOOTSTRAP_USERS must be set to a non-empty JSON array '
-                'when INFINITAS_SERVER_ENV=production'
+                "INFINITAS_SERVER_BOOTSTRAP_USERS must be set to a non-empty JSON array "
+                "when INFINITAS_SERVER_ENV=production"
             )
-        bootstrap_users = list(DEFAULT_BOOTSTRAP_USERS)
+        bootstrap_users = _normalize_bootstrap_users(list(DEFAULT_BOOTSTRAP_USERS))
 
-    default_db_path = ROOT / '.state' / 'server.db'
-    database_url = (
-        os.environ.get('INFINITAS_SERVER_DATABASE_URL') or f'sqlite:///{default_db_path}'
-    )
-    repo_path = Path(os.environ.get('INFINITAS_SERVER_REPO_PATH') or ROOT).expanduser().resolve()
+    default_db_path = ROOT / ".state" / "server.db"
+    database_url = os.environ.get("INFINITAS_SERVER_DATABASE_URL") or f"sqlite:///{default_db_path}"
+    repo_path = Path(os.environ.get("INFINITAS_SERVER_REPO_PATH") or ROOT).expanduser().resolve()
     artifact_path = (
-        Path(
-            os.environ.get('INFINITAS_SERVER_ARTIFACT_PATH')
-            or (ROOT / '.state' / 'artifacts')
-        )
-        .expanduser()
-        .resolve()
-    )
-    repo_lock_path = (
-        Path(
-            os.environ.get('INFINITAS_SERVER_REPO_LOCK_PATH') or (ROOT / '.state' / 'repo.lock')
-        )
+        Path(os.environ.get("INFINITAS_SERVER_ARTIFACT_PATH") or (ROOT / ".state" / "artifacts"))
         .expanduser()
         .resolve()
     )
     registry_read_tokens = _load_string_list_env(
-        'INFINITAS_REGISTRY_READ_TOKENS',
-        strict=environment == 'production',
+        "INFINITAS_REGISTRY_READ_TOKENS",
+        strict=environment == "production",
     )
     trusted_proxies = _load_string_list_env(
-        'INFINITAS_SERVER_TRUSTED_PROXIES',
+        "INFINITAS_SERVER_TRUSTED_PROXIES",
         strict=False,
-    )
-    mirror_remote = str(os.environ.get('INFINITAS_SERVER_MIRROR_REMOTE') or '').strip()
-    mirror_branch = str(os.environ.get('INFINITAS_SERVER_MIRROR_BRANCH') or '').strip()
-    memory = load_memory_config()
-    memory_curation_action = _normalize_memory_curation_action(
-        os.environ.get('INFINITAS_SERVER_MEMORY_CURATION_ACTION')
-    )
-    memory_curation_apply = _env_flag('INFINITAS_SERVER_MEMORY_CURATION_APPLY')
-    if 'INFINITAS_SERVER_MEMORY_CURATION_APPLY' not in os.environ:
-        memory_curation_apply = True
-    memory_curation_limit = _positive_int_env(
-        'INFINITAS_SERVER_MEMORY_CURATION_LIMIT',
-        default=50,
-    )
-    memory_curation_max_actions = _positive_int_env(
-        'INFINITAS_SERVER_MEMORY_CURATION_MAX_ACTIONS',
-        default=20,
-    )
-    memory_curation_actor_ref = (
-        str(os.environ.get('INFINITAS_SERVER_MEMORY_CURATION_ACTOR_REF') or '').strip()
-        or 'system:memory-curation:schedule'
     )
 
     return Settings(
-        app_name='infinitas-hosted-registry',
+        app_name="infinitas-hosted-registry",
         root_dir=ROOT,
         environment=environment,
         database_url=database_url,
         secret_key=secret_key,
         allowed_hosts=allowed_hosts,
-        template_dir=ROOT / 'server' / 'templates',
+        template_dir=ROOT / "server" / "templates",
         bootstrap_users=bootstrap_users,
         repo_path=repo_path,
         artifact_path=artifact_path,
-        repo_lock_path=repo_lock_path,
         registry_read_tokens=registry_read_tokens,
         trusted_proxies=trusted_proxies,
-        mirror_remote=mirror_remote,
-        mirror_branch=mirror_branch,
-        memory_backend=memory.backend,
-        memory_context_enabled=memory.context_enabled,
-        memory_write_enabled=memory.write_enabled,
-        memory_namespace=memory.namespace,
-        memory_top_k=memory.top_k,
-        memory_mem0_base_url=memory.mem0_base_url,
-        memory_mem0_api_key_env=memory.mem0_api_key_env,
-        memory_curation_action=memory_curation_action,
-        memory_curation_apply=memory_curation_apply,
-        memory_curation_limit=memory_curation_limit,
-        memory_curation_max_actions=memory_curation_max_actions,
-        memory_curation_actor_ref=memory_curation_actor_ref,
     )

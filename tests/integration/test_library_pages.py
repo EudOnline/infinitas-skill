@@ -42,9 +42,11 @@ def _seed_library_access_data(client) -> dict[str, int]:
     now = datetime.now(timezone.utc)
     session_factory = get_session_factory()
     with session_factory() as session:
-        public_review_case = session.query(ReviewCase).filter(
-            ReviewCase.exposure_id == int(public_exposure["id"])
-        ).one()
+        public_review_case = (
+            session.query(ReviewCase)
+            .filter(ReviewCase.exposure_id == int(public_exposure["id"]))
+            .one()
+        )
         public_review_case.state = "approved"
         public_review_case.closed_at = utcnow()
 
@@ -159,7 +161,7 @@ def test_home_and_login_pages_promote_library_as_admin_entry(
     home = client.get("/?lang=en")
     assert home.status_code == 200, home.text
     home_html = home.text
-    assert '/library?lang=en' in home_html
+    assert "/library?lang=en" in home_html
     assert "Open Library" in home_html
 
     login = client.get("/login?lang=en")
@@ -213,9 +215,7 @@ def test_library_object_and_release_pages_render(
 
     listing = client.get("/api/v1/library", headers=headers)
     assert listing.status_code == 200, listing.text
-    object_payload = next(
-        item for item in listing.json()["items"] if item["kind"] == "skill"
-    )
+    object_payload = next(item for item in listing.json()["items"] if item["kind"] == "skill")
     object_id = object_payload["id"]
     release_id = object_payload["current_release"]["release_id"]
 
@@ -360,6 +360,7 @@ def test_manage_page_shows_grant_share_usage_aliases(
     manage_response = client.get("/manage?lang=en", headers=headers)
     assert manage_response.status_code == 200, manage_response.text
     manage_html = manage_response.text
+
     assert "Grant-backed exhausted share" in manage_html
     assert "1/1" in manage_html
     assert "exhausted" in manage_html
@@ -402,14 +403,27 @@ def test_revoked_token_and_share_remain_visible_in_inventory(
     seeded = _seed_library_access_data(client)
     headers = {"Authorization": "Bearer fixture-maintainer-token"}
 
+    token_response = client.post(
+        f"/api/v1/object-tokens/objects/{seeded['object_id']}/tokens",
+        headers=headers,
+        json={
+            "name": "revoke-test-token",
+            "type": "reader",
+            "scope_type": "release",
+            "scope_id": seeded["release_id"],
+        },
+    )
+    assert token_response.status_code == 201, token_response.text
+    token_id = token_response.json()["token"]["id"]
+
     revoke_token = client.post(
-        f"/api/v1/library/tokens/{seeded['reader_credential_id']}/revoke",
+        f"/api/v1/object-tokens/tokens/{token_id}/revoke",
         headers=headers,
     )
     assert revoke_token.status_code == 200, revoke_token.text
 
     revoke_share = client.post(
-        f"/api/v1/library/share-links/{seeded['share_grant_id']}/revoke",
+        f"/api/v1/share-links/{seeded['share_grant_id']}/revoke",
         headers=headers,
     )
     assert revoke_share.status_code == 200, revoke_share.text
@@ -435,20 +449,25 @@ def test_manage_page_shows_labels_for_items_created_from_release_page(
     headers = {"Authorization": "Bearer fixture-maintainer-token"}
 
     token_response = client.post(
-        f"/api/v1/library/releases/{seeded['release_id']}/tokens",
+        f"/api/v1/object-tokens/objects/{seeded['object_id']}/tokens",
         headers=headers,
-        json={"token_type": "publisher", "label": "Deploy Bot"},
+        json={
+            "name": "Deploy Bot",
+            "type": "publisher",
+            "scope_type": "release",
+            "scope_id": seeded["release_id"],
+        },
     )
     assert token_response.status_code == 201, token_response.text
 
     share_response = client.post(
-        f"/api/v1/library/releases/{seeded['release_id']}/share-links",
+        f"/api/v1/share-links/releases/{seeded['release_id']}/share-links",
         headers=headers,
         json={
-            "label": "QA Share",
-            "temporary_password": "moon-door",
+            "name": "QA Share",
+            "password": "moon-door",
             "expires_in_days": 7,
-            "usage_limit": 5,
+            "max_uses": 5,
         },
     )
     assert share_response.status_code == 201, share_response.text
@@ -521,8 +540,21 @@ def test_manage_page_includes_token_revocation_events(
     seeded = _seed_library_access_data(client)
     headers = {"Authorization": "Bearer fixture-maintainer-token"}
 
+    token_response = client.post(
+        f"/api/v1/object-tokens/objects/{seeded['object_id']}/tokens",
+        headers=headers,
+        json={
+            "name": "event-test-token",
+            "type": "reader",
+            "scope_type": "release",
+            "scope_id": seeded["release_id"],
+        },
+    )
+    assert token_response.status_code == 201, token_response.text
+    token_id = token_response.json()["token"]["id"]
+
     revoke_token = client.post(
-        f"/api/v1/library/tokens/{seeded['reader_credential_id']}/revoke",
+        f"/api/v1/object-tokens/tokens/{token_id}/revoke",
         headers=headers,
     )
     assert revoke_token.status_code == 200, revoke_token.text

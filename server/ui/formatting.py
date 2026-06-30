@@ -17,6 +17,7 @@ def load_json_object(raw: str | None) -> dict:
         return {}
     return payload if isinstance(payload, dict) else {}
 
+
 def load_json_list(raw: str | None) -> list[str]:
     if not raw:
         return []
@@ -28,6 +29,7 @@ def load_json_list(raw: str | None) -> list[str]:
         return []
     return [str(item).strip() for item in payload if str(item).strip()]
 
+
 def short_stamp(value: str | None) -> str:
     if not value:
         return "No snapshot"
@@ -35,6 +37,7 @@ def short_stamp(value: str | None) -> str:
         return datetime.fromisoformat(value.replace("Z", "+00:00")).strftime("%Y-%m-%d")
     except ValueError:
         return value
+
 
 def localized_stamp(value: str | None, lang: str) -> str:
     if not value:
@@ -44,10 +47,12 @@ def localized_stamp(value: str | None, lang: str) -> str:
     except ValueError:
         return value
 
+
 def humanize_identifier(value: str | None) -> str:
     if not value:
         return "-"
     return value.replace("_", " ").replace("-", " ").strip().title()
+
 
 def _humanize_with_mapping(
     value: str | None,
@@ -59,13 +64,14 @@ def _humanize_with_mapping(
         return pick_lang(lang, labels[0], labels[1])
     return humanize_identifier(value)
 
+
 def humanize_status(status: str | None, lang: str) -> str:
     return _humanize_with_mapping(
         status,
         lang,
-        {
-        },
+        {},
     )
+
 
 def humanize_job_kind(kind: str | None, lang: str) -> str:
     return _humanize_with_mapping(
@@ -74,45 +80,14 @@ def humanize_job_kind(kind: str | None, lang: str) -> str:
         {"materialize_release": ("生成发布产物", "Materialize release")},
     )
 
+
 def humanize_role(role: str | None, lang: str) -> str:
     return _humanize_with_mapping(
         role,
         lang,
-        {
-        },
+        {},
     )
 
-def humanize_audience_type(audience_type: str | None, lang: str) -> str:
-    return _humanize_with_mapping(
-        audience_type,
-        lang,
-        {
-        },
-    )
-
-def humanize_listing_mode(listing_mode: str | None, lang: str) -> str:
-    return _humanize_with_mapping(
-        listing_mode,
-        lang,
-        {
-        },
-    )
-
-def humanize_install_mode(install_mode: str | None, lang: str) -> str:
-    return _humanize_with_mapping(
-        install_mode,
-        lang,
-        {
-        },
-    )
-
-def humanize_review_gate(review_gate: str | None, lang: str) -> str:
-    return _humanize_with_mapping(
-        review_gate,
-        lang,
-        {
-        },
-    )
 
 def humanize_timestamp(value: str | None) -> str:
     if not value:
@@ -126,6 +101,7 @@ def humanize_timestamp(value: str | None) -> str:
         stamp = f"{stamp} UTC"
     return stamp
 
+
 def build_kawaii_ui_context(
     request: Request,
     lang: str,
@@ -136,8 +112,7 @@ def build_kawaii_ui_context(
         "page_language": lang,
         "page_lang_attr": "zh-CN" if lang == "zh" else "en",
         "home_href": with_lang("/", lang),
-        "session_ui": {
-        },
+        "session_ui": {},
         "language_switches": build_language_switches(request, lang),
         "theme_switches": [
             {"value": "light", "label": t(lang, "theme.light")},
@@ -314,7 +289,9 @@ def build_kawaii_ui_context(
             "hint_activation_blocked": t(lang, "hint_activation_blocked"),
             "hint_activation_blocked_not_approved": t(lang, "hint_activation_blocked_not_approved"),
             "hint_activation_blocked_rejected": t(lang, "hint_activation_blocked_rejected"),
-            "hint_activation_blocked_review_required": t(lang, "hint_activation_blocked_review_required"),
+            "hint_activation_blocked_review_required": t(
+                lang, "hint_activation_blocked_review_required"
+            ),
             "option_blocking": t(lang, "option_blocking"),
             "option_advisory": t(lang, "option_advisory"),
             "login_error": t(lang, "login_error"),
@@ -439,6 +416,7 @@ def build_kawaii_ui_context(
             "back_home": t(lang, "back_home"),
         },
     }
+
 
 __all__ = [
     "build_kawaii_ui_context",

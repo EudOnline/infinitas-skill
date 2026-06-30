@@ -7,12 +7,15 @@ from sqlalchemy.orm import Session
 
 from server.exceptions_base import (
     ConflictError as BaseConflictError,
+)
+from server.exceptions_base import (
     ForbiddenError as BaseForbiddenError,
+)
+from server.exceptions_base import (
     NotFoundError as BaseNotFoundError,
 )
 from server.models import Exposure, Release, utcnow
 from server.modules.exposure.schemas import ExposureCreateRequest, ExposurePatchRequest
-from server.modules.memory.service import record_lifecycle_memory_event_best_effort
 from server.modules.release import service as release_service
 from server.modules.review import service as review_service
 from server.modules.review.policy import evaluate_exposure_policy
@@ -160,32 +163,6 @@ def create_exposure(
     db.add(exposure)
     db.commit()
     db.refresh(exposure)
-    record_lifecycle_memory_event_best_effort(
-        db,
-        lifecycle_event="task.exposure.create",
-        aggregate_type="exposure",
-        aggregate_id=str(exposure.id),
-        actor_ref=f"principal:{actor_principal_id}",
-        payload={
-            "release_id": str(exposure.release_id),
-            "audience_type": exposure.audience_type,
-            "review_requirement": exposure.review_requirement,
-            "state": exposure.state,
-        },
-    )
-    if exposure.state == "active":
-        record_lifecycle_memory_event_best_effort(
-            db,
-            lifecycle_event="task.exposure.activate",
-            aggregate_type="exposure",
-            aggregate_id=str(exposure.id),
-            actor_ref=f"principal:{actor_principal_id}",
-            payload={
-                "release_id": str(exposure.release_id),
-                "audience_type": exposure.audience_type,
-                "activation_source": "create_exposure",
-            },
-        )
     return exposure
 
 
@@ -214,30 +191,16 @@ def patch_exposure(
     if payload.install_mode is not None:
         exposure.install_mode = payload.install_mode
     if payload.requested_review_mode is not None:
-        current_requested_review_mode = str(
-            snapshot.get("requested_review_mode") or "none"
-        ).strip().lower()
+        current_requested_review_mode = (
+            str(snapshot.get("requested_review_mode") or "none").strip().lower()
+        )
         next_requested_review_mode = str(payload.requested_review_mode or "none").strip().lower()
         if next_requested_review_mode != current_requested_review_mode:
-            raise ConflictError(
-                "requested_review_mode cannot be changed after exposure creation"
-            )
+            raise ConflictError("requested_review_mode cannot be changed after exposure creation")
 
     db.add(exposure)
     db.commit()
     db.refresh(exposure)
-    record_lifecycle_memory_event_best_effort(
-        db,
-        lifecycle_event="task.exposure.patch",
-        aggregate_type="exposure",
-        aggregate_id=str(exposure.id),
-        actor_ref=f"principal:{actor_principal_id}",
-        payload={
-            "release_id": str(exposure.release_id),
-            "listing_mode": exposure.listing_mode,
-            "install_mode": exposure.install_mode,
-        },
-    )
     return exposure
 
 
@@ -273,18 +236,6 @@ def activate_exposure(
     db.add(exposure)
     db.commit()
     db.refresh(exposure)
-    record_lifecycle_memory_event_best_effort(
-        db,
-        lifecycle_event="task.exposure.activate",
-        aggregate_type="exposure",
-        aggregate_id=str(exposure.id),
-        actor_ref=f"principal:{actor_principal_id}",
-        payload={
-            "release_id": str(exposure.release_id),
-            "audience_type": exposure.audience_type,
-            "activation_source": "manual_activate",
-        },
-    )
     return exposure
 
 

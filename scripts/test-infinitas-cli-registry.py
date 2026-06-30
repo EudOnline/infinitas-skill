@@ -29,7 +29,7 @@ def run_result(command: list[str]) -> subprocess.CompletedProcess[str]:
 
 
 def scenario_registry_cli_surface() -> None:
-    cli_help = run(['uv', 'run', 'infinitas', 'registry', '--help'])
+    cli_help = run(["uv", "run", "infinitas", "registry", "--help"])
     if "Hosted registry private-first control plane CLI" not in cli_help:
         fail("expected infinitas registry help to use the maintained private-first description")
     for noun in ["skills", "drafts", "releases", "exposures", "grants", "tokens", "reviews"]:
@@ -38,11 +38,11 @@ def scenario_registry_cli_surface() -> None:
     if "submissions" in cli_help:
         fail("expected submissions to stay removed from infinitas registry help")
 
-    drafts_help = run(['uv', 'run', 'infinitas', 'registry', 'drafts', '--help'])
+    drafts_help = run(["uv", "run", "infinitas", "registry", "drafts", "--help"])
     if "create" not in drafts_help or "seal" not in drafts_help:
         fail("expected infinitas registry drafts help to expose create and seal")
 
-    removed_legacy = run_result(['uv', 'run', 'infinitas', 'registry', 'submissions', '--help'])
+    removed_legacy = run_result(["uv", "run", "infinitas", "registry", "submissions", "--help"])
     if removed_legacy.returncode != 2 or "invalid choice" not in removed_legacy.stderr:
         fail(
             "expected submissions command to be removed from infinitas registry entirely, "

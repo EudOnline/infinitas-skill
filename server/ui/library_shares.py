@@ -16,6 +16,7 @@ from server.ui.library_access import (
 )
 from server.ui.library_scope import (
     LibraryScope,
+    iso_stamp,
     iter_grant_credentials,
     load_library_scope,
     parse_datetime,
@@ -80,6 +81,8 @@ def build_share_rows_from_scope(
                 "usage_limit": share_usage_limit(constraints),
                 "state": share_link_state_from_grant(grant, constraints),
                 "can_revoke": grant_is_active(grant, constraints),
+                "created": humanize_timestamp(iso_stamp(grant.created_at)),
+                "created_at": humanize_timestamp(iso_stamp(grant.created_at)),
                 "_sort_at": parse_datetime(grant.created_at)
                 or datetime.min.replace(tzinfo=timezone.utc),
             }

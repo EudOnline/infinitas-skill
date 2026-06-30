@@ -6,30 +6,26 @@ from .decision_metadata import canonical_decision_metadata
 
 
 def compatibility_summary(verified_support: dict[str, Any]) -> dict[str, str]:
-    summary = {}
+    summary: dict[str, str] = {}
     for platform, payload in (verified_support or {}).items():
         if not isinstance(platform, str) or not platform.strip():
             continue
-        if (
-            isinstance(payload, dict)
-            and isinstance(payload.get("state"), str)
-            and payload.get("state").strip()
-        ):
-            summary[platform] = payload.get("state")
+        if isinstance(payload, dict):
+            state = payload.get("state")
+            if isinstance(state, str) and state.strip():
+                summary[platform] = state
     return summary
 
 
 def compatibility_freshness_summary(verified_support: dict[str, Any]) -> dict[str, str]:
-    summary = {}
+    summary: dict[str, str] = {}
     for platform, payload in (verified_support or {}).items():
         if not isinstance(platform, str) or not platform.strip():
             continue
-        if (
-            isinstance(payload, dict)
-            and isinstance(payload.get("freshness_state"), str)
-            and payload.get("freshness_state").strip()
-        ):
-            summary[platform] = payload.get("freshness_state")
+        if isinstance(payload, dict):
+            freshness_state = payload.get("freshness_state")
+            if isinstance(freshness_state, str) and freshness_state.strip():
+                summary[platform] = freshness_state
     return summary
 
 
@@ -123,13 +119,13 @@ def build_inspect_payload(
     provenance_view: dict[str, Any],
     distribution_view: dict[str, Any],
     trust_view: dict[str, Any],
-    memory_hints: dict[str, Any],
 ) -> dict[str, Any]:
     runtime = dict(skill_entry.get("runtime") or {})
     verified_support_view = _resolved_verified_support(skill_entry, verified_support)
-    install_targets = (
-        runtime.get("install_targets") if isinstance(runtime.get("install_targets"), dict) else {}
-    )
+    install_targets_raw = runtime.get("install_targets")
+    install_targets = install_targets_raw if isinstance(install_targets_raw, dict) else {}
+    readiness_raw = runtime.get("readiness")
+    runtime_readiness = readiness_raw.get("status") if isinstance(readiness_raw, dict) else None
     return {
         "ok": True,
         "name": skill_entry.get("name"),
@@ -146,11 +142,7 @@ def build_inspect_payload(
             "freshness_summary": compatibility_freshness_summary(verified_support_view),
         },
         "runtime": runtime,
-        "runtime_readiness": (
-            (runtime.get("readiness") or {}).get("status")
-            if isinstance(runtime.get("readiness"), dict)
-            else None
-        ),
+        "runtime_readiness": runtime_readiness,
         "workspace_fit": {
             "scope": runtime.get("workspace_scope"),
             "targets": list(install_targets.get("workspace") or []),
@@ -159,7 +151,6 @@ def build_inspect_payload(
         "provenance": provenance_view,
         "distribution": distribution_view,
         "trust": trust_view,
-        "memory_hints": memory_hints,
     }
 
 

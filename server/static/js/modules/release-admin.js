@@ -81,28 +81,31 @@ function initIssueTokenForm() {
     setButtonBusy(submitButton, true);
 
     try {
+      const objectId = form.dataset.objectId;
       const releaseId = form.dataset.releaseId;
       const payload = {
-        token_type: form.elements.token_type.value,
-        label: String(form.elements.label.value || '').trim() || null,
+        name: String(form.elements.label.value || '').trim() || 'release token',
+        type: form.elements.token_type.value,
+        scope_type: 'release',
+        scope_id: Number(releaseId),
       };
       const data = await apiPost(
-        `/api/library/releases/${encodeURIComponent(releaseId)}/tokens`,
+        `/api/v1/object-tokens/objects/${encodeURIComponent(objectId)}/tokens`,
         payload,
       );
       renderResult(result, uiText('token_created', 'Token created'), [
         {
           label: uiText('table_col_type', 'Type'),
-          value: data.token_type,
+          value: data.token.type,
         },
         {
           label: uiText('table_col_token', 'Token'),
-          value: data.token,
-          copyValue: data.token,
+          value: data.raw_token,
+          copyValue: data.raw_token,
         },
         {
           label: uiText('label_scopes', 'Scopes'),
-          value: Array.isArray(data.scopes) ? data.scopes.join(', ') : '-',
+          value: Array.isArray(data.token.scopes) ? data.token.scopes.join(', ') : '-',
         },
       ]);
       form.reset();
@@ -128,13 +131,13 @@ function initCreateShareForm() {
     try {
       const releaseId = form.dataset.releaseId;
       const payload = {
-        label: String(form.elements.label.value || '').trim() || null,
-        temporary_password: String(form.elements.temporary_password.value || '').trim() || null,
+        name: String(form.elements.label.value || '').trim() || 'share link',
+        password: String(form.elements.temporary_password.value || '').trim() || null,
         expires_in_days: Number(form.elements.expires_in_days.value || 7),
-        usage_limit: Number(form.elements.usage_limit.value || 5),
+        max_uses: Number(form.elements.usage_limit.value || 5),
       };
       const data = await apiPost(
-        `/api/library/releases/${encodeURIComponent(releaseId)}/share-links`,
+        `/api/v1/share-links/releases/${encodeURIComponent(releaseId)}/share-links`,
         payload,
       );
       renderResult(result, uiText('share_created', 'Share link created'), [

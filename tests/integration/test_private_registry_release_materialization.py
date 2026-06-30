@@ -421,12 +421,7 @@ def test_repeat_release_request_can_recover_when_previous_materialization_job_is
     assert retry.status_code == 200, retry.text
 
     with session_factory() as session:
-        jobs = (
-            session.query(Job)
-            .filter(Job.release_id == release_id)
-            .order_by(Job.id.asc())
-            .all()
-        )
+        jobs = session.query(Job).filter(Job.release_id == release_id).order_by(Job.id.asc()).all()
         assert [job.status for job in jobs] == ["running", "queued"]
 
     processed = run_worker_loop(limit=1)
@@ -635,11 +630,6 @@ def test_repeat_release_request_does_not_duplicate_materialization_job_with_acti
     assert retry.status_code == 200, retry.text
 
     with session_factory() as session:
-        jobs = (
-            session.query(Job)
-            .filter(Job.release_id == release_id)
-            .order_by(Job.id.asc())
-            .all()
-        )
+        jobs = session.query(Job).filter(Job.release_id == release_id).order_by(Job.id.asc()).all()
         assert len(jobs) == 1
         assert jobs[0].status == "running"

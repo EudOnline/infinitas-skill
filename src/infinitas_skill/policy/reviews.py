@@ -6,7 +6,7 @@ import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from infinitas_skill.root import ROOT
 
@@ -117,8 +117,8 @@ def save_reviews(skill_dir: Path, reviews):
 
 
 def normalize_groups(raw_groups, root: Path = ROOT):
-    errors = []
-    normalized = {}
+    errors: list[str] = []
+    normalized: dict[str, Any] = {}
     if raw_groups is None:
         return normalized, errors
     if not isinstance(raw_groups, dict):
@@ -184,8 +184,8 @@ def normalize_groups(raw_groups, root: Path = ROOT):
 
 
 def normalize_quorum_rule(path, raw_rule):
-    errors = []
-    normalized = {}
+    errors: list[str] = []
+    normalized: dict[str, Any] = {}
     if raw_rule is None:
         return normalized, errors
     if not isinstance(raw_rule, dict):
@@ -213,8 +213,8 @@ def normalize_quorum_rule(path, raw_rule):
 
 
 def normalize_quorum(reviews_cfg):
-    errors = []
-    normalized = {
+    errors: list[str] = []
+    normalized: dict[str, Any] = {
         "defaults": {},
         "stage_overrides": {},
         "risk_overrides": {},
@@ -329,7 +329,7 @@ def configured_reviewers(policy, root: Path = ROOT):
     groups, group_errors = normalize_groups(reviews_cfg.get("groups", {}), root=root)
     if group_errors:
         raise ReviewPolicyError(group_errors)
-    reviewers = {}
+    reviewers: dict[str, dict[str, Any]] = {}
     for group_name, group_data in groups.items():
         for reviewer in group_data.get("resolved_members", []):
             reviewers.setdefault(reviewer, {"groups": []})["groups"].append(group_name)
@@ -377,10 +377,10 @@ def validate_promotion_policy(policy, root: Path = ROOT):
     errors = []
     if not isinstance(policy, dict):
         return ["promotion policy must be a JSON object"]
-    if "version" in policy and (
-        not isinstance(policy.get("version"), int) or policy.get("version") < 1
-    ):
-        errors.append("version must be a positive integer")
+    if "version" in policy:
+        version = policy.get("version")
+        if not isinstance(version, int) or version < 1:
+            errors.append("version must be a positive integer")
 
     active_requires = policy.get("active_requires")
     if not isinstance(active_requires, dict):
@@ -436,14 +436,13 @@ def validate_promotion_policy(policy, root: Path = ROOT):
     if high_risk and not isinstance(high_risk, dict):
         errors.append("high_risk_active_requires must be an object when present")
     elif isinstance(high_risk, dict):
-        if "min_maintainers" in high_risk and (
-            not isinstance(high_risk.get("min_maintainers"), int)
-            or high_risk.get("min_maintainers") < 0
-        ):
-            errors.append(
-                "high_risk_active_requires.min_maintainers "
-                "must be a non-negative integer when present"
-            )
+        if "min_maintainers" in high_risk:
+            min_maintainers = high_risk.get("min_maintainers")
+            if not isinstance(min_maintainers, int) or min_maintainers < 0:
+                errors.append(
+                    "high_risk_active_requires.min_maintainers "
+                    "must be a non-negative integer when present"
+                )
         if "require_requires_block" in high_risk and not isinstance(
             high_risk.get("require_requires_block"), bool
         ):
@@ -466,7 +465,7 @@ def load_promotion_policy(root: Path = ROOT):
 
 
 def latest_distinct_entries(entries):
-    latest = {}
+    latest: dict[str, tuple[tuple[datetime, int], dict[str, Any]]] = {}
     for index, raw_entry in enumerate(entries or []):
         if not isinstance(raw_entry, dict):
             continue

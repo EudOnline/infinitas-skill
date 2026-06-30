@@ -11,7 +11,7 @@ import logging
 import re
 import shutil
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, cast
 
 from infinitas_skill.discovery.ai_index import validate_ai_index_payload
 from infinitas_skill.install.distribution import materialize_distribution_source
@@ -108,7 +108,7 @@ def derive_registry_meta(
         raise OpenClawBridgeError("frontmatter name does not produce a valid registry slug")
 
     publisher_slug = slugify(publisher) if publisher else ""
-    meta = {
+    meta: Dict[str, object] = {
         "name": slug,
         "version": "0.1.0",
         "status": "incubating",
@@ -197,14 +197,19 @@ def load_ai_index(root: Path) -> Dict[str, object]:
     errors = validate_ai_index_payload(payload)
     if errors:
         raise OpenClawBridgeError("; ".join(errors))
-    return payload
+    return cast(Dict[str, object], payload)
 
 
 def select_ai_skill(ai_index: Dict[str, object], requested: str) -> Dict[str, object]:
-    matches = []
-    for skill in ai_index.get("skills", []):
-        if requested == skill.get("qualified_name") or requested == skill.get("name"):
-            matches.append(skill)
+    matches: list[Dict[str, object]] = []
+    skills = ai_index.get("skills")
+    if not isinstance(skills, list):
+        skills = []
+    for skill in skills:
+        if isinstance(skill, dict) and (
+            requested == skill.get("qualified_name") or requested == skill.get("name")
+        ):
+            matches.append(cast(Dict[str, object], skill))
 
     if not matches:
         raise OpenClawBridgeError(f"no AI-index entry found for {requested}")
@@ -215,7 +220,7 @@ def select_ai_skill(ai_index: Dict[str, object], requested: str) -> Dict[str, ob
     if len(matches) == 1:
         return matches[0]
     choices = ", ".join(
-        sorted(skill.get("qualified_name") or skill.get("name") or "?" for skill in matches)
+        sorted(str(skill.get("qualified_name") or skill.get("name") or "?") for skill in matches)
     )
     raise OpenClawBridgeError(f"ambiguous skill name {requested}: {choices}")
 
@@ -281,7 +286,8 @@ def resolve_ai_release(
     root: Path, requested: str, requested_version: Optional[str] = None
 ) -> Tuple[Dict[str, object], str, Dict[str, object]]:
     ai_index = load_ai_index(root)
-    policy = ai_index.get("install_policy") or {}
+    policy_raw = ai_index.get("install_policy")
+    policy = policy_raw if isinstance(policy_raw, dict) else {}
     if (
         policy.get("mode") != "immutable-only"
         or policy.get("direct_source_install_allowed") is not False
@@ -291,8 +297,13 @@ def resolve_ai_release(
         )
 
     selected_skill = select_ai_skill(ai_index, requested)
-    resolved_version = requested_version or selected_skill.get("default_install_version")
-    versions = selected_skill.get("versions") or {}
+    resolved_version = requested_version or cast(
+        Optional[str], selected_skill.get("default_install_version")
+    )
+    if resolved_version is None:
+        raise OpenClawBridgeError(f"no default install version for {requested}")
+    versions_raw = selected_skill.get("versions")
+    versions = versions_raw if isinstance(versions_raw, dict) else {}
     version_entry = versions.get(resolved_version)
     if not isinstance(version_entry, dict):
         raise OpenClawBridgeError(
@@ -303,20 +314,23 @@ def resolve_ai_release(
         raise OpenClawBridgeError(f"version {resolved_version!r} is not installable")
 
     required_fields = ["manifest_path", "bundle_path", "bundle_sha256", "attestation_path"]
-    missing = [
-        field
-        for field in required_fields
-        if not isinstance(version_entry.get(field), str) or not version_entry.get(field).strip()
-    ]
+    missing = []
+    for field in required_fields:
+        field_value = version_entry.get(field)
+        if not isinstance(field_value, str) or not field_value.strip():
+            missing.append(field)
     if missing:
         raise OpenClawBridgeError(f"missing distribution fields: {', '.join(missing)}")
 
     for field in ["manifest_path", "bundle_path", "attestation_path"]:
-        full_path = (root / version_entry[field]).resolve()
+        field_value = version_entry.get(field)
+        if not isinstance(field_value, str):
+            continue
+        full_path = (root / field_value).resolve()
         if not full_path.exists():
-            raise OpenClawBridgeError(f"missing {field}: {version_entry[field]}")
+            raise OpenClawBridgeError(f"missing {field}: {field_value}")
 
-    return selected_skill, resolved_version, version_entry
+    return selected_skill, resolved_version, cast(Dict[str, object], version_entry)
 
 
 def export_release_to_directory(

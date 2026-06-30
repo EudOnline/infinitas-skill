@@ -48,7 +48,7 @@ def test_create_reader_token_for_release_returns_raw_token_once(
     object_id, release_id = _prepared_object_and_release(client, headers=headers)
 
     response = client.post(
-        f"/api/objects/{object_id}/tokens",
+        f"/api/v1/object-tokens/objects/{object_id}/tokens",
         headers=headers,
         json={
             "name": "reader-a",
@@ -67,7 +67,7 @@ def test_create_reader_token_for_release_returns_raw_token_once(
     assert created["token"]["scope_id"] == release_id
     assert created["token"]["state"] == "active"
 
-    listing = client.get(f"/api/objects/{object_id}/tokens", headers=headers)
+    listing = client.get(f"/api/v1/object-tokens/objects/{object_id}/tokens", headers=headers)
     assert listing.status_code == 200, listing.text
     payload = listing.json()
     assert payload["total"] == 1
@@ -91,7 +91,7 @@ def test_create_publisher_token_for_object_and_revoke(
     object_id, _release_id = _prepared_object_and_release(client, headers=headers)
 
     response = client.post(
-        f"/api/objects/{object_id}/tokens",
+        f"/api/v1/object-tokens/objects/{object_id}/tokens",
         headers=headers,
         json={
             "name": "publisher-a",
@@ -108,10 +108,10 @@ def test_create_publisher_token_for_object_and_revoke(
     assert token["scope_id"] == object_id
     assert token["expires_at"] is not None
 
-    revoke = client.post(f"/api/tokens/{token['id']}/revoke", headers=headers)
+    revoke = client.post(f"/api/v1/object-tokens/tokens/{token['id']}/revoke", headers=headers)
     assert revoke.status_code == 200, revoke.text
     assert revoke.json()["state"] == "revoked"
 
-    listing = client.get(f"/api/objects/{object_id}/tokens", headers=headers)
+    listing = client.get(f"/api/v1/object-tokens/objects/{object_id}/tokens", headers=headers)
     assert listing.status_code == 200, listing.text
     assert listing.json()["items"][0]["state"] == "revoked"

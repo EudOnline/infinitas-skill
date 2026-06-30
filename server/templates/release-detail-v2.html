@@ -163,7 +163,7 @@
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <article class="p-4 bg-kawaii-panel-soft rounded-kawaii-lg border border-kawaii-line">
       <h3 class="font-display text-sm font-bold text-kawaii-ink mb-3">{{ ui['section_issue_agent_token'] }}</h3>
-      <form id="issue-token-form" class="space-y-3" data-release-id="{{ release.id }}" action="" method="POST">
+      <form id="issue-token-form" class="space-y-3" data-release-id="{{ release.id }}" data-object-id="{{ object.id }}" action="" method="POST">
         <label for="issue-token-type">
           <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['table_col_type'] }}</span>
           <select class="kawaii-input" name="token_type" id="issue-token-type">
@@ -182,7 +182,7 @@
 
     <article class="p-4 bg-kawaii-panel-soft rounded-kawaii-lg border border-kawaii-line">
       <h3 class="font-display text-sm font-bold text-kawaii-ink mb-3">{{ ui['section_create_share_link'] }}</h3>
-      <form id="create-share-form" class="space-y-3" data-release-id="{{ release.id }}" action="" method="POST">
+      <form id="create-share-form" class="space-y-3" data-release-id="{{ release.id }}" data-object-id="{{ object.id }}" action="" method="POST">
         <label for="share-link-label">
           <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['label_share_name'] }}</span>
           <input class="kawaii-input" type="text" name="label" id="share-link-label" placeholder="{{ ui['placeholder_share_label'] }}" required />

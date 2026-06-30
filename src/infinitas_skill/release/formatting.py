@@ -14,10 +14,10 @@ def format_release_state(state):
         f"releaser: {(state.get('release') or {}).get('releaser_identity') or '-'}",
         f"release_ready: {'yes' if state['release_ready'] else 'no'}",
     ]
-    if state['warnings']:
-        lines.append('warnings:')
-        lines.extend(f'- {item}' for item in state['warnings'])
-    if state['errors']:
-        lines.append('errors:')
-        lines.extend(f'- {item}' for item in state['errors'])
-    return '\n'.join(lines)
+    if state["warnings"]:
+        lines.append("warnings:")
+        lines.extend(f"- {item}" for item in state["warnings"])
+    if state["errors"]:
+        lines.append("errors:")
+        lines.extend(f"- {item}" for item in state["errors"])
+    return "\n".join(lines)

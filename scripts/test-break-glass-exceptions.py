@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -74,7 +75,8 @@ def contract_checked_at(repo: Path, platform: str):
     if not isinstance(last_verified, str) or not last_verified:
         fail(f"missing contract.last_verified for platform {platform!r}")
     minute = PLATFORM_EVIDENCE_MINUTES.get(platform, 0)
-    return f"{last_verified}T12:{minute:02d}:00Z"
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    return f"{today}T12:{minute:02d}:00Z"
 
 
 def refresh_platform_evidence(repo: Path, skill_name: str):
@@ -83,12 +85,7 @@ def refresh_platform_evidence(repo: Path, skill_name: str):
     version = meta["version"]
     for platform in PLATFORM_EVIDENCE_MINUTES:
         path = (
-            repo
-            / "catalog"
-            / "compatibility-evidence"
-            / platform
-            / skill_name
-            / f"{version}.json"
+            repo / "catalog" / "compatibility-evidence" / platform / skill_name / f"{version}.json"
         )
         payload = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
         payload.update(
@@ -111,18 +108,21 @@ def copy_repo(prefix):
         ROOT,
         repo,
         ignore=shutil.ignore_patterns(
-            ".git",
-            ".venv",
-            ".worktrees",
-            ".planning",
-            ".pytest_cache",
             ".ruff_cache",
             ".mypy_cache",
-            "__pycache__",
-            "*.pyc",
-            ".cache",
             "catalog",
+            ".git.pytest_cache",
+            ".planning",
             "scripts/__pycache__",
+            ".cache__pycache__",
+            ".worktrees",
+            ".venv",
+            "*.pyc.coverage",
+            ".gitignore",
+            ".state",
+            "buildinfinitas_hosted_registry.egg-info",
+            "node_modules",
+            "tmp",
         ),
     )
     compatibility_root = ROOT / "catalog" / "compatibility-evidence"

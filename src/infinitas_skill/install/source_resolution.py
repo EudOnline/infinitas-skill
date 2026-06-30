@@ -30,9 +30,7 @@ def _resolve_manifest_path(reg_root: Path, manifest_path: str | None) -> str:
         return str(reg_root)
     resolved = (reg_root / manifest_path).resolve()
     if not resolved.is_relative_to(reg_root):
-        raise DependencyError(
-            f"distribution manifest_path escapes registry root: {manifest_path}"
-        )
+        raise DependencyError(f"distribution manifest_path escapes registry root: {manifest_path}")
     return str(resolved)
 
 

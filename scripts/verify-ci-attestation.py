@@ -7,9 +7,13 @@ from infinitas_skill.release.attestation import AttestationError, verify_ci_atte
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Verify a CI-native release attestation against repo-managed policy')
-    parser.add_argument('provenance', help='Path to the CI attestation JSON file')
-    parser.add_argument('--json', action='store_true', help='Print machine-readable verification details')
+    parser = argparse.ArgumentParser(
+        description="Verify a CI-native release attestation against repo-managed policy"
+    )
+    parser.add_argument("provenance", help="Path to the CI attestation JSON file")
+    parser.add_argument(
+        "--json", action="store_true", help="Print machine-readable verification details"
+    )
     return parser.parse_args()
 
 
@@ -18,7 +22,7 @@ def main():
     try:
         result = verify_ci_attestation(args.provenance)
     except AttestationError as exc:
-        print(f'FAIL: {exc}', file=sys.stderr)
+        print(f"FAIL: {exc}", file=sys.stderr)
         raise SystemExit(1)
 
     if args.json:
@@ -30,5 +34,5 @@ def main():
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

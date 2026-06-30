@@ -259,16 +259,13 @@ def _ai_index_payload() -> dict:
                 "versions": {
                     "0.9.0": {
                         "manifest_path": (
-                            "catalog/distributions/_legacy/"
-                            "external-only-skill/0.9.0/manifest.json"
+                            "catalog/distributions/_legacy/external-only-skill/0.9.0/manifest.json"
                         ),
                         "distribution_manifest_path": (
-                            "catalog/distributions/_legacy/"
-                            "external-only-skill/0.9.0/manifest.json"
+                            "catalog/distributions/_legacy/external-only-skill/0.9.0/manifest.json"
                         ),
                         "bundle_path": (
-                            "catalog/distributions/_legacy/"
-                            "external-only-skill/0.9.0/bundle.tar.gz"
+                            "catalog/distributions/_legacy/external-only-skill/0.9.0/bundle.tar.gz"
                         ),
                         "bundle_sha256": "deadbeef",
                         "attestation_path": "catalog/provenance/external-only-skill-0.9.0.json",
@@ -293,12 +290,7 @@ def _configure_external_registry(repo: Path, tmpdir: Path) -> None:
     external_repo = tmpdir / "external-demo"
     _write_json(external_repo / "catalog" / "ai-index.json", _ai_index_payload())
     external_distribution_dir = (
-        external_repo
-        / "catalog"
-        / "distributions"
-        / "_legacy"
-        / "external-only-skill"
-        / "0.9.0"
+        external_repo / "catalog" / "distributions" / "_legacy" / "external-only-skill" / "0.9.0"
     )
     external_distribution_dir.mkdir(parents=True, exist_ok=True)
     (external_repo / "catalog" / "provenance").mkdir(parents=True, exist_ok=True)

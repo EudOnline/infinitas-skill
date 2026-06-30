@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+from typing import Any
 
 from .schema_version import validate_schema_version
 
@@ -146,11 +147,13 @@ def validate_canonical_payload(payload: dict) -> list[str]:
     else:
         required_runtimes = verification.get("required_runtimes")
         required_platforms = verification.get("required_platforms")
+        required_runtime_values: list[Any]
+        required_runtime_field: str
         if isinstance(required_runtimes, list):
             required_runtime_values = required_runtimes
             required_runtime_field = "verification.required_runtimes"
         else:
-            required_runtime_values = required_platforms
+            required_runtime_values = required_platforms or []
             required_runtime_field = "verification.required_platforms"
         if not isinstance(required_runtime_values, list) or not all(
             isinstance(item, str) for item in required_runtime_values
@@ -175,7 +178,7 @@ def validate_canonical_payload(payload: dict) -> list[str]:
 
 
 def _load_platform_overrides(skill_dir: Path) -> dict:
-    overlays = {}
+    overlays: dict[str, Any] = {}
     platforms_dir = skill_dir / "platforms"
     if not platforms_dir.is_dir():
         return overlays

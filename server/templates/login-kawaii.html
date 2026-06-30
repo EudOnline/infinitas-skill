@@ -6,7 +6,7 @@
   <p class="mt-2 text-kawaii-ink-soft">{{ ui['login_desc'] }}</p>
 
   <div class="login-panel" id="login-panel">
-    <form id="login-auth-form" action="/api/auth/login" method="POST">
+    <form id="login-auth-form" action="/api/v1/auth/login" method="POST">
       <div class="flex flex-col gap-3 mt-4">
         <div>
           <label for="login-username-input" class="block text-sm font-medium text-kawaii-ink-soft mb-1">{{ ui['login_input_label'] }}</label>
@@ -21,7 +21,7 @@
           <div class="token-input-wrapper login-token-wrapper">
             <input type="password" id="login-password-input" class="token-input login-token-input"
                    placeholder="{{ ui['login_password_placeholder'] }}"
-                   autocomplete="current-password" minlength="1" maxlength="128"
+                   autocomplete="current-password" minlength="8" maxlength="128"
                    required
               />
             <button type="button" class="token-toggle login-token-toggle" id="login-password-toggle" title="{{ ui['toggle_password_title'] }}" aria-label="{{ ui['toggle_password_visibility'] }}">

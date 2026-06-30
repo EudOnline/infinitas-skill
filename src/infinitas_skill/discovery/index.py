@@ -88,20 +88,16 @@ def normalize_discovery_skill(
     if runtime.get("platform") == "openclaw" and readiness.get("ready") is True:
         if "openclaw" not in legacy_agent_compatible:
             legacy_agent_compatible.append("openclaw")
-    qualified_name = skill.get("qualified_name") or skill.get("name")
+    name = skill.get("name")
+    qualified_name = skill.get("qualified_name") or name
     latest_version = skill.get("latest_version") or skill.get("default_install_version") or ""
     match_names = []
-    for candidate in [skill.get("name"), qualified_name]:
+    for candidate in [name, qualified_name]:
         if isinstance(candidate, str) and candidate.strip() and candidate not in match_names:
             match_names.append(candidate)
     publisher = skill.get("publisher")
-    if (
-        isinstance(publisher, str)
-        and publisher.strip()
-        and isinstance(skill.get("name"), str)
-        and skill.get("name").strip()
-    ):
-        qualified = f"{publisher.strip()}/{skill.get('name').strip()}"
+    if isinstance(publisher, str) and publisher.strip() and isinstance(name, str) and name.strip():
+        qualified = f"{publisher.strip()}/{name.strip()}"
         if qualified not in match_names:
             match_names.append(qualified)
     return {
@@ -126,9 +122,12 @@ def normalize_discovery_skill(
         "tags": list(skill.get("tags") or []),
         "maturity": decision_metadata["maturity"],
         "quality_score": decision_metadata["quality_score"],
-        "last_verified_at": skill.get("last_verified_at")
-        if isinstance(skill.get("last_verified_at"), str) and skill.get("last_verified_at").strip()
-        else None,
+        "last_verified_at": (
+            last_verified_at
+            if isinstance(last_verified_at := skill.get("last_verified_at"), str)
+            and last_verified_at.strip()
+            else None
+        ),
         "capabilities": decision_metadata["capabilities"],
         "verified_support": dict(skill.get("verified_support") or {}),
         "attestation_formats": list(
@@ -138,8 +137,6 @@ def normalize_discovery_skill(
         "use_when": decision_metadata["use_when"],
         "avoid_when": decision_metadata["avoid_when"],
         "runtime_assumptions": decision_metadata["runtime_assumptions"],
-        "supported_memory_modes": list(skill.get("supported_memory_modes") or []),
-        "default_memory_mode": skill.get("default_memory_mode"),
     }
 
 
@@ -158,7 +155,7 @@ def _sort_skills(skills):
 def build_discovery_index(*, root: Path, local_ai_index: dict, registry_config: dict) -> dict:
     root = Path(root).resolve()
     registries = registry_config.get("registries") or []
-    default_registry = registry_config.get("default_registry")
+    default_registry = str(registry_config.get("default_registry") or "self")
     skills = []
     sources = []
 

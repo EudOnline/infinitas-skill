@@ -43,7 +43,7 @@ def _build_runtime_fixture_index(root: Path) -> dict:
                     "requires": {
                         "bins": ["git"],
                         "env": ["OPENAI_API_KEY"],
-                        "config": ["memory.store.enabled"],
+                        "config": ["skill.registry.enabled"],
                     }
                 }
             },
@@ -113,7 +113,7 @@ def test_ai_index_and_discovery_emit_openclaw_runtime_contract(tmp_path: Path) -
     ]
     assert runtime.get("install_targets", {}).get("workspace") == ["skills", ".agents/skills"]
     assert runtime.get("requires_detail", {}).get("bins") == ["git"]
-    assert runtime.get("requires_detail", {}).get("config") == ["memory.store.enabled"]
+    assert runtime.get("requires_detail", {}).get("config") == ["skill.registry.enabled"]
     assert runtime.get("background_tasks", {}).get("required") is True
     assert runtime.get("subagents", {}).get("required") is True
     assert isinstance(runtime.get("readiness", {}).get("status"), str)

@@ -10,6 +10,7 @@ The implementation is split across focused sub-modules:
 - :mod:`provenance` — provenance JSON document building
 - :mod:`signing` — SSH signing and identity resolution
 """
+
 from __future__ import annotations
 
 import logging
@@ -179,8 +180,7 @@ def materialize_release(
 
     # Build and sign provenance
     signature_filename = (
-        f"{publisher}--{skill_slug}-{version}.json"
-        + attestation_cfg["signature_ext"]
+        f"{publisher}--{skill_slug}-{version}.json" + attestation_cfg["signature_ext"]
     )
     provenance = build_provenance_payload(
         snapshot=snapshot,
@@ -198,6 +198,7 @@ def materialize_release(
     )
 
     from server.modules.release.bundle import canonical_json_bytes as _canonical_json
+
     provenance_bytes = _canonical_json(provenance)
 
     signature_bytes = sign_provenance(
@@ -214,12 +215,9 @@ def materialize_release(
     )
 
     # Store provenance and signature
-    provenance_public_path = (
-        Path("provenance") / f"{publisher}--{skill_slug}-{version}.json"
-    )
+    provenance_public_path = Path("provenance") / f"{publisher}--{skill_slug}-{version}.json"
     signature_public_path = Path(
-        f"provenance/{publisher}--{skill_slug}-{version}.json"
-        + attestation_cfg["signature_ext"]
+        f"provenance/{publisher}--{skill_slug}-{version}.json" + attestation_cfg["signature_ext"]
     )
     storage.put_bytes(provenance_bytes, public_path=str(provenance_public_path))
     storage.put_bytes(signature_bytes, public_path=str(signature_public_path))
@@ -274,11 +272,10 @@ def materialize_release(
     from infinitas_skill.release.release_resolution import resolve_skill
     from infinitas_skill.release.service import collect_release_state
 
-    platform_compat = None
     try:
         resolved_skill = resolve_skill(repo_root, skill_slug)
         release_state = collect_release_state(resolved_skill, root=repo_root)
-        platform_compat = release_state.get("platform_compatibility")
+        release_state.get("platform_compatibility")
     except Exception:
         logger.warning(
             "Platform compatibility collection failed for %s/%s v%s "
@@ -393,25 +390,13 @@ def _artifact_rows_match_materialized_files(
 ) -> bool:
     paths_by_kind = {
         "bundle": (
-            Path(artifact_root)
-            / "skills"
-            / publisher
-            / skill_slug
-            / version
-            / "skill.tar.gz"
+            Path(artifact_root) / "skills" / publisher / skill_slug / version / "skill.tar.gz"
         ),
         "manifest": (
-            Path(artifact_root)
-            / "skills"
-            / publisher
-            / skill_slug
-            / version
-            / "manifest.json"
+            Path(artifact_root) / "skills" / publisher / skill_slug / version / "manifest.json"
         ),
         "provenance": (
-            Path(artifact_root)
-            / "provenance"
-            / f"{publisher}--{skill_slug}-{version}.json"
+            Path(artifact_root) / "provenance" / f"{publisher}--{skill_slug}-{version}.json"
         ),
         "signature": Path(artifact_root)
         / "provenance"

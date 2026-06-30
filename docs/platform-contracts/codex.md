@@ -2,7 +2,7 @@
 audience: contributors, reviewers, compatibility maintainers
 owner: repository maintainers
 source_of_truth: legacy platform contract annex
-last_reviewed: 2026-04-21
+last_reviewed: 2026-06-15
 status: legacy
 ---
 
@@ -25,7 +25,7 @@ status: legacy
 - https://developers.openai.com/codex/cloud
 
 ## Last verified
-2026-04-13
+2026-06-15
 
 ## Verification steps
 - Confirm the Agent Skills page still requires `SKILL.md` with `name` and `description`, and still documents optional support directories.

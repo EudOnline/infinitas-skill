@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 import json
+from typing import Any, cast
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from server.exceptions_base import (
     ConflictError as BaseConflictError,
+)
+from server.exceptions_base import (
     NotFoundError as BaseNotFoundError,
 )
 from server.models import Exposure, ReviewCase, ReviewDecision, ReviewPolicy, User, utcnow
-from server.modules.memory.service import record_lifecycle_memory_event_best_effort
 from server.modules.review import default_policy
 
 
@@ -59,11 +61,13 @@ def get_review_case_or_404(db: Session, review_case_id: int) -> ReviewCase:
 
 
 def get_review_decisions(db: Session, review_case_id: int) -> list[ReviewDecision]:
-    return db.scalars(
-        select(ReviewDecision)
-        .where(ReviewDecision.review_case_id == review_case_id)
-        .order_by(ReviewDecision.id.asc())
-    ).all()
+    return list(
+        db.scalars(
+            select(ReviewDecision)
+            .where(ReviewDecision.review_case_id == review_case_id)
+            .order_by(ReviewDecision.id.asc())
+        ).all()
+    )
 
 
 def get_open_review_case_for_exposure(db: Session, exposure_id: int) -> ReviewCase | None:
@@ -87,16 +91,8 @@ def close_review_case(db: Session, review_case: ReviewCase, *, reason: str) -> N
     if review_case.state != "open":
         return
     review_case.state = "closed"
-    review_case.closed_at = utcnow()
+    cast(Any, review_case).closed_at = utcnow()
     db.add(review_case)
-    record_lifecycle_memory_event_best_effort(
-        db,
-        lifecycle_event="task.review.close",
-        aggregate_type="review_case",
-        aggregate_id=str(review_case.id),
-        actor_ref="system",
-        payload={"reason": reason},
-    )
 
 
 def open_review_case(
@@ -160,56 +156,21 @@ def record_decision(
 
     if normalized_decision == "approve":
         review_case.state = "approved"
-        review_case.closed_at = utcnow()
+        cast(Any, review_case).closed_at = utcnow()
         if review_case.mode == "blocking":
             exposure.state = "active"
             if exposure.activated_at is None:
-                exposure.activated_at = utcnow()
+                cast(Any, exposure).activated_at = utcnow()
     elif normalized_decision == "reject":
         review_case.state = "rejected"
-        review_case.closed_at = utcnow()
+        cast(Any, review_case).closed_at = utcnow()
         if review_case.mode == "blocking":
             exposure.state = "rejected"
-            exposure.ended_at = utcnow()
+            cast(Any, exposure).ended_at = utcnow()
 
     db.add(review_case)
     db.add(exposure)
     db.commit()
     db.refresh(review_case)
     db.refresh(exposure)
-    if normalized_decision in {"approve", "reject"}:
-        record_lifecycle_memory_event_best_effort(
-            db,
-            lifecycle_event=(
-                "task.review.approve"
-                if normalized_decision == "approve"
-                else "task.review.reject"
-            ),
-            aggregate_type="review_case",
-            aggregate_id=str(review_case.id),
-            actor_ref=f"principal:{reviewer_principal_id}",
-            payload={
-                "exposure_id": str(exposure.id),
-                "decision": normalized_decision,
-                "mode": review_case.mode,
-                "state": review_case.state,
-            },
-        )
-    if (
-        normalized_decision == "approve"
-        and review_case.mode == "blocking"
-        and exposure.state == "active"
-    ):
-        record_lifecycle_memory_event_best_effort(
-            db,
-            lifecycle_event="task.exposure.activate",
-            aggregate_type="exposure",
-            aggregate_id=str(exposure.id),
-            actor_ref=f"principal:{reviewer_principal_id}",
-            payload={
-                "release_id": str(exposure.release_id),
-                "audience_type": exposure.audience_type,
-                "activation_source": "review_approve",
-            },
-        )
     return review_case, exposure

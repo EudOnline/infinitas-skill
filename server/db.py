@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
 
@@ -97,7 +96,6 @@ def seed_bootstrap_users():
                     username=item["username"],
                     display_name=item["display_name"],
                     role=item["role"],
-                    token=None,
                 )
                 session.add(user)
                 existing[user.username] = user
@@ -109,9 +107,7 @@ def seed_bootstrap_users():
                 try:
                     user.password_hash = hash_password(password)
                 except ValueError as exc:
-                    log.warning(
-                        "bootstrap user %s password skipped: %s", item["username"], exc
-                    )
+                    log.warning("bootstrap user %s password skipped: %s", item["username"], exc)
             principal = ensure_user_principal(session, user)
             token = item.get("token")
             if not token and settings.environment in {"development", "test"}:
@@ -144,20 +140,6 @@ def get_db():
     session = factory()
     try:
         yield session
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
-
-
-@contextmanager
-def session_scope():
-    factory = get_session_factory()
-    session = factory()
-    try:
-        yield session
-        session.commit()
     except Exception:
         session.rollback()
         raise

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
@@ -25,9 +26,10 @@ def _file_response(artifact_root: Path, relative_path: str) -> FileResponse:
     return FileResponse(candidate)
 
 
-def _payload(builder, request: Request, db: Session) -> dict:
+def _payload(builder, request: Request, db: Session) -> dict[str, Any]:
     try:
-        return builder(get_settings(), db, request)
+        result: dict[str, Any] = builder(get_settings(), db, request)
+        return result
     except service.UnauthorizedError as exc:
         raise HTTPException(status_code=401, detail=str(exc)) from exc
 

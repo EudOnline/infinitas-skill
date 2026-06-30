@@ -105,11 +105,15 @@ def create_ready_release(client, headers: dict[str, str], *, slug: str, display_
     return release_id
 
 
-def approve_exposure_review(client, session_factory, headers: dict[str, str], exposure_id: int) -> None:
+def approve_exposure_review(
+    client, session_factory, headers: dict[str, str], exposure_id: int
+) -> None:
     from server.models import ReviewCase
 
     with session_factory() as session:
-        review_case = session.scalar(select(ReviewCase).where(ReviewCase.exposure_id == exposure_id))
+        review_case = session.scalar(
+            select(ReviewCase).where(ReviewCase.exposure_id == exposure_id)
+        )
         if review_case is None:
             fail(f"expected review case for exposure {exposure_id}")
         review_case_id = review_case.id
@@ -147,8 +151,7 @@ def create_exposure(
     )
     if response.status_code != 201:
         fail(
-            "expected exposure creation to return 201, "
-            f"got {response.status_code}: {response.text}"
+            f"expected exposure creation to return 201, got {response.status_code}: {response.text}"
         )
     return response.json()
 
@@ -180,7 +183,9 @@ def create_grant_token(session_factory, *, exposure_id: int, owner_slug: str) ->
 
 
 def list_names(payload: dict) -> list[str]:
-    return sorted(item.get("name") for item in (payload.get("items") or []) if isinstance(item, dict))
+    return sorted(
+        item.get("name") for item in (payload.get("items") or []) if isinstance(item, dict)
+    )
 
 
 def scenario_discovery_views_are_audience_aware() -> None:
@@ -272,7 +277,9 @@ def scenario_discovery_views_are_audience_aware() -> None:
             )
         public_only_names = list_names(public_response.json())
         if public_only_names != ["reviewed-public-skill"]:
-            fail(f"expected only reviewed public skill in anonymous search, got {public_only_names!r}")
+            fail(
+                f"expected only reviewed public skill in anonymous search, got {public_only_names!r}"
+            )
 
         me_response = client.get(
             "/api/v1/search/me",
@@ -280,7 +287,9 @@ def scenario_discovery_views_are_audience_aware() -> None:
             headers=owner_headers,
         )
         if me_response.status_code != 200:
-            fail(f"expected me search to return 200, got {me_response.status_code}: {me_response.text}")
+            fail(
+                f"expected me search to return 200, got {me_response.status_code}: {me_response.text}"
+            )
         me_names = list_names(me_response.json())
         for required_name in ["grant-shared-skill", "private-owner-skill", "reviewed-public-skill"]:
             if required_name not in me_names:

@@ -1,8 +1,10 @@
 """Auth API for username/password authentication."""
+
 from __future__ import annotations
 
 import os
 import secrets
+from typing import Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
@@ -110,9 +112,7 @@ def login(
     lang = resolve_language(request)
     client_ip = request.client.host if request.client else "unknown"
 
-    result = access_service.resolve_user_by_password(
-        db, payload.username, payload.password
-    )
+    result = access_service.resolve_user_by_password(db, payload.username, payload.password)
     if result is None:
         log.warning("login failed for username=%s ip=%s", payload.username, client_ip)
         response.status_code = 401
@@ -136,7 +136,7 @@ def login(
         .order_by(Credential.id.desc())
     )
     if existing is not None:
-        existing.revoked_at = utcnow()
+        cast(Any, existing).revoked_at = utcnow()
         db.add(existing)
         db.flush()
 
@@ -180,7 +180,7 @@ def logout(response: Response, request: Request, db: Session = Depends(get_db)):
     if isinstance(decoded, dict) and isinstance(decoded.get("credential_id"), int):
         credential = db.get(Credential, decoded["credential_id"])
         if credential is not None and credential.revoked_at is None:
-            credential.revoked_at = utcnow()
+            cast(Any, credential).revoked_at = utcnow()
             db.add(credential)
             db.commit()
             log.info("session credential revoked on logout credential_id=%s", credential.id)

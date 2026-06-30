@@ -4,6 +4,7 @@ Consolidates the duplicated ``server_engine_kwargs`` function and the
 repeated open-build-dispose session pattern that previously appeared
 in 6 separate files.
 """
+
 from __future__ import annotations
 
 from contextlib import contextmanager

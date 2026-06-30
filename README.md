@@ -58,15 +58,15 @@ Agents and automation use Bearer tokens via the API.
 
 Agent and automation workflows use these product APIs:
 
-- `GET /api/library`, `GET /api/library/{object_id}`, `GET /api/library/{object_id}/releases`
-- `PUT /api/publish/objects/{slug}`
-- `POST /api/publish/objects/{object_id}/releases`
-- `GET /api/publish/releases/{release_id}/status`
-- `POST /api/objects/{object_id}/tokens`, `GET /api/objects/{object_id}/tokens`
-- `POST /api/tokens/{token_id}/revoke`
-- `POST /api/releases/{release_id}/share-links`, `GET /api/releases/{release_id}/share-links`
-- `POST /api/share-links/{share_id}/resolve`, `POST /api/share-links/{share_id}/revoke`
-- `GET /api/activity`, `GET /api/tokens/{token_id}/activity`, `GET /api/share-links/{share_id}/activity`
+- `GET /api/v1/library`, `GET /api/v1/library/{object_id}`, `GET /api/v1/library/{object_id}/releases`
+- `POST /api/v1/skills`
+- `POST /api/v1/versions/{version_id}/releases`
+- `GET /api/v1/releases/{release_id}`
+- `POST /api/v1/object-tokens/objects/{object_id}/tokens`, `GET /api/v1/object-tokens/objects/{object_id}/tokens`
+- `POST /api/v1/object-tokens/tokens/{token_id}/revoke`
+- `POST /api/v1/share-links/releases/{release_id}/share-links`, `GET /api/v1/share-links/releases/{release_id}/share-links`
+- `POST /api/v1/share-links/{share_id}/resolve`, `POST /api/v1/share-links/{share_id}/revoke`
+- `GET /api/v1/activity`, `GET /api/v1/activity/tokens/{token_id}/activity`, `GET /api/v1/activity/share-links/{share_id}/activity`
 
 Net-new web admin templates are generated or iterated from the Kimi CLI spec in
 [docs/specs/kimi-library-ui-spec.md](docs/specs/kimi-library-ui-spec.md); hand edits should stay
@@ -88,14 +88,6 @@ uv run infinitas release signing-readiness --skill <skill> --json
 uv run infinitas release doctor-signing <skill> --json
 uv run infinitas release bootstrap-signing --help
 uv run infinitas server healthcheck --api-url http://127.0.0.1:8000 --repo-path /srv/infinitas/repo --artifact-path /srv/infinitas/artifacts --database-url sqlite:////srv/infinitas/data/server.db --json
-uv run infinitas server memory-curation --database-url sqlite:////srv/infinitas/data/server.db --action plan --limit 50 --json
-uv run infinitas server memory-curation --database-url sqlite:////srv/infinitas/data/server.db --action archive --apply --max-actions 10 --json
-uv run infinitas server memory-curation --database-url sqlite:////srv/infinitas/data/server.db --action prune --apply --max-actions 5 --json
-uv run infinitas server memory-curation --database-url sqlite:////srv/infinitas/data/server.db --action archive --apply --max-actions 10 --enqueue --json
-uv run infinitas server memory-curation --database-url sqlite:////srv/infinitas/data/server.db --use-server-policy --enqueue --json
-uv run infinitas server memory-health --database-url sqlite:////srv/infinitas/data/server.db --limit 20 --json
-uv run infinitas server memory-observability --database-url sqlite:////srv/infinitas/data/server.db --limit 20 --job-limit 10 --window-hours 24 --json
-uv run infinitas server memory-baselines --database-url sqlite:////srv/infinitas/data/server.db --window-hours 24 --json
 uv run infinitas server prune-backups --backup-root /srv/infinitas/backups --keep-last 7 --json
 ```
 
@@ -112,13 +104,12 @@ make ci-fast
 make test-fast
 make test-full
 make lint-maintained
-uv run pytest tests/integration/test_memory_evaluation_matrix.py -q
 ```
 
 Treat verification as three layers:
 
 - maintained runtime and backend truth: `make lint-maintained`, `make test-fast`
-- migration-focused OpenClaw runtime matrix: `uv run pytest tests/unit/openclaw tests/integration/test_openclaw_runtime_index.py tests/integration/test_openclaw_install_planning.py tests/integration/test_cli_openclaw_runtime.py tests/integration/test_cli_release_state.py tests/integration/test_memory_evaluation_matrix.py -q`
+- migration-focused OpenClaw runtime matrix: `uv run pytest tests/unit/openclaw tests/integration/test_openclaw_runtime_index.py tests/integration/test_openclaw_install_planning.py tests/integration/test_cli_openclaw_runtime.py tests/integration/test_cli_release_state.py -q`
 - broader repository sweeps: `./scripts/check-all.sh focused-integration`, then opt into `release-long` when release packaging or attestation flows changed
 
 `make clean-local` is the supported local hygiene path for generated artifacts and local automation
@@ -168,7 +159,7 @@ Hard maintainability budgets now backstop the maintained reset:
 - `src/infinitas_skill/server/ops.py` must stay at or below 550 lines
 - `src/infinitas_skill/install/service.py` must stay at or below 650 lines
 - `src/infinitas_skill/release/service.py` must stay at or below 650 lines
-- top-level files under `scripts/` must stay at or below 231 until a deliberate cleanup changes the ceiling
+- top-level files under `scripts/` must stay at or below 221 until a deliberate cleanup changes the ceiling
 
 `tests/integration/test_maintainability_budgets.py` and `scripts/check-all.sh focused-integration` enforce these limits.
 
@@ -207,20 +198,6 @@ Use these canonical docs for the current model:
 - [Hosted registry server deployment](docs/ops/server-deployment.md)
 
 Compatibility reporting still distinguishes between legacy `declared support` metadata such as `_meta.json.agent_compatible` and historical `verified support` evidence. Those fields remain useful for migration and audit context, but they are no longer the maintained runtime source of truth.
-
-The optional memory layer is additive only:
-
-- recommendation and inspect may include advisory memory fields
-- recommendation and inspect can now emit local `memory_retrieval` audit events when `INFINITAS_DISCOVERY_AUDIT_DATABASE_URL` is configured
-- lifecycle events may emit best-effort memory writeback attempts plus traceable audit events
-- fixture-backed memory evaluation now lives in `tests/integration/test_memory_evaluation_matrix.py`
-- the evaluation matrix now checks duplicate suppression and noisy recall stability
-- the evaluation matrix now also publishes deterministic usefulness summary metrics for helpful use vs correct restraint
-- operator-facing curation planning, guarded archive/prune execution, queue-driven enqueue, and server-policy scheduled runs now live behind `uv run infinitas server memory-curation ...`
-- operator-facing writeback diagnostics now live behind `uv run infinitas server memory-health ...`
-- operator-facing memory operations summary plus rolling drift context now lives behind `uv run infinitas server memory-observability ...`, including retrieval-side `memory_retrieval` status and effect visibility
-- operator-facing rolling memory baselines now live behind `uv run infinitas server memory-baselines ...`, including retrieval-side drift
-- release, review, access, and install truth still comes from the local database, immutable artifacts, and current policy checks
 
 ## Policy trace and validation output
 

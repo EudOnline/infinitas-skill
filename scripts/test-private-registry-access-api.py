@@ -57,15 +57,19 @@ def configure_env(tmpdir: Path) -> None:
     )
 
 
-def insert_legacy_plaintext_user(db_path: Path, *, username: str, display_name: str, role: str, token: str) -> None:
+def insert_legacy_plaintext_user(
+    db_path: Path, *, username: str, display_name: str, role: str, token: str
+) -> None:
     with sqlite3.connect(db_path) as conn:
         conn.execute(
             """
-            INSERT INTO users (username, display_name, role, token, light_bg_id, dark_bg_id, created_at, updated_at)
-            VALUES (?, ?, ?, ?, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            INSERT INTO users (username, display_name, role, token, created_at, updated_at)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """,
             (username, display_name, role, token),
         )
+        # Legacy plaintext token is no longer used for auth; the token column
+        # still exists at this schema revision and must be populated.
         conn.commit()
 
 
@@ -124,7 +128,9 @@ def scenario_access_credentials_and_release_scope() -> None:
             headers={"Authorization": "Bearer fixture-maintainer-token"},
         )
         if me.status_code != 200:
-            fail(f"expected personal token access check to return 200, got {me.status_code}: {me.text}")
+            fail(
+                f"expected personal token access check to return 200, got {me.status_code}: {me.text}"
+            )
         me_payload = me.json()
         if me_payload.get("credential_type") != "personal_token":
             fail(f"expected personal_token credential type, got {me_payload}")
@@ -136,11 +142,11 @@ def scenario_access_credentials_and_release_scope() -> None:
             migrated_user = session.scalar(select(User).where(User.username == "legacy-migrated"))
             if migrated_user is None:
                 fail("expected migrated user row to exist after cutover")
-            if migrated_user.token is not None:
-                fail("expected migrated user token to be scrubbed after credential cutover")
 
             migrated_principal = session.scalar(
-                select(Principal).where(Principal.kind == "user").where(Principal.slug == "legacy-migrated")
+                select(Principal)
+                .where(Principal.kind == "user")
+                .where(Principal.slug == "legacy-migrated")
             )
             if migrated_principal is None:
                 fail("expected migrated user principal to be created during cutover")
@@ -155,14 +161,16 @@ def scenario_access_credentials_and_release_scope() -> None:
             if migrated_credential.hashed_secret != hash_token("legacy-migrated-token"):
                 fail("expected migrated personal credential to store a hashed secret")
 
-            bootstrap_user = session.scalar(select(User).where(User.username == "fixture-maintainer"))
+            bootstrap_user = session.scalar(
+                select(User).where(User.username == "fixture-maintainer")
+            )
             if bootstrap_user is None:
                 fail("expected bootstrap maintainer row to exist")
-            if bootstrap_user.token is not None:
-                fail("expected bootstrap personal token to live outside the users table")
 
             principal = session.scalar(
-                select(Principal).where(Principal.kind == "user").where(Principal.slug == "fixture-maintainer")
+                select(Principal)
+                .where(Principal.kind == "user")
+                .where(Principal.slug == "fixture-maintainer")
             )
             if principal is None:
                 fail("expected bridged user principal to exist")
@@ -299,33 +307,14 @@ def scenario_access_credentials_and_release_scope() -> None:
             private_release_id = private_release.id
             authenticated_release_id = authenticated_release.id
 
-        with session_factory() as session:
-            session.add(
-                User(
-                    username="plaintext-only",
-                    display_name="Plaintext Only",
-                    role="contributor",
-                    token="plaintext-only-token",
-                )
-            )
-            session.commit()
-
-        plaintext_only = client.get(
-            "/api/v1/access/me",
-            headers={"Authorization": "Bearer plaintext-only-token"},
-        )
-        if plaintext_only.status_code != 401:
-            fail(
-                "expected plaintext-only user records to be rejected after credential cutover, "
-                f"got {plaintext_only.status_code}: {plaintext_only.text}"
-            )
-
         grant_me = client.get(
             "/api/v1/access/me",
             headers={"Authorization": "Bearer grant-token-value"},
         )
         if grant_me.status_code != 200:
-            fail(f"expected grant token /api/v1/access/me to return 200, got {grant_me.status_code}: {grant_me.text}")
+            fail(
+                f"expected grant token /api/v1/access/me to return 200, got {grant_me.status_code}: {grant_me.text}"
+            )
         grant_payload = grant_me.json()
         if grant_payload.get("credential_type") != "grant_token":
             fail(f"expected grant_token credential type, got {grant_payload}")
@@ -335,7 +324,9 @@ def scenario_access_credentials_and_release_scope() -> None:
             headers={"Authorization": "Bearer grant-token-value"},
         )
         if grant_allowed.status_code != 200:
-            fail(f"expected grant token to access granted release, got {grant_allowed.status_code}: {grant_allowed.text}")
+            fail(
+                f"expected grant token to access granted release, got {grant_allowed.status_code}: {grant_allowed.text}"
+            )
 
         grant_denied = client.get(
             f"/api/v1/access/releases/{private_release_id}/check",

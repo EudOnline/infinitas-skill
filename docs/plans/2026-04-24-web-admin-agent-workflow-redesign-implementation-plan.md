@@ -34,8 +34,8 @@
   - `GET /api/library/{object_id}/releases`
   - `GET /api/releases/{release_id}`
   - `PATCH /api/releases/{release_id}/visibility`
-  - `POST /api/objects/{object_id}/tokens`
-  - `GET /api/objects/{object_id}/tokens`
+  - `POST /api/v1/object-tokens/objects/{object_id}/tokens`
+  - `GET /api/v1/object-tokens/objects/{object_id}/tokens`
   - `POST /api/releases/{release_id}/share-links`
   - `GET /api/releases/{release_id}/share-links`
   - `GET /api/activity`
@@ -333,9 +333,9 @@ Extend `Credential` or add a thin wrapper service so tokens carry:
 
 Add:
 
-- `POST /api/objects/{object_id}/tokens`
-- `GET /api/objects/{object_id}/tokens`
-- `POST /api/tokens/{token_id}/revoke`
+- `POST /api/v1/object-tokens/objects/{object_id}/tokens`
+- `GET /api/v1/object-tokens/objects/{object_id}/tokens`
+- `POST /api/v1/object-tokens/tokens/{token_id}/revoke`
 
 Do not expose `grant` or raw `credential` terminology in responses.
 

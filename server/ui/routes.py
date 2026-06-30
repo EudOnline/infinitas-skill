@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -10,12 +10,11 @@ from sqlalchemy.orm import Session
 from server import __version__ as server_version
 from server.auth import maybe_get_current_user
 from server.db import get_db
-from server.models import User
+from server.modules.access.authn import AccessContext
 from server.ui.activity import list_activity_rows
 from server.ui.auth_state import (
     require_lifecycle_actor,
 )
-from server.ui.console import build_console_forbidden_context
 from server.ui.formatting import build_kawaii_ui_context
 from server.ui.home import build_home_context
 from server.ui.i18n import build_registry_base_url, pick_lang, resolve_language, with_lang
@@ -40,19 +39,6 @@ def _blocked_actor_response(
     return None
 
 
-def _forbidden_owner_response(
-    templates: Jinja2Templates,
-    request: Request,
-    user: User,
-):
-    context = build_console_forbidden_context(
-        request=request,
-        user=user,
-        allowed_roles=("maintainer", "contributor"),
-    )
-    return templates.TemplateResponse(request, "console-forbidden.html", context, status_code=403)
-
-
 def _build_login_context(request: Request) -> dict[str, Any]:
     lang = resolve_language(request)
     registry_base_url = build_registry_base_url(request)
@@ -71,8 +57,9 @@ def _build_login_context(request: Request) -> dict[str, Any]:
         "page_kicker": page_kicker,
         "page_mode": "console",
         "show_console_session": False,
-        "nav_links": build_site_nav(home=False, lang=lang, variant="library"),
-        "cli_command": f'curl -H "Authorization: Bearer <token>" {registry_base_url}/api/v1/me',
+        "robots_noindex": True,
+        "nav_links": build_site_nav(home=False, lang=lang),
+        "cli_command": f'curl -H "Authorization: Bearer <token>" {registry_base_url}/api/v1/access/me',
         "page_stats": [
             {
                 "value": pick_lang(lang, "Bearer Token", "Bearer Token"),
@@ -80,7 +67,7 @@ def _build_login_context(request: Request) -> dict[str, Any]:
                 "detail": pick_lang(lang, "由控制台签发", "Issued by control plane"),
             },
             {
-                "value": "/api/v1/me",
+                "value": "/api/v1/access/me",
                 "label": pick_lang(lang, "首个检查点", "First probe"),
                 "detail": pick_lang(lang, "验证 token 是否生效", "Validate token works"),
             },
@@ -99,7 +86,7 @@ def _build_login_context(request: Request) -> dict[str, Any]:
 def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> None:
     def _build_admin_context(
         request: Request,
-        actor,
+        actor: AccessContext,
         *,
         title: str,
         content: str,
@@ -111,6 +98,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
             "request": request,
             "title": title,
             "content": content,
+            "robots_noindex": True,
             "page_kicker": page_kicker,
             "page_eyebrow": page_eyebrow,
             "page_mode": "console",
@@ -125,7 +113,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
     @app.get("/", response_class=HTMLResponse)
     def index(request: Request, db: Session = Depends(get_db)):
         session_user = maybe_get_current_user(request, db)
-        context = {
+        context: dict[str, Any] = {
             "request": request,
         }
         context.update(build_home_context(settings=settings, db=db, request=request))
@@ -143,12 +131,15 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         "/activity": "/manage#activity",
     }
     for _src, _dst in _SIMPLE_REDIRECTS.items():
+
         def _make_redirect(dst: str = _dst):
             def _redirect(request: Request):
                 return RedirectResponse(
                     url=with_lang(dst, resolve_language(request)), status_code=307
                 )
+
             return _redirect
+
         app.get(_src)(_make_redirect())
 
     @app.get("/library/{object_id}", response_class=HTMLResponse)
@@ -161,6 +152,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         blocked = _blocked_actor_response(templates, request, actor)
         if blocked is not None:
             return blocked
+        actor = cast(AccessContext, actor)
         lang = resolve_language(request)
         scope, _total = load_library_scope(db, actor=actor)
         detail = get_library_object_detail(db, actor=actor, object_id=object_id, scope=scope)
@@ -226,6 +218,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         blocked = _blocked_actor_response(templates, request, actor)
         if blocked is not None:
             return blocked
+        actor = cast(AccessContext, actor)
         lang = resolve_language(request)
         release_detail = get_library_release_detail(
             db,
@@ -271,6 +264,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         blocked = _blocked_actor_response(templates, request, actor)
         if blocked is not None:
             return blocked
+        actor = cast(AccessContext, actor)
         lang = resolve_language(request)
         context = _build_admin_context(
             request,
@@ -295,6 +289,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         blocked = _blocked_actor_response(templates, request, actor)
         if blocked is not None:
             return blocked
+        actor = cast(AccessContext, actor)
         lang = resolve_language(request)
         scope, _total = load_library_scope(db, actor=actor)
         context = _build_admin_context(
@@ -309,7 +304,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
             page_kicker=pick_lang(lang, "管理", "Management"),
             page_eyebrow=pick_lang(lang, "技能与访问管理", "Skill & Access Management"),
         )
-        context["object_items"], _total = list_library_objects(db, actor=actor)
+        context["object_items"], _total = list_library_objects(db, actor=actor, lang=lang)
         context["token_items"] = list_library_token_rows(db, actor=actor, lang=lang, scope=scope)
         context["share_items"] = list_library_share_rows(db, actor=actor, lang=lang, scope=scope)
         context["activity_items"] = list_activity_rows(db, limit=50)
@@ -328,6 +323,7 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         blocked = _blocked_actor_response(templates, request, actor)
         if blocked is not None:
             return blocked
+        actor = cast(AccessContext, actor)
         lang = resolve_language(request)
         context = _build_admin_context(
             request,
@@ -360,12 +356,15 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
         "/review-cases": "/manage#activity",
     }
     for _src, _dst in _LEGACY_REDIRECTS.items():
+
         def _make_redirect(dst: str = _dst):
             def _redirect(request: Request):
                 return RedirectResponse(
                     url=with_lang(dst, resolve_language(request)), status_code=307
                 )
+
             return _redirect
+
         app.get(_src)(_make_redirect())
 
     @app.get("/skills/{skill_id}", response_class=HTMLResponse)
@@ -394,7 +393,9 @@ def register_ui_routes(app: FastAPI, templates: Jinja2Templates, settings) -> No
 
     @app.get("/login", response_class=HTMLResponse)
     def login(request: Request):
-        return templates.TemplateResponse(request, "login-kawaii.html", _build_login_context(request))
+        return templates.TemplateResponse(
+            request, "login-kawaii.html", _build_login_context(request)
+        )
 
 
 __all__ = ["register_ui_routes"]

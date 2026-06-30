@@ -115,7 +115,7 @@ export function initialSessionUser() {
 export async function requestSessionCleanup() {
   try {
     const csrfToken = getCsrfToken();
-    await fetch('/api/auth/logout', {
+    await fetch('/api/v1/auth/logout', {
       method: 'POST',
       credentials: 'same-origin',
       headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : {},
@@ -144,8 +144,8 @@ export function validateCredentials(username, password) {
   if (!password || !password.trim()) {
     return uiText('auth_enter_password', 'Please enter password');
   }
-  if (password.length < 1) {
-    return uiText('auth_password_min', 'Password must be at least 1 character');
+  if (password.length < 8) {
+    return uiText('auth_password_min', 'Password must be at least 8 characters');
   }
   if (password.length > 128) {
     return uiText('auth_password_max', 'Password must not exceed 128 characters');

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import select
@@ -154,32 +153,6 @@ def update_credential_policy(
     return {"status": "updated", "policy": updated_rs.get("_policy")}
 
 
-def record_writeback(
-    db: Session,
-    context: AccessContext,
-    note: str,
-    extra_context: dict[str, Any] | None,
-) -> dict[str, str]:
-    """Record a memory writeback audit event."""
-    credential = context.credential
-    actor_ref = context.principal.slug if context.principal else str(credential.id)
-
-    payload: dict[str, Any] = {"note": note, "context": extra_context}
-
-    event = AuditEvent(
-        aggregate_type="memory_writeback",
-        aggregate_id=str(credential.id),
-        event_type="memory.writeback",
-        actor_ref=actor_ref,
-        payload_json=json.dumps(payload, ensure_ascii=False),
-        occurred_at=datetime.now(timezone.utc),
-    )
-    db.add(event)
-    db.commit()
-
-    return {"status": "recorded"}
-
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 
@@ -189,16 +162,18 @@ def get_current_policy(db: Session, credential: Credential) -> dict[str, Any] | 
         grant = db.get(AccessGrant, credential.grant_id)
         if grant is not None and grant.constraints_json:
             try:
-                return json.loads(grant.constraints_json)
+                policy = json.loads(grant.constraints_json)
             except (json.JSONDecodeError, TypeError):
                 return None
+            return policy if isinstance(policy, dict) else None
     # Check resource_selector_json._policy
     if credential.resource_selector_json:
         try:
             rs = json.loads(credential.resource_selector_json)
-            return rs.get("_policy")
         except (json.JSONDecodeError, TypeError):
             return None
+        policy = rs.get("_policy") if isinstance(rs, dict) else None
+        return policy if isinstance(policy, dict) else None
     return None
 
 
@@ -237,12 +212,14 @@ def _resolve_accessible_skills(db: Session, credential: Credential) -> list[dict
         if skill is None:
             continue
         seen_skill_ids.add(skill.id)
-        skills.append({
-            "id": skill.id,
-            "slug": skill.slug,
-            "display_name": skill.display_name,
-            "kind": "skill",
-        })
+        skills.append(
+            {
+                "id": skill.id,
+                "slug": skill.slug,
+                "display_name": skill.display_name,
+                "kind": "skill",
+            }
+        )
 
     return skills
 
@@ -265,15 +242,17 @@ def _resolve_operation_history(db: Session, credential: Credential) -> list[dict
                 payload = json.loads(row.payload_json)
             except (json.JSONDecodeError, TypeError):
                 payload = {}
-        result.append({
-            "id": row.id,
-            "aggregate_type": row.aggregate_type,
-            "aggregate_id": row.aggregate_id,
-            "event_type": row.event_type,
-            "actor_ref": row.actor_ref,
-            "payload": payload,
-            "occurred_at": iso_format(row.occurred_at),
-        })
+        result.append(
+            {
+                "id": row.id,
+                "aggregate_type": row.aggregate_type,
+                "aggregate_id": row.aggregate_id,
+                "event_type": row.event_type,
+                "actor_ref": row.actor_ref,
+                "payload": payload,
+                "occurred_at": iso_format(row.occurred_at),
+            }
+        )
 
     return result
 
@@ -284,7 +263,8 @@ def _resolve_policy(db: Session, credential: Credential) -> dict[str, Any] | Non
         grant = db.get(AccessGrant, credential.grant_id)
         if grant is not None and grant.constraints_json:
             try:
-                return json.loads(grant.constraints_json)
+                policy = json.loads(grant.constraints_json)
             except (json.JSONDecodeError, TypeError):
                 return None
+            return policy if isinstance(policy, dict) else None
     return None

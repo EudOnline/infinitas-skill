@@ -46,8 +46,7 @@ def build_signing_doctor_parser(*, prog: str | None = None) -> argparse.Argument
     parser = argparse.ArgumentParser(
         prog=prog,
         description=(
-            "Diagnose SSH signing bootstrap, release-tag readiness, "
-            "and attestation prerequisites"
+            "Diagnose SSH signing bootstrap, release-tag readiness, and attestation prerequisites"
         ),
     )
     return configure_signing_doctor_parser(parser)
@@ -163,9 +162,7 @@ def _check_signing_config(root: Path) -> tuple[dict | None, list[dict]]:
         ]
 
 
-def _check_allowed_signers(
-    signing: dict, identity: str | None
-) -> tuple[list[dict], list[dict]]:
+def _check_allowed_signers(signing: dict, identity: str | None) -> tuple[list[dict], list[dict]]:
     """Parse and validate allowed signers. Returns (allowed_entries, checks)."""
     try:
         allowed_entries = parse_allowed_signers(signing["allowed_signers_path"])
@@ -214,8 +211,7 @@ def _check_allowed_signers(
                 + ("y" if len(allowed_entries) == 1 else "ies")
             ),
             detail=(
-                "Committed signer identities are available for tag and "
-                "attestation verification."
+                "Committed signer identities are available for tag and attestation verification."
             ),
             data={"identities": [entry["identity"] for entry in allowed_entries]},
         )
@@ -292,8 +288,7 @@ def _check_signing_key(
                 "fail",
                 "Configured SSH signing key is not trusted by the repository",
                 detail=(
-                    f"The key at `{key_path}` is not present in "
-                    f"`{signing['allowed_signers_rel']}`."
+                    f"The key at `{key_path}` is not present in `{signing['allowed_signers_rel']}`."
                 ),
                 fixes=[
                     "Run "
@@ -391,8 +386,7 @@ def _check_release_preflight(
             "release-preflight",
             "warn" if dirty_only else "fail",
             (
-                f"Release preflight for {skill_name} is dirty after "
-                "writing release artifacts"
+                f"Release preflight for {skill_name} is dirty after writing release artifacts"
                 if dirty_only
                 else f"Release preflight is blocked for {skill_name}"
             ),
@@ -428,17 +422,14 @@ def _check_namespace_signer_policy(
         return []
 
     unauthorized = [
-        actor
-        for actor in inferred_identities
-        if actor not in release.get("authorized_signers", [])
+        actor for actor in inferred_identities if actor not in release.get("authorized_signers", [])
     ]
     if unauthorized:
         return [
             make_check(
                 "namespace-signer-policy",
                 "warn",
-                "Configured signer identities are not authorized for "
-                f"publisher {publisher}",
+                f"Configured signer identities are not authorized for publisher {publisher}",
                 detail="Current matches: " + ", ".join(unauthorized),
                 fixes=[
                     "Authorize them with "
@@ -496,8 +487,7 @@ def _check_namespace_releaser_policy(
         make_check(
             "namespace-releaser-policy",
             "ok",
-            f"Releaser identity {releaser_identity!r} is authorized for "
-            f"publisher {publisher}",
+            f"Releaser identity {releaser_identity!r} is authorized for publisher {publisher}",
         )
     ]
 
@@ -537,9 +527,7 @@ def _check_release_tag(skill_state: dict, skill_name: str) -> list[dict]:
                 "release-tag",
                 "info",
                 f"Release tag {expected_tag} is signed locally but not pushed yet",
-                fixes=[
-                    f"Push it with `scripts/release-skill.sh {skill_name} --push-tag`"
-                ],
+                fixes=[f"Push it with `scripts/release-skill.sh {skill_name} --push-tag`"],
             )
         ]
 
@@ -601,12 +589,9 @@ def _check_attestation(
                 "fail",
                 f"Provenance file does not exist: {provenance_path}",
                 detail=(
-                    "Doctor cannot verify an attestation bundle until the JSON "
-                    "payload exists."
+                    "Doctor cannot verify an attestation bundle until the JSON payload exists."
                 ),
-                fixes=[
-                    "Create it with `scripts/release-skill.sh <skill> --write-provenance`"
-                ],
+                fixes=["Create it with `scripts/release-skill.sh <skill> --write-provenance`"],
             )
         ]
 
@@ -655,6 +640,7 @@ def build_signing_doctor_report(
             "inferred_signer_identities": [],
             "checks": config_checks,
         }
+    signing = signing or {}
 
     # 2. Check allowed signers
     allowed_entries, signers_checks = _check_allowed_signers(signing, identity)

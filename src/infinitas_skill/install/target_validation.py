@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import cmp_to_key
 from pathlib import Path
+from typing import Any
 
 from infinitas_skill.install.install_manifest import InstallManifestError, load_install_manifest
 from infinitas_skill.install.source_resolution import (
@@ -91,7 +92,7 @@ def load_installed_state(target_dir):
             normalized = normalize_meta_dependencies(meta)
             identity = normalize_skill_identity(meta)
             identity_key = identity_key_for(identity) or meta.get("name") or child.name
-            entry = {}
+            entry: dict[str, Any] = {}
             for key in unique([identity_key, meta.get("name"), child.name]):
                 if key and key in manifest_skills:
                     entry = manifest_skills.get(key) or {}

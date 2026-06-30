@@ -172,7 +172,7 @@ export class SearchManager {
 
     try {
       const response = await fetch(
-        `/api/search?q=${encodeURIComponent(query)}&lang=${encodeURIComponent(currentPageLanguage())}&scope=${encodeURIComponent(currentSearchScope())}`,
+        `/api/v1/search?q=${encodeURIComponent(query)}&lang=${encodeURIComponent(currentPageLanguage())}&scope=${encodeURIComponent(currentSearchScope())}`,
         { credentials: 'same-origin', signal: this.abortController.signal }
       );
 

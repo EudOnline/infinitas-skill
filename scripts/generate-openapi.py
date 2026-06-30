@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Generate a static openapi.json from the FastAPI application."""
+
 from __future__ import annotations
 
 import json
@@ -22,6 +23,7 @@ def main() -> int:
 
     # Suppress alembic migration logs
     import logging
+
     logging.getLogger("alembic.runtime.migration").setLevel(logging.WARNING)
 
     from server.app import app

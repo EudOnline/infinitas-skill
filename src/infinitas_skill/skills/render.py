@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import shutil
 from pathlib import Path
+from typing import Any, cast
 
 from .canonical import load_skill_source
 
@@ -53,7 +54,7 @@ def load_platform_profile(root: Path, platform: str) -> dict:
         raise RenderSkillError(
             f"platform profile {profile_path} has mismatched platform {payload.get('platform')!r}"
         )
-    return payload
+    return cast(dict[Any, Any], payload)
 
 
 def apply_tool_intent_mapping(source: dict, platform: str, profile: dict) -> dict:
@@ -84,12 +85,10 @@ def render_skill_markdown(source: dict, platform: str, profile: dict) -> str:
     )
     if platform == "openclaw":
         # OpenClaw rendering here is migration/export support, not runtime truth.
-        runtime = (
-            source.get("openclaw_runtime")
-            if isinstance(source.get("openclaw_runtime"), dict)
-            else {}
-        )
-        requires = runtime.get("requires") if isinstance(runtime.get("requires"), list) else []
+        runtime_raw = source.get("openclaw_runtime")
+        runtime = runtime_raw if isinstance(runtime_raw, dict) else {}
+        requires_raw = runtime.get("requires")
+        requires = requires_raw if isinstance(requires_raw, list) else []
         if not requires:
             requires = platform_overrides.get("requires") or []
         if not requires:
@@ -141,7 +140,7 @@ def _copy_support_dir(source_dir: Path, target_dir: Path, name: str):
 
 
 def _copy_legacy_entries(source_dir: Path, target_dir: Path):
-    files = []
+    files: list[str] = []
     for entry in sorted(source_dir.iterdir()):
         if entry.name == "SKILL.md":
             continue

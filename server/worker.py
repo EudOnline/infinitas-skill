@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import time
 
-from infinitas_skill.memory import build_memory_provider
-from infinitas_skill.server.memory_curation import execute_memory_curation
 from server.db import get_session_factory
 from server.jobs import (
     MAX_RETRY_ATTEMPTS,
@@ -17,9 +15,7 @@ from server.jobs import (
 from server.logging import get_logger
 from server.models import Job
 from server.modules.discovery.projections import refresh_projection_snapshot
-from server.modules.memory.service import record_lifecycle_memory_event_best_effort
 from server.modules.release.materializer import materialize_release
-from server.modules.release.service import get_release_snapshot
 from server.repo_ops import RepoOpError
 from server.settings import get_settings
 
@@ -52,43 +48,6 @@ def _process_materialize_release_job(session, job: Job, settings):
     return release
 
 
-def _process_memory_curation_job(session, job: Job):
-    payload = load_job_payload(job)
-    action = str(payload.get("action") or "plan").strip().lower() or "plan"
-    apply = bool(payload.get("apply"))
-    try:
-        limit = int(payload.get("limit") or 50)
-    except (TypeError, ValueError):
-        limit = 50
-    try:
-        max_actions = int(payload.get("max_actions") or 20)
-    except (TypeError, ValueError):
-        max_actions = 20
-    actor_ref = str(payload.get("actor_ref") or "system:memory-curation").strip()
-    provider = build_memory_provider() if action == "prune" and apply else None
-    summary = execute_memory_curation(
-        session,
-        action=action,
-        apply=apply,
-        provider=provider,
-        limit=limit,
-        max_actions=max_actions,
-        actor_ref=actor_ref or "system:memory-curation",
-    )
-    execution = summary.get("execution") if isinstance(summary.get("execution"), dict) else {}
-    append_job_log(
-        job,
-        "memory curation "
-        f"action={summary.get('action')} apply={summary.get('apply')} "
-        f"selected={execution.get('selected_candidates', 0)} "
-        f"archived={execution.get('archived', 0)} "
-        f"pruned={execution.get('pruned', 0)} "
-        f"skipped={execution.get('skipped', 0)} "
-        f"failed={execution.get('failed', 0)}",
-    )
-    return summary
-
-
 def _is_retryable_error(exc: Exception) -> bool:
     """Determine if a job failure is transient and worth retrying."""
     message = str(exc).lower()
@@ -117,9 +76,7 @@ def process_job(job_id: int):
         try:
             heartbeat_job(session, job, commit=False)
             if job.kind == 'materialize_release':
-                release = _process_materialize_release_job(session, job, settings)
-            elif job.kind == 'memory_curation':
-                _process_memory_curation_job(session, job)
+                _process_materialize_release_job(session, job, settings)
             else:
                 raise RepoOpError(f'unsupported job kind: {job.kind}')
             complete_job(session, job, commit=False)
@@ -129,21 +86,6 @@ def process_job(job_id: int):
                 job.id,
                 job.kind,
             )
-            if job.kind == 'materialize_release':
-                snapshot = get_release_snapshot(session, release.id)
-                record_lifecycle_memory_event_best_effort(
-                    session,
-                    lifecycle_event="task.release.ready",
-                    aggregate_type="release",
-                    aggregate_id=str(release.id),
-                    actor_ref=f"principal:{release.created_by_principal_id or 0}",
-                    payload={
-                        "release_id": str(release.id),
-                        "skill_version_id": str(snapshot.skill_version.id),
-                        "qualified_name": f"{snapshot.namespace.slug}/{snapshot.skill.slug}",
-                        "version": snapshot.skill_version.version,
-                    },
-                )
         except Exception as exc:
             retryable = _is_retryable_error(exc)
             if retryable and (job.attempt_count or 0) < MAX_RETRY_ATTEMPTS:

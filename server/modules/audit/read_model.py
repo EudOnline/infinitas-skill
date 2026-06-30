@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, Sequence
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -56,8 +56,7 @@ def _prefetch_related(
     releases_by_id: dict[int, Release] = {}
     if release_ids:
         releases_by_id = {
-            r.id: r
-            for r in db.scalars(select(Release).where(Release.id.in_(release_ids))).all()
+            r.id: r for r in db.scalars(select(Release).where(Release.id.in_(release_ids))).all()
         }
 
     return skills_by_id, releases_by_id
@@ -115,13 +114,13 @@ def normalize_event(db: Session, event: AuditEvent) -> dict[str, Any]:
     }
 
 
-def normalize_events(db: Session, events: list[AuditEvent]) -> list[dict[str, Any]]:
+def normalize_events(db: Session, events: Sequence[AuditEvent]) -> list[dict[str, Any]]:
     """Batch-normalize audit events with resolved object/release references.
 
     Performs exactly 2 SQL queries regardless of event count (vs 2*N for the
     per-event :func:`normalize_event`).
     """
-    skills_by_id, releases_by_id = _prefetch_related(db, events)
+    skills_by_id, releases_by_id = _prefetch_related(db, list(events))
     results: list[dict[str, Any]] = []
     for event in events:
         payload = json_payload(event)

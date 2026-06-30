@@ -76,20 +76,26 @@ def build_token_rows_from_scope(
             or parse_datetime(credential.last_used_at)
             or parse_datetime(credential.created_at)
         )
+        token_type = token_type_for_credential(credential)
+        label = str(constraints.get("label") or "").strip() or None
         rows.append(
             {
                 "id": credential.id,
-                "token_type": token_type_for_credential(credential),
+                "credential_id": credential.id,
+                "token_type": token_type,
+                "type": token_type,
                 "object_id": skill.id,
                 "object_name": skill.display_name,
                 "object_href": with_lang(f"/library/{skill.id}", lang),
                 "release_id": release.id,
                 "release_version": version.version if version is not None else None,
-                "label": constraints.get("label") or "",
+                "label": label,
+                "agent_name": label,
                 "grant_id": grant.id,
                 "state": state,
                 "can_revoke": state == "active",
                 "created_at": humanize_timestamp(iso_stamp(credential.created_at)),
+                "created": humanize_timestamp(iso_stamp(credential.created_at)),
                 "last_used_at": humanize_timestamp(iso_stamp(credential.last_used_at)),
                 "revoked_at": humanize_timestamp(iso_stamp(credential.revoked_at)),
                 "_sort_at": sort_at or datetime.min.replace(tzinfo=timezone.utc),
@@ -154,16 +160,3 @@ def list_library_token_rows(
     if scope is None:
         scope, _total = load_library_scope(db, actor=actor)
     return build_token_rows_from_scope(scope, lang=lang, object_id=object_id)
-
-
-def list_library_token_activity_rows(
-    db: Session,
-    *,
-    actor: AccessContext,
-    lang: str,
-    scope: LibraryScope | None = None,
-) -> list[dict[str, Any]]:
-    if scope is None:
-        scope, _total = load_library_scope(db, actor=actor)
-    token_rows = build_token_rows_from_scope(scope, lang=lang)
-    return build_token_activity_rows_from_token_rows(token_rows)

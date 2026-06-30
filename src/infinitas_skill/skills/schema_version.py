@@ -17,8 +17,7 @@ def validate_schema_version(
         return default_version, [f"{field} must be an integer"]
     if value != SUPPORTED_SCHEMA_VERSION:
         return value, [
-            f"unsupported {field} {value!r}; "
-            f"supported version is {SUPPORTED_SCHEMA_VERSION}"
+            f"unsupported {field} {value!r}; supported version is {SUPPORTED_SCHEMA_VERSION}"
         ]
     return value, []
 

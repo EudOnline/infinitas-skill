@@ -14,9 +14,7 @@ from server.modules.audit.read_model import activity_query, normalize_events
 router = APIRouter(prefix="/api/v1/activity", tags=["activity"])
 
 
-def _assert_token_owner(
-    db: Session, token_id: int, principal_id: int, is_maintainer: bool
-) -> None:
+def _assert_token_owner(db: Session, token_id: int, principal_id: int, is_maintainer: bool) -> None:
     if is_maintainer:
         return
     credential = db.get(Credential, token_id)
@@ -24,9 +22,7 @@ def _assert_token_owner(
         raise HTTPException(status_code=403, detail="token access denied")
 
 
-def _assert_share_owner(
-    db: Session, share_id: int, principal_id: int, is_maintainer: bool
-) -> None:
+def _assert_share_owner(db: Session, share_id: int, principal_id: int, is_maintainer: bool) -> None:
     if is_maintainer:
         return
     grant = db.get(AccessGrant, share_id)

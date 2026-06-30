@@ -38,7 +38,7 @@ Include an `Authorization: Bearer <token>` header. Tokens are scoped and can be 
 
 ```bash
 curl -H "Authorization: Bearer your-api-token" \
-  https://skills.infinitas.fun/api/v1/me
+  https://skills.infinitas.fun/api/v1/access/me
 ```
 
 ### Session Cookie (Browser)
@@ -51,26 +51,27 @@ The web UI uses HMAC-signed session cookies (`infinitas_auth_token`). Cookie-aut
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| GET | `/healthz` | None | Service health check + user count |
-| GET | `/api/v1/me` | Bearer or Cookie | Current user identity |
+| GET | `/api/v1/system/healthz` | None | Service health check + user count |
+| GET | `/api/v1/access/me` | Bearer or Cookie | Current user identity |
+| GET | `/api/v1/profile/me` | Bearer or Cookie | Current user profile |
 
 ### Authentication
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/api/auth/login` | None | Exchange username + password for session |
-| POST | `/api/auth/logout` | Cookie | Clear session cookies |
-| GET | `/api/auth/csrf` | None | Refresh CSRF token cookie |
+| POST | `/api/v1/auth/login` | None | Exchange username + password for session |
+| POST | `/api/v1/auth/logout` | Cookie | Clear session cookies |
+| GET | `/api/v1/auth/csrf` | None | Refresh CSRF token cookie |
 
 ### Library & Objects
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| GET | `/api/library` | Bearer | List published library entries |
-| GET | `/api/library/{id}` | Bearer | Get library entry details |
-| GET | `/api/library/{id}/releases` | Bearer | List releases for an object |
-| POST | `/api/objects/{id}/tokens` | Bearer | Create access token |
-| POST | `/api/tokens/{token_id}/revoke` | Bearer | Revoke a token |
+| GET | `/api/v1/library` | Bearer | List published library entries |
+| GET | `/api/v1/library/{id}` | Bearer | Get library entry details |
+| GET | `/api/v1/library/{id}/releases` | Bearer | List releases for an object |
+| POST | `/api/v1/object-tokens/objects/{object_id}/tokens` | Bearer | Create access token |
+| POST | `/api/v1/object-tokens/tokens/{token_id}/revoke` | Bearer | Revoke a token |
 
 ### Publishing
 
@@ -78,35 +79,37 @@ The maintained publish surface is object-first and release-first. Do not build n
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| PUT | `/api/publish/objects/{slug}` | Bearer | Publish or update an object |
-| POST | `/api/publish/objects/{object_id}/releases` | Bearer | Publish a release |
-| POST | `/api/publish/drafts` | Bearer | Legacy migration shim for draft-based publishing; not maintained for new integrations |
+| POST | `/api/v1/skills` | Bearer | Create a skill object |
+| POST | `/api/v1/versions/{version_id}/releases` | Bearer | Create a release from a sealed version |
+| POST | `/api/v1/drafts` | Bearer | Legacy migration shim for draft-based publishing; not maintained for new integrations |
 
 ### Share Links
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/api/releases/{id}/share-links` | Bearer | Create password-protected share link |
-| POST | `/api/share-links/{id}/resolve` | None | Resolve a share link (with password) |
+| POST | `/api/v1/share-links/releases/{release_id}/share-links` | Bearer | Create password-protected share link |
+| GET | `/api/v1/share-links/releases/{release_id}/share-links` | Bearer | List share links for a release |
+| POST | `/api/v1/share-links/{share_id}/resolve` | None | Resolve a share link (with password) |
+| POST | `/api/v1/share-links/{share_id}/revoke` | Bearer | Revoke a share link |
 
 ### Search
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| GET | `/api/search` | Bearer | Full-text search across skills |
+| GET | `/api/v1/search` | Bearer | Full-text search across skills |
 
 ### Activity
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| GET | `/api/activity` | Bearer | Activity log for the current user |
+| GET | `/api/v1/activity` | Bearer | Activity log for the current user |
 
 ### Background & Theme
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| GET | `/api/background/presets` | None | List available background presets |
-| POST | `/api/background/set` | Cookie | Set user background preference |
+| GET | `/api/v1/background/presets` | None | List available background presets |
+| POST | `/api/v1/background/set` | Cookie | Set user background preference |
 
 ### Admin / Maintainer Endpoints
 
@@ -114,8 +117,8 @@ The following endpoints require `maintainer` role:
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/api/v1/agent-codes` | List agent codes |
-| GET | `/api/v1/agent-presets` | List agent presets |
+| GET | `/api/v1/agent-codes` | List agent codes (NOT IMPLEMENTED) |
+| GET | `/api/v1/agent-presets` | List agent presets (NOT IMPLEMENTED) |
 | GET | `/api/v1/review-cases/{id}` | Get a review case |
 | POST | `/api/v1/review-cases/{id}/decisions` | Act on a review case |
 
@@ -144,7 +147,7 @@ For a detailed error catalog, see [`error-catalog.md`](error-catalog.md).
 
 ## Rate Limiting
 
-The login endpoint (`POST /api/auth/login`) is protected by a pluggable rate limiter. The default
+The login endpoint (`POST /api/v1/auth/login`) is protected by a pluggable rate limiter. The default
 `MemoryRateLimiter` keeps attempt counts in memory; for multi-node deployments, switch to
 `DBRateLimiter` which stores counts in the `rate_limit_entries` table. For additional protection,
 consider adding a reverse-proxy rate limit (e.g., nginx `limit_req` or Cloudflare).

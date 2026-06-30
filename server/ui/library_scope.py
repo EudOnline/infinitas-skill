@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Sequence, TypeVar
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -31,8 +32,11 @@ class LibraryScope:
     credentials_by_grant_id: dict[int, list[Credential]]
 
 
-def group_by(items: list[object], key_name: str) -> dict[int, list[object]]:
-    grouped: dict[int, list[object]] = {}
+T = TypeVar("T")
+
+
+def group_by(items: Sequence[T], key_name: str) -> dict[int, list[T]]:
+    grouped: dict[int, list[T]] = {}
     for item in items:
         key = getattr(item, key_name, None)
         if key is None:
@@ -140,35 +144,41 @@ def load_library_scope(
         skill_query = skill_query.offset(skip)
     if limit is not None:
         skill_query = skill_query.limit(limit)
-    skills = db.scalars(skill_query).all()
+    skills = list(db.scalars(skill_query).all())
     skill_ids = [item.id for item in skills]
     principal_ids = sorted({item.namespace_id for item in skills})
 
-    principals = []
+    principals: list[Principal] = []
     if principal_ids:
-        principals = db.scalars(
-            select(Principal)
-            .where(Principal.id.in_(principal_ids))
-            .order_by(Principal.id.asc())
-        ).all()
+        principals = list(
+            db.scalars(
+                select(Principal)
+                .where(Principal.id.in_(principal_ids))
+                .order_by(Principal.id.asc())
+            ).all()
+        )
 
-    versions = []
+    versions: list[SkillVersion] = []
     if skill_ids:
-        versions = db.scalars(
-            select(SkillVersion)
-            .where(SkillVersion.skill_id.in_(skill_ids))
-            .order_by(SkillVersion.created_at.desc(), SkillVersion.id.desc())
-        ).all()
+        versions = list(
+            db.scalars(
+                select(SkillVersion)
+                .where(SkillVersion.skill_id.in_(skill_ids))
+                .order_by(SkillVersion.created_at.desc(), SkillVersion.id.desc())
+            ).all()
+        )
     versions_by_skill_id = group_by(versions, "skill_id")
 
     version_ids = [version.id for version in versions]
-    releases = []
+    releases: list[Release] = []
     if version_ids:
-        releases = db.scalars(
-            select(Release)
-            .where(Release.skill_version_id.in_(version_ids))
-            .order_by(Release.created_at.desc(), Release.id.desc())
-        ).all()
+        releases = list(
+            db.scalars(
+                select(Release)
+                .where(Release.skill_version_id.in_(version_ids))
+                .order_by(Release.created_at.desc(), Release.id.desc())
+            ).all()
+        )
 
     releases_by_skill_id: dict[int, list[Release]] = {}
     for release in releases:
@@ -177,42 +187,50 @@ def load_library_scope(
             releases_by_skill_id.setdefault(int(version.skill_id), []).append(release)
 
     release_ids = [release.id for release in releases]
-    exposures = []
+    exposures: list[Exposure] = []
     if release_ids:
-        exposures = db.scalars(
-            select(Exposure)
-            .where(Exposure.release_id.in_(release_ids))
-            .order_by(Exposure.id.desc())
-        ).all()
+        exposures = list(
+            db.scalars(
+                select(Exposure)
+                .where(Exposure.release_id.in_(release_ids))
+                .order_by(Exposure.id.desc())
+            ).all()
+        )
     exposures_by_release_id = group_by(exposures, "release_id")
 
     exposure_ids = [exposure.id for exposure in exposures]
-    review_cases = []
+    review_cases: list[ReviewCase] = []
     if exposure_ids:
-        review_cases = db.scalars(
-            select(ReviewCase)
-            .where(ReviewCase.exposure_id.in_(exposure_ids))
-            .order_by(ReviewCase.id.desc())
-        ).all()
+        review_cases = list(
+            db.scalars(
+                select(ReviewCase)
+                .where(ReviewCase.exposure_id.in_(exposure_ids))
+                .order_by(ReviewCase.id.desc())
+            ).all()
+        )
     review_cases_by_exposure_id = group_by(review_cases, "exposure_id")
 
-    grants = []
+    grants: list[AccessGrant] = []
     if exposure_ids:
-        grants = db.scalars(
-            select(AccessGrant)
-            .where(AccessGrant.exposure_id.in_(exposure_ids))
-            .order_by(AccessGrant.id.desc())
-        ).all()
+        grants = list(
+            db.scalars(
+                select(AccessGrant)
+                .where(AccessGrant.exposure_id.in_(exposure_ids))
+                .order_by(AccessGrant.id.desc())
+            ).all()
+        )
     grants_by_exposure_id = group_by(grants, "exposure_id")
 
     grant_ids = [grant.id for grant in grants]
-    credentials = []
+    credentials: list[Credential] = []
     if grant_ids:
-        credentials = db.scalars(
-            select(Credential)
-            .where(Credential.grant_id.in_(grant_ids))
-            .order_by(Credential.id.desc())
-        ).all()
+        credentials = list(
+            db.scalars(
+                select(Credential)
+                .where(Credential.grant_id.in_(grant_ids))
+                .order_by(Credential.id.desc())
+            ).all()
+        )
     credentials_by_grant_id = group_by(credentials, "grant_id")
 
     scope = LibraryScope(

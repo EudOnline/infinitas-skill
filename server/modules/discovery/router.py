@@ -11,13 +11,13 @@ from server.auth import get_current_access_context
 from server.db import get_db
 from server.modules.access.authn import AccessContext
 from server.modules.discovery import service
-from server.modules.shared.formatting import iso_format
 from server.modules.discovery.schemas import (
     CatalogEntryView,
     CatalogListView,
     InstallResolutionView,
     ProjectionArtifactPaths,
 )
+from server.modules.shared.formatting import iso_format
 from server.settings import get_settings
 
 router = APIRouter(prefix="/api/v1", tags=["discovery"])
@@ -55,8 +55,6 @@ def _install_links(request: Request) -> ProjectionArtifactPaths:
 def _install_payload(
     request: Request,
     entry,
-    *,
-    memory_mode: str | None = None,
 ) -> InstallResolutionView:
     links = _install_links(request)
     ready_at = None
@@ -86,8 +84,6 @@ def _install_payload(
         bundle_url=links.bundle_url,
         provenance_url=links.provenance_url,
         signature_url=links.signature_url,
-        supported_memory_modes=list(entry.supported_memory_modes or []),
-        default_memory_mode=entry.default_memory_mode,
     )
 
 
@@ -125,49 +121,11 @@ def catalog_grant(
         raise HTTPException(status_code=403, detail=str(exc)) from exc
 
 
-@router.get("/search/public", response_model=CatalogListView)
-def search_public(
-    q: str = Query(default="", max_length=200),
-    limit: int = Query(default=20, ge=1, le=100),
-    db: Session = Depends(get_db),
-):
-    return _catalog_list(service.search_public_catalog(db, query=q, limit=limit))
-
-
-@router.get("/search/me", response_model=CatalogListView)
-def search_me(
-    q: str = Query(default="", max_length=200),
-    limit: int = Query(default=20, ge=1, le=100),
-    context: AccessContext = Depends(get_current_access_context),
-    db: Session = Depends(get_db),
-):
-    try:
-        return _catalog_list(service.search_me_catalog(db, context=context, query=q, limit=limit))
-    except service.ForbiddenError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
-
-
-@router.get("/search/grant", response_model=CatalogListView)
-def search_grant(
-    q: str = Query(default="", max_length=200),
-    limit: int = Query(default=20, ge=1, le=100),
-    context: AccessContext = Depends(get_current_access_context),
-    db: Session = Depends(get_db),
-):
-    try:
-        return _catalog_list(
-            service.search_grant_catalog(db, context=context, query=q, limit=limit)
-        )
-    except service.ForbiddenError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
-
-
 @router.get("/install/public/{skill_ref:path}", response_model=InstallResolutionView)
 def install_public(
     request: Request,
     skill_ref: str,
     artifact: str | None = Query(default=None),
-    memory_mode: str | None = Query(default=None),
     db: Session = Depends(get_db),
 ):
     try:
@@ -182,7 +140,7 @@ def install_public(
             service.artifact_relative_path(entry, artifact=artifact),
         )
     try:
-        return _install_payload(request, entry, memory_mode=memory_mode)
+        return _install_payload(request, entry)
     except DependencyError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
@@ -192,7 +150,6 @@ def install_me(
     request: Request,
     skill_ref: str,
     artifact: str | None = Query(default=None),
-    memory_mode: str | None = Query(default=None),
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
 ):
@@ -210,7 +167,7 @@ def install_me(
             service.artifact_relative_path(entry, artifact=artifact),
         )
     try:
-        return _install_payload(request, entry, memory_mode=memory_mode)
+        return _install_payload(request, entry)
     except DependencyError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
@@ -220,7 +177,6 @@ def install_grant(
     request: Request,
     skill_ref: str,
     artifact: str | None = Query(default=None),
-    memory_mode: str | None = Query(default=None),
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
 ):
@@ -238,6 +194,6 @@ def install_grant(
             service.artifact_relative_path(entry, artifact=artifact),
         )
     try:
-        return _install_payload(request, entry, memory_mode=memory_mode)
+        return _install_payload(request, entry)
     except DependencyError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc

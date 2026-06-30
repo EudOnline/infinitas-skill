@@ -409,9 +409,7 @@ def _validate_refresh_policy(reg: dict, name: str) -> list[str]:
     stale_policy = refresh_policy_cfg.get("stale_policy")
 
     if not isinstance(interval_hours, int) or interval_hours < 1:
-        errors.append(
-            f"registry {name!r} refresh_policy.interval_hours must be a positive integer"
-        )
+        errors.append(f"registry {name!r} refresh_policy.interval_hours must be a positive integer")
     if not isinstance(max_cache_age_hours, int) or max_cache_age_hours < 1:
         errors.append(
             f"registry {name!r} refresh_policy.max_cache_age_hours must be a positive integer"
@@ -427,8 +425,7 @@ def _validate_refresh_policy(reg: dict, name: str) -> list[str]:
         )
     if stale_policy not in STALE_POLICIES:
         errors.append(
-            f"registry {name!r} refresh_policy.stale_policy must be one of "
-            f"{sorted(STALE_POLICIES)}"
+            f"registry {name!r} refresh_policy.stale_policy must be one of {sorted(STALE_POLICIES)}"
         )
 
     return errors
@@ -466,9 +463,7 @@ def _validate_federation(
             )
         else:
             invalid_publishers = [
-                item.strip()
-                for item in raw_publishers
-                if not PUBLISHER_SLUG_RE.match(item.strip())
+                item.strip() for item in raw_publishers if not PUBLISHER_SLUG_RE.match(item.strip())
             ]
             if invalid_publishers:
                 errors.append(
@@ -495,8 +490,7 @@ def _validate_federation(
                     invalid_values.append(raw_value)
             if invalid_keys:
                 errors.append(
-                    f"registry {name!r} federation.publisher_map keys must be valid "
-                    "publisher slugs"
+                    f"registry {name!r} federation.publisher_map keys must be valid publisher slugs"
                 )
             if invalid_values:
                 errors.append(
@@ -508,8 +502,7 @@ def _validate_federation(
         federation.get("require_immutable_artifacts"), bool
     ):
         errors.append(
-            f"registry {name!r} federation.require_immutable_artifacts must be boolean "
-            "when present"
+            f"registry {name!r} federation.require_immutable_artifacts must be boolean when present"
         )
 
     # Cross-field validation
@@ -528,8 +521,7 @@ def _validate_federation(
         and update_policy.get("mode") == "track"
     ):
         errors.append(
-            f"registry {name!r} federated git registries cannot use "
-            "update_policy.mode='track'"
+            f"registry {name!r} federated git registries cannot use update_policy.mode='track'"
         )
 
     allowed_publishers = federation_cfg.get("allowed_publishers")
@@ -590,9 +582,7 @@ def _validate_git_registry(reg: dict, name: str, trust: str, root: Path) -> list
         not isinstance(update_policy.get("mode"), str)
         or update_policy.get("mode") not in UPDATE_MODES
     ):
-        errors.append(
-            f"registry {name!r} update_policy.mode must be one of {sorted(UPDATE_MODES)}"
-        )
+        errors.append(f"registry {name!r} update_policy.mode must be one of {sorted(UPDATE_MODES)}")
 
     # Allowed hosts validation
     if reg.get("allowed_hosts") is not None:
@@ -600,18 +590,12 @@ def _validate_git_registry(reg: dict, name: str, trust: str, root: Path) -> list
         if not isinstance(raw_hosts, list) or not all(
             isinstance(item, str) and item.strip() for item in raw_hosts
         ):
-            errors.append(
-                f"registry {name!r} allowed_hosts must be an array of non-empty strings"
-            )
+            errors.append(f"registry {name!r} allowed_hosts must be an array of non-empty strings")
     host = extract_git_host(url)
     if host and not allowed_hosts:
-        errors.append(
-            f"registry {name!r} must declare allowed_hosts for remote git sources"
-        )
+        errors.append(f"registry {name!r} must declare allowed_hosts for remote git sources")
     if host and host not in allowed_hosts:
-        errors.append(
-            f"registry {name!r} url host {host!r} is not present in allowed_hosts"
-        )
+        errors.append(f"registry {name!r} url host {host!r} is not present in allowed_hosts")
 
     # Allowed refs validation
     if reg.get("allowed_refs") is not None:
@@ -619,19 +603,14 @@ def _validate_git_registry(reg: dict, name: str, trust: str, root: Path) -> list
         if not isinstance(raw_refs, list) or not all(
             isinstance(item, str) and item.strip() for item in raw_refs
         ):
-            errors.append(
-                f"registry {name!r} allowed_refs must be an array of non-empty strings"
-            )
+            errors.append(f"registry {name!r} allowed_refs must be an array of non-empty strings")
     desired_ref = canonical_pin_ref(pin.get("mode"), pin.get("value"))
     if pin.get("mode") in {"branch", "tag"}:
         if not allowed_refs:
-            errors.append(
-                f"registry {name!r} must declare allowed_refs for branch/tag pins"
-            )
+            errors.append(f"registry {name!r} must declare allowed_refs for branch/tag pins")
         elif desired_ref not in allowed_refs:
             errors.append(
-                f"registry {name!r} pin ref {desired_ref!r} must be "
-                "included in allowed_refs"
+                f"registry {name!r} pin ref {desired_ref!r} must be included in allowed_refs"
             )
 
     # Cross-field validation
@@ -641,9 +620,7 @@ def _validate_git_registry(reg: dict, name: str, trust: str, root: Path) -> list
         errors.append(f"registry {name!r} pinned policy requires a tag or commit pin")
     if update_policy.get("mode") == "local-only" and not local_path:
         errors.append(f"registry {name!r} local-only policy requires local_path")
-    if local_path is not None and (
-        not isinstance(local_path, str) or not local_path.strip()
-    ):
+    if local_path is not None and (not isinstance(local_path, str) or not local_path.strip()):
         errors.append(f"registry {name!r} local_path must be a non-empty string when set")
     if local_path and update_policy.get("mode") != "local-only":
         errors.append(
@@ -651,19 +628,14 @@ def _validate_git_registry(reg: dict, name: str, trust: str, root: Path) -> list
             "update_policy.mode=local-only"
         )
     if trust == "public" and update_policy.get("mode") == "track":
-        errors.append(
-            f"registry {name!r} public registries must use pinned or local-only updates"
-        )
+        errors.append(f"registry {name!r} public registries must use pinned or local-only updates")
     if trust == "untrusted" and update_policy.get("mode") != "local-only":
-        errors.append(
-            f"registry {name!r} untrusted registries may only use local-only mode"
-        )
+        errors.append(f"registry {name!r} untrusted registries may only use local-only mode")
 
     reg_root = resolve_registry_root(root, reg)
     if local_path and reg_root == root and update_policy.get("mode") != "local-only":
         errors.append(
-            f"registry {name!r} cannot sync the working repository root outside "
-            "local-only mode"
+            f"registry {name!r} cannot sync the working repository root outside local-only mode"
         )
 
     return errors
@@ -691,9 +663,7 @@ def _validate_http_registry(reg: dict, name: str, trust: str) -> list[str]:
     if not isinstance(base_url, str) or not base_url.strip():
         errors.append(f"http registry {name!r} missing non-empty base_url")
     parsed_base = (
-        urlparse(base_url.strip())
-        if isinstance(base_url, str) and base_url.strip()
-        else None
+        urlparse(base_url.strip()) if isinstance(base_url, str) and base_url.strip() else None
     )
     if parsed_base and not parsed_base.hostname:
         errors.append(f"registry {name!r} base_url must include a hostname")
@@ -727,13 +697,12 @@ def _validate_http_registry(reg: dict, name: str, trust: str) -> list[str]:
             errors.append(f"registry {name!r} catalog_paths must be an object when present")
         else:
             for key in ["ai_index", "distributions", "compatibility"]:
+                catalog_path_value = catalog_paths.get(key)
                 if key in catalog_paths and (
-                    not isinstance(catalog_paths.get(key), str)
-                    or not catalog_paths.get(key).strip()
+                    not isinstance(catalog_path_value, str) or not catalog_path_value.strip()
                 ):
                     errors.append(
-                        f"registry {name!r} catalog_paths.{key} must be a non-empty "
-                        "string when set"
+                        f"registry {name!r} catalog_paths.{key} must be a non-empty string when set"
                     )
 
     return errors
@@ -746,15 +715,15 @@ def validate_registry_config(root: Path, cfg):
         errors.append("registries must be a non-empty array")
         return errors
 
-    seen = set()
+    seen: set[str] = set()
     for reg in registries:
         if not isinstance(reg, dict):
             errors.append("each registry entry must be an object")
             continue
 
-        name = reg.get("name")
-        kind = reg.get("kind")
-        trust = reg.get("trust")
+        name = str(reg.get("name")) if isinstance(reg.get("name"), str) else ""
+        kind = str(reg.get("kind")) if isinstance(reg.get("kind"), str) else ""
+        trust = str(reg.get("trust")) if isinstance(reg.get("trust"), str) else ""
         update_policy = normalized_update_policy(reg)
 
         # Basic fields

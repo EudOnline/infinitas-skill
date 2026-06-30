@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 from server.exceptions import ConflictError, ForbiddenError, NotFoundError
 from server.modules.access.authn import AccessContext
 from server.modules.access.authz import can_access_releases
-from server.modules.discovery import search
 from server.modules.discovery.projections import (
     DiscoveryProjection,
     build_release_projections,
@@ -16,8 +15,14 @@ from server.modules.discovery.projections import (
 from server.modules.shared.json import read_json_file as _read_json
 from server.modules.shared.version_sort import (
     audience_rank as _audience_rank,
+)
+from server.modules.shared.version_sort import (
     dedupe_entries as _dedupe,
+)
+from server.modules.shared.version_sort import (
     ready_sort_key as _ready_sort_key,
+)
+from server.modules.shared.version_sort import (
     version_sort_key as _version_sort_key,
 )
 from server.settings import get_settings
@@ -211,15 +216,7 @@ def _catalog_snapshot_projections() -> list[DiscoveryProjection]:
                         f"provenance/{publisher}--{name}-{version}.json.ssig",
                     ],
                 ),
-                bundle_sha256=(
-                    str(distribution.get("bundle_sha256") or "").strip() or None
-                ),
-                supported_memory_modes=item.get("supported_memory_modes")
-                if isinstance(item.get("supported_memory_modes"), list)
-                else None,
-                default_memory_mode=(
-                    str(item.get("default_memory_mode") or "").strip() or None
-                ),
+                bundle_sha256=(str(distribution.get("bundle_sha256") or "").strip() or None),
             )
         )
     return projections
@@ -300,20 +297,67 @@ def list_grant_catalog(db: Session, *, context: AccessContext) -> list[Discovery
     return _dedupe(rows)
 
 
+def _score_discovery_entry(query: str, entry: DiscoveryProjection) -> float:
+    needle = (query or "").strip().lower()
+    if not needle:
+        return 1.0
+
+    haystacks = [
+        entry.name.lower(),
+        entry.qualified_name.lower(),
+        (entry.display_name or "").lower(),
+        (entry.summary or "").lower(),
+        entry.version.lower(),
+    ]
+    score = 0.0
+    for index, haystack in enumerate(haystacks):
+        if not haystack:
+            continue
+        if haystack == needle:
+            score += 100.0 - index
+        elif haystack.startswith(needle):
+            score += 60.0 - index
+        elif needle in haystack:
+            score += 30.0 - index
+    return score
+
+
+def _search_entries(
+    entries: list[DiscoveryProjection],
+    *,
+    query: str,
+    limit: int,
+) -> list[DiscoveryProjection]:
+    scored = []
+    for entry in entries:
+        score = _score_discovery_entry(query, entry)
+        if score <= 0:
+            continue
+        scored.append((score, entry))
+    scored.sort(
+        key=lambda item: (
+            -item[0],
+            item[1].qualified_name,
+            item[1].version,
+        )
+    )
+    return [entry for _score_value, entry in scored[:limit]]
+
+
 def search_public_catalog(db: Session, *, query: str, limit: int) -> list[DiscoveryProjection]:
-    return search.search_entries(list_public_catalog(db), query=query, limit=limit)
+    return _search_entries(list_public_catalog(db), query=query, limit=limit)
 
 
 def search_me_catalog(
     db: Session, *, context: AccessContext, query: str, limit: int
 ) -> list[DiscoveryProjection]:
-    return search.search_entries(list_me_catalog(db, context=context), query=query, limit=limit)
+    return _search_entries(list_me_catalog(db, context=context), query=query, limit=limit)
 
 
 def search_grant_catalog(
     db: Session, *, context: AccessContext, query: str, limit: int
 ) -> list[DiscoveryProjection]:
-    return search.search_entries(list_grant_catalog(db, context=context), query=query, limit=limit)
+    return _search_entries(list_grant_catalog(db, context=context), query=query, limit=limit)
 
 
 def resolve_public_install(db: Session, *, skill_ref: str) -> DiscoveryProjection:

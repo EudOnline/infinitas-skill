@@ -2,7 +2,7 @@
 audience: contributors, reviewers, compatibility maintainers
 owner: repository maintainers
 source_of_truth: legacy platform contract annex
-last_reviewed: 2026-04-21
+last_reviewed: 2026-06-15
 status: legacy
 ---
 
@@ -24,7 +24,7 @@ status: legacy
 - https://code.claude.com/docs/en/getting-started
 
 ## Last verified
-2026-04-13
+2026-06-15
 
 ## Verification steps
 - Confirm the subagents guide still documents Markdown + YAML frontmatter and the storage scopes for `.claude/agents/` and `~/.claude/agents/`.

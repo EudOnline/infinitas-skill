@@ -1,4 +1,5 @@
 """Characterization tests for server.artifact_ops."""
+
 from __future__ import annotations
 
 import hashlib
@@ -40,6 +41,7 @@ class TestEnsureFileBytes:
         ensure_file_bytes(target, b"same")
         # mtime should not change (or be very close)
         import os
+
         assert os.path.getmtime(target) == mtime_before
 
     def test_overwrites_different(self, tmp_path):
@@ -79,6 +81,7 @@ class TestEnsureFileCopy:
         mtime = target.stat().st_mtime
         ensure_file_copy(source, target)
         import os
+
         assert os.path.getmtime(target) == mtime
 
     def test_missing_source_raises(self, tmp_path):

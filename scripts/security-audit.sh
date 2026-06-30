@@ -59,22 +59,26 @@ echo "Checking for known vulnerabilities..."
 echo ""
 
 if [ "$JSON_MODE" = true ]; then
-    AUDIT_OUTPUT=$($PIP_AUDIT --format json 2>&1) || true
+    set +e
+    AUDIT_OUTPUT=$($PIP_AUDIT --format json 2>&1)
+    AUDIT_EXIT=$?
+    set -e
     echo "$AUDIT_OUTPUT"
 else
-    AUDIT_OUTPUT=$($PIP_AUDIT 2>&1) || true
+    set +e
+    AUDIT_OUTPUT=$($PIP_AUDIT 2>&1)
+    AUDIT_EXIT=$?
+    set -e
     echo "$AUDIT_OUTPUT"
 fi
 
-# Check exit code
-AUDIT_EXIT=$?
 if [ $AUDIT_EXIT -eq 0 ]; then
     echo ""
     echo -e "${GREEN}✓ No known vulnerabilities found${NC}"
     exit 0
 else
     echo ""
-    echo -e "${RED}✗ Vulnerabilities found${NC}"
+    echo -e "${RED}✗ pip-audit failed (exit code ${AUDIT_EXIT})${NC}"
 
     if [ "$FIX_MODE" = true ]; then
         echo ""
@@ -90,8 +94,8 @@ else
         fi
     else
         echo ""
-        echo "Run with --fix to attempt automatic remediation."
+        echo "Review the output above. Run with --fix to attempt automatic remediation."
     fi
 
-    exit 1
+    exit $AUDIT_EXIT
 fi

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import argparse
 import json
 import logging
 import shutil
@@ -34,16 +33,16 @@ from infinitas_skill.install.workflows_parsers import (
     build_install_by_name_parser,
     build_install_check_update_parser,
     build_install_exact_parser,
-    build_install_rollback_parser,
     build_install_resolve_skill_parser,
+    build_install_rollback_parser,
     build_install_switch_parser,
     build_install_sync_parser,
     build_install_upgrade_parser,
     configure_install_by_name_parser,
     configure_install_check_update_parser,
     configure_install_exact_parser,
-    configure_install_rollback_parser,
     configure_install_resolve_skill_parser,
+    configure_install_rollback_parser,
     configure_install_switch_parser,
     configure_install_sync_parser,
     configure_install_upgrade_parser,
@@ -721,7 +720,7 @@ def _load_installed_info(
     report_item["freshness_warning"] = _format_warning(
         report_item.get("freshness_warning"),
         target_dir=target_dir,
-        skill_name=info["name"],
+        skill_name=info["name"] or "",
     )
     return info, report_item, item
 
@@ -732,7 +731,7 @@ def _upgrade_next_step(recovery_action: str | None, *, default: str) -> str:
         "repair": "repair-installed-skill",
         "reinstall": "reinstall-installed-skill",
         "backfill-distribution-manifest": "backfill-distribution-manifest",
-    }.get(recovery_action, default)
+    }.get(recovery_action or "", default)
 
 
 def run_install_resolve_skill(
@@ -1062,6 +1061,29 @@ def run_install_sync(
 
     if not force:
         _emit_mutation_warning(report_item)
+        if report_item.get("mutation_readiness") == "warning":
+            payload = {
+                "ok": True,
+                "qualified_name": info.get("qualified_name"),
+                "source_registry": info.get("source_registry"),
+                "installed_version": info.get("installed_version"),
+                "target_dir": target_dir,
+                "state": "up-to-date",
+                "manifest_path": str(Path(target_dir) / ".infinitas-skill-install-manifest.json"),
+                "next_step": _upgrade_next_step(
+                    report_item.get("recovery_action"),
+                    default="refresh-installed-integrity",
+                ),
+                "freshness_state": report_item.get("freshness_state"),
+                "freshness_policy": report_item.get("freshness_policy"),
+                "freshness_warning": report_item.get("freshness_warning"),
+                "mutation_readiness": report_item.get("mutation_readiness"),
+                "mutation_policy": report_item.get("mutation_policy"),
+                "mutation_reason_code": report_item.get("mutation_reason_code"),
+                "recovery_action": report_item.get("recovery_action"),
+            }
+            _emit_payload(payload, as_json=as_json)
+            return 0
 
     resolve_name = info.get("qualified_name") or installed_name
     resolve_registry = info.get("source_registry")

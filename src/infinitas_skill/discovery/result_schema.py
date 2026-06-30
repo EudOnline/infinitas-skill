@@ -61,55 +61,8 @@ def _validate_pull_explanation(explanation, prefix, errors):
     _require_string_list(explanation, "next_actions", prefix, errors)
 
 
-def validate_publish_result(payload):
-    errors = []
-    if not _require_object(payload, "publish_result", errors):
-        return errors
-    _require_bool(payload, "ok", "publish_result", errors)
-    _require_string(payload, "state", "publish_result", errors)
-    ok = payload.get("ok")
-    state = payload.get("state")
-
-    if ok is True and state == "planned":
-        for key in [
-            "skill",
-            "qualified_name",
-            "version",
-            "status",
-            "manifest_path",
-            "bundle_path",
-            "attestation_path",
-            "next_step",
-        ]:
-            _require_string(payload, key, "publish_result", errors)
-        _require_command_list(payload, "commands", "publish_result", errors)
-        _require_bool(payload, "promotion_required", "publish_result", errors)
-    elif ok is True and state == "published":
-        for key in [
-            "skill",
-            "qualified_name",
-            "version",
-            "manifest_path",
-            "bundle_path",
-            "bundle_sha256",
-            "attestation_path",
-            "next_step",
-        ]:
-            _require_string(payload, key, "publish_result", errors)
-        _require_nullable_string(payload, "published_at", "publish_result", errors)
-    elif ok is False and state == "failed":
-        for key in ["failed_at_step", "error_code", "message", "suggested_action"]:
-            _require_string(payload, key, "publish_result", errors)
-        for key in ["skill", "qualified_name", "version"]:
-            if key in payload:
-                _require_string(payload, key, "publish_result", errors)
-    else:
-        errors.append("publish_result state/ok combination is not supported")
-    return errors
-
-
 def validate_pull_result(payload):
-    errors = []
+    errors: list[str] = []
     if not _require_object(payload, "pull_result", errors):
         return errors
     _require_bool(payload, "ok", "pull_result", errors)
@@ -168,4 +121,4 @@ def validate_pull_result(payload):
     return errors
 
 
-__all__ = ["validate_publish_result", "validate_pull_result"]
+__all__ = ["validate_pull_result"]

@@ -8,21 +8,20 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / 'src'
+SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from infinitas_skill.discovery.recommendation import recommend_skills  # noqa: E402
-from infinitas_skill.memory.contracts import MemoryRecord, MemorySearchResult  # noqa: E402
 
-QUALIFIED_NAME = 'lvxiaoer/operate-infinitas-skill'
-RELEASE_QUALIFIED_NAME = 'lvxiaoer/release-infinitas-skill'
-CONSUME_QUALIFIED_NAME = 'lvxiaoer/consume-infinitas-skill'
-FEDERATION_QUALIFIED_NAME = 'lvxiaoer/federation-registry-ops'
+QUALIFIED_NAME = "lvxiaoer/operate-infinitas-skill"
+RELEASE_QUALIFIED_NAME = "lvxiaoer/release-infinitas-skill"
+CONSUME_QUALIFIED_NAME = "lvxiaoer/consume-infinitas-skill"
+FEDERATION_QUALIFIED_NAME = "lvxiaoer/federation-registry-ops"
 
 
 def fail(message):
-    print(f'FAIL: {message}', file=sys.stderr)
+    print(f"FAIL: {message}", file=sys.stderr)
     raise SystemExit(1)
 
 
@@ -30,46 +29,46 @@ def run(command, cwd, expect=0):
     try:
         result = subprocess.run(command, cwd=cwd, text=True, capture_output=True)
     except FileNotFoundError as exc:
-        fail(f'missing command {command[0]!r}: {exc}')
+        fail(f"missing command {command[0]!r}: {exc}")
     if result.returncode != expect:
         fail(
-            f'command {command!r} exited {result.returncode}, expected {expect}\n'
-            f'stdout:\n{result.stdout}\n'
-            f'stderr:\n{result.stderr}'
+            f"command {command!r} exited {result.returncode}, expected {expect}\n"
+            f"stdout:\n{result.stdout}\n"
+            f"stderr:\n{result.stderr}"
         )
     return result
 
 
 def run_discovery_cli(*args, cwd, expect=0):
     env = dict(os.environ)
-    env['PYTHONPATH'] = str((cwd / 'src').resolve())
+    env["PYTHONPATH"] = str((cwd / "src").resolve())
     try:
         result = subprocess.run(
-            [sys.executable, '-m', 'infinitas_skill.cli.main', 'discovery', *args],
+            [sys.executable, "-m", "infinitas_skill.cli.main", "discovery", *args],
             cwd=cwd,
             text=True,
             capture_output=True,
             env=env,
         )
     except FileNotFoundError as exc:
-        fail(f'missing command {sys.executable!r}: {exc}')
+        fail(f"missing command {sys.executable!r}: {exc}")
     if result.returncode != expect:
         fail(
-            f'command {result.args!r} exited {result.returncode}, expected {expect}\n'
-            f'stdout:\n{result.stdout}\n'
-            f'stderr:\n{result.stderr}'
+            f"command {result.args!r} exited {result.returncode}, expected {expect}\n"
+            f"stdout:\n{result.stdout}\n"
+            f"stderr:\n{result.stderr}"
         )
     return result
 
 
 def write_json(path: Path, payload):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def contains_absolute_path(value):
     if isinstance(value, str):
-        return value.startswith('/') or value.startswith('C:\\')
+        return value.startswith("/") or value.startswith("C:\\")
     if isinstance(value, dict):
         return any(contains_absolute_path(item) for item in value.values())
     if isinstance(value, list):
@@ -79,26 +78,34 @@ def contains_absolute_path(value):
 
 def assert_confidence(payload, *, label):
     if not isinstance(payload, dict):
-        fail(f'expected {label} confidence object, got {payload!r}')
-    if payload.get('level') not in {'high', 'medium', 'low'}:
+        fail(f"expected {label} confidence object, got {payload!r}")
+    if payload.get("level") not in {"high", "medium", "low"}:
         fail(f"expected {label} confidence level high/medium/low, got {payload.get('level')!r}")
-    reasons = payload.get('reasons')
-    if not isinstance(reasons, list) or not reasons or any(not isinstance(item, str) or not item.strip() for item in reasons):
-        fail(f'expected {label} confidence reasons list, got {reasons!r}')
+    reasons = payload.get("reasons")
+    if (
+        not isinstance(reasons, list)
+        or not reasons
+        or any(not isinstance(item, str) or not item.strip() for item in reasons)
+    ):
+        fail(f"expected {label} confidence reasons list, got {reasons!r}")
 
 
 def assert_comparative_signals(payload, *, label):
     if not isinstance(payload, dict):
-        fail(f'expected {label} comparative_signals object, got {payload!r}')
-    if not isinstance(payload.get('rank'), int) or payload.get('rank') < 1:
+        fail(f"expected {label} comparative_signals object, got {payload!r}")
+    if not isinstance(payload.get("rank"), int) or payload.get("rank") < 1:
         fail(f"expected {label} comparative_signals.rank >= 1, got {payload.get('rank')!r}")
-    for key in ['score_gap_from_top', 'quality_gap_from_top', 'verification_freshness_gap_from_top']:
+    for key in [
+        "score_gap_from_top",
+        "quality_gap_from_top",
+        "verification_freshness_gap_from_top",
+    ]:
         value = payload.get(key)
         if not isinstance(value, int) or value < 0:
-            fail(f'expected {label} {key} to be a non-negative int, got {value!r}')
-    if payload.get('compatibility_gap_from_top') not in {'same', 'better', 'worse'}:
+            fail(f"expected {label} {key} to be a non-negative int, got {value!r}")
+    if payload.get("compatibility_gap_from_top") not in {"same", "better", "worse"}:
         fail(
-            'expected '
+            "expected "
             f"{label} compatibility_gap_from_top to be same/better/worse, got {payload.get('compatibility_gap_from_top')!r}"
         )
 
@@ -106,240 +113,274 @@ def assert_comparative_signals(payload, *, label):
 def scenario_recommend_returns_ranked_fields_for_real_catalog():
     payload = json.loads(
         run_discovery_cli(
-            'recommend',
-            'operate in this repo',
-            '--target-agent',
-            'codex',
-            '--json',
+            "recommend",
+            "operate in this repo",
+            "--target-agent",
+            "codex",
+            "--json",
             cwd=ROOT,
         ).stdout
     )
-    results = payload.get('results') or []
+    results = payload.get("results") or []
     if not results:
-        fail('expected at least one recommendation result')
+        fail("expected at least one recommendation result")
     top = results[0]
     for key in [
-        'qualified_name',
-        'score',
-        'recommendation_reason',
-        'ranking_factors',
-        'confidence',
-        'comparative_signals',
-        'trust_state',
-        'verified_support',
-        'use_when',
-        'avoid_when',
-        'capabilities',
-        'runtime_assumptions',
-        'maturity',
-        'quality_score',
+        "qualified_name",
+        "score",
+        "recommendation_reason",
+        "ranking_factors",
+        "confidence",
+        "comparative_signals",
+        "trust_state",
+        "verified_support",
+        "use_when",
+        "avoid_when",
+        "capabilities",
+        "runtime_assumptions",
+        "maturity",
+        "quality_score",
     ]:
         if key not in top:
-            fail(f'missing recommendation field {key!r}')
-    factors = top.get('ranking_factors') or {}
-    for key in ['match_strength', 'compatibility', 'trust', 'quality', 'verification_freshness']:
+            fail(f"missing recommendation field {key!r}")
+    factors = top.get("ranking_factors") or {}
+    for key in ["match_strength", "compatibility", "trust", "quality", "verification_freshness"]:
         if key not in factors:
-            fail(f'missing ranking_factors field {key!r}')
-    assert_confidence(top.get('confidence'), label='top recommendation')
-    assert_comparative_signals(top.get('comparative_signals'), label='top recommendation')
-    if top.get('comparative_signals', {}).get('rank') != 1:
-        fail(f"expected top recommendation rank 1, got {top.get('comparative_signals', {}).get('rank')!r}")
-    if top.get('comparative_signals', {}).get('score_gap_from_top') != 0:
+            fail(f"missing ranking_factors field {key!r}")
+    assert_confidence(top.get("confidence"), label="top recommendation")
+    assert_comparative_signals(top.get("comparative_signals"), label="top recommendation")
+    if top.get("comparative_signals", {}).get("rank") != 1:
         fail(
-            'expected top recommendation score_gap_from_top 0, '
+            f"expected top recommendation rank 1, got {top.get('comparative_signals', {}).get('rank')!r}"
+        )
+    if top.get("comparative_signals", {}).get("score_gap_from_top") != 0:
+        fail(
+            "expected top recommendation score_gap_from_top 0, "
             f"got {top.get('comparative_signals', {}).get('score_gap_from_top')!r}"
         )
-    if top.get('qualified_name') != QUALIFIED_NAME:
+    if top.get("qualified_name") != QUALIFIED_NAME:
         fail(f"expected top recommendation {QUALIFIED_NAME!r}, got {top.get('qualified_name')!r}")
-    if top.get('use_when') != [
-        'Need to operate inside the infinitas-skill repository',
-        'Need guidance on registry workflows, planning files, or release discipline',
+    if top.get("use_when") != [
+        "Need to operate inside the infinitas-skill repository",
+        "Need guidance on registry workflows, planning files, or release discipline",
     ]:
         fail(f"expected canonical recommendation use_when, got {top.get('use_when')!r}")
-    if top.get('avoid_when') != ['Need a general-purpose Git helper outside this repository']:
+    if top.get("avoid_when") != ["Need a general-purpose Git helper outside this repository"]:
         fail(f"expected canonical recommendation avoid_when, got {top.get('avoid_when')!r}")
-    if top.get('capabilities') != ['repo-operations', 'release-guidance', 'registry-debugging']:
+    if top.get("capabilities") != ["repo-operations", "release-guidance", "registry-debugging"]:
         fail(f"expected canonical recommendation capabilities, got {top.get('capabilities')!r}")
-    if top.get('runtime_assumptions') != [
-        'A Git checkout of infinitas-skill is available',
-        'Repository scripts can be executed from the workspace',
+    if top.get("runtime_assumptions") != [
+        "A Git checkout of infinitas-skill is available",
+        "Repository scripts can be executed from the workspace",
     ]:
-        fail(f"expected canonical recommendation runtime_assumptions, got {top.get('runtime_assumptions')!r}")
-    if top.get('maturity') != 'stable':
-        fail(f"expected canonical recommendation maturity 'stable', got {top.get('maturity')!r}")
-    if top.get('quality_score') != 90:
-        fail(f"expected canonical recommendation quality_score 90, got {top.get('quality_score')!r}")
-    explanation = payload.get('explanation') or {}
-    if not isinstance(explanation.get('winner_reason'), str) or not explanation.get('winner_reason').strip():
-        fail(f"expected top-level winner_reason, got {explanation.get('winner_reason')!r}")
-    if explanation.get('winner') != QUALIFIED_NAME:
-        fail(f"expected explanation winner {QUALIFIED_NAME!r}, got {explanation.get('winner')!r}")
-    assert_confidence(explanation.get('winner_confidence'), label='top-level explanation')
-    memory_summary = explanation.get('memory_summary')
-    if not isinstance(memory_summary, dict):
-        fail(f'expected explanation.memory_summary object, got {memory_summary!r}')
-    if memory_summary.get('used') is not False:
-        fail(f"expected memory_summary.used False by default, got {memory_summary.get('used')!r}")
-    if memory_summary.get('advisory_only') is not True:
         fail(
-            'expected memory_summary.advisory_only true, '
-            f"got {memory_summary.get('advisory_only')!r}"
+            f"expected canonical recommendation runtime_assumptions, got {top.get('runtime_assumptions')!r}"
         )
+    if top.get("maturity") != "stable":
+        fail(f"expected canonical recommendation maturity 'stable', got {top.get('maturity')!r}")
+    if top.get("quality_score") != 90:
+        fail(
+            f"expected canonical recommendation quality_score 90, got {top.get('quality_score')!r}"
+        )
+    explanation = payload.get("explanation") or {}
+    if (
+        not isinstance(explanation.get("winner_reason"), str)
+        or not explanation.get("winner_reason").strip()
+    ):
+        fail(f"expected top-level winner_reason, got {explanation.get('winner_reason')!r}")
+    if explanation.get("winner") != QUALIFIED_NAME:
+        fail(f"expected explanation winner {QUALIFIED_NAME!r}, got {explanation.get('winner')!r}")
+    assert_confidence(explanation.get("winner_confidence"), label="top-level explanation")
     if contains_absolute_path(payload):
-        fail(f'expected recommendation payload to avoid raw filesystem paths\n{json.dumps(payload, ensure_ascii=False, indent=2)}')
+        fail(
+            f"expected recommendation payload to avoid raw filesystem paths\n{json.dumps(payload, ensure_ascii=False, indent=2)}"
+        )
 
 
 def scenario_recommend_prefers_specialized_real_skills():
     scenarios = [
-        ('publish immutable release', 'codex', RELEASE_QUALIFIED_NAME),
-        ('install released skill into openclaw runtime', 'openclaw', CONSUME_QUALIFIED_NAME),
-        ('debug federated registry mirror audit export', 'codex', FEDERATION_QUALIFIED_NAME),
+        ("publish immutable release", "codex", RELEASE_QUALIFIED_NAME),
+        ("install released skill into openclaw runtime", "openclaw", CONSUME_QUALIFIED_NAME),
+        ("debug federated registry mirror audit export", "codex", FEDERATION_QUALIFIED_NAME),
     ]
     for task, agent, expected in scenarios:
         payload = json.loads(
             run_discovery_cli(
-                'recommend',
+                "recommend",
                 task,
-                '--target-agent',
+                "--target-agent",
                 agent,
-                '--json',
+                "--json",
                 cwd=ROOT,
             ).stdout
         )
-        results = payload.get('results') or []
+        results = payload.get("results") or []
         if not results:
-            fail(f'expected recommendation results for {task!r}')
+            fail(f"expected recommendation results for {task!r}")
         top = results[0]
-        if top.get('qualified_name') != expected:
-            fail(f"expected top recommendation {expected!r} for {task!r}, got {top.get('qualified_name')!r}")
-        if not top.get('use_when'):
-            fail(f'expected use_when for {expected!r}')
-        if not top.get('runtime_assumptions'):
-            fail(f'expected runtime_assumptions for {expected!r}')
-        assert_confidence(top.get('confidence'), label=f'recommendation for {task!r}')
-        assert_comparative_signals(top.get('comparative_signals'), label=f'recommendation for {task!r}')
+        if top.get("qualified_name") != expected:
+            fail(
+                f"expected top recommendation {expected!r} for {task!r}, got {top.get('qualified_name')!r}"
+            )
+        if not top.get("use_when"):
+            fail(f"expected use_when for {expected!r}")
+        if not top.get("runtime_assumptions"):
+            fail(f"expected runtime_assumptions for {expected!r}")
+        assert_confidence(top.get("confidence"), label=f"recommendation for {task!r}")
+        assert_comparative_signals(
+            top.get("comparative_signals"), label=f"recommendation for {task!r}"
+        )
 
 
 def discovery_index_payload():
     return {
-        'schema_version': 1,
-        'generated_at': '2026-03-15T00:00:00Z',
-        'default_registry': 'self',
-        'sources': [
-            {'name': 'self', 'kind': 'git', 'priority': 100, 'trust_level': 'private', 'root': '.', 'status': 'ready'},
-            {'name': 'external-demo', 'kind': 'local', 'priority': 50, 'trust_level': 'trusted', 'root': '../external-demo', 'status': 'ready'},
+        "schema_version": 1,
+        "generated_at": "2026-03-15T00:00:00Z",
+        "default_registry": "self",
+        "sources": [
+            {
+                "name": "self",
+                "kind": "git",
+                "priority": 100,
+                "trust_level": "private",
+                "root": ".",
+                "status": "ready",
+            },
+            {
+                "name": "external-demo",
+                "kind": "local",
+                "priority": 50,
+                "trust_level": "trusted",
+                "root": "../external-demo",
+                "status": "ready",
+            },
         ],
-        'resolution_policy': {
-            'private_registry_first': True,
-            'external_requires_confirmation': True,
-            'auto_install_mutable_sources': False,
+        "resolution_policy": {
+            "private_registry_first": True,
+            "external_requires_confirmation": True,
+            "auto_install_mutable_sources": False,
         },
-        'skills': [
+        "skills": [
             {
-                'name': 'ops-private',
-                'qualified_name': 'team/ops-private',
-                'publisher': 'team',
-                'summary': 'Operate safely inside this repository',
-                'source_registry': 'self',
-                'source_priority': 100,
-                'match_names': ['ops-private', 'team/ops-private'],
-                'default_install_version': '1.2.3',
-                'latest_version': '1.2.3',
-                'available_versions': ['1.2.3'],
-                'agent_compatible': ['codex'],
-                'install_requires_confirmation': False,
-                'trust_level': 'private',
-                'trust_state': 'verified',
-                'tags': ['operations', 'repo'],
-                'verified_support': {
-                    'codex': {
-                        'state': 'adapted',
-                        'checked_at': '2026-03-15T00:00:00Z',
-                        'freshness_state': 'fresh',
-                        'freshness_reason': 'not-applicable',
+                "name": "ops-private",
+                "qualified_name": "team/ops-private",
+                "publisher": "team",
+                "summary": "Operate safely inside this repository",
+                "source_registry": "self",
+                "source_priority": 100,
+                "match_names": ["ops-private", "team/ops-private"],
+                "default_install_version": "1.2.3",
+                "latest_version": "1.2.3",
+                "available_versions": ["1.2.3"],
+                "agent_compatible": ["codex"],
+                "install_requires_confirmation": False,
+                "trust_level": "private",
+                "trust_state": "verified",
+                "tags": ["operations", "repo"],
+                "verified_support": {
+                    "codex": {
+                        "state": "adapted",
+                        "checked_at": "2026-03-15T00:00:00Z",
+                        "freshness_state": "fresh",
+                        "freshness_reason": "not-applicable",
                     }
                 },
-                'attestation_formats': ['ssh'],
-                'use_when': ['Need to operate in this repo'],
-                'avoid_when': [],
-                'runtime_assumptions': ['A checkout of this repository is available'],
-                'maturity': 'stable',
-                'quality_score': 92,
-                'last_verified_at': '2026-03-15T00:00:00Z',
-                'capabilities': ['repo-operations', 'release'],
+                "attestation_formats": ["ssh"],
+                "use_when": ["Need to operate in this repo"],
+                "avoid_when": [],
+                "runtime_assumptions": ["A checkout of this repository is available"],
+                "maturity": "stable",
+                "quality_score": 92,
+                "last_verified_at": "2026-03-15T00:00:00Z",
+                "capabilities": ["repo-operations", "release"],
             },
             {
-                'name': 'ops-external',
-                'qualified_name': 'partner/ops-external',
-                'publisher': 'partner',
-                'summary': 'External operations helper',
-                'source_registry': 'external-demo',
-                'source_priority': 50,
-                'match_names': ['ops-external', 'partner/ops-external'],
-                'default_install_version': '0.9.0',
-                'latest_version': '0.9.0',
-                'available_versions': ['0.9.0'],
-                'agent_compatible': ['codex'],
-                'install_requires_confirmation': True,
-                'trust_level': 'trusted',
-                'trust_state': 'attested',
-                'tags': ['operations'],
-                'verified_support': {
-                    'codex': {
-                        'state': 'adapted',
-                        'checked_at': '2026-03-10T00:00:00Z',
-                        'freshness_state': 'stale',
-                        'freshness_reason': 'age-expired',
+                "name": "ops-external",
+                "qualified_name": "partner/ops-external",
+                "publisher": "partner",
+                "summary": "External operations helper",
+                "source_registry": "external-demo",
+                "source_priority": 50,
+                "match_names": ["ops-external", "partner/ops-external"],
+                "default_install_version": "0.9.0",
+                "latest_version": "0.9.0",
+                "available_versions": ["0.9.0"],
+                "agent_compatible": ["codex"],
+                "install_requires_confirmation": True,
+                "trust_level": "trusted",
+                "trust_state": "attested",
+                "tags": ["operations"],
+                "verified_support": {
+                    "codex": {
+                        "state": "adapted",
+                        "checked_at": "2026-03-10T00:00:00Z",
+                        "freshness_state": "stale",
+                        "freshness_reason": "age-expired",
                     }
                 },
-                'attestation_formats': ['ssh'],
-                'use_when': ['Need repo operations'],
-                'avoid_when': [],
-                'runtime_assumptions': ['A trusted external registry is configured'],
-                'maturity': 'beta',
-                'quality_score': 61,
-                'last_verified_at': '2026-03-10T00:00:00Z',
-                'capabilities': ['repo-operations'],
+                "attestation_formats": ["ssh"],
+                "use_when": ["Need repo operations"],
+                "avoid_when": [],
+                "runtime_assumptions": ["A trusted external registry is configured"],
+                "maturity": "beta",
+                "quality_score": 61,
+                "last_verified_at": "2026-03-10T00:00:00Z",
+                "capabilities": ["repo-operations"],
             },
             {
-                'name': 'notes-helper',
-                'qualified_name': 'partner/notes-helper',
-                'publisher': 'partner',
-                'summary': 'Documentation helper',
-                'source_registry': 'external-demo',
-                'source_priority': 50,
-                'match_names': ['notes-helper', 'partner/notes-helper'],
-                'default_install_version': '0.1.0',
-                'latest_version': '0.1.0',
-                'available_versions': ['0.1.0'],
-                'agent_compatible': ['openclaw'],
-                'install_requires_confirmation': True,
-                'trust_level': 'trusted',
-                'trust_state': 'attested',
-                'tags': ['docs'],
-                'verified_support': {},
-                'attestation_formats': ['ssh'],
-                'use_when': ['Need docs tooling'],
-                'avoid_when': [],
-                'runtime_assumptions': ['Documentation sources are available'],
-                'maturity': 'experimental',
-                'quality_score': 40,
-                'last_verified_at': None,
-                'capabilities': ['docs'],
+                "name": "notes-helper",
+                "qualified_name": "partner/notes-helper",
+                "publisher": "partner",
+                "summary": "Documentation helper",
+                "source_registry": "external-demo",
+                "source_priority": 50,
+                "match_names": ["notes-helper", "partner/notes-helper"],
+                "default_install_version": "0.1.0",
+                "latest_version": "0.1.0",
+                "available_versions": ["0.1.0"],
+                "agent_compatible": ["openclaw"],
+                "install_requires_confirmation": True,
+                "trust_level": "trusted",
+                "trust_state": "attested",
+                "tags": ["docs"],
+                "verified_support": {},
+                "attestation_formats": ["ssh"],
+                "use_when": ["Need docs tooling"],
+                "avoid_when": [],
+                "runtime_assumptions": ["Documentation sources are available"],
+                "maturity": "experimental",
+                "quality_score": 40,
+                "last_verified_at": None,
+                "capabilities": ["docs"],
             },
         ],
     }
 
 
 def prepare_repo():
-    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-recommend-skill-test-'))
-    repo = tmpdir / 'repo'
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-recommend-skill-test-"))
+    repo = tmpdir / "repo"
     shutil.copytree(
         ROOT,
         repo,
-        ignore=shutil.ignore_patterns('.git', '.planning', '__pycache__', '.cache', 'scripts/__pycache__', '.worktrees'),
+        ignore=shutil.ignore_patterns(
+            ".git",
+            ".planning",
+            "scripts/__pycache__",
+            "__pycache__.worktrees",
+            ".cache",
+            "*.pyc",
+            ".coverage.gitignore",
+            ".mypy_cache",
+            ".pytest_cache",
+            ".ruff_cache.state",
+            ".venv",
+            "build",
+            "infinitas_hosted_registry.egg-infonode_modules",
+            "tmp",
+        ),
     )
-    write_json(repo / 'catalog' / 'discovery-index.json', discovery_index_payload())
+    write_json(repo / "catalog" / "discovery-index.json", discovery_index_payload())
     return tmpdir, repo
 
 
@@ -348,59 +389,92 @@ def scenario_recommend_prefers_private_high_quality_match():
     try:
         payload = json.loads(
             run_discovery_cli(
-                'recommend',
-                'Need repo operations',
-                '--target-agent',
-                'codex',
-                '--json',
+                "recommend",
+                "Need repo operations",
+                "--target-agent",
+                "codex",
+                "--json",
                 cwd=repo,
             ).stdout
         )
-        results = payload.get('results') or []
+        results = payload.get("results") or []
         if len(results) < 2:
-            fail(f'expected at least two ranked recommendation results, got {len(results)}')
+            fail(f"expected at least two ranked recommendation results, got {len(results)}")
         top = results[0]
-        external = next((item for item in results if item.get('qualified_name') == 'partner/ops-external'), None)
-        if top.get('qualified_name') != 'team/ops-private':
-            fail(f"expected private candidate to outrank external candidate, got {top.get('qualified_name')!r}")
-        if not external:
-            fail('expected ranked results to include external candidate')
-        if external.get('install_requires_confirmation') is not True:
-            fail(f"expected external recommendation to require confirmation, got {external.get('install_requires_confirmation')!r}")
-        if top.get('runtime_assumptions') != ['A checkout of this repository is available']:
-            fail(f"expected top runtime_assumptions to survive recommendation output, got {top.get('runtime_assumptions')!r}")
-        if external.get('runtime_assumptions') != ['A trusted external registry is configured']:
+        external = next(
+            (item for item in results if item.get("qualified_name") == "partner/ops-external"), None
+        )
+        if top.get("qualified_name") != "team/ops-private":
             fail(
-                'expected external runtime_assumptions to survive recommendation output, '
+                f"expected private candidate to outrank external candidate, got {top.get('qualified_name')!r}"
+            )
+        if not external:
+            fail("expected ranked results to include external candidate")
+        if external.get("install_requires_confirmation") is not True:
+            fail(
+                f"expected external recommendation to require confirmation, got {external.get('install_requires_confirmation')!r}"
+            )
+        if top.get("runtime_assumptions") != ["A checkout of this repository is available"]:
+            fail(
+                f"expected top runtime_assumptions to survive recommendation output, got {top.get('runtime_assumptions')!r}"
+            )
+        if external.get("runtime_assumptions") != ["A trusted external registry is configured"]:
+            fail(
+                "expected external runtime_assumptions to survive recommendation output, "
                 f"got {external.get('runtime_assumptions')!r}"
             )
-        assert_confidence(top.get('confidence'), label='private candidate')
-        assert_confidence(external.get('confidence'), label='external candidate')
-        assert_comparative_signals(top.get('comparative_signals'), label='private candidate')
-        assert_comparative_signals(external.get('comparative_signals'), label='external candidate')
-        if external.get('comparative_signals', {}).get('rank') != 2:
-            fail(f"expected external candidate rank 2, got {external.get('comparative_signals', {}).get('rank')!r}")
-        if external.get('comparative_signals', {}).get('score_gap_from_top', 0) <= 0:
-            fail(f'expected external candidate to trail top score, got {external.get("comparative_signals")!r}')
-        if external.get('comparative_signals', {}).get('quality_gap_from_top', 0) <= 0:
-            fail(f'expected external candidate to trail top quality, got {external.get("comparative_signals")!r}')
-        if external.get('comparative_signals', {}).get('verification_freshness_gap_from_top', 0) <= 0:
-            fail(f'expected external candidate to trail top freshness, got {external.get("comparative_signals")!r}')
-        if external.get('comparative_signals', {}).get('compatibility_gap_from_top') != 'same':
+        assert_confidence(top.get("confidence"), label="private candidate")
+        assert_confidence(external.get("confidence"), label="external candidate")
+        assert_comparative_signals(top.get("comparative_signals"), label="private candidate")
+        assert_comparative_signals(external.get("comparative_signals"), label="external candidate")
+        if external.get("comparative_signals", {}).get("rank") != 2:
             fail(
-                'expected external candidate compatibility gap to remain same, '
+                f"expected external candidate rank 2, got {external.get('comparative_signals', {}).get('rank')!r}"
+            )
+        if external.get("comparative_signals", {}).get("score_gap_from_top", 0) <= 0:
+            fail(
+                f"expected external candidate to trail top score, got {external.get('comparative_signals')!r}"
+            )
+        if external.get("comparative_signals", {}).get("quality_gap_from_top", 0) <= 0:
+            fail(
+                f"expected external candidate to trail top quality, got {external.get('comparative_signals')!r}"
+            )
+        if (
+            external.get("comparative_signals", {}).get("verification_freshness_gap_from_top", 0)
+            <= 0
+        ):
+            fail(
+                f"expected external candidate to trail top freshness, got {external.get('comparative_signals')!r}"
+            )
+        if external.get("comparative_signals", {}).get("compatibility_gap_from_top") != "same":
+            fail(
+                "expected external candidate compatibility gap to remain same, "
                 f"got {external.get('comparative_signals', {}).get('compatibility_gap_from_top')!r}"
             )
-        explanation = payload.get('explanation') or {}
-        if explanation.get('runner_up') != 'partner/ops-external':
+        explanation = payload.get("explanation") or {}
+        if explanation.get("runner_up") != "partner/ops-external":
             fail(f"expected runner_up 'partner/ops-external', got {explanation.get('runner_up')!r}")
-        assert_confidence(explanation.get('winner_confidence'), label='private-vs-external explanation')
-        if not isinstance(explanation.get('score_gap_to_runner_up'), int) or explanation.get('score_gap_to_runner_up') <= 0:
-            fail(f"expected positive score_gap_to_runner_up, got {explanation.get('score_gap_to_runner_up')!r}")
-        if not isinstance(explanation.get('comparison_summary'), str) or not explanation.get('comparison_summary').strip():
-            fail(f"expected comparison_summary in recommendation explanation, got {explanation.get('comparison_summary')!r}")
+        assert_confidence(
+            explanation.get("winner_confidence"), label="private-vs-external explanation"
+        )
+        if (
+            not isinstance(explanation.get("score_gap_to_runner_up"), int)
+            or explanation.get("score_gap_to_runner_up") <= 0
+        ):
+            fail(
+                f"expected positive score_gap_to_runner_up, got {explanation.get('score_gap_to_runner_up')!r}"
+            )
+        if (
+            not isinstance(explanation.get("comparison_summary"), str)
+            or not explanation.get("comparison_summary").strip()
+        ):
+            fail(
+                f"expected comparison_summary in recommendation explanation, got {explanation.get('comparison_summary')!r}"
+            )
         if contains_absolute_path(payload):
-            fail(f'expected recommendation payload to avoid raw filesystem paths\n{json.dumps(payload, ensure_ascii=False, indent=2)}')
+            fail(
+                f"expected recommendation payload to avoid raw filesystem paths\n{json.dumps(payload, ensure_ascii=False, indent=2)}"
+            )
     finally:
         shutil.rmtree(tmpdir)
 
@@ -409,274 +483,101 @@ def scenario_recommend_prefers_fresh_verified_support():
     tmpdir, repo = prepare_repo()
     try:
         payload_data = discovery_index_payload()
-        payload_data['skills'] = [
+        payload_data["skills"] = [
             {
-                'name': 'fresh-candidate',
-                'qualified_name': 'team/fresh-candidate',
-                'publisher': 'team',
-                'summary': 'Need repo operations',
-                'source_registry': 'self',
-                'source_priority': 100,
-                'match_names': ['fresh-candidate', 'team/fresh-candidate'],
-                'default_install_version': '1.0.0',
-                'latest_version': '1.0.0',
-                'available_versions': ['1.0.0'],
-                'agent_compatible': ['codex'],
-                'install_requires_confirmation': False,
-                'trust_level': 'private',
-                'trust_state': 'verified',
-                'tags': ['operations'],
-                'verified_support': {
-                    'codex': {
-                        'state': 'adapted',
-                        'checked_at': '2026-03-15T00:00:00Z',
-                        'freshness_state': 'fresh',
-                        'freshness_reason': 'not-applicable',
+                "name": "fresh-candidate",
+                "qualified_name": "team/fresh-candidate",
+                "publisher": "team",
+                "summary": "Need repo operations",
+                "source_registry": "self",
+                "source_priority": 100,
+                "match_names": ["fresh-candidate", "team/fresh-candidate"],
+                "default_install_version": "1.0.0",
+                "latest_version": "1.0.0",
+                "available_versions": ["1.0.0"],
+                "agent_compatible": ["codex"],
+                "install_requires_confirmation": False,
+                "trust_level": "private",
+                "trust_state": "verified",
+                "tags": ["operations"],
+                "verified_support": {
+                    "codex": {
+                        "state": "adapted",
+                        "checked_at": "2026-03-15T00:00:00Z",
+                        "freshness_state": "fresh",
+                        "freshness_reason": "not-applicable",
                     }
                 },
-                'attestation_formats': ['ssh'],
-                'use_when': ['Need repo operations'],
-                'avoid_when': [],
-                'runtime_assumptions': ['A checkout of this repository is available'],
-                'maturity': 'stable',
-                'quality_score': 80,
-                'last_verified_at': '2026-03-15T00:00:00Z',
-                'capabilities': ['repo-operations'],
+                "attestation_formats": ["ssh"],
+                "use_when": ["Need repo operations"],
+                "avoid_when": [],
+                "runtime_assumptions": ["A checkout of this repository is available"],
+                "maturity": "stable",
+                "quality_score": 80,
+                "last_verified_at": "2026-03-15T00:00:00Z",
+                "capabilities": ["repo-operations"],
             },
             {
-                'name': 'stale-candidate',
-                'qualified_name': 'team/stale-candidate',
-                'publisher': 'team',
-                'summary': 'Need repo operations',
-                'source_registry': 'self',
-                'source_priority': 100,
-                'match_names': ['stale-candidate', 'team/stale-candidate'],
-                'default_install_version': '1.0.0',
-                'latest_version': '1.0.0',
-                'available_versions': ['1.0.0'],
-                'agent_compatible': ['codex'],
-                'install_requires_confirmation': False,
-                'trust_level': 'private',
-                'trust_state': 'verified',
-                'tags': ['operations'],
-                'verified_support': {
-                    'codex': {
-                        'state': 'adapted',
-                        'checked_at': '2026-03-01T00:00:00Z',
-                        'freshness_state': 'stale',
-                        'freshness_reason': 'age-expired',
+                "name": "stale-candidate",
+                "qualified_name": "team/stale-candidate",
+                "publisher": "team",
+                "summary": "Need repo operations",
+                "source_registry": "self",
+                "source_priority": 100,
+                "match_names": ["stale-candidate", "team/stale-candidate"],
+                "default_install_version": "1.0.0",
+                "latest_version": "1.0.0",
+                "available_versions": ["1.0.0"],
+                "agent_compatible": ["codex"],
+                "install_requires_confirmation": False,
+                "trust_level": "private",
+                "trust_state": "verified",
+                "tags": ["operations"],
+                "verified_support": {
+                    "codex": {
+                        "state": "adapted",
+                        "checked_at": "2026-03-01T00:00:00Z",
+                        "freshness_state": "stale",
+                        "freshness_reason": "age-expired",
                     }
                 },
-                'attestation_formats': ['ssh'],
-                'use_when': ['Need repo operations'],
-                'avoid_when': [],
-                'runtime_assumptions': ['A checkout of this repository is available'],
-                'maturity': 'stable',
-                'quality_score': 80,
-                'last_verified_at': '2026-03-01T00:00:00Z',
-                'capabilities': ['repo-operations'],
+                "attestation_formats": ["ssh"],
+                "use_when": ["Need repo operations"],
+                "avoid_when": [],
+                "runtime_assumptions": ["A checkout of this repository is available"],
+                "maturity": "stable",
+                "quality_score": 80,
+                "last_verified_at": "2026-03-01T00:00:00Z",
+                "capabilities": ["repo-operations"],
             },
         ]
-        write_json(repo / 'catalog' / 'discovery-index.json', payload_data)
+        write_json(repo / "catalog" / "discovery-index.json", payload_data)
         payload = json.loads(
             run_discovery_cli(
-                'recommend',
-                'Need repo operations',
-                '--target-agent',
-                'codex',
-                '--json',
+                "recommend",
+                "Need repo operations",
+                "--target-agent",
+                "codex",
+                "--json",
                 cwd=repo,
             ).stdout
         )
-        results = payload.get('results') or []
+        results = payload.get("results") or []
         if len(results) < 2:
-            fail(f'expected at least two results for freshness comparison, got {results!r}')
-        if results[0].get('qualified_name') != 'team/fresh-candidate':
-            fail(f"expected fresh candidate to outrank stale candidate, got {results[0].get('qualified_name')!r}")
-        stale = next((item for item in results if item.get('qualified_name') == 'team/stale-candidate'), None)
-        if stale is None:
-            fail(f'expected stale candidate in ranked results, got {results!r}')
-        if stale.get('comparative_signals', {}).get('score_gap_from_top', 0) <= 0:
-            fail(f"expected stale candidate to trail top score, got {stale.get('comparative_signals')!r}")
-    finally:
-        shutil.rmtree(tmpdir)
-
-
-class FakeMemoryProvider:
-    backend_name = 'fake'
-    capabilities = {'read': True, 'write': True}
-
-    def search(self, *, query, limit, scope=None, memory_types=None):  # noqa: ARG002
-        return MemorySearchResult(
-            backend=self.backend_name,
-            records=[
-                MemoryRecord(
-                    memory='User prefers neptune workflows for codex helper choices.',
-                    memory_type='user_preference',
-                    score=0.96,
-                ),
-                MemoryRecord(
-                    memory='Pluto workflow often fails due to unsupported runtime.',
-                    memory_type='experience',
-                    score=0.91,
-                ),
-            ],
-        )
-
-
-def scenario_recommend_memory_signals_and_guardrails():
-    tmpdir, repo = prepare_repo()
-    try:
-        payload_data = discovery_index_payload()
-        payload_data['skills'] = [
-            {
-                'name': 'alpha-safe',
-                'qualified_name': 'team/alpha-safe',
-                'publisher': 'team',
-                'summary': 'Codex helper for saturn workflows',
-                'source_registry': 'self',
-                'source_priority': 100,
-                'match_names': ['alpha-safe', 'team/alpha-safe'],
-                'default_install_version': '1.0.0',
-                'latest_version': '1.0.0',
-                'available_versions': ['1.0.0'],
-                'agent_compatible': ['codex'],
-                'install_requires_confirmation': False,
-                'trust_level': 'private',
-                'trust_state': 'verified',
-                'tags': ['helper', 'ops'],
-                'verified_support': {},
-                'attestation_formats': ['ssh'],
-                'use_when': ['Need codex helper'],
-                'avoid_when': [],
-                'runtime_assumptions': ['Repo is available'],
-                'maturity': 'stable',
-                'quality_score': 70,
-                'last_verified_at': '2026-04-03T00:00:00Z',
-                'capabilities': ['repo-operations'],
-            },
-            {
-                'name': 'beta-preferred',
-                'qualified_name': 'team/beta-preferred',
-                'publisher': 'team',
-                'summary': 'Codex helper for neptune workflows',
-                'source_registry': 'self',
-                'source_priority': 100,
-                'match_names': ['beta-preferred', 'team/beta-preferred'],
-                'default_install_version': '1.0.0',
-                'latest_version': '1.0.0',
-                'available_versions': ['1.0.0'],
-                'agent_compatible': ['codex'],
-                'install_requires_confirmation': False,
-                'trust_level': 'private',
-                'trust_state': 'verified',
-                'tags': ['helper', 'ops'],
-                'verified_support': {},
-                'attestation_formats': ['ssh'],
-                'use_when': ['Need codex helper'],
-                'avoid_when': [],
-                'runtime_assumptions': ['Repo is available'],
-                'maturity': 'stable',
-                'quality_score': 70,
-                'last_verified_at': '2026-04-03T00:00:00Z',
-                'capabilities': ['repo-operations'],
-            },
-            {
-                'name': 'gamma-unsafe',
-                'qualified_name': 'team/gamma-unsafe',
-                'publisher': 'team',
-                'summary': 'Codex helper for pluto workflows',
-                'source_registry': 'self',
-                'source_priority': 100,
-                'match_names': ['gamma-unsafe', 'team/gamma-unsafe'],
-                'default_install_version': '1.0.0',
-                'latest_version': '1.0.0',
-                'available_versions': ['1.0.0'],
-                'agent_compatible': ['codex'],
-                'install_requires_confirmation': False,
-                'trust_level': 'private',
-                'trust_state': 'verified',
-                'tags': ['helper', 'ops'],
-                'verified_support': {
-                    'codex': {
-                        'state': 'unsupported',
-                        'checked_at': '2026-04-03T00:00:00Z',
-                        'freshness_state': 'fresh',
-                    }
-                },
-                'attestation_formats': ['ssh'],
-                'use_when': ['Need codex helper'],
-                'avoid_when': [],
-                'runtime_assumptions': ['Repo is available'],
-                'maturity': 'stable',
-                'quality_score': 390,
-                'last_verified_at': '2026-04-03T00:00:00Z',
-                'capabilities': ['repo-operations'],
-            },
-        ]
-        write_json(repo / 'catalog' / 'discovery-index.json', payload_data)
-        baseline = recommend_skills(
-            repo,
-            task='Need codex helper for workflows',
-            target_agent='codex',
-            limit=3,
-        )
-        if baseline.get('results', [{}])[0].get('qualified_name') != 'team/alpha-safe':
-            fail(f'expected deterministic baseline winner team/alpha-safe, got {baseline!r}')
-
-        payload = recommend_skills(
-            repo,
-            task='Need codex helper for workflows',
-            target_agent='codex',
-            limit=3,
-            memory_provider=FakeMemoryProvider(),
-            memory_scope={'user_ref': 'maintainer'},
-            memory_context_enabled=True,
-        )
-        results = payload.get('results') or []
-        if len(results) < 3:
-            fail(f'expected at least three recommendation results, got {results!r}')
-        if results[0].get('qualified_name') != 'team/beta-preferred':
-            fail(f"expected memory to break close tie toward team/beta-preferred, got {results[0].get('qualified_name')!r}")
-        top_memory = results[0].get('memory_signals') or {}
-        if top_memory.get('matched_memory_count') != 1:
-            fail(f"expected top matched_memory_count 1, got {top_memory.get('matched_memory_count')!r}")
-        if not isinstance(top_memory.get('applied_boost'), int) or top_memory.get('applied_boost') <= 0:
-            fail(f"expected top applied memory boost > 0, got {top_memory.get('applied_boost')!r}")
-        if top_memory.get('memory_types') != ['user_preference']:
-            fail(f"expected top memory_types ['user_preference'], got {top_memory.get('memory_types')!r}")
-
-        explanation = payload.get('explanation') or {}
-        memory_summary = explanation.get('memory_summary') or {}
-        expected_summary = {
-            'used': True,
-            'backend': 'fake',
-            'matched_count': 2,
-            'retrieved_count': 2,
-            'advisory_only': True,
-            'status': 'matched',
-            'curation_summary': {
-                'input_count': 2,
-                'kept_count': 2,
-                'suppressed_duplicates': 0,
-                'suppressed_low_signal': 0,
-            },
-        }
-        if memory_summary != expected_summary:
-            fail(f'expected memory_summary {expected_summary!r}, got {memory_summary!r}')
-
-        unsafe = next((item for item in results if item.get('qualified_name') == 'team/gamma-unsafe'), None)
-        if unsafe is None:
-            fail(f'expected gamma-unsafe result to remain visible, got {results!r}')
-        if unsafe.get('ranking_factors', {}).get('compatibility') is not False:
-            fail(f"expected gamma-unsafe compatibility false, got {unsafe.get('ranking_factors')!r}")
-        if (unsafe.get('memory_signals') or {}).get('applied_boost') != 0:
+            fail(f"expected at least two results for freshness comparison, got {results!r}")
+        if results[0].get("qualified_name") != "team/fresh-candidate":
             fail(
-                'expected incompatible candidate memory boost 0, '
-                f"got {(unsafe.get('memory_signals') or {}).get('applied_boost')!r}"
+                f"expected fresh candidate to outrank stale candidate, got {results[0].get('qualified_name')!r}"
             )
-        if results[0].get('qualified_name') == 'team/gamma-unsafe':
-            fail('memory should not lift incompatible candidate above compatible candidates')
+        stale = next(
+            (item for item in results if item.get("qualified_name") == "team/stale-candidate"), None
+        )
+        if stale is None:
+            fail(f"expected stale candidate in ranked results, got {results!r}")
+        if stale.get("comparative_signals", {}).get("score_gap_from_top", 0) <= 0:
+            fail(
+                f"expected stale candidate to trail top score, got {stale.get('comparative_signals')!r}"
+            )
     finally:
         shutil.rmtree(tmpdir)
 
@@ -686,9 +587,8 @@ def main():
     scenario_recommend_prefers_specialized_real_skills()
     scenario_recommend_prefers_private_high_quality_match()
     scenario_recommend_prefers_fresh_verified_support()
-    scenario_recommend_memory_signals_and_guardrails()
-    print('OK: recommend-skill checks passed')
+    print("OK: recommend-skill checks passed")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

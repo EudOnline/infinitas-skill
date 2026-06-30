@@ -2,7 +2,7 @@
 audience: contributors, integrators, operators
 owner: repository maintainers
 source_of_truth: generated from argparse definitions in src/infinitas_skill
-last_reviewed: 2026-04-07
+last_reviewed: 2026-06-30
 status: maintained
 ---
 
@@ -20,8 +20,7 @@ uv run python3 -m infinitas_skill.cli.reference
 
 ```text
 usage: infinitas [-h]
-                 {compatibility,release,install,discovery,openclaw,registry,policy,server}
-                 ...
+                 {compatibility,release,install,discovery,openclaw,registry,policy,server} ...
 
 infinitas project CLI
 
@@ -153,7 +152,6 @@ usage: infinitas install resolve-plan [-h] [--skill-dir SKILL_DIR]
                                       [--target-dir TARGET_DIR]
                                       [--source-registry SOURCE_REGISTRY]
                                       [--source-json SOURCE_JSON]
-                                      [--memory-mode MEMORY_MODE]
                                       [--mode {install,sync}] [--json]
 
 Resolve an install or sync dependency plan
@@ -171,9 +169,6 @@ options:
                         Registry hint for the root skill source
   --source-json SOURCE_JSON
                         Resolved source metadata JSON for the root skill
-  --memory-mode MEMORY_MODE
-                        Selected memory mode for agent_preset registry
-                        installs
   --mode {install,sync}
                         Whether to plan an install or sync flow
   --json                Print machine-readable plan output
@@ -486,8 +481,7 @@ options:
 
 ```text
 usage: infinitas policy [-h]
-                        {check-packs,check-promotion,recommend-reviewers,review-status}
-                        ...
+                        {check-packs,check-promotion,recommend-reviewers,review-status} ...
 
 Policy validation and promotion CLI
 
@@ -570,17 +564,14 @@ options:
 
 ```text
 usage: infinitas registry [-h] [--base-url BASE_URL] [--token TOKEN]
-                          {skills,drafts,agent-presets,agent-codes,releases,exposures,grants,tokens,reviews}
-                          ...
+                          {skills,drafts,releases,exposures,grants,tokens,reviews} ...
 
 Hosted registry private-first control plane CLI
 
 positional arguments:
-  {skills,drafts,agent-presets,agent-codes,releases,exposures,grants,tokens,reviews}
+  {skills,drafts,releases,exposures,grants,tokens,reviews}
     skills              Manage private-first skill records
     drafts              Manage editable drafts and immutable version sealing
-    agent-presets       Manage publishable agent preset objects
-    agent-codes         Manage publishable agent code objects
     releases            Create and inspect immutable releases
     exposures           Manage audience exposure and share policy
     grants              Inspect grant policy scaffolding for token-scoped
@@ -626,48 +617,6 @@ positional arguments:
     create              Create an editable draft for a skill
     update              Patch an open draft
     seal                Seal draft into an immutable skill version
-
-options:
-  -h, --help            show this help message and exit
-  --base-url BASE_URL   Hosted registry API base URL
-  --token TOKEN         Bearer token for hosted registry API
-```
-
-## `infinitas registry agent-presets`
-
-```text
-usage: infinitas registry agent-presets [-h] [--base-url BASE_URL]
-                                        [--token TOKEN]
-                                        {create,create-draft,seal-draft} ...
-
-Manage publishable agent preset objects
-
-positional arguments:
-  {create,create-draft,seal-draft}
-    create              Create a new agent preset object
-    create-draft        Create a draft payload for an agent preset
-    seal-draft          Seal an agent preset draft
-
-options:
-  -h, --help            show this help message and exit
-  --base-url BASE_URL   Hosted registry API base URL
-  --token TOKEN         Bearer token for hosted registry API
-```
-
-## `infinitas registry agent-codes`
-
-```text
-usage: infinitas registry agent-codes [-h] [--base-url BASE_URL]
-                                      [--token TOKEN]
-                                      {create,create-draft,seal-draft} ...
-
-Manage publishable agent code objects
-
-positional arguments:
-  {create,create-draft,seal-draft}
-    create              Create a new agent code object
-    create-draft        Create an external-import draft for agent code
-    seal-draft          Seal an agent code draft
 
 options:
   -h, --help            show this help message and exit
@@ -779,8 +728,7 @@ options:
 
 ```text
 usage: infinitas release [-h]
-                         {check-state,signing-readiness,doctor-signing,bootstrap-signing}
-                         ...
+                         {check-state,signing-readiness,doctor-signing,bootstrap-signing} ...
 
 Release CLI
 
@@ -851,8 +799,7 @@ options:
 
 ```text
 usage: infinitas release bootstrap-signing [-h]
-                                           {init-key,add-allowed-signer,configure-git,authorize-publisher}
-                                           ...
+                                           {init-key,add-allowed-signer,configure-git,authorize-publisher} ...
 
 Bootstrap SSH signing and repository signer policy
 
@@ -873,24 +820,18 @@ options:
 
 ```text
 usage: infinitas server [-h]
-                        {healthcheck,backup,render-systemd,prune-backups,worker,inspect-state,memory-health,memory-curation,memory-observability,memory-baselines}
-                        ...
+                        {healthcheck,backup,render-systemd,prune-backups,worker,inspect-state} ...
 
 Hosted server operations CLI
 
 positional arguments:
-  {healthcheck,backup,render-systemd,prune-backups,worker,inspect-state,memory-health,memory-curation,memory-observability,memory-baselines}
+  {healthcheck,backup,render-systemd,prune-backups,worker,inspect-state}
     healthcheck         Run hosted server health checks
     backup              Create a hosted registry backup set
     render-systemd      Render a hosted registry systemd deployment bundle
     prune-backups       Prune older hosted registry backup snapshots
     worker              Run the hosted registry worker loop
     inspect-state       Inspect hosted registry queue and release state
-    memory-health       Inspect hosted registry memory writeback health
-    memory-curation     Inspect hosted registry memory curation candidates
-    memory-observability
-                        Inspect hosted registry memory operations health
-    memory-baselines    Inspect rolling memory baselines
 
 options:
   -h, --help            show this help message and exit
@@ -899,8 +840,9 @@ options:
 ## `infinitas server healthcheck`
 
 ```text
-usage: infinitas server healthcheck [-h] --api-url API_URL --repo-path
-                                    REPO_PATH --artifact-path ARTIFACT_PATH
+usage: infinitas server healthcheck [-h] --api-url API_URL
+                                    --repo-path REPO_PATH
+                                    --artifact-path ARTIFACT_PATH
                                     --database-url DATABASE_URL
                                     [--token TOKEN] [--json]
 
@@ -922,8 +864,9 @@ options:
 ## `infinitas server backup`
 
 ```text
-usage: infinitas server backup [-h] --repo-path REPO_PATH --database-url
-                               DATABASE_URL --artifact-path ARTIFACT_PATH
+usage: infinitas server backup [-h] --repo-path REPO_PATH
+                               --database-url DATABASE_URL
+                               --artifact-path ARTIFACT_PATH
                                --output-dir OUTPUT_DIR [--label LABEL]
                                [--json]
 
@@ -984,8 +927,9 @@ options:
 
 ```text
 usage: infinitas server render-systemd [-h] --output-dir OUTPUT_DIR
-                                       --repo-root REPO_ROOT --python-bin
-                                       PYTHON_BIN --env-file ENV_FILE
+                                       --repo-root REPO_ROOT
+                                       --python-bin PYTHON_BIN
+                                       --env-file ENV_FILE
                                        [--service-prefix SERVICE_PREFIX]
                                        [--service-user SERVICE_USER]
                                        [--listen-host LISTEN_HOST]
@@ -1000,9 +944,6 @@ usage: infinitas server render-systemd [-h] --output-dir OUTPUT_DIR
                                        [--prune-on-calendar PRUNE_ON_CALENDAR]
                                        [--prune-keep-last PRUNE_KEEP_LAST]
                                        [--inspect-on-calendar INSPECT_ON_CALENDAR]
-                                       [--curation-on-calendar CURATION_ON_CALENDAR]
-                                       [--curation-action {archive,prune}]
-                                       [--curation-max-actions CURATION_MAX_ACTIONS]
                                        [--inspect-limit INSPECT_LIMIT]
                                        [--inspect-max-queued-jobs INSPECT_MAX_QUEUED_JOBS]
                                        [--inspect-max-running-jobs INSPECT_MAX_RUNNING_JOBS]
@@ -1059,14 +1000,6 @@ options:
   --inspect-on-calendar INSPECT_ON_CALENDAR
                         systemd OnCalendar expression for queue inspection
                         runs
-  --curation-on-calendar CURATION_ON_CALENDAR
-                        Optional systemd OnCalendar expression for scheduled
-                        memory curation enqueue
-  --curation-action {archive,prune}
-                        Action scheduled memory curation should enqueue
-  --curation-max-actions CURATION_MAX_ACTIONS
-                        Maximum candidates each scheduled memory curation run
-                        should touch
   --inspect-limit INSPECT_LIMIT
                         Number of recent rows included in each inspection run
   --inspect-max-queued-jobs INSPECT_MAX_QUEUED_JOBS

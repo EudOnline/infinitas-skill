@@ -7,6 +7,7 @@ import os
 import re
 import subprocess
 from pathlib import Path
+from typing import Any
 
 SIGNER_RE = re.compile(r'Good "git" signature for (.+?) with ')
 SIGNATURE_MARKERS = ("BEGIN SSH SIGNATURE", "BEGIN PGP SIGNATURE")
@@ -106,7 +107,7 @@ def _tag_signature_markers(root, tag_name):
 
 
 def local_tag_state(root, tag_name, signing, *, allowed_signer_entries=None):
-    state = {
+    state: dict[str, Any] = {
         "exists": False,
         "ref_type": None,
         "target_commit": None,

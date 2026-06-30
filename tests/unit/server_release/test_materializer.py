@@ -8,6 +8,7 @@ server.models ↔ server.modules.release.models circular re-export chain.
 We import server.models first to establish the Base class before the
 release models try to inherit from it.
 """
+
 from __future__ import annotations
 
 import gzip

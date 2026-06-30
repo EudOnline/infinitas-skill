@@ -12,11 +12,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' "
-            "'sha256-dkACincQ35HE+JH32YH7iAxfFFDeZtankjXNpNEgklY='; "
+            "script-src 'self'; "
             "style-src 'self' https://fonts.googleapis.com "
             "'sha256-Bn5g5YFE2knf3df736jiCF0Yao9wmuW+tCibG1uamiE='; "
-            "img-src 'self' data:; "
+            "img-src 'self' data: https://images.unsplash.com; "
             "font-src 'self' https://fonts.gstatic.com; "
             "connect-src 'self'; "
             "frame-ancestors 'none'; "
@@ -25,9 +24,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Strict-Transport-Security"] = (
-            "max-age=31536000; includeSubDomains"
-        )
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         response.headers["Permissions-Policy"] = (
             "camera=(), microphone=(), geolocation=(), payment=()"
         )

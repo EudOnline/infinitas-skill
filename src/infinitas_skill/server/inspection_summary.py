@@ -136,9 +136,7 @@ def build_jobs_inspection_summary(
         ).scalars()
     )
     queued_jobs = list(
-        session.execute(
-            select(Job).where(Job.status == "queued").order_by(Job.id.desc())
-        ).scalars()
+        session.execute(select(Job).where(Job.status == "queued").order_by(Job.id.desc())).scalars()
     )
     recent_reclaimed = session.execute(
         select(Job)
@@ -155,8 +153,7 @@ def build_jobs_inspection_summary(
     queued_ages = [
         age
         for age in (
-            _seconds_since(getattr(job, "created_at", None), now=checked_at)
-            for job in queued_jobs
+            _seconds_since(getattr(job, "created_at", None), now=checked_at) for job in queued_jobs
         )
         if age is not None
     ]

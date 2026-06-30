@@ -46,31 +46,6 @@ def profile_admin_view(
         raise HTTPException(status_code=403, detail="credential access denied")
 
 
-# ── Writeback ─────────────────────────────────────────────────────────────────
-
-
-class WritebackBody(BaseModel):
-    note: str = Field(max_length=4096)
-    context: dict[str, Any] | None = None
-
-
-@router.post("/writeback")
-def profile_writeback(
-    body: WritebackBody,
-    context: AccessContext = Depends(get_current_access_context),
-    db: Session = Depends(get_db),
-):
-    """Record a memory writeback event for the authenticated credential."""
-    from server.modules.access.authz import require_any_scope
-
-    if not require_any_scope(context, {"api:user", "authoring:write", "skill:write"}):
-        raise HTTPException(
-            status_code=403, detail="insufficient scope for writeback"
-        )
-
-    return profile_service.record_writeback(db, context, body.note, body.context)
-
-
 # ── Policy update ─────────────────────────────────────────────────────────────
 
 

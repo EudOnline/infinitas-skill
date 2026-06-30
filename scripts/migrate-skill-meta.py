@@ -16,22 +16,22 @@ def iter_meta_paths(raw_paths):
     for raw in raw_paths:
         path = Path(raw).resolve()
         if path.is_file():
-            if path.name != '_meta.json':
-                raise MigrationError(f'expected a _meta.json file, got {path}')
+            if path.name != "_meta.json":
+                raise MigrationError(f"expected a _meta.json file, got {path}")
             if path not in seen:
                 seen.add(path)
                 yield path
             continue
         if not path.exists():
-            raise MigrationError(f'path does not exist: {path}')
-        direct = path / '_meta.json'
+            raise MigrationError(f"path does not exist: {path}")
+        direct = path / "_meta.json"
         if direct.is_file():
             resolved = direct.resolve()
             if resolved not in seen:
                 seen.add(resolved)
                 yield resolved
             continue
-        for candidate in sorted(path.rglob('_meta.json')):
+        for candidate in sorted(path.rglob("_meta.json")):
             resolved = candidate.resolve()
             if resolved not in seen:
                 seen.add(resolved)
@@ -39,25 +39,25 @@ def iter_meta_paths(raw_paths):
 
 
 def migrate_meta(path: Path, *, check=False):
-    payload = json.loads(path.read_text(encoding='utf-8'))
+    payload = json.loads(path.read_text(encoding="utf-8"))
     _version, errors = validate_schema_version(payload)
     if errors:
         raise MigrationError(f"{path}: {'; '.join(errors)}")
-    if payload.get('schema_version') == SUPPORTED_SCHEMA_VERSION:
+    if payload.get("schema_version") == SUPPORTED_SCHEMA_VERSION:
         return False
     if check:
-        print(f'{path}: would update schema_version to {SUPPORTED_SCHEMA_VERSION}')
+        print(f"{path}: would update schema_version to {SUPPORTED_SCHEMA_VERSION}")
         return True
-    payload = {'schema_version': SUPPORTED_SCHEMA_VERSION, **payload}
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-    print(f'{path}: wrote schema_version {SUPPORTED_SCHEMA_VERSION}')
+    payload = {"schema_version": SUPPORTED_SCHEMA_VERSION, **payload}
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"{path}: wrote schema_version {SUPPORTED_SCHEMA_VERSION}")
     return True
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--check', action='store_true')
-    parser.add_argument('paths', nargs='+')
+    parser.add_argument("--check", action="store_true")
+    parser.add_argument("paths", nargs="+")
     args = parser.parse_args()
 
     try:
@@ -67,7 +67,7 @@ def main():
         return 1
 
     if not meta_paths:
-        print('no _meta.json files found', file=sys.stderr)
+        print("no _meta.json files found", file=sys.stderr)
         return 1
 
     changed = False
@@ -83,5 +83,5 @@ def main():
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     raise SystemExit(main())

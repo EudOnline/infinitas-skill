@@ -105,11 +105,15 @@ def create_ready_release(client, headers: dict[str, str], *, slug: str, display_
     return release_id
 
 
-def approve_exposure_review(client, session_factory, headers: dict[str, str], exposure_id: int) -> None:
+def approve_exposure_review(
+    client, session_factory, headers: dict[str, str], exposure_id: int
+) -> None:
     from server.models import ReviewCase
 
     with session_factory() as session:
-        review_case = session.scalar(select(ReviewCase).where(ReviewCase.exposure_id == exposure_id))
+        review_case = session.scalar(
+            select(ReviewCase).where(ReviewCase.exposure_id == exposure_id)
+        )
         if review_case is None:
             fail(f"expected review case for exposure {exposure_id}")
         review_case_id = review_case.id
@@ -147,8 +151,7 @@ def create_exposure(
     )
     if response.status_code != 201:
         fail(
-            "expected exposure creation to return 201, "
-            f"got {response.status_code}: {response.text}"
+            f"expected exposure creation to return 201, got {response.status_code}: {response.text}"
         )
     return response.json()
 
@@ -274,7 +277,9 @@ def scenario_install_resolution_is_authorized_by_audience() -> None:
             headers=owner_headers,
         )
         if me_install.status_code != 200:
-            fail(f"expected me install resolution to return 200, got {me_install.status_code}: {me_install.text}")
+            fail(
+                f"expected me install resolution to return 200, got {me_install.status_code}: {me_install.text}"
+            )
         assert_install_payload(me_install.json(), expected_name="private-owner-skill")
 
         grant_install = client.get(
@@ -293,7 +298,9 @@ def scenario_install_resolution_is_authorized_by_audience() -> None:
             headers=outsider_headers,
         )
         if denied.status_code != 403:
-            fail(f"expected outsider me install resolution to return 403, got {denied.status_code}: {denied.text}")
+            fail(
+                f"expected outsider me install resolution to return 403, got {denied.status_code}: {denied.text}"
+            )
 
         grant_denied = client.get(
             "/api/v1/install/grant/grant-shared-skill",

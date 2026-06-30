@@ -1,7 +1,6 @@
 """Unit tests for server.modules.review.service."""
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations
 
 
 def _get_review_service():
@@ -11,6 +10,7 @@ def _get_review_service():
         NotFoundError,
         ReviewError,
     )
+
     return {
         "ConflictError": ConflictError,
         "NotFoundError": NotFoundError,
@@ -37,9 +37,11 @@ class TestReviewExceptions:
     def test_not_found_inherits_base_not_found(self):
         svc = _get_review_service()
         from server.exceptions_base import NotFoundError as BaseNotFoundError
+
         assert issubclass(svc["NotFoundError"], BaseNotFoundError)
 
     def test_conflict_inherits_base_conflict(self):
         svc = _get_review_service()
         from server.exceptions_base import ConflictError as BaseConflictError
+
         assert issubclass(svc["ConflictError"], BaseConflictError)

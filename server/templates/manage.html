@@ -129,11 +129,19 @@
       {% for item in share_items %}
       <article class="kawaii-card animate-in">
         <div class="flex items-center justify-between mb-2">
-          <span class="font-display text-sm font-bold text-kawaii-ink">{{ item.object_name or item.grant_id }}</span>
+          <span class="font-display text-sm font-bold text-kawaii-ink">{{ item.label or item.object_name or item.grant_id }}</span>
           <span class="kawaii-badge {{ 'kawaii-badge--success' if item.state == 'active' else 'kawaii-badge--pending' }}">{{ item.state }}</span>
         </div>
         <p class="text-xs text-kawaii-ink-muted">{{ item.release_version or '-' }} · {{ item.created }}</p>
         {% if item.usage_limit %}<p class="text-xs text-kawaii-ink-soft mt-1">{{ item.usage_count or 0 }}/{{ item.usage_limit }}</p>{% endif %}
+        <div class="flex gap-2 mt-3">
+          {% if item.can_revoke %}
+          <button class="text-xs text-kawaii-danger hover:text-kawaii-danger transition-colors px-2 py-2 min-h-[2.75rem] rounded-kawaii-md"
+                  data-action="revoke-share-link" data-grant-id="{{ item.id }}">
+            {{ ui.get('btn_revoke', '撤销') }}
+          </button>
+          {% endif %}
+        </div>
       </article>
       {% endfor %}
       {% if not share_items %}
@@ -148,16 +156,22 @@
             <th scope="col" class="pb-2 pr-4">{{ ui.get('col_release', '发布') }}</th>
             <th scope="col" class="pb-2 pr-4">{{ ui.get('col_state', '状态') }}</th>
             <th scope="col" class="pb-2 pr-4">{{ ui.get('col_created', '创建') }}</th>
-            <th scope="col" class="pb-2">{{ ui.get('col_usage', '用量') }}</th>
+            <th scope="col" class="pb-2 pr-4">{{ ui.get('col_usage', '用量') }}</th>
+            <th scope="col" class="pb-2">{{ ui.get('col_actions', '操作') }}</th>
           </tr></thead>
           <tbody>
             {% for item in share_items %}
             <tr class="border-b border-kawaii-line/50">
-              <td data-label="{{ ui.get('col_object', '对象') }}" class="py-2 pr-4 font-medium">{{ item.object_name or item.grant_id }}</td>
+              <td data-label="{{ ui.get('col_object', '对象') }}" class="py-2 pr-4 font-medium">{{ item.label or item.object_name or item.grant_id }}</td>
               <td data-label="{{ ui.get('col_release', '发布') }}" class="py-2 pr-4 text-kawaii-ink-soft">{{ item.release_version or '-' }}</td>
               <td data-label="{{ ui.get('col_state', '状态') }}" class="py-2 pr-4"><span class="kawaii-badge {{ 'kawaii-badge--success' if item.state == 'active' else 'kawaii-badge--pending' }}">{{ item.state }}</span></td>
               <td data-label="{{ ui.get('col_created', '创建') }}" class="py-2 pr-4 text-kawaii-ink-muted">{{ item.created }}</td>
-              <td data-label="{{ ui.get('col_usage', '用量') }}" class="py-2">{% if item.usage_limit %}{{ item.usage_count or 0 }}/{{ item.usage_limit }}{% else %}-{% endif %}</td>
+              <td data-label="{{ ui.get('col_usage', '用量') }}" class="py-2 pr-4">{% if item.usage_limit %}{{ item.usage_count or 0 }}/{{ item.usage_limit }}{% else %}-{% endif %}</td>
+              <td data-label="{{ ui.get('col_actions', '操作') }}" class="py-2">
+                {% if item.can_revoke %}
+                <button class="text-xs text-kawaii-danger px-2 py-2 min-h-[2.75rem] rounded-kawaii-md" data-action="revoke-share-link" data-grant-id="{{ item.id }}">{{ ui.get('btn_revoke', '撤销') }}</button>
+                {% endif %}
+              </td>
             </tr>
             {% endfor %}
           </tbody>
@@ -176,8 +190,9 @@
       <article class="kawaii-card animate-in flex items-center gap-2">
         <span class="text-lg">{{ item.icon }}</span>
         <div class="flex-1 min-w-0">
-          <p class="text-sm text-kawaii-ink truncate">{{ item.event }}</p>
-          <p class="text-xs text-kawaii-ink-muted">{{ item.timestamp }}</p>
+          <p class="text-sm text-kawaii-ink truncate">{{ item.event }}{% if item.object_name %} · {{ item.object_name }}{% endif %}</p>
+          {% if item.description %}<p class="text-xs text-kawaii-ink-soft truncate">{{ item.description }}</p>{% endif %}
+          <p class="text-xs text-kawaii-ink-muted">{{ item.actor or '-' }} · {{ item.timestamp }}</p>
         </div>
       </article>
       {% endfor %}

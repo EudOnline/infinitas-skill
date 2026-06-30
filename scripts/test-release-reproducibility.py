@@ -143,7 +143,20 @@ def prepare_repo():
         ROOT,
         repo,
         ignore=shutil.ignore_patterns(
-            ".git", ".planning", "__pycache__", ".cache", "scripts/__pycache__"
+            ".git",
+            ".planning",
+            "scripts/__pycache__",
+            "__pycache__.cache",
+            "*.pyc",
+            ".coverage",
+            ".gitignore.mypy_cache",
+            ".pytest_cache",
+            ".ruff_cache",
+            ".state.venv",
+            ".worktrees",
+            "build",
+            "infinitas_hosted_registry.egg-infonode_modules",
+            "tmp",
         ),
     )
     (repo / "config" / "allowed_signers").write_text("", encoding="utf-8")

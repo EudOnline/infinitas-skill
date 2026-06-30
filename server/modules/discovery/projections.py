@@ -42,7 +42,7 @@ def _get_cache_key(
 def _get_cached_projections(cache_key: str) -> list[DiscoveryProjection] | None:
     """Get projections from cache if valid."""
     entry = _projection_cache.get(cache_key)
-    if _is_cache_entry_valid(entry):
+    if entry is not None and _is_cache_entry_valid(entry):
         # Update access order for LRU
         if cache_key in _cache_access_order:
             _cache_access_order.remove(cache_key)
@@ -74,10 +74,7 @@ def cleanup_expired_cache_entries(ttl: int = _PROJECTION_CACHE_TTL) -> int:
         Number of entries removed.
     """
     now = time.time()
-    expired_keys = [
-        key for key, entry in _projection_cache.items()
-        if now - entry.timestamp >= ttl
-    ]
+    expired_keys = [key for key, entry in _projection_cache.items() if now - entry.timestamp >= ttl]
     for key in expired_keys:
         _projection_cache.pop(key, None)
         if key in _cache_access_order:
@@ -88,6 +85,7 @@ def cleanup_expired_cache_entries(ttl: int = _PROJECTION_CACHE_TTL) -> int:
 @dataclass(frozen=True)
 class CacheEntry:
     """Cache entry with timestamp for TTL expiration."""
+
     projections: list[DiscoveryProjection]
     timestamp: float
 
@@ -121,31 +119,6 @@ class DiscoveryProjection:
     provenance_path: str
     signature_path: str
     bundle_sha256: str | None
-    supported_memory_modes: list[str] | None = None
-    default_memory_mode: str | None = None
-
-
-def _memory_metadata_from_manifest(raw: str | None) -> tuple[list[str] | None, str | None]:
-    if not raw:
-        return None, None
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError:
-        return None, None
-    if not isinstance(payload, dict):
-        return None, None
-    metadata = payload.get("metadata")
-    if not isinstance(metadata, dict):
-        return None, None
-    supported = [
-        str(item).strip()
-        for item in (metadata.get("supported_memory_modes") or [])
-        if isinstance(item, str) and str(item).strip()
-    ]
-    default_mode = metadata.get("default_memory_mode")
-    if not isinstance(default_mode, str) or not default_mode.strip():
-        default_mode = None
-    return (supported or None), default_mode
 
 
 def _artifact_paths(*, publisher: str, name: str, version: str) -> dict[str, str]:
@@ -281,9 +254,7 @@ def build_release_projections(
     rows = db.execute(query).all()
 
     bundle_artifact_ids = {
-        int(row.bundle_artifact_id)
-        for row in rows
-        if row.bundle_artifact_id is not None
+        int(row.bundle_artifact_id) for row in rows if row.bundle_artifact_id is not None
     }
     bundle_sha_by_release: dict[int, str] = {}
     if bundle_artifact_ids:
@@ -301,9 +272,6 @@ def build_release_projections(
         name = str(row.name)
         version = str(row.version)
         paths = _artifact_paths(publisher=publisher, name=name, version=version)
-        supported_memory_modes, default_memory_mode = _memory_metadata_from_manifest(
-            row.sealed_manifest_json
-        )
         projections.append(
             DiscoveryProjection(
                 exposure_id=int(row.exposure_id),
@@ -326,8 +294,6 @@ def build_release_projections(
                 provenance_path=paths["provenance_path"],
                 signature_path=paths["signature_path"],
                 bundle_sha256=bundle_sha_by_release.get(int(row.release_id)),
-                supported_memory_modes=supported_memory_modes,
-                default_memory_mode=default_memory_mode,
             )
         )
 
@@ -339,14 +305,6 @@ def build_release_projections(
         _set_cached_projections(cache_key, projections)
 
     return projections
-
-
-def build_release_projections_legacy(db: Session) -> list[DiscoveryProjection]:
-    """Legacy version for backward compatibility - loads all projections.
-
-    Deprecated: Use build_release_projections() with explicit limit instead.
-    """
-    return build_release_projections(db, limit=None, offset=0, use_cache=False)
 
 
 def refresh_projection_snapshot(db: Session, artifact_root: Path) -> Path:

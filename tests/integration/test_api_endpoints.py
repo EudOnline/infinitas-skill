@@ -9,12 +9,12 @@ Covers:
 - Permissions-Policy header
 - CSRF protection
 """
+
 from __future__ import annotations
 
 import os
 from pathlib import Path
 
-import pytest
 from fastapi.testclient import TestClient
 
 from server.app import create_app
@@ -28,8 +28,9 @@ def _api_client(tmp_path: Path, *, bootstrap_users: str = "[]") -> TestClient:
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(tmp_path / "artifacts")
     os.environ["INFINITAS_SERVER_BOOTSTRAP_USERS"] = bootstrap_users
     os.environ["INFINITAS_SERVER_ALLOWED_HOSTS"] = '["localhost","127.0.0.1","testserver"]'
-    os.environ["INFINITAS_SERVER_ENVIRONMENT"] = "development"
+    os.environ["INFINITAS_SERVER_ENV"] = "development"
     from server.rate_limit import get_rate_limiter
+
     get_rate_limiter().reset_all()
     return TestClient(create_app())
 
@@ -80,46 +81,61 @@ class TestHealthEndpoints:
 class TestAuthFlow:
     def test_login_with_valid_credentials(self, tmp_path: Path):
         client = _api_client(tmp_path, bootstrap_users=_BOOTSTRAP_USER)
-        response = client.post("/api/v1/auth/login", json={
-            "username": "testadmin",
-            "password": "AdminPass123!",
-        })
+        response = client.post(
+            "/api/v1/auth/login",
+            json={
+                "username": "testadmin",
+                "password": "AdminPass123!",
+            },
+        )
         assert response.status_code == 200
         # Should set auth token cookie
         assert "infinitas_auth_token" in response.cookies
 
     def test_login_with_invalid_password(self, tmp_path: Path):
         client = _api_client(tmp_path, bootstrap_users=_BOOTSTRAP_USER)
-        response = client.post("/api/v1/auth/login", json={
-            "username": "testadmin",
-            "password": "wrong-password",
-        })
+        response = client.post(
+            "/api/v1/auth/login",
+            json={
+                "username": "testadmin",
+                "password": "wrong-password",
+            },
+        )
         assert response.status_code == 401
 
     def test_login_with_nonexistent_user(self, tmp_path: Path):
         client = _api_client(tmp_path, bootstrap_users=_BOOTSTRAP_USER)
-        response = client.post("/api/v1/auth/login", json={
-            "username": "nonexistent",
-            "password": "whatever",
-        })
+        response = client.post(
+            "/api/v1/auth/login",
+            json={
+                "username": "nonexistent",
+                "password": "whatever",
+            },
+        )
         assert response.status_code == 401
 
     def test_login_sets_csrf_cookie(self, tmp_path: Path):
         client = _api_client(tmp_path, bootstrap_users=_BOOTSTRAP_USER)
-        response = client.post("/api/v1/auth/login", json={
-            "username": "testadmin",
-            "password": "AdminPass123!",
-        })
+        response = client.post(
+            "/api/v1/auth/login",
+            json={
+                "username": "testadmin",
+                "password": "AdminPass123!",
+            },
+        )
         assert response.status_code == 200
         assert "csrf_token" in response.cookies
 
     def test_auth_me_returns_user(self, tmp_path: Path):
         client = _api_client(tmp_path, bootstrap_users=_BOOTSTRAP_USER)
         # Login first
-        client.post("/api/v1/auth/login", json={
-            "username": "testadmin",
-            "password": "AdminPass123!",
-        })
+        client.post(
+            "/api/v1/auth/login",
+            json={
+                "username": "testadmin",
+                "password": "AdminPass123!",
+            },
+        )
         # Check /auth/me
         response = client.get("/api/v1/auth/me")
         assert response.status_code == 200
@@ -136,10 +152,13 @@ class TestAuthFlow:
     def test_logout_returns_success(self, tmp_path: Path):
         client = _api_client(tmp_path, bootstrap_users=_BOOTSTRAP_USER)
         # Login first
-        login_resp = client.post("/api/v1/auth/login", json={
-            "username": "testadmin",
-            "password": "AdminPass123!",
-        })
+        login_resp = client.post(
+            "/api/v1/auth/login",
+            json={
+                "username": "testadmin",
+                "password": "AdminPass123!",
+            },
+        )
         assert login_resp.status_code == 200
         # Logout
         csrf = login_resp.cookies.get("csrf_token", "")
@@ -171,10 +190,13 @@ class TestRateLimiting:
         client = _api_client(tmp_path, bootstrap_users=_BOOTSTRAP_USER)
         # Make many failed login attempts
         for _ in range(12):
-            response = client.post("/api/v1/auth/login", json={
-                "username": "testadmin",
-                "password": "wrong",
-            })
+            response = client.post(
+                "/api/v1/auth/login",
+                json={
+                    "username": "testadmin",
+                    "password": "wrong",
+                },
+            )
         # Should be rate limited after multiple failures
         assert response.status_code == 429
 
@@ -182,15 +204,21 @@ class TestRateLimiting:
         client = _api_client(tmp_path, bootstrap_users=_BOOTSTRAP_USER)
         # Make a few failed attempts (not enough to trigger limit)
         for _ in range(3):
-            client.post("/api/v1/auth/login", json={
-                "username": "testadmin",
-                "password": "wrong",
-            })
+            client.post(
+                "/api/v1/auth/login",
+                json={
+                    "username": "testadmin",
+                    "password": "wrong",
+                },
+            )
         # Successful login should still work
-        response = client.post("/api/v1/auth/login", json={
-            "username": "testadmin",
-            "password": "AdminPass123!",
-        })
+        response = client.post(
+            "/api/v1/auth/login",
+            json={
+                "username": "testadmin",
+                "password": "AdminPass123!",
+            },
+        )
         assert response.status_code == 200
 
 
@@ -207,7 +235,7 @@ class TestSearchAPI:
 
     def test_search_public_endpoint(self, tmp_path: Path):
         client = _api_client(tmp_path)
-        response = client.get("/api/v1/search/public", params={"q": "test"})
+        response = client.get("/api/v1/search", params={"q": "test", "scope": "public"})
         assert response.status_code == 200
 
 
@@ -252,7 +280,7 @@ class TestAPISecurityHeaders:
     def test_hsts_header_present(self, tmp_path: Path):
         client = _api_client(tmp_path)
         response = client.get("/api/v1/system/healthz")
-        hsts = response.headers.get("strict-transport-security", "")
+        _hsts = response.headers.get("strict-transport-security", "")
         # HSTS may not be set in development/test, but header middleware should be active
         # In production it would be set
         assert "x-frame-options" in response.headers

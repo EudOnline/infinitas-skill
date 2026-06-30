@@ -3,6 +3,7 @@
 Pure accessor functions that extract fields from the release snapshot
 composite object.  Zero side effects.
 """
+
 from __future__ import annotations
 
 from server.modules.authoring.service import load_metadata
@@ -13,7 +14,7 @@ def snapshot_content_mode(snapshot) -> str:
     if value:
         return str(value)
     if snapshot.draft is not None:
-        return snapshot.draft.content_mode
+        return str(snapshot.draft.content_mode)
     return "external_ref"
 
 
@@ -22,7 +23,7 @@ def snapshot_content_ref(snapshot) -> str:
     if value:
         return str(value)
     if snapshot.draft is not None:
-        return snapshot.draft.content_ref or ""
+        return str(snapshot.draft.content_ref or "")
     return ""
 
 
@@ -34,8 +35,8 @@ def snapshot_content_artifact_id(snapshot) -> int | None:
     )
     if value is not None:
         return int(value)
-    if snapshot.draft is not None:
-        return snapshot.draft.content_artifact_id
+    if snapshot.draft is not None and snapshot.draft.content_artifact_id is not None:
+        return int(snapshot.draft.content_artifact_id)
     return None
 
 

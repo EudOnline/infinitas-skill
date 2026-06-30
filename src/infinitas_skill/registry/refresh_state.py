@@ -128,12 +128,9 @@ def evaluate_refresh_status(root: Path, reg, *, now=None):
             freshness_state = "fresh"
 
     cache_path = None
-    if (
-        isinstance(state, dict)
-        and isinstance(state.get("cache_path"), str)
-        and state.get("cache_path").strip()
-    ):
-        cache_path = state.get("cache_path").strip()
+    cache_path_value = state.get("cache_path") if isinstance(state, dict) else None
+    if isinstance(cache_path_value, str) and cache_path_value.strip():
+        cache_path = cache_path_value.strip()
     else:
         reg_root = resolve_registry_root(root, reg)
         cache_path = str(reg_root.resolve()) if reg_root else None

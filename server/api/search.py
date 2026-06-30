@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
@@ -84,7 +85,7 @@ def _search_skill_payload(
     workspace_targets: list[str] | None = None,
 ) -> dict:
     install_ref = _install_ref(qualified_name, version)
-    payload = {
+    payload: dict[str, Any] = {
         "id": qualified_name,
         "name": name,
         "qualified_name": qualified_name,
@@ -121,8 +122,7 @@ def _search_payload(entries, *, scope: str) -> dict:
                 audience_type=entry.audience_type,
                 listing_mode=entry.listing_mode,
                 install_api_path=(
-                    f"/api/v1/install/{scope}/"
-                    f"{_install_ref(entry.qualified_name, entry.version)}"
+                    f"/api/v1/install/{scope}/{_install_ref(entry.qualified_name, entry.version)}"
                 ),
                 runtime=runtime,
                 runtime_readiness=runtime_readiness,
@@ -156,8 +156,7 @@ def _snapshot_skill_payloads(items: list[dict], *, limit: int) -> list[dict]:
                 audience_type="public",
                 listing_mode="listed",
                 install_api_path=(
-                    "/api/v1/install/public/"
-                    + _install_ref(qualified_name, version)
+                    "/api/v1/install/public/" + _install_ref(qualified_name, version)
                 ),
                 runtime=item.get("runtime") if isinstance(item.get("runtime"), dict) else None,
                 runtime_readiness=item.get("runtime_readiness"),

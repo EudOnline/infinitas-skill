@@ -5,8 +5,39 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .agent_support import supports_target_agent
 from .decision_metadata import canonical_decision_metadata
+
+_BLOCKING_COMPATIBILITY_STATES = {"blocked", "broken", "unsupported"}
+_VERIFIED_COMPATIBILITY_STATES = {"native", "adapted", "degraded"}
+
+
+def _supports_target_agent(item: dict, target_agent: str | None) -> bool:
+    if target_agent is None:
+        return True
+
+    verified_support = item.get("verified_support")
+    verified_support = verified_support if isinstance(verified_support, dict) else {}
+    payload = verified_support.get(target_agent)
+    payload = payload if isinstance(payload, dict) else {}
+    state = payload.get("state")
+    if state in _BLOCKING_COMPATIBILITY_STATES:
+        return False
+
+    runtime = item.get("runtime")
+    runtime = runtime if isinstance(runtime, dict) else {}
+    readiness = runtime.get("readiness")
+    readiness = readiness if isinstance(readiness, dict) else {}
+    if (
+        target_agent == "openclaw"
+        and runtime.get("platform") == "openclaw"
+        and readiness.get("ready") is True
+    ):
+        return True
+
+    if state in _VERIFIED_COMPATIBILITY_STATES:
+        return True
+
+    return target_agent in (item.get("agent_compatible") or [])
 
 
 def _load_json(path: Path):
@@ -18,16 +49,14 @@ def _load_discovery_index(root: Path):
 
 
 def _compatibility_freshness_summary(verified_support: dict) -> dict:
-    summary = {}
+    summary: dict[str, str] = {}
     for platform, payload in (verified_support or {}).items():
         if not isinstance(platform, str) or not platform.strip():
             continue
-        if (
-            isinstance(payload, dict)
-            and isinstance(payload.get("freshness_state"), str)
-            and payload.get("freshness_state").strip()
-        ):
-            summary[platform] = payload.get("freshness_state")
+        if isinstance(payload, dict):
+            freshness_state = payload.get("freshness_state")
+            if isinstance(freshness_state, str) and freshness_state.strip():
+                summary[platform] = freshness_state
     return summary
 
 
@@ -54,7 +83,7 @@ def search_skills(
                 continue
         if publisher and item.get("publisher") != publisher:
             continue
-        if agent and not supports_target_agent(item, agent):
+        if agent and not _supports_target_agent(item, agent):
             continue
         if tag and tag not in (item.get("tags") or []):
             continue

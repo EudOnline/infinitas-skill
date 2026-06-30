@@ -20,50 +20,50 @@ from infinitas_skill.server.repo_checks import (
     require_sqlite_db,
 )
 
-BACKUP_DIR_RE = re.compile(r'^\d{8}T\d{6}Z(?:-[A-Za-z0-9._-]+)?$')
+BACKUP_DIR_RE = re.compile(r"^\d{8}T\d{6}Z(?:-[A-Za-z0-9._-]+)?$")
 
 
 def sanitize_label(label: str) -> str:
-    cleaned = re.sub(r'[^A-Za-z0-9._-]+', '-', label.strip()).strip('-')
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", label.strip()).strip("-")
     return cleaned
 
 
 def create_backup_dir(output_dir: str, label: str) -> tuple[Path, str]:
     root = Path(output_dir)
     root.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     suffix = sanitize_label(label)
-    dirname = f'{timestamp}-{suffix}' if suffix else timestamp
+    dirname = f"{timestamp}-{suffix}" if suffix else timestamp
     backup_dir = root / dirname
     backup_dir.mkdir()
     return backup_dir, timestamp
 
 
 def write_repo_bundle(repo: Path, backup_dir: Path) -> str:
-    bundle_name = 'repo.bundle'
+    bundle_name = "repo.bundle"
     bundle_path = backup_dir / bundle_name
     result = subprocess.run(
-        ['git', '-C', str(repo), 'bundle', 'create', str(bundle_path), '--all'],
+        ["git", "-C", str(repo), "bundle", "create", str(bundle_path), "--all"],
         text=True,
         capture_output=True,
     )
     if result.returncode != 0:
-        fail(f'failed to create repo bundle: {result.stderr}')
+        fail(f"failed to create repo bundle: {result.stderr}")
     return bundle_name
 
 
 def copy_sqlite_db(db_path: Path, backup_dir: Path) -> str:
-    db_name = db_path.name or 'server.db'
+    db_name = db_path.name or "server.db"
     destination = backup_dir / db_name
     shutil.copy2(db_path, destination)
     return db_name
 
 
 def archive_artifacts(artifact_path: Path, backup_dir: Path) -> str:
-    archive_name = 'artifacts.tar.gz'
+    archive_name = "artifacts.tar.gz"
     archive_path = backup_dir / archive_name
-    with tarfile.open(archive_path, 'w:gz') as archive:
-        archive.add(artifact_path, arcname='artifacts')
+    with tarfile.open(archive_path, "w:gz") as archive:
+        archive.add(artifact_path, arcname="artifacts")
     return archive_name
 
 
@@ -77,7 +77,7 @@ def classify_backup_entries(root: Path) -> tuple[list[Path], list[Path]]:
         if not BACKUP_DIR_RE.match(entry.name):
             ignored.append(entry)
             continue
-        if not (entry / 'manifest.json').is_file():
+        if not (entry / "manifest.json").is_file():
             ignored.append(entry)
             continue
         eligible.append(entry)
@@ -94,12 +94,12 @@ def build_prune_summary(root: Path, keep_last: int) -> dict:
         shutil.rmtree(path)
 
     return {
-        'ok': True,
-        'backup_root': str(root),
-        'keep_last': keep_last,
-        'kept': [str(path) for path in kept],
-        'deleted': [str(path) for path in deleted],
-        'ignored': [str(path) for path in ignored],
+        "ok": True,
+        "backup_root": str(root),
+        "keep_last": keep_last,
+        "kept": [str(path) for path in kept],
+        "deleted": [str(path) for path in deleted],
+        "ignored": [str(path) for path in ignored],
     }
 
 
@@ -120,7 +120,7 @@ def emit_prune_summary(summary: dict, *, as_json: bool):
     print(f"OK: backup root {summary['backup_root']}")
     print(f"OK: kept {len(summary['kept'])} recognized backup directories")
     print(f"OK: deleted {len(summary['deleted'])} recognized backup directories")
-    if summary['ignored']:
+    if summary["ignored"]:
         print(f"OK: ignored {len(summary['ignored'])} non-hosted entries")
 
 
@@ -130,7 +130,7 @@ def run_server_backup(
     database_url: str,
     artifact_path: str,
     output_dir: str,
-    label: str = '',
+    label: str = "",
     as_json: bool = False,
 ) -> int:
     repo = require_clean_git_repo(repo_path)
@@ -143,37 +143,39 @@ def run_server_backup(
     artifacts_name = archive_artifacts(artifacts, backup_dir)
 
     manifest = {
-        'created_at': timestamp,
-        'label': label,
-        'repo': {
-            'path': str(repo),
-            'head': git_output(repo, 'rev-parse', 'HEAD'),
-            'branch': git_output(repo, 'branch', '--show-current'),
-            'bundle': repo_bundle_name,
+        "created_at": timestamp,
+        "label": label,
+        "repo": {
+            "path": str(repo),
+            "head": git_output(repo, "rev-parse", "HEAD"),
+            "branch": git_output(repo, "branch", "--show-current"),
+            "bundle": repo_bundle_name,
         },
-        'database': {
-            'kind': 'sqlite',
-            'url': database_url,
-            'path': str(db_path),
-            'backup_file': db_copy_name,
+        "database": {
+            "kind": "sqlite",
+            "url": database_url,
+            "path": str(db_path),
+            "backup_file": db_copy_name,
         },
-        'artifacts': {
-            'path': str(artifacts),
-            'archive': artifacts_name,
+        "artifacts": {
+            "path": str(artifacts),
+            "archive": artifacts_name,
         },
     }
-    manifest_name = 'manifest.json'
-    (backup_dir / manifest_name).write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    manifest_name = "manifest.json"
+    (backup_dir / manifest_name).write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
 
     summary = {
-        'ok': True,
-        'backup_dir': str(backup_dir),
-        'manifest': str(backup_dir / manifest_name),
-        'files': {
-            'repo_bundle': repo_bundle_name,
-            'database': db_copy_name,
-            'artifacts': artifacts_name,
-            'manifest': manifest_name,
+        "ok": True,
+        "backup_dir": str(backup_dir),
+        "manifest": str(backup_dir / manifest_name),
+        "files": {
+            "repo_bundle": repo_bundle_name,
+            "database": db_copy_name,
+            "artifacts": artifacts_name,
+            "manifest": manifest_name,
         },
     }
     emit_backup_summary(summary, as_json=as_json)
@@ -189,16 +191,16 @@ def run_server_prune_backups(*, backup_root: str, keep_last: int, as_json: bool 
 
 
 __all__ = [
-    'BACKUP_DIR_RE',
-    'archive_artifacts',
-    'build_prune_summary',
-    'classify_backup_entries',
-    'copy_sqlite_db',
-    'create_backup_dir',
-    'emit_backup_summary',
-    'emit_prune_summary',
-    'run_server_backup',
-    'run_server_prune_backups',
-    'sanitize_label',
-    'write_repo_bundle',
+    "BACKUP_DIR_RE",
+    "archive_artifacts",
+    "build_prune_summary",
+    "classify_backup_entries",
+    "copy_sqlite_db",
+    "create_backup_dir",
+    "emit_backup_summary",
+    "emit_prune_summary",
+    "run_server_backup",
+    "run_server_prune_backups",
+    "sanitize_label",
+    "write_repo_bundle",
 ]

@@ -26,9 +26,7 @@ DEFAULT_REQUIRE_TEST_FLAGS = (
 DEFAULT_RELEASE_HELPER_CHECK_ALL_BLOCKS = "focused-integration"
 
 
-def preferred_python_bin_dir(
-    root: Path, *, probe_command: str = _PYTHON_ENV_PROBE
-) -> Path | None:
+def preferred_python_bin_dir(root: Path, *, probe_command: str = _PYTHON_ENV_PROBE) -> Path | None:
     candidates = [Path(sys.executable), root / ".venv" / "bin" / "python3"]
     seen = set()
     probe_cwd = Path(tempfile.gettempdir())

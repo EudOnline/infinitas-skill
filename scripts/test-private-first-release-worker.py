@@ -54,10 +54,16 @@ def scenario_release_worker_only_processes_release_jobs() -> None:
         create_skill = client.post(
             "/api/v1/skills",
             headers=headers,
-            json={"slug": "worker-skill", "display_name": "Worker Skill", "summary": "Worker summary"},
+            json={
+                "slug": "worker-skill",
+                "display_name": "Worker Skill",
+                "summary": "Worker summary",
+            },
         )
         if create_skill.status_code != 201:
-            fail(f"expected skill creation to return 201, got {create_skill.status_code}: {create_skill.text}")
+            fail(
+                f"expected skill creation to return 201, got {create_skill.status_code}: {create_skill.text}"
+            )
         skill_id = int(create_skill.json()["id"])
 
         create_draft = client.post(
@@ -65,14 +71,21 @@ def scenario_release_worker_only_processes_release_jobs() -> None:
             headers=headers,
             json={
                 "content_ref": "git+https://example.com/worker-skill.git#0123456789abcdef0123456789abcdef01234567",
-                "metadata": {"entrypoint": "SKILL.md", "manifest": {"name": "worker-skill", "version": "0.1.0"}},
+                "metadata": {
+                    "entrypoint": "SKILL.md",
+                    "manifest": {"name": "worker-skill", "version": "0.1.0"},
+                },
             },
         )
         if create_draft.status_code != 201:
-            fail(f"expected draft creation to return 201, got {create_draft.status_code}: {create_draft.text}")
+            fail(
+                f"expected draft creation to return 201, got {create_draft.status_code}: {create_draft.text}"
+            )
         draft_id = int(create_draft.json()["id"])
 
-        seal = client.post(f"/api/v1/drafts/{draft_id}/seal", headers=headers, json={"version": "0.1.0"})
+        seal = client.post(
+            f"/api/v1/drafts/{draft_id}/seal", headers=headers, json={"version": "0.1.0"}
+        )
         if seal.status_code != 201:
             fail(f"expected seal to return 201, got {seal.status_code}: {seal.text}")
         version_id = int((seal.json().get("skill_version") or {})["id"])
@@ -91,7 +104,9 @@ def scenario_release_worker_only_processes_release_jobs() -> None:
         with factory() as session:
             release = session.get(Release, release_id)
             if release is None or release.state != "ready":
-                fail(f"expected release {release_id} to be ready after worker loop, got {release!r}")
+                fail(
+                    f"expected release {release_id} to be ready after worker loop, got {release!r}"
+                )
 
         with factory() as session:
             user = session.query(User).filter(User.username == "fixture-maintainer").one_or_none()
@@ -119,7 +134,9 @@ def scenario_release_worker_only_processes_release_jobs() -> None:
             if failed_job is None or failed_job.status != "failed":
                 fail(f"expected unsupported worker job to be marked failed, got {failed_job!r}")
             if "unsupported job kind" not in (failed_job.error_message or ""):
-                fail(f"expected unsupported job kind error message, got {failed_job.error_message!r}")
+                fail(
+                    f"expected unsupported job kind error message, got {failed_job.error_message!r}"
+                )
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 

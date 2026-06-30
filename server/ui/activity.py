@@ -116,16 +116,27 @@ def _description_for_event(
     return str(payload.get("detail") or event.aggregate_type or event.event_type or "audit")
 
 
+_CATEGORY_ICONS: dict[str, str] = {
+    "share": "🔗",
+    "token": "🔑",
+    "visibility": "👁️",
+    "audit": "📋",
+}
+
+
 def normalize_audit_event_for_ui(db: Session, event: AuditEvent) -> dict[str, Any]:
     payload = json_payload(event)
     object_name = _object_name(db, payload)
+    category = _event_category(event, payload)
+    title = _title_for_event(event, payload)
     sort_at = event.occurred_at
     if sort_at is None:
         sort_at = datetime.min.replace(tzinfo=timezone.utc)
     return {
         "id": event.id,
-        "event_type": _event_category(event, payload),
-        "title": _title_for_event(event, payload),
+        "event_type": category,
+        "title": title,
+        "event": title,
         "description": _description_for_event(
             db,
             event,
@@ -135,6 +146,7 @@ def normalize_audit_event_for_ui(db: Session, event: AuditEvent) -> dict[str, An
         "object_name": object_name,
         "actor": _actor_label(event.actor_ref),
         "timestamp": humanize_timestamp(_iso_stamp(event.occurred_at)),
+        "icon": _CATEGORY_ICONS.get(category, "📝"),
         "aggregate_type": event.aggregate_type,
         "aggregate_id": event.aggregate_id,
         "detail": payload,

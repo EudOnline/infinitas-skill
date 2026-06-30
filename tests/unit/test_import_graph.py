@@ -3,10 +3,13 @@
 This test ensures the bidirectional dependency is fully resolved.
 It should be run after Phase 1 is complete.
 """
+
 from __future__ import annotations
 
 import ast
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 SERVER_LIB_DIR = ROOT / "src" / "infinitas_skill" / "server"
@@ -23,7 +26,11 @@ def _collect_module_level_server_imports(directory: Path) -> list[tuple[str, int
             continue
         rel = py_file.relative_to(ROOT)
         for node in ast.walk(tree):
-            if isinstance(node, ast.ImportFrom) and node.module and node.module.startswith("server"):
+            if (
+                isinstance(node, ast.ImportFrom)
+                and node.module
+                and node.module.startswith("server")
+            ):
                 # Only flag module-level imports (col_offset == 0)
                 if node.col_offset == 0:
                     violations.append((str(rel), node.lineno, f"from {node.module} import ..."))
@@ -39,5 +46,8 @@ class TestNoModuleLevelServerImports:
         violations = _collect_module_level_server_imports(SERVER_LIB_DIR)
         if violations:
             lines = [f"  {path}:{line} — {stmt}" for path, line, stmt in violations]
-            msg = f"Found {len(violations)} module-level upward import(s) in src/infinitas_skill/server/:\n" + "\n".join(lines)
+            msg = (
+                f"Found {len(violations)} module-level upward import(s) "
+                "in src/infinitas_skill/server/:\n" + "\n".join(lines)
+            )
             pytest.fail(msg)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
+from typing import Any
 
 from infinitas_skill.root import ROOT
 
@@ -37,7 +38,7 @@ def normalize_public_key(value):
 
 
 def parse_allowed_signers(path):
-    entries = []
+    entries: list[dict[str, Any]] = []
     path = Path(path)
     if not path.exists():
         return entries
@@ -94,9 +95,7 @@ def public_key_from_key_path(path):
 def upsert_allowed_signer(path, identity, public_key):
     allowed_path = Path(path)
     existing_lines = (
-        allowed_path.read_text(encoding="utf-8").splitlines()
-        if allowed_path.exists()
-        else []
+        allowed_path.read_text(encoding="utf-8").splitlines() if allowed_path.exists() else []
     )
     desired_line = f"{identity} {public_key.strip()}"
     new_lines = []
@@ -212,9 +211,7 @@ def default_allowed_signers_path(root=ROOT):
     config = load_json(Path(root) / "config" / "signing.json")
     tag_cfg = config.get("git_tag") or {}
     allowed_rel = (
-        tag_cfg.get("allowed_signers")
-        or config.get("allowed_signers")
-        or "config/allowed_signers"
+        tag_cfg.get("allowed_signers") or config.get("allowed_signers") or "config/allowed_signers"
     )
     return (Path(root) / allowed_rel).resolve()
 

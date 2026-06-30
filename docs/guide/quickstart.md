@@ -75,16 +75,17 @@ Agents without a Token can be granted temporary Release access through a Share L
 Object creation and release production are agent-driven. The canonical publish contract is:
 
 ```text
-PUT /api/publish/objects/{slug}
-POST /api/publish/objects/{object_id}/releases
-GET /api/publish/releases/{release_id}/status
+POST /api/v1/skills
+POST /api/v1/versions/{version_id}/releases
+GET /api/v1/releases/{release_id}
 ```
 
 Recommended flow:
 
-1. Upsert the Object with `PUT /api/publish/objects/{slug}`.
-2. Submit release content with `POST /api/publish/objects/{object_id}/releases`.
-3. Poll `GET /api/publish/releases/{release_id}/status` until the Release is ready.
+1. Create the Object with `POST /api/v1/skills`.
+2. Seal a version through the authoring surface (`POST /api/v1/drafts`, `POST /api/v1/drafts/{draft_id}/seal`).
+3. Create a Release with `POST /api/v1/versions/{version_id}/releases`.
+4. Poll `GET /api/v1/releases/{release_id}` until the Release is ready.
 
 Internal draft and sealing mechanics may still exist behind the service boundary, but they are not the primary product story.
 
@@ -93,16 +94,19 @@ Internal draft and sealing mechanics may still exist behind the service boundary
 Agents and automation should consume the unified read surface:
 
 ```text
-GET /api/library
-GET /api/library/{object_id}
-GET /api/library/{object_id}/releases
-GET /api/releases/{release_id}
-PATCH /api/releases/{release_id}/visibility
-POST /api/objects/{object_id}/tokens
-GET /api/objects/{object_id}/tokens
-POST /api/releases/{release_id}/share-links
-GET /api/releases/{release_id}/share-links
-GET /api/activity
+GET /api/v1/library
+GET /api/v1/library/{object_id}
+GET /api/v1/library/{object_id}/releases
+GET /api/v1/releases/{release_id}
+POST /api/v1/exposures/{exposure_id}/revoke
+POST /api/v1/object-tokens/objects/{object_id}/tokens
+GET /api/v1/object-tokens/objects/{object_id}/tokens
+POST /api/v1/object-tokens/tokens/{token_id}/revoke
+POST /api/v1/share-links/releases/{release_id}/share-links
+GET /api/v1/share-links/releases/{release_id}/share-links
+POST /api/v1/share-links/{share_id}/resolve
+POST /api/v1/share-links/{share_id}/revoke
+GET /api/v1/activity
 ```
 
 This keeps read and governance actions centered on Objects and Releases instead of lifecycle internals.

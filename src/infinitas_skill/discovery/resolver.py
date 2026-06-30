@@ -1,11 +1,43 @@
 import json
 from pathlib import Path
+from typing import Any, cast
 
 from infinitas_skill.install.registry_sources import load_registry_config
 
-from .agent_support import supports_target_agent
 from .ai_index import validate_ai_index_payload
 from .index import build_discovery_index, validate_discovery_index_payload
+
+_BLOCKING_COMPATIBILITY_STATES = {"blocked", "broken", "unsupported"}
+_VERIFIED_COMPATIBILITY_STATES = {"native", "adapted", "degraded"}
+
+
+def _supports_target_agent(item: dict, target_agent: str | None) -> bool:
+    if target_agent is None:
+        return True
+
+    verified_support = item.get("verified_support")
+    verified_support = verified_support if isinstance(verified_support, dict) else {}
+    payload = verified_support.get(target_agent)
+    payload = payload if isinstance(payload, dict) else {}
+    state = payload.get("state")
+    if state in _BLOCKING_COMPATIBILITY_STATES:
+        return False
+
+    runtime = item.get("runtime")
+    runtime = runtime if isinstance(runtime, dict) else {}
+    readiness = runtime.get("readiness")
+    readiness = readiness if isinstance(readiness, dict) else {}
+    if (
+        target_agent == "openclaw"
+        and runtime.get("platform") == "openclaw"
+        and readiness.get("ready") is True
+    ):
+        return True
+
+    if state in _VERIFIED_COMPATIBILITY_STATES:
+        return True
+
+    return target_agent in (item.get("agent_compatible") or [])
 
 
 def load_discovery_index(root: Path) -> dict:
@@ -33,7 +65,7 @@ def load_discovery_index(root: Path) -> dict:
     errors = validate_discovery_index_payload(payload)
     if errors:
         raise ValueError("; ".join(errors))
-    return payload
+    return cast(dict[Any, Any], payload)
 
 
 def filter_candidates(skills: list, query: str) -> list:
@@ -51,7 +83,9 @@ def filter_candidates(skills: list, query: str) -> list:
 def filter_by_agent(candidates: list, target_agent: str | None) -> list:
     if not target_agent:
         return list(candidates)
-    return [candidate for candidate in candidates if supports_target_agent(candidate, target_agent)]
+    return [
+        candidate for candidate in candidates if _supports_target_agent(candidate, target_agent)
+    ]
 
 
 def rank_candidates(
@@ -67,7 +101,7 @@ def rank_candidates(
         key=lambda item: (
             item.get("source_registry") != default_registry,
             exact_query not in {item.get("name"), item.get("qualified_name")},
-            target_agent is not None and not supports_target_agent(item, target_agent),
+            target_agent is not None and not _supports_target_agent(item, target_agent),
             -(item.get("source_priority") or 0),
             item.get("qualified_name") or "",
         ),
@@ -85,7 +119,7 @@ def candidate_view(item: dict) -> dict:
 
 
 def resolve_skill(*, payload: dict, query: str, target_agent: str | None = None) -> dict:
-    default_registry = payload.get("default_registry")
+    default_registry = str(payload.get("default_registry") or "self")
     all_candidates = filter_candidates(payload.get("skills") or [], query)
     private_candidates = [
         item for item in all_candidates if item.get("source_registry") == default_registry

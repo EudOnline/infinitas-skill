@@ -160,10 +160,6 @@ def configure_resolve_install_plan_parser(
     parser.add_argument("--source-registry", help="Registry hint for the root skill source")
     parser.add_argument("--source-json", help="Resolved source metadata JSON for the root skill")
     parser.add_argument(
-        "--memory-mode",
-        help="Selected memory mode for registry installs",
-    )
-    parser.add_argument(
         "--mode",
         choices=INSTALL_MODES,
         default="install",
@@ -195,14 +191,11 @@ def run_resolve_install_plan(
     source_json: str | None = None,
     mode: str = "install",
     as_json: bool = False,
-    memory_mode: str | None = None,
 ) -> int:
     source_info = _load_source_info(source_json)
     try:
         if registry_entry_json is not None:
-            plan = plan_from_registry_entry(
-                json.loads(registry_entry_json), memory_mode=memory_mode
-            )
+            plan = plan_from_registry_entry(json.loads(registry_entry_json))
         else:
             if not skill_dir:
                 raise DependencyError("resolve-plan requires --skill-dir or --registry-entry-json")
@@ -234,7 +227,6 @@ def resolve_install_plan_main(argv: list[str] | None = None, *, prog: str | None
         source_json=args.source_json,
         mode=args.mode,
         as_json=args.json,
-        memory_mode=args.memory_mode,
     )
 
 

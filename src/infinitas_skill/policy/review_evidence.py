@@ -76,7 +76,7 @@ def load_review_evidence(skill_dir: Path):
                 f"review evidence entry has unsupported keys: {entry_path}: {', '.join(unknown)}"
             )
 
-        normalized_entry = {}
+        normalized_entry: dict[str, str | None] = {}
         for key in ["source", "source_kind", "source_ref", "reviewer", "decision", "at"]:
             value = raw_entry.get(key)
             if not isinstance(value, str) or not value.strip():

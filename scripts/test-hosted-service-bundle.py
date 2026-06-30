@@ -9,11 +9,11 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / 'src'
+SRC = ROOT / "src"
 
 
 def fail(message):
-    print(f'FAIL: {message}', file=sys.stderr)
+    print(f"FAIL: {message}", file=sys.stderr)
     raise SystemExit(1)
 
 
@@ -21,9 +21,9 @@ def run(command, cwd, expect=0, env=None):
     result = subprocess.run(command, cwd=cwd, text=True, capture_output=True, env=env)
     if result.returncode != expect:
         fail(
-            f'command {command!r} exited {result.returncode}, expected {expect}\n'
-            f'stdout:\n{result.stdout}\n'
-            f'stderr:\n{result.stderr}'
+            f"command {command!r} exited {result.returncode}, expected {expect}\n"
+            f"stdout:\n{result.stdout}\n"
+            f"stderr:\n{result.stderr}"
         )
     return result
 
@@ -32,15 +32,17 @@ def cli_env(extra_env=None):
     env = os.environ.copy()
     if extra_env:
         env.update(extra_env)
-    existing_pythonpath = env.get('PYTHONPATH', '')
+    existing_pythonpath = env.get("PYTHONPATH", "")
     pythonpath = os.pathsep.join([str(ROOT), str(SRC)])
-    env['PYTHONPATH'] = f'{pythonpath}{os.pathsep}{existing_pythonpath}' if existing_pythonpath else pythonpath
+    env["PYTHONPATH"] = (
+        f"{pythonpath}{os.pathsep}{existing_pythonpath}" if existing_pythonpath else pythonpath
+    )
     return env
 
 
 def run_server_cli(args, *, cwd=ROOT, expect=0, env=None):
     return run(
-        [sys.executable, '-m', 'infinitas_skill.cli.main', 'server', *args],
+        [sys.executable, "-m", "infinitas_skill.cli.main", "server", *args],
         cwd=cwd,
         expect=expect,
         env=cli_env(env),
@@ -49,15 +51,15 @@ def run_server_cli(args, *, cwd=ROOT, expect=0, env=None):
 
 def assert_contains(text, needle, label):
     if needle not in text:
-        fail(f'{label} did not include {needle!r}\n{text}')
+        fail(f"{label} did not include {needle!r}\n{text}")
 
 
 def prepare_db(tmpdir: Path) -> Path:
-    db_path = tmpdir / 'worker.db'
+    db_path = tmpdir / "worker.db"
     conn = sqlite3.connect(db_path)
     try:
-        conn.execute('create table if not exists bootstrap(ok integer)')
-        conn.execute('insert into bootstrap(ok) values (1)')
+        conn.execute("create table if not exists bootstrap(ok integer)")
+        conn.execute("insert into bootstrap(ok) values (1)")
         conn.commit()
     finally:
         conn.close()
@@ -65,123 +67,150 @@ def prepare_db(tmpdir: Path) -> Path:
 
 
 def scenario_render_systemd_bundle():
-    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-service-bundle-test-'))
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-service-bundle-test-"))
     try:
-        output_dir = tmpdir / 'rendered'
-        repo_root = '/srv/infinitas/repo'
-        env_file = '/etc/infinitas/hosted-registry.env'
-        python_bin = '/opt/infinitas/.venv/bin/python'
-        prefix = 'infinitas-hosted'
+        output_dir = tmpdir / "rendered"
+        repo_root = "/srv/infinitas/repo"
+        env_file = "/etc/infinitas/hosted-registry.env"
+        python_bin = "/opt/infinitas/.venv/bin/python"
+        prefix = "infinitas-hosted"
 
         result = run_server_cli(
             [
-                'render-systemd',
-                '--output-dir',
+                "render-systemd",
+                "--output-dir",
                 str(output_dir),
-                '--repo-root',
+                "--repo-root",
                 repo_root,
-                '--python-bin',
+                "--python-bin",
                 python_bin,
-                '--env-file',
+                "--env-file",
                 env_file,
-                '--service-prefix',
+                "--service-prefix",
                 prefix,
-                '--backup-output-dir',
-                '/srv/infinitas/backups',
-                '--backup-on-calendar',
-                'daily',
-                '--backup-label',
-                'nightly',
+                "--backup-output-dir",
+                "/srv/infinitas/backups",
+                "--backup-on-calendar",
+                "daily",
+                "--backup-label",
+                "nightly",
             ],
         )
-        assert_contains(result.stdout, 'wrote', 'render output')
+        assert_contains(result.stdout, "wrote", "render output")
 
         expected = {
-            f'{prefix}.env.example',
-            f'{prefix}-api.service',
-            f'{prefix}-worker.service',
-            f'{prefix}-backup.service',
-            f'{prefix}-backup.timer',
+            f"{prefix}.env.example",
+            f"{prefix}-api.service",
+            f"{prefix}-worker.service",
+            f"{prefix}-backup.service",
+            f"{prefix}-backup.timer",
         }
         found = {path.name for path in output_dir.iterdir()}
         missing = sorted(expected - found)
         if missing:
-            fail(f'missing rendered files: {missing}')
+            fail(f"missing rendered files: {missing}")
 
-        api_unit = (output_dir / f'{prefix}-api.service').read_text(encoding='utf-8')
-        worker_unit = (output_dir / f'{prefix}-worker.service').read_text(encoding='utf-8')
-        backup_service = (output_dir / f'{prefix}-backup.service').read_text(encoding='utf-8')
-        backup_timer = (output_dir / f'{prefix}-backup.timer').read_text(encoding='utf-8')
-        inspect_service = (output_dir / f'{prefix}-inspect.service').read_text(encoding='utf-8')
-        env_example = (output_dir / f'{prefix}.env.example').read_text(encoding='utf-8')
+        api_unit = (output_dir / f"{prefix}-api.service").read_text(encoding="utf-8")
+        worker_unit = (output_dir / f"{prefix}-worker.service").read_text(encoding="utf-8")
+        backup_service = (output_dir / f"{prefix}-backup.service").read_text(encoding="utf-8")
+        backup_timer = (output_dir / f"{prefix}-backup.timer").read_text(encoding="utf-8")
+        inspect_service = (output_dir / f"{prefix}-inspect.service").read_text(encoding="utf-8")
+        env_example = (output_dir / f"{prefix}.env.example").read_text(encoding="utf-8")
 
-        assert_contains(api_unit, f'EnvironmentFile={env_file}', 'api unit')
-        assert_contains(api_unit, f'Environment=PYTHONPATH={repo_root}/src', 'api unit')
-        assert_contains(api_unit, python_bin, 'api unit')
-        assert_contains(api_unit, 'uvicorn server.app:app', 'api unit')
-        assert_contains(worker_unit, f'Environment=PYTHONPATH={repo_root}/src', 'worker unit')
-        assert_contains(worker_unit, '-m infinitas_skill.cli.main server worker', 'worker unit')
-        assert_contains(worker_unit, repo_root, 'worker unit')
-        assert_contains(worker_unit, 'poll-interval', 'worker unit')
-        assert_contains(backup_service, f'Environment=PYTHONPATH={repo_root}/src', 'backup service')
-        assert_contains(backup_service, '-m infinitas_skill.cli.main server backup', 'backup service')
-        assert_contains(backup_service, '/srv/infinitas/backups', 'backup service')
-        assert_contains(backup_timer, 'OnCalendar=daily', 'backup timer')
-        assert_contains(inspect_service, f'Environment=PYTHONPATH={repo_root}/src', 'inspect service')
-        assert_contains(inspect_service, '-m infinitas_skill.cli.main server inspect-state', 'inspect service')
-        assert_contains(inspect_service, '--json', 'inspect service')
-        assert_contains(env_example, 'INFINITAS_SERVER_DATABASE_URL=', 'env example')
-        assert_contains(env_example, f'INFINITAS_SERVER_REPO_PATH={repo_root}', 'env example')
+        assert_contains(api_unit, f"EnvironmentFile={env_file}", "api unit")
+        assert_contains(api_unit, f"Environment=PYTHONPATH={repo_root}/src", "api unit")
+        assert_contains(api_unit, python_bin, "api unit")
+        assert_contains(api_unit, "uvicorn server.app:app", "api unit")
+        assert_contains(worker_unit, f"Environment=PYTHONPATH={repo_root}/src", "worker unit")
+        assert_contains(worker_unit, "-m infinitas_skill.cli.main server worker", "worker unit")
+        assert_contains(worker_unit, repo_root, "worker unit")
+        assert_contains(worker_unit, "poll-interval", "worker unit")
+        assert_contains(backup_service, f"Environment=PYTHONPATH={repo_root}/src", "backup service")
+        assert_contains(
+            backup_service, "-m infinitas_skill.cli.main server backup", "backup service"
+        )
+        assert_contains(backup_service, "/srv/infinitas/backups", "backup service")
+        assert_contains(backup_timer, "OnCalendar=daily", "backup timer")
+        assert_contains(
+            inspect_service, f"Environment=PYTHONPATH={repo_root}/src", "inspect service"
+        )
+        assert_contains(
+            inspect_service, "-m infinitas_skill.cli.main server inspect-state", "inspect service"
+        )
+        assert_contains(inspect_service, "--json", "inspect service")
+        assert_contains(env_example, "INFINITAS_SERVER_DATABASE_URL=", "env example")
+        assert_contains(env_example, f"INFINITAS_SERVER_REPO_PATH={repo_root}", "env example")
 
-        deployment_doc = (ROOT / 'docs' / 'ops' / 'server-deployment.md').read_text(encoding='utf-8')
-        backup_doc = (ROOT / 'docs' / 'ops' / 'server-backup-and-restore.md').read_text(encoding='utf-8')
-        compose_file = (ROOT / 'docker-compose.yml').read_text(encoding='utf-8')
-        readme = (ROOT / 'README.md').read_text(encoding='utf-8')
-        assert_contains(deployment_doc, 'systemd', 'deployment doc')
-        assert_contains(deployment_doc, 'infinitas server worker', 'deployment doc')
-        assert_contains(deployment_doc, 'infinitas server inspect-state', 'deployment doc')
-        assert_contains(deployment_doc, 'infinitas server healthcheck', 'deployment doc')
-        assert_contains(backup_doc, 'infinitas server backup', 'backup doc')
-        assert_contains(backup_doc, 'infinitas server prune-backups', 'backup doc')
-        assert_contains(backup_doc, 'timer', 'backup doc')
-        assert_contains(compose_file, 'python3 -m infinitas_skill.cli.main server healthcheck', 'compose file')
-        assert_contains(compose_file, 'python3 -m infinitas_skill.cli.main server worker', 'compose file')
-        assert_contains(compose_file, 'python3 -m infinitas_skill.cli.main server backup', 'compose file')
-        assert_contains(compose_file, 'python3 -m infinitas_skill.cli.main server prune-backups', 'compose file')
-        assert_contains(compose_file, 'python3 -m infinitas_skill.cli.main server inspect-state', 'compose file')
-        assert_contains(compose_file, 'PYTHONPATH', 'compose file')
-        assert_contains(readme, 'uv run infinitas server healthcheck', 'README')
-        assert_contains(readme, '`uv run infinitas ...` is the maintained CLI surface.', 'README')
+        deployment_doc = (ROOT / "docs" / "ops" / "server-deployment.md").read_text(
+            encoding="utf-8"
+        )
+        backup_doc = (ROOT / "docs" / "ops" / "server-backup-and-restore.md").read_text(
+            encoding="utf-8"
+        )
+        compose_file = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        assert_contains(deployment_doc, "systemd", "deployment doc")
+        assert_contains(deployment_doc, "infinitas server worker", "deployment doc")
+        assert_contains(deployment_doc, "infinitas server inspect-state", "deployment doc")
+        assert_contains(deployment_doc, "infinitas server healthcheck", "deployment doc")
+        assert_contains(backup_doc, "infinitas server backup", "backup doc")
+        assert_contains(backup_doc, "infinitas server prune-backups", "backup doc")
+        assert_contains(backup_doc, "timer", "backup doc")
+        assert_contains(
+            compose_file, "python3 -m infinitas_skill.cli.main server healthcheck", "compose file"
+        )
+        assert_contains(
+            compose_file, "python3 -m infinitas_skill.cli.main server worker", "compose file"
+        )
+        assert_contains(
+            compose_file, "python3 -m infinitas_skill.cli.main server backup", "compose file"
+        )
+        assert_contains(
+            compose_file, "python3 -m infinitas_skill.cli.main server prune-backups", "compose file"
+        )
+        assert_contains(
+            compose_file, "python3 -m infinitas_skill.cli.main server inspect-state", "compose file"
+        )
+        assert_contains(compose_file, "PYTHONPATH", "compose file")
+        assert_contains(readme, "uv run infinitas server healthcheck", "README")
+        assert_contains(readme, "`uv run infinitas ...` is the maintained CLI surface.", "README")
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 def scenario_worker_runner_once_smoke():
-    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-worker-runner-test-'))
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-worker-runner-test-"))
     try:
         db_path = prepare_db(tmpdir)
-        artifact_dir = tmpdir / 'artifacts'
+        artifact_dir = tmpdir / "artifacts"
         artifact_dir.mkdir()
-        repo_lock = tmpdir / 'repo.lock'
+        repo_lock = tmpdir / "repo.lock"
         env = os.environ.copy()
-        env['INFINITAS_SERVER_DATABASE_URL'] = f'sqlite:///{db_path}'
-        env['INFINITAS_SERVER_SECRET_KEY'] = 'fixture-secret'
-        env['INFINITAS_SERVER_BOOTSTRAP_USERS'] = json.dumps(
-            [{'username': 'fixture-maintainer', 'display_name': 'Fixture Maintainer', 'role': 'maintainer', 'token': 'fixture-token'}]
+        env["INFINITAS_SERVER_DATABASE_URL"] = f"sqlite:///{db_path}"
+        env["INFINITAS_SERVER_SECRET_KEY"] = "fixture-secret"
+        env["INFINITAS_SERVER_BOOTSTRAP_USERS"] = json.dumps(
+            [
+                {
+                    "username": "fixture-maintainer",
+                    "display_name": "Fixture Maintainer",
+                    "role": "maintainer",
+                    "token": "fixture-token",
+                }
+            ]
         )
-        env['INFINITAS_SERVER_REPO_PATH'] = str(ROOT)
-        env['INFINITAS_SERVER_ARTIFACT_PATH'] = str(artifact_dir)
-        env['INFINITAS_SERVER_REPO_LOCK_PATH'] = str(repo_lock)
+        env["INFINITAS_SERVER_REPO_PATH"] = str(ROOT)
+        env["INFINITAS_SERVER_ARTIFACT_PATH"] = str(artifact_dir)
+        env["INFINITAS_SERVER_REPO_LOCK_PATH"] = str(repo_lock)
 
         result = run_server_cli(
             [
-                'worker',
-                '--once',
+                "worker",
+                "--once",
             ],
             env=env,
         )
         combined = result.stdout + result.stderr
-        assert_contains(combined, 'processed', 'worker runner output')
+        assert_contains(combined, "processed", "worker runner output")
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -189,8 +218,8 @@ def scenario_worker_runner_once_smoke():
 def main():
     scenario_render_systemd_bundle()
     scenario_worker_runner_once_smoke()
-    print('OK: hosted service bundle checks passed')
+    print("OK: hosted service bundle checks passed")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

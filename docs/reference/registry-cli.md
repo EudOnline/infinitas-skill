@@ -30,27 +30,27 @@ The product is split into two surfaces:
 
 ### Agent read and governance
 
-- `GET /api/library`
-- `GET /api/library/{object_id}`
-- `GET /api/library/{object_id}/releases`
-- `GET /api/releases/{release_id}`
-- `PATCH /api/releases/{release_id}/visibility`
-- `POST /api/objects/{object_id}/tokens`
-- `GET /api/objects/{object_id}/tokens`
-- `POST /api/tokens/{token_id}/revoke`
-- `POST /api/releases/{release_id}/share-links`
-- `GET /api/releases/{release_id}/share-links`
-- `POST /api/share-links/{share_id}/resolve`
-- `POST /api/share-links/{share_id}/revoke`
-- `GET /api/activity`
-- `GET /api/tokens/{token_id}/activity`
-- `GET /api/share-links/{share_id}/activity`
+- `GET /api/v1/library`
+- `GET /api/v1/library/{object_id}`
+- `GET /api/v1/library/{object_id}/releases`
+- `GET /api/v1/releases/{release_id}`
+- `POST /api/v1/exposures/{exposure_id}/revoke` (visibility is managed through exposures)
+- `POST /api/v1/object-tokens/objects/{object_id}/tokens`
+- `GET /api/v1/object-tokens/objects/{object_id}/tokens`
+- `POST /api/v1/object-tokens/tokens/{token_id}/revoke`
+- `POST /api/v1/share-links/releases/{release_id}/share-links`
+- `GET /api/v1/share-links/releases/{release_id}/share-links`
+- `POST /api/v1/share-links/{share_id}/resolve`
+- `POST /api/v1/share-links/{share_id}/revoke`
+- `GET /api/v1/activity`
+- `GET /api/v1/activity/tokens/{token_id}/activity`
+- `GET /api/v1/activity/share-links/{share_id}/activity`
 
 ### Agent publish
 
-- `PUT /api/publish/objects/{slug}`
-- `POST /api/publish/objects/{object_id}/releases`
-- `GET /api/publish/releases/{release_id}/status`
+- `POST /api/v1/skills`
+- `POST /api/v1/versions/{version_id}/releases`
+- `GET /api/v1/releases/{release_id}`
 
 The maintained publish path creates immutable version snapshots directly from object content. Draft and seal commands may still exist as compatibility tools for older automation, but they are not the maintained publish model for new work.
 
@@ -268,6 +268,8 @@ Example response:
 
 ## `infinitas registry agent-presets create`
 
+**Status: NOT IMPLEMENTED** — the `agent-presets` subcommand is not currently available in the CLI.
+
 Create a new agent preset.
 
 | Argument | Required | Default | Description |
@@ -276,8 +278,6 @@ Create a new agent preset.
 | `--display-name` | yes | | Display name |
 | `--summary` | no | `''` | Summary |
 | `--runtime-family` | no | `'openclaw'` | Runtime family |
-| `--supported-memory-modes` | no | `['none']` | Space-separated list |
-| `--default-memory-mode` | no | `'none'` | Default memory mode |
 | `--pinned-skill-dependencies` | no | `[]` | Space-separated list |
 
 API: `POST /api/v1/agent-presets`
@@ -313,6 +313,8 @@ API: `POST /api/v1/agent-preset-drafts/{draft_id}/seal`
 ---
 
 ## `infinitas registry agent-codes create`
+
+**Status: NOT IMPLEMENTED** — the `agent-codes` subcommand is not currently available in the CLI.
 
 Create a new agent code.
 
@@ -704,10 +706,11 @@ Example response:
 IDs produced by one command feed into the next. The maintained publish chain is:
 
 ```
-publish objects upsert -> object.id                  -> publish releases create
-publish releases create -> release_id                -> exposures create, tokens check-release, releases get/artifacts
-exposures create        -> id (exposure_id)          -> reviews open-case
-reviews open-case       -> id (review_case_id)       -> reviews decide
+registry skills create   -> skill.id                 -> drafts create
+registry drafts seal     -> skill_version.id         -> releases create
+releases create          -> release_id               -> exposures create, tokens check-release, releases get/artifacts
+exposures create         -> id (exposure_id)         -> reviews open-case
+reviews open-case        -> id (review_case_id)      -> reviews decide
 ```
 
 ---

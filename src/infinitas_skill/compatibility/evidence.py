@@ -7,6 +7,7 @@ import logging
 import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
 
 from infinitas_skill.compatibility.contracts import load_platform_profile_contract
 
@@ -182,7 +183,7 @@ def load_compatibility_evidence(root: Path) -> list[dict]:
 
 def load_platform_contracts(root: Path) -> dict[str, dict]:
     root = Path(root).resolve()
-    contracts = {}
+    contracts: dict[str, Any] = {}
     profiles_dir = root / "profiles"
     if not profiles_dir.exists():
         return contracts

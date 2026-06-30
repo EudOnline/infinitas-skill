@@ -4,11 +4,12 @@ Provides common functions for sorting semantic versions and deduplicating
 discovery projections by release ID.  Used by both the discovery and registry
 modules which previously maintained independent (and subtly divergent) copies.
 """
+
 from __future__ import annotations
 
 import re
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 _VERSION_PARTS_RE = re.compile(r"(\d+|[A-Za-z]+)")
 
@@ -67,7 +68,7 @@ def dedupe_entries(
         Deduplicated list sorted by qualified name, version, audience rank,
         and ready_at timestamp.
     """
-    by_release: dict[int, object] = {}
+    by_release: dict[int, Any] = {}
     for entry in entries:
         current = by_release.get(entry.release_id)
         if current is None:

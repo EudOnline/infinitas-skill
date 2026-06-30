@@ -2,11 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from infinitas_skill.memory import effective_memory_score
-from infinitas_skill.memory.contracts import MemoryRecord
-
-from .agent_support import supports_target_agent
-
 TRUST_SCORES = {
     "verified": 3,
     "attested": 2,
@@ -19,53 +14,6 @@ MATURITY_SCORES = {
     "beta": 2,
     "experimental": 1,
     "unknown": 0,
-}
-
-MEMORY_TYPE_BOOSTS = {
-    "user_preference": 22,
-    "task_context": 16,
-    "experience": 12,
-}
-MEMORY_MAX_BOOST = 35
-MEMORY_MIN_TOKEN_LENGTH = 4
-MEMORY_TOKEN_STOPWORDS = {
-    "and",
-    "artifact",
-    "artifacts",
-    "codex",
-    "for",
-    "helper",
-    "helpers",
-    "install",
-    "need",
-    "ready",
-    "release",
-    "released",
-    "skill",
-    "skills",
-    "stable",
-    "task",
-    "the",
-    "workflow",
-    "workflows",
-}
-NEGATIVE_EXPERIENCE_TERMS = {
-    "blocked",
-    "break",
-    "broken",
-    "crash",
-    "crashes",
-    "denied",
-    "error",
-    "errors",
-    "fail",
-    "failed",
-    "failing",
-    "fails",
-    "rejected",
-    "rejects",
-    "unsafe",
-    "unsupported",
 }
 
 
@@ -116,13 +64,16 @@ def compatibility_signal(item: dict[str, Any], *, target_agent: str | None) -> d
             "freshness_state": None,
         }
 
-    verified_support = item.get("verified_support") or {}
-    payload = verified_support.get(target_agent) if isinstance(verified_support, dict) else {}
-    payload = payload if isinstance(payload, dict) else {}
+    verified_support_raw = item.get("verified_support")
+    verified_support = verified_support_raw if isinstance(verified_support_raw, dict) else {}
+    payload_raw = verified_support.get(target_agent)
+    payload = payload_raw if isinstance(payload_raw, dict) else {}
     state = payload.get("state")
     freshness_state = payload.get("freshness_state")
-    runtime = item.get("runtime") if isinstance(item.get("runtime"), dict) else {}
-    readiness = runtime.get("readiness") if isinstance(runtime.get("readiness"), dict) else {}
+    runtime_raw = item.get("runtime")
+    runtime = runtime_raw if isinstance(runtime_raw, dict) else {}
+    readiness_raw = runtime.get("readiness")
+    readiness = readiness_raw if isinstance(readiness_raw, dict) else {}
     declared = target_agent in (item.get("agent_compatible") or [])
     runtime_ready = (
         target_agent == "openclaw"
@@ -170,7 +121,7 @@ def compatibility_signal(item: dict[str, Any], *, target_agent: str | None) -> d
             "state": state,
             "freshness_state": freshness_state,
         }
-    if declared or supports_target_agent(item, target_agent):
+    if declared:
         return {
             "compatible": True,
             "bonus": 350,
@@ -184,76 +135,6 @@ def compatibility_signal(item: dict[str, Any], *, target_agent: str | None) -> d
         "mode": "incompatible",
         "state": state,
         "freshness_state": freshness_state,
-    }
-
-
-def candidate_text_blob(item: dict[str, Any]) -> str:
-    parts = []
-    for field in ["name", "qualified_name", "summary"]:
-        value = item.get(field)
-        if isinstance(value, str):
-            parts.append(value.lower())
-    for field in ["tags", "use_when", "capabilities"]:
-        for value in item.get(field) or []:
-            if isinstance(value, str):
-                parts.append(value.lower())
-    return " ".join(parts)
-
-
-def memory_tokens(value: str) -> list[str]:
-    tokens = []
-    for token in tokenize(value):
-        if len(token) < MEMORY_MIN_TOKEN_LENGTH:
-            continue
-        if token in MEMORY_TOKEN_STOPWORDS:
-            continue
-        tokens.append(token)
-    return tokens
-
-
-def is_negative_experience(record: MemoryRecord) -> bool:
-    if record.memory_type != "experience":
-        return False
-    return any(token in NEGATIVE_EXPERIENCE_TERMS for token in tokenize(record.memory))
-
-
-def calculate_memory_signals(
-    item: dict[str, Any],
-    *,
-    factors: dict[str, Any],
-    records: list[MemoryRecord],
-) -> dict[str, Any]:
-    candidate_blob = candidate_text_blob(item)
-    matched = []
-    boostable = []
-    for record in records:
-        tokens = memory_tokens(record.memory)
-        if not tokens:
-            continue
-        if any(token in candidate_blob for token in tokens):
-            matched.append(record)
-            if not is_negative_experience(record):
-                boostable.append(record)
-
-    boostable.sort(key=effective_memory_score, reverse=True)
-    memory_types = []
-    for record in boostable:
-        memory_type = record.memory_type if isinstance(record.memory_type, str) else "generic"
-        if memory_type not in memory_types:
-            memory_types.append(memory_type)
-
-    boost = 0
-    if factors.get("compatibility"):
-        for record in boostable:
-            memory_type = record.memory_type if isinstance(record.memory_type, str) else "generic"
-            quality_ratio = min(max(effective_memory_score(record), 0.25), 1.0)
-            boost += int(round(MEMORY_TYPE_BOOSTS.get(memory_type, 8) * quality_ratio))
-        boost = min(boost, MEMORY_MAX_BOOST)
-
-    return {
-        "matched_memory_count": len(matched),
-        "applied_boost": boost,
-        "memory_types": memory_types,
     }
 
 
@@ -326,7 +207,6 @@ def recommendation_reason(item: dict[str, Any], factors: dict[str, Any]) -> str:
 
 
 __all__ = [
-    "calculate_memory_signals",
     "compatibility_signal",
     "freshness_score",
     "match_strength",

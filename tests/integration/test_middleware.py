@@ -9,6 +9,7 @@ from server.app import create_app
 
 def _middleware_client(tmp_path: Path) -> TestClient:
     import os
+
     os.environ["INFINITAS_SERVER_DATABASE_URL"] = f"sqlite:///{tmp_path / 'mw.db'}"
     os.environ["INFINITAS_SERVER_SECRET_KEY"] = "mw-test-secret-32chars-long-minimum"
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(tmp_path / "artifacts")
@@ -20,7 +21,7 @@ def _middleware_client(tmp_path: Path) -> TestClient:
 class TestSecurityHeadersMiddleware:
     def test_all_security_headers_present(self, tmp_path: Path):
         client = _middleware_client(tmp_path)
-        response = client.get("/healthz")
+        response = client.get("/api/v1/system/healthz")
         assert response.status_code == 200
         headers = response.headers
         assert "content-security-policy" in headers
@@ -31,23 +32,23 @@ class TestSecurityHeadersMiddleware:
 
     def test_csp_script_hash_present(self, tmp_path: Path):
         client = _middleware_client(tmp_path)
-        response = client.get("/healthz")
+        response = client.get("/api/v1/system/healthz")
         csp = response.headers["content-security-policy"]
         assert "sha256-" in csp
 
     def test_frame_ancestors_none(self, tmp_path: Path):
         client = _middleware_client(tmp_path)
-        response = client.get("/healthz")
+        response = client.get("/api/v1/system/healthz")
         assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
 
     def test_x_frame_options_deny(self, tmp_path: Path):
         client = _middleware_client(tmp_path)
-        response = client.get("/healthz")
+        response = client.get("/api/v1/system/healthz")
         assert response.headers["x-frame-options"] == "DENY"
 
     def test_hsts_max_age(self, tmp_path: Path):
         client = _middleware_client(tmp_path)
-        response = client.get("/healthz")
+        response = client.get("/api/v1/system/healthz")
         hsts = response.headers["strict-transport-security"]
         assert "max-age=31536000" in hsts
 
@@ -65,5 +66,5 @@ class TestCsrfValidationMiddleware:
         # We can't easily test websockets here, but we verify the middleware
         # doesn't crash on a normal request
         client = _middleware_client(tmp_path)
-        response = client.get("/healthz")
+        response = client.get("/api/v1/system/healthz")
         assert response.status_code == 200

@@ -7,8 +7,10 @@ from infinitas_skill.install.distribution import DistributionError, materialize_
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Materialize a resolved skill source into a local directory')
-    parser.add_argument('--source-json', required=True, help='Resolver JSON payload')
+    parser = argparse.ArgumentParser(
+        description="Materialize a resolved skill source into a local directory"
+    )
+    parser.add_argument("--source-json", required=True, help="Resolver JSON payload")
     return parser.parse_args()
 
 
@@ -18,11 +20,11 @@ def main():
     try:
         result = materialize_distribution_source(source_info)
     except DistributionError as exc:
-        print(f'FAIL: {exc}', file=sys.stderr)
+        print(f"FAIL: {exc}", file=sys.stderr)
         return 1
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     raise SystemExit(main())

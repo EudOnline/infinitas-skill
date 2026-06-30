@@ -7,6 +7,7 @@ import json
 import os
 import secrets
 import time
+from typing import Any
 
 import bcrypt
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -22,18 +23,18 @@ from server.modules.access import service as access_service
 from server.modules.access.authn import AccessContext, resolve_access_context
 from server.settings import get_settings
 
-AUTH_COOKIE_NAME = 'infinitas_auth_token'
+AUTH_COOKIE_NAME = "infinitas_auth_token"
 AUTH_COOKIE_MAX_AGE = 30 * 24 * 60 * 60
-AUTH_SESSION_PREFIX = 'session:'
+AUTH_SESSION_PREFIX = "session:"
 
-CSRF_COOKIE_NAME = 'csrf_token'
-CSRF_HEADER_NAME = 'x-csrf-token'
+CSRF_COOKIE_NAME = "csrf_token"
+CSRF_HEADER_NAME = "x-csrf-token"
 
 
 def _extract_bearer_token(authorization: str | None) -> str | None:
     if not isinstance(authorization, str):
         return None
-    prefix = 'Bearer '
+    prefix = "Bearer "
     if not authorization.startswith(prefix):
         return None
     token = authorization[len(prefix) :].strip()
@@ -41,16 +42,16 @@ def _extract_bearer_token(authorization: str | None) -> str | None:
 
 
 def _resolve_request_token(request: Request) -> str | None:
-    return _extract_bearer_token(request.headers.get('authorization'))
+    return _extract_bearer_token(request.headers.get("authorization"))
 
 
 def _urlsafe_b64encode(raw: bytes) -> str:
-    return base64.urlsafe_b64encode(raw).rstrip(b'=').decode('ascii')
+    return base64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii")
 
 
 def _urlsafe_b64decode(raw: str) -> bytes:
-    padding = '=' * (-len(raw) % 4)
-    return base64.urlsafe_b64decode((raw + padding).encode('ascii'))
+    padding = "=" * (-len(raw) % 4)
+    return base64.urlsafe_b64decode((raw + padding).encode("ascii"))
 
 
 def _derive_aes_key() -> bytes:
@@ -89,32 +90,32 @@ def _decrypt_payload(ciphertext: bytes) -> bytes | None:
 
 
 def _session_signature(payload: str) -> str:
-    secret = get_settings().secret_key.encode('utf-8')
+    secret = get_settings().secret_key.encode("utf-8")
     # hmac.new() is the canonical HMAC constructor in Python's hmac module
-    digest = hmac.new(secret, payload.encode('utf-8'), hashlib.sha256).digest()
+    digest = hmac.new(secret, payload.encode("utf-8"), hashlib.sha256).digest()
     return _urlsafe_b64encode(digest)
 
 
 def create_auth_session_cookie(credential_id: int) -> str:
     plaintext = json.dumps(
         {
-            'credential_id': credential_id,
-            'issued_at': int(time.time()),
+            "credential_id": credential_id,
+            "issued_at": int(time.time()),
         },
-        separators=(',', ':'),
+        separators=(",", ":"),
         sort_keys=True,
-    ).encode('utf-8')
+    ).encode("utf-8")
     ciphertext = _encrypt_payload(plaintext)
     payload = _urlsafe_b64encode(ciphertext)
-    return f'{AUTH_SESSION_PREFIX}{payload}.{_session_signature(payload)}'
+    return f"{AUTH_SESSION_PREFIX}{payload}.{_session_signature(payload)}"
 
 
 def _decode_auth_session_cookie(value: str | None) -> dict | None:
-    raw = str(value or '').strip()
+    raw = str(value or "").strip()
     if not raw.startswith(AUTH_SESSION_PREFIX):
         return None
     payload_and_sig = raw[len(AUTH_SESSION_PREFIX) :]
-    payload, sep, signature = payload_and_sig.partition('.')
+    payload, sep, signature = payload_and_sig.partition(".")
     if not payload or not sep or not signature:
         return None
     expected = _session_signature(payload)
@@ -125,12 +126,14 @@ def _decode_auth_session_cookie(value: str | None) -> dict | None:
         plaintext = _decrypt_payload(ciphertext)
         if plaintext is None:
             return None
-        decoded = json.loads(plaintext.decode('utf-8'))
+        decoded: dict[str, Any] | None = json.loads(plaintext.decode("utf-8"))
     except Exception:
         get_logger(__name__).debug("session cookie decode failed", exc_info=True)
         return None
-    issued_at = decoded.get('issued_at')
-    credential_id = decoded.get('credential_id')
+    if not isinstance(decoded, dict):
+        return None
+    issued_at = decoded.get("issued_at")
+    credential_id = decoded.get("credential_id")
     if not isinstance(issued_at, int) or not isinstance(credential_id, int):
         return None
     now = int(time.time())
@@ -145,7 +148,7 @@ def _resolve_session_access_context(db: Session, auth_cookie: str | None) -> Acc
     decoded = _decode_auth_session_cookie(auth_cookie)
     if not isinstance(decoded, dict):
         return None
-    credential = access_service.resolve_credential_by_id(db, decoded.get('credential_id'))
+    credential = access_service.resolve_credential_by_id(db, decoded.get("credential_id"))
     if credential is None:
         return None
     if credential.revoked_at is not None:
@@ -185,9 +188,9 @@ def get_current_access_context(
     else:
         context = _resolve_session_access_context(db, auth_cookie)
     if not token and not auth_cookie:
-        raise HTTPException(status_code=401, detail='missing bearer token')
+        raise HTTPException(status_code=401, detail="missing bearer token")
     if context is None:
-        raise HTTPException(status_code=401, detail='invalid bearer token')
+        raise HTTPException(status_code=401, detail="invalid bearer token")
     return context
 
 
@@ -202,7 +205,7 @@ def get_current_user(
         db=db,
     )
     if context.user is None:
-        raise HTTPException(status_code=401, detail='invalid bearer token')
+        raise HTTPException(status_code=401, detail="invalid bearer token")
     return context.user
 
 
@@ -211,13 +214,14 @@ def require_role(*allowed_roles: str):
 
     def dependency(user: User = Depends(get_current_user)) -> User:
         if user.role not in allowed:
-            raise HTTPException(status_code=403, detail='insufficient role')
+            raise HTTPException(status_code=403, detail="insufficient role")
         return user
 
     return dependency
 
 
 # ── Password hashing ───────────────────────────────────────────────────────
+
 
 def validate_password_strength(plain: str) -> None:
     """Validate password meets minimum complexity requirements.
@@ -253,7 +257,7 @@ def validate_password_strength(plain: str) -> None:
 def hash_password(plain: str) -> str:
     """Hash a plaintext password using bcrypt."""
     validate_password_strength(plain)
-    return bcrypt.hashpw(plain.encode('utf-8'), bcrypt.gensalt(rounds=12)).decode('utf-8')
+    return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
 
 
 def hash_share_password(plain: str) -> str:
@@ -265,17 +269,18 @@ def hash_share_password(plain: str) -> str:
     """
     if not plain or len(plain) < 4:
         raise ValueError("Share password must be at least 4 characters")
-    return bcrypt.hashpw(plain.encode('utf-8'), bcrypt.gensalt(rounds=12)).decode('utf-8')
+    return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str | None) -> bool:
     """Verify a plaintext password against a bcrypt hash."""
     if not hashed:
         return False
-    return bcrypt.checkpw(plain.encode('utf-8'), hashed.encode('utf-8'))
+    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
 
 
 # ── CSRF Protection ────────────────────────────────────────────────────────
+
 
 def generate_csrf_token() -> str:
     """Generate a cryptographically secure random CSRF token."""
@@ -291,7 +296,7 @@ def validate_csrf_token(request: Request) -> None:
     - Bearer token authentication is used
     - No auth cookie is present (not logged in)
     """
-    if request.method in {'GET', 'HEAD', 'OPTIONS', 'TRACE'}:
+    if request.method in {"GET", "HEAD", "OPTIONS", "TRACE"}:
         return
 
     # Bearer token auth is not vulnerable to CSRF
@@ -306,7 +311,7 @@ def validate_csrf_token(request: Request) -> None:
     csrf_header = request.headers.get(CSRF_HEADER_NAME)
 
     if not csrf_cookie or not csrf_header:
-        raise HTTPException(status_code=403, detail='CSRF token missing')
+        raise HTTPException(status_code=403, detail="CSRF token missing")
 
     if not hmac.compare_digest(csrf_cookie, csrf_header):
-        raise HTTPException(status_code=403, detail='CSRF token mismatch')
+        raise HTTPException(status_code=403, detail="CSRF token mismatch")

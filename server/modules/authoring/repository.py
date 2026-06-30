@@ -13,9 +13,7 @@ def get_skill(db: Session, skill_id: int) -> Skill | None:
 
 def get_skill_by_namespace_and_slug(db: Session, *, namespace_id: int, slug: str) -> Skill | None:
     return db.scalar(
-        select(Skill)
-        .where(Skill.namespace_id == namespace_id)
-        .where(Skill.slug == slug)
+        select(Skill).where(Skill.namespace_id == namespace_id).where(Skill.slug == slug)
     )
 
 

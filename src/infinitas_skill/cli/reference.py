@@ -63,7 +63,7 @@ from infinitas_skill.server.ops import (
     build_server_worker_parser,
 )
 
-GENERATED_CLI_REFERENCE_LAST_REVIEWED = "2026-04-07"
+GENERATED_CLI_REFERENCE_LAST_REVIEWED = "2026-06-30"
 
 
 def _render_help_block(text: str) -> str:

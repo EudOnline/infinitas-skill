@@ -261,8 +261,8 @@ def build_signing_readiness_report(root, skill_targets):
     signing_key = summarize_signing_key(root, signing, allowed_entries)
     skills = [summarize_skill(root, target) for target in skill_targets]
 
-    errors = []
-    warnings = []
+    errors: list[str] = []
+    warnings: list[str] = []
     if trusted_signers.get("status") == "fail":
         errors.extend(trusted_signers.get("errors") or [])
     elif trusted_signers.get("status") == "warn":
@@ -294,11 +294,7 @@ def render_signing_readiness_report(report) -> str:
     lines.append(
         "trusted_signers: "
         f"{trusted.get('count', 0)}"
-        + (
-            f" ({', '.join(trusted.get('identities') or [])})"
-            if trusted.get("identities")
-            else ""
-        )
+        + (f" ({', '.join(trusted.get('identities') or [])})" if trusted.get("identities") else "")
     )
     signing_key = report.get("signing_key") or {}
     lines.append(

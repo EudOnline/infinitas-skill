@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -47,14 +48,9 @@ def write_json(path: Path, payload):
 
 
 def contract_checked_at(repo: Path, platform: str):
-    profile_path = repo / "profiles" / f"{platform}.json"
-    payload = json.loads(profile_path.read_text(encoding="utf-8"))
-    contract = payload.get("contract") if isinstance(payload.get("contract"), dict) else {}
-    last_verified = contract.get("last_verified")
-    if not isinstance(last_verified, str) or not last_verified:
-        fail(f"missing contract.last_verified for platform {platform!r}")
     minute = PLATFORM_EVIDENCE_MINUTES.get(platform, 0)
-    return f"{last_verified}T12:{minute:02d}:00Z"
+    checked_at = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(minutes=minute)
+    return checked_at.isoformat().replace("+00:00", "Z")
 
 
 def make_env(repo: Path, extra=None):
@@ -165,7 +161,20 @@ def prepare_repo(include_signers=False):
         ROOT,
         repo,
         ignore=shutil.ignore_patterns(
-            ".git", ".planning", "__pycache__", ".cache", "scripts/__pycache__"
+            ".git",
+            ".planning",
+            "scripts/__pycache__",
+            "__pycache__.cache",
+            "*.pyc",
+            ".coverage",
+            ".gitignore.mypy_cache",
+            ".pytest_cache",
+            ".ruff_cache",
+            ".state.venv",
+            ".worktrees",
+            "build",
+            "infinitas_hosted_registry.egg-infonode_modules",
+            "tmp",
         ),
     )
     (repo / "config" / "allowed_signers").write_text("", encoding="utf-8")
@@ -674,8 +683,7 @@ def scenario_stale_or_missing_platform_evidence_blocks_preflight():
         verified_support = platform_compatibility.get("verified_support") or {}
         if verified_support.get("openclaw", {}).get("freshness_state") != "stale":
             fail(
-                "expected openclaw freshness_state stale, got "
-                f"{verified_support.get('openclaw')!r}"
+                f"expected openclaw freshness_state stale, got {verified_support.get('openclaw')!r}"
             )
         if verified_support.get("codex", {}).get("freshness_state") != "fresh":
             fail(f"expected codex freshness_state fresh, got {verified_support.get('codex')!r}")

@@ -216,7 +216,7 @@ export function initHomeAuthSession() {
     BackgroundManager.setCurrentBgId(theme, bgId);
     if (currentUser) {
       try {
-        const response = await fetch('/api/background/set', {
+        const response = await fetch('/api/v1/background/set', {
           method: 'POST',
           credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
@@ -361,7 +361,7 @@ export function initHomeAuthSession() {
 
   async function fetchAndApplyUserBackground() {
     try {
-      const response = await fetch('/api/background/me', { credentials: 'same-origin' });
+      const response = await fetch('/api/v1/background/me', { credentials: 'same-origin' });
       if (!response.ok) {
         return;
       }
@@ -399,7 +399,7 @@ export function initHomeAuthSession() {
       return;
     }
     try {
-      const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
+      const response = await fetch('/api/v1/auth/me', { credentials: 'same-origin' });
       if (response.ok) {
         const payload = await response.json();
         if (payload.authenticated) {

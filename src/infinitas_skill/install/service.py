@@ -41,59 +41,26 @@ def _string_list(value: object) -> list[str]:
     return out
 
 
-def resolve_memory_mode_selection(
-    *,
-    supported_modes: object,
-    default_mode: object,
-    requested_mode: str | None = None,
-) -> dict[str, object]:
-    supported = _string_list(supported_modes)
-    normalized_default = (
-        str(default_mode).strip() if isinstance(default_mode, str) and default_mode.strip() else None
-    )
-    if normalized_default not in supported:
-        normalized_default = supported[0] if supported else None
-    normalized_requested = (
-        str(requested_mode).strip()
-        if isinstance(requested_mode, str) and requested_mode.strip()
-        else None
-    )
-    if normalized_requested is not None and normalized_requested not in supported:
-        raise DependencyError(
-            f"unsupported memory mode: {normalized_requested}",
-            {
-                "supported_memory_modes": supported,
-                "default_memory_mode": normalized_default,
-                "requested_memory_mode": normalized_requested,
-            },
-        )
-    selected = normalized_requested or normalized_default
-    return {
-        "supported_memory_modes": supported,
-        "default_memory_mode": normalized_default,
-        "selected_memory_mode": selected,
-    }
-
-
 def _bool_required(value: object) -> bool:
     if isinstance(value, bool):
         return value
     if isinstance(value, dict):
-        if isinstance(value.get("required"), bool):
-            return value["required"]
-        if isinstance(value.get("enabled"), bool):
-            return value["enabled"]
+        required = value.get("required")
+        if isinstance(required, bool):
+            return required
+        enabled = value.get("enabled")
+        if isinstance(enabled, bool):
+            return enabled
     return False
 
 
 def _openclaw_requires(meta: dict) -> dict[str, list[str]]:
-    requires = meta.get("requires") if isinstance(meta.get("requires"), dict) else {}
-    metadata_openclaw = (meta.get("metadata") or {}).get("openclaw")
-    openclaw_requires = (
-        metadata_openclaw.get("requires")
-        if isinstance(metadata_openclaw, dict) and isinstance(metadata_openclaw.get("requires"), dict)
-        else {}
-    )
+    requires_raw = meta.get("requires")
+    requires = requires_raw if isinstance(requires_raw, dict) else {}
+    metadata_openclaw_raw = (meta.get("metadata") or {}).get("openclaw")
+    metadata_openclaw = metadata_openclaw_raw if isinstance(metadata_openclaw_raw, dict) else {}
+    openclaw_requires_raw = metadata_openclaw.get("requires")
+    openclaw_requires = openclaw_requires_raw if isinstance(openclaw_requires_raw, dict) else {}
     bins = _string_list(requires.get("bins")) + _string_list(openclaw_requires.get("bins"))
     env = _string_list(requires.get("env")) + _string_list(openclaw_requires.get("env"))
     return {
@@ -134,10 +101,10 @@ def _build_openclaw_runtime_install_view(
     root_candidate: dict,
     install_target: dict,
 ) -> dict:
-    meta = root_candidate.get("meta") if isinstance(root_candidate.get("meta"), dict) else {}
-    runtime_meta = (
-        meta.get("openclaw_runtime") if isinstance(meta.get("openclaw_runtime"), dict) else {}
-    )
+    meta_raw = root_candidate.get("meta")
+    meta = meta_raw if isinstance(meta_raw, dict) else {}
+    runtime_meta_raw = meta.get("openclaw_runtime")
+    runtime_meta = runtime_meta_raw if isinstance(runtime_meta_raw, dict) else {}
     plugin_required = normalize_plugin_capabilities(runtime_meta.get("plugin_capabilities"))
     background_required = _bool_required(runtime_meta.get("background_tasks"))
     subagents_required = _bool_required(runtime_meta.get("subagents"))
@@ -343,9 +310,7 @@ def plan_from_skill_dir(
     if not isinstance(workspace_scope, str) or workspace_scope not in {"workspace", "user"}:
         workspace_scope = "workspace"
     workspace_root = (
-        Path(target_dir).resolve()
-        if target_dir is not None
-        else Path(skill_dir).resolve().parent
+        Path(target_dir).resolve() if target_dir is not None else Path(skill_dir).resolve().parent
     )
     install_target = resolve_openclaw_install_target(
         workspace_root=workspace_root,
@@ -360,16 +325,8 @@ def plan_from_skill_dir(
     )
 
 
-def plan_from_registry_entry(entry: dict, *, memory_mode: str | None = None) -> dict:
+def plan_from_registry_entry(entry: dict) -> dict:
     kind = str(entry.get("kind") or entry.get("object_kind") or "skill")
-    memory_selection = resolve_memory_mode_selection(
-        supported_modes=entry.get("supported_memory_modes"),
-        default_mode=entry.get("default_memory_mode"),
-        requested_mode=memory_mode,
-    )
-    supported_memory_modes = list(memory_selection["supported_memory_modes"])
-    default_memory_mode = memory_selection["default_memory_mode"]
-    selected_memory_mode = memory_selection.get("selected_memory_mode")
 
     root = {
         "kind": kind,
@@ -377,9 +334,6 @@ def plan_from_registry_entry(entry: dict, *, memory_mode: str | None = None) -> 
         "qualified_name": entry.get("qualified_name") or entry.get("name"),
         "version": entry.get("default_install_version") or entry.get("latest_version"),
         "publisher": entry.get("publisher"),
-        "selected_memory_mode": selected_memory_mode,
-        "default_memory_mode": default_memory_mode,
-        "supported_memory_modes": supported_memory_modes,
     }
     step = {
         "order": 1,
@@ -388,9 +342,12 @@ def plan_from_registry_entry(entry: dict, *, memory_mode: str | None = None) -> 
         "name": root["name"],
         "qualified_name": root["qualified_name"],
         "version": root["version"],
-        "manifest_path": ((entry.get("versions") or {}).get(root["version"]) or {}).get("manifest_path"),
-        "bundle_path": ((entry.get("versions") or {}).get(root["version"]) or {}).get("bundle_path"),
-        "selected_memory_mode": selected_memory_mode,
+        "manifest_path": ((entry.get("versions") or {}).get(root["version"]) or {}).get(
+            "manifest_path"
+        ),
+        "bundle_path": ((entry.get("versions") or {}).get(root["version"]) or {}).get(
+            "bundle_path"
+        ),
     }
     return {
         "mode": "install",
@@ -407,6 +364,5 @@ __all__ = [
     "error_to_payload",
     "normalize_meta_dependencies",
     "plan_from_skill_dir",
-    "resolve_memory_mode_selection",
     "plan_to_text",
 ]

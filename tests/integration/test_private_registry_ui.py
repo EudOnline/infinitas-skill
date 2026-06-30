@@ -19,17 +19,19 @@ AUTH_SESSION_JS_PATH = ROOT / "server" / "static" / "js" / "auth-session.js"
 MODULES_DIR = ROOT / "server" / "static" / "js" / "modules"
 SEARCH_MODULE_PATH = MODULES_DIR / "search.js"
 LIFECYCLE_MODULE_PATH = MODULES_DIR / "lifecycle.js"
+LIFECYCLE_CRUD_MODULE_PATH = MODULES_DIR / "lifecycle-crud.js"
+LIFECYCLE_ACCESS_MODULE_PATH = MODULES_DIR / "lifecycle-access.js"
+LIFECYCLE_EXPOSURE_MODULE_PATH = MODULES_DIR / "lifecycle-exposure.js"
 AUTH_HOME_MODULE_PATH = MODULES_DIR / "auth-home.js"
 AUTH_CONSOLE_MODULE_PATH = MODULES_DIR / "auth-console.js"
 AUTH_MODAL_MODULE_PATH = MODULES_DIR / "auth-modal.js"
 ROUTES_PATH = ROOT / "server" / "ui" / "routes.py"
 LAYOUT_TEMPLATE_PATH = ROOT / "server" / "templates" / "layout-kawaii.html"
-LIBRARY_TEMPLATE_PATH = ROOT / "server" / "templates" / "library.html"
+MANAGE_TEMPLATE_PATH = ROOT / "server" / "templates" / "manage.html"
 OBJECT_DETAIL_TEMPLATE_PATH = ROOT / "server" / "templates" / "object-detail.html"
-ACCESS_CENTER_TEMPLATE_PATH = ROOT / "server" / "templates" / "access-center.html"
-SHARES_TEMPLATE_PATH = ROOT / "server" / "templates" / "shares.html"
-ACTIVITY_TEMPLATE_PATH = ROOT / "server" / "templates" / "activity.html"
 RELEASE_DETAIL_V2_TEMPLATE_PATH = ROOT / "server" / "templates" / "release-detail-v2.html"
+PROFILE_TEMPLATE_PATH = ROOT / "server" / "templates" / "profile.html"
+SETTINGS_TEMPLATE_PATH = ROOT / "server" / "templates" / "settings.html"
 HOME_AUTH_PANEL_TEMPLATE_PATH = ROOT / "server" / "templates" / "partials" / "home-auth-panel.html"
 SECURITY_PATH = ROOT / "server" / "middleware.py"
 INPUT_CSS_PATH = ROOT / "server" / "static" / "css" / "input.css"
@@ -166,16 +168,15 @@ def assert_alembic_config_declares_path_separator() -> None:
 
 def assert_maintained_control_plane_docs_freeze_canonical_model() -> None:
     docs = {
-        CONTROL_PLANE_BUSINESS_FLOWS_PATH: CONTROL_PLANE_BUSINESS_FLOWS_PATH.read_text(encoding="utf-8"),
+        CONTROL_PLANE_BUSINESS_FLOWS_PATH: CONTROL_PLANE_BUSINESS_FLOWS_PATH.read_text(
+            encoding="utf-8"
+        ),
         FRONTEND_ALIGNMENT_PATH: FRONTEND_ALIGNMENT_PATH.read_text(encoding="utf-8"),
         FRONTEND_CHECKLIST_PATH: FRONTEND_CHECKLIST_PATH.read_text(encoding="utf-8"),
         API_REFERENCE_PATH: API_REFERENCE_PATH.read_text(encoding="utf-8"),
     }
 
-    intros = {
-        path: "\n".join(text.splitlines()[:20]).lower()
-        for path, text in docs.items()
-    }
+    intros = {path: "\n".join(text.splitlines()[:20]).lower() for path, text in docs.items()}
 
     for path, intro in intros.items():
         assert "not maintained" in intro, (
@@ -248,13 +249,14 @@ def _sha256_base64(payload: str) -> str:
 def assert_private_registry_ui_js_contracts() -> None:
     app_js_source = APP_JS_PATH.read_text(encoding="utf-8")
     search_source = SEARCH_MODULE_PATH.read_text(encoding="utf-8")
-    lifecycle_source = LIFECYCLE_MODULE_PATH.read_text(encoding="utf-8")
-    library_template = LIBRARY_TEMPLATE_PATH.read_text(encoding="utf-8")
+    lifecycle_crud_source = LIFECYCLE_CRUD_MODULE_PATH.read_text(encoding="utf-8")
+    lifecycle_access_source = LIFECYCLE_ACCESS_MODULE_PATH.read_text(encoding="utf-8")
+    lifecycle_exposure_source = LIFECYCLE_EXPOSURE_MODULE_PATH.read_text(encoding="utf-8")
+    manage_template = MANAGE_TEMPLATE_PATH.read_text(encoding="utf-8")
     object_detail_template = OBJECT_DETAIL_TEMPLATE_PATH.read_text(encoding="utf-8")
-    access_center_template = ACCESS_CENTER_TEMPLATE_PATH.read_text(encoding="utf-8")
-    shares_template = SHARES_TEMPLATE_PATH.read_text(encoding="utf-8")
-    activity_template = ACTIVITY_TEMPLATE_PATH.read_text(encoding="utf-8")
     release_detail_v2_template = RELEASE_DETAIL_V2_TEMPLATE_PATH.read_text(encoding="utf-8")
+    profile_template = PROFILE_TEMPLATE_PATH.read_text(encoding="utf-8")
+    settings_template = SETTINGS_TEMPLATE_PATH.read_text(encoding="utf-8")
     auth_home_source = AUTH_HOME_MODULE_PATH.read_text(encoding="utf-8")
     auth_console_source = AUTH_CONSOLE_MODULE_PATH.read_text(encoding="utf-8")
     auth_modal_source = AUTH_MODAL_MODULE_PATH.read_text(encoding="utf-8")
@@ -262,8 +264,8 @@ def assert_private_registry_ui_js_contracts() -> None:
     home_auth_panel_template = HOME_AUTH_PANEL_TEMPLATE_PATH.read_text(encoding="utf-8")
     security_source = SECURITY_PATH.read_text(encoding="utf-8")
     create_draft_source = _slice_top_level_function_source(
-        lifecycle_source,
-        "async function createDraft(form) {",
+        lifecycle_crud_source,
+        "export async function createDraft(form) {",
     )
     install_panel_source = _slice_source(
         search_source,
@@ -271,24 +273,24 @@ def assert_private_registry_ui_js_contracts() -> None:
         "\n\n  selectNext()",
     )
     artifacts_table_source = _slice_top_level_function_source(
-        lifecycle_source,
-        "async function updateArtifactsTable(releaseId) {",
+        lifecycle_crud_source,
+        "export async function updateArtifactsTable(releaseId) {",
     )
     access_check_source = _slice_top_level_function_source(
-        lifecycle_source,
-        "async function checkReleaseAccess(releaseId) {",
+        lifecycle_access_source,
+        "export async function checkReleaseAccess(releaseId) {",
     )
     review_detail_source = _slice_top_level_function_source(
-        lifecycle_source,
-        "async function toggleReviewDetail(reviewCaseId, button) {",
+        lifecycle_exposure_source,
+        "export async function toggleReviewDetail(reviewCaseId, button) {",
     )
     exposure_policy_source = _slice_top_level_function_source(
-        lifecycle_source,
-        "function syncExposureReviewModePolicy() {",
+        lifecycle_exposure_source,
+        "export function syncExposureReviewModePolicy() {",
     )
     release_poll_source = _slice_top_level_function_source(
-        lifecycle_source,
-        "async function pollReleaseReady(releaseId, intervalMs = 3000) {",
+        lifecycle_crud_source,
+        "export async function pollReleaseReady(releaseId, intervalMs = 3000) {",
     )
     auth_handle_login_source = _slice_source(
         auth_modal_source,
@@ -305,9 +307,7 @@ def assert_private_registry_ui_js_contracts() -> None:
         "  const controller = createAuthModalController({",
         "\n\n  async function init() {",
     )
-    app_js_imports = set(
-        re.findall(r"""from ['"](\./modules/[^'"]+)['"]""", app_js_source)
-    )
+    app_js_imports = set(re.findall(r"""from ['"](\./modules/[^'"]+)['"]""", app_js_source))
     expected_shell_imports = {
         "./modules/toast.js",
         "./modules/theme.js",
@@ -349,34 +349,34 @@ def assert_private_registry_ui_js_contracts() -> None:
         )
 
     for template_source, marker in [
-        (library_template, "static_url('/static/js/modules/library.js')"),
+        (manage_template, "static_url('/static/js/modules/manage.js')"),
         (object_detail_template, "static_url('/static/js/modules/library.js')"),
-        (access_center_template, "static_url('/static/js/modules/access-center.js')"),
-        (shares_template, "static_url('/static/js/modules/shares.js')"),
-        (activity_template, "static_url('/static/js/modules/activity.js')"),
         (release_detail_v2_template, "static_url('/static/js/modules/release-admin.js')"),
+        (profile_template, "static_url('/static/js/modules/profile.js')"),
     ]:
         assert marker in template_source, (
             "expected maintained templates to own their page-level module wiring; "
             f"missing marker {marker!r}"
         )
 
+    for deleted_module in ("access-center.js", "shares.js", "activity.js"):
+        marker = f"static_url('/static/js/modules/{deleted_module}')"
+        assert marker not in settings_template, (
+            f"expected live templates to avoid wiring deleted modules; found marker {marker!r}"
+        )
+
     for marker in [
-        "async function updateArtifactsTable(releaseId) {",
+        "export async function updateArtifactsTable(releaseId) {",
         "apiGet(`/api/v1/releases/${encodeURIComponent(releaseId)}/artifacts`)",
         "const artifacts = Array.isArray(data) ? data : (data.items || []);",
     ]:
-        assert (
-            marker in artifacts_table_source
-            if marker != "async function updateArtifactsTable(releaseId) {"
-            else marker in lifecycle_source
-        ), (
+        assert marker in artifacts_table_source, (
             "expected release detail polling to refresh artifact rows from the release artifacts API; "
             f"missing marker {marker!r}"
         )
     for marker in [
         "_toast.error(uiText('invalid_json', 'JSON 格式错误'));",
-        "setButtonLoading(button, false);",
+        "_setButtonLoading(button, false);",
         "return;",
     ]:
         assert marker in create_draft_source, (
@@ -439,14 +439,14 @@ def assert_private_registry_ui_js_contracts() -> None:
         "valueEl.textContent = String(artifactCount || 0);",
         "const data = await apiGet(`/api/v1/releases/${encodeURIComponent(releaseId)}`, ac.signal);",
         "if (err.status === 403 || err.status === 404) {",
-        "data.items || []",
     ]:
-        assert (
-            marker in lifecycle_source if marker == "data.items || []" else marker in release_poll_source
-        ), (
+        assert marker in release_poll_source, (
             "expected release polling UI to update summary stats and recover from empty-state "
             f"artifact sections; missing marker {marker!r}"
         )
+    assert "data.items || []" in lifecycle_crud_source, (
+        "expected empty-state artifact handling in the CRUD module; missing marker 'data.items || []'"
+    )
     next_target_index = auth_handle_login_source.index("const nextTarget = pendingRedirect;")
     close_modal_index = auth_handle_login_source.index("closeModal(")
     assert next_target_index < close_modal_index, (
@@ -495,14 +495,19 @@ def assert_private_registry_ui_js_contracts() -> None:
     )
     layout_script = re.search(r"<script>(.*?)</script>", layout_template, re.S)
     layout_style = re.search(r"<style>(.*?)</style>", layout_template, re.S)
-    assert layout_script is not None, (
-        "expected layout-kawaii template to keep a single inline theme bootstrap"
+    assert layout_script is None, (
+        "expected layout-kawaii template to avoid inline scripts under the CSP; "
+        "theme bootstrap is loaded from /static/js/theme-init.js"
     )
     assert layout_style is not None, (
         "expected layout-kawaii template to keep the inline critical CSS block"
     )
-    assert _sha256_base64(layout_script.group(1)) in security_source, (
-        "expected CSP script-src hashes to match the current inline theme bootstrap"
+    assert "{{ static_url('/static/js/theme-init.js') }}" in layout_template, (
+        "expected layout-kawaii template to load the external theme-init.js bootstrap"
+    )
+    script_src_directive = security_source.split("script-src")[1].split(";")[0]
+    assert "'self'" in script_src_directive and "'sha256-" not in script_src_directive, (
+        "expected CSP script-src to allow same-origin external scripts without inline hashes"
     )
     assert _sha256_base64(layout_style.group(1)) in security_source, (
         "expected CSP style-src hashes to match the current inline critical CSS block"

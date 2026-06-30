@@ -3,6 +3,7 @@
 Handles in-memory tar.gz bundle creation, artifact path resolution,
 and uploaded-bundle loading from the database and filesystem.
 """
+
 from __future__ import annotations
 
 import gzip
@@ -18,9 +19,9 @@ from server.modules.release.models import Artifact
 
 
 def canonical_json_bytes(payload: dict) -> bytes:
-    return (
-        json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
-    ).encode("utf-8")
+    return (json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode(
+        "utf-8"
+    )
 
 
 def bundle_bytes(*, skill_slug: str, content_ref: str, metadata: dict) -> tuple[bytes, int]:
@@ -29,9 +30,9 @@ def bundle_bytes(*, skill_slug: str, content_ref: str, metadata: dict) -> tuple[
     with gzip.GzipFile(fileobj=buffer, mode="wb", mtime=0) as gzip_file:
         with tarfile.open(fileobj=gzip_file, mode="w", format=tarfile.PAX_FORMAT) as archive:
             entries = {
-                f"{skill_slug}/snapshot/content-ref.txt": (
-                    content_ref.rstrip("\n") + "\n"
-                ).encode("utf-8"),
+                f"{skill_slug}/snapshot/content-ref.txt": (content_ref.rstrip("\n") + "\n").encode(
+                    "utf-8"
+                ),
                 f"{skill_slug}/snapshot/metadata.json": canonical_json_bytes(metadata),
             }
             file_count = len(entries)

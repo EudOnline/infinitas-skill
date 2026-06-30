@@ -19,6 +19,7 @@ def _auth_client(tmp_path: Path) -> TestClient:
     os.environ["INFINITAS_SERVER_ALLOWED_HOSTS"] = '["localhost","127.0.0.1","testserver"]'
     # Reset global rate limiter so tests don't interfere with each other
     from server.rate_limit import get_rate_limiter
+
     get_rate_limiter().reset_all()
     return TestClient(create_app())
 
@@ -49,6 +50,7 @@ class TestLoginEdgeCases:
         assert response.status_code == 429
         # Clean up rate limiter to avoid affecting other tests
         from server.rate_limit import get_rate_limiter
+
         get_rate_limiter().reset_all()
 
     def test_login_sets_csrf_cookie(self, tmp_path: Path):

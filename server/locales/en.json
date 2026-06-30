@@ -327,5 +327,11 @@
   "tab_library": "Library",
   "tab_nav_label": "Main navigation",
   "tab_tokens": "Tokens",
-  "back_home": "Back Home"
+  "back_home": "Back Home",
+  "library_title": "Library",
+  "library_redirect_hint": "Redirecting to manage...",
+  "sort_ascending": "{label}: sorted ascending",
+  "sort_descending": "{label}: sorted descending",
+  "confirm_revoke_token": "Are you sure you want to revoke this token? This action cannot be undone.",
+  "confirm_revoke_share_link": "Are you sure you want to revoke this share link? This action cannot be undone."
 }

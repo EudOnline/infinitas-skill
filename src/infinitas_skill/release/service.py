@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from infinitas_skill.policy.exception_policy import (
     ExceptionPolicyError,
@@ -92,7 +93,7 @@ def collect_release_state(skill_dir, mode="stable-release", root=None):
     require_upstream_sync = mode in {"preflight", "stable-release"}
     require_fresh_platform_support = mode in {"preflight", "stable-release"}
     releaser_identity = resolve_releaser_identity(root)
-    platform_compatibility = {
+    platform_compatibility: dict[str, Any] = {
         "canonical_runtime_platform": "openclaw",
         "canonical_runtime": {},
         "declared_support": meta.get("agent_compatible") or [],

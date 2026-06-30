@@ -37,7 +37,7 @@ def configure_release_parser(parser: argparse.ArgumentParser) -> argparse.Argume
         add_help=False,
     )
     check_state.description = "Check stable release invariants for a skill"
-    check_state.help = "Check stable release invariants for a skill"
+    setattr(check_state, "help", "Check stable release invariants for a skill")
     check_state.set_defaults(
         _handler=lambda args: run_release_check_state(
             args.skill,
@@ -53,7 +53,7 @@ def configure_release_parser(parser: argparse.ArgumentParser) -> argparse.Argume
         add_help=False,
     )
     signing_readiness.description = "Report repository-level SSH signing readiness"
-    signing_readiness.help = "Report repository-level SSH signing readiness"
+    setattr(signing_readiness, "help", "Report repository-level SSH signing readiness")
     signing_readiness.set_defaults(
         _handler=lambda args: signing_readiness_main(_signing_readiness_argv(args))
     )
@@ -66,7 +66,7 @@ def configure_release_parser(parser: argparse.ArgumentParser) -> argparse.Argume
     doctor_signing.description = (
         "Diagnose SSH signing bootstrap, release-tag readiness, and attestation prerequisites"
     )
-    doctor_signing.help = "Diagnose signing bootstrap and release readiness"
+    setattr(doctor_signing, "help", "Diagnose signing bootstrap and release readiness")
     doctor_signing.set_defaults(
         _handler=lambda args: signing_doctor_main(_signing_doctor_argv(args))
     )
@@ -77,7 +77,7 @@ def configure_release_parser(parser: argparse.ArgumentParser) -> argparse.Argume
         add_help=False,
     )
     bootstrap_signing.description = "Bootstrap SSH signing and repository signer policy"
-    bootstrap_signing.help = "Bootstrap SSH signing and signer policy"
+    setattr(bootstrap_signing, "help", "Bootstrap SSH signing and signer policy")
     bootstrap_signing.set_defaults(
         _handler=lambda args: signing_bootstrap_cli_main(_signing_bootstrap_argv(args))
     )
@@ -97,7 +97,7 @@ def release_main(argv: list[str] | None = None, *, prog: str | None = None) -> i
     if handler is None:
         parser.print_help()
         return 0
-    return handler(args)
+    return int(handler(args))
 
 
 def _signing_readiness_argv(args: argparse.Namespace) -> list[str]:

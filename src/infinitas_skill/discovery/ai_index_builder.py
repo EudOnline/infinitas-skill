@@ -5,6 +5,7 @@ import logging
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from infinitas_skill.openclaw.contracts import OpenClawContractError
 from infinitas_skill.openclaw.plugins import normalize_plugin_capabilities
@@ -222,21 +223,31 @@ def _install_targets_from_runtime(runtime_targets: list[str]) -> dict[str, list[
     return {"workspace": workspace, "shared": shared}
 
 
-def _requires_detail(meta: dict, requires: dict, runtime_contract: dict) -> dict[str, list[str]]:
-    metadata_openclaw = (meta.get("metadata") or {}).get("openclaw")
-    openclaw_requires = (
-        metadata_openclaw.get("requires")
-        if isinstance(metadata_openclaw, dict)
-        and isinstance(metadata_openclaw.get("requires"), dict)
-        else {}
+def _requires_detail(meta: Any, requires: Any, runtime_contract: Any) -> dict[str, list[str]]:
+    if not isinstance(meta, dict):
+        meta = {}
+    if not isinstance(requires, dict):
+        requires = {}
+    if not isinstance(runtime_contract, dict):
+        runtime_contract = {}
+    metadata_payload = meta.get("metadata") if isinstance(meta, dict) else None
+    metadata_openclaw = (
+        metadata_payload.get("openclaw") if isinstance(metadata_payload, dict) else None
     )
+    openclaw_requires_raw = (
+        metadata_openclaw.get("requires") if isinstance(metadata_openclaw, dict) else None
+    )
+    openclaw_requires = openclaw_requires_raw if isinstance(openclaw_requires_raw, dict) else {}
 
     tools = _string_list(requires.get("tools"))
     bins = _string_list(requires.get("bins")) + _string_list(openclaw_requires.get("bins"))
     env = _string_list(requires.get("env")) + _string_list(openclaw_requires.get("env"))
     config = _string_list(openclaw_requires.get("config"))
 
-    runtime_requires = (runtime_contract.get("runtime") or {}).get("requires")
+    runtime_payload = runtime_contract.get("runtime")
+    runtime_requires = (
+        runtime_payload.get("requires") if isinstance(runtime_payload, dict) else None
+    )
     for token in _string_list(runtime_requires):
         normalized = token.replace("_", "-")
         if normalized not in tools:
@@ -302,9 +313,8 @@ def _openclaw_runtime_payload(
     runtime_contract_payload = dict(runtime_contract.get("runtime") or {})
     runtime_targets = _runtime_targets(runtime_model)
     install_targets = _install_targets_from_runtime(runtime_targets)
-    openclaw_runtime = (
-        meta.get("openclaw_runtime") if isinstance(meta.get("openclaw_runtime"), dict) else {}
-    )
+    raw_openclaw_runtime = meta.get("openclaw_runtime")
+    openclaw_runtime = raw_openclaw_runtime if isinstance(raw_openclaw_runtime, dict) else {}
     workspace_scope = runtime_contract_payload.get("workspace_scope") or openclaw_runtime.get(
         "workspace_scope"
     )
@@ -349,7 +359,6 @@ def _openclaw_runtime_payload(
             background_tasks_required=background_tasks_required,
             subagents_required=subagents_required,
         ),
-
     }
 
 
@@ -371,7 +380,7 @@ def build_ai_index(*, root: Path, catalog_entries: list, distribution_entries: l
     root = Path(root).resolve()
     runtime_model = _load_runtime_model(root)
     catalog_lookup = _catalog_entry_by_key(catalog_entries)
-    grouped = {}
+    grouped: dict[str, list[dict[str, Any]]] = {}
     for entry in distribution_entries or []:
         if not isinstance(entry, dict):
             continue

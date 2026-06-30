@@ -3,6 +3,7 @@
 Consolidates the ``ActorRef`` dataclass duplicated across access and shares
 modules.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

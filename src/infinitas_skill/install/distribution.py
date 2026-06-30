@@ -10,6 +10,7 @@ import tempfile
 from datetime import datetime, timezone
 from gzip import GzipFile
 from pathlib import Path
+from typing import Any
 
 from infinitas_skill.install.distribution_index import (
     load_distribution_index as _load_distribution_index,
@@ -152,7 +153,7 @@ def reproducibility_summary(payload):
     if not isinstance(payload, dict):
         return {}
 
-    summary = {}
+    summary: dict[str, Any] = {}
     file_manifest = payload.get("file_manifest")
     if isinstance(file_manifest, list):
         summary["file_manifest_count"] = len(file_manifest)
@@ -164,12 +165,15 @@ def reproducibility_summary(payload):
 
     bundle = payload.get("bundle")
     if isinstance(bundle, dict):
-        if isinstance(bundle.get("path"), str) and bundle.get("path"):
-            summary["bundle_path"] = bundle.get("path")
-        if isinstance(bundle.get("sha256"), str) and bundle.get("sha256"):
-            summary["bundle_sha256"] = bundle.get("sha256")
-        if isinstance(bundle.get("file_count"), int):
-            summary["bundle_file_count"] = bundle.get("file_count")
+        bundle_path = bundle.get("path")
+        if isinstance(bundle_path, str) and bundle_path:
+            summary["bundle_path"] = bundle_path
+        bundle_sha256 = bundle.get("sha256")
+        if isinstance(bundle_sha256, str) and bundle_sha256:
+            summary["bundle_sha256"] = bundle_sha256
+        bundle_file_count = bundle.get("file_count")
+        if isinstance(bundle_file_count, int):
+            summary["bundle_file_count"] = bundle_file_count
 
     return summary
 
@@ -300,9 +304,11 @@ def validate_distribution_manifest(payload):
             errors.append("bundle.format must be tar.gz")
         require_string(bundle, "sha256", "bundle.sha256")
         require_string(bundle, "root_dir", "bundle.root_dir")
-        if not isinstance(bundle.get("size"), int) or bundle.get("size") < 0:
+        bundle_size = bundle.get("size")
+        if not isinstance(bundle_size, int) or bundle_size < 0:
             errors.append("bundle.size must be a non-negative integer")
-        if not isinstance(bundle.get("file_count"), int) or bundle.get("file_count") < 1:
+        bundle_file_count = bundle.get("file_count")
+        if not isinstance(bundle_file_count, int) or bundle_file_count < 1:
             errors.append("bundle.file_count must be a positive integer")
 
     registry = payload.get("registry")

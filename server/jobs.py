@@ -23,8 +23,10 @@ def load_job_payload(job: Job) -> dict:
 
 
 def _optional_positive_int(value: object) -> int | None:
+    if not isinstance(value, (int, str, bytes)):
+        return None
     try:
-        candidate = int(value or 0)
+        candidate = int(value)
     except (TypeError, ValueError):
         return None
     return candidate if candidate > 0 else None

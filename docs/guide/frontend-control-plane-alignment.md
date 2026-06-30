@@ -40,22 +40,22 @@ The maintained routes are:
 
 Frontend delivery should stay inside these maintained surfaces:
 
-- `GET /api/library`
-- `GET /api/library/{object_id}`
-- `GET /api/library/{object_id}/releases`
-- `PUT /api/publish/objects/{slug}`
-- `POST /api/publish/objects/{object_id}/releases`
-- `GET /api/publish/releases/{release_id}/status`
-- `POST /api/objects/{object_id}/tokens`
-- `GET /api/objects/{object_id}/tokens`
-- `POST /api/tokens/{token_id}/revoke`
-- `POST /api/releases/{release_id}/share-links`
-- `GET /api/releases/{release_id}/share-links`
-- `POST /api/share-links/{share_id}/resolve`
-- `POST /api/share-links/{share_id}/revoke`
-- `GET /api/activity`
-- `GET /api/tokens/{token_id}/activity`
-- `GET /api/share-links/{share_id}/activity`
+- `GET /api/v1/library`
+- `GET /api/v1/library/{object_id}`
+- `GET /api/v1/library/{object_id}/releases`
+- `POST /api/v1/skills`
+- `POST /api/v1/versions/{version_id}/releases`
+- `GET /api/v1/releases/{release_id}`
+- `POST /api/v1/object-tokens/objects/{object_id}/tokens`
+- `GET /api/v1/object-tokens/objects/{object_id}/tokens`
+- `POST /api/v1/object-tokens/tokens/{token_id}/revoke`
+- `POST /api/v1/share-links/releases/{release_id}/share-links`
+- `GET /api/v1/share-links/releases/{release_id}/share-links`
+- `POST /api/v1/share-links/{share_id}/resolve`
+- `POST /api/v1/share-links/{share_id}/revoke`
+- `GET /api/v1/activity`
+- `GET /api/v1/activity/tokens/{token_id}/activity`
+- `GET /api/v1/activity/share-links/{share_id}/activity`
 
 ## Frontend guardrails
 

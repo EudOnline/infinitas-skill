@@ -35,8 +35,7 @@ def configure_recommend_reviewers_parser(
 
 def build_recommend_reviewers_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog=prog,
-        description="Recommend reviewers and escalation paths for one skill"
+        prog=prog, description="Recommend reviewers and escalation paths for one skill"
     )
     return configure_recommend_reviewers_parser(parser)
 

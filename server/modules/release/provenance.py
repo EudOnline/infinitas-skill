@@ -4,6 +4,7 @@ Builds the full provenance JSON payload including git context, source
 snapshot, registry payload, dependency steps, review, release, and
 attestation sections.
 """
+
 from __future__ import annotations
 
 import subprocess

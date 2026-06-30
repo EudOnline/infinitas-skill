@@ -3,14 +3,21 @@ import argparse
 import json
 import sys
 
-from infinitas_skill.install.installed_integrity import InstalledIntegrityError, verify_installed_skill
+from infinitas_skill.install.installed_integrity import (
+    InstalledIntegrityError,
+    verify_installed_skill,
+)
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Verify one installed skill directory against its recorded immutable distribution source')
-    parser.add_argument('skill', help='Installed skill name or qualified name')
-    parser.add_argument('target_dir', help='Installed skills target directory')
-    parser.add_argument('--json', action='store_true', help='Print machine-readable verification details')
+    parser = argparse.ArgumentParser(
+        description="Verify one installed skill directory against its recorded immutable distribution source"
+    )
+    parser.add_argument("skill", help="Installed skill name or qualified name")
+    parser.add_argument("target_dir", help="Installed skills target directory")
+    parser.add_argument(
+        "--json", action="store_true", help="Print machine-readable verification details"
+    )
     return parser.parse_args()
 
 
@@ -23,22 +30,22 @@ def main():
             print(
                 json.dumps(
                     {
-                        'state': 'failed',
-                        'skill': args.skill,
-                        'target_dir': args.target_dir,
-                        'error': str(exc),
+                        "state": "failed",
+                        "skill": args.skill,
+                        "target_dir": args.target_dir,
+                        "error": str(exc),
                     },
                     ensure_ascii=False,
                     indent=2,
                 )
             )
         else:
-            print(f'FAIL: {exc}', file=sys.stderr)
+            print(f"FAIL: {exc}", file=sys.stderr)
         return 1
 
     if args.json:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
-    elif payload['state'] == 'verified':
+    elif payload["state"] == "verified":
         print(
             f"OK: verified {payload['qualified_name']}@{payload['installed_version']} "
             f"({payload['release_file_manifest_count']} files checked)"
@@ -50,8 +57,8 @@ def main():
             f"unexpected={len(payload['unexpected_files'])})",
             file=sys.stderr,
         )
-    return 0 if payload['state'] == 'verified' else 1
+    return 0 if payload["state"] == "verified" else 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     raise SystemExit(main())

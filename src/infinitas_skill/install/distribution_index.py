@@ -33,7 +33,5 @@ def load_distribution_index(root):
         expected = checksum_path.read_text(encoding="utf-8").strip().split()[0]
         actual = _sha256_file(index_path)
         if expected != actual:
-            raise ValueError(
-                f"distribution index integrity check failed: {index_path}"
-            )
+            raise ValueError(f"distribution index integrity check failed: {index_path}")
     return skills

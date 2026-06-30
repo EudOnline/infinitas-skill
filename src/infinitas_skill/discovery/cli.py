@@ -4,13 +4,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 from pathlib import Path
 
 from infinitas_skill.discovery.inspect import inspect_skill
 from infinitas_skill.discovery.recommendation import recommend_skills
 from infinitas_skill.discovery.search import search_skills
-from infinitas_skill.server.memory_retrieval_audit import build_memory_retrieval_audit_recorder
 
 DISCOVERY_TOP_LEVEL_HELP = "Discovery and inspection tools"
 DISCOVERY_PARSER_DESCRIPTION = "Discovery, recommendation, and inspection CLI"
@@ -23,14 +21,6 @@ def _repo_root(value: str | None) -> Path:
 def _emit_payload(payload: dict, *, as_json: bool) -> int:
     print(json.dumps(payload, ensure_ascii=False, indent=2 if as_json else None))
     return 0
-
-
-def _audit_recorder(default_actor_ref: str):
-    database_url = os.environ.get("INFINITAS_DISCOVERY_AUDIT_DATABASE_URL", "").strip()
-    actor_ref = os.environ.get("INFINITAS_DISCOVERY_AUDIT_ACTOR_REF", default_actor_ref).strip()
-    if not database_url:
-        return None
-    return build_memory_retrieval_audit_recorder(database_url=database_url, actor_ref=actor_ref)
 
 
 def run_discovery_search(
@@ -65,7 +55,6 @@ def run_discovery_recommend(
         task=task,
         target_agent=target_agent,
         limit=limit,
-        audit_recorder=_audit_recorder("system:discovery:recommend-cli"),
     )
     return _emit_payload(payload, as_json=as_json)
 
@@ -83,7 +72,6 @@ def run_discovery_inspect(
         name=name,
         version=version,
         target_agent=target_agent,
-        audit_recorder=_audit_recorder("system:discovery:inspect-cli"),
     )
     return _emit_payload(payload, as_json=as_json)
 

@@ -4,11 +4,13 @@ Build pipeline writes ``server/static/.hashes.json``; this module
 reads it and exposes a Jinja2 global so templates can append
 content hashes to static URLs for cache busting.
 """
+
 from __future__ import annotations
 
 import json
 import logging
 from pathlib import Path
+from typing import cast
 
 logger = logging.getLogger(__name__)
 
@@ -17,10 +19,12 @@ def load_asset_hashes(static_dir: Path) -> dict[str, str]:
     """Load the asset hash manifest, returning an empty dict on any error."""
     manifest = static_dir / ".hashes.json"
     try:
-        return json.loads(manifest.read_text())
+        result = json.loads(manifest.read_text())
+        if isinstance(result, dict):
+            return cast(dict[str, str], result)
     except Exception:
         logger.debug("asset hash manifest not found or invalid: %s", manifest)
-        return {}
+    return {}
 
 
 def static_url_factory(hashes: dict[str, str]):

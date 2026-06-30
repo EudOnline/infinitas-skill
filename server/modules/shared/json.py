@@ -6,7 +6,7 @@ from typing import Any
 
 
 def dumps_json(payload: Any) -> str:
-    return json.dumps(payload, ensure_ascii=False, separators=(',', ':'))
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
 
 
 def loads_json(payload: str, *, default: Any) -> Any:
@@ -16,9 +16,10 @@ def loads_json(payload: str, *, default: Any) -> Any:
         return default
 
 
-def read_json_file(path: Path) -> dict:
+def read_json_file(path: Path) -> dict[Any, Any]:
     """Read and parse a JSON file, returning ``{}`` on any error."""
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        result = json.loads(path.read_text(encoding="utf-8"))
+        return result if isinstance(result, dict) else {}
     except (OSError, json.JSONDecodeError, ValueError):
         return {}

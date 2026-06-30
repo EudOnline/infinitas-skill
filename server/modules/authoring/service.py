@@ -9,7 +9,11 @@ from sqlalchemy.orm import Session
 
 from server.exceptions_base import (
     ConflictError as BaseConflictError,
+)
+from server.exceptions_base import (
     ForbiddenError as BaseForbiddenError,
+)
+from server.exceptions_base import (
     NotFoundError as BaseNotFoundError,
 )
 from server.modules.authoring import repository
@@ -19,7 +23,6 @@ from server.modules.authoring.schemas import (
     SkillDraftCreateRequest,
     SkillDraftPatchRequest,
 )
-from server.modules.memory.service import record_lifecycle_memory_event_best_effort
 from server.modules.release.models import Artifact
 
 
@@ -268,19 +271,6 @@ def create_skill_version_snapshot(
     )
     db.commit()
     db.refresh(skill_version)
-    record_lifecycle_memory_event_best_effort(
-        db,
-        lifecycle_event="task.authoring.create_version",
-        aggregate_type="skill_version",
-        aggregate_id=str(skill_version.id),
-        actor_ref=f"principal:{actor_principal_id}",
-        payload={
-            "skill_id": str(skill.id),
-            "skill_slug": skill.slug,
-            "version": skill_version.version,
-            "skill_version_id": str(skill_version.id),
-        },
-    )
     return skill_version
 
 
@@ -322,12 +312,15 @@ def get_skill_or_404(db: Session, skill_id: int) -> Skill:
 def _check_team_access(db: Session, namespace_id: int, principal_id: int) -> bool:
     from server.modules.access.models import Team, TeamMembership
 
-    return db.scalar(
-        select(TeamMembership.id)
-        .join(Team, Team.id == TeamMembership.team_id)
-        .where(Team.principal_id == namespace_id)
-        .where(TeamMembership.user_id == principal_id)
-    ) is not None
+    return (
+        db.scalar(
+            select(TeamMembership.id)
+            .join(Team, Team.id == TeamMembership.team_id)
+            .where(Team.principal_id == namespace_id)
+            .where(TeamMembership.user_id == principal_id)
+        )
+        is not None
+    )
 
 
 def assert_namespace_owner(
@@ -387,18 +380,6 @@ def create_draft(
     )
     db.commit()
     db.refresh(draft)
-    record_lifecycle_memory_event_best_effort(
-        db,
-        lifecycle_event="task.authoring.create_draft",
-        aggregate_type="skill_draft",
-        aggregate_id=str(draft.id),
-        actor_ref=f"principal:{actor_principal_id}",
-        payload={
-            "skill_id": str(skill.id),
-            "skill_slug": skill.slug,
-            "draft_state": draft.state,
-        },
-    )
     return draft
 
 
@@ -434,9 +415,7 @@ def patch_draft(
             db,
             content_mode=payload.content_mode or draft.content_mode,
             content_ref=(
-                payload.content_ref
-                if payload.content_ref is not None
-                else draft.content_ref
+                payload.content_ref if payload.content_ref is not None else draft.content_ref
             ),
             content_upload_token=(
                 payload.content_upload_token
@@ -518,17 +497,4 @@ def seal_draft(
     db.commit()
     db.refresh(draft)
     db.refresh(skill_version)
-    record_lifecycle_memory_event_best_effort(
-        db,
-        lifecycle_event="task.authoring.seal_draft",
-        aggregate_type="skill_draft",
-        aggregate_id=str(draft.id),
-        actor_ref=f"principal:{actor_principal_id}",
-        payload={
-            "skill_id": str(skill.id),
-            "skill_slug": skill.slug,
-            "version": skill_version.version,
-            "skill_version_id": str(skill_version.id),
-        },
-    )
     return draft, skill_version

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 
 def candidate_view(candidate):
     return {
@@ -71,7 +73,7 @@ def build_plan(root_candidate, selected, installed, catalog, mode):
 
     root_identity = root_candidate.get("identity_key") or root_candidate.get("name")
     visit(root_identity)
-    requesters = {}
+    requesters: dict[str, list[dict[str, Any]]] = {}
     for candidate in selected.values():
         for dep in candidate.get("depends_on", []):
             dep_key = dep.get("identity_key") or dep.get("name")

@@ -229,7 +229,9 @@ def scenario_exposure_and_review_flow() -> None:
         second_public_exposure = second_public_response.json()
         with session_factory() as session:
             second_public_case = session.scalar(
-                select(ReviewCase).where(ReviewCase.exposure_id == int(second_public_exposure["id"]))
+                select(ReviewCase).where(
+                    ReviewCase.exposure_id == int(second_public_exposure["id"])
+                )
             )
             if second_public_case is None:
                 fail("expected second public exposure to open a review case")
@@ -251,7 +253,9 @@ def scenario_exposure_and_review_flow() -> None:
             if rejected_exposure is None:
                 fail("expected rejected public exposure row to exist")
             if rejected_exposure.state == "active":
-                fail(f"expected rejected public exposure to stay inactive, got {rejected_exposure.state!r}")
+                fail(
+                    f"expected rejected public exposure to stay inactive, got {rejected_exposure.state!r}"
+                )
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 

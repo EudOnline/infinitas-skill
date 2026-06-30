@@ -105,6 +105,3 @@ def build_console_forbidden_context(
         context["ui"]["page_kicker"] = context["page_kicker"]
         context["ui"]["page_eyebrow"] = context["page_eyebrow"]
     return context
-
-
-

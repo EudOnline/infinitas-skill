@@ -40,11 +40,28 @@ def _prepare_signing_repo(repo: Path, signing_key: Path) -> None:
     add_allowed_signer(allowed_signers, identity="release-test", key_path=signing_key)
 
     subprocess.run(["git", "init", "-b", "main"], cwd=repo, check=True, capture_output=True)
-    subprocess.run(["git", "config", "user.name", "Registry Test"], cwd=repo, check=True, capture_output=True)
-    subprocess.run(["git", "config", "user.email", "registry@example.com"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.name", "Registry Test"], cwd=repo, check=True, capture_output=True
+    )
+    subprocess.run(
+        ["git", "config", "user.email", "registry@example.com"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
     configure_git_ssh_signing(repo, signing_key)
-    subprocess.run(["git", "add", "config/allowed_signers", "config/signing.json"], cwd=repo, check=True, capture_output=True)
-    subprocess.run(["git", "commit", "-m", "test: bootstrap signing config"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "add", "config/allowed_signers", "config/signing.json"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "commit", "-m", "test: bootstrap signing config"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
 
 
 def create_ready_release(client, headers: dict[str, str], *, slug: str, display_name: str) -> int:
@@ -228,12 +245,7 @@ def test_public_search_snapshot_install_targets_resolve_install_payload() -> Non
     try:
         artifact_root = configure_env(tmpdir)
         distribution_dir = (
-            artifact_root
-            / "catalog"
-            / "distributions"
-            / "partner"
-            / "snapshot-skill"
-            / "1.2.3"
+            artifact_root / "catalog" / "distributions" / "partner" / "snapshot-skill" / "1.2.3"
         )
         distribution_dir.mkdir(parents=True, exist_ok=True)
         manifest_path = "catalog/distributions/partner/snapshot-skill/1.2.3/manifest.json"
@@ -389,9 +401,7 @@ def test_me_search_results_include_install_resolution_targets_for_private_entrie
 
     install_response = client.get(private_entry["install_api_path"], headers=headers)
     assert install_response.status_code == 200, install_response.text
-    assert (
-        install_response.json()["qualified_name"] == "fixture-maintainer/private-search-skill"
-    )
+    assert install_response.json()["qualified_name"] == "fixture-maintainer/private-search-skill"
     assert int(private_exposure["id"]) > 0
 
 

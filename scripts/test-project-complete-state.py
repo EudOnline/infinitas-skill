@@ -103,7 +103,9 @@ def main() -> None:
         ROOT / ".planning/STATE.md",
     ]
     if all(not path.exists() for path in planning_paths):
-        print("SKIP: project complete state checks (planning docs unavailable in this workspace copy)")
+        print(
+            "SKIP: project complete state checks (planning docs unavailable in this workspace copy)"
+        )
         return
     assert_exists("docs/adr/0002-maintained-surface-cutover.md")
     for path in RETIRED_SERVER_SHIMS:

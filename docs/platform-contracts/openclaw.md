@@ -2,7 +2,7 @@
 audience: contributors, reviewers, compatibility maintainers
 owner: repository maintainers
 source_of_truth: legacy platform contract annex
-last_reviewed: 2026-04-21
+last_reviewed: 2026-06-15
 status: legacy
 ---
 
@@ -29,7 +29,7 @@ status: legacy
 - https://docs.openclaw.ai/tools/clawhub
 
 ## Last verified
-2026-04-07
+2026-06-15
 
 ## Verification steps
 - Confirm the Skills page still documents `SKILL.md`-based runtime semantics and workspace-oriented skill directory behavior.

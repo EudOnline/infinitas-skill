@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hmac
 from dataclasses import dataclass
-from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
@@ -21,9 +20,12 @@ from server.modules.discovery.projections import (
     build_release_projections,
     projection_has_materialized_artifacts,
 )
-from server.modules.shared.formatting import iso_format as _iso, utc_now_iso as _utc_now_iso
+from server.modules.shared.formatting import iso_format as _iso
+from server.modules.shared.formatting import utc_now_iso as _utc_now_iso
 from server.modules.shared.version_sort import (
     dedupe_entries as _dedupe_entries,
+)
+from server.modules.shared.version_sort import (
     version_sort_key as _version_sort_key,
 )
 from server.settings import get_settings
@@ -70,6 +72,7 @@ def _openclaw_runtime_targets() -> tuple[str, ...]:
         runtime_targets = list(runtime_model.get("skill_dir_candidates") or [])
     except Exception:
         import logging
+
         logging.getLogger(__name__).debug(
             "failed to load OpenClaw runtime model, using defaults", exc_info=True
         )
@@ -110,8 +113,10 @@ def _resolve_registry_audience(db: Session, request: Request) -> RegistryAudienc
     if not has_auth_input:
         raise UnauthorizedError("missing registry bearer token")
 
-    if allowed_reader_tokens and _matches_registry_reader_token(
-        bearer_token, allowed_reader_tokens
+    if (
+        bearer_token is not None
+        and allowed_reader_tokens
+        and _matches_registry_reader_token(bearer_token, allowed_reader_tokens)
     ):
         return RegistryAudience(mode="public", context=None)
 
@@ -171,7 +176,6 @@ def _registry_runtime_payload() -> dict:
             "supports_subagents": capabilities.get("supports_subagents") is True,
             "status": "ready",
         },
-
     }
 
 
@@ -205,9 +209,7 @@ def _all_accessible_entries(db: Session, request: Request) -> list[DiscoveryProj
     accessible_ids = can_access_releases(
         db, context=context, release_ids=[e.release_id for e in entries]
     )
-    return _dedupe_entries(
-        [entry for entry in entries if entry.release_id in accessible_ids]
-    )
+    return _dedupe_entries([entry for entry in entries if entry.release_id in accessible_ids])
 
 
 def _listed_entries(db: Session, request: Request) -> list[DiscoveryProjection]:
@@ -239,10 +241,6 @@ def _distribution_entry(entry: DiscoveryProjection) -> dict:
         "release_id": entry.release_id,
         "exposure_id": entry.exposure_id,
     }
-    if entry.supported_memory_modes:
-        payload["supported_memory_modes"] = list(entry.supported_memory_modes)
-    if entry.default_memory_mode:
-        payload["default_memory_mode"] = entry.default_memory_mode
     return payload
 
 
@@ -281,8 +279,6 @@ def _skill_defaults(entry: dict) -> dict:
                 },
             }
         },
-        "supported_memory_modes": list(entry.get("supported_memory_modes") or []),
-        "default_memory_mode": entry.get("default_memory_mode"),
     }
 
 
@@ -338,8 +334,6 @@ def _build_ai_index_from_entries(entries: list[dict]) -> dict:
                     "env": list(defaults["requires"]["env"]),
                 },
                 "interop": {"openclaw": dict(defaults["interop"]["openclaw"])},
-                "supported_memory_modes": list(defaults["supported_memory_modes"]),
-                "default_memory_mode": defaults["default_memory_mode"],
                 "versions": {
                     version: {
                         "manifest_path": version_map[version]["manifest_path"],

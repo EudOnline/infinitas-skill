@@ -1,7 +1,6 @@
 """Unit tests for server.modules.exposure.service."""
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations
 
 
 def _get_exposure_service():
@@ -12,6 +11,7 @@ def _get_exposure_service():
         ForbiddenError,
         NotFoundError,
     )
+
     return {
         "ConflictError": ConflictError,
         "ExposureError": ExposureError,
@@ -43,14 +43,17 @@ class TestExposureExceptions:
     def test_not_found_inherits_base_not_found(self):
         svc = _get_exposure_service()
         from server.exceptions_base import NotFoundError as BaseNotFoundError
+
         assert issubclass(svc["NotFoundError"], BaseNotFoundError)
 
     def test_conflict_inherits_base_conflict(self):
         svc = _get_exposure_service()
         from server.exceptions_base import ConflictError as BaseConflictError
+
         assert issubclass(svc["ConflictError"], BaseConflictError)
 
     def test_forbidden_inherits_base_forbidden(self):
         svc = _get_exposure_service()
         from server.exceptions_base import ForbiddenError as BaseForbiddenError
+
         assert issubclass(svc["ForbiddenError"], BaseForbiddenError)

@@ -1,21 +1,7 @@
 from __future__ import annotations
 
-from server.modules.shared.enums import ExposureMode, ReviewRequirement
 from server.modules.shared.json import dumps_json, loads_json
 from server.modules.shared.metadata import NAMING_CONVENTION, SHARED_METADATA
-
-
-class TestExposureMode:
-    def test_values(self):
-        assert ExposureMode.PRIVATE == "private"
-        assert ExposureMode.GRANT == "grant"
-        assert ExposureMode.PUBLIC == "public"
-
-
-class TestReviewRequirement:
-    def test_values(self):
-        assert ReviewRequirement.NONE == "none"
-        assert ReviewRequirement.BLOCKING == "blocking"
 
 
 class TestDumpsJson:

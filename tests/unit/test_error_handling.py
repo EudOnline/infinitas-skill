@@ -130,9 +130,9 @@ class TestAPIErrorResponses:
         client = _test_client(tmp_path)
 
         # Try to create an object with invalid slug
-        response = client.put(
-            "/api/v1/publish/objects/invalid$slug",
-            json={"display_name": "Test"},
+        response = client.post(
+            "/api/v1/skills",
+            json={"slug": "invalid$slug", "display_name": "Test"},
         )
         # Should be 422 or 401 (if auth required)
         assert response.status_code in (401, 422)
@@ -150,7 +150,7 @@ class TestDatabaseTransactionBehavior:
         os.environ["INFINITAS_SERVER_SECRET_KEY"] = "rollback-test-secret-32chars"
         os.environ["INFINITAS_SERVER_ENV"] = "test"
 
-        engine = get_engine()
+        _engine = get_engine()
         session_factory = get_session_factory()
 
         # Run migrations
@@ -158,10 +158,10 @@ class TestDatabaseTransactionBehavior:
 
         from alembic import command
 
-        ROOT = Path(__file__).resolve().parents[2]
-        alembic_dir = ROOT / "alembic"
+        _root = Path(__file__).resolve().parents[2]
+        alembic_dir = _root / "alembic"
         if alembic_dir.exists():
-            alembic_cfg = Config(str(ROOT / "alembic.ini"))
+            alembic_cfg = Config(str(_root / "alembic.ini"))
             alembic_cfg.set_main_option("script_location", str(alembic_dir))
             command.upgrade(alembic_cfg, "head")
 
@@ -211,7 +211,7 @@ class TestDatabaseTransactionBehavior:
         os.environ["INFINITAS_SERVER_SECRET_KEY"] = "session-test-secret-32chars"
         os.environ["INFINITAS_SERVER_ENV"] = "test"
 
-        engine = get_engine()
+        _engine = get_engine()
         session_factory = get_session_factory()
 
         # Run migrations
@@ -219,10 +219,10 @@ class TestDatabaseTransactionBehavior:
 
         from alembic import command
 
-        ROOT = Path(__file__).resolve().parents[2]
-        alembic_dir = ROOT / "alembic"
+        _root = Path(__file__).resolve().parents[2]
+        alembic_dir = _root / "alembic"
         if alembic_dir.exists():
-            alembic_cfg = Config(str(ROOT / "alembic.ini"))
+            alembic_cfg = Config(str(_root / "alembic.ini"))
             alembic_cfg.set_main_option("script_location", str(alembic_dir))
             command.upgrade(alembic_cfg, "head")
 

@@ -2,11 +2,13 @@
 
 Handles SSH key-based provenance signing and signer identity resolution.
 """
+
 from __future__ import annotations
 
 import subprocess
 import tempfile
 from pathlib import Path
+from typing import cast
 
 from infinitas_skill.release.signing_bootstrap import (
     parse_allowed_signers,
@@ -34,7 +36,7 @@ def resolve_signer_identity(
             f"configured signing key {signing_key} is not trusted by "
             f"{allowed_signers_path.relative_to(repo_root)}"
         )
-    return identities[0]
+    return cast(str, identities[0])
 
 
 def sign_provenance(

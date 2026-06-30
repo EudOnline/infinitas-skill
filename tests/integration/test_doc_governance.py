@@ -47,7 +47,7 @@ def test_doc_governance_rejects_retired_cli_wrappers_in_maintained_ops_docs(
         "status: maintained\n"
         "---\n\n"
         "# Docs\n\n"
-        "- [Ops](ops/README.md)\n"
+        "- [Ops](ops/README.md)\n",
     )
     _write(
         fake_platform / "README.md",

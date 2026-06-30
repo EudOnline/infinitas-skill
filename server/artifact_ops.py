@@ -47,6 +47,23 @@ def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def sync_catalog_artifacts(repo_path: Path, artifact_path: Path):
+    repo_path = Path(repo_path).resolve()
+    artifact_path = Path(artifact_path).resolve()
+    artifact_path.mkdir(parents=True, exist_ok=True)
+    source_catalog = repo_path / 'catalog'
+    target_catalog = artifact_path / 'catalog'
+    _replace_tree(source_catalog, target_catalog)
+
+    _copy_or_remove(source_catalog / 'ai-index.json', artifact_path / 'ai-index.json')
+    _copy_or_remove(source_catalog / 'distributions.json', artifact_path / 'distributions.json')
+    _copy_or_remove(source_catalog / 'compatibility.json', artifact_path / 'compatibility.json')
+    _copy_or_remove(source_catalog / 'discovery-index.json', artifact_path / 'discovery-index.json')
+
+    _merge_tree(source_catalog / 'distributions', artifact_path / 'skills')
+    _merge_tree(source_catalog / 'provenance', artifact_path / 'provenance')
+
+
 def ensure_file_bytes(path: Path, data: bytes):
     """Write bytes to *path* atomically (write-to-temp then rename).
 
@@ -61,13 +78,14 @@ def ensure_file_bytes(path: Path, data: bytes):
     fd, tmp_path = tempfile.mkstemp(
         dir=str(path.parent), prefix=".tmp-", suffix=".partial"
     )
+    fd_closed = False
     try:
         os.write(fd, data)
         os.close(fd)
-        fd = None
+        fd_closed = True
         os.replace(tmp_path, str(path))
     except BaseException:
-        if fd is not None:
+        if not fd_closed:
             os.close(fd)
         # Clean up the temp file on any failure
         try:
@@ -88,18 +106,3 @@ def ensure_file_copy(source: Path, target: Path):
     shutil.copy2(source, target)
 
 
-def sync_catalog_artifacts(repo_path: Path, artifact_path: Path):
-    repo_path = Path(repo_path).resolve()
-    artifact_path = Path(artifact_path).resolve()
-    artifact_path.mkdir(parents=True, exist_ok=True)
-    source_catalog = repo_path / 'catalog'
-    target_catalog = artifact_path / 'catalog'
-    _replace_tree(source_catalog, target_catalog)
-
-    _copy_or_remove(source_catalog / 'ai-index.json', artifact_path / 'ai-index.json')
-    _copy_or_remove(source_catalog / 'distributions.json', artifact_path / 'distributions.json')
-    _copy_or_remove(source_catalog / 'compatibility.json', artifact_path / 'compatibility.json')
-    _copy_or_remove(source_catalog / 'discovery-index.json', artifact_path / 'discovery-index.json')
-
-    _merge_tree(source_catalog / 'distributions', artifact_path / 'skills')
-    _merge_tree(source_catalog / 'provenance', artifact_path / 'provenance')

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Sequence
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -13,7 +15,7 @@ def require_any_scope(context: AccessContext, allowed_scopes: set[str]) -> bool:
 
 
 def _build_active_grants_lookup(
-    db: Session, *, exposures: list[Exposure], principal_id: int | None
+    db: Session, *, exposures: Sequence[Exposure], principal_id: int | None
 ) -> dict[int, list[AccessGrant]]:
     """Bulk-fetch active AccessGrants for grant-type exposures.
 
@@ -72,9 +74,7 @@ def can_access_release(db: Session, *, context: AccessContext, release_id: int) 
     return release_id in can_access_releases(db, context=context, release_ids=[release_id])
 
 
-def can_access_releases(
-    db: Session, *, context: AccessContext, release_ids: list[int]
-) -> set[int]:
+def can_access_releases(db: Session, *, context: AccessContext, release_ids: list[int]) -> set[int]:
     """Return the subset of *release_ids* that *context* can access.
 
     Uses exactly two queries regardless of input size:

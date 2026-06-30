@@ -31,9 +31,7 @@ def configure_signing_bootstrap_parser(
         "--identity", required=True, help="Signer identity to store as the SSH key comment"
     )
     init_key.add_argument("--output", required=True, help="Private key path to create")
-    init_key.add_argument(
-        "--force", action="store_true", help="Overwrite an existing key path"
-    )
+    init_key.add_argument("--force", action="store_true", help="Overwrite an existing key path")
 
     add_signer = subparsers.add_parser(
         "add-allowed-signer", help="Add or update a trusted signer entry"
@@ -41,9 +39,7 @@ def configure_signing_bootstrap_parser(
     add_signer.add_argument(
         "--identity", required=True, help="Signer identity stored in config/allowed_signers"
     )
-    add_signer.add_argument(
-        "--key", required=True, help="Private SSH key path or .pub file"
-    )
+    add_signer.add_argument("--key", required=True, help="Private SSH key path or .pub file")
     add_signer.add_argument(
         "--allowed-signers",
         default=str(default_allowed_signers_path()),
@@ -106,9 +102,7 @@ def run_init_key(args) -> None:
     output = Path(args.output).expanduser()
     pub_path = Path(str(output) + ".pub")
     if not args.force and (output.exists() or pub_path.exists()):
-        raise SigningBootstrapError(
-            f"key path already exists: {output} (use --force to overwrite)"
-        )
+        raise SigningBootstrapError(f"key path already exists: {output} (use --force to overwrite)")
     output.parent.mkdir(parents=True, exist_ok=True)
     result = subprocess.run(
         ["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", args.identity, "-f", str(output)],
@@ -166,14 +160,8 @@ def run_authorize_publisher(args) -> None:
     status = "updated" if result["changed"] else "unchanged"
     print(f"{status} namespace policy: {args.policy}")
     print(f"publisher: {args.publisher}")
-    print(
-        "authorized_signers: "
-        + ", ".join(result["summary"].get("authorized_signers", []))
-    )
-    print(
-        "authorized_releasers: "
-        + ", ".join(result["summary"].get("authorized_releasers", []))
-    )
+    print("authorized_signers: " + ", ".join(result["summary"].get("authorized_signers", [])))
+    print("authorized_releasers: " + ", ".join(result["summary"].get("authorized_releasers", [])))
     print(
         "next: git add policy/namespace-policy.json "
         '&& git commit -m "chore: authorize release identities" && git push'

@@ -21,20 +21,11 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(100), unique=True, index=True)
     display_name: Mapped[str] = mapped_column(String(200))
     role: Mapped[str] = mapped_column(String(32), default='contributor')
-    token: Mapped[str | None] = mapped_column(
-        String(255),
-        unique=True,
-        index=True,
-        nullable=True,
-        default=None,
-    )
     password_hash: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
         default=None,
     )
-    light_bg_id: Mapped[str | None] = mapped_column(String(64), nullable=True, default=None)
-    dark_bg_id: Mapped[str | None] = mapped_column(String(64), nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -100,7 +91,6 @@ from server.modules.review.models import (  # noqa: E402
     ReviewDecision,
     ReviewPolicy,
 )
-from server.modules.shares.models import ShareLink  # noqa: E402
 
 __all__ = [
     "AccessGrant",
@@ -117,7 +107,6 @@ __all__ = [
     "ReviewDecision",
     "ReviewPolicy",
     "ServicePrincipal",
-    "ShareLink",
     "Skill",
     "SkillDraft",
     "SkillVersion",

@@ -153,7 +153,7 @@ export function initConsoleAuthSession() {
   // -----------------------------------------------------------------------
 
   async function refreshCurrentUser() {
-    const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
+    const response = await fetch('/api/v1/auth/me', { credentials: 'same-origin' });
     if (!response.ok) {
       throw new Error('auth probe failed');
     }

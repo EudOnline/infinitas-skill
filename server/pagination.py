@@ -5,12 +5,9 @@ Provides standardized pagination support across all list endpoints.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar
+from typing import Any
 
 from fastapi import Query
-from pydantic import BaseModel
-
-T = TypeVar("T")
 
 
 @dataclass
@@ -24,27 +21,6 @@ class PaginationParams:
 
     skip: int = 0
     limit: int = 20
-
-
-class PaginatedResponse(BaseModel, Generic[T]):
-    """Standard paginated response structure.
-
-    Type Parameters:
-        T: The type of items in the results list
-
-    Attributes:
-        items: List of items for the current page
-        total: Total number of items (across all pages)
-        skip: Current offset
-        limit: Current page size
-        has_more: Whether there are more items after this page
-    """
-
-    items: list[T]
-    total: int
-    skip: int
-    limit: int
-    has_more: bool
 
 
 def create_paginated_response(

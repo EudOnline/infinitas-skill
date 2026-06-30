@@ -5,31 +5,35 @@ import sys
 from pathlib import Path
 
 from infinitas_skill.registry.snapshot import create_snapshot
-from infinitas_skill.install.registry_sources import find_registry, load_registry_config, validate_registry_config
+from infinitas_skill.install.registry_sources import (
+    find_registry,
+    load_registry_config,
+    validate_registry_config,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
 def fail(message):
-    print(f'FAIL: {message}', file=sys.stderr)
+    print(f"FAIL: {message}", file=sys.stderr)
     raise SystemExit(1)
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('registry')
-    parser.add_argument('--snapshot-id')
-    parser.add_argument('--json', action='store_true')
+    parser.add_argument("registry")
+    parser.add_argument("--snapshot-id")
+    parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
     cfg = load_registry_config(ROOT)
     errors = validate_registry_config(ROOT, cfg)
     if errors:
-        fail('invalid registry-sources.json:\n- ' + '\n- '.join(errors))
+        fail("invalid registry-sources.json:\n- " + "\n- ".join(errors))
 
     reg = find_registry(cfg, args.registry)
     if reg is None:
-        fail(f'unknown registry: {args.registry}')
+        fail(f"unknown registry: {args.registry}")
 
     try:
         payload = create_snapshot(ROOT, reg, snapshot_id=args.snapshot_id)
@@ -40,8 +44,8 @@ def main():
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return
 
-    print(payload.get('snapshot_root'))
+    print(payload.get("snapshot_root"))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

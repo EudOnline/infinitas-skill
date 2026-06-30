@@ -23,8 +23,6 @@ class CatalogEntryView(BaseModel):
     provenance_path: str
     signature_path: str
     bundle_sha256: str | None = None
-    supported_memory_modes: list[str] = Field(default_factory=list)
-    default_memory_mode: str | None = None
 
     @classmethod
     def from_projection(cls, entry: DiscoveryProjection) -> "CatalogEntryView":
@@ -45,8 +43,6 @@ class CatalogEntryView(BaseModel):
             provenance_path=entry.provenance_path,
             signature_path=entry.signature_path,
             bundle_sha256=entry.bundle_sha256,
-            supported_memory_modes=list(entry.supported_memory_modes or []),
-            default_memory_mode=entry.default_memory_mode,
         )
 
 
@@ -79,8 +75,6 @@ class InstallResolutionView(BaseModel):
     bundle_url: str
     provenance_url: str
     signature_url: str
-    supported_memory_modes: list[str] = Field(default_factory=list)
-    default_memory_mode: str | None = None
 
 
 class ProjectionArtifactPaths(BaseModel):

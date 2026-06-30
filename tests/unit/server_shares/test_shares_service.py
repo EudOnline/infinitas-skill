@@ -1,10 +1,8 @@
 """Unit tests for server.modules.shares.service."""
+
 from __future__ import annotations
 
-import json
 from datetime import datetime, timedelta, timezone
-
-import pytest
 
 
 # Import after other modules to avoid circular import
@@ -18,6 +16,7 @@ def _get_shares_service():
         _password_credential,
         _share_state,
     )
+
     return {
         "ShareLinkConflictError": ShareLinkConflictError,
         "ShareLinkError": ShareLinkError,
@@ -52,6 +51,7 @@ class TestShareLinkExceptions:
     def test_not_found_inherits_base_not_found(self):
         svc = _get_shares_service()
         from server.exceptions_base import NotFoundError as BaseNotFoundError
+
         # Note: ShareLinkNotFoundError does NOT inherit from BaseNotFoundError
         # This is intentional - shares has its own exception hierarchy
         assert not issubclass(svc["ShareLinkNotFoundError"], BaseNotFoundError)

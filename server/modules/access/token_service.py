@@ -2,18 +2,18 @@ from __future__ import annotations
 
 import json
 import secrets
-from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Literal
+from typing import Any, Literal, cast
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from server.models import AccessGrant, Credential, Exposure, Principal, Skill, utcnow
+from server.models import AccessGrant, Credential, Exposure, Skill, utcnow
 from server.modules.access import service as access_service
 from server.modules.audit import service as audit_service
 from server.modules.release import service as release_service
-from server.modules.shared.actor import ActorRef, actor_ref_label as _actor_ref
+from server.modules.shared.actor import ActorRef
+from server.modules.shared.actor import actor_ref_label as _actor_ref
 from server.modules.shared.formatting import iso_format
 
 TokenType = Literal["reader", "publisher"]
@@ -54,15 +54,15 @@ def _find_release_for_scope(
     if scope_id != object_id:
         raise TokenForbiddenError("object token scope must match object")
 
-    release = db.scalar(
+    latest_release: Release | None = db.scalar(
         select(Release)
         .where(Release.skill_id == object_id)
         .where(Release.state == "ready")
         .order_by(Release.ready_at.desc(), Release.id.desc())
     )
-    if release is None:
+    if latest_release is None:
         raise TokenConflictError("object has no ready release for token anchoring")
-    return int(release.id)
+    return int(latest_release.id)
 
 
 def _require_active_grant_exposure(db: Session, *, release_id: int) -> Exposure:
@@ -86,7 +86,7 @@ def _assert_object_owner(
 
 def _token_scopes(token_type: TokenType) -> set[str]:
     scopes = {"artifact:download"}
-    if token_type == "publisher":
+    if token_type == "publisher":  # noqa: S105
         scopes.add("release:write")
         scopes.add("registry:publish")
     return scopes
@@ -216,14 +216,10 @@ def list_product_tokens(db: Session, *, object_id: int, actor: ActorRef) -> list
     credentials = db.scalars(
         select(Credential)
         .where(Credential.type == "product_token")
+        .where(func.json_extract(Credential.resource_selector_json, "$.object_id") == object_id)
         .order_by(Credential.id.desc())
     ).all()
-    rows: list[dict] = []
-    for credential in credentials:
-        selector = json.loads(credential.resource_selector_json or "{}")
-        if int(selector.get("object_id") or 0) == object_id:
-            rows.append(_token_metadata(credential))
-    return rows
+    return [_token_metadata(credential) for credential in credentials]
 
 
 def revoke_product_token(db: Session, *, token_id: int, actor: ActorRef) -> dict:
@@ -238,7 +234,7 @@ def revoke_product_token(db: Session, *, token_id: int, actor: ActorRef) -> dict
     _assert_object_owner(db, skill=skill, actor=actor)
 
     if credential.revoked_at is None:
-        credential.revoked_at = utcnow()
+        cast(Any, credential).revoked_at = utcnow()
         db.add(credential)
         if credential.grant_id is not None:
             grant = db.get(AccessGrant, credential.grant_id)

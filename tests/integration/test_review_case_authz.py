@@ -41,11 +41,28 @@ def _prepare_signing_repo(repo: Path, signing_key: Path) -> None:
     add_allowed_signer(allowed_signers, identity="release-test", key_path=signing_key)
 
     subprocess.run(["git", "init", "-b", "main"], cwd=repo, check=True, capture_output=True)
-    subprocess.run(["git", "config", "user.name", "Registry Test"], cwd=repo, check=True, capture_output=True)
-    subprocess.run(["git", "config", "user.email", "registry@example.com"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.name", "Registry Test"], cwd=repo, check=True, capture_output=True
+    )
+    subprocess.run(
+        ["git", "config", "user.email", "registry@example.com"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
     configure_git_ssh_signing(repo, signing_key)
-    subprocess.run(["git", "add", "config/allowed_signers", "config/signing.json"], cwd=repo, check=True, capture_output=True)
-    subprocess.run(["git", "commit", "-m", "test: bootstrap signing config"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "add", "config/allowed_signers", "config/signing.json"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "commit", "-m", "test: bootstrap signing config"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
     os.environ["INFINITAS_REGISTRY_READ_TOKENS"] = json.dumps(["registry-reader-token"])
     os.environ["INFINITAS_SERVER_BOOTSTRAP_USERS"] = json.dumps(
         [

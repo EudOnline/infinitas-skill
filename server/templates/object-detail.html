@@ -140,7 +140,7 @@
         <td data-label="{{ ui['table_col_password'] }}">
           {% if item.has_password %}<span class="kawaii-badge kawaii-badge--success">●</span>{% else %}<span class="kawaii-badge kawaii-badge--running">○</span>{% endif %}
         </td>
-        <td data-label="{{ ui['table_col_usage'] }}">{{ item.usage_count or 0 }}{% if item.usage_limit %} / {{ item.usage_limit }}{% endif %}</td>
+        <td data-label="{{ ui['table_col_usage'] }}">{{ item.usage_count or 0 }}{% if item.usage_limit %}/{{ item.usage_limit }}{% endif %}</td>
         <td data-label="{{ ui['table_col_state'] }}">
           <span class="kawaii-badge {% if item.state == 'active' %}kawaii-badge--success{% elif item.state == 'expired' %}kawaii-badge--pending{% elif item.state == 'exhausted' %}kawaii-badge--pending{% else %}kawaii-badge--running{% endif %}">{{ item.state }}</span>
         </td>

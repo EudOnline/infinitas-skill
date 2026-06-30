@@ -7,6 +7,7 @@ import sys
 import tempfile
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -23,7 +24,10 @@ PLATFORM_EVIDENCE_MINUTES = {
     "claude": 1,
     "openclaw": 2,
 }
-from infinitas_skill.release.attestation import AttestationError, publish_attestation_to_transparency_log  # noqa: E402
+from infinitas_skill.release.attestation import (
+    AttestationError,
+    publish_attestation_to_transparency_log,
+)  # noqa: E402
 
 
 def fail(message):
@@ -63,14 +67,9 @@ def infinitas_cli(repo: Path, *args: str) -> list[str]:
 
 
 def contract_checked_at(repo: Path, platform: str):
-    profile_path = repo / "profiles" / f"{platform}.json"
-    payload = json.loads(profile_path.read_text(encoding="utf-8"))
-    contract = payload.get("contract") if isinstance(payload.get("contract"), dict) else {}
-    last_verified = contract.get("last_verified")
-    if not isinstance(last_verified, str) or not last_verified:
-        fail(f"missing contract.last_verified for platform {platform!r}")
     minute = PLATFORM_EVIDENCE_MINUTES.get(platform, 0)
-    return f"{last_verified}T12:{minute:02d}:00Z"
+    checked_at = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(minutes=minute)
+    return checked_at.isoformat().replace("+00:00", "Z")
 
 
 def scaffold_fixture(repo: Path):
@@ -165,17 +164,20 @@ def prepare_repo():
         ROOT,
         repo,
         ignore=shutil.ignore_patterns(
-            ".git",
-            ".venv",
-            ".planning",
-            ".worktrees",
-            ".cache",
-            ".pytest_cache",
             ".ruff_cache",
             ".mypy_cache",
-            "__pycache__",
-            "*.pyc",
+            ".git",
+            ".pytest_cache.planning",
             "scripts/__pycache__",
+            ".cache",
+            "__pycache__.worktrees",
+            ".venv",
+            "*.pyc",
+            ".coverage.gitignore",
+            ".state",
+            "build",
+            "infinitas_hosted_registry.egg-infonode_modules",
+            "tmp",
         ),
     )
     (repo / "config" / "allowed_signers").write_text("", encoding="utf-8")

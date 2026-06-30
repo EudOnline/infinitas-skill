@@ -1,6 +1,7 @@
 /**
  * Client-side table sort and filter interactions
  */
+import { uiText } from './config.js';
 
 export function initSortableTable(tableEl) {
   const headers = tableEl.querySelectorAll('th[data-sort]');
@@ -48,8 +49,12 @@ export function initSortableTable(tableEl) {
       sortTable(tableEl, th.cellIndex, sortType, newDir);
 
       const label = th.textContent.replace(/[↑↓↕]/g, '').trim();
-      const directionLabel = newDir === 'asc' ? '升序' : '降序';
-      if (liveRegion) liveRegion.textContent = `${label}：已按${directionLabel}排序`;
+      const directionKey = newDir === 'asc' ? 'sort_ascending' : 'sort_descending';
+      const fallback = newDir === 'asc' ? `${label}: sorted ascending` : `${label}: sorted descending`;
+      if (liveRegion) {
+        const template = uiText(directionKey, fallback);
+        liveRegion.textContent = template.replace('{label}', label);
+      }
     }
 
     th.addEventListener('click', activateSort);

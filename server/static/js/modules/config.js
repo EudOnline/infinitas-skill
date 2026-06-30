@@ -66,9 +66,11 @@ export function logError(...args) {
 }
 
 /**
- * Read the CSRF token from the double-submit cookie.
+ * Read the CSRF token — prefer <meta> tag, fall back to cookie.
  */
 export function getCsrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  if (meta && meta.content) return meta.content;
   const match = document.cookie.match(/csrf_token=([^;]+)/);
   if (!match) return '';
   try {

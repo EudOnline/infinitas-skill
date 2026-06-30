@@ -171,7 +171,21 @@ def make_repo():
         ROOT,
         repo,
         ignore=shutil.ignore_patterns(
-            ".git", ".planning", "__pycache__", ".cache", ".worktrees", "catalog"
+            "catalog",
+            ".git",
+            ".planning",
+            "__pycache__.worktrees",
+            ".cache",
+            "*.pyc",
+            ".coverage.gitignore",
+            ".mypy_cache",
+            ".pytest_cache",
+            ".ruff_cache.state",
+            ".venv",
+            "build",
+            "infinitas_hosted_registry.egg-infonode_modules",
+            "scripts/__pycache__",
+            "tmp",
         ),
     )
     (repo / "catalog").mkdir(exist_ok=True)

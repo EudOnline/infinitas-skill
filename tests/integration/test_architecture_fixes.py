@@ -1,4 +1,5 @@
 """Tests for architecture fixes: N+1, exception handling, rate limiting, cache busting."""
+
 from __future__ import annotations
 
 import json
@@ -7,7 +8,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy.orm import Session
 
-from server.db import _engine_kwargs, session_scope
+from server.db import _engine_kwargs
 from server.models import (
     AccessGrant,
     Credential,
@@ -41,7 +42,7 @@ def db(monkeypatch, tmp_path: Path):
     get_session_factory.cache_clear()
     ensure_database_ready()
 
-    with session_scope() as session:
+    with get_session_factory()() as session:
         yield session
 
 

@@ -77,9 +77,11 @@ def collect_release_context(
     remote_tag = state["git"]["remote_tag"]
     local_tag = state["git"]["local_tag"]
     tag_name = state["git"]["expected_tag"]
-    commit = remote_tag.get("target_commit") or local_tag.get("target_commit") or state["git"][
-        "head_commit"
-    ]
+    commit = (
+        remote_tag.get("target_commit")
+        or local_tag.get("target_commit")
+        or state["git"]["head_commit"]
+    )
     review = state.get("review") or {}
     release = state.get("release") or {}
     releaser_identity = releaser or release.get("releaser_identity")

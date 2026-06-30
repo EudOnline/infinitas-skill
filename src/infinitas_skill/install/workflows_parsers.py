@@ -3,6 +3,7 @@
 This module contains all the argparse parser configuration and builder
 functions for the install subcommands.
 """
+
 from __future__ import annotations
 
 import argparse

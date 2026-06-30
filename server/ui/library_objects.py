@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from server.models import Exposure, Skill
 from server.modules.access.authn import AccessContext
 from server.ui.formatting import humanize_timestamp
+from server.ui.i18n import with_lang
 from server.ui.library_access import (
     credential_is_active,
     credential_is_share_secret,
@@ -65,7 +66,7 @@ def type_details(scope: LibraryScope, skill: Skill) -> dict[str, Any]:
     }
 
 
-def object_payload(scope: LibraryScope, skill: Skill) -> dict[str, Any]:
+def object_payload(scope: LibraryScope, skill: Skill, *, lang: str | None = None) -> dict[str, Any]:
     current_release = current_release_payload(
         scope,
         skill_id=skill.id,
@@ -87,17 +88,21 @@ def object_payload(scope: LibraryScope, skill: Skill) -> dict[str, Any]:
         elif not credential_is_share_secret(credential) and credential_is_active(credential, grant):
             token_count += 1
 
+    detail_href = with_lang(f"/library/{skill.id}", lang) if lang else f"/library/{skill.id}"
     return {
         "id": skill.id,
         "kind": "skill",
         "slug": skill.slug,
+        "name": skill.display_name,
         "display_name": skill.display_name,
         "summary": skill.summary or "",
         "updated_at": humanize_timestamp(iso_stamp(skill.updated_at)),
         "current_release": current_release,
+        "version": current_release["version"] if current_release is not None else None,
         "current_visibility": visibility_payload(current_exposure),
         "token_count": token_count,
         "share_link_count": share_link_count,
+        "detail_href": detail_href,
     }
 
 
@@ -105,6 +110,7 @@ def list_library_objects(
     db: Session,
     *,
     actor: AccessContext,
+    lang: str | None = None,
     skip: int = 0,
     limit: int | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
@@ -114,7 +120,7 @@ def list_library_objects(
         Tuple of (items, total_count).
     """
     scope, total = load_library_scope(db, actor=actor, skip=skip, limit=limit)
-    items = [object_payload(scope, item) for item in scope.skills]
+    items = [object_payload(scope, item, lang=lang) for item in scope.skills]
     return items, total
 
 

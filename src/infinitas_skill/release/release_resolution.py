@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from infinitas_skill.release.git_state import ReleaseError
 
 
 def load_json(path: str | Path) -> dict[str, Any]:
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    return cast(dict[str, Any], json.loads(Path(path).read_text(encoding="utf-8")))
 
 
 def resolve_skill(root: str | Path, target: str | Path) -> Path:

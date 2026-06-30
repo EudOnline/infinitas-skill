@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from server.auth import get_current_access_context
 from server.db import get_db
 from server.jobs import enqueue_job, has_active_job
+from server.models import User
 from server.modules.access.authn import AccessContext
 from server.modules.access.authz import require_any_scope
 from server.modules.release import service
@@ -16,7 +17,7 @@ from server.settings import get_settings
 router = APIRouter(prefix="/api/v1", tags=["release"])
 
 
-def _require_release_context(context: AccessContext) -> tuple[int, object]:
+def _require_release_context(context: AccessContext) -> tuple[int, User]:
     if context.principal is None or context.user is None:
         raise HTTPException(
             status_code=403,

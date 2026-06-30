@@ -24,7 +24,7 @@ def resolve_repo_root(explicit_root: str | Path | None = None) -> Path:
 
     module_path = Path(__file__).resolve()
     cwd = Path.cwd().resolve()
-    candidates = [*module_path.parents, cwd, *cwd.parents]
+    candidates = [cwd, *cwd.parents, *module_path.parents]
 
     seen = set()
     for candidate in candidates:

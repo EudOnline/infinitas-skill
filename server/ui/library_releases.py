@@ -50,7 +50,8 @@ def build_release_visibility_rows(
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for exposure in scope.exposures_by_release_id.get(release.id, []):
-        review_case = (scope.review_cases_by_exposure_id.get(exposure.id) or [None])[0]
+        review_cases = scope.review_cases_by_exposure_id.get(exposure.id) or []
+        review_case = review_cases[0] if review_cases else None
         review_case_state = str(getattr(review_case, "state", None) or "none")
         share_count = 0
         token_count = 0
@@ -124,10 +125,7 @@ def list_library_releases_from_scope(
     *,
     skill_id: int,
 ) -> list[dict[str, Any]]:
-    versions = {
-        version.id: version
-        for version in scope.versions_by_skill_id.get(skill_id, [])
-    }
+    versions = {version.id: version for version in scope.versions_by_skill_id.get(skill_id, [])}
     rows: list[dict[str, Any]] = []
     for release in scope.releases_by_skill_id.get(skill_id, []):
         exposure = next(iter(scope.exposures_by_release_id.get(release.id, [])), None)
@@ -168,10 +166,7 @@ def get_library_release_detail(
     skill = next((item for item in scope.skills if item.id == object_id), None)
     if skill is None:
         return None
-    version_map = {
-        version.id: version
-        for version in scope.versions_by_skill_id.get(skill.id, [])
-    }
+    version_map = {version.id: version for version in scope.versions_by_skill_id.get(skill.id, [])}
     release = next(
         (item for item in scope.releases_by_skill_id.get(object_id, []) if item.id == release_id),
         None,

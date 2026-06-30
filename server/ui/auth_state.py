@@ -70,38 +70,11 @@ def require_lifecycle_actor(
     return context
 
 
-def require_skill_or_404(db: Session, skill_id: int):
-    """Get a skill by ID or raise 404.
-
-    Delegates to ui_service layer for database access.
-    """
-    return get_skill_or_404(db, skill_id)
-
-
-def require_draft_bundle_or_404(db: Session, draft_id: int):
-    """Get a draft and its associated skill.
-
-    Delegates to ui_service layer for database access.
-    """
-    return get_draft_bundle_or_404(db, draft_id)
-
-
-def require_release_bundle_or_404(db: Session, release_id: int):
-    """Get a release with its version and skill.
-
-    Delegates to ui_service layer for database access.
-    """
-    return get_release_bundle_or_404(db, release_id)
-
-
 __all__ = [
     "hydrate_auth_state",
     "is_owner",
     "principal_label",
-    "require_draft_bundle_or_404",
     "require_lifecycle_actor",
-    "require_release_bundle_or_404",
-    "require_skill_or_404",
     "get_skill_or_404",
     "get_draft_bundle_or_404",
     "get_release_bundle_or_404",

@@ -75,12 +75,6 @@ class TestBuildSiteNav:
         assert nav[2]["href"] == "/manage?lang=en"
         assert nav[2]["label"] == "Management"
 
-    def test_variant_param_ignored(self):
-        """variant no longer changes the nav items; always 3 tabs."""
-        nav = build_site_nav(home=False, lang="en", variant="library")
-        assert len(nav) == 3
-        assert nav[1]["label"] == "Profile"
-
 
 class TestBuildExposurePolicy:
     def test_private_policy(self):

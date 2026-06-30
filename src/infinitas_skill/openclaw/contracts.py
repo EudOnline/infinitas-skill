@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any, cast
 
 
 class OpenClawContractError(Exception):
@@ -64,7 +65,7 @@ def load_openclaw_runtime_profile(root: Path) -> dict:
     _require_string_list(contract.get("sources"), field="contract.sources")
     _require_nonempty_string(contract.get("last_verified"), field="contract.last_verified")
 
-    return payload
+    return cast(dict[Any, Any], payload)
 
 
 __all__ = ["OpenClawContractError", "load_openclaw_runtime_profile"]

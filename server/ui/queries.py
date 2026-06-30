@@ -3,6 +3,7 @@
 This module provides a clean separation between the UI layer and database access,
 following the principle that UI code should not directly access the database.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -71,9 +72,7 @@ def get_draft_bundle_or_404(db: Session, draft_id: int) -> tuple[SkillDraft, Ski
     return draft, skill
 
 
-def get_release_bundle_or_404(
-    db: Session, release_id: int
-) -> tuple[Release, SkillVersion, Skill]:
+def get_release_bundle_or_404(db: Session, release_id: int) -> tuple[Release, SkillVersion, Skill]:
     """Get a release with its version and skill.
 
     Args:
@@ -196,34 +195,25 @@ def get_dashboard_counts(db: Session) -> DashboardCounts:
     total_releases = int(db.scalar(select(func.count()).select_from(Release)) or 0)
     total_share_links = int(
         db.scalar(
-            select(func.count())
-            .select_from(AccessGrant)
-            .where(AccessGrant.grant_type == "link")
+            select(func.count()).select_from(AccessGrant).where(AccessGrant.grant_type == "link")
         )
         or 0
     )
     total_access = int(
         db.scalar(
-            select(func.count())
-            .select_from(Credential)
-            .where(Credential.type == "grant_token")
+            select(func.count()).select_from(Credential).where(Credential.type == "grant_token")
         )
         or 0
     )
     pending_reviews = int(
-        db.scalar(
-            select(func.count()).select_from(ReviewCase).where(ReviewCase.state == "open")
-        )
+        db.scalar(select(func.count()).select_from(ReviewCase).where(ReviewCase.state == "open"))
         or 0
     )
     queued_jobs = int(
         db.scalar(select(func.count()).select_from(Job).where(Job.status == "queued")) or 0
     )
     running_jobs = int(
-        db.scalar(
-            select(func.count()).select_from(Job).where(Job.status == "running")
-        )
-        or 0
+        db.scalar(select(func.count()).select_from(Job).where(Job.status == "running")) or 0
     )
 
     return DashboardCounts(
@@ -277,9 +267,7 @@ def get_user_stats(db: Session, *, days: int = 7) -> UserStats:
     accessible_skills = int(db.scalar(select(func.count()).select_from(Skill)) or 0)
     new_activity = int(
         db.scalar(
-            select(func.count())
-            .select_from(AuditEvent)
-            .where(AuditEvent.occurred_at >= week_ago)
+            select(func.count()).select_from(AuditEvent).where(AuditEvent.occurred_at >= week_ago)
         )
         or 0
     )

@@ -136,19 +136,22 @@ Share Link requirements:
 
 ### Agent-facing routes
 
-- `GET /api/library`
-- `GET /api/library/{object_id}`
-- `GET /api/library/{object_id}/releases`
-- `GET /api/releases/{release_id}`
-- `PATCH /api/releases/{release_id}/visibility`
-- `POST /api/objects/{object_id}/tokens`
-- `GET /api/objects/{object_id}/tokens`
-- `POST /api/releases/{release_id}/share-links`
-- `GET /api/releases/{release_id}/share-links`
-- `GET /api/activity`
-- `PUT /api/publish/objects/{slug}`
-- `POST /api/publish/objects/{object_id}/releases`
-- `GET /api/publish/releases/{release_id}/status`
+- `GET /api/v1/library`
+- `GET /api/v1/library/{object_id}`
+- `GET /api/v1/library/{object_id}/releases`
+- `GET /api/v1/releases/{release_id}`
+- `POST /api/v1/exposures/{exposure_id}/revoke`
+- `POST /api/v1/object-tokens/objects/{object_id}/tokens`
+- `GET /api/v1/object-tokens/objects/{object_id}/tokens`
+- `POST /api/v1/object-tokens/tokens/{token_id}/revoke`
+- `POST /api/v1/share-links/releases/{release_id}/share-links`
+- `GET /api/v1/share-links/releases/{release_id}/share-links`
+- `POST /api/v1/share-links/{share_id}/resolve`
+- `POST /api/v1/share-links/{share_id}/revoke`
+- `GET /api/v1/activity`
+- `POST /api/v1/skills`
+- `POST /api/v1/versions/{version_id}/releases`
+- `GET /api/v1/releases/{release_id}`
 
 ## UX rules
 

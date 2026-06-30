@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from typing import cast
 
 from pydantic import BaseModel, Field
 
@@ -57,7 +58,7 @@ class ArtifactView(BaseModel):
     def from_model(cls, artifact: Artifact) -> "ArtifactView":
         return cls(
             id=artifact.id,
-            release_id=artifact.release_id,
+            release_id=cast(int, artifact.release_id),
             kind=artifact.kind,
             storage_uri=artifact.storage_uri,
             sha256=artifact.sha256,

@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import json
 import secrets
-from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -22,7 +21,8 @@ from server.models import (
 from server.modules.access import service as access_service
 from server.modules.audit import service as audit_service
 from server.modules.release import service as release_service
-from server.modules.shared.actor import ActorRef, actor_ref_label as _actor_ref
+from server.modules.shared.actor import ActorRef
+from server.modules.shared.actor import actor_ref_label as _actor_ref
 from server.modules.shared.formatting import iso_format
 
 
@@ -99,9 +99,7 @@ def _active_grant_exposure(db: Session, *, release_id: int) -> Exposure:
         .order_by(Exposure.id.desc())
     )
     if exposure is None:
-        raise ShareLinkConflictError(
-            "active grant visibility required before issuing share links"
-        )
+        raise ShareLinkConflictError("active grant visibility required before issuing share links")
     return exposure
 
 
@@ -117,9 +115,11 @@ def _install_path(*, owner: Principal, skill: Skill, version: str) -> str:
 
 
 def _share_credentials(db: Session, *, grant_id: int) -> list[Credential]:
-    return db.scalars(
-        select(Credential).where(Credential.grant_id == grant_id).order_by(Credential.id.desc())
-    ).all()
+    return list(
+        db.scalars(
+            select(Credential).where(Credential.grant_id == grant_id).order_by(Credential.id.desc())
+        ).all()
+    )
 
 
 def _password_credential(credentials: list[Credential]) -> Credential | None:
@@ -152,6 +152,7 @@ def _share_link_payload(
     grant: AccessGrant,
     *,
     install_path: str | None = None,
+    temporary_password: str | None = None,
 ) -> dict:
     release_id = _release_id_for_grant(db, grant=grant)
     constraints = _json_object(grant.constraints_json)
@@ -176,6 +177,8 @@ def _share_link_payload(
     }
     if install_path is not None:
         payload["install_path"] = install_path
+    if temporary_password is not None:
+        payload["temporary_password"] = temporary_password
     return payload
 
 
@@ -265,6 +268,7 @@ def create_share_link(
             skill=skill,
             version=version_label,
         ),
+        temporary_password=credential_secret,
     )
 
 
@@ -290,7 +294,7 @@ def revoke_share_link(db: Session, *, share_id: int, actor: ActorRef) -> dict:
         revoked_at = utcnow()
         for credential in _share_credentials(db, grant_id=grant.id):
             if credential.revoked_at is None:
-                credential.revoked_at = revoked_at
+                cast(Any, credential).revoked_at = revoked_at
                 db.add(credential)
         audit_service.append_audit_event(
             db,

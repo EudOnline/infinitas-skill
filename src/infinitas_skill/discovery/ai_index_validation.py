@@ -192,10 +192,9 @@ def validate_ai_index_payload(payload: dict) -> list:
                     if not isinstance(readiness.get(field), bool):
                         errors.append(f"{prefix}.runtime.readiness.{field} must be a boolean")
 
+        raw_available_versions = skill.get("available_versions")
         available_versions = (
-            skill.get("available_versions")
-            if isinstance(skill.get("available_versions"), list)
-            else []
+            raw_available_versions if isinstance(raw_available_versions, list) else []
         )
         versions = skill.get("versions")
         if not isinstance(versions, dict):

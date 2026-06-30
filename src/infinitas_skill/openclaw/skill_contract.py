@@ -57,8 +57,9 @@ def load_openclaw_skill_contract(path: Path) -> dict:
         "requires": _normalized_requires(source),
         "plugin_capabilities": plugin_capabilities,
     }
-    if isinstance(runtime.get("workspace_scope"), str) and runtime.get("workspace_scope").strip():
-        runtime_payload["workspace_scope"] = runtime["workspace_scope"].strip()
+    workspace_scope = runtime.get("workspace_scope")
+    if isinstance(workspace_scope, str) and workspace_scope.strip():
+        runtime_payload["workspace_scope"] = workspace_scope.strip()
     if isinstance(license_value, str) and license_value.strip():
         runtime_payload["license"] = license_value.strip()
 

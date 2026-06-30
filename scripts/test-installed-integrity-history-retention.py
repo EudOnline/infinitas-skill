@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -14,18 +15,18 @@ if str(SRC) not in sys.path:
 
 from infinitas_skill.testing.env import build_regression_test_env
 
-FIXTURE_NAME = 'release-fixture'
-VERSION = '1.2.3'
-SNAPSHOT_FILENAME = '.infinitas-skill-installed-integrity.json'
+FIXTURE_NAME = "release-fixture"
+VERSION = "1.2.3"
+SNAPSHOT_FILENAME = ".infinitas-skill-installed-integrity.json"
 PLATFORM_EVIDENCE_MINUTES = {
-    'codex': 0,
-    'claude': 1,
-    'openclaw': 2,
+    "codex": 0,
+    "claude": 1,
+    "openclaw": 2,
 }
 
 
 def fail(message):
-    print(f'FAIL: {message}', file=sys.stderr)
+    print(f"FAIL: {message}", file=sys.stderr)
     raise SystemExit(1)
 
 
@@ -33,33 +34,33 @@ def run(command, cwd, expect=0, env=None):
     result = subprocess.run(command, cwd=cwd, text=True, capture_output=True, env=env)
     if result.returncode != expect:
         fail(
-            f'command {command!r} exited {result.returncode}, expected {expect}\n'
-            f'stdout:\n{result.stdout}\n'
-            f'stderr:\n{result.stderr}'
+            f"command {command!r} exited {result.returncode}, expected {expect}\n"
+            f"stdout:\n{result.stdout}\n"
+            f"stderr:\n{result.stderr}"
         )
     return result
 
 
 def write_json(path: Path, payload):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def make_env(repo: Path, extra=None):
-    merged_extra = {'INFINITAS_SKILL_RELEASER': 'retention-test'}
+    merged_extra = {"INFINITAS_SKILL_RELEASER": "retention-test"}
     if extra:
         merged_extra.update(extra)
     return build_regression_test_env(
         ROOT,
         extra=merged_extra,
         env=os.environ.copy(),
-        add_pythonpath=repo / 'src',
+        add_pythonpath=repo / "src",
     )
 
 
 def run_cli(repo: Path, args: list[str], *, expect=0):
     return run(
-        [sys.executable, '-m', 'infinitas_skill.cli.main', *args],
+        [sys.executable, "-m", "infinitas_skill.cli.main", *args],
         cwd=repo,
         expect=expect,
         env=make_env(repo),
@@ -67,91 +68,86 @@ def run_cli(repo: Path, args: list[str], *, expect=0):
 
 
 def contract_checked_at(repo: Path, platform: str):
-    profile_path = repo / 'profiles' / f'{platform}.json'
-    payload = json.loads(profile_path.read_text(encoding='utf-8'))
-    contract = payload.get('contract') if isinstance(payload.get('contract'), dict) else {}
-    last_verified = contract.get('last_verified')
-    if not isinstance(last_verified, str) or not last_verified:
-        fail(f'missing contract.last_verified for platform {platform!r}')
     minute = PLATFORM_EVIDENCE_MINUTES.get(platform, 0)
-    return f'{last_verified}T12:{minute:02d}:00Z'
+    checked_at = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(minutes=minute)
+    return checked_at.isoformat().replace("+00:00", "Z")
 
 
 def seed_fresh_platform_evidence(repo: Path):
     fixtures = (
-        ('codex', contract_checked_at(repo, 'codex')),
-        ('claude', contract_checked_at(repo, 'claude')),
-        ('openclaw', contract_checked_at(repo, 'openclaw')),
+        ("codex", contract_checked_at(repo, "codex")),
+        ("claude", contract_checked_at(repo, "claude")),
+        ("openclaw", contract_checked_at(repo, "openclaw")),
     )
     for platform, checked_at in fixtures:
         path = (
             repo
-            / 'catalog'
-            / 'compatibility-evidence'
+            / "catalog"
+            / "compatibility-evidence"
             / platform
             / FIXTURE_NAME
-            / f'{VERSION}.json'
+            / f"{VERSION}.json"
         )
         path.parent.mkdir(parents=True, exist_ok=True)
         write_json(
             path,
             {
-                'platform': platform,
-                'skill': FIXTURE_NAME,
-                'version': VERSION,
-                'state': 'adapted',
-                'checked_at': checked_at,
-                'checker': f'check-{platform}-compat.py',
+                "platform": platform,
+                "skill": FIXTURE_NAME,
+                "version": VERSION,
+                "state": "adapted",
+                "checked_at": checked_at,
+                "checker": f"check-{platform}-compat.py",
             },
         )
 
 
 def scaffold_fixture(repo: Path):
-    fixture_dir = repo / 'skills' / 'active' / FIXTURE_NAME
+    fixture_dir = repo / "skills" / "active" / FIXTURE_NAME
     if fixture_dir.exists():
         shutil.rmtree(fixture_dir)
-    shutil.copytree(ROOT / 'templates' / 'basic-skill', fixture_dir)
-    meta = json.loads((fixture_dir / '_meta.json').read_text(encoding='utf-8'))
+    shutil.copytree(ROOT / "templates" / "basic-skill", fixture_dir)
+    meta = json.loads((fixture_dir / "_meta.json").read_text(encoding="utf-8"))
     meta.update(
         {
-            'name': FIXTURE_NAME,
-            'version': VERSION,
-            'status': 'active',
-            'summary': f'Fixture skill version {VERSION} for installed integrity history retention tests',
-            'owner': 'retention-test',
-            'owners': ['retention-test'],
-            'author': 'retention-test',
-            'review_state': 'approved',
+            "name": FIXTURE_NAME,
+            "version": VERSION,
+            "status": "active",
+            "summary": f"Fixture skill version {VERSION} for installed integrity history retention tests",
+            "owner": "retention-test",
+            "owners": ["retention-test"],
+            "author": "retention-test",
+            "review_state": "approved",
         }
     )
-    write_json(fixture_dir / '_meta.json', meta)
-    (fixture_dir / 'SKILL.md').write_text(
-        '---\n'
-        f'name: {FIXTURE_NAME}\n'
-        'description: Fixture skill for installed integrity history retention tests.\n'
-        '---\n\n'
-        '# Release Fixture\n\n'
-        f'Current fixture version: {VERSION}.\n',
-        encoding='utf-8',
+    write_json(fixture_dir / "_meta.json", meta)
+    (fixture_dir / "SKILL.md").write_text(
+        "---\n"
+        f"name: {FIXTURE_NAME}\n"
+        "description: Fixture skill for installed integrity history retention tests.\n"
+        "---\n\n"
+        "# Release Fixture\n\n"
+        f"Current fixture version: {VERSION}.\n",
+        encoding="utf-8",
     )
-    (fixture_dir / 'VERSION.txt').write_text(VERSION + '\n', encoding='utf-8')
+    (fixture_dir / "VERSION.txt").write_text(VERSION + "\n", encoding="utf-8")
     write_json(
-        fixture_dir / 'reviews.json',
+        fixture_dir / "reviews.json",
         {
-            'version': 1,
-            'requests': [
+            "version": 1,
+            "requests": [
                 {
-                    'requested_at': '2026-03-19T00:00:00Z',
-                    'requested_by': 'retention-test',
-                    'note': 'Fixture approval for installed integrity history retention tests',
+                    "requested_at": "2026-03-19T00:00:00Z",
+                    "requested_by": "retention-test",
+                    "note": "Fixture approval for installed integrity history retention tests",
                 }
             ],
-            'entries': [
+            "entries": [
                 {
-                    'reviewer': 'lvxiaoer',
-                    'decision': 'approved',
-                    'at': '2026-03-19T00:05:00Z',
-                    'note': 'Fixture approval',
+                    "reviewer": "lvxiaoer",
+                    "decision": "approved",
+                    "at": "2026-03-19T00:05:00Z",
+                    "note": "Fixture approval",
                 }
             ],
         },
@@ -159,93 +155,106 @@ def scaffold_fixture(repo: Path):
 
 
 def prepare_repo():
-    tmpdir = Path(tempfile.mkdtemp(prefix='infinitas-installed-integrity-retention-'))
-    repo = tmpdir / 'repo'
-    origin = tmpdir / 'origin.git'
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-installed-integrity-retention-"))
+    repo = tmpdir / "repo"
+    origin = tmpdir / "origin.git"
     shutil.copytree(
         ROOT,
         repo,
         ignore=shutil.ignore_patterns(
-            '.git',
-            '.venv',
-            '.planning',
-            '.worktrees',
-            '.pytest_cache',
-            '.ruff_cache',
-            '.mypy_cache',
-            '__pycache__',
-            '*.pyc',
-            '.cache',
-            'scripts/__pycache__',
+            ".ruff_cache",
+            ".mypy_cache",
+            ".git",
+            ".pytest_cache.planning",
+            "scripts/__pycache__",
+            ".cache",
+            "__pycache__.worktrees",
+            ".venv",
+            "*.pyc",
+            ".coverage.gitignore",
+            ".state",
+            "build",
+            "infinitas_hosted_registry.egg-infonode_modules",
+            "tmp",
         ),
     )
     scaffold_fixture(repo)
     seed_fresh_platform_evidence(repo)
     write_json(
-        repo / 'config' / 'install-integrity-policy.json',
+        repo / "config" / "install-integrity-policy.json",
         {
-            '$schema': '../schemas/install-integrity-policy.schema.json',
-            'schema_version': 1,
-            'freshness': {
-                'stale_after_hours': 168,
+            "$schema": "../schemas/install-integrity-policy.schema.json",
+            "schema_version": 1,
+            "freshness": {
+                "stale_after_hours": 168,
             },
-            'history': {
-                'max_inline_events': 2,
+            "history": {
+                "max_inline_events": 2,
             },
         },
     )
-    run(['git', 'init', '--bare', str(origin)], cwd=tmpdir)
-    run(['git', 'init', '-b', 'main'], cwd=repo)
-    run(['git', 'config', 'user.name', 'Retention Fixture'], cwd=repo)
-    run(['git', 'config', 'user.email', 'retention@example.com'], cwd=repo)
-    run(['git', 'remote', 'add', 'origin', str(origin)], cwd=repo)
-    run(['git', 'add', '.'], cwd=repo)
-    run(['git', 'commit', '-m', 'fixture repo'], cwd=repo)
-    run(['git', 'push', '-u', 'origin', 'main'], cwd=repo)
-    run([str(repo / 'scripts' / 'build-catalog.sh')], cwd=repo)
-    run(['git', 'add', 'catalog'], cwd=repo)
-    run(['git', 'commit', '-m', 'build fixture catalog'], cwd=repo)
-    run(['git', 'push'], cwd=repo)
+    run(["git", "init", "--bare", str(origin)], cwd=tmpdir)
+    run(["git", "init", "-b", "main"], cwd=repo)
+    run(["git", "config", "user.name", "Retention Fixture"], cwd=repo)
+    run(["git", "config", "user.email", "retention@example.com"], cwd=repo)
+    run(["git", "remote", "add", "origin", str(origin)], cwd=repo)
+    run(["git", "add", "."], cwd=repo)
+    run(["git", "commit", "-m", "fixture repo"], cwd=repo)
+    run(["git", "push", "-u", "origin", "main"], cwd=repo)
+    run([str(repo / "scripts" / "build-catalog.sh")], cwd=repo)
+    run(["git", "add", "catalog"], cwd=repo)
+    run(["git", "commit", "-m", "build fixture catalog"], cwd=repo)
+    run(["git", "push"], cwd=repo)
 
-    key_path = tmpdir / 'retention-test-key'
-    identity = 'retention-test'
-    run(['ssh-keygen', '-q', '-t', 'ed25519', '-N', '', '-C', identity, '-f', str(key_path)], cwd=repo)
-    with (repo / 'config' / 'allowed_signers').open('a', encoding='utf-8') as handle:
-        public_key = Path(str(key_path) + '.pub').read_text(encoding='utf-8').strip()
-        handle.write(f'{identity} {public_key}\n')
-    run(['git', 'config', 'gpg.format', 'ssh'], cwd=repo)
-    run(['git', 'config', 'user.signingkey', str(key_path)], cwd=repo)
-    run(['git', 'add', 'config/allowed_signers'], cwd=repo)
-    run(['git', 'commit', '-m', 'add release signer'], cwd=repo)
-    run(['git', 'push'], cwd=repo)
+    key_path = tmpdir / "retention-test-key"
+    identity = "retention-test"
+    run(
+        ["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", identity, "-f", str(key_path)],
+        cwd=repo,
+    )
+    with (repo / "config" / "allowed_signers").open("a", encoding="utf-8") as handle:
+        public_key = Path(str(key_path) + ".pub").read_text(encoding="utf-8").strip()
+        handle.write(f"{identity} {public_key}\n")
+    run(["git", "config", "gpg.format", "ssh"], cwd=repo)
+    run(["git", "config", "user.signingkey", str(key_path)], cwd=repo)
+    run(["git", "add", "config/allowed_signers"], cwd=repo)
+    run(["git", "commit", "-m", "add release signer"], cwd=repo)
+    run(["git", "push"], cwd=repo)
     return tmpdir, repo
 
 
 def release_fixture(repo: Path):
     run(
-        [str(repo / 'scripts' / 'release-skill.sh'), FIXTURE_NAME, '--push-tag', '--write-provenance'],
+        [
+            str(repo / "scripts" / "release-skill.sh"),
+            FIXTURE_NAME,
+            "--push-tag",
+            "--write-provenance",
+        ],
         cwd=repo,
         env=make_env(repo),
     )
 
 
 def install_fixture(repo: Path, target_dir: Path):
-    run_cli(repo, ['install', 'exact', FIXTURE_NAME, str(target_dir), '--version', VERSION])
+    run_cli(repo, ["install", "exact", FIXTURE_NAME, str(target_dir), "--version", VERSION])
 
 
 def read_install_manifest(target_dir: Path):
-    return json.loads((target_dir / '.infinitas-skill-install-manifest.json').read_text(encoding='utf-8'))
+    return json.loads(
+        (target_dir / ".infinitas-skill-install-manifest.json").read_text(encoding="utf-8")
+    )
 
 
 def run_report(repo: Path, target_dir: Path, *, refresh=False):
     command = [
         sys.executable,
-        str(repo / 'scripts' / 'report-installed-integrity.py'),
+        str(repo / "scripts" / "report-installed-integrity.py"),
         str(target_dir),
-        '--json',
+        "--json",
     ]
     if refresh:
-        command.insert(-1, '--refresh')
+        command.insert(-1, "--refresh")
     result = run(command, cwd=repo, env=make_env(repo))
     return json.loads(result.stdout)
 
@@ -253,15 +262,15 @@ def run_report(repo: Path, target_dir: Path, *, refresh=False):
 def read_snapshot(target_dir: Path):
     path = target_dir / SNAPSHOT_FILENAME
     if not path.exists():
-        fail(f'missing installed integrity snapshot {path}')
-    return json.loads(path.read_text(encoding='utf-8'))
+        fail(f"missing installed integrity snapshot {path}")
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def main():
     tmpdir, repo = prepare_repo()
     try:
         release_fixture(repo)
-        target_dir = tmpdir / 'installed'
+        target_dir = tmpdir / "installed"
         target_dir.mkdir(parents=True, exist_ok=True)
         install_fixture(repo, target_dir)
 
@@ -270,39 +279,39 @@ def main():
             payload = run_report(repo, target_dir, refresh=True)
 
         if payload is None:
-            fail('expected refresh payload after repeated report refreshes')
+            fail("expected refresh payload after repeated report refreshes")
 
         manifest = read_install_manifest(target_dir)
-        current = ((manifest.get('skills') or {}).get(FIXTURE_NAME) or {})
-        inline_events = current.get('integrity_events') or []
+        current = (manifest.get("skills") or {}).get(FIXTURE_NAME) or {}
+        inline_events = current.get("integrity_events") or []
         if len(inline_events) != 2:
-            fail(f'expected retained inline integrity_events length 2, got {current!r}')
+            fail(f"expected retained inline integrity_events length 2, got {current!r}")
 
         snapshot = read_snapshot(target_dir)
-        if snapshot.get('schema_version') != 1:
+        if snapshot.get("schema_version") != 1:
             fail(f"expected snapshot schema_version 1, got {snapshot!r}")
-        if snapshot.get('target_dir') != str(target_dir.resolve()):
-            fail(f'expected snapshot target_dir to match install target, got {snapshot!r}')
-        policy = snapshot.get('policy') or {}
-        if ((policy.get('history') or {}).get('max_inline_events')) != 2:
-            fail(f'expected snapshot policy history.max_inline_events 2, got {snapshot!r}')
+        if snapshot.get("target_dir") != str(target_dir.resolve()):
+            fail(f"expected snapshot target_dir to match install target, got {snapshot!r}")
+        policy = snapshot.get("policy") or {}
+        if ((policy.get("history") or {}).get("max_inline_events")) != 2:
+            fail(f"expected snapshot policy history.max_inline_events 2, got {snapshot!r}")
 
-        skills = snapshot.get('skills')
+        skills = snapshot.get("skills")
         if not isinstance(skills, list) or not skills:
-            fail(f'expected snapshot skills list, got {snapshot!r}')
-        item = next((entry for entry in skills if entry.get('name') == FIXTURE_NAME), None)
+            fail(f"expected snapshot skills list, got {snapshot!r}")
+        item = next((entry for entry in skills if entry.get("name") == FIXTURE_NAME), None)
         if item is None:
-            fail(f'missing snapshot skill entry for {FIXTURE_NAME!r}: {snapshot!r}')
-        if item.get('integrity_events') != inline_events:
-            fail(f'expected snapshot inline integrity_events to match manifest, got {item!r}')
-        archived = item.get('archived_integrity_events')
+            fail(f"missing snapshot skill entry for {FIXTURE_NAME!r}: {snapshot!r}")
+        if item.get("integrity_events") != inline_events:
+            fail(f"expected snapshot inline integrity_events to match manifest, got {item!r}")
+        archived = item.get("archived_integrity_events")
         if not isinstance(archived, list) or len(archived) < 3:
-            fail(f'expected archived_integrity_events to retain overflow history, got {item!r}')
+            fail(f"expected archived_integrity_events to retain overflow history, got {item!r}")
     finally:
         shutil.rmtree(tmpdir)
 
-    print('OK: installed integrity history retention checks passed')
+    print("OK: installed integrity history retention checks passed")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

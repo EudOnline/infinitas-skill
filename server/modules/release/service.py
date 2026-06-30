@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any, cast
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -8,7 +9,11 @@ from sqlalchemy.orm import Session
 
 from server.exceptions_base import (
     ConflictError as BaseConflictError,
+)
+from server.exceptions_base import (
     ForbiddenError as BaseForbiddenError,
+)
+from server.exceptions_base import (
     NotFoundError as BaseNotFoundError,
 )
 from server.models import Principal, Skill, SkillDraft, SkillVersion, utcnow
@@ -56,11 +61,13 @@ def get_release_or_404(db: Session, release_id: int) -> Release:
 
 
 def get_artifacts_for_release(db: Session, release_id: int) -> list[Artifact]:
-    return db.scalars(
-        select(Artifact)
-        .where(Artifact.release_id == release_id)
-        .order_by(Artifact.kind.asc(), Artifact.id.asc())
-    ).all()
+    return list(
+        db.scalars(
+            select(Artifact)
+            .where(Artifact.release_id == release_id)
+            .order_by(Artifact.kind.asc(), Artifact.id.asc())
+        ).all()
+    )
 
 
 def get_current_artifacts_for_release(db: Session, release: Release) -> list[Artifact]:
@@ -76,11 +83,13 @@ def get_current_artifacts_for_release(db: Session, release: Release) -> list[Art
     }
     if not artifact_ids:
         return []
-    return db.scalars(
-        select(Artifact)
-        .where(Artifact.id.in_(sorted(artifact_ids)))
-        .order_by(Artifact.kind.asc(), Artifact.id.asc())
-    ).all()
+    return list(
+        db.scalars(
+            select(Artifact)
+            .where(Artifact.id.in_(sorted(artifact_ids)))
+            .order_by(Artifact.kind.asc(), Artifact.id.asc())
+        ).all()
+    )
 
 
 def _get_skill_or_404(db: Session, skill_id: int) -> Skill:
@@ -133,12 +142,15 @@ def assert_skill_owner(
         return
     from server.modules.access.models import Team, TeamMembership
 
-    if db.scalar(
-        select(TeamMembership.id)
-        .join(Team, Team.id == TeamMembership.team_id)
-        .where(Team.principal_id == skill.namespace_id)
-        .where(TeamMembership.user_id == principal_id)
-    ) is not None:
+    if (
+        db.scalar(
+            select(TeamMembership.id)
+            .join(Team, Team.id == TeamMembership.team_id)
+            .where(Team.principal_id == skill.namespace_id)
+            .where(TeamMembership.user_id == principal_id)
+        )
+        is not None
+    ):
         return
     raise ForbiddenError("release namespace access denied")
 
@@ -207,9 +219,7 @@ def get_release_snapshot(db: Session, release_id: int) -> ReleaseSnapshot:
             "content_ref": draft.content_ref,
             "content_artifact_id": draft.content_artifact_id,
             "metadata": (
-                manifest.get("metadata")
-                if isinstance(manifest.get("metadata"), dict)
-                else {}
+                manifest.get("metadata") if isinstance(manifest.get("metadata"), dict) else {}
             ),
         }
     return ReleaseSnapshot(
@@ -287,7 +297,7 @@ def mark_release_ready(
     release.bundle_artifact_id = bundle_artifact_id
     release.signature_artifact_id = signature_artifact_id
     release.provenance_artifact_id = provenance_artifact_id
-    release.ready_at = utcnow()
+    cast(Any, release).ready_at = utcnow()
     db.add(release)
     db.flush()
     return release

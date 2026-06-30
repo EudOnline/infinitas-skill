@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
+from typing import cast
 
 from infinitas_skill.policy.policy_pack import (
     PolicyPackError,
@@ -37,15 +38,18 @@ def load_attestation_config(root=None):
         config = load_effective_policy_domain(root, "signing")
     except PolicyPackError as exc:
         raise AttestationError("; ".join(exc.errors)) from exc
-    git_tag = config.get("git_tag") if isinstance(config.get("git_tag"), dict) else {}
-    attestation = config.get("attestation") if isinstance(config.get("attestation"), dict) else {}
-    ci = attestation.get("ci") if isinstance(attestation.get("ci"), dict) else {}
-    transparency_log = (
-        attestation.get("transparency_log")
-        if isinstance(attestation.get("transparency_log"), dict)
-        else {}
-    )
-    policy = attestation.get("policy") if isinstance(attestation.get("policy"), dict) else {}
+    if not isinstance(config, dict):
+        config = {}
+    git_tag_raw = config.get("git_tag")
+    git_tag = git_tag_raw if isinstance(git_tag_raw, dict) else {}
+    attestation_raw = config.get("attestation")
+    attestation = attestation_raw if isinstance(attestation_raw, dict) else {}
+    ci_raw = attestation.get("ci")
+    ci = ci_raw if isinstance(ci_raw, dict) else {}
+    transparency_log_raw = attestation.get("transparency_log")
+    transparency_log = transparency_log_raw if isinstance(transparency_log_raw, dict) else {}
+    policy_raw = attestation.get("policy")
+    policy = policy_raw if isinstance(policy_raw, dict) else {}
     mode = policy.get("mode", "enforce")
     release_trust_mode = policy.get("release_trust_mode", "ssh")
     if release_trust_mode not in {"ssh", "ci", "both"}:
@@ -251,13 +255,14 @@ def validate_provenance_payload(payload):
     release = payload.get("release")
     release_mode = "stable-release"
     if isinstance(release, dict):
-        if release.get("release_mode") is not None:
-            if release.get("release_mode") not in {"stable-release", "local-tag"}:
+        release_mode_value = release.get("release_mode")
+        if release_mode_value is not None:
+            if release_mode_value not in {"stable-release", "local-tag"}:
                 errors.append(
                     "release.release_mode must be 'stable-release' or 'local-tag' when present"
                 )
             else:
-                release_mode = release.get("release_mode")
+                release_mode = cast(str, release_mode_value)
 
     if payload.get("kind") != "skill-release-attestation":
         errors.append("kind must be skill-release-attestation")
@@ -410,9 +415,11 @@ def validate_provenance_payload(payload):
                     errors.append("distribution.bundle.format must be tar.gz")
                 require_string(bundle, "sha256", "distribution.bundle.sha256")
                 require_string(bundle, "root_dir", "distribution.bundle.root_dir")
-                if not isinstance(bundle.get("size"), int) or bundle.get("size") < 0:
+                bundle_size = bundle.get("size")
+                if not isinstance(bundle_size, int) or bundle_size < 0:
                     errors.append("distribution.bundle.size must be a non-negative integer")
-                if not isinstance(bundle.get("file_count"), int) or bundle.get("file_count") < 1:
+                bundle_file_count = bundle.get("file_count")
+                if not isinstance(bundle_file_count, int) or bundle_file_count < 1:
                     errors.append("distribution.bundle.file_count must be a positive integer")
 
     return errors

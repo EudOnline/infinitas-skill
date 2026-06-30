@@ -20,11 +20,14 @@ def test_openclaw_profile_exposes_native_runtime_capabilities() -> None:
 
 
 def test_build_openclaw_runtime_model_keeps_contract_metadata() -> None:
+    profile = load_openclaw_runtime_profile(ROOT)
     model = build_openclaw_runtime_model(ROOT)
 
     assert model["platform"] == "openclaw"
     assert model["entrypoint"] == "SKILL.md"
-    assert model["contract_last_verified"] == "2026-04-07"
+    # The model must surface whatever the contract records as last-verified,
+    # rather than a hard-coded date that drifts on every re-verification.
+    assert model["contract_last_verified"] == profile["contract"]["last_verified"]
     assert model["skill_dir_candidates"] == [
         "skills",
         ".agents/skills",

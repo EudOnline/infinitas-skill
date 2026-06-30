@@ -1,18 +1,11 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock
-
-import pytest
-from fastapi import HTTPException
 
 from server.ui.auth_state import (
     hydrate_auth_state,
     is_owner,
     principal_label,
-    require_draft_bundle_or_404,
-    require_release_bundle_or_404,
-    require_skill_or_404,
 )
 
 
@@ -78,89 +71,3 @@ class TestIsOwner:
     def test_mismatching_principal_ids(self):
         user = SimpleNamespace(role="contributor")
         assert is_owner(user, 5, 6) is False
-
-
-class TestRequireSkillOr404:
-    def test_found_skill(self):
-        mock_skill = MagicMock()
-        db = MagicMock()
-        db.get.return_value = mock_skill
-        assert require_skill_or_404(db, 1) == mock_skill
-        db.get.assert_called_once()
-
-    def test_not_found_raises(self):
-        db = MagicMock()
-        db.get.return_value = None
-        with pytest.raises(HTTPException) as exc:
-            require_skill_or_404(db, 1)
-        assert exc.value.status_code == 404
-
-
-class TestRequireDraftBundleOr404:
-    def test_found(self):
-        mock_draft = MagicMock()
-        mock_draft.skill_id = 2
-        mock_skill = MagicMock()
-        db = MagicMock()
-        db.get.side_effect = [mock_draft, mock_skill]
-        assert require_draft_bundle_or_404(db, 1) == (mock_draft, mock_skill)
-
-    def test_draft_not_found(self):
-        db = MagicMock()
-        db.get.return_value = None
-        with pytest.raises(HTTPException) as exc:
-            require_draft_bundle_or_404(db, 1)
-        assert exc.value.status_code == 404
-        assert "draft" in exc.value.detail
-
-    def test_skill_not_found(self):
-        mock_draft = MagicMock()
-        mock_draft.skill_id = 2
-        db = MagicMock()
-        db.get.side_effect = [mock_draft, None]
-        with pytest.raises(HTTPException) as exc:
-            require_draft_bundle_or_404(db, 1)
-        assert exc.value.status_code == 404
-        assert "skill" in exc.value.detail
-
-
-class TestRequireReleaseBundleOr404:
-    def test_found(self):
-        mock_release = MagicMock()
-        mock_release.skill_version_id = 2
-        mock_version = MagicMock()
-        mock_version.skill_id = 3
-        mock_skill = MagicMock()
-        db = MagicMock()
-        db.get.side_effect = [mock_release, mock_version, mock_skill]
-        assert require_release_bundle_or_404(db, 1) == (mock_release, mock_version, mock_skill)
-
-    def test_release_not_found(self):
-        db = MagicMock()
-        db.get.return_value = None
-        with pytest.raises(HTTPException) as exc:
-            require_release_bundle_or_404(db, 1)
-        assert exc.value.status_code == 404
-        assert "release" in exc.value.detail
-
-    def test_version_not_found(self):
-        mock_release = MagicMock()
-        mock_release.skill_version_id = 2
-        db = MagicMock()
-        db.get.side_effect = [mock_release, None]
-        with pytest.raises(HTTPException) as exc:
-            require_release_bundle_or_404(db, 1)
-        assert exc.value.status_code == 404
-        assert "version" in exc.value.detail
-
-    def test_skill_not_found(self):
-        mock_release = MagicMock()
-        mock_release.skill_version_id = 2
-        mock_version = MagicMock()
-        mock_version.skill_id = 3
-        db = MagicMock()
-        db.get.side_effect = [mock_release, mock_version, None]
-        with pytest.raises(HTTPException) as exc:
-            require_release_bundle_or_404(db, 1)
-        assert exc.value.status_code == 404
-        assert "skill" in exc.value.detail

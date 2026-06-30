@@ -7,9 +7,13 @@ from infinitas_skill.install.distribution import DistributionError, verify_distr
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Verify a stable distribution manifest against the signed attestation payload and bundle')
-    parser.add_argument('manifest', help='Path to the distribution manifest JSON file')
-    parser.add_argument('--json', action='store_true', help='Print machine-readable verification details')
+    parser = argparse.ArgumentParser(
+        description="Verify a stable distribution manifest against the signed attestation payload and bundle"
+    )
+    parser.add_argument("manifest", help="Path to the distribution manifest JSON file")
+    parser.add_argument(
+        "--json", action="store_true", help="Print machine-readable verification details"
+    )
     return parser.parse_args()
 
 
@@ -18,7 +22,7 @@ def main():
     try:
         result = verify_distribution_manifest(args.manifest)
     except DistributionError as exc:
-        print(f'FAIL: {exc}', file=sys.stderr)
+        print(f"FAIL: {exc}", file=sys.stderr)
         return 1
     if args.json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
@@ -29,5 +33,5 @@ def main():
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     raise SystemExit(main())

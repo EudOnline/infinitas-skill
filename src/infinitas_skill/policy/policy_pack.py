@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 from pathlib import Path
+from typing import Any, cast
 
 SUPPORTED_DOMAINS = {
     "promotion_policy",
@@ -201,7 +202,7 @@ def load_policy_pack(root: Path, name: str) -> dict:
     errors = _validate_pack(payload, name)
     if errors:
         raise PolicyPackError(errors)
-    return payload
+    return cast(dict[Any, Any], payload)
 
 
 def load_policy_domain_resolution(root: Path, domain: str) -> dict:
@@ -209,7 +210,7 @@ def load_policy_domain_resolution(root: Path, domain: str) -> dict:
     if domain not in SUPPORTED_DOMAINS:
         raise PolicyPackError([f"unsupported policy domain: {domain!r}"])
 
-    effective = {}
+    effective: dict[str, Any] = {}
     saw_source = False
     effective_sources = []
     selection = load_policy_pack_selection(root)
@@ -258,4 +259,5 @@ def load_policy_domain_resolution(root: Path, domain: str) -> dict:
 
 
 def load_effective_policy_domain(root: Path, domain: str) -> dict:
-    return load_policy_domain_resolution(root, domain)["effective"]
+    result = load_policy_domain_resolution(root, domain)["effective"]
+    return cast(dict[Any, Any], result)

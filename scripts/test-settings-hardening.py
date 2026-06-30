@@ -107,7 +107,7 @@ def scenario_production_requires_explicit_bootstrap_users() -> None:
     try:
         env = build_env(tmpdir)
         env["INFINITAS_SERVER_ENV"] = "production"
-        env["INFINITAS_SERVER_SECRET_KEY"] = "prod-secret-key"
+        env["INFINITAS_SERVER_SECRET_KEY"] = "Th9jQ2xLp0vWn5sKc8aBz1yEf4gHi6mNo7PqRtu3w"
         env["INFINITAS_SERVER_ALLOWED_HOSTS"] = json.dumps(["registry.example.com"])
 
         missing_bootstrap = run_settings_probe(env, expect=1)
@@ -133,7 +133,7 @@ def scenario_production_requires_explicit_allowed_hosts() -> None:
     try:
         env = build_env(tmpdir)
         env["INFINITAS_SERVER_ENV"] = "production"
-        env["INFINITAS_SERVER_SECRET_KEY"] = "prod-secret-key"
+        env["INFINITAS_SERVER_SECRET_KEY"] = "Th9jQ2xLp0vWn5sKc8aBz1yEf4gHi6mNo7PqRtu3w"
         env["INFINITAS_SERVER_BOOTSTRAP_USERS"] = json.dumps(FIXTURE_BOOTSTRAP_USERS)
 
         missing_hosts = run_settings_probe(env, expect=1)
@@ -162,7 +162,7 @@ def scenario_test_mode_can_use_fixture_defaults() -> None:
 
         if payload.get("environment") != "test":
             fail(f"expected test environment payload, got {payload}")
-        if payload.get("secret_key") != "change-me":
+        if payload.get("secret_key") != "dev-only-insecure-key":
             fail(f"expected test mode to keep fixture secret defaults, got {payload}")
 
         bootstrap_users = payload.get("bootstrap_users") or []
@@ -180,7 +180,7 @@ def scenario_production_rejects_invalid_registry_read_tokens() -> None:
     try:
         env = build_env(tmpdir)
         env["INFINITAS_SERVER_ENV"] = "production"
-        env["INFINITAS_SERVER_SECRET_KEY"] = "prod-secret-key"
+        env["INFINITAS_SERVER_SECRET_KEY"] = "Th9jQ2xLp0vWn5sKc8aBz1yEf4gHi6mNo7PqRtu3w"
         env["INFINITAS_SERVER_ALLOWED_HOSTS"] = json.dumps(["registry.example.com"])
         env["INFINITAS_SERVER_BOOTSTRAP_USERS"] = json.dumps(FIXTURE_BOOTSTRAP_USERS)
 

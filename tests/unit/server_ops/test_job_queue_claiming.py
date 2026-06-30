@@ -17,9 +17,6 @@ def _configure_worker_env(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("INFINITAS_SERVER_DATABASE_URL", f"sqlite:///{tmp_path / 'server.db'}")
     monkeypatch.setenv("INFINITAS_SERVER_ARTIFACT_PATH", str(tmp_path / "artifacts"))
     monkeypatch.setenv("INFINITAS_SERVER_BOOTSTRAP_USERS", "[]")
-    monkeypatch.setenv("INFINITAS_MEMORY_BACKEND", "disabled")
-    monkeypatch.setenv("INFINITAS_MEMORY_CONTEXT_ENABLED", "0")
-    monkeypatch.setenv("INFINITAS_MEMORY_WRITE_ENABLED", "0")
 
 
 def test_job_lease_metadata_round_trips_through_sqlalchemy(tmp_path) -> None:
@@ -102,8 +99,8 @@ def test_claim_next_job_is_atomic_under_concurrency(monkeypatch, tmp_path) -> No
     with session_factory() as session:
         enqueue_job(
             session,
-            kind="memory_curation",
-            payload={"action": "archive", "apply": False},
+            kind="materialize_release",
+            payload={"release_id": 42},
             requested_by=None,
         )
 
@@ -160,8 +157,8 @@ def test_claim_next_job_sets_lease_metadata_for_queued_work(tmp_path) -> None:
     with session_factory() as session:
         enqueue_job(
             session,
-            kind="memory_curation",
-            payload={"action": "archive", "apply": False},
+            kind="materialize_release",
+            payload={"release_id": 42},
             requested_by=None,
         )
 
@@ -239,9 +236,10 @@ def test_process_job_refreshes_lease_before_work_and_clears_it_on_completion(
 
     with session_factory() as session:
         job = Job(
-            kind="memory_curation",
+            kind="materialize_release",
             status="running",
-            payload_json='{"action":"archive","apply":false}',
+            payload_json='{"release_id": 42}',
+            release_id=42,
             started_at=stale_claimed_at,
             heartbeat_at=stale_claimed_at,
             lease_expires_at=stale_claimed_at + timedelta(minutes=1),
@@ -251,19 +249,19 @@ def test_process_job_refreshes_lease_before_work_and_clears_it_on_completion(
         session.commit()
         job_id = int(job.id)
 
-    def fake_process_memory_curation_job(session, job):
+    def fake_process_materialize_release_job(session, job, settings):
         observed["heartbeat_at"] = job.heartbeat_at
         observed["lease_expires_at"] = job.lease_expires_at
         assert job.heartbeat_at is not None
         assert job.lease_expires_at is not None
         assert job.heartbeat_at.replace(tzinfo=None) > old_heartbeat
         assert job.lease_expires_at > job.heartbeat_at
-        return {"ok": True}
+        return job
 
     monkeypatch.setattr(
         worker_module,
-        "_process_memory_curation_job",
-        fake_process_memory_curation_job,
+        "_process_materialize_release_job",
+        fake_process_materialize_release_job,
     )
 
     worker_module.process_job(job_id)
@@ -294,9 +292,10 @@ def test_process_job_clears_lease_metadata_when_work_fails(monkeypatch, tmp_path
 
     with session_factory() as session:
         job = Job(
-            kind="memory_curation",
+            kind="materialize_release",
             status="running",
-            payload_json='{"action":"archive","apply":false}',
+            payload_json='{"release_id": 42}',
+            release_id=42,
             started_at=stale_claimed_at,
             heartbeat_at=stale_claimed_at,
             lease_expires_at=stale_claimed_at + timedelta(minutes=1),
@@ -306,7 +305,7 @@ def test_process_job_clears_lease_metadata_when_work_fails(monkeypatch, tmp_path
         session.commit()
         job_id = int(job.id)
 
-    def fake_process_memory_curation_job(session, job):
+    def fake_process_materialize_release_job(session, job, settings):
         assert job.heartbeat_at is not None
         assert job.lease_expires_at is not None
         assert job.heartbeat_at.replace(tzinfo=None) > old_heartbeat
@@ -314,8 +313,8 @@ def test_process_job_clears_lease_metadata_when_work_fails(monkeypatch, tmp_path
 
     monkeypatch.setattr(
         worker_module,
-        "_process_memory_curation_job",
-        fake_process_memory_curation_job,
+        "_process_materialize_release_job",
+        fake_process_materialize_release_job,
     )
 
     try:

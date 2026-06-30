@@ -2,7 +2,7 @@
 audience: contributors, reviewers, compatibility maintainers
 owner: repository maintainers
 source_of_truth: legacy platform contract landing page
-last_reviewed: 2026-04-21
+last_reviewed: 2026-06-15
 status: legacy
 ---
 

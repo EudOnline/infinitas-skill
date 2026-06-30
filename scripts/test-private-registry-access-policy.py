@@ -120,17 +120,20 @@ def create_exposure(
     )
     if response.status_code != 201:
         fail(
-            "expected exposure creation to return 201, "
-            f"got {response.status_code}: {response.text}"
+            f"expected exposure creation to return 201, got {response.status_code}: {response.text}"
         )
     return response.json()
 
 
-def approve_exposure_review(client, session_factory, headers: dict[str, str], exposure_id: int) -> None:
+def approve_exposure_review(
+    client, session_factory, headers: dict[str, str], exposure_id: int
+) -> None:
     from server.models import ReviewCase
 
     with session_factory() as session:
-        review_case = session.scalar(select(ReviewCase).where(ReviewCase.exposure_id == exposure_id))
+        review_case = session.scalar(
+            select(ReviewCase).where(ReviewCase.exposure_id == exposure_id)
+        )
         if review_case is None:
             fail(f"expected review case for exposure {exposure_id}")
         review_case_id = review_case.id
@@ -182,22 +185,30 @@ def scenario_registry_access_uses_private_first_credentials() -> None:
             headers={"Authorization": "Bearer definitely-invalid-token"},
         )
         if unauthorized.status_code != 401:
-            fail(f"expected invalid registry token to return 401, got {unauthorized.status_code}: {unauthorized.text}")
+            fail(
+                f"expected invalid registry token to return 401, got {unauthorized.status_code}: {unauthorized.text}"
+            )
 
         anonymous = client.get("/registry/ai-index.json")
         if anonymous.status_code != 200:
-            fail(f"expected anonymous registry ai-index to return 200, got {anonymous.status_code}: {anonymous.text}")
+            fail(
+                f"expected anonymous registry ai-index to return 200, got {anonymous.status_code}: {anonymous.text}"
+            )
         anonymous_names = [
             item.get("qualified_name")
             for item in (anonymous.json().get("skills") or [])
             if isinstance(item, dict)
         ]
         if anonymous_names != ["fixture-maintainer/policy-public-skill"]:
-            fail(f"expected anonymous ai-index to contain only public release, got {anonymous_names!r}")
+            fail(
+                f"expected anonymous ai-index to contain only public release, got {anonymous_names!r}"
+            )
 
         authorized = client.get("/registry/ai-index.json", headers=headers)
         if authorized.status_code != 200:
-            fail(f"expected user token ai-index to return 200, got {authorized.status_code}: {authorized.text}")
+            fail(
+                f"expected user token ai-index to return 200, got {authorized.status_code}: {authorized.text}"
+            )
         authorized_names = [
             item.get("qualified_name")
             for item in (authorized.json().get("skills") or [])
@@ -208,7 +219,9 @@ def scenario_registry_access_uses_private_first_credentials() -> None:
 
         me_response = client.get("/api/v1/me", headers=headers)
         if me_response.status_code != 200:
-            fail(f"expected /api/v1/me to return 200, got {me_response.status_code}: {me_response.text}")
+            fail(
+                f"expected /api/v1/me to return 200, got {me_response.status_code}: {me_response.text}"
+            )
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 

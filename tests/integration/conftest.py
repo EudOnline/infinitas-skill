@@ -1,4 +1,5 @@
 """Shared test helpers for integration tests that need a library client with skill data."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -12,16 +13,17 @@ from tests.integration.test_private_registry_release_materialization import (
 
 
 def _publish_skill_release(client, *, headers: dict) -> int:
-    """Create a skill via the publish API and return its object ID."""
-    object_response = client.put(
-        "/api/v1/publish/objects/test-library-skill",
+    """Create a skill via the authoring API and return its object ID."""
+    object_response = client.post(
+        "/api/v1/skills",
         headers=headers,
         json={
+            "slug": "test-library-skill",
             "display_name": "Test Library Skill",
             "summary": "A skill for integration testing",
         },
     )
-    assert object_response.status_code == 200, object_response.text
+    assert object_response.status_code == 201, object_response.text
     return object_response.json()["id"]
 
 
@@ -42,16 +44,30 @@ def _prepare_library_client(
     headers = {"Authorization": "Bearer fixture-maintainer-token"}
     skill_id = _publish_skill_release(client, headers=headers)
 
-    from server.worker import run_worker_loop
-
-    release_response = client.post(
-        f"/api/v1/publish/objects/{skill_id}/releases",
+    draft_response = client.post(
+        f"/api/v1/skills/{skill_id}/drafts",
         headers=headers,
         json={
-            "version": "1.0.0",
             "content_ref": "git+https://example.com/test.git#0123456789abcdef0123456789abcdef01234567",
             "metadata": {"entrypoint": "SKILL.md"},
         },
+    )
+    assert draft_response.status_code == 201, draft_response.text
+    draft_id = draft_response.json()["id"]
+
+    seal_response = client.post(
+        f"/api/v1/drafts/{draft_id}/seal",
+        headers=headers,
+        json={"version": "1.0.0"},
+    )
+    assert seal_response.status_code == 201, seal_response.text
+    version_id = seal_response.json()["skill_version"]["id"]
+
+    from server.worker import run_worker_loop
+
+    release_response = client.post(
+        f"/api/v1/versions/{version_id}/releases",
+        headers=headers,
     )
     assert release_response.status_code == 201, release_response.text
     run_worker_loop(limit=1)

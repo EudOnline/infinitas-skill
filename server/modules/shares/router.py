@@ -71,6 +71,8 @@ def create_share_link(
     except share_service.ShareLinkError as exc:
         raise _translate_error(exc) from exc
     db.commit()
+    base_url = str(request.base_url).rstrip("/")
+    share["install_url"] = f"{base_url}{share['install_path']}"
     return share
 
 
@@ -88,7 +90,7 @@ def list_share_links(
     return {"items": items, "total": len(items)}
 
 
-@router.post("/share-links/{share_id}/revoke")
+@router.post("/{share_id}/revoke")
 def revoke_share_link(
     share_id: int,
     context: AccessContext = Depends(get_current_access_context),
@@ -103,7 +105,7 @@ def revoke_share_link(
     return share
 
 
-@router.post("/share-links/{share_id}/resolve")
+@router.post("/{share_id}/resolve")
 def resolve_share_link(
     share_id: int,
     payload: ShareLinkResolveRequest,

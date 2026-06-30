@@ -72,9 +72,7 @@ def normalize_install_integrity_policy(payload):
             "install-integrity policy freshness.stale_policy must be one of "
             "'ignore', 'warn', or 'fail'"
         )
-    never_verified_policy = freshness.get(
-        "never_verified_policy", DEFAULT_NEVER_VERIFIED_POLICY
-    )
+    never_verified_policy = freshness.get("never_verified_policy", DEFAULT_NEVER_VERIFIED_POLICY)
     if never_verified_policy not in {"ignore", "warn", "fail"}:
         raise InstallIntegrityPolicyError(
             "install-integrity policy freshness.never_verified_policy must be one of "

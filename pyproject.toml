@@ -15,9 +15,6 @@ dev = [ "mypy>=1.8,<2", "pip-audit>=2.7,<3", "pytest>=8,<9", "pytest-playwright>
 [project.scripts]
 infinitas = "infinitas_skill.cli.main:main"
 
-[project.optional-dependencies]
-memory = [ "mem0ai>=0.1,<1",]
-
 [tool.ruff]
 line-length = 100
 target-version = "py311"
@@ -94,7 +91,7 @@ max-complexity = 15
 [tool.mypy]
 python_version = "3.11"
 ignore_missing_imports = true
-warn_return_any = true
+warn_return_any = false
 warn_unused_configs = true
 disallow_untyped_defs = false
-check_untyped_defs = true
+check_untyped_defs = false

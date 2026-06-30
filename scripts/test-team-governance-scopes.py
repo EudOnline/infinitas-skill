@@ -63,13 +63,21 @@ def prepare_repo():
         ROOT,
         repo,
         ignore=shutil.ignore_patterns(
-            ".git",
-            ".worktrees",
-            ".planning",
-            "__pycache__",
-            ".cache",
             "catalog",
-            "scripts/__pycache__",
+            ".git",
+            ".planning",
+            "scripts/__pycache____pycache__",
+            ".worktrees",
+            ".cache",
+            "*.pyc.coverage",
+            ".gitignore",
+            ".mypy_cache",
+            ".pytest_cache.ruff_cache",
+            ".state",
+            ".venv",
+            "buildinfinitas_hosted_registry.egg-info",
+            "node_modules",
+            "tmp",
         ),
     )
     return tmpdir, repo
@@ -305,21 +313,23 @@ def scenario_team_review_scope_and_policy_trace():
 
         run(
             [
-                str(repo / "scripts" / "request-review.sh"),
-                "delegated-review-fixture",
-                "--note",
-                "Delegated team review",
+                sys.executable,
+                "-c",
+                (
+                    "from infinitas_skill.policy.reviews import request_review; "
+                    f"request_review({str(skill_dir)!r}, note='Delegated team review')"
+                ),
             ],
             cwd=repo,
         )
         run(
             [
-                str(repo / "scripts" / "approve-skill.sh"),
-                "delegated-review-fixture",
-                "--reviewer",
-                "alice",
-                "--decision",
-                "approved",
+                sys.executable,
+                "-c",
+                (
+                    "from infinitas_skill.policy.reviews import record_review_decision; "
+                    f"record_review_decision({str(skill_dir)!r}, 'alice', 'approved')"
+                ),
             ],
             cwd=repo,
         )
@@ -345,12 +355,12 @@ def scenario_team_review_scope_and_policy_trace():
 
         run(
             [
-                str(repo / "scripts" / "approve-skill.sh"),
-                "delegated-review-fixture",
-                "--reviewer",
-                "bob",
-                "--decision",
-                "approved",
+                sys.executable,
+                "-c",
+                (
+                    "from infinitas_skill.policy.reviews import record_review_decision; "
+                    f"record_review_decision({str(skill_dir)!r}, 'bob', 'approved')"
+                ),
             ],
             cwd=repo,
         )

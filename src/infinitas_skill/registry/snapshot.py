@@ -64,12 +64,10 @@ def _snapshot_sort_key(item):
 def summarize_snapshot(root: Path, payload, metadata_path: Path):
     if not isinstance(payload, dict):
         return None
-    source_registry = (
-        payload.get("source_registry") if isinstance(payload.get("source_registry"), dict) else {}
-    )
-    refresh_state = (
-        payload.get("refresh_state") if isinstance(payload.get("refresh_state"), dict) else {}
-    )
+    source_registry_raw = payload.get("source_registry")
+    source_registry = source_registry_raw if isinstance(source_registry_raw, dict) else {}
+    refresh_state_raw = payload.get("refresh_state")
+    refresh_state = refresh_state_raw if isinstance(refresh_state_raw, dict) else {}
     snapshot_id = payload.get("snapshot_id") or metadata_path.parent.name
     return {
         "registry": payload.get("registry") or metadata_path.parent.parent.name,

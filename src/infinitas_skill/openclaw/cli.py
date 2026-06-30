@@ -6,6 +6,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any, cast
 
 from infinitas_skill.root import ROOT
 
@@ -66,13 +67,13 @@ def run_openclaw_skill_validate(*, skill_dir: str, as_json: bool = False) -> int
     return 0
 
 
-def _load_plugin_payload(path: Path) -> dict:
+def _load_plugin_payload(path: Path) -> dict[Any, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if isinstance(payload.get("plugin_capabilities"), dict):
-        return payload["plugin_capabilities"]
+        return cast(dict[Any, Any], payload["plugin_capabilities"])
     if isinstance(payload.get("capabilities"), dict):
-        return payload["capabilities"]
-    return payload if isinstance(payload, dict) else {}
+        return cast(dict[Any, Any], payload["capabilities"])
+    return cast(dict[Any, Any], payload) if isinstance(payload, dict) else {}
 
 
 def run_openclaw_plugin_inspect(*, plugin_path: str, as_json: bool = False) -> int:

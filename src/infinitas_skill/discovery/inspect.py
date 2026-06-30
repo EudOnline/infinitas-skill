@@ -7,9 +7,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from .inspect_memory import load_inspect_memory_hints
 from .inspect_view import build_inspect_payload, dependency_summary, derive_trust_state
-from .memory_audit import MemoryAuditRecorder, emit_inspect_memory_audit
 
 logger = logging.getLogger(__name__)
 
@@ -54,12 +52,7 @@ def inspect_skill(
     name: str,
     version: str | None = None,
     *,
-    memory_provider: Any | None = None,
-    memory_scope: dict | None = None,
-    memory_context_enabled: bool = True,
-    memory_top_k: int = 3,
     target_agent: str | None = None,
-    audit_recorder: MemoryAuditRecorder | None = None,
 ) -> dict[str, Any]:
     root = Path(root).resolve()
     ai_index = _load_ai_index(root)
@@ -74,8 +67,11 @@ def inspect_skill(
     if skill_entry is None:
         raise ValueError(f"could not resolve skill {name!r}")
 
-    resolved_version = (
-        version or skill_entry.get("latest_version") or skill_entry.get("default_install_version")
+    resolved_version = str(
+        version
+        or skill_entry.get("latest_version")
+        or skill_entry.get("default_install_version")
+        or ""
     )
     version_entry = (skill_entry.get("versions") or {}).get(resolved_version) or {}
     distribution = distributions.get(
@@ -117,14 +113,6 @@ def inspect_skill(
         manifest_payload,
         provenance_payload,
         distribution,
-    )
-    memory_hints = load_inspect_memory_hints(
-        skill_ref=skill_entry.get("qualified_name") or skill_entry.get("name") or name,
-        target_agent=target_agent,
-        memory_provider=memory_provider,
-        memory_scope=memory_scope,
-        memory_context_enabled=memory_context_enabled,
-        memory_top_k=memory_top_k,
     )
     provenance_view = {
         "attestation_path": provenance_path,
@@ -179,7 +167,6 @@ def inspect_skill(
         provenance_view=provenance_view,
         distribution_view=distribution_view,
         trust_view=trust_view,
-        memory_hints=memory_hints,
     )
     runtime = dict(skill_entry.get("runtime") or {})
     readiness = dict(runtime.get("readiness") or {})
@@ -212,13 +199,6 @@ def inspect_skill(
     }
     payload["background_tasks"] = dict(runtime.get("background_tasks") or {"required": False})
     payload["subagents"] = dict(runtime.get("subagents") or {"required": False})
-    emit_inspect_memory_audit(
-        audit_recorder=audit_recorder,
-        skill_ref=skill_entry.get("qualified_name") or skill_entry.get("name") or name,
-        version=resolved_version,
-        target_agent=target_agent,
-        payload=payload,
-    )
     return payload
 
 

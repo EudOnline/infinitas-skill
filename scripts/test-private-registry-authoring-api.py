@@ -167,7 +167,9 @@ def scenario_authoring_skill_draft_and_seal() -> None:
             json={"version": "0.1.0"},
         )
         if seal_response.status_code != 201:
-            fail(f"expected seal to return 201, got {seal_response.status_code}: {seal_response.text}")
+            fail(
+                f"expected seal to return 201, got {seal_response.status_code}: {seal_response.text}"
+            )
         seal_payload = seal_response.json()
         if seal_payload.get("version") != "0.1.0":
             fail(f"expected top-level sealed version 0.1.0 in response, got {seal_payload}")
@@ -185,7 +187,9 @@ def scenario_authoring_skill_draft_and_seal() -> None:
             if draft.state != "sealed":
                 fail(f"expected persisted draft state=sealed, got {draft.state!r}")
 
-            version = session.scalar(select(SkillVersion).where(SkillVersion.created_from_draft_id == draft_id))
+            version = session.scalar(
+                select(SkillVersion).where(SkillVersion.created_from_draft_id == draft_id)
+            )
             if version is None:
                 fail("expected skill version to be created from sealed draft")
             expected_content_digest = sha256_prefixed(pinned_content_ref)
@@ -217,7 +221,9 @@ def scenario_authoring_skill_draft_and_seal() -> None:
             )
         branched_draft_payload = branched_draft_response.json()
         if int(branched_draft_payload.get("base_version_id") or 0) != int(sealed_version["id"]):
-            fail(f"expected branched draft base_version_id to round-trip, got {branched_draft_payload}")
+            fail(
+                f"expected branched draft base_version_id to round-trip, got {branched_draft_payload}"
+            )
 
         create_other_skill_response = client.post(
             "/api/v1/skills",

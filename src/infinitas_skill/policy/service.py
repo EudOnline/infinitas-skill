@@ -539,7 +539,7 @@ def policy_main(argv: list[str] | None = None, *, prog: str | None = None) -> in
     if handler is None:
         parser.print_help()
         return 0
-    return handler(args)
+    return int(handler(args))
 
 
 __all__ = [

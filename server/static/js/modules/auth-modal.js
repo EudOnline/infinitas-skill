@@ -125,7 +125,7 @@ export function createAuthModalController(options) {
 
     try {
       const csrfToken = getCsrfToken();
-      const res = await fetch(`/api/auth/login?lang=${encodeURIComponent(currentPageLanguage())}`, {
+      const res = await fetch(`/api/v1/auth/login?lang=${encodeURIComponent(currentPageLanguage())}`, {
         method: 'POST',
         credentials: 'same-origin',
         headers: csrfToken ? { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken } : { 'Content-Type': 'application/json' },

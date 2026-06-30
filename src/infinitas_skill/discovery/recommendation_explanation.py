@@ -24,18 +24,17 @@ def confidence_view(
     score_gap_from_top: int,
     score_gap_to_runner_up: int | None = None,
 ) -> dict[str, Any]:
-    match_strength = (
-        factors.get("match_strength") if isinstance(factors.get("match_strength"), int) else 0
-    )
+    match_strength_raw = factors.get("match_strength")
+    match_strength = match_strength_raw if isinstance(match_strength_raw, int) else 0
     compatibility = bool(factors.get("compatibility"))
-    trust = factors.get("trust") if isinstance(factors.get("trust"), dict) else {}
-    trust_score = trust.get("score") if isinstance(trust.get("score"), int) else 0
-    quality_score = factors.get("quality") if isinstance(factors.get("quality"), int) else 0
-    freshness_score = (
-        factors.get("verification_freshness_score")
-        if isinstance(factors.get("verification_freshness_score"), int)
-        else 0
-    )
+    trust_raw = factors.get("trust")
+    trust = trust_raw if isinstance(trust_raw, dict) else {}
+    trust_score_raw = trust.get("score")
+    trust_score = trust_score_raw if isinstance(trust_score_raw, int) else 0
+    quality_score_raw = factors.get("quality")
+    quality_score = quality_score_raw if isinstance(quality_score_raw, int) else 0
+    freshness_score_raw = factors.get("verification_freshness_score")
+    freshness_score = freshness_score_raw if isinstance(freshness_score_raw, int) else 0
 
     reasons = []
     strength = 0
@@ -146,8 +145,8 @@ def annotate_ranked_recommendations(
                     ),
                 )
             )
-            result["comparative_signals"]["compatibility_gap_from_runner_up"] = (
-                compatibility_gap(runner_up_factors, factors)
+            result["comparative_signals"]["compatibility_gap_from_runner_up"] = compatibility_gap(
+                runner_up_factors, factors
             )
         result["confidence"] = confidence_view(
             factors=factors,
@@ -163,53 +162,14 @@ def build_recommendation_explanation(
     *,
     scored: list[tuple[int, int, str, dict[str, Any]]],
     visible: list[dict[str, Any]],
-    memory_context: dict[str, Any] | None,
-    memory_records_count: int,
-    memory_context_enabled: bool,
 ) -> dict[str, Any]:
-    curation_summary = (
-        dict(memory_context.get("curation_summary") or {})
-        if isinstance(memory_context, dict)
-        else {}
-    )
-    memory_summary = {
-        "used": bool(
-            memory_context_enabled
-            and any(
-                isinstance(entry[3].get("memory_signals"), dict)
-                and isinstance(entry[3]["memory_signals"].get("applied_boost"), int)
-                and entry[3]["memory_signals"]["applied_boost"] > 0
-                for entry in scored
-            )
-        ),
-        "backend": (
-            memory_context.get("backend") if isinstance(memory_context, dict) else "disabled"
-        ),
-        "matched_count": memory_records_count,
-        "advisory_only": True,
-        "status": memory_context.get("status") if isinstance(memory_context, dict) else "disabled",
-    }
-    input_count = curation_summary.get("input_count")
-    if isinstance(input_count, int):
-        memory_summary["retrieved_count"] = input_count
-    if curation_summary:
-        memory_summary["curation_summary"] = curation_summary
-    explanation = {
-        "memory_summary": memory_summary
-    }
-    if isinstance(memory_context, dict):
-        memory_error = memory_context.get("error")
-        if isinstance(memory_error, str) and memory_error.strip():
-            explanation["memory_summary"]["error"] = memory_error
-
+    explanation: dict[str, Any] = {}
     if not visible:
         return explanation
 
     winner = visible[0]
     runner_up = scored[1][3] if len(scored) > 1 else None
-    score_gap_to_runner_up = (
-        scored[0][0] - scored[1][0] if len(scored) > 1 else None
-    )
+    score_gap_to_runner_up = scored[0][0] - scored[1][0] if len(scored) > 1 else None
     winner_reason = winner.get("recommendation_reason") or "top deterministic recommendation"
     if runner_up:
         winner_reason = (

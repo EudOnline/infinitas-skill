@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from typing import Any
 
 from fastapi import Request
@@ -109,17 +107,21 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
                 if lang == "zh"
                 else f"{counts.pending_reviews} review / {counts.queued_jobs} pending"
             ),
-            "detail": f"{counts.running_jobs} 运行中" if lang == "zh" else f"{counts.running_jobs} running",
+            "detail": f"{counts.running_jobs} 运行中"
+            if lang == "zh"
+            else f"{counts.running_jobs} running",
         },
     ]
-    inspect_example_target = featured_skills[0]["qualified_name"] if featured_skills else "<publisher>/<skill>"
+    inspect_example_target = (
+        featured_skills[0]["qualified_name"] if featured_skills else "<publisher>/<skill>"
+    )
     command_examples = [
         {
             "label": pick_lang(lang, "执行命令", "Run command"),
             "title": pick_lang(lang, "搜索候选", "Search options"),
             "short_label": pick_lang(lang, "搜索", "Search"),
             "command": (
-                'uv run infinitas discovery recommend '
+                "uv run infinitas discovery recommend "
                 '"Need a codex skill for repository operations" --target-agent codex --json'
             ),
         },
@@ -127,9 +129,7 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
             "label": pick_lang(lang, "执行命令", "Run command"),
             "title": pick_lang(lang, "检查细节", "Inspect details"),
             "short_label": pick_lang(lang, "检查", "Inspect"),
-            "command": (
-                f"uv run infinitas discovery inspect {inspect_example_target} --json"
-            ),
+            "command": (f"uv run infinitas discovery inspect {inspect_example_target} --json"),
         },
     ]
     human_prompts = [

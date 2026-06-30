@@ -9,21 +9,21 @@ from infinitas_skill.skills.openclaw import validate_exported_openclaw_dir
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--skill-dir', required=True)
-    parser.add_argument('--public-ready', action='store_true')
-    parser.add_argument('--json', action='store_true')
+    parser.add_argument("--skill-dir", required=True)
+    parser.add_argument("--public-ready", action="store_true")
+    parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
     result = validate_exported_openclaw_dir(Path(args.skill_dir), public_ready=args.public_ready)
     if args.json:
         print(json.dumps(result, ensure_ascii=False))
     else:
-        if result['errors']:
-            print('\n'.join(result['errors']), file=sys.stderr)
+        if result["errors"]:
+            print("\n".join(result["errors"]), file=sys.stderr)
         else:
             print(f"OK: {args.skill_dir}")
-    raise SystemExit(1 if result['errors'] else 0)
+    raise SystemExit(1 if result["errors"] else 0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

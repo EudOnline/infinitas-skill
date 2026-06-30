@@ -4,7 +4,6 @@ import errno
 import fcntl
 import json
 import os
-import shutil
 import subprocess
 import time
 from contextlib import contextmanager
@@ -126,70 +125,10 @@ def current_branch(repo_path: Path) -> str:
     return result.stdout.strip() or 'main'
 
 
-def commit_and_push(repo_path: Path, *, message: str) -> list[str]:
-    logs: list[str] = []
-    if git_status_is_clean(repo_path):
-        return logs
-    logs.append(run_command(repo_path, ['git', 'add', '.']))
-    logs.append(run_command(repo_path, ['git', 'commit', '-m', message]))
-    logs.append(run_command(repo_path, ['git', 'push', 'origin', current_branch(repo_path)]))
-    return logs
-
-
 def _normalize_file_content(value) -> str:
     if isinstance(value, (dict, list)):
         return json.dumps(value, ensure_ascii=False, indent=2) + '\n'
     return str(value)
 
 
-def materialize_submission_skill(
-    repo_path: Path,
-    *,
-    skill_name: str,
-    payload: dict,
-    review_payload: dict | None = None,
-    lock_path: Path | None = None,
-) -> Path:
-    files = payload.get('files')
-    if not isinstance(files, dict) or not files:
-        raise RepoOpError('submission payload must contain a non-empty files object')
 
-    # Use per-namespace lock if lock_path provided, otherwise proceed without lock
-    # (caller should provide lock_path for concurrent safety)
-    def _do_materialize():
-        skill_dir = repo_path / 'skills' / 'incubating' / skill_name
-        if skill_dir.exists():
-            shutil.rmtree(skill_dir)
-        skill_dir.mkdir(parents=True, exist_ok=True)
-
-        for rel_path, content in files.items():
-            if not isinstance(rel_path, str) or not rel_path.strip():
-                raise RepoOpError(
-                    'submission payload file keys must be non-empty strings'
-                )
-            target = skill_dir / _safe_relative_path(rel_path.strip())
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(_normalize_file_content(content), encoding='utf-8')
-
-        meta_path = skill_dir / '_meta.json'
-        if not meta_path.exists():
-            raise RepoOpError('submission payload must provide _meta.json')
-        meta = json.loads(meta_path.read_text(encoding='utf-8'))
-        meta['name'] = meta.get('name') or skill_name
-        meta['status'] = 'incubating'
-        meta_path.write_text(
-            json.dumps(meta, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
-        )
-
-        if review_payload is not None:
-            (skill_dir / 'reviews.json').write_text(
-                json.dumps(review_payload, ensure_ascii=False, indent=2) + '\n',
-                encoding='utf-8',
-            )
-
-        return skill_dir
-
-    if lock_path is not None:
-        with locked_namespace(lock_path, skill_name):
-            return _do_materialize()
-    return _do_materialize()

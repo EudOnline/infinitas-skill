@@ -38,8 +38,3 @@ def test_build_site_nav_assembles_language_aware_home_and_console_links() -> Non
         {"href": "/profile?lang=en", "label": "Profile"},
         {"href": "/manage?lang=en", "label": "Management"},
     ]
-    assert build_site_nav(home=False, lang="en", variant="library") == [
-        {"href": "/?lang=en", "label": "Home"},
-        {"href": "/profile?lang=en", "label": "Profile"},
-        {"href": "/manage?lang=en", "label": "Management"},
-    ]
