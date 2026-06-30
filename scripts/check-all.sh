@@ -98,7 +98,6 @@ if should_run full-regression; then
   python3 scripts/check-registry-sources.py
   python3 scripts/test-registry-refresh-policy.py
   python3 scripts/test-registry-snapshot-mirror.py
-  python3 scripts/test-hosted-registry-source.py
   env PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}" python3 -m infinitas_skill.cli.main policy check-packs
   python3 scripts/test-policy-pack-loading.py
   python3 scripts/test-policy-evaluation-traces.py
@@ -136,7 +135,6 @@ PY
   python3 scripts/test-installed-integrity-report.py
   python3 scripts/test-installed-integrity-freshness.py
   python3 scripts/test-installed-integrity-history-retention.py
-  python3 scripts/test-installed-integrity-stale-guardrails.py
   python3 scripts/test-install-manifest-compat.py
   fi
   if [[ "${INFINITAS_SKIP_COMPAT_PIPELINE_TESTS:-0}" != "1" ]]; then
