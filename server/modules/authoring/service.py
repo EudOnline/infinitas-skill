@@ -17,12 +17,8 @@ from server.exceptions_base import (
     NotFoundError as BaseNotFoundError,
 )
 from server.modules.authoring import repository
-from server.modules.authoring.models import Skill, SkillDraft, SkillVersion
-from server.modules.authoring.schemas import (
-    SkillCreateRequest,
-    SkillDraftCreateRequest,
-    SkillDraftPatchRequest,
-)
+from server.modules.authoring.models import Skill, SkillVersion
+from server.modules.authoring.schemas import SkillCreateRequest
 from server.modules.release.models import Artifact
 
 
@@ -135,21 +131,6 @@ def resolve_version_content(
     return normalized_mode, normalized_ref, None
 
 
-def resolve_draft_content(
-    db: Session,
-    *,
-    content_mode: str | None,
-    content_ref: str | None,
-    content_upload_token: str | None,
-) -> tuple[str, str, int | None]:
-    return resolve_version_content(
-        db,
-        content_mode=content_mode,
-        content_ref=content_ref,
-        content_upload_token=content_upload_token,
-    )
-
-
 def _content_digest_for_snapshot(
     db: Session,
     *,
@@ -171,15 +152,6 @@ def _content_digest_for_snapshot(
     return sha256_prefixed(frozen_content_ref)
 
 
-def _content_digest_for_draft(db: Session, draft: SkillDraft) -> str:
-    return _content_digest_for_snapshot(
-        db,
-        content_mode=draft.content_mode,
-        content_ref=draft.content_ref,
-        content_artifact_id=draft.content_artifact_id,
-    )
-
-
 def _version_manifest(
     *,
     kind: str,
@@ -195,16 +167,6 @@ def _version_manifest(
         "content_artifact_id": content_artifact_id,
         "metadata": metadata,
     }
-
-
-def _sealed_manifest_for_draft(draft: SkillDraft, metadata: dict) -> dict:
-    return _version_manifest(
-        kind="skill_draft_manifest",
-        content_mode=draft.content_mode,
-        content_ref=draft.content_ref,
-        content_artifact_id=draft.content_artifact_id,
-        metadata=metadata,
-    )
 
 
 def create_skill_version_snapshot(
@@ -339,162 +301,3 @@ def assert_namespace_owner(
     raise ForbiddenError("skill namespace access denied")
 
 
-def create_draft(
-    db: Session,
-    *,
-    skill_id: int,
-    actor_principal_id: int,
-    is_maintainer: bool = False,
-    payload: SkillDraftCreateRequest,
-) -> SkillDraft:
-    skill = repository.get_skill(db, skill_id)
-    if skill is None:
-        raise NotFoundError("skill not found")
-    assert_namespace_owner(
-        db,
-        skill,
-        principal_id=actor_principal_id,
-        is_maintainer=is_maintainer,
-    )
-    if payload.base_version_id is not None:
-        base_version = repository.get_skill_version(db, payload.base_version_id)
-        if base_version is None:
-            raise NotFoundError("base skill version not found")
-        if base_version.skill_id != skill.id:
-            raise ConflictError("base skill version does not belong to skill")
-    content_mode, content_ref, content_artifact_id = resolve_draft_content(
-        db,
-        content_mode=payload.content_mode,
-        content_ref=payload.content_ref,
-        content_upload_token=payload.content_upload_token,
-    )
-    draft = repository.create_draft(
-        db,
-        skill_id=skill_id,
-        base_version_id=payload.base_version_id,
-        content_mode=content_mode,
-        content_ref=content_ref,
-        content_artifact_id=content_artifact_id,
-        metadata_json=canonical_metadata_json(payload.metadata),
-        updated_by_principal_id=actor_principal_id,
-    )
-    db.commit()
-    db.refresh(draft)
-    return draft
-
-
-def patch_draft(
-    db: Session,
-    *,
-    draft_id: int,
-    actor_principal_id: int,
-    is_maintainer: bool = False,
-    payload: SkillDraftPatchRequest,
-) -> SkillDraft:
-    draft = db.scalar(select(SkillDraft).where(SkillDraft.id == draft_id).with_for_update())
-    if draft is None:
-        raise NotFoundError("draft not found")
-    if draft.state != "open":
-        raise ConflictError("sealed draft is immutable")
-    skill = repository.get_skill(db, draft.skill_id)
-    if skill is None:
-        raise NotFoundError("skill not found")
-    assert_namespace_owner(
-        db,
-        skill,
-        principal_id=actor_principal_id,
-        is_maintainer=is_maintainer,
-    )
-
-    if (
-        payload.content_mode is not None
-        or payload.content_ref is not None
-        or payload.content_upload_token is not None
-    ):
-        content_mode, content_ref, content_artifact_id = resolve_draft_content(
-            db,
-            content_mode=payload.content_mode or draft.content_mode,
-            content_ref=(
-                payload.content_ref if payload.content_ref is not None else draft.content_ref
-            ),
-            content_upload_token=(
-                payload.content_upload_token
-                if payload.content_upload_token is not None
-                else (
-                    str(draft.content_artifact_id)
-                    if draft.content_artifact_id is not None
-                    else None
-                )
-            ),
-        )
-        draft.content_mode = content_mode
-        draft.content_ref = content_ref
-        draft.content_artifact_id = content_artifact_id
-    if payload.metadata is not None:
-        draft.metadata_json = canonical_metadata_json(payload.metadata)
-    draft.updated_by_principal_id = actor_principal_id
-    db.add(draft)
-    db.commit()
-    db.refresh(draft)
-    return draft
-
-
-def seal_draft(
-    db: Session,
-    *,
-    draft_id: int,
-    actor_principal_id: int,
-    is_maintainer: bool = False,
-    version: str,
-) -> tuple[SkillDraft, SkillVersion]:
-    draft = repository.get_draft(db, draft_id)
-    if draft is None:
-        raise NotFoundError("draft not found")
-
-    # Lock draft row and re-read to prevent concurrent seal race
-    locked = db.scalar(select(SkillDraft).where(SkillDraft.id == draft_id).with_for_update())
-    if locked is not None:
-        draft = locked
-    if draft.state != "open":
-        raise ConflictError("draft is already sealed")
-
-    skill = repository.get_skill(db, draft.skill_id)
-    if skill is None:
-        raise NotFoundError("skill not found")
-    assert_namespace_owner(
-        db,
-        skill,
-        principal_id=actor_principal_id,
-        is_maintainer=is_maintainer,
-    )
-    existing_version = db.scalar(
-        select(SkillVersion)
-        .where(SkillVersion.skill_id == skill.id)
-        .where(SkillVersion.version == version)
-        .with_for_update()
-    )
-    if existing_version is not None:
-        raise ConflictError("skill version already exists")
-
-    frozen_metadata = load_metadata(draft.metadata_json)
-    content_digest = _content_digest_for_draft(db, draft)
-    metadata_digest = sha256_prefixed(canonical_metadata_json(frozen_metadata))
-    sealed_manifest = _sealed_manifest_for_draft(draft, frozen_metadata)
-
-    skill_version = repository.create_skill_version(
-        db,
-        skill_id=draft.skill_id,
-        version=version,
-        content_digest=content_digest,
-        metadata_digest=metadata_digest,
-        sealed_manifest_json=canonical_manifest_json(sealed_manifest),
-        created_from_draft_id=draft.id,
-        created_by_principal_id=actor_principal_id,
-    )
-    draft.state = "sealed"
-    draft.updated_by_principal_id = actor_principal_id
-    db.add(draft)
-    db.commit()
-    db.refresh(draft)
-    db.refresh(skill_version)
-    return draft, skill_version

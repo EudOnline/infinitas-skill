@@ -3,8 +3,41 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import subprocess
 import tempfile
 from pathlib import Path
+
+from tests.helpers.signing import add_allowed_signer, configure_git_ssh_signing
+
+
+def _prepare_signing_repo(repo: Path, signing_key: Path) -> None:
+    allowed_signers = repo / "config" / "allowed_signers"
+    allowed_signers.write_text("", encoding="utf-8")
+    add_allowed_signer(allowed_signers, identity="release-test", key_path=signing_key)
+
+    subprocess.run(["git", "init", "-b", "main"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.name", "Registry Test"], cwd=repo, check=True, capture_output=True
+    )
+    subprocess.run(
+        ["git", "config", "user.email", "registry@example.com"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
+    configure_git_ssh_signing(repo, signing_key)
+    subprocess.run(
+        ["git", "add", "config/allowed_signers", "config/signing.json"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "commit", "-m", "test: bootstrap signing config"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
 
 
 def configure_env(tmpdir: Path) -> None:
@@ -39,24 +72,17 @@ def create_ready_release(client, headers: dict[str, str], *, slug: str, display_
     assert create_skill_response.status_code == 201, create_skill_response.text
     skill_id = int(create_skill_response.json()["id"])
 
-    create_draft_response = client.post(
-        f"/api/v1/skills/{skill_id}/drafts",
+    create_version_response = client.post(
+        f"/api/v1/skills/{skill_id}/versions",
         headers=headers,
         json={
+            "version": "0.1.0",
             "content_ref": f"git+https://example.com/{slug}.git#0123456789abcdef0123456789abcdef01234567",
             "metadata": {"entrypoint": "SKILL.md"},
         },
     )
-    assert create_draft_response.status_code == 201, create_draft_response.text
-    draft_id = int(create_draft_response.json()["id"])
-
-    seal_response = client.post(
-        f"/api/v1/drafts/{draft_id}/seal",
-        headers=headers,
-        json={"version": "0.1.0"},
-    )
-    assert seal_response.status_code == 201, seal_response.text
-    version_id = int((seal_response.json().get("skill_version") or {})["id"])
+    assert create_version_response.status_code == 201, create_version_response.text
+    version_id = int(create_version_response.json()["id"])
 
     create_release_response = client.post(
         f"/api/v1/versions/{version_id}/releases",
@@ -70,10 +96,17 @@ def create_ready_release(client, headers: dict[str, str], *, slug: str, display_
     return release_id
 
 
-def test_grant_token_cannot_access_private_exposure_release() -> None:
+def test_grant_token_cannot_access_private_exposure_release(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    _prepare_signing_repo(temp_repo_copy, signing_key)
     tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-access-grant-boundary-test-"))
     try:
         configure_env(tmpdir)
+        monkeypatch.setenv("INFINITAS_SERVER_REPO_PATH", str(temp_repo_copy))
 
         from fastapi.testclient import TestClient
 

@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from server.modules.authoring.models import Skill, SkillDraft, SkillVersion
+from server.modules.authoring.models import Skill, SkillVersion
 from server.modules.shared.formatting import iso_format as _iso
 
 
@@ -83,53 +83,6 @@ class SkillView(BaseModel):
         )
 
 
-class SkillDraftCreateRequest(BaseModel):
-    content_mode: Literal["external_ref", "uploaded_bundle"] | None = None
-    base_version_id: int | None = None
-    content_ref: str = Field(default="", max_length=2000)
-    content_upload_token: str | None = Field(default=None, max_length=500)
-    metadata: dict = Field(default_factory=dict)
-
-
-class SkillDraftPatchRequest(BaseModel):
-    content_mode: Literal["external_ref", "uploaded_bundle"] | None = None
-    content_ref: str | None = Field(default=None, max_length=2000)
-    content_upload_token: str | None = Field(default=None, max_length=500)
-    metadata: dict | None = None
-
-
-class SkillDraftView(BaseModel):
-    id: int
-    skill_id: int
-    base_version_id: int | None = None
-    state: str
-    content_mode: str
-    content_ref: str
-    content_artifact_id: int | None = None
-    metadata: dict = Field(default_factory=dict)
-    updated_by_principal_id: int | None = None
-    updated_at: str
-
-    @classmethod
-    def from_model(cls, draft: SkillDraft) -> "SkillDraftView":
-        return cls(
-            id=draft.id,
-            skill_id=draft.skill_id,
-            base_version_id=draft.base_version_id,
-            state=draft.state,
-            content_mode=draft.content_mode,
-            content_ref=draft.content_ref,
-            content_artifact_id=draft.content_artifact_id,
-            metadata=_load_metadata(draft.metadata_json),
-            updated_by_principal_id=draft.updated_by_principal_id,
-            updated_at=_iso(draft.updated_at) or "",
-        )
-
-
-class SkillDraftSealRequest(BaseModel):
-    version: str = Field(min_length=1, max_length=64, pattern=SEMVER_PATTERN)
-
-
 class SkillVersionView(BaseModel):
     id: int
     skill_id: int
@@ -158,7 +111,3 @@ class SkillVersionView(BaseModel):
         )
 
 
-class SkillDraftSealResponse(BaseModel):
-    version: str
-    draft: SkillDraftView
-    skill_version: SkillVersionView

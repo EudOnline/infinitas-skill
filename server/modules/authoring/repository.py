@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from server.modules.authoring.models import Skill, SkillDraft, SkillVersion
+from server.modules.authoring.models import Skill, SkillVersion
 from server.modules.release.models import Artifact
 
 
@@ -39,36 +39,6 @@ def create_skill(
     db.add(skill)
     db.flush()
     return skill
-
-
-def get_draft(db: Session, draft_id: int) -> SkillDraft | None:
-    return db.get(SkillDraft, draft_id)
-
-
-def create_draft(
-    db: Session,
-    *,
-    skill_id: int,
-    base_version_id: int | None,
-    content_mode: str,
-    content_ref: str,
-    content_artifact_id: int | None,
-    metadata_json: str,
-    updated_by_principal_id: int | None,
-) -> SkillDraft:
-    draft = SkillDraft(
-        skill_id=skill_id,
-        base_version_id=base_version_id,
-        state="open",
-        content_mode=content_mode,
-        content_ref=content_ref,
-        content_artifact_id=content_artifact_id,
-        metadata_json=metadata_json,
-        updated_by_principal_id=updated_by_principal_id,
-    )
-    db.add(draft)
-    db.flush()
-    return draft
 
 
 def get_skill_version(db: Session, skill_version_id: int) -> SkillVersion | None:

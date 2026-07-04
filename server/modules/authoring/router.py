@@ -10,11 +10,6 @@ from server.modules.access.authz import require_any_scope
 from server.modules.authoring import service
 from server.modules.authoring.schemas import (
     SkillCreateRequest,
-    SkillDraftCreateRequest,
-    SkillDraftPatchRequest,
-    SkillDraftSealRequest,
-    SkillDraftSealResponse,
-    SkillDraftView,
     SkillVersionCreateRequest,
     SkillVersionView,
     SkillView,
@@ -107,91 +102,3 @@ def get_skill(
     return SkillView.from_model(skill)
 
 
-@router.post(
-    "/skills/{skill_id}/drafts",
-    response_model=SkillDraftView,
-    status_code=status.HTTP_201_CREATED,
-)
-def create_draft(
-    skill_id: int,
-    payload: SkillDraftCreateRequest,
-    context: AccessContext = Depends(get_current_access_context),
-    db: Session = Depends(get_db),
-):
-    principal_id = _require_authoring_principal(context)
-    is_maintainer = context.user is not None and context.user.role == "maintainer"
-    try:
-        draft = service.create_draft(
-            db,
-            skill_id=skill_id,
-            actor_principal_id=principal_id,
-            is_maintainer=is_maintainer,
-            payload=payload,
-        )
-    except service.NotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except service.ConflictError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except service.ForbiddenError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
-    return SkillDraftView.from_model(draft)
-
-
-@router.patch("/drafts/{draft_id}", response_model=SkillDraftView)
-def patch_draft(
-    draft_id: int,
-    payload: SkillDraftPatchRequest,
-    context: AccessContext = Depends(get_current_access_context),
-    db: Session = Depends(get_db),
-):
-    principal_id = _require_authoring_principal(context)
-    is_maintainer = context.user is not None and context.user.role == "maintainer"
-    try:
-        draft = service.patch_draft(
-            db,
-            draft_id=draft_id,
-            actor_principal_id=principal_id,
-            is_maintainer=is_maintainer,
-            payload=payload,
-        )
-    except service.NotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except service.ConflictError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except service.ForbiddenError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
-    return SkillDraftView.from_model(draft)
-
-
-@router.post(
-    "/drafts/{draft_id}/seal",
-    response_model=SkillDraftSealResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-def seal_draft(
-    draft_id: int,
-    payload: SkillDraftSealRequest,
-    context: AccessContext = Depends(get_current_access_context),
-    db: Session = Depends(get_db),
-):
-    principal_id = _require_authoring_principal(context)
-    is_maintainer = context.user is not None and context.user.role == "maintainer"
-    try:
-        draft, skill_version = service.seal_draft(
-            db,
-            draft_id=draft_id,
-            actor_principal_id=principal_id,
-            is_maintainer=is_maintainer,
-            version=payload.version,
-        )
-    except service.NotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except service.ConflictError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except service.ForbiddenError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
-    return SkillDraftSealResponse(
-        version=skill_version.version,
-        draft=SkillDraftView.from_model(draft),
-        skill_version=SkillVersionView.from_model(skill_version),
-    )

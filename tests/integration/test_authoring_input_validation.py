@@ -51,7 +51,7 @@ def test_create_skill_rejects_invalid_slug() -> None:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
-def test_seal_draft_rejects_invalid_version_string() -> None:
+def test_create_version_rejects_invalid_version_string() -> None:
     tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-authoring-version-test-"))
     try:
         configure_env(tmpdir)
@@ -73,22 +73,15 @@ def test_seal_draft_rejects_invalid_version_string() -> None:
         assert create_skill.status_code == 201, create_skill.text
         skill_id = int(create_skill.json()["id"])
 
-        create_draft = client.post(
-            f"/api/v1/skills/{skill_id}/drafts",
+        create_version = client.post(
+            f"/api/v1/skills/{skill_id}/versions",
             headers=headers,
             json={
+                "version": "release/1",
                 "content_ref": "git+https://example.com/valid-skill.git#0123456789abcdef0123456789abcdef01234567",
                 "metadata": {"entrypoint": "SKILL.md"},
             },
         )
-        assert create_draft.status_code == 201, create_draft.text
-        draft_id = int(create_draft.json()["id"])
-
-        seal_response = client.post(
-            f"/api/v1/drafts/{draft_id}/seal",
-            headers=headers,
-            json={"version": "release/1"},
-        )
-        assert seal_response.status_code == 422, seal_response.text
+        assert create_version.status_code == 422, create_version.text
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)

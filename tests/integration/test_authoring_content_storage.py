@@ -97,7 +97,7 @@ def _create_skill(client: TestClient) -> int:
     return int(response.json()["id"])
 
 
-def test_create_draft_accepts_uploaded_content_bundle_reference() -> None:
+def test_create_version_accepts_uploaded_content_bundle_reference() -> None:
     tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-authoring-uploaded-content-test-"))
     try:
         configure_env(tmpdir)
@@ -109,9 +109,10 @@ def test_create_draft_accepts_uploaded_content_bundle_reference() -> None:
         skill_id = _create_skill(client)
 
         response = client.post(
-            f"/api/v1/skills/{skill_id}/drafts",
+            f"/api/v1/skills/{skill_id}/versions",
             headers={"Authorization": "Bearer fixture-maintainer-token"},
             json={
+                "version": "0.1.0",
                 "content_mode": "uploaded_bundle",
                 "content_upload_token": str(artifact_id),
                 "metadata": {
@@ -122,14 +123,14 @@ def test_create_draft_accepts_uploaded_content_bundle_reference() -> None:
         )
         assert response.status_code == 201, response.text
         payload = response.json()
-        assert payload["content_mode"] == "uploaded_bundle"
-        assert payload["content_artifact_id"] == artifact_id
-        assert payload["content_ref"] == ""
+        assert payload["sealed_manifest"]["content_mode"] == "uploaded_bundle"
+        assert payload["sealed_manifest"]["content_artifact_id"] == artifact_id
+        assert payload["sealed_manifest"]["content_ref"] == ""
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
-def test_create_draft_accepts_external_immutable_content_ref() -> None:
+def test_create_version_accepts_external_immutable_content_ref() -> None:
     tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-authoring-external-content-test-"))
     try:
         configure_env(tmpdir)
@@ -140,9 +141,10 @@ def test_create_draft_accepts_external_immutable_content_ref() -> None:
         skill_id = _create_skill(client)
 
         response = client.post(
-            f"/api/v1/skills/{skill_id}/drafts",
+            f"/api/v1/skills/{skill_id}/versions",
             headers={"Authorization": "Bearer fixture-maintainer-token"},
             json={
+                "version": "0.1.0",
                 "content_mode": "external_ref",
                 "content_ref": "git+https://example.com/uploaded-skill.git#0123456789abcdef0123456789abcdef01234567",
                 "metadata": {"entrypoint": "SKILL.md"},
@@ -150,14 +152,15 @@ def test_create_draft_accepts_external_immutable_content_ref() -> None:
         )
         assert response.status_code == 201, response.text
         payload = response.json()
-        assert payload["content_mode"] == "external_ref"
-        assert payload["content_artifact_id"] is None
-        assert payload["content_ref"].endswith("#0123456789abcdef0123456789abcdef01234567")
+        expected_ref = "#0123456789abcdef0123456789abcdef01234567"
+        assert payload["sealed_manifest"]["content_mode"] == "external_ref"
+        assert payload["sealed_manifest"]["content_artifact_id"] is None
+        assert payload["sealed_manifest"]["content_ref"].endswith(expected_ref)
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
-def test_seal_uploaded_content_draft_freezes_content_and_metadata_digests() -> None:
+def test_create_version_freezes_content_and_metadata_digests() -> None:
     tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-authoring-seal-content-test-"))
     try:
         configure_env(tmpdir)
@@ -172,33 +175,25 @@ def test_seal_uploaded_content_draft_freezes_content_and_metadata_digests() -> N
             "manifest": {"name": "uploaded-skill", "version": "0.1.0"},
         }
 
-        create_draft = client.post(
-            f"/api/v1/skills/{skill_id}/drafts",
+        response = client.post(
+            f"/api/v1/skills/{skill_id}/versions",
             headers={"Authorization": "Bearer fixture-maintainer-token"},
             json={
+                "version": "0.1.0",
                 "content_mode": "uploaded_bundle",
                 "content_upload_token": str(artifact_id),
                 "metadata": metadata,
             },
         )
-        assert create_draft.status_code == 201, create_draft.text
-        draft_id = int(create_draft.json()["id"])
+        assert response.status_code == 201, response.text
 
-        seal_response = client.post(
-            f"/api/v1/drafts/{draft_id}/seal",
-            headers={"Authorization": "Bearer fixture-maintainer-token"},
-            json={"version": "0.1.0"},
-        )
-        assert seal_response.status_code == 201, seal_response.text
-
-        payload = seal_response.json()
-        version_payload = payload["skill_version"]
-        assert version_payload["content_digest"].startswith("sha256:")
-        assert version_payload["metadata_digest"].startswith("sha256:")
-        assert version_payload["sealed_manifest"]["content_mode"] == "uploaded_bundle"
-        assert version_payload["sealed_manifest"]["content_artifact_id"] == artifact_id
-        assert version_payload["sealed_manifest"]["metadata"] == metadata
-        assert version_payload["metadata_digest"] != version_payload["content_digest"]
-        assert _canonical_metadata_json(metadata) in version_payload["sealed_manifest_json"]
+        payload = response.json()
+        assert payload["content_digest"].startswith("sha256:")
+        assert payload["metadata_digest"].startswith("sha256:")
+        assert payload["sealed_manifest"]["content_mode"] == "uploaded_bundle"
+        assert payload["sealed_manifest"]["content_artifact_id"] == artifact_id
+        assert payload["sealed_manifest"]["metadata"] == metadata
+        assert payload["metadata_digest"] != payload["content_digest"]
+        assert _canonical_metadata_json(metadata) in payload["sealed_manifest_json"]
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)

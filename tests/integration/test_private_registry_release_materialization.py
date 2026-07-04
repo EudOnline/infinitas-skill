@@ -129,10 +129,11 @@ def _create_release(client: TestClient) -> int:
     assert create_skill.status_code == 201, create_skill.text
     skill_id = int(create_skill.json()["id"])
 
-    create_draft = client.post(
-        f"/api/v1/skills/{skill_id}/drafts",
+    create_version = client.post(
+        f"/api/v1/skills/{skill_id}/versions",
         headers=headers,
         json={
+            "version": "0.1.0",
             "content_ref": "git+https://example.com/materialized-release.git#0123456789abcdef0123456789abcdef01234567",
             "metadata": {
                 "entrypoint": "SKILL.md",
@@ -141,16 +142,8 @@ def _create_release(client: TestClient) -> int:
             },
         },
     )
-    assert create_draft.status_code == 201, create_draft.text
-    draft_id = int(create_draft.json()["id"])
-
-    seal = client.post(
-        f"/api/v1/drafts/{draft_id}/seal",
-        headers=headers,
-        json={"version": "0.1.0"},
-    )
-    assert seal.status_code == 201, seal.text
-    version_id = int((seal.json().get("skill_version") or {})["id"])
+    assert create_version.status_code == 201, create_version.text
+    version_id = int(create_version.json()["id"])
 
     release = client.post(
         f"/api/v1/versions/{version_id}/releases",
@@ -174,10 +167,11 @@ def _create_release_with_version(client: TestClient) -> tuple[int, int]:
     assert create_skill.status_code == 201, create_skill.text
     skill_id = int(create_skill.json()["id"])
 
-    create_draft = client.post(
-        f"/api/v1/skills/{skill_id}/drafts",
+    create_version = client.post(
+        f"/api/v1/skills/{skill_id}/versions",
         headers=headers,
         json={
+            "version": "0.1.0",
             "content_ref": "git+https://example.com/materialized-release.git#0123456789abcdef0123456789abcdef01234567",
             "metadata": {
                 "entrypoint": "SKILL.md",
@@ -186,16 +180,8 @@ def _create_release_with_version(client: TestClient) -> tuple[int, int]:
             },
         },
     )
-    assert create_draft.status_code == 201, create_draft.text
-    draft_id = int(create_draft.json()["id"])
-
-    seal = client.post(
-        f"/api/v1/drafts/{draft_id}/seal",
-        headers=headers,
-        json={"version": "0.1.0"},
-    )
-    assert seal.status_code == 201, seal.text
-    version_id = int((seal.json().get("skill_version") or {})["id"])
+    assert create_version.status_code == 201, create_version.text
+    version_id = int(create_version.json()["id"])
 
     release = client.post(
         f"/api/v1/versions/{version_id}/releases",
@@ -220,10 +206,11 @@ def _create_uploaded_content_release(client: TestClient, *, artifact_root: Path)
     skill_id = int(create_skill.json()["id"])
 
     artifact_id = _stage_uploaded_content_artifact(artifact_root=artifact_root)
-    create_draft = client.post(
-        f"/api/v1/skills/{skill_id}/drafts",
+    create_version = client.post(
+        f"/api/v1/skills/{skill_id}/versions",
         headers=headers,
         json={
+            "version": "0.1.0",
             "content_mode": "uploaded_bundle",
             "content_upload_token": str(artifact_id),
             "metadata": {
@@ -232,16 +219,8 @@ def _create_uploaded_content_release(client: TestClient, *, artifact_root: Path)
             },
         },
     )
-    assert create_draft.status_code == 201, create_draft.text
-    draft_id = int(create_draft.json()["id"])
-
-    seal = client.post(
-        f"/api/v1/drafts/{draft_id}/seal",
-        headers=headers,
-        json={"version": "0.1.0"},
-    )
-    assert seal.status_code == 201, seal.text
-    version_id = int((seal.json().get("skill_version") or {})["id"])
+    assert create_version.status_code == 201, create_version.text
+    version_id = int(create_version.json()["id"])
 
     release = client.post(
         f"/api/v1/versions/{version_id}/releases",

@@ -85,24 +85,17 @@ def create_ready_release(client: TestClient, headers: dict[str, str], *, slug: s
     assert create_skill.status_code == 201, create_skill.text
     skill_id = int(create_skill.json()["id"])
 
-    create_draft = client.post(
-        f"/api/v1/skills/{skill_id}/drafts",
+    create_version = client.post(
+        f"/api/v1/skills/{skill_id}/versions",
         headers=headers,
         json={
+            "version": "0.1.0",
             "content_ref": f"git+https://example.com/{slug}.git#0123456789abcdef0123456789abcdef01234567",
             "metadata": {"entrypoint": "SKILL.md"},
         },
     )
-    assert create_draft.status_code == 201, create_draft.text
-    draft_id = int(create_draft.json()["id"])
-
-    seal = client.post(
-        f"/api/v1/drafts/{draft_id}/seal",
-        headers=headers,
-        json={"version": "0.1.0"},
-    )
-    assert seal.status_code == 201, seal.text
-    version_id = int((seal.json().get("skill_version") or {})["id"])
+    assert create_version.status_code == 201, create_version.text
+    version_id = int(create_version.json()["id"])
 
     create_release = client.post(
         f"/api/v1/versions/{version_id}/releases",

@@ -1,3 +1,3 @@
-from server.modules.authoring.models import Skill, SkillDraft, SkillVersion
+from server.modules.authoring.models import Skill, SkillVersion
 
-__all__ = ["Skill", "SkillDraft", "SkillVersion"]
+__all__ = ["Skill", "SkillVersion"]

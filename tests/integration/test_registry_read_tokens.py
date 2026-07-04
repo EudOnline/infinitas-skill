@@ -10,7 +10,12 @@ from sqlalchemy import select
 
 from server.auth import AUTH_COOKIE_NAME
 from server.models import Artifact
+from server.modules.discovery.projections import cleanup_expired_cache_entries
 from tests.helpers.signing import add_allowed_signer, configure_git_ssh_signing
+
+
+def _clear_discovery_cache() -> None:
+    cleanup_expired_cache_entries(ttl=0)
 
 
 def _run(command: list[str], *, cwd: Path) -> None:
@@ -115,10 +120,11 @@ def _create_public_release(client: TestClient) -> tuple[int, str]:
     assert create_skill.status_code == 201, create_skill.text
     skill_id = int(create_skill.json()["id"])
 
-    create_draft = client.post(
-        f"/api/v1/skills/{skill_id}/drafts",
+    create_version = client.post(
+        f"/api/v1/skills/{skill_id}/versions",
         headers=headers,
         json={
+            "version": "0.1.0",
             "content_ref": "git+https://example.com/registry-gated-skill.git#0123456789abcdef0123456789abcdef01234567",
             "metadata": {
                 "entrypoint": "SKILL.md",
@@ -127,16 +133,8 @@ def _create_public_release(client: TestClient) -> tuple[int, str]:
             },
         },
     )
-    assert create_draft.status_code == 201, create_draft.text
-    draft_id = int(create_draft.json()["id"])
-
-    seal = client.post(
-        f"/api/v1/drafts/{draft_id}/seal",
-        headers=headers,
-        json={"version": "0.1.0"},
-    )
-    assert seal.status_code == 201, seal.text
-    version_id = int((seal.json().get("skill_version") or {})["id"])
+    assert create_version.status_code == 201, create_version.text
+    version_id = int(create_version.json()["id"])
 
     release = client.post(
         f"/api/v1/versions/{version_id}/releases",
@@ -207,17 +205,19 @@ def test_registry_read_tokens_gate_registry_routes_without_breaking_user_credent
         exposure_id=int(exposure.json()["id"]),
     )
 
-    anonymous = client.get("/registry/ai-index.json")
+    _clear_discovery_cache()
+
+    anonymous = client.get("/api/v1/registry/ai-index.json")
     assert anonymous.status_code == 401, anonymous.text
 
     wrong_token = client.get(
-        "/registry/ai-index.json",
+        "/api/v1/registry/ai-index.json",
         headers={"Authorization": "Bearer wrong-token"},
     )
     assert wrong_token.status_code == 401, wrong_token.text
 
     reader_token = client.get(
-        "/registry/ai-index.json",
+        "/api/v1/registry/ai-index.json",
         headers={"Authorization": "Bearer registry-reader-token"},
     )
     assert reader_token.status_code == 200, reader_token.text
@@ -228,7 +228,7 @@ def test_registry_read_tokens_gate_registry_routes_without_breaking_user_credent
     assert (ai_skill.get("runtime") or {}).get("readiness", {}).get("status") == "ready"
 
     maintainer_token = client.get(
-        "/registry/ai-index.json",
+        "/api/v1/registry/ai-index.json",
         headers={"Authorization": maintainer_authorization},
     )
     assert maintainer_token.status_code == 200, maintainer_token.text
@@ -242,11 +242,11 @@ def test_registry_read_tokens_gate_registry_routes_without_breaking_user_credent
     assert session_cookie, "expected login to issue a browser session cookie"
     client.cookies.set(AUTH_COOKIE_NAME, session_cookie)
 
-    session_response = client.get("/registry/ai-index.json")
+    session_response = client.get("/api/v1/registry/ai-index.json")
     assert session_response.status_code == 200, session_response.text
 
     discovery_index = client.get(
-        "/registry/discovery-index.json",
+        "/api/v1/registry/discovery-index.json",
         headers={"Authorization": "Bearer registry-reader-token"},
     )
     assert discovery_index.status_code == 200, discovery_index.text
@@ -261,7 +261,7 @@ def test_registry_read_tokens_gate_registry_routes_without_breaking_user_credent
     assert registry_skill.get("workspace_targets") == ["skills", ".agents/skills"]
 
     manifest = client.get(
-        "/registry/skills/fixture-maintainer/registry-gated-skill/0.1.0/manifest.json",
+        "/api/v1/registry/skills/fixture-maintainer/registry-gated-skill/0.1.0/manifest.json",
         headers={"Authorization": "Bearer registry-reader-token"},
     )
     assert manifest.status_code == 200, manifest.text
@@ -324,8 +324,10 @@ def test_registry_metadata_uses_current_release_bundle_artifact(
         )
         session.commit()
 
+    _clear_discovery_cache()
+
     compatibility = client.get(
-        "/registry/compatibility.json",
+        "/api/v1/registry/compatibility.json",
         headers={"Authorization": "Bearer registry-reader-token"},
     )
     assert compatibility.status_code == 200, compatibility.text
@@ -402,8 +404,10 @@ def test_invalid_manifest_hides_release_from_catalog_and_registry(
         for item in (catalog.json().get("items") or [])
     )
 
+    _clear_discovery_cache()
+
     registry_ai_index = client.get(
-        "/registry/ai-index.json",
+        "/api/v1/registry/ai-index.json",
         headers={"Authorization": "Bearer registry-reader-token"},
     )
     assert registry_ai_index.status_code == 200, registry_ai_index.text
@@ -449,16 +453,18 @@ def test_public_registry_ignores_invalid_cookie_and_bearer_token(
         exposure_id=int(exposure.json()["id"]),
     )
 
-    anonymous = client.get("/registry/ai-index.json")
+    _clear_discovery_cache()
+
+    anonymous = client.get("/api/v1/registry/ai-index.json")
     assert anonymous.status_code == 200, anonymous.text
 
     client.cookies.set(AUTH_COOKIE_NAME, "bogus-cookie")
-    stale_cookie = client.get("/registry/ai-index.json")
+    stale_cookie = client.get("/api/v1/registry/ai-index.json")
     client.cookies.delete(AUTH_COOKIE_NAME)
     assert stale_cookie.status_code == 200, stale_cookie.text
 
     wrong_token = client.get(
-        "/registry/ai-index.json",
+        "/api/v1/registry/ai-index.json",
         headers={"Authorization": "Bearer wrong-token"},
     )
     assert wrong_token.status_code == 200, wrong_token.text
@@ -510,7 +516,9 @@ def test_public_registry_hides_release_when_materialized_artifacts_are_missing(
     assert manifest_path.exists(), f"expected manifest fixture at {manifest_path}"
     manifest_path.unlink()
 
-    anonymous = client.get("/registry/ai-index.json")
+    _clear_discovery_cache()
+
+    anonymous = client.get("/api/v1/registry/ai-index.json")
     assert anonymous.status_code == 200, anonymous.text
     skills = anonymous.json().get("skills") or []
     assert not any(item.get("name") == "registry-gated-skill" for item in skills)
@@ -531,7 +539,7 @@ def test_production_rejects_malformed_registry_read_tokens(monkeypatch, tmp_path
 
     monkeypatch.setenv("INFINITAS_SERVER_ENV", "production")
     monkeypatch.setenv("INFINITAS_SERVER_DATABASE_URL", f"sqlite:///{tmp_path / 'server.db'}")
-    monkeypatch.setenv("INFINITAS_SERVER_SECRET_KEY", "prod-secret-key")
+    monkeypatch.setenv("INFINITAS_SERVER_SECRET_KEY", "Xn9pL2vQ4sT7wZ1aB3cD5eF7gH9jK1mN")
     monkeypatch.setenv(
         "INFINITAS_SERVER_ALLOWED_HOSTS",
         json.dumps(["registry.example.com"]),
@@ -561,7 +569,7 @@ def test_production_rejects_non_array_registry_read_tokens(monkeypatch, tmp_path
 
     monkeypatch.setenv("INFINITAS_SERVER_ENV", "production")
     monkeypatch.setenv("INFINITAS_SERVER_DATABASE_URL", f"sqlite:///{tmp_path / 'server.db'}")
-    monkeypatch.setenv("INFINITAS_SERVER_SECRET_KEY", "prod-secret-key")
+    monkeypatch.setenv("INFINITAS_SERVER_SECRET_KEY", "Xn9pL2vQ4sT7wZ1aB3cD5eF7gH9jK1mN")
     monkeypatch.setenv(
         "INFINITAS_SERVER_ALLOWED_HOSTS",
         json.dumps(["registry.example.com"]),

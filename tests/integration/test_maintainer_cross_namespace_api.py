@@ -3,10 +3,43 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import subprocess
 import tempfile
 from pathlib import Path
 
 from sqlalchemy import select
+
+from tests.helpers.signing import add_allowed_signer, configure_git_ssh_signing
+
+
+def _prepare_signing_repo(repo: Path, signing_key: Path) -> None:
+    allowed_signers = repo / "config" / "allowed_signers"
+    allowed_signers.write_text("", encoding="utf-8")
+    add_allowed_signer(allowed_signers, identity="release-test", key_path=signing_key)
+
+    subprocess.run(["git", "init", "-b", "main"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.name", "Registry Test"], cwd=repo, check=True, capture_output=True
+    )
+    subprocess.run(
+        ["git", "config", "user.email", "registry@example.com"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
+    configure_git_ssh_signing(repo, signing_key)
+    subprocess.run(
+        ["git", "add", "config/allowed_signers", "config/signing.json"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "commit", "-m", "test: bootstrap signing config"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
 
 
 def configure_env(tmpdir: Path) -> None:
@@ -32,10 +65,17 @@ def configure_env(tmpdir: Path) -> None:
     )
 
 
-def test_maintainer_can_administer_contributor_owned_lifecycle_resources() -> None:
+def test_maintainer_can_administer_contributor_owned_lifecycle_resources(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    _prepare_signing_repo(temp_repo_copy, signing_key)
     tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-maintainer-cross-namespace-"))
     try:
         configure_env(tmpdir)
+        monkeypatch.setenv("INFINITAS_SERVER_REPO_PATH", str(temp_repo_copy))
 
         from fastapi.testclient import TestClient
 
@@ -60,31 +100,17 @@ def test_maintainer_can_administer_contributor_owned_lifecycle_resources() -> No
         assert create_skill.status_code == 201, create_skill.text
         skill_id = int(create_skill.json()["id"])
 
-        create_draft = client.post(
-            f"/api/v1/skills/{skill_id}/drafts",
-            headers=owner_headers,
+        create_version = client.post(
+            f"/api/v1/skills/{skill_id}/versions",
+            headers=maintainer_headers,
             json={
+                "version": "0.1.0",
                 "content_ref": "git+https://example.com/cross-namespace-skill.git#0123456789abcdef0123456789abcdef01234567",
-                "metadata": {"entrypoint": "SKILL.md"},
+                "metadata": {"entrypoint": "SKILL.md", "maintained_by": "fixture-maintainer"},
             },
         )
-        assert create_draft.status_code == 201, create_draft.text
-        draft_id = int(create_draft.json()["id"])
-
-        patch_draft = client.patch(
-            f"/api/v1/drafts/{draft_id}",
-            headers=maintainer_headers,
-            json={"metadata": {"entrypoint": "SKILL.md", "maintained_by": "fixture-maintainer"}},
-        )
-        assert patch_draft.status_code == 200, patch_draft.text
-
-        seal = client.post(
-            f"/api/v1/drafts/{draft_id}/seal",
-            headers=maintainer_headers,
-            json={"version": "0.1.0"},
-        )
-        assert seal.status_code == 201, seal.text
-        version_id = int((seal.json().get("skill_version") or {})["id"])
+        assert create_version.status_code == 201, create_version.text
+        version_id = int(create_version.json()["id"])
 
         release = client.post(
             f"/api/v1/versions/{version_id}/releases",
