@@ -47,6 +47,14 @@ class SkillCreateRequest(BaseModel):
     default_visibility_profile: str | None = None
 
 
+class SkillVersionCreateRequest(BaseModel):
+    version: str = Field(min_length=1, max_length=64, pattern=SEMVER_PATTERN)
+    content_mode: Literal["external_ref", "uploaded_bundle"] | None = None
+    content_ref: str | None = Field(default=None, max_length=2000)
+    content_upload_token: str | None = Field(default=None, max_length=500)
+    metadata: dict = Field(default_factory=dict)
+
+
 class SkillView(BaseModel):
     id: int
     namespace_id: int

@@ -53,24 +53,17 @@ def test_publish_facade_creates_release_without_draft_or_seal_terms(
     object_id = object_payload["id"]
     assert object_payload["slug"] == "demo-published-skill"
 
-    draft_response = client.post(
-        f"/api/v1/skills/{object_id}/drafts",
+    version_response = client.post(
+        f"/api/v1/skills/{object_id}/versions",
         headers=headers,
         json={
+            "version": "1.2.3",
             "content_ref": "git+https://example.com/demo.git#0123456789abcdef0123456789abcdef01234567",
             "metadata": {"entrypoint": "SKILL.md"},
         },
     )
-    assert draft_response.status_code == 201, draft_response.text
-    draft_id = draft_response.json()["id"]
-
-    seal_response = client.post(
-        f"/api/v1/drafts/{draft_id}/seal",
-        headers=headers,
-        json={"version": "1.2.3"},
-    )
-    assert seal_response.status_code == 201, seal_response.text
-    version_id = seal_response.json()["skill_version"]["id"]
+    assert version_response.status_code == 201, version_response.text
+    version_id = version_response.json()["id"]
 
     release_response = client.post(
         f"/api/v1/versions/{version_id}/releases",
@@ -92,7 +85,7 @@ def test_publish_facade_creates_release_without_draft_or_seal_terms(
         assert release is not None
         skill_version = session.get(SkillVersion, int(release.skill_version_id))
         assert skill_version is not None
-        assert skill_version.created_from_draft_id is not None
+        assert skill_version.created_from_draft_id is None
 
     status = client.get(
         f"/api/v1/releases/{release_id}",

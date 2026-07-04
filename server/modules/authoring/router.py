@@ -15,6 +15,7 @@ from server.modules.authoring.schemas import (
     SkillDraftSealRequest,
     SkillDraftSealResponse,
     SkillDraftView,
+    SkillVersionCreateRequest,
     SkillVersionView,
     SkillView,
 )
@@ -47,6 +48,40 @@ def create_skill(
     except service.ConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return SkillView.from_model(skill)
+
+
+@router.post(
+    "/skills/{skill_id}/versions",
+    response_model=SkillVersionView,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_version(
+    skill_id: int,
+    payload: SkillVersionCreateRequest,
+    context: AccessContext = Depends(get_current_access_context),
+    db: Session = Depends(get_db),
+):
+    principal_id = _require_authoring_principal(context)
+    is_maintainer = context.user is not None and context.user.role == "maintainer"
+    try:
+        skill_version = service.create_skill_version_snapshot(
+            db,
+            skill_id=skill_id,
+            actor_principal_id=principal_id,
+            is_maintainer=is_maintainer,
+            version=payload.version,
+            content_mode=payload.content_mode,
+            content_ref=payload.content_ref,
+            content_upload_token=payload.content_upload_token,
+            metadata=payload.metadata,
+        )
+    except service.NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except service.ConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except service.ForbiddenError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    return SkillVersionView.from_model(skill_version)
 
 
 @router.get("/skills/{skill_id}", response_model=SkillView)
