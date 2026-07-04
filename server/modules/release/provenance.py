@@ -345,7 +345,6 @@ def build_provenance_payload(
         "release_snapshot": {
             "release_id": release.id,
             "skill_version_id": snapshot.skill_version.id,
-            "source": "draft" if snapshot.draft is not None else "version",
-            "draft_id": snapshot.draft.id if snapshot.draft is not None else None,
+            "source": "version",
         },
     }

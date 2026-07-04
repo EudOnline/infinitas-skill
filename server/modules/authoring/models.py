@@ -30,36 +30,6 @@ class Skill(Base):
     )
 
 
-class SkillDraft(Base):
-    __tablename__ = "skill_drafts"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"), index=True)
-    base_version_id: Mapped[int | None] = mapped_column(
-        Integer,
-        nullable=True,
-        index=True,
-    )
-    state: Mapped[str] = mapped_column(String(32), default="open")
-    content_mode: Mapped[str] = mapped_column(String(32), default="external_ref")
-    content_ref: Mapped[str] = mapped_column(Text, default="")
-    content_artifact_id: Mapped[int | None] = mapped_column(
-        Integer,
-        nullable=True,
-        index=True,
-    )
-    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
-    updated_by_principal_id: Mapped[int | None] = mapped_column(
-        ForeignKey("principals.id"),
-        nullable=True,
-    )
-    updated_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True),
-        default=utcnow,
-        onupdate=utcnow,
-    )
-
-
 class SkillVersion(Base):
     __tablename__ = "skill_versions"
     __table_args__ = (
@@ -72,11 +42,6 @@ class SkillVersion(Base):
     content_digest: Mapped[str] = mapped_column(String(255))
     metadata_digest: Mapped[str] = mapped_column(String(255))
     sealed_manifest_json: Mapped[str] = mapped_column(Text, default="{}")
-    created_from_draft_id: Mapped[int | None] = mapped_column(
-        ForeignKey("skill_drafts.id"),
-        nullable=True,
-        index=True,
-    )
     created_by_principal_id: Mapped[int | None] = mapped_column(
         ForeignKey("principals.id"),
         nullable=True,

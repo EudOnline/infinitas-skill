@@ -16,7 +16,7 @@ from server.exceptions_base import (
 from server.exceptions_base import (
     NotFoundError as BaseNotFoundError,
 )
-from server.models import Principal, Skill, SkillDraft, SkillVersion, utcnow
+from server.models import Principal, Skill, SkillVersion, utcnow
 from server.modules.release.models import Artifact, Release
 
 
@@ -43,7 +43,6 @@ class ReleaseSnapshot:
     skill: Skill
     namespace: Principal
     manifest: dict
-    draft: SkillDraft | None = None
 
 
 def get_skill_version_or_404(db: Session, version_id: int) -> SkillVersion:
@@ -106,17 +105,6 @@ def _get_namespace_or_404(db: Session, principal_id: int) -> Principal:
     return namespace
 
 
-def _get_sealed_draft_or_404(db: Session, draft_id: int | None) -> SkillDraft:
-    if draft_id is None:
-        raise ConflictError("skill version cannot be released without a sealed draft snapshot")
-    draft = db.get(SkillDraft, draft_id)
-    if draft is None:
-        raise NotFoundError("sealed draft not found")
-    if draft.state != "sealed":
-        raise ConflictError("skill version draft snapshot must be sealed before release")
-    return draft
-
-
 def _version_manifest(skill_version: SkillVersion) -> dict:
     import json
 
@@ -170,9 +158,6 @@ def create_or_get_release(
         principal_id=actor_principal_id,
         is_maintainer=is_maintainer,
     )
-    if not _version_has_source_snapshot(skill_version):
-        _get_sealed_draft_or_404(db, skill_version.created_from_draft_id)
-
     existing = db.scalar(
         select(Release)
         .where(Release.skill_version_id == skill_version.id)
@@ -210,25 +195,13 @@ def get_release_snapshot(db: Session, release_id: int) -> ReleaseSnapshot:
     skill_version = get_skill_version_or_404(db, release.skill_version_id)
     skill = _get_skill_or_404(db, skill_version.skill_id)
     namespace = _get_namespace_or_404(db, skill.namespace_id)
-    draft = None
     manifest = _version_manifest(skill_version)
-    if not _version_has_source_snapshot(skill_version):
-        draft = _get_sealed_draft_or_404(db, skill_version.created_from_draft_id)
-        manifest = {
-            "content_mode": draft.content_mode,
-            "content_ref": draft.content_ref,
-            "content_artifact_id": draft.content_artifact_id,
-            "metadata": (
-                manifest.get("metadata") if isinstance(manifest.get("metadata"), dict) else {}
-            ),
-        }
     return ReleaseSnapshot(
         release=release,
         skill_version=skill_version,
         skill=skill,
         namespace=namespace,
         manifest=manifest,
-        draft=draft,
     )
 
 

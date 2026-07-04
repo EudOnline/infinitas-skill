@@ -75,7 +75,7 @@ def uploaded_bundle_data(
     content_artifact_id: int | None,
 ) -> tuple[bytes, int, str]:
     if content_artifact_id is None:
-        raise RuntimeError("uploaded_bundle draft is missing content_artifact_id")
+        raise RuntimeError("uploaded_bundle version is missing content_artifact_id")
     artifact = db.get(Artifact, int(content_artifact_id))
     if artifact is None:
         raise RuntimeError(f"uploaded bundle artifact {content_artifact_id} not found")

@@ -81,7 +81,6 @@ from server.modules.audit.models import AuditEvent  # noqa: E402
 from server.modules.authoring.models import (  # noqa: E402
     Namespace,
     Skill,
-    SkillDraft,
     SkillVersion,
 )
 from server.modules.exposure.models import Exposure  # noqa: E402
@@ -108,7 +107,6 @@ __all__ = [
     "ReviewPolicy",
     "ServicePrincipal",
     "Skill",
-    "SkillDraft",
     "SkillVersion",
     "Team",
     "TeamMembership",

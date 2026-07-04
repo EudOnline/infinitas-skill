@@ -70,7 +70,6 @@ def create_skill_version(
     content_digest: str,
     metadata_digest: str,
     sealed_manifest_json: str,
-    created_from_draft_id: int | None,
     created_by_principal_id: int | None,
 ) -> SkillVersion:
     skill_version = SkillVersion(
@@ -79,7 +78,6 @@ def create_skill_version(
         content_digest=content_digest,
         metadata_digest=metadata_digest,
         sealed_manifest_json=sealed_manifest_json,
-        created_from_draft_id=created_from_draft_id,
         created_by_principal_id=created_by_principal_id,
     )
     db.add(skill_version)

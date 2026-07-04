@@ -85,7 +85,6 @@ def test_publish_facade_creates_release_without_draft_or_seal_terms(
         assert release is not None
         skill_version = session.get(SkillVersion, int(release.skill_version_id))
         assert skill_version is not None
-        assert skill_version.created_from_draft_id is None
 
     status = client.get(
         f"/api/v1/releases/{release_id}",

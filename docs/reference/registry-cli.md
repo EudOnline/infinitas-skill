@@ -52,7 +52,7 @@ The product is split into two surfaces:
 - `POST /api/v1/versions/{version_id}/releases`
 - `GET /api/v1/releases/{release_id}`
 
-The maintained publish path creates immutable version snapshots directly from object content. Draft and seal commands may still exist as compatibility tools for older automation, but they are not the maintained publish model for new work.
+The maintained publish path creates immutable skill versions directly from object content using `infinitas registry versions create`. Draft and seal commands have been removed.
 
 ## Preferred workflow by persona
 
@@ -166,101 +166,34 @@ Example response:
 
 ---
 
-## `infinitas registry drafts create`
+## `infinitas registry versions create`
 
-Create a new draft for a skill.
+Create an immutable skill version directly from content.
 
 | Argument | Required | Default | Description |
 |---|---|---|---|
 | `skill_id` (positional) | yes | | Skill identifier (int) |
-| `--base-version-id` | no | `None` | Base skill_version id |
-| `--content-ref` | no | `''` | Content locator/ref |
-| `--metadata-json` | no | `'{}'` | Draft metadata JSON object |
-
-API: `POST /api/v1/skills/{skill_id}/drafts`
-
-Example response:
-
-```json
-{
-  "id": 10,
-  "skill_id": 1,
-  "base_version_id": null,
-  "state": "open",
-  "content_mode": "ref",
-  "content_ref": "",
-  "content_artifact_id": null,
-  "metadata": {},
-  "updated_by_principal_id": 1,
-  "updated_at": "2026-04-22T00:00:00Z"
-}
-```
-
----
-
-## `infinitas registry drafts update`
-
-Update an existing draft.
-
-| Argument | Required | Default | Description |
-|---|---|---|---|
-| `draft_id` (positional) | yes | | Draft identifier (int) |
-| `--content-ref` | no | `None` | Updated content ref |
-| `--metadata-json` | no | `None` | Updated metadata JSON object |
-
-At least one flag is required; the CLI exits with code 1 if neither is provided.
-
-API: `PATCH /api/v1/drafts/{draft_id}`
-
-Example response:
-
-```json
-{
-  "id": 10,
-  "skill_id": 1,
-  "base_version_id": null,
-  "state": "open",
-  "content_mode": "ref",
-  "content_ref": "sha256:abc123",
-  "content_artifact_id": null,
-  "metadata": {"key": "value"},
-  "updated_by_principal_id": 1,
-  "updated_at": "2026-04-22T00:01:00Z"
-}
-```
-
----
-
-## `infinitas registry drafts seal`
-
-Seal a draft, producing a versioned skill release candidate.
-
-| Argument | Required | Default | Description |
-|---|---|---|---|
-| `draft_id` (positional) | yes | | Draft identifier (int) |
 | `--version` | yes | | Semantic version to create |
+| `--content-mode` | no | `None` | `external_ref` or `uploaded_bundle` |
+| `--content-ref` | no | `''` | Content locator/ref |
+| `--content-upload-token` | no | `None` | Uploaded artifact token for `uploaded_bundle` |
+| `--metadata-json` | no | `'{}'` | Version metadata JSON object |
 
-API: `POST /api/v1/drafts/{draft_id}/seal`
+API: `POST /api/v1/skills/{skill_id}/versions`
 
 Example response:
 
 ```json
 {
+  "id": 5,
+  "skill_id": 1,
   "version": "1.0.0",
-  "draft": {
-    "state": "sealed"
-  },
-  "skill_version": {
-    "id": 5,
-    "version": "1.0.0",
-    "content_digest": "sha256:abc123",
-    "metadata_digest": "sha256:def456",
-    "sealed_manifest_json": "{}",
-    "sealed_manifest": {},
-    "created_from_draft_id": 10,
-    "created_by_principal_id": 1,
-    "created_at": "2026-04-22T00:02:00Z"
-  }
+  "content_digest": "sha256:abc123",
+  "metadata_digest": "sha256:def456",
+  "sealed_manifest_json": "{}",
+  "sealed_manifest": {},
+  "created_by_principal_id": 1,
+  "created_at": "2026-04-22T00:02:00Z"
 }
 ```
 
@@ -706,8 +639,8 @@ Example response:
 IDs produced by one command feed into the next. The maintained publish chain is:
 
 ```
-registry skills create   -> skill.id                 -> drafts create
-registry drafts seal     -> skill_version.id         -> releases create
+registry skills create   -> skill.id                 -> versions create
+registry versions create -> skill_version.id         -> releases create
 releases create          -> release_id               -> exposures create, tokens check-release, releases get/artifacts
 exposures create         -> id (exposure_id)         -> reviews open-case
 reviews open-case        -> id (review_case_id)      -> reviews decide

@@ -228,7 +228,6 @@ def create_skill_version_snapshot(
         content_digest=content_digest,
         metadata_digest=metadata_digest,
         sealed_manifest_json=canonical_manifest_json(version_manifest),
-        created_from_draft_id=None,
         created_by_principal_id=actor_principal_id,
     )
     db.commit()

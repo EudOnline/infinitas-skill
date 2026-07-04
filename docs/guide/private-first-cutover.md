@@ -13,7 +13,7 @@ status: maintained
 The hosted registry now uses the private-first domain model end to end:
 
 - `principals`, `teams`, `service_principals`
-- `skills`, `skill_drafts`, `skill_versions`
+- `skills`, `skill_versions`
 - `releases`, `artifacts`
 - `exposures`, `review_cases`, `review_decisions`
 - `access_grants`, `credentials`

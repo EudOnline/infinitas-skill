@@ -91,7 +91,6 @@ class SkillVersionView(BaseModel):
     metadata_digest: str
     sealed_manifest_json: str
     sealed_manifest: dict = Field(default_factory=dict)
-    created_from_draft_id: int | None = None
     created_by_principal_id: int | None = None
     created_at: str
 
@@ -105,7 +104,6 @@ class SkillVersionView(BaseModel):
             metadata_digest=version.metadata_digest,
             sealed_manifest_json=version.sealed_manifest_json,
             sealed_manifest=_load_manifest(version.sealed_manifest_json),
-            created_from_draft_id=version.created_from_draft_id,
             created_by_principal_id=version.created_by_principal_id,
             created_at=_iso(version.created_at) or "",
         )
