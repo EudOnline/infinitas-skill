@@ -19,12 +19,11 @@ from server.models import (
     Release,
     ReviewCase,
     Skill,
-    SkillDraft,
     SkillVersion,
 )
 from server.modules.audit.read_model import activity_query
 
-# ── Skill/Draft/Release lookup services ─────────────────────────────────────
+# ── Skill/Release lookup services ───────────────────────────────────────────
 
 
 def get_skill_or_404(db: Session, skill_id: int) -> Skill:
@@ -46,30 +45,6 @@ def get_skill_or_404(db: Session, skill_id: int) -> Skill:
     if skill is None:
         raise HTTPException(status_code=404, detail="skill not found")
     return skill
-
-
-def get_draft_bundle_or_404(db: Session, draft_id: int) -> tuple[SkillDraft, Skill]:
-    """Get a draft and its associated skill.
-
-    Args:
-        db: Database session
-        draft_id: Draft ID
-
-    Returns:
-        Tuple of (draft, skill)
-
-    Raises:
-        HTTPException: If draft or skill not found
-    """
-    from fastapi import HTTPException
-
-    draft = db.get(SkillDraft, draft_id)
-    if draft is None:
-        raise HTTPException(status_code=404, detail="draft not found")
-    skill = db.get(Skill, draft.skill_id)
-    if skill is None:
-        raise HTTPException(status_code=404, detail="skill not found")
-    return draft, skill
 
 
 def get_release_bundle_or_404(db: Session, release_id: int) -> tuple[Release, SkillVersion, Skill]:
@@ -281,7 +256,6 @@ def get_user_stats(db: Session, *, days: int = 7) -> UserStats:
 
 __all__ = [
     "get_skill_or_404",
-    "get_draft_bundle_or_404",
     "get_release_bundle_or_404",
     "get_skill_name",
     "get_release_label",

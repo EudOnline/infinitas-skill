@@ -60,19 +60,22 @@ export async function createSkill(form) {
   }
 }
 
-// ── Draft CRUD ──────────────────────────────────────────────────────
+// ── Version CRUD ────────────────────────────────────────────────────
 
-export async function createDraft(form) {
+export async function createVersion(form) {
   const skillId = form.dataset.skillId;
   const button = form.querySelector('button[type="submit"]');
   _setButtonLoading(button, true);
   try {
-    const baseVersionId = form.elements.base_version_id.value;
     const data = {
+      version: form.elements.version.value.trim(),
       content_ref: form.elements.content_ref.value.trim(),
       metadata: {},
     };
-    if (baseVersionId) data.base_version_id = parseInt(baseVersionId, 10);
+    const contentMode = form.elements.content_mode?.value;
+    if (contentMode) data.content_mode = contentMode;
+    const uploadToken = form.elements.content_upload_token?.value;
+    if (uploadToken) data.content_upload_token = uploadToken;
     try {
       data.metadata = JSON.parse(form.elements.metadata_json.value || '{}');
     } catch (_e) {
@@ -80,49 +83,12 @@ export async function createDraft(form) {
       _setButtonLoading(button, false);
       return;
     }
-    const result = await apiPost(`/api/v1/skills/${encodeURIComponent(skillId)}/drafts`, data);
-    _toast.success(uiText('draft_created', '草稿创建成功'));
-    window.location.href = _preserveLang(`/drafts/${result.id}`);
+    const result = await apiPost(`/api/v1/skills/${encodeURIComponent(skillId)}/versions`, data);
+    _toast.success(uiText('version_created', '版本创建成功'));
+    window.location.href = _preserveLang(`/skills/${skillId}/versions/${result.id}`);
   } catch (err) {
     _setButtonLoading(button, false);
-    _toast.error(err.message || uiText('draft_create_error', '创建草稿失败'));
-  }
-}
-
-export async function saveDraft(form) {
-  const draftId = form.dataset.draftId;
-  const button = form.querySelector('button[type="submit"]');
-  _setButtonLoading(button, true);
-  try {
-    const data = {};
-    const contentRef = form.elements.content_ref.value.trim();
-    if (contentRef) data.content_ref = contentRef;
-    try {
-      data.metadata = JSON.parse(form.elements.metadata_json.value || '{}');
-    } catch (_e) {
-      _toast.error(uiText('invalid_json', 'JSON 格式错误'));
-      _setButtonLoading(button, false);
-      return;
-    }
-    await apiPatch(`/api/v1/drafts/${encodeURIComponent(draftId)}`, data);
-    _reloadWithToast('success', uiText('draft_saved', '草稿保存成功'));
-  } catch (err) {
-    _setButtonLoading(button, false);
-    _toast.error(err.message || uiText('draft_save_error', '保存草稿失败'));
-  }
-}
-
-export async function sealDraft(form) {
-  const draftId = form.dataset.draftId;
-  const button = form.querySelector('button[type="submit"]');
-  _setButtonLoading(button, true);
-  try {
-    const version = form.elements.version.value.trim();
-    await apiPost(`/api/v1/drafts/${encodeURIComponent(draftId)}/seal`, { version });
-    _reloadWithToast('success', uiText('draft_sealed', '草稿已封版'));
-  } catch (err) {
-    _setButtonLoading(button, false);
-    _toast.error(err.message || uiText('draft_seal_error', '封版失败'));
+    _toast.error(err.message || uiText('version_create_error', '创建版本失败'));
   }
 }
 

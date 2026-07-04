@@ -11,7 +11,6 @@ from server.models import Principal, User
 from server.modules.access.authn import AccessContext
 from server.ui.i18n import build_auth_redirect_url, resolve_language
 from server.ui.queries import (
-    get_draft_bundle_or_404,
     get_release_bundle_or_404,
     get_skill_or_404,
 )
@@ -76,6 +75,5 @@ __all__ = [
     "principal_label",
     "require_lifecycle_actor",
     "get_skill_or_404",
-    "get_draft_bundle_or_404",
     "get_release_bundle_or_404",
 ]

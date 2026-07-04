@@ -263,9 +263,9 @@ def assert_private_registry_ui_js_contracts() -> None:
     layout_template = LAYOUT_TEMPLATE_PATH.read_text(encoding="utf-8")
     home_auth_panel_template = HOME_AUTH_PANEL_TEMPLATE_PATH.read_text(encoding="utf-8")
     security_source = SECURITY_PATH.read_text(encoding="utf-8")
-    create_draft_source = _slice_top_level_function_source(
+    create_version_source = _slice_top_level_function_source(
         lifecycle_crud_source,
-        "export async function createDraft(form) {",
+        "export async function createVersion(form) {",
     )
     install_panel_source = _slice_source(
         search_source,
@@ -379,8 +379,8 @@ def assert_private_registry_ui_js_contracts() -> None:
         "_setButtonLoading(button, false);",
         "return;",
     ]:
-        assert marker in create_draft_source, (
-            "expected create-draft flow to block invalid metadata JSON instead of silently "
+        assert marker in create_version_source, (
+            "expected create-version flow to block invalid metadata JSON instead of silently "
             f"submitting an empty payload; missing marker {marker!r}"
         )
     for marker in [

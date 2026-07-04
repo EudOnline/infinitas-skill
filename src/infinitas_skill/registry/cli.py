@@ -73,34 +73,16 @@ def command_authoring_create_skill(args):
     )
 
 
-def command_authoring_create_draft(args):
+def command_authoring_create_version(args):
     metadata = _parse_json_object(args.metadata_json, arg_name="--metadata-json")
     payload = {
-        "base_version_id": args.base_version_id,
+        "version": args.version,
+        "content_mode": args.content_mode,
         "content_ref": args.content_ref,
+        "content_upload_token": args.content_upload_token,
         "metadata": metadata,
     }
-    return request_json(args, "POST", f"/api/v1/skills/{args.skill_id}/drafts", payload)
-
-
-def command_authoring_patch_draft(args):
-    payload = {}
-    if args.content_ref is not None:
-        payload["content_ref"] = args.content_ref
-    if args.metadata_json is not None:
-        payload["metadata"] = _parse_json_object(args.metadata_json, arg_name="--metadata-json")
-    if not payload:
-        fail("drafts update requires at least one of --content-ref or --metadata-json")
-    return request_json(args, "PATCH", f"/api/v1/drafts/{args.draft_id}", payload)
-
-
-def command_authoring_seal_draft(args):
-    return request_json(
-        args,
-        "POST",
-        f"/api/v1/drafts/{args.draft_id}/seal",
-        {"version": args.version},
-    )
+    return request_json(args, "POST", f"/api/v1/skills/{args.skill_id}/versions", payload)
 
 
 def command_release_create(args):
@@ -203,7 +185,7 @@ def configure_registry_parser(parser: argparse.ArgumentParser) -> argparse.Argum
     )
     subparsers = parser.add_subparsers(
         dest="registry_command",
-        metavar="{skills,drafts,releases,exposures,grants,tokens,reviews}",
+        metavar="{skills,versions,releases,exposures,grants,tokens,reviews}",
     )
 
     skills = subparsers.add_parser("skills", help="Manage private-first skill records")
@@ -226,40 +208,35 @@ def configure_registry_parser(parser: argparse.ArgumentParser) -> argparse.Argum
     skills_get.add_argument("skill_id", type=int, help="Skill identifier")
     skills_get.set_defaults(_handler=_wrap_registry_handler(command_authoring_get_skill))
 
-    drafts = subparsers.add_parser(
-        "drafts", help="Manage editable drafts and immutable version sealing"
+    versions = subparsers.add_parser(
+        "versions", help="Create immutable skill versions directly"
     )
-    drafts_subparsers = drafts.add_subparsers(dest="subcommand", metavar="{create,update,seal}")
-    drafts_create = drafts_subparsers.add_parser(
-        "create", help="Create an editable draft for a skill"
+    versions_subparsers = versions.add_subparsers(dest="subcommand", metavar="{create}")
+    versions_create = versions_subparsers.add_parser(
+        "create", help="Create an immutable version for a skill"
     )
-    drafts_create.add_argument("skill_id", type=int, help="Skill identifier")
-    drafts_create.add_argument(
-        "--base-version-id",
-        type=int,
+    versions_create.add_argument("skill_id", type=int, help="Skill identifier")
+    versions_create.add_argument("--version", required=True, help="Semantic version to create")
+    versions_create.add_argument(
+        "--content-mode",
         default=None,
-        help="Optional base skill_version id",
+        choices=["external_ref", "uploaded_bundle"],
+        help="Content mode for the version",
     )
-    drafts_create.add_argument(
+    versions_create.add_argument(
         "--content-ref", default="", help="Content locator/ref used by authoring"
     )
-    drafts_create.add_argument(
+    versions_create.add_argument(
+        "--content-upload-token",
+        default=None,
+        help="Uploaded artifact token for uploaded_bundle mode",
+    )
+    versions_create.add_argument(
         "--metadata-json",
         default="{}",
-        help="Draft metadata as JSON object",
+        help="Version metadata as JSON object",
     )
-    drafts_create.set_defaults(_handler=_wrap_registry_handler(command_authoring_create_draft))
-    drafts_update = drafts_subparsers.add_parser("update", help="Patch an open draft")
-    drafts_update.add_argument("draft_id", type=int, help="Draft identifier")
-    drafts_update.add_argument("--content-ref", default=None, help="Updated content ref")
-    drafts_update.add_argument("--metadata-json", default=None, help="Updated metadata JSON object")
-    drafts_update.set_defaults(_handler=_wrap_registry_handler(command_authoring_patch_draft))
-    drafts_seal = drafts_subparsers.add_parser(
-        "seal", help="Seal draft into an immutable skill version"
-    )
-    drafts_seal.add_argument("draft_id", type=int, help="Draft identifier")
-    drafts_seal.add_argument("--version", required=True, help="Semantic version to create")
-    drafts_seal.set_defaults(_handler=_wrap_registry_handler(command_authoring_seal_draft))
+    versions_create.set_defaults(_handler=_wrap_registry_handler(command_authoring_create_version))
 
     releases = subparsers.add_parser("releases", help="Create and inspect immutable releases")
     releases_subparsers = releases.add_subparsers(
