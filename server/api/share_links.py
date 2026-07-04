@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session
 from server.auth import get_current_access_context
 from server.auth_guards import require_actor_ref as _require_actor
 from server.db import get_db
+from server.modules.access import share_links as share_service
 from server.modules.access.authn import AccessContext
-from server.modules.shares import service as share_service
 from server.rate_limit import get_rate_limiter, resolve_client_ip
 
 router = APIRouter(prefix="/api/v1/share-links", tags=["share-links"])

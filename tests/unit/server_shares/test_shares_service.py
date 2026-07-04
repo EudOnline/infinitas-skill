@@ -1,4 +1,4 @@
-"""Unit tests for server.modules.shares.service."""
+"""Unit tests for server.modules.access.share_links."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 # Import after other modules to avoid circular import
 def _get_shares_service():
-    from server.modules.shares.service import (
+    from server.modules.access.share_links import (
         ShareLinkConflictError,
         ShareLinkError,
         ShareLinkForbiddenError,

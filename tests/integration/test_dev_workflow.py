@@ -72,10 +72,13 @@ def _read(rel_path: str) -> str:
 def test_make_targets_and_docs_expose_dev_workflow_entrypoints() -> None:
     makefile = _read("Makefile")
     lint_command = (
-        "uv run ruff check src/infinitas_skill server/ui server/app.py tests/integration tests/unit"
+        "uv run ruff check src/infinitas_skill server/ui server/api server/modules "
+        "server/auth.py server/db.py server/settings.py server/middleware.py server/app.py "
+        "tests/integration tests/unit"
     )
     fmt_command = (
-        "uv run ruff format src/infinitas_skill server/ui server/app.py "
+        "uv run ruff format src/infinitas_skill server/ui server/api server/modules "
+        "server/auth.py server/db.py server/settings.py server/middleware.py server/app.py "
         "tests/integration tests/unit"
     )
     required_targets = [
@@ -396,3 +399,20 @@ def test_review_operator_scripts_stay_package_owned() -> None:
             assert marker not in text, (
                 f"{rel_path} should not keep duplicated review command logic: {marker}"
             )
+
+
+def test_share_links_module_is_consolidated_into_access() -> None:
+    """Complexity reduction: share links must not keep a standalone module."""
+    assert not (ROOT / "server/modules/shares").exists(), (
+        "server/modules/shares should be consolidated into server/modules/access"
+    )
+    for rel_path in [
+        "server/app.py",
+        "server/api/library.py",
+        "server/ui/library_shares.py",
+        "server/api/activity.py",
+    ]:
+        text = _read(rel_path)
+        assert "server.modules.shares" not in text, (
+            f"{rel_path} should not import the deleted server.modules.shares package"
+        )

@@ -31,7 +31,7 @@ uv sync
 uv run pytest tests/integration/test_cli_release_state.py tests/integration/test_cli_server_ops.py tests/integration/test_private_registry_ui.py -q
 uv run pytest tests/integration/test_maintainability_budgets.py -q
 uv run pytest tests/integration/test_cli_policy.py tests/integration/test_signing_bootstrap.py tests/integration/test_installed_integrity.py -q
-uv run ruff check src/infinitas_skill server/ui server/app.py tests/integration tests/unit
+uv run ruff check src/infinitas_skill server/ui server/api server/modules server/auth.py server/db.py server/settings.py server/middleware.py server/app.py tests/integration tests/unit
 ./scripts/check-all.sh
 ./scripts/check-all.sh release-long
 ```

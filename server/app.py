@@ -13,6 +13,7 @@ from server.api.object_tokens import router as object_tokens_router
 from server.api.profile import credentials_router
 from server.api.profile import router as profile_router
 from server.api.search import router as search_router
+from server.api.share_links import router as share_links_router
 from server.api.system import router as system_router
 from server.db import ensure_database_ready
 from server.exceptions import register_exception_handlers
@@ -25,7 +26,6 @@ from server.modules.exposure.router import router as exposure_router
 from server.modules.registry.router import router as registry_router
 from server.modules.release.router import router as release_router
 from server.modules.review.router import router as review_router
-from server.modules.shares.router import router as shares_router
 from server.settings import get_settings
 from server.static_files import CachedStaticFiles
 from server.ui.assets import load_asset_hashes, static_url_factory
@@ -70,7 +70,7 @@ def create_app() -> FastAPI:
         release_router,
         exposure_router,
         review_router,
-        shares_router,
+        share_links_router,
         registry_router,
     ):
         app.include_router(router)

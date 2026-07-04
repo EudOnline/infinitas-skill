@@ -1,9 +1,18 @@
 from __future__ import annotations
 
+import importlib.util
+import sys
 from pathlib import Path
 
 from tests.integration.conftest import _prepare_library_client
 from tests.integration.test_object_tokens_api import _prepared_object_and_release
+
+
+def test_share_links_module_is_removed() -> None:
+    """The standalone shares module must be consolidated into the access package."""
+    assert "server.modules.shares" not in sys.modules
+    spec = importlib.util.find_spec("server.modules.shares")
+    assert spec is None
 
 
 def test_create_passworded_share_link_and_resolve(
