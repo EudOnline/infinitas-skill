@@ -39,7 +39,6 @@ from infinitas_skill.policy.review_commands import (
     build_review_status_parser,
 )
 from infinitas_skill.registry.cli import (
-    build_registry_drafts_parser,
     build_registry_exposures_parser,
     build_registry_grants_parser,
     build_registry_parser,
@@ -47,6 +46,7 @@ from infinitas_skill.registry.cli import (
     build_registry_reviews_parser,
     build_registry_skills_parser,
     build_registry_tokens_parser,
+    build_registry_versions_parser,
 )
 from infinitas_skill.release.cli import build_release_parser
 from infinitas_skill.release.signing_bootstrap_cli import build_signing_bootstrap_parser
@@ -137,7 +137,7 @@ def render_cli_reference() -> str:
     ).format_help()
     registry_help = build_registry_parser(prog="infinitas registry").format_help()
     registry_skills_help = build_registry_skills_parser().format_help()
-    registry_drafts_help = build_registry_drafts_parser().format_help()
+    registry_versions_help = build_registry_versions_parser().format_help()
     registry_releases_help = build_registry_releases_parser().format_help()
     registry_exposures_help = build_registry_exposures_parser().format_help()
     registry_grants_help = build_registry_grants_parser().format_help()
@@ -302,9 +302,9 @@ def render_cli_reference() -> str:
         "",
         _render_help_block(registry_skills_help).rstrip(),
         "",
-        "## `infinitas registry drafts`",
+        "## `infinitas registry versions`",
         "",
-        _render_help_block(registry_drafts_help).rstrip(),
+        _render_help_block(registry_versions_help).rstrip(),
         "",
         "## `infinitas registry releases`",
         "",

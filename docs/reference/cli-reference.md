@@ -564,14 +564,14 @@ options:
 
 ```text
 usage: infinitas registry [-h] [--base-url BASE_URL] [--token TOKEN]
-                          {skills,drafts,releases,exposures,grants,tokens,reviews} ...
+                          {skills,versions,releases,exposures,grants,tokens,reviews} ...
 
 Hosted registry private-first control plane CLI
 
 positional arguments:
-  {skills,drafts,releases,exposures,grants,tokens,reviews}
+  {skills,versions,releases,exposures,grants,tokens,reviews}
     skills              Manage private-first skill records
-    drafts              Manage editable drafts and immutable version sealing
+    versions            Create immutable skill versions directly
     releases            Create and inspect immutable releases
     exposures           Manage audience exposure and share policy
     grants              Inspect grant policy scaffolding for token-scoped
@@ -604,24 +604,22 @@ options:
   --token TOKEN        Bearer token for hosted registry API
 ```
 
-## `infinitas registry drafts`
+## `infinitas registry versions`
 
 ```text
-usage: infinitas registry drafts [-h] [--base-url BASE_URL] [--token TOKEN]
-                                 {create,update,seal} ...
+usage: infinitas registry versions [-h] [--base-url BASE_URL] [--token TOKEN]
+                                   {create} ...
 
-Manage editable drafts and immutable version sealing
+Create immutable skill versions directly
 
 positional arguments:
-  {create,update,seal}
-    create              Create an editable draft for a skill
-    update              Patch an open draft
-    seal                Seal draft into an immutable skill version
+  {create}
+    create             Create an immutable version for a skill
 
 options:
-  -h, --help            show this help message and exit
-  --base-url BASE_URL   Hosted registry API base URL
-  --token TOKEN         Bearer token for hosted registry API
+  -h, --help           show this help message and exit
+  --base-url BASE_URL  Hosted registry API base URL
+  --token TOKEN        Bearer token for hosted registry API
 ```
 
 ## `infinitas registry releases`

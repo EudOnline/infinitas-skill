@@ -40,7 +40,7 @@ flowchart TD
   A["Author / Agent / Automation"] --> B["Create or update object
   skill / agent_preset / agent_code"]
   B --> C["Generate version
-  legacy authoring internals may still run behind the facade"]
+  immutable skill version from content"]
   C --> D["Create release
   state=preparing"]
   D --> E["Worker materializes immutable artifacts
@@ -147,8 +147,8 @@ flowchart LR
 ### Detailed narrative
 
 1. The agent starts from the maintained CLI or the publish facade.
-2. Object creation is object-centric, not draft-centric.
-3. Release creation may still translate into legacy authoring internals for `skill` and related object kinds.
+2. Object creation is object-centric; skill versions are created directly from content.
+3. Release creation consumes the immutable skill version and begins materialization.
 4. A new release begins in `preparing`.
 5. A worker materializes immutable artifacts before the release becomes `ready`.
 6. A ready release still cannot be used broadly until exposure policy opens the appropriate audience surface.
@@ -251,9 +251,9 @@ The repository is already consolidated around the maintained model, but a few ar
 
 ### 1. Publish facade vs internal lifecycle
 
-The agent-facing publish API is object-centric and hides legacy authoring mechanics.
+The agent-facing publish API is object-centric and creates immutable skill versions directly from content.
 
-Internally, the backend still uses legacy draft and sealed-version transitions for some object kinds. This is intentional, but it means maintainers should not mistake those internals for the maintained product model.
+The legacy draft and sealed-version transitions have been removed for `skill`; all object kinds should follow the same direct-version model.
 
 ### 2. Frontend distribution console vs legacy lifecycle JavaScript
 

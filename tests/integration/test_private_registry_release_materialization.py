@@ -97,14 +97,14 @@ def _stage_uploaded_content_artifact(*, artifact_root: Path) -> int:
     storage = build_artifact_storage(artifact_root)
     stored = storage.put_bytes(
         _build_uploaded_bundle_bytes(),
-        public_path="draft-content/materialized-release-uploaded.tar.gz",
+        public_path="version-content/materialized-release-uploaded.tar.gz",
     )
 
     session_factory = get_session_factory()
     with session_factory() as session:
         artifact = Artifact(
             release_id=None,
-            kind="draft_content",
+            kind="version_content",
             storage_uri=stored.storage_uri,
             sha256=stored.sha256,
             size_bytes=stored.size_bytes,

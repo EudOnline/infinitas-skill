@@ -43,7 +43,7 @@ Install-time preset selection must use the exact variant field names:
 
 The following remain authoritative in the repository backend:
 
-- draft and sealed-version state
+- immutable skill version state
 - immutable release and artifact state
 - exposure, review case, and access-grant state
 - install planning and audit history

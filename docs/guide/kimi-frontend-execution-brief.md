@@ -147,7 +147,6 @@ Acceptance:
 Relevant areas:
 
 - skill detail
-- draft detail
 - release detail
 - share/exposure detail
 - review case views

@@ -99,7 +99,7 @@ def _parse_artifact_token(token: str | None) -> int | None:
 def _resolve_uploaded_content_artifact(db: Session, token: str | None) -> Artifact:
     artifact_id = _parse_artifact_token(token)
     if artifact_id is None:
-        raise ConflictError("uploaded_bundle drafts require content_upload_token")
+        raise ConflictError("uploaded_bundle versions require content_upload_token")
     artifact = repository.get_artifact(db, artifact_id)
     if artifact is None:
         raise NotFoundError("uploaded content artifact not found")

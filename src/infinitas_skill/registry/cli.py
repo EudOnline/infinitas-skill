@@ -401,25 +401,29 @@ def build_registry_skills_parser(*, prog=None):
     return parser
 
 
-def build_registry_drafts_parser(*, prog=None):
+def build_registry_versions_parser(*, prog=None):
     parser = argparse.ArgumentParser(
-        prog=prog or "infinitas registry drafts",
-        description="Manage editable drafts and immutable version sealing",
+        prog=prog or "infinitas registry versions",
+        description="Create immutable skill versions directly",
     )
     _add_common_args(parser)
-    sub = parser.add_subparsers(dest="subcommand", metavar="{create,update,seal}")
-    create = sub.add_parser("create", help="Create an editable draft for a skill")
+    sub = parser.add_subparsers(dest="subcommand", metavar="{create}")
+    create = sub.add_parser("create", help="Create an immutable version for a skill")
     create.add_argument("skill_id", type=int, help="Skill identifier")
-    create.add_argument("--base-version-id", type=int, default=None, help="Base skill_version id")
+    create.add_argument("--version", required=True, help="Semantic version to create")
+    create.add_argument(
+        "--content-mode",
+        default=None,
+        choices=["external_ref", "uploaded_bundle"],
+        help="Content mode for the version",
+    )
     create.add_argument("--content-ref", default="", help="Content locator/ref used by authoring")
-    create.add_argument("--metadata-json", default="{}", help="Draft metadata as JSON object")
-    update = sub.add_parser("update", help="Patch an open draft")
-    update.add_argument("draft_id", type=int, help="Draft identifier")
-    update.add_argument("--content-ref", default=None, help="Updated content ref")
-    update.add_argument("--metadata-json", default=None, help="Updated metadata JSON object")
-    seal = sub.add_parser("seal", help="Seal draft into an immutable skill version")
-    seal.add_argument("draft_id", type=int, help="Draft identifier")
-    seal.add_argument("--version", required=True, help="Semantic version to create")
+    create.add_argument(
+        "--content-upload-token",
+        default=None,
+        help="Uploaded artifact token for uploaded_bundle mode",
+    )
+    create.add_argument("--metadata-json", default="{}", help="Version metadata as JSON object")
     return parser
 
 
@@ -529,8 +533,8 @@ def registry_main(argv: list[str] | None = None, *, prog: str | None = None) -> 
 __all__ = [
     "REGISTRY_PARSER_DESCRIPTION",
     "REGISTRY_TOP_LEVEL_HELP",
-    "build_registry_drafts_parser",
     "build_registry_exposures_parser",
+    "build_registry_versions_parser",
     "build_registry_grants_parser",
     "build_registry_parser",
     "build_registry_releases_parser",

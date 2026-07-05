@@ -65,8 +65,7 @@ These are returned as HTTP status codes in API responses. The CLI surface conver
 | Error detail | Cause | Remediation |
 |---|---|---|
 | `skill not found` | Skill ID does not exist | Verify the skill ID from `registry skills get` or the UI |
-| `draft not found` | Draft ID does not exist | Verify the draft ID from the create response |
-| `skill version not found` | Version ID does not exist | Verify the version ID from the seal response |
+| `skill version not found` | Version ID does not exist | Verify the version ID from `registry versions create` or the UI |
 | `release not found` | Release ID does not exist | Verify the release ID from the create response |
 | `exposure not found` | Exposure ID does not exist | Verify the exposure ID from the create response |
 | `review case not found` | Review case ID does not exist | Verify the case ID from the open-case response |
@@ -79,12 +78,10 @@ These are returned as HTTP status codes in API responses. The CLI surface conver
 | Error detail | Cause | Remediation |
 |---|---|---|
 | `skill slug already exists in namespace` | A skill with the same slug already exists in the principal's namespace | Choose a different slug or use the existing skill |
-| `sealed draft is immutable` | Attempted to update a draft that is already sealed | Create a new draft instead |
-| `draft is already sealed` | Attempted to seal a draft that was already sealed | Use the existing sealed version |
 | `skill version already exists` | A version with the same semver string already exists for this skill | Use a different version string |
 | `release already exists for skill version` | A release already exists for this version | Use `releases get` to fetch the existing release |
 | `only ready releases can be exposed` | Release materialization has not completed | Poll `releases get` until `state` becomes `ready` |
-| `draft content_ref must be an immutable snapshot before sealing` | Content ref is not a valid immutable snapshot | Ensure content is uploaded or referenced as an immutable artifact |
+| `content_ref must be an immutable snapshot` | Content ref is not a valid immutable snapshot | Ensure content is uploaded or referenced as an immutable artifact |
 | `review case is already closed` | Attempted to record a decision on a closed case | Open a new review case |
 | `closed exposure cannot be patched` | Attempted to update an ended/revoked exposure | Create a new exposure |
 | `closed exposure cannot be re-activated` | Attempted to activate a revoked exposure | Create a new exposure |
@@ -102,7 +99,6 @@ These originate from `src/infinitas_skill/registry/cli.py` and exit with code 1.
 | `<response.text>` | Server returned HTTP 400+ | Parse the response body for the specific error detail |
 | `invalid --metadata-json: <exc>` | `--metadata-json` value is not valid JSON | Ensure the value is a valid JSON string |
 | `invalid --metadata-json: expected JSON object` | `--metadata-json` parsed as JSON but is not an object | Wrap the value in `{}` |
-| `drafts update requires at least one of --content-ref or --metadata-json` | Neither flag provided to `drafts update` | Provide at least one of the flags |
 | `exposures update requires at least one of --listing-mode, --install-mode, or --requested-review-mode` | Neither flag provided to `exposures update` | Provide at least one of the flags |
 | `grant listing API is not available yet` | `grants list` is a stub command | Track the grants feature milestone |
 | `grant token issuing API is not available yet` | `grants create-token` is a stub command | Track the grants feature milestone |

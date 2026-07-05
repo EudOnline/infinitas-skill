@@ -25,7 +25,7 @@ def _client(
     return TestClient(create_app())
 
 
-def test_publish_facade_creates_release_without_draft_or_seal_terms(
+def test_publish_facade_creates_release_via_direct_version(
     monkeypatch,
     tmp_path: Path,
     temp_repo_copy: Path,

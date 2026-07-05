@@ -75,13 +75,13 @@ The web UI uses HMAC-signed session cookies (`infinitas_auth_token`). Cookie-aut
 
 ### Publishing
 
-The maintained publish surface is object-first and release-first. Do not build new integrations around legacy draft-oriented routes.
+The maintained publish surface is object-first and release-first.
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
 | POST | `/api/v1/skills` | Bearer | Create a skill object |
-| POST | `/api/v1/versions/{version_id}/releases` | Bearer | Create a release from a sealed version |
-| POST | `/api/v1/drafts` | Bearer | Legacy migration shim for draft-based publishing; not maintained for new integrations |
+| POST | `/api/v1/skills/{skill_id}/versions` | Bearer | Create an immutable skill version directly |
+| POST | `/api/v1/versions/{version_id}/releases` | Bearer | Create a release from a version |
 
 ### Share Links
 

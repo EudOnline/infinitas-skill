@@ -16,7 +16,7 @@ The retired branch contained six committed themes plus local work-in-progress:
 
 - multi-object distribution vocabulary and schema definitions
 - shared hosted object storage primitives
-- draft content artifact storage for hosted objects
+- version content artifact storage for hosted objects
 - inline hosted bundle materialization
 - agent preset publishing APIs
 - memory-aware preset install variants
@@ -49,7 +49,7 @@ That end-to-end framing is valuable. It keeps memory mode from becoming a write-
 
 The branch included good scenario coverage around:
 
-- hosted draft content storage
+- hosted version content storage
 - bundle materialization for hosted releases
 - preset publishing APIs
 - memory-aware install variants
@@ -61,7 +61,7 @@ The main lesson is not that the exact tests should be restored verbatim, but tha
 
 A useful modeling choice in the branch was to distinguish:
 
-- stored draft content artifacts
+- stored version content artifacts
 - uploaded bundle materialization
 - external immutable refs such as `git+...#commit`
 

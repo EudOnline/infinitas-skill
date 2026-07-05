@@ -83,11 +83,9 @@ GET /api/v1/releases/{release_id}
 Recommended flow:
 
 1. Create the Object with `POST /api/v1/skills`.
-2. Seal a version through the authoring surface (`POST /api/v1/drafts`, `POST /api/v1/drafts/{draft_id}/seal`).
+2. Create an immutable version with `POST /api/v1/skills/{skill_id}/versions`.
 3. Create a Release with `POST /api/v1/versions/{version_id}/releases`.
 4. Poll `GET /api/v1/releases/{release_id}` until the Release is ready.
-
-Internal draft and sealing mechanics may still exist behind the service boundary, but they are not the primary product story.
 
 ## Step 5: Read from the unified library surface
 

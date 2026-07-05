@@ -48,8 +48,8 @@ Later hosted lifecycle work must use these exact object-kind names. The install 
 
 ## Supported runtime model
 
-1. author into a draft
-2. seal into an immutable version
+1. author content for an object
+2. create an immutable version directly
 3. create a release
 4. materialize immutable artifacts
 5. expose the release to `private`, `grant`, or `public`

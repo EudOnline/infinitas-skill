@@ -111,7 +111,6 @@ def assert_route_composition_boundaries() -> None:
         if isinstance(node, ast.ImportFrom) and node.module == "server.ui.auth_state":
             auth_aliases = {
                 "is_owner",
-                "require_draft_bundle_or_404",
                 "require_lifecycle_actor",
                 "require_release_bundle_or_404",
                 "require_skill_or_404",
