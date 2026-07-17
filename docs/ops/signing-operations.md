@@ -74,7 +74,7 @@ When you need to re-check existing release evidence:
 
 ```bash
 uv run infinitas release signing-readiness --skill operate-infinitas-skill --json
-python3 scripts/verify-attestation.py catalog/provenance/operate-infinitas-skill-0.1.1.json
+uv run infinitas release verify-attestation catalog/provenance/operate-infinitas-skill-0.1.1.json --json
 uv run infinitas release doctor-signing operate-infinitas-skill --provenance catalog/provenance/operate-infinitas-skill-0.1.1.json
 ```
 
@@ -102,7 +102,7 @@ The modes mean:
 
 The returned log-entry contract is normalized into a stable JSON shape with `entry_id`, `log_index`, `integrated_time`, `attestation_sha256`, and `proof` fields so later release tooling can persist and audit the same proof record.
 
-When `scripts/release-skill.sh --write-provenance` runs with transparency publication enabled, it writes that normalized proof to:
+When `infinitas release publish --write-attestation` runs with transparency publication enabled, it writes that normalized proof to:
 
 ```text
 catalog/provenance/<skill>-<version>.transparency.json
@@ -112,4 +112,4 @@ Operationally:
 
 - `advisory` mode logs a warning and continues if the endpoint is unavailable or returns a bad proof
 - `required` mode fails the release before distribution artifacts are finalized, so no half-trusted release bundle is left behind
-- `python3 scripts/verify-attestation.py <attestation.json> --json` is the fastest way to confirm whether the stored transparency proof still matches the attestation digest
+- `uv run infinitas release verify-attestation <attestation.json> --json` is the fastest way to confirm whether the stored transparency proof still matches the attestation digest

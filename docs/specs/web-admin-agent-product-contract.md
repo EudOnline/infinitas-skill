@@ -12,7 +12,7 @@ This document freezes the target product split for the hosted registry:
 
 - Web is a human-admin distribution console.
 - Agent is an API and CLI client for publish and read workflows.
-- `skill`, `agent_preset`, and `agent_code` are first-class object types that share the same release core.
+- v0.1 ships `skill` as its only first-class object type on the shared release core.
 
 ## Product vocabulary
 
@@ -62,11 +62,14 @@ Agent users do not use the web app as the primary authoring surface. Agents use 
 
 Every published item is an Object with a stable identity and a current set of Releases.
 
-Supported kinds:
+Supported kind in v0.1:
 
 - `skill`
-- `agent_preset`
-- `agent_code`
+
+The generic Object and Release terms are an extensibility boundary, not a claim
+that other object kinds are implemented. `agent_preset` and `agent_code` remain
+deferred until their authoring, materialization, discovery, and install contracts
+are delivered end to end.
 
 Shared Object fields:
 

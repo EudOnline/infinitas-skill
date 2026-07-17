@@ -53,7 +53,7 @@ After updating a contract doc:
 Then rerun:
 
 ```bash
-uv run python3 scripts/test-canonical-contracts.py
+.venv/bin/pytest tests/unit/compatibility -q --override-ini=addopts=
 uv run infinitas compatibility check-platform-contracts --max-age-days 30 --stale-policy fail
 ```
 
@@ -62,7 +62,7 @@ uv run infinitas compatibility check-platform-contracts --max-age-days 30 --stal
 If the platform change could affect whether a skill still works, refresh verified support evidence for the impacted skills:
 
 ```bash
-uv run python3 scripts/record-verified-support.py <skill> --platform codex --platform claude --platform openclaw --build-catalog
+uv run infinitas registry catalog build
 ```
 
 Operational rule:
@@ -93,6 +93,6 @@ Use this loop whenever upstream platform behavior changes or when release readin
 1. Refresh the upstream platform contract review.
 2. Update `docs/platform-contracts/*.md`.
 3. Sync `profiles/*.json`.
-4. Rerun `python3 scripts/record-verified-support.py <skill> --platform ... --build-catalog` for impacted skills.
-5. Run `uv run bash scripts/check-all.sh`.
+4. Record current runtime evidence under `catalog/compatibility-evidence/<platform>/<skill>/<version>.json` for impacted skills, then run `uv run infinitas registry catalog build`.
+5. Run `./scripts/check-all.sh`.
 6. Ship only after `uv run infinitas release check-state <skill> --mode preflight` is clean.

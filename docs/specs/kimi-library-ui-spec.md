@@ -16,7 +16,7 @@ Replace the old maintainer-console primary information architecture with a human
 
 The web app is for people who manage distribution, visibility, access, and audit trails.
 
-The web app is not the primary place to create objects or walk through draft and seal mechanics.
+The web app is not the primary place to create objects or walk through immutable version mechanics.
 
 ## Visual direction
 
@@ -69,8 +69,7 @@ Use these product nouns in UI copy:
 
 Hide these internal nouns from the primary UI:
 
-- Draft
-- Seal
+- Immutable version
 - Exposure
 - Grant
 - Credential
@@ -106,8 +105,7 @@ It must include:
 Must not show:
 
 - create skill
-- create draft
-- seal draft
+- create immutable version
 - create release
 
 ## Object detail page requirements

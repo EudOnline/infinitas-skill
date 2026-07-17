@@ -9,13 +9,9 @@ See: `.planning/PROJECT.md` (updated 2026-03-20)
 
 ## Current Position
 
-Phase: steady-state (with a post-steady-state refactor pass — see note)
+Phase: steady-state
 Plan: `docs/plans/2026-03-20-project-completion-and-steady-state.md`
-Status: v20 was complete on `main` as of 2026-03-20. Since then the tree has had
-a follow-on refactor pass not captured as a numbered milestone: security/auth
-hardening, Pydantic schema tightening, expanded test coverage, and removal of the
-`memory` subsystem and the `share_links` table (reimplemented on `AccessGrant`).
-Treat `git log` and the live tree as authoritative for current state.
+Status: v20 complete on `main`; the repository is in steady-state until a new milestone is intentionally opened.
 Last activity: 2026-06-30 — cleanliness audit + consolidation (see git history).
 Progress: [##########] 100% (steady-state maintenance)
 

@@ -22,46 +22,41 @@ The installed-integrity workflow extends v15's signed `file_manifest` into the l
 Verify one installed skill:
 
 ```bash
-python3 scripts/verify-installed-skill.py my-skill ~/.openclaw/skills --json
+uv run infinitas install verify my-skill ~/.openclaw/skills --json
 ```
 
 Report the currently recorded integrity summary for all installed skills:
 
 ```bash
-python3 scripts/report-installed-integrity.py ~/.openclaw/skills --json
+uv run infinitas install report ~/.openclaw/skills --json
 ```
 
 Refresh the target-local summary and append additive audit history:
 
 ```bash
-python3 scripts/report-installed-integrity.py ~/.openclaw/skills --refresh --json
+uv run infinitas install report ~/.openclaw/skills --refresh --json
 ```
 
 Repair one drifted install back to its recorded immutable source:
 
 ```bash
-scripts/repair-installed-skill.sh my-skill ~/.openclaw/skills
+uv run infinitas install repair my-skill ~/.openclaw/skills
 ```
 
 ## Integrity States
 
 - `verified`: the installed local files still match the signed released-file inventory recorded by the immutable distribution source
 - `drifted`: one or more local files are missing, modified, or unexpected compared with the signed released-file inventory
-- `repaired`: not a persisted steady-state value; it describes the action where `repair-installed-skill.sh` restores the install and the follow-up verification returns `verified`
+- `repaired`: not a persisted steady-state value; it describes the action where `infinitas install repair` restores the install and the follow-up verification returns `verified`
 - `unknown`: the install manifest does not yet carry enough immutable source metadata to compare local files against a signed released-file inventory
 
-For legacy immutable releases, `unknown` is often a manifest-shape problem instead of an install problem. After backfilling the referenced distribution manifest in place, the same installed runtime copy can move to `verified` without reinstalling:
+Because this repository is unreleased, manifests without a signed file inventory are invalid development artifacts. Regenerate the release with `uv run infinitas release publish <name> --create-tag --write-attestation` or reinstall from a current immutable source; do not backfill old manifest shapes.
 
-```bash
-python3 scripts/backfill-distribution-manifests.py --manifest <distribution-manifest> --write --json
-python3 scripts/verify-installed-skill.py <name> <target-dir> --json
-```
-
-`verify-installed-skill.py` stays read-only. `report-installed-integrity.py --refresh` is the command that re-runs verification and writes refreshed summary fields back into `.infinitas-skill-install-manifest.json`.
+`infinitas install verify` stays read-only. `infinitas install report --refresh` is the command that re-runs verification and writes refreshed summary fields back into `.infinitas-skill-install-manifest.json`.
 
 ## Drift Report
 
-`verify-installed-skill.py --json` reports additive arrays for:
+`infinitas install verify --json` reports additive arrays for:
 
 - `modified_files`
 - `missing_files`
@@ -77,7 +72,7 @@ It also reports compact summary counters such as:
 
 This keeps both humans and wrappers on the same contract without scraping stdout text.
 
-`report-installed-integrity.py --json` adds a stable per-skill summary layer:
+`infinitas install report --json` adds a stable per-skill summary layer:
 
 - `integrity_capability`
 - `integrity_reason`
@@ -120,18 +115,18 @@ Freshness policy is repo-managed configuration, not a new persisted install-mani
 - `warn`: print the recommended recovery path before overwrite-style mutation
 - `fail`: refuse overwrite-style mutation until the recommended recovery path has re-established trust
 
-`stale_policy` applies only to stale-but-clean installs. `never_verified_policy` applies to `never-verified` installs, including legacy manifests that do not yet carry enough timing data. Refreshable installs recommend `report-installed-integrity.py <target-dir> --refresh`; compatibility-only installs without enough immutable source metadata recommend reinstall or manifest backfill instead.
+`stale_policy` applies only to stale-but-clean installs. `never_verified_policy` applies to `never-verified` installs, including legacy manifests that do not yet carry enough timing data. Refreshable installs recommend `infinitas install report <target-dir> --refresh`; compatibility-only installs without enough immutable source metadata recommend reinstall or manifest backfill instead.
 
 ## Repair Workflow
 
 When a skill is `drifted`, prefer repair over silent overwrite:
 
-1. run `python3 scripts/verify-installed-skill.py <name> <target-dir> --json`
+1. run `uv run infinitas install verify <name> <target-dir> --json`
 2. inspect the reported drift paths
-3. run `scripts/repair-installed-skill.sh <name> <target-dir>`
+3. run `uv run infinitas install repair <name> <target-dir>`
 4. verify again to confirm the state is back to `verified`
 
-`repair-installed-skill.sh` is exact-source and manifest-driven:
+`infinitas install repair` is exact-source and manifest-driven:
 
 - it reuses the recorded `source_qualified_name`
 - it reuses the recorded `source_registry`
@@ -149,7 +144,7 @@ Mutation commands such as:
 
 now follow one guard order before overwriting local files:
 
-1. detected `drifted` state still blocks first and points operators to `verify-installed-skill.py` or `repair-installed-skill.sh`
+1. detected `drifted` state still blocks first and points operators to `infinitas install verify` or `infinitas install repair`
 2. stale-but-clean installs then consult `freshness.stale_policy`
 3. `never-verified` installs then consult `freshness.never_verified_policy`
 4. `warn` emits the matching recovery guidance and continues
@@ -172,7 +167,7 @@ Use this matrix when you need to predict what overwrite-style mutation will do:
 | `freshness_state = never-verified` and immutable source metadata is compatibility-only | `freshness.never_verified_policy` | `warning` under the default `warn` policy | `backfill-distribution-manifest` or `reinstall` |
 | explicit `--force` | bypasses local readiness guardrails | forced overwrite | use only when intentionally bypassing the target-local safety checks |
 
-`infinitas install upgrade --mode confirm`, `infinitas install check-update`, `report-installed-integrity.py`, and the overwrite-style mutation commands all consume the same derived readiness fields so wrappers do not need separate per-command policy logic.
+`infinitas install upgrade --mode confirm`, `infinitas install check-update`, `infinitas install report`, and the overwrite-style mutation commands all consume the same derived readiness fields so wrappers do not need separate per-command policy logic.
 
 ## Trust Boundary
 
@@ -188,10 +183,10 @@ If the install lacks those immutable references, the integrity state remains `un
 
 ## Steady-State Verification
 
-Repository steady-state verification guidance is documented in `../project-closeout.md`.
+Repository verification commands and quality gates are documented in [testing.md](testing.md).
 
-- CI installs the hosted-registry dependency set with `python3 -m pip install .` and runs `scripts/check-all.sh` with `INFINITAS_REQUIRE_HOSTED_E2E_TESTS=1`.
-- Minimal local environments may still skip `scripts/test-hosted-registry-e2e.py` until that same dependency set is installed explicitly.
+- CI installs every dependency group with `uv sync --all-groups` and runs `scripts/check-all.sh` with `INFINITAS_REQUIRE_HOSTED_E2E_TESTS=1`.
+- Local verification uses the pytest suites documented in [testing.md](testing.md); there is no parallel script-test entrypoint.
 - The project is already complete on `main`; these notes describe the supported maintenance baseline, not an unfinished merge gate.
 - The remaining compatibility quirks are accepted non-blocking maintenance notes unless a concrete user-facing defect appears.
 
@@ -219,7 +214,7 @@ Install-manifest entries now preserve additive trust metadata alongside the nest
 }
 ```
 
-Current writers also keep only bounded recent `integrity_events` inline. `report-installed-integrity.py --refresh` writes or refreshes one target-local snapshot/history artifact at:
+Current writers also keep only bounded recent `integrity_events` inline. `infinitas install report --refresh` writes or refreshes one target-local snapshot/history artifact at:
 
 ```text
 .infinitas-skill-installed-integrity.json

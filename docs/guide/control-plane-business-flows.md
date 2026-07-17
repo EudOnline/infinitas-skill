@@ -10,7 +10,7 @@ status: maintained
 
 This guide summarizes the maintained business flows for `infinitas-skill` after the private-first and OpenClaw-first cutovers.
 
-The old lifecycle model is not maintained as a product story. Old routes exist only as redirects or migration shims, and new work must use the canonical `object/release/exposure/distribution` flow.
+The old lifecycle model is not maintained as a product story. Its routes and storage forms have been removed, and new work must use the canonical `object/release/exposure/distribution` flow.
 
 Use this page when you need one conceptual model that explains:
 
@@ -21,7 +21,6 @@ Use this page when you need one conceptual model that explains:
 
 For lower-level route and command details, continue into:
 
-- [Private-first cutover](private-first-cutover.md)
 - [Frontend control-plane alignment](frontend-control-plane-alignment.md)
 - [OpenClaw runtime contract](../reference/openclaw-runtime-contract.md)
 - [API reference](../reference/api-reference.md)
@@ -37,8 +36,7 @@ It does not treat "skill exists" or even "release exists" as enough for downstre
 
 ```mermaid
 flowchart TD
-  A["Author / Agent / Automation"] --> B["Create or update object
-  skill / agent_preset / agent_code"]
+  A["Author / Agent / Automation"] --> B["Create or update skill object"]
   B --> C["Generate version
   immutable skill version from content"]
   C --> D["Create release
@@ -70,7 +68,7 @@ flowchart TD
 
 The repository uses one backend truth set for both agent and frontend flows:
 
-- `RegistryObject` is the durable identity for `skill`, `agent_preset`, and `agent_code`
+- `Skill` is the durable identity for the maintained `skill` object kind
 - version and release state remain backend-owned
 - immutable release artifacts remain backend-owned
 - exposure, review, token, share, and audit state remain backend-owned
@@ -163,7 +161,7 @@ This means the agent-facing happy path deliberately hides lifecycle complexity w
 
 ### Primary goal
 
-The browser product is a human-admin distribution console. The old lifecycle model is not maintained for browser work, and any legacy browser routes redirect to the maintained `/manage` surface.
+The browser product is a human-admin distribution console. The old lifecycle model is not maintained for browser work; only the maintained `/manage` and `/library/*` surfaces are supported.
 
 The maintained browser routes are:
 
@@ -253,11 +251,12 @@ The repository is already consolidated around the maintained model, but a few ar
 
 The agent-facing publish API is object-centric and creates immutable skill versions directly from content.
 
-The legacy draft and sealed-version transitions have been removed for `skill`; all object kinds should follow the same direct-version model.
+The legacy draft and sealed-version transitions have been removed. The maintained
+`skill` flow creates immutable versions directly from content.
 
 ### 2. Frontend distribution console vs legacy lifecycle JavaScript
 
-The routed browser product now redirects legacy authoring pages into the Library surfaces, but the global application bootstrap still initializes lifecycle-era JavaScript modules. That is a maintainability signal that old frontend plumbing has not been fully retired.
+Legacy authoring pages are no longer registered. The global application bootstrap loads only modules needed by the maintained Library, access, sharing, and activity surfaces.
 
 ### 3. Share-link implementation split
 
@@ -277,7 +276,7 @@ The browser activity page is assembled from UI aggregation helpers rather than d
 When onboarding a contributor, the fastest path is:
 
 1. this business-flow guide
-2. [Private-first cutover](private-first-cutover.md)
+2. [Web admin and Agent product contract](../specs/web-admin-agent-product-contract.md)
 3. [Frontend control-plane alignment](frontend-control-plane-alignment.md)
 4. [OpenClaw runtime contract](../reference/openclaw-runtime-contract.md)
 5. [API reference](../reference/api-reference.md)

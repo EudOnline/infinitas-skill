@@ -22,7 +22,7 @@ Treat each surface according to its role. Do not assume every JSON file or regis
 | `federation.mode = "mirror"` registry | Operator visibility, backup inventory, comparison surface | Default resolver candidate, authoritative install source, proof that an artifact is trusted |
 | `catalog/inventory-export.json` | Current committed inventory summary for registries, skills, release/installability, and federation visibility | Immutable audit evidence, live release readiness, debug policy reasoning |
 | `catalog/audit-export.json` | Committed release audit evidence derived from provenance and distributions | Current mutable worktree state, uncommitted review or release readiness |
-| `python3 scripts/report-installed-integrity.py <target-dir> --json` | Target-local installed runtime trust state, additive integrity history, and repair recommendations | Repo-scoped immutable release evidence, registry policy, historical promotion decisions |
+| `uv run infinitas install report <target-dir> --json` | Target-local installed runtime trust state, additive integrity history, and repair recommendations | Repo-scoped immutable release evidence, registry policy, historical promotion decisions |
 | `catalog/provenance/*.json` plus signatures | Immutable release evidence for one released version | Global inventory, current registry policy, moving-branch status |
 | `policy_trace` and live `check-release-state --json` output | Operator debugging and current decision explanation | Long-term stable external integration contract |
 
@@ -44,7 +44,7 @@ Treat each surface according to its role. Do not assume every JSON file or regis
 
 - `inventory-export.json` answers: "What do we currently expose and from which registry view?"
 - `audit-export.json` answers: "What immutable release evidence do we have for this version?"
-- `report-installed-integrity.py` answers: "What is the trust state of this specific target-local install right now?"
+- `infinitas install report` answers: "What is the trust state of this specific target-local install right now?"
 - When the two disagree, treat audit evidence as authoritative for released artifacts and inventory as authoritative for current committed exposure.
 - Do not use `catalog/audit-export.json` as a substitute for target-local runtime verification. Use the target-local report or explicit verifier instead.
 
@@ -70,7 +70,7 @@ Interpretation:
 
 Recovery:
 
-1. Run `python3 scripts/list-registry-sources.py` and inspect `federation=` plus `resolver=` output.
+1. Run `uv run infinitas registry sources list --json` and inspect federation mode plus resolver eligibility.
 2. Confirm whether the registry is `mirror` or `federated`.
 3. If the registry is `mirror`, do not treat absence from normal resolution as a bug by itself.
 4. Refresh or inspect the authoritative federated or hosted source instead of promoting the mirror.
@@ -89,10 +89,10 @@ Interpretation:
 Recovery:
 
 1. Run `uv run infinitas policy check-packs`.
-2. Run `python3 scripts/check-registry-sources.py`.
-3. Inspect the effective registry config with `python3 scripts/list-registry-sources.py`.
+2. Run `uv run infinitas registry sources check --json`.
+3. Inspect the effective registry config with `uv run infinitas registry sources list --json`.
 4. If the upstream should still federate, fix the policy file or pack override rather than patching exports by hand.
-5. Rebuild committed artifacts with `bash scripts/build-catalog.sh` after policy is corrected.
+5. Rebuild committed artifacts with `uv run infinitas registry catalog build` after policy is corrected.
 
 ### 3. Missing or invalid provenance
 
@@ -109,12 +109,10 @@ Interpretation:
 
 Recovery:
 
-1. Verify the distribution manifest directly:
-   `python3 scripts/verify-distribution-manifest.py <manifest.json>`
-2. Verify the release attestation directly:
-   `python3 scripts/verify-attestation.py <provenance.json>`
+1. Materialize the release into a disposable target with `uv run infinitas install exact <skill> /tmp/infinitas-verify --version <version> --json`; install verification checks the manifest, signature, bundle digest, and signed file inventory.
+2. Verify the release attestation directly with `uv run infinitas release verify-attestation <provenance.json> --json`.
 3. If verification fails, do not trust `audit-export.json` to be complete until the release artifacts are repaired and regenerated.
-4. Regenerate catalog artifacts with `bash scripts/build-catalog.sh` only after provenance and manifest verification succeeds.
+4. Regenerate catalog artifacts with `uv run infinitas registry catalog build` only after provenance and manifest verification succeeds.
 
 ### 4. Export artifacts are older than the committed catalog state
 
@@ -129,8 +127,8 @@ Interpretation:
 
 Recovery:
 
-1. Run `bash scripts/build-catalog.sh`.
-2. Run `python3 scripts/check-catalog-exports.py`.
+1. Run `uv run infinitas registry catalog build`.
+2. Run `uv run infinitas registry catalog build --check --json`.
 3. Review the resulting diff instead of editing export files manually.
 4. Commit the regenerated artifacts once the diff matches the intended source change.
 
@@ -150,9 +148,9 @@ Recovery:
 1. Decide whether the source should become `mirror`, `untrusted`, or be removed entirely.
 2. Update `config/registry-sources.json` or the active policy pack accordingly.
 3. Re-run:
-   - `python3 scripts/check-registry-sources.py`
-   - `python3 scripts/test-federated-registry-resolution.py`
-   - `bash scripts/build-catalog.sh`
+   - `uv run infinitas registry sources check --json`
+   - `.venv/bin/pytest tests/integration/test_cli_registry_local_ops.py -q --override-ini=addopts=`
+   - `uv run infinitas registry catalog build`
 4. Verify the resulting exports and resolver behavior before merging the policy change.
 
 ## Recovery order
@@ -161,15 +159,15 @@ When you are unsure where the failure starts, use this order:
 
 1. Validate policy:
    - `uv run infinitas policy check-packs`
-   - `python3 scripts/check-registry-sources.py`
+   - `uv run infinitas registry sources check --json`
 2. Inspect registry visibility and authority:
-   - `python3 scripts/list-registry-sources.py`
+   - `uv run infinitas registry sources list --json`
 3. Rebuild and validate committed catalog artifacts:
-   - `bash scripts/build-catalog.sh`
-   - `python3 scripts/check-catalog-exports.py`
+   - `uv run infinitas registry catalog build`
+   - `uv run infinitas registry catalog build --check --json`
 4. Verify immutable release evidence when releases are involved:
-   - `python3 scripts/verify-distribution-manifest.py <manifest.json>`
-   - `python3 scripts/verify-attestation.py <provenance.json>`
+   - `uv run infinitas install exact <skill> /tmp/infinitas-verify --version <version> --json`
+   - `uv run infinitas release verify-attestation <provenance.json> --json`
 5. Re-run repo validation:
    - `scripts/check-all.sh`
 

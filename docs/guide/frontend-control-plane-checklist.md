@@ -10,7 +10,7 @@ status: maintained
 
 Use this checklist after reading [Frontend control-plane alignment](frontend-control-plane-alignment.md).
 
-The old lifecycle model is not maintained for frontend delivery. Legacy routes exist only as redirects or migration shims, and all new work must follow the canonical `object/release/exposure/distribution` model.
+The old lifecycle model is not maintained for frontend delivery. Legacy routes are removed, and all new work must follow the canonical `object/release/exposure/distribution` model.
 
 This page keeps frontend execution focused on the maintained browser surface.
 
@@ -23,7 +23,7 @@ New browser work should land on:
 - `/library/{object_id}/releases/{release_id}` — release detail
 - `/settings`
 
-Old `/library`, `/access`, `/shares`, and `/activity` routes redirect to `/manage`.
+Only `/manage` and the maintained `/library/{object_id}` detail routes are supported; removed console aliases return 404.
 
 ## Maintained API checklist
 

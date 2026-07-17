@@ -23,7 +23,6 @@ Archive pages preserve history, plans, and superseded narratives. They are usefu
 - [Design and UX explorations](design/ui-ux-analysis-and-rebuild.md)
 - [Theme migration history](design/theme-migration-guide.md)
 - [Audit snapshots](audits/dark-mode-audit.md)
-- [Project closeout](../project-closeout.md)
 
 ## How to use archive material
 

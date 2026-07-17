@@ -24,15 +24,11 @@ The maintained runtime contract centers on:
 
 ## Published object contract
 
-OpenClaw-facing distribution now treats these object kinds as first-class:
+OpenClaw-facing distribution in v0.1 supports `skill` Objects only.
 
-- `skill`
-- `agent_preset`
-- `agent_code`
-
-`agent_preset` is the shared OpenClaw configuration object. It captures runtime-facing configuration such as prompt, model, tool, dependency, and memory defaults without implying that the preset itself owns the executable runtime implementation.
-
-`agent_code` is the lightweight runnable agent-code object. It may originate from an immutable external source, but hosted release output must still be a platform-owned frozen bundle rather than a live upstream reference.
+The broader Object vocabulary may later include configuration presets or runnable
+agent code, but those kinds are not part of the current authoring, release,
+discovery, or install contract.
 
 Install-time preset selection must use the exact variant field names:
 

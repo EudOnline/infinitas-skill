@@ -123,10 +123,10 @@ uv run infinitas release signing-readiness --skill my-skill --json
 Once doctor is green, the stable release ceremony is:
 
 ```bash
-scripts/release-skill.sh my-skill --push-tag
-scripts/release-skill.sh my-skill \
+uv run infinitas release tag my-skill --create --push
+uv run infinitas release publish my-skill \
   --notes-out /tmp/my-skill-release.md \
-  --write-provenance \
+  --write-attestation \
   --releaser lvxiaoer
 uv run infinitas release doctor-signing \
   my-skill \

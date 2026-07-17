@@ -100,9 +100,6 @@ These originate from `src/infinitas_skill/registry/cli.py` and exit with code 1.
 | `invalid --metadata-json: <exc>` | `--metadata-json` value is not valid JSON | Ensure the value is a valid JSON string |
 | `invalid --metadata-json: expected JSON object` | `--metadata-json` parsed as JSON but is not an object | Wrap the value in `{}` |
 | `exposures update requires at least one of --listing-mode, --install-mode, or --requested-review-mode` | Neither flag provided to `exposures update` | Provide at least one of the flags |
-| `grant listing API is not available yet` | `grants list` is a stub command | Track the grants feature milestone |
-| `grant token issuing API is not available yet` | `grants create-token` is a stub command | Track the grants feature milestone |
-| `grant revoke API is not available yet` | `grants revoke` is a stub command | Track the grants feature milestone |
 
 ## Local CLI errors
 
@@ -137,7 +134,7 @@ These originate from `src/infinitas_skill/registry/cli.py` and exit with code 1.
 | `ReviewPolicyError` | `reviews.py`, `policy/service.py` | Policy evaluation failed (quorum, group, or stage errors) | Check promotion policy groups and quorum settings |
 | `invalid JSON in <path>` | `policy/service.py` | Policy file contains invalid JSON | Fix the JSON syntax |
 | `<path> must contain a JSON object` | `policy/service.py` | Policy file is not a JSON object | Wrap content in `{}` |
-| `missing AI index: <path>` | `discovery/resolver.py` | No `ai-index.json` in catalog directory | Run `scripts/build-catalog.sh` |
+| `missing AI index: <path>` | `discovery/resolver.py` | No `ai-index.json` in catalog directory | Run `uv run infinitas registry catalog build` |
 | `could not resolve skill <name>` | `discovery/inspect.py` | Skill name not found in any registry | Check skill name or rebuild catalog |
 
 ## See also

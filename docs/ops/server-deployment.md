@@ -49,12 +49,12 @@ Production safety rails:
 3. Point `INFINITAS_SERVER_REPO_PATH` at the writable checkout
 4. Point `INFINITAS_SERVER_ARTIFACT_PATH` at a durable filesystem path
 5. Start the API app with `uv run uvicorn server.app:app --host 0.0.0.0 --port 8000`
-6. Start a worker loop process that drains queued validate / promote / publish jobs, for example `uv run infinitas server worker --poll-interval 5`
+6. Start a worker loop process that drains queued release materialization jobs, for example `uv run infinitas server worker --poll-interval 5`
 7. Configure the reverse proxy so hosted registry clients reach the API and immutable artifacts over HTTPS
 
 The built-in hosted app now serves immutable distribution artifacts directly from the synchronized artifact root under `/registry/*`. That means operators can expose both the control-plane API and hosted install surface through the same app process, for example:
 
-- `https://skills.example.com/healthz`
+- `https://skills.example.com/api/v1/system/healthz`
 - `https://skills.example.com/api/v1/...`
 - `https://skills.example.com/registry/ai-index.json`
 - `https://skills.example.com/registry/skills/<publisher>/<skill>/<version>/manifest.json`
@@ -171,7 +171,7 @@ uv run infinitas server healthcheck \
 
 This checks:
 
-- `GET /healthz` responds with `ok=true`
+- `GET /api/v1/system/healthz` responds with `ok=true`
 - the server-owned repo path is a real git worktree
 - the artifact directory contains `ai-index.json` and `catalog/`
 - the configured SQLite database file exists and answers a simple query
@@ -219,7 +219,11 @@ This summarizes:
 - recent jobs whose logs contain `WARNING:`
 - releases grouped by exposure audience and review state
 
-Hosted workers now claim jobs with a lease, refresh that lease immediately before doing work, and clear lease metadata on success or failure. A `running` job is considered healthy only while `lease_expires_at` is still in the future. If a worker crashes after claiming a job, the next worker or repeated release request can recover it after lease expiry without duplicating healthy queued or healthy running work.
+Hosted workers claim jobs with a 30-minute lease, persist lease renewal at materialization
+phase checkpoints, and clear lease metadata on success or failure. A `running` job is
+considered healthy only while `lease_expires_at` is still in the future. If a worker
+crashes after claiming a job, the next worker or repeated release request can recover it
+after lease expiry without duplicating healthy queued or healthy running work.
 
 When any configured threshold is exceeded, the script still emits its summary but exits with status code `2`. That makes it suitable for `systemd` oneshot health/alert runs.
 This is especially useful for best-effort publish mirror hooks: a publish may still complete successfully while leaving a warning that operators should inspect.
@@ -306,8 +310,7 @@ If mirror automation is enabled in the rendered bundle, also run:
 - `sudo systemctl enable --now infinitas-hosted-mirror.timer`
 
 The API service starts `uvicorn`, and the worker, backup, prune, and inspect units all run `python -m infinitas_skill.cli.main server ...` with `PYTHONPATH` pointed at `<repo>/src`. The backup timer runs `server backup`, the prune timer runs `server prune-backups` against the backup root, and the inspect timer runs `server inspect-state` with the configured alert thresholds.
-When configured, the mirror timer runs `scripts/mirror-registry.sh` for one-way outward mirroring only.
-If `INFINITAS_SERVER_MIRROR_REMOTE` is set in the worker environment, each successful publish also attempts an immediate best-effort one-way mirror push after artifact sync and the primary `origin` push complete.
+When configured, the mirror timer runs `infinitas registry sources mirror` for one-way outward mirroring only.
 Published artifacts remain filesystem-backed under `INFINITAS_SERVER_ARTIFACT_PATH`, and the hosted app serves that synchronized artifact root read-only from `/registry/*`.
 
 For a small single-node deployment, a reasonable starting point is:
@@ -328,16 +331,14 @@ The prune service deletes only older recognized hosted backup snapshots, not arb
 
 GitHub is an optional **one-way mirror** only. The hosted server remains the writable source of truth.
 
-- Use `scripts/mirror-registry.sh --remote <mirror-remote>`
+- Use `uv run infinitas registry sources mirror --remote <mirror-remote>`
 - Or render an optional `infinitas-hosted-mirror.timer` with `--mirror-remote <mirror-remote>`
-- Or set `INFINITAS_SERVER_MIRROR_REMOTE=<mirror-remote>` for an immediate best-effort publish-completion hook
 - Never fetch or merge GitHub back into the hosted repo
-- Mirror after successful publish or on a scheduled operator action
-- If the immediate publish hook warns, treat the scheduled mirror timer as the fallback safety net and inspect the publish job log
+- Mirror after successful materialization or on a scheduled operator action
 
 ## Operational notes
 
 - Keep the repo checkout on fast local storage; worker jobs mutate it directly
 - Serve artifacts from the synced artifact directory, not from editable skill folders
-- Monitor job logs for failed `check-skill`, promotion, or publish steps
-- Prefer SQLite only for single-node deployments; move to PostgreSQL when multiple app/worker nodes are needed
+- Monitor job logs for failed `materialize_release` jobs
+- v0.1 supports one API/Worker deployment group backed by SQLite; do not add multiple app or Worker nodes until PostgreSQL concurrency, health, backup, and restore contracts are implemented and validated

@@ -13,7 +13,6 @@ Use the guide section when you need orientation, decision framing, or contributo
 ## Start here
 
 - [Quickstart](quickstart.md)
-- [Private-first cutover](private-first-cutover.md)
 - [Control-plane business flows](control-plane-business-flows.md)
 - [Retired multi-object branch notes](multi-object-agent-distribution-branch-notes.md)
 - [Trust model](trust-model.md)

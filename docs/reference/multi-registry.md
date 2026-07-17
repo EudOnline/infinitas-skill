@@ -118,16 +118,15 @@ The fields mean:
 
 Successful remote syncs persist refresh metadata under `.cache/registries/_state/<registry>.json`.
 
-Use `python3 scripts/registry-refresh-status.py <registry> --json` to inspect the current cache age, freshness state, and configured thresholds for one registry.
+Use `uv run infinitas registry sources status <registry> --json` to inspect the current cache age, freshness state, and configured thresholds for one registry.
 
 When immutable registry snapshots exist under `.cache/registry-snapshots/<registry>/`, catalog and registry listing surfaces now expose additive visibility fields such as `snapshot_count`, `latest_snapshot`, and `available_snapshots`. Snapshot visibility is informational at this stage; it does not change default resolver authority on its own.
 
 To consume one snapshot on purpose, pass both the registry name and a selector:
 
 ```bash
-python3 scripts/resolve-skill-source.py demo --registry upstream --snapshot latest --json
-uv run python3 -m infinitas_skill.cli.main install exact demo ~/.openclaw/skills --registry upstream --snapshot latest
-scripts/sync-registry-source.sh upstream --snapshot latest
+uv run infinitas install exact demo ~/.openclaw/skills --registry upstream --snapshot latest --json
+uv run infinitas registry sources sync upstream --snapshot latest
 ```
 
 `latest` resolves to the newest known snapshot for that registry. You may also pass a concrete snapshot ID. Missing snapshots fail explicitly and do not fall back to the mutable cache.
@@ -169,8 +168,8 @@ Validation enforces the current trust boundary:
 
 That means:
 
-- `scripts/sync-registry-source.sh self` no longer fetches or hard-resets the working repository.
-- `scripts/sync-all-registries.sh` is safe to run even when `self` is enabled.
+- `infinitas registry sources sync self` never fetches or hard-resets the working repository.
+- `infinitas registry sources sync-all` is safe to run even when `self` is enabled.
 - mutable sync is limited to cache clones under `.cache/registries/<name>`.
 
 For tracked or pinned remote registries, sync now:
@@ -245,15 +244,15 @@ Auth currently supports:
 - `registry_refresh_age_hours`
 - `expected_tag`
 
-Use `publisher/skill` when you need to disambiguate two publishers that share the same bare skill slug. Legacy unqualified names still resolve for backward compatibility.
+Use `publisher/skill` when you need to disambiguate two publishers that share the same bare skill slug. An unqualified name resolves only when it is unique.
 
 For federated registries, the resolved `publisher` / `qualified_name` may be the mapped local namespace, while `upstream_publisher` / `upstream_qualified_name` preserve the original upstream identity for auditability.
 
-When `refresh_policy.stale_policy = "warn"`, resolver output stays additive: the candidate remains eligible, but `registry_freshness_warning` explains that the cache is stale and points operators at `scripts/sync-registry-source.sh <registry>`.
+When `refresh_policy.stale_policy = "warn"`, resolver output stays additive: the candidate remains eligible, but `registry_freshness_warning` explains that the cache is stale and points operators at `infinitas registry sources sync <registry>`.
 
 When `refresh_policy.stale_policy = "fail"`, stale cached registries are removed from resolution and the resolver exits with an actionable refresh error instead of silently relying on an outdated checkout.
 
-Install and sync manifests persist the same identity so `scripts/list-installed.sh` can show where a skill came from with its publisher namespace plus exact registry commit/tag.
+Install and sync manifests persist the same identity so `infinitas install list <target-dir> --json` can show where a skill came from with its publisher namespace plus exact registry commit/tag.
 
 For hosted registries, manifests should instead persist:
 
@@ -286,7 +285,7 @@ Dependency planning now follows a deterministic registry-aware order:
 5. `archived` candidates are only considered for exact version requests, while `incubating` candidates require `allow_incubating: true`.
 6. If the final plan would violate an installed dependency lock or leave an unresolved conflict, install/sync fails before mutating the target directory.
 
-`uv run infinitas install resolve-plan` exposes the same planner that `infinitas install exact`, `infinitas install sync`, `infinitas install check-target`, and `check-registry-integrity.py` now use.
+`uv run infinitas install resolve-plan` exposes the same planner used by `infinitas install exact`, `infinitas install sync`, and `infinitas install check-target`.
 
 ## Catalog output
 
@@ -303,7 +302,7 @@ Dependency planning now follows a deterministic registry-aware order:
 - `resolved_require_immutable_artifacts`
 - `resolver_candidate`
 
-When the local repository itself is the catalog source in `local-only` mode, catalog generation intentionally leaves `resolved_commit` / `resolved_tag` (and per-skill `source_registry_commit` / `source_registry_tag`) empty. That keeps committed catalog snapshots stable instead of making every new commit invalidate `catalog/registries.json` on the next validation pass. Operators can still inspect the live checkout identity with `scripts/list-registry-sources.py`.
+When the local repository itself is the catalog source in `local-only` mode, catalog generation intentionally leaves `resolved_commit` / `resolved_tag` (and per-skill `source_registry_commit` / `source_registry_tag`) empty. That keeps committed catalog snapshots stable instead of making every new commit invalidate `catalog/registries.json` on the next validation pass. Operators can inspect the live checkout identity with `infinitas registry sources list --json`.
 
 ## Integration exports
 
@@ -327,6 +326,6 @@ When the local repository itself is the catalog source in `local-only` mode, cat
 - delegated review context and release authority context when present
 - applied exception usage without relying on debug-only `policy_trace`
 
-These export files are generated by `scripts/build-catalog.sh` and validated by `python3 scripts/check-catalog-exports.py`.
+These export files are generated and validated by `uv run infinitas registry catalog build --check --json`.
 
 For operator-facing trust boundaries, failure modes, and recovery order, see [docs/ops/federation-operations.md](../ops/federation-operations.md).

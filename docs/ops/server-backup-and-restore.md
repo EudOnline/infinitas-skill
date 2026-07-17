@@ -13,7 +13,7 @@ This runbook covers the minimum backup set for a hosted `infinitas-skill` server
 ## What to back up
 
 - **Repo**: the writable source-of-truth checkout or a bare mirror of it
-- **DB**: the hosted server database (`db`, `sqlite` file, or PostgreSQL dump)
+- **DB**: the hosted SQLite database file
 - **Artifacts**: the hosted artifact directory that serves `ai-index.json`, `catalog/`, bundles, and provenance
 - **Secrets metadata**: signing-key references, bootstrap user configuration, and service env manifests stored outside the repo
 
@@ -83,7 +83,7 @@ sudo systemctl list-timers infinitas-hosted-prune.timer
 Before restoring onto a real server path, rehearse the backup into a staging directory:
 
 ```bash
-python scripts/rehearse-hosted-restore.py \
+uv run infinitas server restore-rehearsal \
   --backup-dir /srv/infinitas/backups/20260314T010000Z-nightly \
   --output-dir /tmp/infinitas-restore-drill \
   --json
@@ -102,16 +102,16 @@ Treat this as the safest first step before pointing any restored files at produc
 ## Restore sequence
 
 1. Restore the repo snapshot to the server-owned checkout path
-2. Restore the DB to the target database path or service
+2. Restore the SQLite DB to the target database path
 3. Restore the artifact directory in full
 4. Reapply service environment and secret references
 5. Run a hosted health check and inspect job queues
-6. Verify the latest provenance with `python3 scripts/doctor-signing.py <skill> --provenance <path>`
-7. Re-run `scripts/mirror-registry.sh --remote <mirror-remote> --dry-run` before re-enabling outward mirroring
+6. Verify the latest provenance with `uv run infinitas release doctor-signing <skill> --provenance <path>`
+7. Re-run `uv run infinitas registry sources mirror --remote <mirror-remote> --dry-run` before re-enabling outward mirroring
 
 ## Recovery priorities
 
 - Recover repo + db + artifacts together for a point-in-time consistent restore
 - Do not restore GitHub back into the hosted source-of-truth repo
 - If artifacts are missing but the repo is intact, rerun worker publish for the affected release after verifying tags and provenance
-- PostgreSQL dumps and object-storage snapshots remain future automation work; phase 1 backup tooling currently targets the smallest SQLite deployment shape
+- PostgreSQL dumps and object-storage snapshots remain future automation work; v0.1 backup tooling supports only the single-node SQLite deployment shape

@@ -1,212 +1,146 @@
 ---
 audience: contributors, operators, integrators
 owner: repository maintainers
-source_of_truth: repo entry page
-last_reviewed: 2026-06-01
+source_of_truth: repository entry page
+last_reviewed: 2026-07-14
 status: maintained
 ---
 
 # infinitas-skill
 
-Private-first skill registry and hosted control plane.
+Private skill registry and hosted control plane for human administrators, Agents, and automation.
 
-This repository is production-oriented and in an active maintainability hardening phase. The hosted backend remains private-first, while the maintained agent runtime model now follows OpenClaw-first semantics and the code and docs continue consolidating around one Python package, one maintained CLI, and one role-based documentation tree.
-The registry/release/install backend remains the durable control plane. Human operators now use
-the Library web admin surface for distribution work, while agents and automation publish through
-object-centric APIs.
+The repository is intentionally pre-release and uses one current architecture: one FastAPI application, one initial database migration, one `infinitas` CLI, pytest-only automated tests, and no project-internal upgrade adapters.
 
-## Start here
+The supported v0.1 deployment profile is single-node SQLite with filesystem-backed
+artifacts. PostgreSQL driver support is present for development evaluation, but
+multi-node production operation and PostgreSQL backup/restore are not release claims.
 
-- [Documentation map](docs/README.md)
-- [Reference docs](docs/reference/README.md)
-- [Operator runbooks](docs/ops/README.md)
-- [2026-04-02 project health scorecard](docs/ops/2026-04-02-project-health-scorecard.md)
-- [Architecture decision 0001: Maintainability reset](docs/adr/0001-maintainability-reset.md)
-- [Architecture decision 0002: Maintained surface cutover](docs/adr/0002-maintained-surface-cutover.md)
-- [Architecture decision 0003: OpenClaw runtime canonicalization](docs/adr/0003-openclaw-runtime-canonical.md)
+OpenClaw is now the canonical agent runtime. The registry/release/install backend remains the durable control plane; OpenClaw-specific runtime metadata is a consumer contract, not a replacement for registry ownership or release verification.
 
-## Repository shape
+## Product split
 
-- `src/infinitas_skill/`: maintained Python package and future home for shared runtime logic
-- `scripts/`: repository automation, validation, packaging, and compatibility-era helpers that are being actively reduced
-- `server/`: hosted control-plane runtime
-- `docs/`: role-based documentation during the reset
+- Human administrators use the server-rendered Web UI to browse the Library, inspect Releases, manage Visibility, issue Tokens, create Share Links, and review Activity.
+- Agents and automation use JSON APIs or the `infinitas` CLI to publish, discover, inspect, install, and operate skills.
+
+These consumers share domain services and read models. UI routes never replace Agent APIs, and JSON APIs are not dead code merely because browser templates do not call them.
+
+## Repository layout
+
+```text
+server/                         Hosted FastAPI control plane
+server/modules/<domain>/        Domain models, services, repositories, routers, schemas
+server/ui/routes/               Human-facing HTML routes
+src/infinitas_skill/            CLI and repository-domain logic
+skills/active/                  Skill definitions consumed by Agents
+schemas/                        Current JSON schemas
+alembic/versions/0001_initial.py
+tests/                          All automated tests
+scripts/                        Four build/verification entrypoints only
+```
+
+See [AGENTS.md](AGENTS.md) for the ownership map, transaction rule, lifecycle rule, and review constraints.
 
 ## Maintained surfaces
 
-- package-owned: `src/infinitas_skill/install/...`, `src/infinitas_skill/policy/...`, `src/infinitas_skill/release/...`, and `src/infinitas_skill/server/...` own maintained CLI logic.
-- runtime-owned: `server/modules/...` and `server/ui/...` own hosted API, UI, and presentation logic, while `server/app.py` stays focused on app assembly.
-- automation-owned: remaining top-level scripts exist for repository automation, catalog generation, release packaging, and targeted regression coverage; canonical user-facing command surfaces live under `infinitas`.
+- package-owned: `src/infinitas_skill/` owns the `infinitas` CLI and repository-domain logic.
+- runtime-owned: `server/modules/` owns JSON APIs and domain services; `server/ui/` owns server-rendered HTML.
+- automation-owned: the four files in `scripts/` own full validation, OpenAPI generation, CSS purging, and asset hashing.
 
-## Hosted web admin
+## Web admin
 
-The maintained browser product is the distribution admin, not the legacy authoring console.
 Primary routes:
 
-- `/manage` — consolidated admin console (Library, Access, Shares, Activity)
-- `/library/{object_id}` — object detail
-- `/library/{object_id}/releases/{release_id}` — release detail
+- `/manage` — Library, Access, Shares, and Activity
+- `/library/{object_id}` — Object detail
+- `/library/{object_id}/releases/{release_id}` — Release detail
+- `/profile`
 - `/settings`
+- `/login`
 
-The web UI uses product vocabulary: Object, Release, Visibility, Token, Share Link, and Activity.
-Old `/library`, `/access`, `/shares`, and `/activity` routes redirect to `/manage`.
-Legacy `/skills`, `/drafts`, `/releases/{id}`, `/access/tokens`, and `/review-cases` UI routes
-also redirect to `/manage`. Low-level authoring routes remain available for API and CLI workflows.
+Browser authentication uses a session cookie and CSRF token. Agent requests use Bearer credentials.
 
-Human operators authenticate through the web UI with username + password (session cookie).
-Agents and automation use Bearer tokens via the API.
+## CLI
 
-Agent and automation workflows use these product APIs:
-
-- `GET /api/v1/library`, `GET /api/v1/library/{object_id}`, `GET /api/v1/library/{object_id}/releases`
-- `POST /api/v1/skills`
-- `POST /api/v1/versions/{version_id}/releases`
-- `GET /api/v1/releases/{release_id}`
-- `POST /api/v1/object-tokens/objects/{object_id}/tokens`, `GET /api/v1/object-tokens/objects/{object_id}/tokens`
-- `POST /api/v1/object-tokens/tokens/{token_id}/revoke`
-- `POST /api/v1/share-links/releases/{release_id}/share-links`, `GET /api/v1/share-links/releases/{release_id}/share-links`
-- `POST /api/v1/share-links/{share_id}/resolve`, `POST /api/v1/share-links/{share_id}/revoke`
-- `GET /api/v1/activity`, `GET /api/v1/activity/tokens/{token_id}/activity`, `GET /api/v1/activity/share-links/{share_id}/activity`
-
-Net-new web admin templates are generated or iterated from the Kimi CLI spec in
-[docs/specs/kimi-library-ui-spec.md](docs/specs/kimi-library-ui-spec.md); hand edits should stay
-limited to integration glue, route wiring, and bug fixes.
-
-## Maintained CLI surface
-
-Maintained entrypoints introduced so far:
+`uv run infinitas ...` is the only user-facing command surface. Representative commands:
 
 ```bash
-uv run infinitas compatibility check-platform-contracts --max-age-days 30 --stale-policy fail
-uv run infinitas install resolve-plan --skill-dir templates/basic-skill --target-dir .tmp-installed-skills --json
-uv run infinitas policy check-packs
-uv run infinitas policy recommend-reviewers <skill> --as-active --json
-uv run infinitas policy review-status <skill> --as-active --require-pass --json
+uv run infinitas discovery search registry --json
+uv run infinitas discovery inspect lvxiaoer/operate-infinitas-skill --json
+uv run infinitas install by-name lvxiaoer/operate-infinitas-skill --target-dir .agents/skills
 uv run infinitas registry --help
-uv run infinitas release check-state <skill> --mode local-preflight --json
-uv run infinitas release signing-readiness --skill <skill> --json
-uv run infinitas release doctor-signing <skill> --json
-uv run infinitas release bootstrap-signing --help
-uv run infinitas server healthcheck --api-url http://127.0.0.1:8000 --repo-path /srv/infinitas/repo --artifact-path /srv/infinitas/artifacts --database-url sqlite:////srv/infinitas/data/server.db --json
-uv run infinitas server prune-backups --backup-root /srv/infinitas/backups --keep-last 7 --json
+uv run infinitas policy check-promotion skills/active/operate-infinitas-skill --json
+uv run infinitas release check-state operate-infinitas-skill --mode local-preflight --json
+uv run infinitas server healthcheck --api-url http://127.0.0.1:8000 --json
 ```
 
-`uv run infinitas ...` is the maintained CLI surface. New command surfaces should land under `infinitas`, not as new top-level scripts.
+The generated command inventory is [docs/reference/cli-reference.md](docs/reference/cli-reference.md).
 
-## Local verification
+## Policy and attestation output
 
-Preferred maintained-surface entrypoints:
+`policy/policy-packs.json` selects shared policy packs and `policy/team-policy.json` defines team ownership. Repository policy commands return `policy_trace` with `effective_sources`, `blocking_rules`, and next actions; catalog validation reports structured `validation_errors`.
+
+```bash
+uv run infinitas policy check-promotion <skill> --json
+uv run infinitas release check-state operate-infinitas-skill --json
+uv run infinitas registry catalog build
+uv run infinitas release verify-ci-attestation <provenance.ci.json> --json
+```
+
+CI-native attestation is defined by `.github/workflows/release-attestation.yml`; `release_trust_mode` selects `ssh`, `ci`, or `both`. See [docs/reference/release-attestation.md](docs/reference/release-attestation.md).
+
+## Local setup
 
 ```bash
 make bootstrap
-make clean-local
-make ci-fast
-make test-fast
-make test-full
-make lint-maintained
 ```
 
-Treat verification as three layers:
+Start the application with the project’s configured ASGI command, then open `/manage`. Runtime configuration is documented in [docs/reference/configuration.md](docs/reference/configuration.md).
 
-- maintained runtime and backend truth: `make lint-maintained`, `make test-fast`
-- migration-focused OpenClaw runtime matrix: `uv run pytest tests/unit/openclaw tests/integration/test_openclaw_runtime_index.py tests/integration/test_openclaw_install_planning.py tests/integration/test_cli_openclaw_runtime.py tests/integration/test_cli_release_state.py -q`
-- broader repository sweeps: `./scripts/check-all.sh focused-integration`, then opt into `release-long` when release packaging or attestation flows changed
+## Verification
 
-`make clean-local` is the supported local hygiene path for generated artifacts and local automation
-output (`__pycache__`, `*.pyc`, test/lint caches, local `*.egg-info` metadata, and
-`output/playwright`). It intentionally preserves tracked files, including placeholders such as
-`build/.gitkeep`.
-
-`make ci-fast` mirrors the maintained CI fast gate by running `make lint-maintained` and then
-`make test-fast` before the repository drops to the broader closeout matrix.
-
-`make test-fast` is now the default fast path for maintained work. It covers the focused integration tier,
-the promoted high-value pytest regressions, and the maintainability budget gate before you drop to raw
-fallback commands.
-
-Raw commands remain available as fallback detail:
+Fast checks:
 
 ```bash
-uv sync
-uv run pytest tests/integration/test_cli_release_state.py tests/integration/test_cli_server_ops.py tests/integration/test_private_registry_ui.py -q
-uv run pytest tests/integration/test_cli_install_planning.py -q
-uv run pytest tests/integration/test_cli_policy.py -q
-uv run ruff check src/infinitas_skill server/ui server/api server/modules server/auth.py server/db.py server/settings.py server/middleware.py server/app.py tests/integration tests/unit
-uv run python3 scripts/test-platform-contracts.py
-uv run python3 scripts/test-install-manifest-compat.py
-uv run python3 scripts/test-release-invariants.py
-uv run python3 scripts/test-infinitas-cli-platform-contracts.py
-uv run python3 scripts/test-infinitas-cli-registry.py
-uv run python3 scripts/test-infinitas-cli-server.py
-uv run python3 scripts/test-infinitas-cli-reference-docs.py
-uv run python3 scripts/test-doc-governance.py
-./scripts/check-all.sh
-./scripts/check-all.sh release-long
+make ci-fast
+make test-fast
+make lint-maintained
+.venv/bin/ruff check .
+.venv/bin/ruff format .
 ```
 
-Use `./scripts/check-all.sh release-long` as the canonical opt-in long-running pre-release gate. It is the
-smallest named block that proves the transparency-log and release-invariant flows end to end.
+Complete closeout:
 
-Legacy compatibility coverage still matters, but it is now regression and audit coverage rather than the maintained runtime gate. Release blocking follows canonical OpenClaw runtime freshness.
+```bash
+make test-full
+```
 
-`make lint-maintained` currently enforces the maintained-surface `E/F/I` baseline while temporarily deferring
-`E501` only in the current debt-heavy maintained files, plus a few legacy path-bootstrap `E402` cases, until the
-planned module splits land.
+`make test-full` delegates to `./scripts/check-all.sh`.
 
-Hard maintainability budgets now backstop the maintained reset:
+The full gate runs repository-wide Ruff and format checks, strict production Mypy,
+coverage-enforced non-E2E pytest, E2E pytest, hermetic Alembic drift detection,
+OpenAPI drift detection, dependency audits, and the frontend build. See
+[docs/reference/testing.md](docs/reference/testing.md) for focused commands and
+environment notes.
 
-- `server/app.py` must stay at or below 80 lines
-- `src/infinitas_skill/server/ops.py` must stay at or below 550 lines
-- `src/infinitas_skill/install/service.py` must stay at or below 650 lines
-- `src/infinitas_skill/release/service.py` must stay at or below 650 lines
-- top-level files under `scripts/` must stay at or below 221 until a deliberate cleanup changes the ceiling
+## Architecture invariants
 
-`tests/integration/test_maintainability_budgets.py` and `scripts/check-all.sh focused-integration` enforce these limits.
+- ORM models have one domain owner; `server/model_registry.py` exists only to populate metadata.
+- `server.db.get_db()` and `session_scope()` own commit/rollback behavior; services do not commit independently.
+- Database initialization and bootstrap run only inside FastAPI lifespan.
+- `alembic/versions/0001_initial.py` is the complete schema for an empty database.
+- UI routes return HTML; domain routers return JSON with explicit response models.
+- Platform/runtime support evaluation remains a current product capability. Superseded repository formats, entrypoints, and route aliases are rejected rather than adapted.
+- Top-level `scripts/` contains only build and verification infrastructure; product behavior belongs under `src/infinitas_skill/` or `server/`.
 
-Local runs default to `INFINITAS_SERVER_ENV=development`. Use `INFINITAS_SERVER_ENV=test` when you need fixture-safe automated behavior.
+## Documentation
 
-## Maintainability reset rules
-
-- No new top-level script may be added under `scripts/` without explicit architecture approval.
-- Do not raise maintained-module line budgets or the top-level script ceiling without updating docs and the budget test in the same change.
-- No new long-lived doc may be added outside `docs/guide/`, `docs/reference/`, `docs/ops/`, `docs/archive/`, or `docs/adr/`.
-- New shared Python logic should land under `src/infinitas_skill/`.
-- Do not add or restore compatibility wrapper entrypoints once a canonical `infinitas ...` command exists.
-
-## Product and policy context
-
-OpenClaw is now the canonical agent runtime.
-
-The internal backend lifecycle remains:
-
-`skill -> draft -> sealed version -> release -> exposure -> review case -> grant/credential -> discovery/install`
-
-That lifecycle is an implementation detail for the web product. Human admins should see the
-Library distribution model, and agents should use the object-centric publish API instead of
-manually driving draft/seal routes for the happy path.
-
-Use these canonical docs for the current model:
-
-- [Private-first cutover](docs/guide/private-first-cutover.md)
-- [OpenClaw runtime contract](docs/reference/openclaw-runtime-contract.md)
-- [API reference](docs/reference/api-reference.md) documents the HTTP endpoints, authentication schemes, and OpenAPI schema
-- [CLI reference](docs/reference/cli-reference.md) documents `uv run infinitas discovery ...`, `uv run infinitas registry ...`, and the maintained operator command surface.
-- [Release attestation](docs/reference/release-attestation.md) covers `release_trust_mode`, CI-native attestation, `scripts/verify-ci-attestation.py`, and `.github/workflows/release-attestation.yml`.
-- [Platform drift playbook](docs/ops/platform-drift-playbook.md)
-- [Release checklist](docs/ops/release-checklist.md)
-- [Project health scorecard](docs/ops/2026-04-02-project-health-scorecard.md)
-- [Hosted registry server deployment](docs/ops/server-deployment.md)
-
-Compatibility reporting still distinguishes between legacy `declared support` metadata such as `_meta.json.agent_compatible` and historical `verified support` evidence. Those fields remain useful for migration and audit context, but they are no longer the maintained runtime source of truth.
-
-## Policy trace and validation output
-
-Policy-aware commands continue to expose structured diagnostics for operators and automation:
-
-- `uv run infinitas policy check-promotion <skill> --json` returns a `policy_trace` payload for promotion decisions.
-- `uv run infinitas policy review-status <skill> --as-active --show-recommendations --json` returns review gate status plus reviewer guidance.
-- `uv run infinitas release signing-readiness --skill operate-infinitas-skill --json` summarizes repo signing trust and per-skill readiness.
-- `uv run infinitas release check-state operate-infinitas-skill --json` returns the release decision plus `policy_trace` details.
-- `scripts/validate-registry.py --json` returns `validation_errors` alongside namespace-level `policy_trace` data.
-- `policy/policy-packs.json` selects ordered shared defaults from `policy/packs/*.json`, while repository-local policy files remain the last override layer.
-- `policy/team-policy.json` remains the default team-governance input that keeps review and release checks aligned.
+- [Documentation map](docs/README.md)
+- [API reference](docs/reference/api-reference.md)
+- [Metadata schema](docs/reference/metadata-schema.md)
+- [Install manifest format](docs/reference/install-manifest-format.md)
+- [Testing](docs/reference/testing.md)
+- [Operator runbooks](docs/ops/README.md)
+- [ADR 0001: maintainability reset](docs/adr/0001-maintainability-reset.md)
+- [ADR 0002: maintained surface cutover](docs/adr/0002-maintained-surface-cutover.md)
+- [ADR 0003: OpenClaw runtime canonical](docs/adr/0003-openclaw-runtime-canonical.md)

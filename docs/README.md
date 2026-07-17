@@ -2,7 +2,7 @@
 audience: contributors, operators, reviewers
 owner: repository maintainers
 source_of_truth: docs landing page
-last_reviewed: 2026-06-01
+last_reviewed: 2026-07-14
 status: maintained
 ---
 
@@ -18,17 +18,15 @@ The docs tree is being rebuilt around audience and task instead of historical fi
 - [ADRs](adr/0001-maintainability-reset.md): durable architecture decisions and policy cut lines, including the OpenClaw runtime cutover in [0003](adr/0003-openclaw-runtime-canonical.md)
 - [Archive](archive/README.md): historical plans, superseded narratives, and closeout material
 
-## Indexed legacy annexes
+## Historical annexes
 
 - [Legacy platform contracts](platform-contracts/README.md): source snapshots for external runtime/platform assumptions
-- [Release, tag, and attestation strategy](release-strategy.md): transitional top-level release policy narrative
-- [Registry snapshot mirrors](registry-snapshot-mirrors.md): transitional top-level mirror and snapshot narrative
-- [Project closeout](project-closeout.md): historical closeout and steady-state verification context
+- [Archive](archive/README.md): superseded plans and historical snapshots that are not operational instructions
 
 ## Migration rules
 
 - `docs/plans/` is archival planning context during the reset, not the primary user entrypoint.
-- Top-level docs that are not yet under `guide/`, `reference/`, `ops/`, `archive/`, or `adr/` should be treated as legacy pages until they are moved or explicitly linked from one of the maintained landing pages.
+- Top-level documentation is limited to this landing page; maintained content belongs under `guide/`, `reference/`, `ops/`, `specs/`, or `adr/`.
 - New maintained docs should include `audience`, `owner`, `source_of_truth`, `last_reviewed`, and `status` metadata.
 
 ## Fast paths

@@ -122,7 +122,7 @@ Version 11-02 adds additive policy-evaluation traces to the main governance entr
 
 - `uv run infinitas policy check-promotion --json --as-active <skill>`
 - `uv run infinitas release check-state <skill> --json`
-- `python3 scripts/validate-registry.py --json`
+- `uv run infinitas registry catalog build --check --json`
 
 Each command now emits `policy_trace` or `policy_traces` data that includes:
 
@@ -134,7 +134,7 @@ Each command now emits `policy_trace` or `policy_traces` data that includes:
 - `exceptions` when a break-glass waiver is actually used
 - human-readable reasons and next actions
 
-`scripts/validate-registry.py --json` also returns structured `validation_errors` entries so callers can see per-skill failures alongside namespace-policy traces.
+Catalog validation returns structured `validation_errors` entries so callers can see per-skill failures alongside namespace-policy traces.
 
 Promotion and release JSON outputs additionally expose top-level `exception_usage` so downstream automation can distinguish waived blockers from ordinary clean passes.
 

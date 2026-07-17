@@ -1,161 +1,160 @@
 ---
-audience: integrators, API consumers, frontend developers
+audience: agent developers, CLI maintainers, integrators
 owner: repository maintainers
-source_of_truth: API reference
-last_reviewed: 2026-06-01
+source_of_truth: FastAPI OpenAPI schema
+last_reviewed: 2026-07-16
 status: maintained
 ---
 
 # API Reference
 
-The infinitas hosted registry exposes a REST API built on FastAPI. This document provides a high-level overview of the available endpoints. For the full interactive schema, see the auto-generated documentation.
+The hosted registry exposes server-rendered HTML for human administrators and JSON APIs for Agents, the CLI, and automation. The route families are intentionally separate consumers of shared domain services.
 
-The old lifecycle model is not maintained as a primary API story. Legacy routes, if they still exist, should be treated only as redirects or migration shims; new integrations must follow the canonical `object/release/exposure/distribution` model.
+The old lifecycle model is not maintained. The current contract is the canonical `object/release/exposure/distribution` flow described by the routes below.
 
-## Interactive Documentation
+## OpenAPI
 
-When the server is running, the following endpoints are available:
+Development environments expose:
 
-| Endpoint | Description |
-|---|---|
-| `/api/docs` | Swagger UI — interactive API explorer with request/response examples |
-| `/api/redoc` | ReDoc — clean, readable API reference |
-| `/openapi.json` | Raw OpenAPI 3.1 schema (machine-readable) |
+- Swagger UI: `/api/docs`
+- ReDoc: `/api/redoc`
+- Schema artifact: `openapi.json`
 
-You can also generate a static `openapi.json` locally:
+Regenerate or check the tracked schema with:
 
 ```bash
-uv run python3 scripts/generate-openapi.py
+.venv/bin/python scripts/generate-openapi.py
+.venv/bin/python scripts/generate-openapi.py --check
 ```
+
+`--check` does not write files or initialize the database.
 
 ## Authentication
 
-The API supports two authentication schemes:
+### Agent and CLI requests
 
-### Bearer Token (API / CLI)
+Use a Bearer credential:
 
-Include an `Authorization: Bearer <token>` header. Tokens are scoped and can be revoked.
-
-```bash
-curl -H "Authorization: Bearer your-api-token" \
-  https://skills.infinitas.fun/api/v1/access/me
+```http
+Authorization: Bearer <token>
 ```
 
-### Session Cookie (Browser)
+Credential scopes and release access are enforced by the access domain. Registry artifact reads may additionally require the configured registry read token.
 
-The web UI uses HMAC-signed session cookies (`infinitas_auth_token`). Cookie-authenticated POST requests must include a valid CSRF token via the `X-CSRF-Token` header (double-submit cookie pattern).
+### Browser requests
 
-## Core Endpoints
+The Web UI uses a signed session cookie. State-changing browser requests require the CSRF token issued by `GET /api/v1/auth/csrf`.
 
-### Health & Identity
+### Share links
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/api/v1/system/healthz` | None | Service health check + user count |
-| GET | `/api/v1/access/me` | Bearer or Cookie | Current user identity |
-| GET | `/api/v1/profile/me` | Bearer or Cookie | Current user profile |
+Share-link creation returns a `resolve_url`. Passwordless links also return a one-time
+`resolve_secret`; store it with the URL because later list responses do not expose it.
 
-### Authentication
+`POST /api/v1/share-links/{share_id}/resolve` is an anonymous credential-exchange
+endpoint:
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | `/api/v1/auth/login` | None | Exchange username + password for session |
-| POST | `/api/v1/auth/logout` | Cookie | Clear session cookies |
-| GET | `/api/v1/auth/csrf` | None | Refresh CSRF token cookie |
+- password-protected links send `{"password":"..."}`;
+- passwordless links send `{"secret":"<resolve_secret>"}`;
+- a successful response returns `access_token` and `install_path`/`install_url`;
+- use the returned token as `Authorization: Bearer <access_token>` when requesting the
+  grant install route.
 
-### Library & Objects
+The password or resolve secret is never itself a Bearer credential. Expiry and usage
+limits are checked atomically, and usage is consumed only by a successful exchange.
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/api/v1/library` | Bearer | List published library entries |
-| GET | `/api/v1/library/{id}` | Bearer | Get library entry details |
-| GET | `/api/v1/library/{id}/releases` | Bearer | List releases for an object |
-| POST | `/api/v1/object-tokens/objects/{object_id}/tokens` | Bearer | Create access token |
-| POST | `/api/v1/object-tokens/tokens/{token_id}/revoke` | Bearer | Revoke a token |
+## JSON route families
 
-### Publishing
+### System and identity
 
-The maintained publish surface is object-first and release-first.
+- `GET /api/v1/system/healthz`
+- `GET /api/v1/access/me`
+- `GET /api/v1/auth/me`
+- `GET /api/v1/profile/me`
+- `GET /api/v1/profile/{credential_id}`
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/logout`
+- `GET /api/v1/auth/csrf`
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | `/api/v1/skills` | Bearer | Create a skill object |
-| POST | `/api/v1/skills/{skill_id}/versions` | Bearer | Create an immutable skill version directly |
-| POST | `/api/v1/versions/{version_id}/releases` | Bearer | Create a release from a version |
+The two `/me` routes serve different contexts: access identity for Agent/API authorization and browser session identity for the Web UI.
 
-### Share Links
+### Library and publishing
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | `/api/v1/share-links/releases/{release_id}/share-links` | Bearer | Create password-protected share link |
-| GET | `/api/v1/share-links/releases/{release_id}/share-links` | Bearer | List share links for a release |
-| POST | `/api/v1/share-links/{share_id}/resolve` | None | Resolve a share link (with password) |
-| POST | `/api/v1/share-links/{share_id}/revoke` | Bearer | Revoke a share link |
+- `GET /api/v1/library/`
+- `GET /api/v1/library/{object_id}`
+- `GET /api/v1/library/{object_id}/releases`
+- `POST /api/v1/skills`
+- `GET /api/v1/skills/{skill_id}`
+- `GET|POST /api/v1/skills/{skill_id}/versions`
+- `POST /api/v1/versions/{version_id}/releases`
+- `GET /api/v1/releases/{release_id}`
+- `GET /api/v1/releases/{release_id}/artifacts`
 
-### Search
+### Visibility and review
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/api/v1/search` | Bearer | Full-text search across skills |
+- `POST /api/v1/releases/{release_id}/exposures`
+- `PATCH /api/v1/exposures/{exposure_id}`
+- `POST /api/v1/exposures/{exposure_id}/activate`
+- `POST /api/v1/exposures/{exposure_id}/revoke`
+- `POST /api/v1/exposures/{exposure_id}/review-cases`
+- `GET /api/v1/review-cases/{review_case_id}`
+- `POST /api/v1/review-cases/{review_case_id}/decisions`
+
+### Tokens and share links
+
+- `GET|POST /api/v1/object-tokens/objects/{object_id}/tokens`
+- `POST /api/v1/object-tokens/tokens/{token_id}/revoke`
+- `GET|POST /api/v1/share-links/releases/{release_id}/share-links`
+- `POST /api/v1/share-links/{share_id}/resolve`
+- `POST /api/v1/share-links/{share_id}/revoke`
+- `PATCH /api/v1/credentials/{credential_id}/policy`
+
+### Discovery, catalog, and install
+
+- `GET /api/v1/search`
+- `GET /api/v1/catalog/public`
+- `GET /api/v1/catalog/me`
+- `GET /api/v1/catalog/grant`
+- `GET /api/v1/install/public/{skill_ref}`
+- `GET /api/v1/install/me/{skill_ref}`
+- `GET /api/v1/install/grant/{skill_ref}`
+- `GET /api/v1/registry/{registry_path}`
+- `GET /api/v1/registry/ai-index.json`
+- `GET /api/v1/registry/discovery-index.json`
+- `GET /api/v1/registry/distributions.json`
+- `GET /api/v1/registry/compatibility.json`
+
+The compatibility document describes current runtime/platform support; it is not an adapter for superseded repository data.
 
 ### Activity
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/api/v1/activity` | Bearer | Activity log for the current user |
+- `GET /api/v1/activity/`
+- `GET /api/v1/activity/tokens/{token_id}/activity`
+- `GET /api/v1/activity/share-links/{share_id}/activity`
 
-### Background & Theme
+## HTML routes
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/api/v1/background/presets` | None | List available background presets |
-| POST | `/api/v1/background/set` | Cookie | Set user background preference |
+- `GET /`
+- `GET /manage`
+- `GET /library/{object_id}`
+- `GET /library/{object_id}/releases/{release_id}`
+- `GET /profile`
+- `GET /settings`
+- `GET /login`
 
-### Admin / Maintainer Endpoints
+These routes return `HTMLResponse` and use Cookie + CSRF authentication. They are not aliases for the JSON API.
 
-The following endpoints require `maintainer` role:
+## Error contract
 
-| Method | Path | Description |
-|---|---|---|
-| GET | `/api/v1/agent-codes` | List agent codes (NOT IMPLEMENTED) |
-| GET | `/api/v1/agent-presets` | List agent presets (NOT IMPLEMENTED) |
-| GET | `/api/v1/review-cases/{id}` | Get a review case |
-| POST | `/api/v1/review-cases/{id}/decisions` | Act on a review case |
+Domain exceptions are converted at the application boundary into stable HTTP status codes and JSON error payloads. Clients should branch on status and documented error fields rather than parsing human-readable messages.
 
-## Error Responses
+Common statuses:
 
-All API errors return a JSON response with a `detail` field:
+- `400` invalid state or request contract;
+- `401` missing or invalid authentication;
+- `403` authenticated but not authorized;
+- `404` resource not found;
+- `409` state conflict;
+- `422` FastAPI/Pydantic validation failure;
+- `429` rate limit exceeded.
 
-```json
-{
-  "detail": "Not found"
-}
-```
-
-Common status codes:
-
-| Code | Meaning |
-|---|---|
-| 400 | Bad Request — invalid input |
-| 401 | Unauthorized — missing or invalid credentials |
-| 403 | Forbidden — insufficient permissions or CSRF failure |
-| 404 | Not Found — resource does not exist |
-| 422 | Unprocessable Entity — Pydantic validation error |
-| 500 | Internal Server Error |
-
-For a detailed error catalog, see [`error-catalog.md`](error-catalog.md).
-
-## Rate Limiting
-
-The login endpoint (`POST /api/v1/auth/login`) is protected by a pluggable rate limiter. The default
-`MemoryRateLimiter` keeps attempt counts in memory; for multi-node deployments, switch to
-`DBRateLimiter` which stores counts in the `rate_limit_entries` table. For additional protection,
-consider adding a reverse-proxy rate limit (e.g., nginx `limit_req` or Cloudflare).
-
-## OpenAPI Schema
-
-The canonical OpenAPI schema is generated from the running application. To keep a static copy:
-
-```bash
-uv run python3 scripts/generate-openapi.py
-```
+The generated OpenAPI schema is authoritative for request bodies, response models, and endpoint-specific status codes.

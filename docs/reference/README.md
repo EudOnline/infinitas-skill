@@ -13,6 +13,8 @@ Reference docs describe exact behavior, contracts, schemas, and maintained comma
 ## API and web surface
 
 - [API reference](api-reference.md) — HTTP endpoints, authentication, and OpenAPI schema
+- [Runtime configuration](configuration.md) — hosted service environment variables and production requirements
+- [Testing](testing.md) — pytest groups, static gates, coverage, and closeout matrix
 
 ## CLI and command surfaces
 

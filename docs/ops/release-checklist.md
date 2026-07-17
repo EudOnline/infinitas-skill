@@ -13,7 +13,7 @@ Before pushing or promoting a skill:
 - [ ] Folder name is lowercase-hyphen format
 - [ ] `SKILL.md` has `name` and `description`
 - [ ] `name:` matches the folder name
-- [ ] `_meta.json` exists and passes `scripts/check-skill.sh`
+- [ ] `_meta.json` exists and `uv run infinitas policy check-promotion <name> --as-active --json` passes
 - [ ] full registry validation passes via `scripts/check-all.sh`
 - [ ] `_meta.json.status` matches the parent directory
 - [ ] computed review quorum passes for the target stage via `uv run infinitas policy review-status <name> --as-active --require-pass`
@@ -27,7 +27,7 @@ Before pushing or promoting a skill:
 - [ ] `tests/smoke.md` exists and was read by a human reviewer
 - [ ] No tokens, API keys, cookies, or auth exports are committed
 - [ ] Skill was manually tested on at least one realistic task
-- [ ] `scripts/build-catalog.sh` has been run after metadata changes
+- [ ] `uv run infinitas registry catalog build` has been run after metadata changes
 
 Before creating stable release output for an active skill:
 
@@ -39,7 +39,7 @@ Before creating stable release output for an active skill:
 - [ ] `git status --short` is empty for the repository worktree
 - [ ] current branch tracks its upstream and is neither ahead nor behind it
 - [ ] expected tag `skill/<name>/v<version>` does not already point at the wrong commit
-- [ ] default stable tag is created with `scripts/release-skill.sh <name> --push-tag` or `scripts/release-skill-tag.sh <name> --create --push`
+- [ ] default stable tag is created with `uv run infinitas release tag <name> --create --push`
 - [ ] `uv run infinitas release check-state <name> --mode preflight --json` passes before writing notes, provenance, or GitHub releases
 - [ ] `uv run infinitas release check-state <name> --mode preflight --json` shows `release.platform_compatibility.canonical_runtime_platform = "openclaw"`
 - [ ] `uv run infinitas release check-state <name> --mode preflight --json` shows `release.platform_compatibility.blocking_platforms = []` for the canonical OpenClaw runtime
@@ -48,21 +48,21 @@ Before creating stable release output for an active skill:
 - [ ] release notes or provenance reference `refs/tags/skill/<name>/v<version>` instead of local-only `HEAD`
 - [ ] `catalog/provenance/<name>-<version>.json` records the resolved registry context, dependency plan, and attestation signer identity
 - [ ] when delegated approvals or release exceptions were used, `catalog/provenance/<name>-<version>.json` preserves that audit context in `review.*` and `release.*` instead of relying on a separate export artifact
-- [ ] `scripts/verify-attestation.py catalog/provenance/<name>-<version>.json` passes against repo-managed allowed signers
-- [ ] if CI attestation / CI-native attestation is enabled, `catalog/provenance/<name>-<version>.ci.json` was generated and `python3 scripts/verify-ci-attestation.py ...` passes
+- [ ] `uv run infinitas release verify-attestation catalog/provenance/<name>-<version>.json --json` passes against repo-managed allowed signers
+- [ ] if CI attestation / CI-native attestation is enabled, `catalog/provenance/<name>-<version>.ci.json` was generated and `uv run infinitas release verify-ci-attestation ... --json` passes
 - [ ] `config/signing.json` `attestation.policy.release_trust_mode` matches the intended rollout mode; the key `release_trust_mode` is set to `ssh`, `ci`, or `both`
 - [ ] `uv run infinitas release doctor-signing <name> --provenance catalog/provenance/<name>-<version>.json` reports no blocking failures after the rehearsal
 - [ ] any optional legacy HMAC provenance signing happens after the required SSH attestation has already been verified
-- [ ] fresh OpenClaw evidence was recorded with `python3 scripts/record-verified-support.py <name> --platform openclaw --build-catalog` before a stable release if runtime behavior or platform contracts changed
-- [ ] if historical Codex or Claude compatibility claims are still surfaced to users, refresh them with `python3 scripts/record-verified-support.py <name> --platform codex --platform claude --build-catalog` when those claims change
+- [ ] fresh OpenClaw evidence exists under `catalog/compatibility-evidence/openclaw/<name>/<version>.json` before a stable release if runtime behavior or platform contracts changed
+- [ ] if Codex or Claude support is declared, corresponding current evidence exists under `catalog/compatibility-evidence/<platform>/<name>/<version>.json`
 - [ ] if `release.platform_compatibility.canonical_runtime.freshness_state = stale|unknown`, refresh the evidence and rerun the playbook steps in `docs/ops/platform-drift-playbook.md`
 
 When the hosted control plane performs the release:
 
-- [ ] queued jobs were created by a maintainer-authorized action and linked back to the reviewed submission
-- [ ] the server-owned repo checkout is locked for exclusive mutation during validate / promote / publish
-- [ ] validation job materializes the submitted skill into `skills/incubating/` and commits the exact reviewed payload
-- [ ] promotion job commits and pushes the `skills/incubating/` → `skills/active/` move before publish begins
-- [ ] publish job syncs `catalog/`, `catalog/provenance/`, and immutable distribution outputs into the hosted artifact directory after release succeeds
-- [ ] if `INFINITAS_SERVER_MIRROR_REMOTE` is configured, the publish job log shows either a successful one-way mirror command or an explicit warning reviewed by the operator
-- [ ] job logs capture every invoked script so operators can audit validate / promote / publish execution
+- [ ] skill and immutable version creation were authorized for the owning principal
+- [ ] the release creates exactly one `materialize_release` job
+- [ ] the worker writes manifest, bundle, provenance, and signature artifacts into the configured artifact directory
+- [ ] the release reaches `ready` only after artifact metadata and files agree
+- [ ] exposure activation and review decisions are recorded separately from release materialization
+- [ ] if a one-way mirror is required, run `uv run infinitas registry sources mirror` after successful materialization
+- [ ] audit events link version creation, release creation, exposure decisions, and access issuance

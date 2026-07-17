@@ -2,7 +2,7 @@
 audience: contributors, automation authors
 owner: repository maintainers
 source_of_truth: quickstart walkthrough
-last_reviewed: 2026-06-01
+last_reviewed: 2026-07-16
 status: maintained
 ---
 
@@ -34,17 +34,14 @@ Primary routes:
 - `/library/{object_id}/releases/{release_id}` — release detail
 - `/settings`
 
-Old `/library`, `/access`, `/shares`, and `/activity` routes redirect to `/manage`.
+The consolidated `/manage` page is the entry point; removed `/access`, `/shares`, and `/activity` aliases return 404.
 Use the manage console to browse Objects, inspect Releases, search by name, and change Visibility.
 The web app should focus on distribution and governance, not on object creation.
 
 ## Step 2: Inspect an Object and its Releases
 
-The Library is shared across:
-
-- `skill`
-- `agent_preset`
-- `agent_code`
+The v0.1 Library publishes `skill` Objects. The shared Object vocabulary is
+extensible, but additional kinds are not part of the current product contract.
 
 For each Object, the web flow should make it easy to:
 
@@ -68,7 +65,16 @@ Recommended usage:
 - use `reader` for search, metadata reads, and install/fetch access
 - use `publisher` for publishing and release creation
 
-Agents without a Token can be granted temporary Release access through a Share Link with an expiry and optional password.
+Agents without a Token can be granted temporary Release access through a Share Link with
+an expiry and optional password. Share credentials use an explicit exchange flow:
+
+1. Create the link and retain its `resolve_url`. For a passwordless link, also retain the
+   one-time `resolve_secret` returned by creation.
+2. POST the password or resolve secret to `resolve_url`.
+3. Read `access_token` from the successful response.
+4. Send that token as a Bearer credential to the returned grant `install_url`.
+
+The share password/secret is not accepted directly as a Bearer token.
 
 ## Step 4: Publish through the agent-facing API
 

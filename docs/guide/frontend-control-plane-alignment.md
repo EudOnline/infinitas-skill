@@ -10,7 +10,7 @@ status: maintained
 
 This guide explains how the frontend should align with the current hosted control plane.
 
-The old lifecycle model is not maintained for frontend work. Legacy routes exist only as redirects or migration shims, and new work must follow the canonical `object/release/exposure/distribution` model.
+The old lifecycle model is not maintained for frontend work. Legacy routes are removed, and new work must follow the canonical `object/release/exposure/distribution` model.
 
 For page-by-page execution work, continue with [Frontend control-plane checklist](frontend-control-plane-checklist.md).
 
@@ -64,5 +64,5 @@ New browser work should preserve these rules:
 - treat the frontend as a projection over backend truth, not as the owner of release lifecycle state
 - keep release distribution centered on the canonical `object/release/exposure/distribution` story
 - keep agent publishing on the publish facade or CLI instead of inventing browser-only authoring flows
-- treat old browser routes only as redirects or migration shims into the maintained pages
+- do not add compatibility routes for removed browser pages
 - avoid reintroducing legacy primary-flow copy or controls into maintained pages

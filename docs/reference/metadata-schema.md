@@ -1,87 +1,69 @@
 ---
-audience: contributors, integrators, reviewers
+audience: skill authors, registry maintainers, tooling developers
 owner: repository maintainers
-source_of_truth: metadata schema reference
-last_reviewed: 2026-03-30
+source_of_truth: schemas/skill-meta.schema.json
+last_reviewed: 2026-07-14
 status: maintained
 ---
 
-# `_meta.json` Schema (MVP)
+# `_meta.json` Schema
 
-Every registry-managed skill should include `_meta.json`.
+Each registry skill directory contains one `_meta.json` document validated by `schemas/skill-meta.schema.json`. Only schema version `1` is accepted; the field is required.
 
 ## Required fields
 
+| Field | Type | Contract |
+|---|---|---|
+| `schema_version` | integer | Exactly `1` |
+| `name` | string | Lowercase slug |
+| `version` | string | Semantic version |
+| `status` | string | `incubating`, `active`, or `archived` |
+| `summary` | string | Non-empty summary |
+| `owner` | string | Primary accountable actor |
+| `review_state` | string | `draft`, `under-review`, `approved`, or `rejected` |
+| `risk_level` | string | `low`, `medium`, or `high` |
+| `distribution` | object | `installable` boolean and `channel` string |
+
+Unknown top-level fields are rejected. Add a field to the schema and all current producers/consumers together.
+
+## Identity
+
+Published skills use a qualified identity:
+
 ```json
 {
   "schema_version": 1,
-  "name": "repo-audit",
+  "name": "operate-infinitas-skill",
   "publisher": "lvxiaoer",
-  "qualified_name": "lvxiaoer/repo-audit",
-  "version": "0.1.0",
-  "status": "incubating",
-  "summary": "Audit a repository for structure, code health, and obvious risks.",
+  "qualified_name": "lvxiaoer/operate-infinitas-skill",
   "owner": "lvxiaoer",
   "owners": ["lvxiaoer"],
   "author": "lvxiaoer",
-  "review_state": "draft",
-  "risk_level": "medium",
-  "distribution": {
-    "installable": true,
-    "channel": "git"
-  }
+  "maintainers": ["lvxiaoer"]
 }
 ```
 
-## Recommended full shape
+`qualified_name` must equal `<publisher>/<name>`. Namespace ownership, signer authority, releaser authority, and publisher transfers are governed by `policy/namespace-policy.json`.
+
+## Discovery metadata
+
+These optional fields improve Agent selection and explanation:
+
+- `tags`
+- `maturity`
+- `quality_score` from `0` to `100`
+- `capabilities`
+- `use_when`
+- `avoid_when`
+- `runtime_assumptions`
+- `agent_compatible`
+
+`agent_compatible` records current runtime/platform support. Release gates recompute verified support from current evidence; metadata alone is not proof of freshness.
+
+## Runtime requirements
 
 ```json
 {
-  "schema_version": 1,
-  "name": "repo-audit",
-  "publisher": "lvxiaoer",
-  "qualified_name": "lvxiaoer/repo-audit",
-  "version": "0.1.0",
-  "status": "incubating",
-  "summary": "Audit a repository for structure, code health, and obvious risks.",
-  "owner": "lvxiaoer",
-  "owners": ["lvxiaoer"],
-  "author": "lvxiaoer",
-  "maintainers": ["lvxiaoer"],
-  "tags": ["github", "audit", "code-review"],
-  "agent_compatible": ["openclaw", "claude-code", "codex"],
-  "depends_on": [
-    {
-      "name": "registry-core",
-      "version": ">=1.2.0 <2.0.0",
-      "registry": "self"
-    },
-    "snapshot-tools@0.4.0"
-  ],
-  "conflicts_with": [
-    {
-      "name": "legacy-registry-core",
-      "version": "<1.2.0"
-    }
-  ],
-  "derived_from": null,
-  "replaces": null,
-  "visibility": "private",
-  "maturity": "stable",
-  "quality_score": 88,
-  "capabilities": ["repo-audit", "risk-triage"],
-  "use_when": [
-    "Need a repository audit with actionable next steps"
-  ],
-  "avoid_when": [
-    "Need to modify production code directly"
-  ],
-  "runtime_assumptions": [
-    "A local git checkout is available",
-    "The agent can run repository scripts and read docs"
-  ],
-  "review_state": "draft",
-  "risk_level": "medium",
   "requires": {
     "tools": ["read", "exec"],
     "bins": ["git"],
@@ -92,7 +74,36 @@ Every registry-managed skill should include `_meta.json`.
   },
   "tests": {
     "smoke": "tests/smoke.md"
-  },
+  }
+}
+```
+
+Paths are relative to the skill directory and must exist when required by policy.
+
+## Dependencies and conflicts
+
+Dependency entries use one object shape:
+
+```json
+{
+  "depends_on": [
+    {
+      "name": "publisher/other-skill",
+      "version": ">=1.2.0,<2.0.0",
+      "registry": "self",
+      "allow_incubating": false
+    }
+  ],
+  "conflicts_with": []
+}
+```
+
+String shorthand is not accepted. `name` is required; the other constraint fields are optional.
+
+## Distribution
+
+```json
+{
   "distribution": {
     "installable": true,
     "channel": "git"
@@ -100,94 +111,22 @@ Every registry-managed skill should include `_meta.json`.
 }
 ```
 
-## Schema-version compatibility
+Release and install tooling use this declaration together with generated distribution manifests, bundle hashes, and attestations. It does not bypass release verification.
 
-- `schema_version` is the file-format version for `_meta.json`
-- current writers should emit `schema_version: 1`
-- missing `schema_version` is treated as legacy schema version `1` for backward compatibility
-- unsupported future schema versions should fail clearly instead of being silently rewritten
-- when `_meta.json` evolves incompatibly, provide a migration command rather than relying on manual edits
+## Snapshot and lineage fields
 
-See `compatibility-contract.md` for the broader compatibility guarantees.
+- `derived_from` and `replaces` describe lineage.
+- `snapshot_of`, `snapshot_created_at`, and `snapshot_label` describe a current snapshot.
 
-Use `scripts/migrate-skill-meta.py` to add `schema_version` to older skill metadata files without editing them by hand.
+These fields are evidence and discovery metadata; they do not create an alternate source layout.
 
-## Field notes
+## Validation
 
-- `name`: folder name and `SKILL.md` frontmatter name should match this
-- `publisher`: optional namespace owner slug used for fully-qualified identity such as `publisher/skill`
-- `qualified_name`: optional fully-qualified identity; when present it must equal `publisher/name`
-- `version`: semver string like `0.1.0`
-- `status`: `incubating | active | archived`
-- `owners`: namespace-authorized owner list for governance and audit trails; `owner` must also appear here when `owners` is present
-- `author`: human or bot identity that originally authored the skill metadata
-- `review_state`: `draft | under-review | approved | rejected` for compatibility and indexing; promotion tooling recomputes the authoritative value from `reviews.json` plus `policy/promotion-policy.json`
-- `risk_level`: `low | medium | high`
-- `maturity`: short author-supplied lifecycle label such as `prototype`, `stable`, or `experimental`; AI-facing surfaces use it as one ranking hint
-- `quality_score`: integer `0-100` for coarse comparative quality; keep it conservative and reviewable
-- `capabilities`: short machine-friendly phrases describing what the skill can do
-- `use_when`: short trigger guidance telling an agent when this skill is a good fit
-- `avoid_when`: short counter-guidance explaining when this skill is the wrong fit
-- `runtime_assumptions`: short statements about environment expectations such as repo checkout, available tools, or execution permissions
-- `derived_from`: lineage string such as `repo-audit@0.1.0`
-- Use the `name@version` form so lineage tools can diff against the intended ancestor
-- `tests.smoke`: path to the minimum realistic validation case
-- `distribution.installable`: whether install/sync scripts should expose the skill
-- `depends_on`: install-time dependency list; use an object for machine-checked ranges and source hints, or keep the legacy `skill` / `skill@version` shorthand. Qualified refs like `publisher/skill@1.2.0` are also valid.
-- `conflicts_with`: install-time conflict list using the same object-or-shorthand format
-- dependency objects support `name`, `version`, optional `registry`, and optional `allow_incubating`; `name` may be bare or fully qualified (`publisher/skill`)
-- version constraints support `*`, exact versions, comparator chains like `>=1.2.0 <2.0.0`, plus `^` and `~` shorthands
-- archived dependencies are only selected for exact version requests; incubating dependencies require `allow_incubating: true`
+Run the repository policy and release checks through the CLI:
 
-These AI decision fields are optional, and empty arrays are valid, but sparse metadata makes `catalog/ai-index.json`, discovery, and recommendation results less decision-useful for agents.
+```bash
+uv run infinitas policy check-promotion skills/active/<skill> --as-active --json
+uv run infinitas release check-state <skill> --mode local-preflight --json
+```
 
-`_meta.json` is the canonical source for these authored decision fields. Generated outputs such as `catalog/ai-index.json`, `catalog/discovery-index.json`, and the search / recommend / inspect wrappers should mirror them rather than inventing separate authored copies.
-
-## MVP constraints
-
-- Keep `_meta.json` machine-friendly and flat enough to parse from shell/python helpers
-- Do not store secrets here
-- Prefer explicit lineage over implicit inheritance
-
-## Machine-readable schema
-
-The canonical JSON Schema file for CI and editor integration lives at:
-
-- `schemas/skill-meta.schema.json`
-
-The current validation script is intentionally dependency-free, so it performs schema-equivalent checks in Python rather than requiring an external `jsonschema` package.
-
-## Install manifests
-
-Installed copies are tracked outside `_meta.json` in target directories via:
-
-- `.infinitas-skill-install-manifest.json`
-
-That manifest records which active skill version was installed or synced into a local runtime directory.
-
-Install manifests now also persist identity fields such as `publisher`, `qualified_name`, `identity_mode`, `author`, `owners`, and `maintainers` together with the resolved source registry metadata.
-
-Namespace claims and publisher transfers are governed by `policy/namespace-policy.json`, which `scripts/check-skill.sh`, `scripts/validate-registry.py`, and release checks now enforce.
-
-## Snapshot metadata
-
-Archived snapshots may add these optional fields:
-
-- `snapshot_of`: original skill and version, e.g. `repo-audit@0.2.0`
-- `snapshot_created_at`: UTC timestamp used when the snapshot was created
-- `snapshot_label`: optional human label such as `pre-refactor`
-
-Archived snapshot folder names may differ from `_meta.json.name` because the directory encodes version and timestamp for uniqueness.
-
-## Install manifest history
-
-Target directories now maintain:
-
-- current installed skill state under `skills.<name>`
-- prior states under `history.<name>[]`
-
-That history is used by rollback tooling and is separate from the registry catalog itself.
-
-The manifest key remains the bare installed folder name for backward compatibility, while each entry records the fully-qualified identity when the source metadata declares one.
-
-Root install/sync entries may also persist `resolution_plan`, which records the deterministic dependency plan that was applied for that action.
+The strict-schema regression lives in `tests/unit/skills/test_strict_skill_schema.py`.

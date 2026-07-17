@@ -2,7 +2,7 @@
 audience: contributors, integrators, operators
 owner: repository maintainers
 source_of_truth: generated from argparse definitions in src/infinitas_skill
-last_reviewed: 2026-06-30
+last_reviewed: 2026-07-14
 status: maintained
 ---
 
@@ -26,7 +26,7 @@ infinitas project CLI
 
 positional arguments:
   {compatibility,release,install,discovery,openclaw,registry,policy,server}
-    compatibility       Compatibility tools
+    compatibility       Platform contract and rendering tools
     release             Release readiness, signing, and verification tools
     install             Install planning and workflow tools
     discovery           Discovery and inspection tools
@@ -487,6 +487,8 @@ Policy validation and promotion CLI
 
 positional arguments:
   {check-packs,check-promotion,recommend-reviewers,review-status}
+    import-review-evidence
+                        Import normalized platform review evidence
 
 options:
   -h, --help            show this help message and exit
@@ -544,7 +546,8 @@ options:
 ## `infinitas policy review-status`
 
 ```text
-usage: infinitas policy review-status <skill-name-or-path> [--require-pass] [--as-active] [--stage STAGE] [--json] [--show-recommendations]
+usage: infinitas policy review-status <skill-name-or-path> [--require-pass] [--as-active] [--stage STAGE] [--json]
+                                      [--show-recommendations]
 
 Show review gate status for one skill
 
@@ -564,20 +567,20 @@ options:
 
 ```text
 usage: infinitas registry [-h] [--base-url BASE_URL] [--token TOKEN]
-                          {skills,versions,releases,exposures,grants,tokens,reviews} ...
+                          {skills,versions,releases,exposures,tokens,reviews} ...
 
 Hosted registry private-first control plane CLI
 
 positional arguments:
-  {skills,versions,releases,exposures,grants,tokens,reviews}
+  {skills,versions,releases,exposures,tokens,reviews}
     skills              Manage private-first skill records
     versions            Create immutable skill versions directly
     releases            Create and inspect immutable releases
     exposures           Manage audience exposure and share policy
-    grants              Inspect grant policy scaffolding for token-scoped
-                        access
     tokens              Inspect token identity and release authorization
     reviews             Manage review cases for public-facing exposures
+    sources             Manage repository registry sources
+    catalog             Build generated registry catalog views
 
 options:
   -h, --help            show this help message and exit
@@ -663,26 +666,6 @@ options:
   --token TOKEN         Bearer token for hosted registry API
 ```
 
-## `infinitas registry grants`
-
-```text
-usage: infinitas registry grants [-h] [--base-url BASE_URL] [--token TOKEN]
-                                 {list,create-token,revoke} ...
-
-Inspect grant policy scaffolding for token-scoped access
-
-positional arguments:
-  {list,create-token,revoke}
-    list                Reserved command for upcoming grant listing APIs
-    create-token        Reserved command for issuing grant tokens
-    revoke              Reserved command for revoking a grant
-
-options:
-  -h, --help            show this help message and exit
-  --base-url BASE_URL   Hosted registry API base URL
-  --token TOKEN         Bearer token for hosted registry API
-```
-
 ## `infinitas registry tokens`
 
 ```text
@@ -726,12 +709,26 @@ options:
 
 ```text
 usage: infinitas release [-h]
-                         {check-state,signing-readiness,doctor-signing,bootstrap-signing} ...
+                         {check-state,signing-readiness,doctor-signing,bootstrap-signing,scaffold,bump,snapshot,lineage,tag,publish,generate-ci-attestation,generate-distribution-manifest,sign-attestation,verify-attestation,verify-ci-attestation} ...
 
 Release CLI
 
 positional arguments:
-  {check-state,signing-readiness,doctor-signing,bootstrap-signing}
+  {check-state,signing-readiness,doctor-signing,bootstrap-signing,scaffold,bump,snapshot,lineage,tag,publish,generate-ci-attestation,generate-distribution-manifest,sign-attestation,verify-attestation,verify-ci-attestation}
+    scaffold            Create a skill from a canonical template
+    bump                Bump skill version and changelog
+    snapshot            Snapshot an active skill
+    lineage             Inspect a skill's derived-from lineage
+    tag                 Create or push a signed skill release tag
+    publish             Publish a signed skill release
+    generate-ci-attestation
+                        Generate CI attestation JSON
+    generate-distribution-manifest
+                        Generate a verified distribution manifest
+    sign-attestation    SSH-sign an attestation
+    verify-attestation  Verify release attestation policy
+    verify-ci-attestation
+                        Verify CI attestation policy
 
 options:
   -h, --help            show this help message and exit
@@ -830,6 +827,7 @@ positional arguments:
     prune-backups       Prune older hosted registry backup snapshots
     worker              Run the hosted registry worker loop
     inspect-state       Inspect hosted registry queue and release state
+    restore-rehearsal   Rehearse restoring a hosted registry backup
 
 options:
   -h, --help            show this help message and exit
@@ -848,7 +846,8 @@ Hosted registry server health check
 
 options:
   -h, --help            show this help message and exit
-  --api-url API_URL     Hosted registry API base URL or /healthz URL
+  --api-url API_URL     Hosted registry API base URL or /api/v1/system/healthz
+                        URL
   --repo-path REPO_PATH
                         Path to the server-owned git checkout
   --artifact-path ARTIFACT_PATH

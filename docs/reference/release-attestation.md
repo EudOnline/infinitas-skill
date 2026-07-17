@@ -2,7 +2,7 @@
 audience: contributors, integrators, release maintainers
 owner: repository maintainers
 source_of_truth: maintained release trust and attestation reference
-last_reviewed: 2026-04-21
+last_reviewed: 2026-07-14
 status: maintained
 ---
 
@@ -21,10 +21,8 @@ This is the maintained reference for CI-native attestation and CI attestation ve
 Offline verification uses downloaded release artifacts only:
 
 ```bash
-python3 scripts/verify-attestation.py catalog/provenance/my-skill-1.2.3.json --json
-python3 scripts/verify-ci-attestation.py catalog/provenance/my-skill-1.2.3.ci.json --json
-python3 scripts/verify-distribution-manifest.py \
-  catalog/distributions/_legacy/my-skill/1.2.3/manifest.json
+uv run infinitas release verify-attestation catalog/provenance/my-skill-1.2.3.json --json
+uv run infinitas release verify-ci-attestation catalog/provenance/my-skill-1.2.3.ci.json --json
 ```
 
 What this checks:
@@ -43,6 +41,8 @@ Online verification is optional and adds operator confidence:
 - confirm the live run metadata still matches the signed source snapshot
 
 The repository workflow scaffold lives at `.github/workflows/release-attestation.yml`.
+
+Create the current distribution manifest with `infinitas release generate-distribution-manifest`; verification then follows the manifest references and signed attestation evidence.
 
 ## How To Read The Policy
 

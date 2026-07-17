@@ -95,13 +95,11 @@ The unified product vocabulary is:
 - Share Link
 - Activity
 
-The shared Object kinds are:
+The v0.1 control plane supports one Object kind: `skill`.
 
-- `skill`
-- `agent_preset`
-- `agent_code`
-
-Type-specific payload can vary, but read surfaces should stay centered on the Object and Release model.
+The Object and Release vocabulary deliberately leaves room for additional kinds,
+but `agent_preset` and `agent_code` are deferred product work and are not accepted
+by the current API, CLI, materializer, or install flow.
 
 ---
 
@@ -365,32 +363,6 @@ Revoke an exposure.
 | `exposure_id` (positional) | yes | | Exposure identifier (int) |
 
 API: `POST /api/v1/exposures/{exposure_id}/revoke`
-
----
-
-## `infinitas registry grants`
-
-**Status: NOT IMPLEMENTED** -- all subcommands are stubs that exit with code 1.
-
-### `infinitas registry grants list`
-
-> "grant listing API is not available yet"
-
-### `infinitas registry grants create-token`
-
-| Argument | Required | Default | Description |
-|---|---|---|---|
-| `grant_id` (positional) | yes | | Grant identifier (int) |
-
-> "grant token issuing API is not available yet"
-
-### `infinitas registry grants revoke`
-
-| Argument | Required | Default | Description |
-|---|---|---|---|
-| `grant_id` (positional) | yes | | Grant identifier (int) |
-
-> "grant revoke API is not available yet"
 
 ---
 

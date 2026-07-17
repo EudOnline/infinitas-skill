@@ -1,47 +1,33 @@
 ---
 audience: contributors, integrators, reviewers
 owner: repository maintainers
-source_of_truth: compatibility matrix reference
-last_reviewed: 2026-04-07
+source_of_truth: generated runtime compatibility view
+last_reviewed: 2026-07-14
 status: maintained
 ---
 
-# Compatibility Matrix
+# Runtime Compatibility Matrix
 
-The registry now exports a machine-readable compatibility view at:
+The generated view is `catalog/compatibility.json` and the hosted API exposes it at `GET /api/v1/registry/compatibility.json`.
 
-- `catalog/compatibility.json`
+## Contents
 
-## What it contains
+- declared support from `_meta.json.agent_compatible`;
+- verified support from current platform evidence;
+- freshness state, reason, verification time, and freshness deadline;
+- skill stage, version, and path.
 
-- declared support exported from author metadata such as `_meta.json.agent_compatible`
-- verified support derived from compatibility evidence and platform-specific checks
-- verified support freshness metadata such as `freshness_state`, `freshness_reason`, `contract_last_verified`, and `fresh_until`
-- stage counts for `incubating`, `active`, and `archived`
-- version + path data for quick lookup
+## Interpretation
 
-## Why this exists
+- `fresh`: current evidence satisfies the configured age and platform-contract checks.
+- `stale`: evidence exists but is older than policy or predates a newer platform contract.
+- `unknown`: the platform has no accepted evidence for this skill version.
 
-As the registry grows, operators may still need to answer questions like:
+OpenClaw is the canonical runtime and its freshness can block preflight or stable release modes. Other platforms remain visible for consumers that target them.
 
-- Which skills claim to work with OpenClaw?
-- Which ones carried historical Codex or Claude Code declarations?
-- How many stable vs experimental skills do we currently have?
+The matrix does not override release attestations, distribution hashes, namespace policy, access control, or installed-integrity verification.
 
-`catalog/compatibility.json` gives you a single generated file for that.
-
-## Current compatibility source of truth
-
-This matrix is now legacy and transitional. It remains useful during migration, but it is no longer the maintained runtime center of gravity.
-
-During the migration window, compatibility has two historical sources of truth with different meanings:
-
-- **declared support** is still read from author metadata such as `_meta.json.agent_compatible`
-- **verified support** is produced by platform-specific compatibility checks and evidence files
-- verified support freshness is derived from compatibility evidence recency plus the current platform contract `last_verified` marker from `profiles/*.json`
-- `python3 scripts/record-verified-support.py <skill> --platform ... --build-catalog` is the canonical way to refresh verified support evidence after a real release/export check
-
-Compatibility is still declared manually in each skill's `_meta.json`:
+## Source declaration
 
 ```json
 {
@@ -49,28 +35,16 @@ Compatibility is still declared manually in each skill's `_meta.json`:
 }
 ```
 
-The matrix is only a generated historical view; edit `_meta.json`, then run:
+Rebuild current registry views with:
 
 ```bash
-scripts/build-catalog.sh
+uv run infinitas registry catalog build
 ```
 
-## What this does not guarantee
+Inspect release readiness with:
 
-`catalog/compatibility.json` currently reflects compatibility-era declarations from `_meta.json.agent_compatible` and historical verified-support evidence.
+```bash
+uv run infinitas release check-state <skill> --mode local-preflight --json
+```
 
-Verified support freshness is additive:
-
-- `fresh`: recent evidence is still within policy and is not older than the current platform contract
-- `stale`: evidence exists, but it is too old or predates a newer platform contract review
-- `unknown`: no evidence has been recorded for that declared platform yet
-
-When freshness turns `stale` or `unknown`, the matrix should be treated as migration or audit context rather than authoritative runtime truth. The maintained runtime contract now lives in [openclaw-runtime-contract.md](openclaw-runtime-contract.md).
-
-It does **not** guarantee:
-
-- `_meta.json` file-format compatibility across schema versions
-- install-manifest compatibility across tool versions
-- migration support for persisted state
-
-Those concerns are defined separately in `compatibility-contract.md`.
+See [compatibility-contract.md](compatibility-contract.md) and [openclaw-runtime-contract.md](openclaw-runtime-contract.md).

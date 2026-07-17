@@ -2,7 +2,7 @@
 audience: operators and release maintainers
 owner: repository maintainers
 source_of_truth: operations landing page
-last_reviewed: 2026-04-02
+last_reviewed: 2026-07-14
 status: maintained
 ---
 
@@ -17,8 +17,6 @@ Use the ops section for procedures that keep the hosted control plane, release f
 - [Signing bootstrap](signing-bootstrap.md)
 - [Signing operations](signing-operations.md)
 - [Release checklist](release-checklist.md)
-- [2026-04-02 project health scorecard](2026-04-02-project-health-scorecard.md)
-- [2026-04-01 release-readiness scorecard](2026-04-01-release-readiness-scorecard.md)
 
 ## Drift and freshness management
 
@@ -26,6 +24,4 @@ Use the ops section for procedures that keep the hosted control plane, release f
 - [Registry refresh policy](../reference/registry-refresh-policy.md)
 - [Federation operations guide](federation-operations.md)
 
-## Migration note
-
-Some operational documents still live at the root of `docs/` because they predate the new IA. During the reset, this page is the canonical operator index.
+Historical scorecards and transitional release narratives are not operational instructions. Use the maintained runbooks above and the current audit under `docs/audits/`.

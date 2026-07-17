@@ -75,7 +75,7 @@ When operators later create an immutable registry snapshot, that refresh-state p
 To inspect one registry directly:
 
 ```bash
-python3 scripts/registry-refresh-status.py upstream --json
+uv run infinitas registry sources status upstream --json
 ```
 
 The JSON output reports:
@@ -97,7 +97,7 @@ Typical states:
 
 ## Resolver behavior
 
-`python3 scripts/resolve-skill-source.py ... --json` now surfaces registry freshness metadata in resolved output:
+`uv run infinitas install exact ... --json` surfaces registry freshness metadata in resolved output:
 
 - `registry_freshness_state`
 - `registry_freshness_warning`
@@ -107,7 +107,7 @@ Behavior by policy:
 
 - `ignore`: resolution continues without extra enforcement
 - `warn`: resolution continues, but the resolved payload includes an actionable `registry_freshness_warning`
-- `fail`: stale remote caches are rejected with an error that tells the operator to run `scripts/sync-registry-source.sh <registry>`
+- `fail`: stale remote caches are rejected with an error that tells the operator to run `infinitas registry sources sync <registry>`
 
 Explicit snapshot resolution is the deliberate exception. If an operator resolves with `--registry <name> --snapshot <id|latest>`, the resolver reads from `.cache/registry-snapshots/<name>/...` instead of the mutable cache and does not apply live-cache freshness blocking to that request.
 
@@ -116,7 +116,7 @@ Explicit snapshot resolution is the deliberate exception. If an operator resolve
 Refresh the registry cache:
 
 ```bash
-scripts/sync-registry-source.sh upstream
+uv run infinitas registry sources sync upstream
 ```
 
 A successful sync rewrites the refresh-state file with the latest timestamp and source commit. Once that happens, stale-cache `warn` or `fail` decisions clear automatically on the next resolution attempt.
@@ -124,5 +124,5 @@ A successful sync rewrites the refresh-state file with the latest timestamp and 
 If you need a stable offline recovery point before refreshing again, create an immutable snapshot first:
 
 ```bash
-python3 scripts/create-registry-snapshot.py upstream --json
+uv run infinitas registry sources snapshot upstream --json
 ```

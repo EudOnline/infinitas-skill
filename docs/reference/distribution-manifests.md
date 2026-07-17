@@ -91,42 +91,14 @@ Useful commands:
 
 ```bash
 # release, write attestation, emit distribution bundle + manifest
-scripts/release-skill.sh my-skill --push-tag --write-provenance
+uv run infinitas release publish my-skill --push-tag --write-attestation
 
-# verify one manifest directly
-python3 scripts/verify-distribution-manifest.py \
-  catalog/distributions/_legacy/my-skill/1.2.3/manifest.json
+# verify the signed provenance referenced by the manifest
+uv run infinitas release verify-attestation \
+  catalog/provenance/my-skill-1.2.3.json --json
 ```
 
-Legacy manifests created before reproducibility metadata was added can be upgraded in place:
-
-```bash
-python3 scripts/backfill-distribution-manifests.py \
-  --manifest catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.1/manifest.json \
-  --write \
-  --json
-```
-
-The backfill flow is additive and deterministic:
-
-- it re-verifies signed provenance plus bundle artifacts first
-- it regenerates canonical `file_manifest` and normalized `build` from immutable artifacts
-- it preserves immutable identity fields (`bundle`, `attestation_bundle`, `source_snapshot`) unchanged
-- it reports `state = "would-backfill"` for dry runs, `state = "backfilled"` when `--write` applies changes, and `state = "unchanged"` on repeat runs
-
-If immutable evidence is incomplete, the command reports a compatibility state instead of guessing release metadata.
-
-The helper now supports both focused and repo-scan workflows:
-
-```bash
-# scan one explicit manifest
-python3 scripts/backfill-distribution-manifests.py --manifest <path> --json
-
-# scan every catalog/distributions/**/manifest.json under a root
-python3 scripts/backfill-distribution-manifests.py --root . --json
-```
-
-Machine-readable output includes one status object per inspected manifest, including additive release capability hints:
+Manifests without current reproducibility metadata are rejected. The project has not shipped, so regenerate invalid development releases instead of maintaining a migration or backfill path. Current manifest and catalog output includes:
 
 - `installed_integrity_capability` (`supported` or `unknown`)
 - `installed_integrity_reason` (for example `missing-signed-file-manifest` when capability is `unknown`)
@@ -135,7 +107,7 @@ Machine-readable output includes one status object per inspected manifest, inclu
 You can now extend that immutable verification path into one installed runtime copy:
 
 ```bash
-python3 scripts/verify-installed-skill.py my-skill ~/.openclaw/skills --json
+uv run infinitas install verify my-skill ~/.openclaw/skills --json
 ```
 
 That verifier loads the install-manifest entry for `my-skill`, re-verifies the recorded distribution manifest and attestation, then compares the installed local files against the signed `file_manifest`.
@@ -143,18 +115,18 @@ That verifier loads the install-manifest entry for `my-skill`, re-verifies the r
 If the local runtime copy has drifted, repair it back to the same recorded immutable release instead of guessing a newer version:
 
 ```bash
-scripts/repair-installed-skill.sh my-skill ~/.openclaw/skills
+uv run infinitas install repair my-skill ~/.openclaw/skills
 ```
 
 Machine-readable verification now exposes the same reproducibility contract on every layer:
 
-- `python3 scripts/verify-attestation.py <attestation.json> --json` includes `distribution.file_manifest_count` plus the signed `distribution.build` summary
+- `uv run infinitas release verify-attestation <attestation.json> --json` includes `distribution.file_manifest_count` plus the signed `distribution.build` summary
 - `uv run infinitas release check-state <name> --mode local-tag --json` includes `release.reproducibility`, so local provenance flows can inspect the generated release metadata even though repo-managed artifacts make the worktree dirty
 - `catalog/catalog.json` mirrors a compact downstream summary under `verified_distribution.file_manifest_count` and `verified_distribution.build_archive_format`
 
 When transparency publication is enabled:
 
-- `python3 scripts/verify-attestation.py <attestation.json> --json` also includes `transparency_log`
+- `uv run infinitas release verify-attestation <attestation.json> --json` also includes `transparency_log`
 - `uv run infinitas release check-state <name> --json` mirrors the same summary under `release.transparency_log`
 - `catalog/catalog.json` preserves a downstream-facing copy under `verified_distribution.transparency_log`
 
@@ -186,17 +158,17 @@ Installed runtime trust now follows the same model:
 1. verify the recorded immutable source
 2. compare installed local files against the signed released-file inventory
 3. stop mutation commands on drift unless the caller explicitly forces replacement
-4. prefer `repair-installed-skill.sh` over silent overwrite when the goal is to restore trust
+4. prefer `infinitas install repair` over silent overwrite when the goal is to restore trust
 
 When the installed copy is still clean but the recorded local verification is stale, overwrite-style commands now consult the repo-managed installed-integrity freshness policy:
 
-- `warn` prints `python3 scripts/report-installed-integrity.py <target-dir> --refresh` guidance before continuing
+- `warn` prints `uv run infinitas install report <target-dir> --refresh` guidance before continuing
 - `fail` stops until that explicit refresh is run
 - `--force` remains the deliberate bypass for local overwrite guardrails
 
 `never-verified` installs use the same target-local policy layer through `freshness.never_verified_policy`:
 
-- refreshable installs recommend `python3 scripts/report-installed-integrity.py <target-dir> --refresh`
+- refreshable installs recommend `uv run infinitas install report <target-dir> --refresh`
 - legacy compatibility-only installs without enough immutable source metadata recommend reinstall or distribution-manifest backfill first
 - `warn` surfaces that recovery path before continuing
 - `fail` blocks overwrite-style mutation until the recovery path re-establishes trust
@@ -236,7 +208,7 @@ The bundle/manifest path is only authoritative once the release attestation can 
 
 Fresh repositories without real trusted signer entries in `config/allowed_signers` remain operationally blocked even though the code path and tests are present.
 
-This repository already has a committed `lvxiaoer` signer plus verified provenance for `operate-infinitas-skill`; use `python3 scripts/report-signing-readiness.py --skill operate-infinitas-skill --json` when you need to confirm the current release-trust state before relying on immutable distribution artifacts.
+Use `uv run infinitas release signing-readiness --skill operate-infinitas-skill --json` before relying on immutable distribution artifacts.
 
 ## Discovery and by-name install
 

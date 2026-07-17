@@ -60,7 +60,7 @@ That merged evidence set is what powers:
 - `uv run infinitas policy review-status --json`
 - `uv run infinitas policy check-promotion --json`
 - `uv run infinitas release check-state --json`
-- `scripts/build-catalog.sh`
+- `uv run infinitas registry catalog build`
 
 If imported evidence is malformed, or if the same reviewer is duplicated inside `review-evidence.json`, validation fails explicitly.
 
