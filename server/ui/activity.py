@@ -5,11 +5,10 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from server.models import AuditEvent
-from server.modules.audit.read_model import json_payload
+from server.modules.audit.models import AuditEvent
+from server.modules.audit.read_model import load_activity_events, normalize_events
 from server.modules.shared.formatting import iso_format
 from server.ui.formatting import humanize_identifier, humanize_timestamp
-from server.ui.queries import get_audit_events, get_release_label, get_skill_name
 
 
 def _iso_stamp(value: object) -> str | None:
@@ -42,29 +41,21 @@ def _actor_label(actor_ref: str | None) -> str | None:
     return text.removeprefix("principal:")
 
 
-def _object_name(db: Session, payload: dict[str, Any]) -> str | None:
-    """Get object name from payload.
-
-    Delegates to ui_service layer for database access.
-    """
+def _object_name(payload: dict[str, Any], normalized: dict[str, Any]) -> str | None:
     explicit = payload.get("object_name") or payload.get("name")
     if explicit:
         return str(explicit)
-    object_id = payload.get("object_id")
-    if object_id is None:
+    object_ref = normalized.get("object")
+    if not isinstance(object_ref, dict):
         return None
-    return get_skill_name(db, int(object_id)) or str(object_id)
+    return str(object_ref.get("name") or object_ref.get("id") or "") or None
 
 
-def _release_label(db: Session, payload: dict[str, Any]) -> str | None:
-    """Get release label from payload.
-
-    Delegates to ui_service layer for database access.
-    """
-    release_id = payload.get("release_id")
-    if release_id is None:
+def _release_label(normalized: dict[str, Any]) -> str | None:
+    release_ref = normalized.get("release")
+    if not isinstance(release_ref, dict) or release_ref.get("id") is None:
         return None
-    return get_release_label(db, int(release_id))
+    return f"release-{release_ref['id']}"
 
 
 def _title_for_event(event: AuditEvent, payload: dict[str, Any]) -> str:
@@ -89,15 +80,15 @@ def _title_for_event(event: AuditEvent, payload: dict[str, Any]) -> str:
 
 
 def _description_for_event(
-    db: Session,
     event: AuditEvent,
     payload: dict[str, Any],
+    normalized: dict[str, Any],
     *,
     object_name: str | None,
 ) -> str:
     if payload.get("description"):
         return str(payload["description"])
-    release_label = _release_label(db, payload)
+    release_label = _release_label(normalized)
     event_type = str(event.event_type or "").strip()
     if event_type.startswith("share_link."):
         target = object_name or "release"
@@ -124,9 +115,9 @@ _CATEGORY_ICONS: dict[str, str] = {
 }
 
 
-def normalize_audit_event_for_ui(db: Session, event: AuditEvent) -> dict[str, Any]:
-    payload = json_payload(event)
-    object_name = _object_name(db, payload)
+def normalize_audit_event_for_ui(event: AuditEvent, normalized: dict[str, Any]) -> dict[str, Any]:
+    payload = normalized["detail"]
+    object_name = _object_name(payload, normalized)
     category = _event_category(event, payload)
     title = _title_for_event(event, payload)
     sort_at = event.occurred_at
@@ -138,9 +129,9 @@ def normalize_audit_event_for_ui(db: Session, event: AuditEvent) -> dict[str, An
         "title": title,
         "event": title,
         "description": _description_for_event(
-            db,
             event,
             payload,
+            normalized,
             object_name=object_name,
         ),
         "object_name": object_name,
@@ -154,11 +145,23 @@ def normalize_audit_event_for_ui(db: Session, event: AuditEvent) -> dict[str, An
     }
 
 
-def list_activity_rows(db: Session, *, limit: int = 100) -> list[dict[str, Any]]:
+def list_activity_rows(
+    db: Session,
+    *,
+    limit: int = 100,
+    owner_principal_id: int | None = None,
+) -> list[dict[str, Any]]:
     """List activity rows for the UI.
 
     Delegates to ui_service layer for database access.
     """
-    capped_limit = max(1, min(int(limit or 100), 500))
-    events = get_audit_events(db, limit=capped_limit)
-    return [normalize_audit_event_for_ui(db, event) for event in events]
+    events = load_activity_events(
+        db,
+        limit=limit,
+        owner_principal_id=owner_principal_id,
+    )
+    normalized_events = normalize_events(db, events)
+    return [
+        normalize_audit_event_for_ui(event, normalized)
+        for event, normalized in zip(events, normalized_events, strict=True)
+    ]

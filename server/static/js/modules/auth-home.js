@@ -1,14 +1,6 @@
-/**
- * Home-page authentication session manager.
- *
- * Handles the user trigger icon, user panel (login / logged-in state),
- * background manager, protected-link interception, and the login modal
- * lifecycle for the home page.
- */
+/** Home and standalone-login authentication session manager. */
 
 import {
-  uiText,
-  uiTemplate,
   remainingDays,
   clearLocalSession,
   hasAuthCookieHint,
@@ -16,74 +8,51 @@ import {
   initialSessionUser,
   requestSessionCleanup,
 } from './auth-shared.js';
-
-import { AUTH_SESSION_CONFIG, logError, getCsrfToken } from './config.js';
+import { AuthBackgroundController } from './auth-background.js';
+import { AUTH_SESSION_CONFIG, logError, uiTemplate, uiText } from './config.js';
 import { createAuthModalController } from './auth-modal.js';
 
-// ---------------------------------------------------------------------------
-// Toast reference (set externally via the toastRef setter pattern)
-// ---------------------------------------------------------------------------
-
-let _toast = null;
-
-/**
- * Accept a toast manager instance from the outside so this module can call
- * `_toast.success(...)` etc. without importing the toast module itself.
- */
-export function setToastRef(toastInstance) {
-  _toast = toastInstance;
+function parseHomeAuthData() {
+  try {
+    const element = document.getElementById('home-auth-session-data');
+    return element?.dataset.json ? JSON.parse(element.dataset.json) : {};
+  } catch (_error) {
+    return {};
+  }
 }
 
-// ---------------------------------------------------------------------------
-// Background settings storage key
-// ---------------------------------------------------------------------------
+function normalizeProtectedTarget(rawTarget) {
+  if (typeof rawTarget !== 'string' || !rawTarget.startsWith('/')) return null;
+  return rawTarget.startsWith('//') ? null : rawTarget;
+}
 
-const BG_STORAGE_KEY = 'infinitas_bg_settings';
-
-// ---------------------------------------------------------------------------
-// Main export
-// ---------------------------------------------------------------------------
-
-export function initHomeAuthSession() {
-  const wrapper = document.getElementById('user-trigger-wrapper');
-  const loginPanel = document.getElementById('login-panel');
-  const standaloneLoginPage = !!loginPanel && !wrapper;
-  if (!wrapper && !loginPanel) {
-    return;
+class HomeAuthSession {
+  constructor(wrapper, loginPanel) {
+    const config = parseHomeAuthData();
+    this.wrapper = wrapper;
+    this.standaloneLoginPage = Boolean(loginPanel && !wrapper);
+    this.suppressInitialModal = config.suppressInitialModal === true;
+    this.currentUser = initialSessionUser();
+    this.isUserPanelOpen = false;
+    this.background = new AuthBackgroundController({
+      presets: config.bgPresets || { light: [], dark: [] },
+      isLoggedIn: () => Boolean(this.currentUser),
+      isPanelOpen: () => this.isUserPanelOpen,
+    });
+    this.controller = createAuthModalController({
+      prefix: this.standaloneLoginPage ? 'login-' : '',
+      modalTitle: uiText('auth_modal_title', 'Authentication'),
+      onLoginSuccess: (data) => this.applyLogin(data),
+    });
   }
 
-  function parseHomeAuthData() {
-    try {
-      const el = document.getElementById('home-auth-session-data');
-      return el && el.dataset.json ? JSON.parse(el.dataset.json) : {};
-    } catch (_) { return {}; }
-  }
-  const homeConfig = parseHomeAuthData();
-  const bgPresets = homeConfig.bgPresets || { light: [], dark: [] };
-  const suppressInitialModal = homeConfig.suppressInitialModal === true;
-  let currentUser = initialSessionUser();
-  let isUserPanelOpen = false;
-  let bgObserver = null;
-
-  // -----------------------------------------------------------------------
-  // Helpers
-  // -----------------------------------------------------------------------
-
-  function normalizeProtectedTarget(rawTarget) {
-    if (typeof rawTarget !== 'string' || !rawTarget.startsWith('/')) {
-      return null;
-    }
-    if (rawTarget.startsWith('//')) {
-      return null;
-    }
-    return rawTarget;
+  element(id) {
+    return document.getElementById(id);
   }
 
-  function consumePendingAuthRedirect() {
+  consumePendingAuthRedirect() {
     const url = new URL(window.location.href);
-    if (url.searchParams.get('auth') !== 'required') {
-      return null;
-    }
+    if (url.searchParams.get('auth') !== 'required') return null;
     const target = normalizeProtectedTarget(url.searchParams.get('next'));
     url.searchParams.delete('auth');
     url.searchParams.delete('next');
@@ -91,440 +60,202 @@ export function initHomeAuthSession() {
     return target;
   }
 
-  function openAuthModal(targetHref = null) {
-    targetHref = normalizeProtectedTarget(targetHref);
-    controller.openModal(targetHref);
+  openAuthModal(targetHref = null) {
+    this.controller.openModal(normalizeProtectedTarget(targetHref));
   }
 
-  // -----------------------------------------------------------------------
-  // BackgroundManager
-  // -----------------------------------------------------------------------
-
-  const BackgroundManager = {
-    getSettings() {
-      try {
-        const saved = window.localStorage.getItem(BG_STORAGE_KEY);
-        if (saved) {
-          return JSON.parse(saved);
-        }
-      } catch (error) {
-        logError('Failed to parse background settings:', error);
-      }
-      return { light: null, dark: null };
-    },
-    saveSettings(settings) {
-      try {
-        window.localStorage.setItem(BG_STORAGE_KEY, JSON.stringify(settings));
-      } catch (_error) {
-        // Ignore storage failures for local preference persistence.
-      }
-    },
-    getCurrentBgId(theme) {
-      const settings = BackgroundManager.getSettings();
-      return settings[theme] || null;
-    },
-    setCurrentBgId(theme, bgId) {
-      const settings = BackgroundManager.getSettings();
-      settings[theme] = bgId;
-      BackgroundManager.saveSettings(settings);
-    },
-    apply(theme, bgId) {
-      const preset = (bgPresets[theme] || []).find((item) => item.id === bgId);
-      const variableName = theme === 'dark' ? '--bg-image-dark' : '--bg-image';
-      if (!preset) {
-        document.body.style.removeProperty(variableName);
-        return;
-      }
-      const lightGradient = getComputedStyle(document.body).getPropertyValue('--bg-gradient-light').trim() || 'linear-gradient(135deg, rgba(255, 240, 245, 0.92) 0%, rgba(255, 228, 235, 0.88) 50%, rgba(255, 248, 250, 0.92) 100%)';
-      const darkGradient = getComputedStyle(document.body).getPropertyValue('--bg-gradient-dark').trim() || 'linear-gradient(135deg, rgba(15, 10, 25, 0.92) 0%, rgba(25, 15, 35, 0.9) 50%, rgba(20, 10, 30, 0.92) 100%)';
-      if (preset.url) {
-        const gradient = theme === 'light' ? lightGradient : darkGradient;
-        const safeUrl = preset.url.replace(/['()\\]/g, '\\$&');
-        document.body.style.setProperty(variableName, `${gradient}, url('${safeUrl}')`);
-        return;
-      }
-      document.body.style.removeProperty(variableName);
-    },
-    renderSelector(theme) {
-      const grid = document.getElementById('bg-grid');
-      const themeLabel = document.getElementById('bg-theme-label');
-      if (!grid) {
-        return;
-      }
-      const currentBgId = BackgroundManager.getCurrentBgId(theme);
-      const presets = bgPresets[theme] || [];
-      if (themeLabel) {
-        themeLabel.textContent = theme === 'light'
-          ? uiText('user_panel_theme_light', '浅色')
-          : uiText('user_panel_theme_dark', '深色');
-      }
-      grid.replaceChildren();
-      presets.forEach((preset) => {
-        const isActive = preset.id === currentBgId;
-        const gradientClass = preset.url ? '' : 'bg-option--gradient';
-        const btn = document.createElement('button');
-        btn.className = `bg-option ${gradientClass} ${isActive ? 'is-active' : ''}`;
-        btn.dataset.bgId = preset.id;
-        btn.dataset.name = preset.name;
-        btn.type = 'button';
-        btn.setAttribute('aria-label', preset.name);
-        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-        if (preset.url) {
-          const safeUrl = preset.url.replace(/['()\\]/g, '\\$&');
-          btn.style.backgroundImage = `url('${safeUrl}')`;
-        }
-        grid.appendChild(btn);
-      });
-      if (!grid.dataset.delegateBound) {
-        grid.dataset.delegateBound = 'true';
-        grid.addEventListener('click', (e) => {
-          const button = e.target.closest('.bg-option');
-          if (!button) return;
-          const currentTheme = document.documentElement.getAttribute('data-color-scheme') || 'light';
-          handleBgSelect(currentTheme, button.dataset.bgId);
-        });
-      }
-    },
-    init() {
-      const currentTheme = document.documentElement.getAttribute('data-color-scheme') || 'light';
-      const currentBgId = BackgroundManager.getCurrentBgId(currentTheme);
-      if (currentBgId) {
-        BackgroundManager.apply(currentTheme, currentBgId);
-      }
-      bgObserver = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.attributeName !== 'data-color-scheme') {
-            return;
-          }
-          const theme = document.documentElement.getAttribute('data-color-scheme') || 'light';
-          const bgId = BackgroundManager.getCurrentBgId(theme);
-          BackgroundManager.apply(theme, bgId);
-          if (isUserPanelOpen) {
-            BackgroundManager.renderSelector(theme);
-          }
-        });
-      });
-      bgObserver.observe(document.documentElement, { attributes: true });
-      window.addEventListener('beforeunload', () => {
-        if (bgObserver) bgObserver.disconnect();
-      });
-    },
-  };
-
-  async function handleBgSelect(theme, bgId) {
-    BackgroundManager.apply(theme, bgId);
-    BackgroundManager.setCurrentBgId(theme, bgId);
-    if (currentUser) {
-      try {
-        const response = await fetch('/api/v1/background/set', {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
-          body: JSON.stringify({ theme, bg_id: bgId }),
-        });
-        if (!response.ok) {
-          logError('Failed to save background to server');
-        }
-      } catch (error) {
-        logError('Network error saving background:', error);
-      }
-    }
-    const grid = document.getElementById('bg-grid');
-    if (!grid) {
-      return;
-    }
-    grid.querySelectorAll('.bg-option').forEach((button) => {
-      button.classList.remove('is-active');
-      button.setAttribute('aria-pressed', 'false');
-    });
-    const activeButton = grid.querySelector(`[data-bg-id="${CSS.escape(bgId)}"]`);
-    if (activeButton) {
-      activeButton.classList.add('is-active');
-      activeButton.setAttribute('aria-pressed', 'true');
-    }
+  updateUserTriggerIcon(authenticated) {
+    const icon = this.element('user-trigger-icon');
+    const pulse = this.element('user-trigger-pulse');
+    const trigger = this.element('user-trigger');
+    if (icon) icon.textContent = authenticated ? '👤' : '🔒';
+    if (pulse) pulse.hidden = authenticated;
+    if (!trigger) return;
+    trigger.classList.toggle('is-active', authenticated);
+    trigger.setAttribute(
+      'aria-label',
+      authenticated
+        ? uiText('user_menu_logged_label', '已登录用户菜单')
+        : uiText('user_menu_anon_label', '登录'),
+    );
   }
 
-  // -----------------------------------------------------------------------
-  // UI helpers
-  // -----------------------------------------------------------------------
-
-  function updateUserTriggerIcon(isLoggedIn) {
-    const icon = document.getElementById('user-trigger-icon');
-    const pulse = document.getElementById('user-trigger-pulse');
-    const trigger = document.getElementById('user-trigger');
-    if (icon) {
-      icon.textContent = isLoggedIn ? '👤' : '🔒';
-    }
-    if (pulse) {
-      pulse.hidden = isLoggedIn;
-    }
-    if (trigger) {
-      trigger.classList.toggle('is-active', isLoggedIn);
-      trigger.setAttribute(
-        'aria-label',
-        isLoggedIn
-          ? uiText('user_menu_logged_label', '已登录用户菜单')
-          : uiText('user_menu_anon_label', '登录')
-      );
-    }
-  }
-
-  function formatSessionMeta() {
+  sessionMeta() {
     const days = remainingDays();
-    if (days > 0) {
-      return uiTemplate('auth_expiry_days', '{days} 天后过期', { days });
-    }
-    return uiText('auth_session_active', '会话已连接');
+    return days > 0
+      ? uiTemplate('auth_expiry_days', '{days} 天后过期', { days })
+      : uiText('auth_session_active', '会话已连接');
   }
 
-  function updateUserPanelState() {
-    const loginSection = document.getElementById('user-panel-login');
-    const loggedSection = document.getElementById('user-panel-logged');
-    if (currentUser) {
-      if (loginSection) {
-        loginSection.hidden = true;
-      }
-      if (loggedSection) {
-        loggedSection.hidden = false;
-      }
-      const username = document.getElementById('user-panel-username');
-      const expiry = document.getElementById('user-panel-expiry');
-      const avatar = document.getElementById('user-avatar');
-      if (username) {
-        username.textContent = currentUser.username;
-      }
-      if (expiry) {
-        expiry.textContent = formatSessionMeta();
-      }
-      if (avatar) {
-        avatar.textContent = currentUser.username.charAt(0).toUpperCase();
-      }
-      const theme = document.documentElement.getAttribute('data-color-scheme') || 'light';
-      BackgroundManager.renderSelector(theme);
-    } else {
-      if (loginSection) {
-        loginSection.hidden = false;
-      }
-      if (loggedSection) {
-        loggedSection.hidden = true;
-      }
-    }
+  renderUserPanel() {
+    const loginSection = this.element('user-panel-login');
+    const loggedSection = this.element('user-panel-logged');
+    const authenticated = Boolean(this.currentUser);
+    if (loginSection) loginSection.hidden = authenticated;
+    if (loggedSection) loggedSection.hidden = !authenticated;
+    if (!authenticated) return;
+    const username = this.element('user-panel-username');
+    const expiry = this.element('user-panel-expiry');
+    const avatar = this.element('user-avatar');
+    if (username) username.textContent = this.currentUser.username;
+    if (expiry) expiry.textContent = this.sessionMeta();
+    if (avatar) avatar.textContent = this.currentUser.username.charAt(0).toUpperCase();
+    this.background.renderSelector(this.background.currentTheme());
   }
 
-  function closeUserPanel() {
-    const panel = document.getElementById('user-panel');
-    const trigger = document.getElementById('user-trigger');
-    if (!panel || panel.hidden) {
-      return;
-    }
-    isUserPanelOpen = false;
+  renderAuthState() {
+    this.updateUserTriggerIcon(Boolean(this.currentUser));
+    this.renderUserPanel();
+  }
+
+  closeUserPanel() {
+    const panel = this.element('user-panel');
+    if (!panel || panel.hidden) return;
+    this.isUserPanelOpen = false;
     panel.hidden = true;
     panel.classList.remove('user-panel--flip');
-    if (trigger) {
-      trigger.setAttribute('aria-expanded', 'false');
-    }
+    this.element('user-trigger')?.setAttribute('aria-expanded', 'false');
   }
 
-  function toggleUserPanel() {
-    const panel = document.getElementById('user-panel');
-    const trigger = document.getElementById('user-trigger');
-    if (!panel || !trigger) {
-      return;
-    }
-    isUserPanelOpen = !isUserPanelOpen;
-    panel.hidden = !isUserPanelOpen;
+  toggleUserPanel() {
+    const panel = this.element('user-panel');
+    const trigger = this.element('user-trigger');
+    if (!panel || !trigger) return;
+    this.isUserPanelOpen = !this.isUserPanelOpen;
+    panel.hidden = !this.isUserPanelOpen;
     panel.classList.remove('user-panel--flip');
-    trigger.setAttribute('aria-expanded', String(isUserPanelOpen));
-    if (isUserPanelOpen && currentUser) {
-      const theme = document.documentElement.getAttribute('data-color-scheme') || 'light';
-      BackgroundManager.renderSelector(theme);
-    }
-    if (isUserPanelOpen) {
-      // 视口边界检测：若面板超出视口则自动翻转展开方向
-      requestAnimationFrame(() => {
-        const rect = panel.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
-        const isMobile = window.innerWidth <= 767;
-        const margin = 12;
-        if (!isMobile && rect.bottom > viewportHeight - margin) {
-          panel.classList.add('user-panel--flip');
-        } else if (isMobile && rect.top < margin) {
-          panel.classList.add('user-panel--flip');
-        }
-      });
-    }
+    trigger.setAttribute('aria-expanded', String(this.isUserPanelOpen));
+    if (!this.isUserPanelOpen) return;
+    if (this.currentUser) this.background.renderSelector(this.background.currentTheme());
+    requestAnimationFrame(() => this.flipPanelIntoViewport(panel));
   }
 
-  // -----------------------------------------------------------------------
-  // Auth state management
-  // -----------------------------------------------------------------------
-
-  async function fetchAndApplyUserBackground() {
-    try {
-      const response = await fetch('/api/v1/background/me', { credentials: 'same-origin' });
-      if (!response.ok) {
-        return;
-      }
-      const payload = await response.json();
-      const theme = document.documentElement.getAttribute('data-color-scheme') || 'light';
-      if (payload.light_bg_id) {
-        BackgroundManager.setCurrentBgId('light', payload.light_bg_id);
-        if (theme === 'light') {
-          BackgroundManager.apply('light', payload.light_bg_id);
-        }
-      }
-      if (payload.dark_bg_id) {
-        BackgroundManager.setCurrentBgId('dark', payload.dark_bg_id);
-        if (theme === 'dark') {
-          BackgroundManager.apply('dark', payload.dark_bg_id);
-        }
-      }
-    } catch (error) {
-      logError('Failed to fetch background:', error);
-    }
+  flipPanelIntoViewport(panel) {
+    const rect = panel.getBoundingClientRect();
+    const isMobile = window.innerWidth <= 767;
+    const shouldFlip = (!isMobile && rect.bottom > window.innerHeight - 12)
+      || (isMobile && rect.top < 12);
+    panel.classList.toggle('user-panel--flip', shouldFlip);
   }
 
-  async function initAuthState() {
-    const shouldProbeAuth = hasAuthCookieHint() || remainingDays() > 0;
-    if (currentUser) {
+  async refreshCurrentUser() {
+    const response = await fetch('/api/v1/auth/me', { credentials: 'same-origin' });
+    if (!response.ok) return null;
+    const payload = await response.json();
+    if (!payload.authenticated) return null;
+    this.currentUser = { username: payload.username, role: payload.role || null };
+    setAuthCookieHint(true);
+    this.renderAuthState();
+    await this.background.loadRemote();
+    return this.currentUser;
+  }
+
+  clearSessionState() {
+    clearLocalSession();
+    this.currentUser = null;
+    this.renderAuthState();
+  }
+
+  async initAuthState() {
+    if (this.currentUser) {
       setAuthCookieHint(true);
-      await fetchAndApplyUserBackground();
+      await this.background.loadRemote();
       return;
     }
-    if (!shouldProbeAuth) {
-      clearLocalSession();
-      currentUser = null;
-      updateUserTriggerIcon(false);
-      updateUserPanelState();
+    if (!hasAuthCookieHint() && remainingDays() <= 0) {
+      this.clearSessionState();
       return;
     }
     try {
-      const response = await fetch('/api/v1/auth/me', { credentials: 'same-origin' });
-      if (response.ok) {
-        const payload = await response.json();
-        if (payload.authenticated) {
-          setAuthCookieHint(true);
-          currentUser = { username: payload.username, role: payload.role || null };
-          updateUserTriggerIcon(true);
-          updateUserPanelState();
-          await fetchAndApplyUserBackground();
-          return;
-        }
-      }
+      if (await this.refreshCurrentUser()) return;
     } catch (error) {
       logError('Auth validation failed:', error);
     }
     await requestSessionCleanup('Failed to clear auth cookie on server:');
-    clearLocalSession();
-    currentUser = null;
-    updateUserTriggerIcon(false);
-    updateUserPanelState();
+    this.clearSessionState();
   }
 
-  async function handleLogout() {
+  async handleLogout() {
     clearLocalSession();
     await requestSessionCleanup('Failed to clear auth cookie on server:');
-    currentUser = null;
-    updateUserTriggerIcon(false);
-    updateUserPanelState();
-    closeUserPanel();
+    this.currentUser = null;
+    this.renderAuthState();
+    this.closeUserPanel();
     document.body.style.removeProperty('--bg-image');
     document.body.style.removeProperty('--bg-image-dark');
-    document.dispatchEvent(new CustomEvent('infinitas:auth-changed', { detail: { authenticated: false } }));
+    document.dispatchEvent(new CustomEvent(
+      'infinitas:auth-changed',
+      { detail: { authenticated: false } },
+    ));
   }
 
-  // -----------------------------------------------------------------------
-  // Event handlers
-  // -----------------------------------------------------------------------
-
-  function handleClickOutside(event) {
-    if (wrapper && !wrapper.contains(event.target) && isUserPanelOpen) {
-      closeUserPanel();
-    }
+  applyLogin(data) {
+    this.currentUser = { username: data.username, role: data.role || null };
+    this.renderAuthState();
+    document.dispatchEvent(new CustomEvent(
+      'infinitas:auth-changed',
+      { detail: { authenticated: true, username: data.username, role: data.role } },
+    ));
+    if (this.standaloneLoginPage) window.location.href = AUTH_SESSION_CONFIG.homeHref || '/';
   }
 
-  function handleKeyDown(event) {
-    if (event.key !== 'Escape') {
-      return;
-    }
-    if (isUserPanelOpen) {
-      closeUserPanel();
-    }
-  }
-
-  function handleProtectedNavigation(event) {
+  handleProtectedNavigation(event) {
     const link = event.target.closest('[data-auth-required="true"]');
-    if (!link) return;
-    if (currentUser) {
-      return;
-    }
+    if (!link || this.currentUser) return;
     event.preventDefault();
-    const targetHref = link.dataset.authTarget || link.getAttribute('href') || null;
-    openAuthModal(targetHref);
+    this.openAuthModal(link.dataset.authTarget || link.getAttribute('href') || null);
   }
 
-  function bindEvents() {
-    document.getElementById('user-trigger')?.addEventListener('click', toggleUserPanel);
-    document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
+  bindEvents() {
+    this.element('user-trigger')?.addEventListener('click', () => this.toggleUserPanel());
+    this.element('logout-btn')?.addEventListener('click', () => this.handleLogout());
     document.querySelectorAll('[data-auth-required="true"]').forEach((link) => {
       link.setAttribute('aria-haspopup', 'dialog');
     });
-    document.body.addEventListener('click', handleProtectedNavigation);
-    document.addEventListener('click', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
+    document.body.addEventListener('click', (event) => this.handleProtectedNavigation(event));
+    document.addEventListener('click', (event) => {
+      if (this.wrapper && !this.wrapper.contains(event.target) && this.isUserPanelOpen) {
+        this.closeUserPanel();
+      }
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && this.isUserPanelOpen) this.closeUserPanel();
+    });
   }
 
-  // -----------------------------------------------------------------------
-  // Modal controller
-  // -----------------------------------------------------------------------
+  syncInitialModal() {
+    const startsVisible = !this.standaloneLoginPage
+      && this.controller.dom.modal
+      && !this.controller.dom.modal.hidden;
+    if (!startsVisible) return;
+    if (this.suppressInitialModal && !this.currentUser) this.controller.dom.modal.hidden = true;
+    else this.openAuthModal();
+  }
 
-  const authPrefix = standaloneLoginPage ? 'login-' : '';
-  const controller = createAuthModalController({
-    prefix: authPrefix,
-    modalTitle: uiText('auth_modal_title', 'Authentication'),
-    onLoginSuccess: (data) => {
-      currentUser = { username: data.username, role: data.role || null };
-      updateUserTriggerIcon(true);
-      updateUserPanelState();
-      document.dispatchEvent(new CustomEvent('infinitas:auth-changed', { detail: { authenticated: true, username: data.username, role: data.role } }));
-      if (standaloneLoginPage) {
-        window.location.href = AUTH_SESSION_CONFIG.homeHref || '/';
-      }
-    },
-  });
+  applyPendingRedirect() {
+    const target = this.consumePendingAuthRedirect();
+    if (!target) return;
+    if (this.currentUser) window.location.replace(target);
+    else this.openAuthModal(target);
+  }
 
-  // -----------------------------------------------------------------------
-  // Init
-  // -----------------------------------------------------------------------
-
-  async function init() {
-    BackgroundManager.init();
-    updateUserTriggerIcon(!!currentUser);
-    updateUserPanelState();
-    await initAuthState();
-    if (standaloneLoginPage && currentUser) {
+  async init() {
+    this.background.init();
+    this.renderAuthState();
+    await this.initAuthState();
+    if (this.standaloneLoginPage && this.currentUser) {
       window.location.replace(AUTH_SESSION_CONFIG.homeHref || '/');
       return;
     }
-    bindEvents();
-    const homeAuthModalStartsVisible = !standaloneLoginPage && controller.dom.modal && !controller.dom.modal.hidden;
-    if (homeAuthModalStartsVisible) {
-      if (suppressInitialModal && !currentUser) {
-        controller.dom.modal.hidden = true;
-      } else {
-        openAuthModal();
-      }
-    }
-    const protectedTarget = consumePendingAuthRedirect();
-    if (!protectedTarget) {
-      return;
-    }
-    if (currentUser) {
-      window.location.replace(protectedTarget);
-      return;
-    }
-    openAuthModal(protectedTarget);
+    this.bindEvents();
+    this.syncInitialModal();
+    this.applyPendingRedirect();
   }
+}
 
-  init();
+export function initHomeAuthSession() {
+  const wrapper = document.getElementById('user-trigger-wrapper');
+  const loginPanel = document.getElementById('login-panel');
+  if (!wrapper && !loginPanel) return;
+  new HomeAuthSession(wrapper, loginPanel).init();
 }

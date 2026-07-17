@@ -262,6 +262,8 @@
   "settings_label": "Settings",
   "share_create_error": "Create failed",
   "share_created": "Created",
+  "share_resolve_secret": "Resolve secret",
+  "share_resolve_url": "Resolve URL",
   "share_revoke_error": "Revoke failed",
   "tab_access": "Access",
   "tab_overview": "Overview",
@@ -329,5 +331,13 @@
   "sort_ascending": "{label}: sorted ascending",
   "sort_descending": "{label}: sorted descending",
   "confirm_revoke_token": "Are you sure you want to revoke this token? This action cannot be undone.",
-  "confirm_revoke_share_link": "Are you sure you want to revoke this share link? This action cannot be undone."
+  "confirm_revoke_share_link": "Are you sure you want to revoke this share link? This action cannot be undone.",
+  "confirm_revoke_exposure": "Are you sure you want to revoke this visibility channel? This action cannot be undone.",
+  "confirm_review_approve": "Approve this review case? This decision closes the case.",
+  "confirm_review_reject": "Reject this review case? This decision closes the case.",
+  "action_review": "Review",
+  "action_approve": "Approve",
+  "action_reject": "Reject",
+  "action_comment": "Comment",
+  "hint_self_review_forbidden": "A different maintainer must review"
 }

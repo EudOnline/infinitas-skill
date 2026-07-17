@@ -6,10 +6,10 @@ from fastapi import Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from server.auth import maybe_get_current_access_context
-from server.models import Principal, User
+from server.i18n import build_auth_redirect_url, resolve_language
 from server.modules.access.authn import AccessContext
-from server.ui.i18n import build_auth_redirect_url, resolve_language
+from server.modules.identity.auth import maybe_get_current_access_context
+from server.modules.identity.models import Principal, User
 from server.ui.queries import (
     get_release_bundle_or_404,
     get_skill_or_404,

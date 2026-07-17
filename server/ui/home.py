@@ -6,9 +6,9 @@ from fastapi import Request
 from sqlalchemy.orm import Session
 
 from server import __version__ as server_version
+from server.i18n import pick_lang, resolve_language, with_lang
 from server.modules.shared.json import read_json_file as _read_json
 from server.ui.formatting import build_kawaii_ui_context, localized_stamp
-from server.ui.i18n import pick_lang, resolve_language, with_lang
 from server.ui.navigation import build_site_nav
 from server.ui.queries import get_dashboard_counts, get_user_stats
 
@@ -52,9 +52,7 @@ def _calculate_skill_rating(skill: dict[str, Any]) -> float | None:
     return None
 
 
-def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[str, Any]:
-    lang = resolve_language(request)
-    discovery_payload = _catalog_payload(settings, "discovery-index.json")
+def _featured_skills(discovery_payload: dict, lang: str) -> list[dict[str, Any]]:
     featured_skills = []
     for skill in (discovery_payload.get("skills") or [])[:3]:
         publisher = skill.get("publisher") or ""
@@ -81,12 +79,13 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
                 else "",
             }
         )
+    return featured_skills
 
-    # Get dashboard counts from service layer
-    counts = get_dashboard_counts(db)
 
-    lifecycle_mode = pick_lang(lang, "私人优先", "Private-first")
-    operating_states = [
+def _operating_states(
+    lang: str, lifecycle_mode: str, generated_at: str | None, counts: Any
+) -> list[dict[str, Any]]:
+    return [
         {
             "icon": "🔒",
             "label": pick_lang(lang, "模式", "Mode"),
@@ -96,7 +95,7 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
         {
             "icon": "📅",
             "label": pick_lang(lang, "同步", "Sync"),
-            "value": localized_stamp(discovery_payload.get("generated_at"), lang),
+            "value": localized_stamp(generated_at, lang),
             "detail": "",
         },
         {
@@ -107,15 +106,19 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
                 if lang == "zh"
                 else f"{counts.pending_reviews} review / {counts.queued_jobs} pending"
             ),
-            "detail": f"{counts.running_jobs} 运行中"
-            if lang == "zh"
-            else f"{counts.running_jobs} running",
+            "detail": (
+                f"{counts.running_jobs} 运行中"
+                if lang == "zh"
+                else f"{counts.running_jobs} running"
+            ),
         },
     ]
-    inspect_example_target = (
-        featured_skills[0]["qualified_name"] if featured_skills else "<publisher>/<skill>"
-    )
-    command_examples = [
+
+
+def _handoff_examples(
+    lang: str, inspect_target: str
+) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    commands = [
         {
             "label": pick_lang(lang, "执行命令", "Run command"),
             "title": pick_lang(lang, "搜索候选", "Search options"),
@@ -129,90 +132,92 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
             "label": pick_lang(lang, "执行命令", "Run command"),
             "title": pick_lang(lang, "检查细节", "Inspect details"),
             "short_label": pick_lang(lang, "检查", "Inspect"),
-            "command": (f"uv run infinitas discovery inspect {inspect_example_target} --json"),
+            "command": f"uv run infinitas discovery inspect {inspect_target} --json",
         },
     ]
-    human_prompts = [
+    prompts = [
         {
             "label": pick_lang(lang, "交任务", "Delegate"),
             "title": pick_lang(lang, "找 skill，再给步骤", "Find a skill, then outline steps"),
             "short_label": pick_lang(lang, "找 skill", "Find skill"),
-            "prompt": (
-                "帮我在私有技能仓库里找适合做 registry 运维的 skill，先说明风险，再给安装步骤。"
-                if lang == "zh"
-                else "Help me find a skill for registry operations in the private catalog, explain the risks first, then give me the install steps."
+            "prompt": pick_lang(
+                lang,
+                "帮我在私有技能仓库里找适合做 registry 运维的 skill，先说明风险，再给安装步骤。",
+                "Help me find a skill for registry operations in the private catalog, explain the risks first, then give me the install steps.",
             ),
         },
         {
             "label": pick_lang(lang, "交任务", "Delegate"),
             "title": pick_lang(lang, "先检查，再安装", "Inspect first, then install"),
             "short_label": pick_lang(lang, "先检查", "Inspect first"),
-            "prompt": (
-                "我需要做 immutable install。先检查来源和版本，再告诉我应该安装哪一个。"
-                if lang == "zh"
-                else "I need to do an immutable install. Inspect the source and version first, then tell me which one I should install."
+            "prompt": pick_lang(
+                lang,
+                "我需要做 immutable install。先检查来源和版本，再告诉我应该安装哪一个。",
+                "I need to do an immutable install. Inspect the source and version first, then tell me which one I should install.",
             ),
         },
     ]
-    console_links = [
-        {
-            "href": with_lang("/library", lang),
-            "icon": "📚",
-            "title": pick_lang(lang, "对象库", "Library"),
-            "value": str(counts.total_objects),
-            "detail": "",
-        },
-        {
-            "href": with_lang("/library", lang),
-            "icon": "🚀",
-            "title": pick_lang(lang, "发布", "Releases"),
-            "value": str(counts.total_releases),
-            "detail": "",
-        },
-        {
-            "href": with_lang("/shares", lang),
-            "icon": "🔗",
-            "title": pick_lang(lang, "分享链接", "Share Links"),
-            "value": str(counts.total_share_links),
-            "detail": "",
-        },
-        {
-            "href": with_lang("/access", lang),
-            "icon": "🗝️",
-            "title": pick_lang(lang, "访问", "Access"),
-            "value": str(counts.total_access),
-            "detail": "",
-        },
-        {
-            "href": with_lang("/activity", lang),
-            "icon": "📋",
-            "title": pick_lang(lang, "活动", "Activity"),
-            "value": str(counts.pending_reviews + counts.queued_jobs + counts.running_jobs),
-            "detail": "",
-        },
-        {
-            "href": with_lang("/settings", lang),
-            "icon": "⚙️",
-            "title": pick_lang(lang, "设置", "Settings"),
-            "value": settings.environment,
-            "detail": f"v{server_version}",
-        },
-    ]
-    # --- Dashboard stats (only computed for authenticated users) ---
-    stats = None
-    from server.auth import maybe_get_current_user as _get_user
+    return commands, prompts
 
-    _session_user = _get_user(request, db)
-    if _session_user is not None:
-        # Get user stats from service layer
-        user_stats = get_user_stats(db)
-        stats = {
-            "active_tokens": user_stats.active_tokens,
-            "accessible_skills": user_stats.accessible_skills,
-            "new_activity": user_stats.new_activity,
+
+def _console_links(lang: str, counts: Any, settings: Any) -> list[dict[str, str]]:
+    definitions = (
+        ("/manage", "📚", "对象库", "Library", counts.total_objects, ""),
+        ("/manage", "🚀", "发布", "Releases", counts.total_releases, ""),
+        ("/manage#shares", "🔗", "分享链接", "Share Links", counts.total_share_links, ""),
+        ("/manage#tokens", "🗝️", "访问", "Access", counts.total_access, ""),
+        (
+            "/manage#activity",
+            "📋",
+            "活动",
+            "Activity",
+            counts.pending_reviews + counts.queued_jobs + counts.running_jobs,
+            "",
+        ),
+        ("/settings", "⚙️", "设置", "Settings", settings.environment, f"v{server_version}"),
+    )
+    return [
+        {
+            "href": with_lang(href, lang),
+            "icon": icon,
+            "title": pick_lang(lang, zh_title, en_title),
+            "value": str(value),
+            "detail": detail,
         }
+        for href, icon, zh_title, en_title, value, detail in definitions
+    ]
 
+
+def _user_stats(request: Request, db: Session) -> dict[str, int] | None:
+    from server.modules.identity.auth import maybe_get_current_user
+
+    if maybe_get_current_user(request, db) is None:
+        return None
+    stats = get_user_stats(db)
+    return {
+        "active_tokens": stats.active_tokens,
+        "accessible_skills": stats.accessible_skills,
+        "new_activity": stats.new_activity,
+    }
+
+
+def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[str, Any]:
+    lang = resolve_language(request)
+    discovery_payload = _catalog_payload(settings, "discovery-index.json")
+    featured_skills = _featured_skills(discovery_payload, lang)
+    counts = get_dashboard_counts(db)
+    lifecycle_mode = pick_lang(lang, "私人优先", "Private-first")
+    operating_states = _operating_states(
+        lang, lifecycle_mode, discovery_payload.get("generated_at"), counts
+    )
+    inspect_target = (
+        featured_skills[0]["qualified_name"] if featured_skills else "<publisher>/<skill>"
+    )
+    command_examples, human_prompts = _handoff_examples(lang, inspect_target)
+    console_links = _console_links(lang, counts, settings)
+    stats = _user_stats(request, db)
     page_eyebrow = pick_lang(lang, "私人技能工作台", "Private agent workspace")
+
     context = {
         "title": pick_lang(lang, "infinitas 私人技能库", "infinitas private skill library"),
         "page_description": pick_lang(
@@ -242,7 +247,7 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
         "console_links": console_links,
         "featured_skills": featured_skills,
         "maintainer_primary_link": {
-            "href": with_lang("/library", lang),
+            "href": with_lang("/manage", lang),
             "label": pick_lang(lang, "打开对象库", "Open Library"),
         },
         "maintainer_body": pick_lang(

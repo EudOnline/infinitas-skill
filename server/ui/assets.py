@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Callable
 from pathlib import Path
 from typing import cast
 
@@ -27,7 +28,7 @@ def load_asset_hashes(static_dir: Path) -> dict[str, str]:
     return {}
 
 
-def static_url_factory(hashes: dict[str, str]):
+def static_url_factory(hashes: dict[str, str]) -> Callable[[str], str]:
     """Return a ``static_url(path)`` function for Jinja2 templates.
 
     ``path`` must start with ``/static/``.  If a matching hash is found

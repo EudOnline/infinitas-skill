@@ -32,10 +32,10 @@
       <div><dt>{{ ui['label_admin_env'] }}</dt><dd><code class="table-code">{{ admin_token_env_name or 'INFINITAS_REGISTRY_API_TOKEN' }}</code></dd></div>
     </dl>
     <div class="mt-3 pt-3 border-t border-kawaii-line flex flex-wrap gap-2">
-      <a class="kawaii-button kawaii-button--ghost text-sm" href="{{ library_href or '/library' }}">{{ ui['action_open_library'] }}</a>
-      <a class="kawaii-button kawaii-button--ghost text-sm" href="{{ access_href or '/access' }}">{{ ui['action_open_access'] }}</a>
-      <a class="kawaii-button kawaii-button--ghost text-sm" href="{{ shares_href or '/shares' }}">{{ ui['action_open_shares'] }}</a>
-      <a class="kawaii-button kawaii-button--ghost text-sm" href="{{ activity_href or '/activity' }}">{{ ui['action_open_activity'] }}</a>
+      <a class="kawaii-button kawaii-button--ghost text-sm" href="{{ library_href or '/manage' }}">{{ ui['action_open_library'] }}</a>
+      <a class="kawaii-button kawaii-button--ghost text-sm" href="{{ access_href or '/manage#tokens' }}">{{ ui['action_open_access'] }}</a>
+      <a class="kawaii-button kawaii-button--ghost text-sm" href="{{ shares_href or '/manage#shares' }}">{{ ui['action_open_shares'] }}</a>
+      <a class="kawaii-button kawaii-button--ghost text-sm" href="{{ activity_href or '/manage#activity' }}">{{ ui['action_open_activity'] }}</a>
     </div>
   </section>
 </div>

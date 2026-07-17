@@ -1,5 +1,6 @@
 <div class="user-trigger-wrapper" id="user-trigger-wrapper">
-  <button class="user-trigger{% if session_current_user %} is-active{% endif %}" id="user-trigger" type="button" aria-label="{% if session_current_user %}{{ ui.user_menu_logged_label }}{% else %}{{ ui.user_menu_anon_label }}{% endif %}" aria-haspopup="true" aria-expanded="false" aria-controls="user-panel">
+  <button class="session-chip user-trigger{% if session_current_user %} is-active{% endif %}" id="user-trigger" type="button" aria-label="{% if session_current_user %}{{ ui.user_menu_logged_label }}{% else %}{{ ui.user_menu_anon_label }}{% endif %}" aria-haspopup="true" aria-expanded="false" aria-controls="user-panel">
+    <span id="user-trigger-icon" aria-hidden="true">{% if session_current_user %}👤{% else %}🔒{% endif %}</span>
     <span class="user-trigger-pulse" id="user-trigger-pulse" {% if session_current_user %}hidden{% endif %}></span>
   </button>
 

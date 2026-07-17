@@ -1,13 +1,6 @@
-/**
- * Console-page authentication session manager.
- *
- * Handles the console session trigger, session panel, logout, and the
- * console-prefixed login modal lifecycle.
- */
+/** Console-page authentication session manager. */
 
 import {
-  uiText,
-  uiTemplate,
   remainingDays,
   clearLocalSession,
   hasAuthCookieHint,
@@ -15,252 +8,190 @@ import {
   initialSessionUser,
   requestSessionCleanup,
 } from './auth-shared.js';
-
-import { AUTH_SESSION_CONFIG, logError } from './config.js';
+import { AUTH_SESSION_CONFIG, logError, uiTemplate, uiText } from './config.js';
 import { createAuthModalController } from './auth-modal.js';
 
-// ---------------------------------------------------------------------------
-// Toast reference (set externally via the toastRef setter pattern)
-// ---------------------------------------------------------------------------
+let toastRef = null;
 
-let _toast = null;
-
-/**
- * Accept a toast manager instance from the outside so this module can call
- * `_toast.success(...)` etc. without importing the toast module itself.
- */
 export function setToastRef(toastInstance) {
-  _toast = toastInstance;
+  toastRef = toastInstance;
 }
 
-// ---------------------------------------------------------------------------
-// Main export
-// ---------------------------------------------------------------------------
-
-export function initConsoleAuthSession() {
-  const root = document.getElementById('console-session-root');
-  if (!root) {
-    return;
+class ConsoleAuthSession {
+  constructor(root) {
+    this.root = root;
+    this.currentUser = initialSessionUser();
+    this.panelOpen = false;
+    this.controller = createAuthModalController({
+      prefix: 'console-',
+      modalTitle: uiText('console_auth_modal_title', 'Identity check'),
+      onLoginSuccess: (data) => this.applyLogin(data),
+    });
   }
 
-  let currentUser = initialSessionUser();
-  let panelOpen = false;
+  element(id) {
+    return document.getElementById(id);
+  }
 
-  // -----------------------------------------------------------------------
-  // Helpers
-  // -----------------------------------------------------------------------
-
-  function roleLabel(role) {
+  roleLabel(role) {
     const normalized = (role || '').toLowerCase();
-    if (normalized === 'maintainer') {
-      return uiText('role_maintainer', 'Maintainer');
-    }
-    if (normalized === 'contributor') {
-      return uiText('role_contributor', 'Contributor');
-    }
+    if (normalized === 'maintainer') return uiText('role_maintainer', 'Maintainer');
+    if (normalized === 'contributor') return uiText('role_contributor', 'Contributor');
     return normalized || uiText('console_session_ready', 'Session ready');
   }
 
-  function sessionMeta() {
-    const role = currentUser?.role
-      ? uiTemplate('console_session_role', 'Role: {role}', { role: roleLabel(currentUser.role) })
+  sessionMeta() {
+    const role = this.currentUser?.role
+      ? uiTemplate('console_session_role', 'Role: {role}', {
+        role: this.roleLabel(this.currentUser.role),
+      })
       : uiText('console_session_ready', 'Session ready');
     const days = remainingDays();
-    if (days > 0) {
-      return `${role} · ${uiTemplate('auth_expiry_days', 'Expires in {days} days', { days })}`;
-    }
-    return `${role} · ${uiText('auth_session_active', 'Session active')}`;
+    const expiry = days > 0
+      ? uiTemplate('auth_expiry_days', 'Expires in {days} days', { days })
+      : uiText('auth_session_active', 'Session active');
+    return `${role} · ${expiry}`;
   }
 
-  // -----------------------------------------------------------------------
-  // Panel management
-  // -----------------------------------------------------------------------
-
-  function closePanel() {
-    const panel = document.getElementById('console-session-panel');
-    const trigger = document.getElementById('console-session-trigger');
-    if (!panel || panel.hidden) {
-      return;
-    }
+  closePanel() {
+    const panel = this.element('console-session-panel');
+    const trigger = this.element('console-session-trigger');
+    if (!panel || panel.hidden) return;
     panel.hidden = true;
-    panelOpen = false;
-    if (trigger) {
-      trigger.setAttribute('aria-expanded', 'false');
-    }
+    this.panelOpen = false;
+    trigger?.setAttribute('aria-expanded', 'false');
   }
 
-  function renderSessionState() {
-    const trigger = document.getElementById('console-session-trigger');
-    const icon = document.getElementById('console-session-icon');
-    const label = document.getElementById('console-session-label');
-    const anonSection = document.getElementById('console-session-anon');
-    const loggedSection = document.getElementById('console-session-logged');
-    const username = document.getElementById('console-session-username');
-    const meta = document.getElementById('console-session-meta');
-    const avatar = document.getElementById('console-session-avatar');
-    const authenticated = !!currentUser;
-    if (icon) {
-      const inner = icon.querySelector('[aria-hidden]') || icon;
-      inner.textContent = authenticated ? '👤' : '🔒';
-    }
+  renderSessionState() {
+    const authenticated = Boolean(this.currentUser);
+    const icon = this.element('console-session-icon');
+    const label = this.element('console-session-label');
+    const trigger = this.element('console-session-trigger');
+    const anonSection = this.element('console-session-anon');
+    const loggedSection = this.element('console-session-logged');
+    if (icon) (icon.querySelector('[aria-hidden]') || icon).textContent = authenticated ? '👤' : '🔒';
     if (label) {
-      label.textContent = authenticated ? currentUser.username : uiText('console_session_guest', 'Sign in');
+      label.textContent = authenticated
+        ? this.currentUser.username
+        : uiText('console_session_guest', 'Sign in');
     }
-    if (trigger) {
-      trigger.setAttribute(
-        'aria-label',
-        authenticated
-          ? uiText('user_menu_logged_label', 'Account menu')
-          : uiText('user_menu_anon_label', 'Sign in')
-      );
-    }
-    if (anonSection) {
-      anonSection.hidden = authenticated;
-    }
-    if (loggedSection) {
-      loggedSection.hidden = !authenticated;
-    }
-    if (authenticated) {
-      if (username) {
-        username.textContent = currentUser.username;
-      }
-      if (meta) {
-        meta.textContent = sessionMeta();
-      }
-      if (avatar) {
-        avatar.textContent = (currentUser.username || 'U').charAt(0).toUpperCase();
-      }
-    }
+    trigger?.setAttribute(
+      'aria-label',
+      authenticated
+        ? uiText('user_menu_logged_label', 'Account menu')
+        : uiText('user_menu_anon_label', 'Sign in'),
+    );
+    if (anonSection) anonSection.hidden = authenticated;
+    if (loggedSection) loggedSection.hidden = !authenticated;
+    if (!authenticated) return;
+    const username = this.element('console-session-username');
+    const meta = this.element('console-session-meta');
+    const avatar = this.element('console-session-avatar');
+    if (username) username.textContent = this.currentUser.username;
+    if (meta) meta.textContent = this.sessionMeta();
+    if (avatar) avatar.textContent = (this.currentUser.username || 'U').charAt(0).toUpperCase();
   }
 
-  function togglePanel() {
-    const panel = document.getElementById('console-session-panel');
-    const trigger = document.getElementById('console-session-trigger');
-    if (!panel || !trigger) {
+  togglePanel() {
+    const panel = this.element('console-session-panel');
+    const trigger = this.element('console-session-trigger');
+    if (!panel || !trigger) return;
+    if (!panel.hidden) {
+      this.closePanel();
       return;
     }
-    if (panel.hidden) {
-      panel.hidden = false;
-      panelOpen = true;
-      trigger.setAttribute('aria-expanded', 'true');
-      return;
-    }
-    closePanel();
+    panel.hidden = false;
+    this.panelOpen = true;
+    trigger.setAttribute('aria-expanded', 'true');
   }
 
-  // -----------------------------------------------------------------------
-  // Auth state management
-  // -----------------------------------------------------------------------
-
-  async function refreshCurrentUser() {
+  async refreshCurrentUser() {
     const response = await fetch('/api/v1/auth/me', { credentials: 'same-origin' });
-    if (!response.ok) {
-      throw new Error('auth probe failed');
-    }
+    if (!response.ok) throw new Error('auth probe failed');
     const payload = await response.json();
-    currentUser = payload.authenticated ? { username: payload.username, role: payload.role || null } : null;
-    setAuthCookieHint(!!currentUser);
-    renderSessionState();
-    return currentUser;
+    this.currentUser = payload.authenticated
+      ? { username: payload.username, role: payload.role || null }
+      : null;
+    setAuthCookieHint(Boolean(this.currentUser));
+    this.renderSessionState();
+    return this.currentUser;
   }
 
-  async function initAuthState() {
-    const shouldProbeAuth = hasAuthCookieHint() || remainingDays() > 0;
-    if (currentUser) {
+  async initAuthState() {
+    if (this.currentUser) {
       setAuthCookieHint(true);
-      renderSessionState();
+      this.renderSessionState();
       return;
     }
-    if (!shouldProbeAuth) {
-      clearLocalSession();
-      currentUser = null;
-      renderSessionState();
+    if (!hasAuthCookieHint() && remainingDays() <= 0) {
+      this.clearSessionState();
       return;
     }
     try {
-      const user = await refreshCurrentUser();
-      if (user) {
-        return;
-      }
+      if (await this.refreshCurrentUser()) return;
     } catch (error) {
       logError('Console auth validation failed:', error);
     }
     await requestSessionCleanup('Console logout request failed:');
-    clearLocalSession();
-    currentUser = null;
-    renderSessionState();
+    this.clearSessionState();
   }
 
-  async function handleLogout() {
+  clearSessionState() {
+    clearLocalSession();
+    this.currentUser = null;
+    this.renderSessionState();
+  }
+
+  async handleLogout() {
     clearLocalSession();
     await requestSessionCleanup('Console logout request failed:');
-    currentUser = null;
-    renderSessionState();
-    closePanel();
+    this.currentUser = null;
+    this.renderSessionState();
+    this.closePanel();
     window.location.href = AUTH_SESSION_CONFIG.homeHref || '/';
   }
 
-  // -----------------------------------------------------------------------
-  // Event handlers
-  // -----------------------------------------------------------------------
-
-  function handleDocumentClick(event) {
-    const trigger = document.getElementById('console-session-trigger');
-    const panel = document.getElementById('console-session-panel');
-    if (panelOpen && trigger && panel && !trigger.contains(event.target) && !panel.contains(event.target)) {
-      closePanel();
-    }
+  applyLogin(data) {
+    this.currentUser = { username: data.username, role: data.role || null };
+    this.renderSessionState();
+    toastRef?.success(uiText('auth_session_active', 'Session active'));
   }
 
-  function handleKeyDown(event) {
-    if (event.key !== 'Escape') {
-      return;
-    }
-    if (panelOpen) {
-      closePanel();
-    }
+  handleDocumentClick(event) {
+    const trigger = this.element('console-session-trigger');
+    const panel = this.element('console-session-panel');
+    const clickedOutside = trigger && panel
+      && !trigger.contains(event.target)
+      && !panel.contains(event.target);
+    if (this.panelOpen && clickedOutside) this.closePanel();
   }
 
-  function bindEvents() {
-    document.getElementById('console-session-trigger')?.addEventListener('click', togglePanel);
-    document.getElementById('console-logout-btn')?.addEventListener('click', handleLogout);
-    document.addEventListener('click', handleDocumentClick);
-    document.addEventListener('keydown', handleKeyDown);
+  handleAuthChanged(event) {
+    this.currentUser = event.detail.authenticated
+      ? { username: event.detail.username, role: event.detail.role || null }
+      : null;
+    this.renderSessionState();
   }
 
-  // -----------------------------------------------------------------------
-  // Modal controller
-  // -----------------------------------------------------------------------
-
-  const controller = createAuthModalController({
-    prefix: 'console-',
-    modalTitle: uiText('console_auth_modal_title', 'Identity check'),
-    onLoginSuccess: (data) => {
-      currentUser = { username: data.username, role: data.role || null };
-      renderSessionState();
-      if (_toast) {
-        _toast.success(uiText('auth_session_active', 'Session active'));
-      }
-    },
-  });
-
-  // -----------------------------------------------------------------------
-  // Init
-  // -----------------------------------------------------------------------
-
-  async function init() {
-    renderSessionState();
-    bindEvents();
-    await initAuthState();
-    document.addEventListener('infinitas:auth-changed', (e) => {
-      if (e.detail.authenticated) {
-        currentUser = { username: e.detail.username, role: e.detail.role || null };
-      } else {
-        currentUser = null;
-      }
-      renderSessionState();
+  bindEvents() {
+    this.element('console-session-trigger')?.addEventListener('click', () => this.togglePanel());
+    this.element('console-logout-btn')?.addEventListener('click', () => this.handleLogout());
+    document.addEventListener('click', (event) => this.handleDocumentClick(event));
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && this.panelOpen) this.closePanel();
     });
+    document.addEventListener('infinitas:auth-changed', (event) => this.handleAuthChanged(event));
   }
 
-  init();
+  async init() {
+    this.renderSessionState();
+    this.bindEvents();
+    await this.initAuthState();
+  }
+}
+
+export function initConsoleAuthSession() {
+  const root = document.getElementById('console-session-root');
+  if (!root) return;
+  new ConsoleAuthSession(root).init();
 }

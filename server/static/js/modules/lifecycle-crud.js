@@ -1,5 +1,5 @@
 /**
- * Skill, Draft, and Release CRUD operations
+ * Release artifact and polling helpers
  */
 import {
   uiText,
@@ -9,7 +9,6 @@ import {
 import {
   apiGet,
   apiPost,
-  apiPatch,
 } from './api.js';
 
 // ── Shared toast + helpers (injected from lifecycle.js) ─────────────
@@ -37,59 +36,6 @@ export function formatBytes(bytes) {
   const units = ['B', 'KB', 'MB', 'GB'];
   const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
   return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
-}
-
-// ── Skill CRUD ──────────────────────────────────────────────────────
-
-export async function createSkill(form) {
-  const button = form.querySelector('button[type="submit"]');
-  _setButtonLoading(button, true);
-  try {
-    const data = {
-      slug: form.elements.slug.value.trim(),
-      display_name: form.elements.display_name.value.trim(),
-      summary: form.elements.summary.value.trim(),
-      default_visibility_profile: form.elements.default_visibility_profile.value || null,
-    };
-    const result = await apiPost('/api/v1/skills', data);
-    _toast.success(uiText('skill_created', '技能创建成功'));
-    window.location.href = _preserveLang(`/skills/${result.id}`);
-  } catch (err) {
-    _setButtonLoading(button, false);
-    _toast.error(err.message || uiText('skill_create_error', '创建技能失败'));
-  }
-}
-
-// ── Version CRUD ────────────────────────────────────────────────────
-
-export async function createVersion(form) {
-  const skillId = form.dataset.skillId;
-  const button = form.querySelector('button[type="submit"]');
-  _setButtonLoading(button, true);
-  try {
-    const data = {
-      version: form.elements.version.value.trim(),
-      content_ref: form.elements.content_ref.value.trim(),
-      metadata: {},
-    };
-    const contentMode = form.elements.content_mode?.value;
-    if (contentMode) data.content_mode = contentMode;
-    const uploadToken = form.elements.content_upload_token?.value;
-    if (uploadToken) data.content_upload_token = uploadToken;
-    try {
-      data.metadata = JSON.parse(form.elements.metadata_json.value || '{}');
-    } catch (_e) {
-      _toast.error(uiText('invalid_json', 'JSON 格式错误'));
-      _setButtonLoading(button, false);
-      return;
-    }
-    const result = await apiPost(`/api/v1/skills/${encodeURIComponent(skillId)}/versions`, data);
-    _toast.success(uiText('version_created', '版本创建成功'));
-    window.location.href = _preserveLang(`/skills/${skillId}/versions/${result.id}`);
-  } catch (err) {
-    _setButtonLoading(button, false);
-    _toast.error(err.message || uiText('version_create_error', '创建版本失败'));
-  }
 }
 
 // ── Release CRUD ────────────────────────────────────────────────────

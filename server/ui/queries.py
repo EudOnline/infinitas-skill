@@ -11,17 +11,13 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from server.models import (
-    AccessGrant,
-    AuditEvent,
-    Credential,
-    Job,
-    Release,
-    ReviewCase,
-    Skill,
-    SkillVersion,
-)
-from server.modules.audit.read_model import activity_query
+from server.modules.access.models import AccessGrant
+from server.modules.audit.models import AuditEvent
+from server.modules.authoring.models import Skill, SkillVersion
+from server.modules.identity.models import Credential
+from server.modules.jobs.models import Job
+from server.modules.release.models import Release
+from server.modules.review.models import ReviewCase
 
 # ── Skill/Release lookup services ───────────────────────────────────────────
 
@@ -74,54 +70,7 @@ def get_release_bundle_or_404(db: Session, release_id: int) -> tuple[Release, Sk
     return release, version, skill
 
 
-def get_skill_name(db: Session, skill_id: int) -> str | None:
-    """Get a skill's display name by ID.
-
-    Args:
-        db: Database session
-        skill_id: Skill ID
-
-    Returns:
-        Display name or None if not found
-    """
-    skill = db.get(Skill, int(skill_id))
-    return skill.display_name if skill else None
-
-
-def get_release_label(db: Session, release_id: int) -> str | None:
-    """Get a release label by ID.
-
-    Args:
-        db: Database session
-        release_id: Release ID
-
-    Returns:
-        Release label or None if not found
-    """
-    try:
-        release = db.get(Release, int(release_id))
-    except (TypeError, ValueError):
-        return str(release_id)
-    if release is None:
-        return str(release_id)
-    return f"release-{release.id}"
-
-
 # ── Activity/Stats services ─────────────────────────────────────────────────────
-
-
-def get_audit_events(db: Session, *, limit: int = 100) -> list[AuditEvent]:
-    """Get recent audit events.
-
-    Args:
-        db: Database session
-        limit: Maximum number of events to return
-
-    Returns:
-        List of audit events
-    """
-    capped_limit = max(1, min(int(limit or 100), 500))
-    return list(db.scalars(activity_query().limit(capped_limit)).all())
 
 
 # ── Dashboard stats services ───────────────────────────────────────────────────
@@ -257,9 +206,6 @@ def get_user_stats(db: Session, *, days: int = 7) -> UserStats:
 __all__ = [
     "get_skill_or_404",
     "get_release_bundle_or_404",
-    "get_skill_name",
-    "get_release_label",
-    "get_audit_events",
     "DashboardCounts",
     "get_dashboard_counts",
     "UserStats",

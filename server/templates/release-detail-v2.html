@@ -24,7 +24,7 @@
 
 <section class="kawaii-card animate-in mb-4">
   <div class="flex flex-wrap items-center gap-2 mb-3">
-    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-kawaii-primary text-white text-xs font-bold shrink-0">1</span>
+    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-kawaii-primary text-kawaii-paper text-xs font-bold shrink-0">1</span>
     <h2 class="font-display text-lg font-bold text-kawaii-ink">{{ ui['section_manage_visibility'] }}</h2>
     {% if release.visibility_count %}<span class="text-xs text-kawaii-ink-soft">{{ release.visibility_count }} channel(s)</span>{% endif %}
   </div>
@@ -99,7 +99,14 @@
         <td data-label="{{ ui['table_col_install'] }}">{{ item.install_mode }}</td>
         <td data-label="{{ ui['label_agent_tokens'] }}">{{ item.token_count }}</td>
         <td data-label="{{ ui['label_share_links'] }}">{{ item.share_count }}</td>
-        <td data-label="{{ ui['table_col_state'] }}">{{ item.state }}</td>
+        <td data-label="{{ ui['table_col_state'] }}">
+          <div>{{ item.state }}</div>
+          {% if item.review_case_id %}
+          <span class="kawaii-badge {% if item.review_case_state_raw == 'approved' %}kawaii-badge--success{% elif item.review_case_state_raw == 'open' %}kawaii-badge--pending{% else %}kawaii-badge--soft{% endif %}">
+            {{ ui['label_review_mode'] }}: {{ item.review_case_state_raw }}
+          </span>
+          {% endif %}
+        </td>
         <td data-label="{{ ui['table_col_actions'] }}">
           <div class="flex flex-wrap items-center gap-2">
             {% if item.can_activate %}
@@ -119,9 +126,39 @@
             {% if item.can_patch %}
             <button class="kawaii-button kawaii-button--secondary text-sm" type="button" data-action="toggle-patch-form" data-exposure-id="{{ item.id }}">{{ ui['action_edit'] }}</button>
             {% endif %}
+            {% if item.review_case_id %}
+            <button class="kawaii-button kawaii-button--ghost text-sm" type="button" data-action="review-detail" data-review-case-id="{{ item.review_case_id }}">{{ ui['review_detail_history'] }}</button>
+            {% if item.review_case_state_raw == 'open' and item.can_review %}
+            <button class="kawaii-button kawaii-button--secondary text-sm" type="button" data-action="toggle-review-form" data-review-case-id="{{ item.review_case_id }}">{{ ui['action_review'] }}</button>
+            {% elif item.review_case_state_raw == 'open' %}
+            <span class="kawaii-badge kawaii-badge--pending">{{ ui['hint_self_review_forbidden'] }}</span>
+            {% endif %}
+            {% endif %}
           </div>
         </td>
       </tr>
+      {% if item.review_case_id %}
+      <tr id="review-detail-row-{{ item.review_case_id }}" hidden>
+        <td colspan="7">
+          <div id="review-detail-content-{{ item.review_case_id }}" class="p-4 bg-kawaii-panel-soft rounded-kawaii-lg border border-kawaii-line" aria-live="polite"></div>
+        </td>
+      </tr>
+      {% if item.review_case_state_raw == 'open' and item.can_review %}
+      <tr id="review-form-row-{{ item.review_case_id }}" hidden>
+        <td colspan="7">
+          <div class="p-4 bg-kawaii-panel-soft rounded-kawaii-lg border border-kawaii-line">
+            <label class="block text-sm font-bold text-kawaii-ink mb-1.5" for="review-note-{{ item.review_case_id }}">{{ ui['review_note_label'] }}</label>
+            <textarea class="kawaii-input min-h-24" id="review-note-{{ item.review_case_id }}" maxlength="5000"></textarea>
+            <div class="flex flex-wrap items-center gap-2 mt-3">
+              <button class="kawaii-button kawaii-button--primary" type="button" data-action="review-approve" data-review-case-id="{{ item.review_case_id }}">{{ ui['action_approve'] }}</button>
+              <button class="kawaii-button kawaii-button--ghost" type="button" data-action="review-reject" data-review-case-id="{{ item.review_case_id }}">{{ ui['action_reject'] }}</button>
+              <button class="kawaii-button kawaii-button--secondary" type="button" data-action="review-comment" data-review-case-id="{{ item.review_case_id }}">{{ ui['action_comment'] }}</button>
+            </div>
+          </div>
+        </td>
+      </tr>
+      {% endif %}
+      {% endif %}
       {% if item.can_patch %}
       <tr class="patch-form-row" id="patch-form-row-{{ item.id }}" hidden>
         <td colspan="7" class="py-2 border-b border-kawaii-line/50 last:border-0">
@@ -152,7 +189,7 @@
 
 <section class="kawaii-card animate-in mb-4 {% if not release.grant_access_ready %}opacity-75{% endif %}">
   <div class="flex flex-wrap items-center gap-2 mb-3">
-    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-kawaii-primary text-white text-xs font-bold shrink-0">2</span>
+    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-kawaii-primary text-kawaii-paper text-xs font-bold shrink-0">2</span>
     <h2 class="font-display text-lg font-bold text-kawaii-ink">{{ ui['section_issue_agent_token'] }}</h2>
     <span class="text-xs text-kawaii-ink-soft">{{ release.token_count or 0 }} tokens, {{ release.share_count or 0 }} shares</span>
   </div>
@@ -177,7 +214,7 @@
         </label>
         <button class="kawaii-button kawaii-button--primary" type="submit">{{ ui['action_issue_token'] }}</button>
       </form>
-      <div id="issue-token-result" class="mt-4 p-4 bg-kawaii-panel-soft rounded-kawaii-lg border border-kawaii-line" hidden></div>
+      <div id="issue-token-result" class="mt-4 p-3 bg-kawaii-surface rounded-kawaii-sm border-l-4 border-kawaii-primary" hidden></div>
     </article>
 
     <article class="p-4 bg-kawaii-panel-soft rounded-kawaii-lg border border-kawaii-line">
@@ -203,7 +240,7 @@
         </div>
         <button class="kawaii-button kawaii-button--primary" type="submit">{{ ui['action_create_share_link'] }}</button>
       </form>
-      <div id="create-share-result" class="mt-4 p-4 bg-kawaii-panel-soft rounded-kawaii-lg border border-kawaii-line" hidden></div>
+      <div id="create-share-result" class="mt-4 p-3 bg-kawaii-surface rounded-kawaii-sm border-l-4 border-kawaii-primary" hidden></div>
     </article>
   </div>
   {% endif %}
@@ -211,7 +248,7 @@
 
 <section class="kawaii-card animate-in mb-4 {% if release.readiness_state != 'ready' %}opacity-75{% endif %}">
   <div class="flex flex-wrap items-center gap-2 mb-3">
-    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-kawaii-primary text-white text-xs font-bold shrink-0">3</span>
+    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-kawaii-primary text-kawaii-paper text-xs font-bold shrink-0">3</span>
     <h2 class="font-display text-lg font-bold text-kawaii-ink">{{ ui['section_artifacts'] }}</h2>
     <span class="text-xs text-kawaii-ink-soft">{{ release.artifacts_count or 0 }} file(s)</span>
   </div>

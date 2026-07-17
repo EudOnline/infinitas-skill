@@ -4,7 +4,8 @@ from typing import Any
 
 from fastapi import Request
 
-from server.models import User
+from server.i18n import pick_lang, resolve_language, with_lang
+from server.modules.identity.models import User
 from server.ui.formatting import (
     build_kawaii_ui_context,
     humanize_job_kind,
@@ -12,7 +13,6 @@ from server.ui.formatting import (
     humanize_status,
     humanize_timestamp,
 )
-from server.ui.i18n import pick_lang, resolve_language, with_lang
 from server.ui.navigation import build_site_nav
 
 

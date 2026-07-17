@@ -130,9 +130,10 @@ function initCreateShareForm() {
 
     try {
       const releaseId = form.dataset.releaseId;
+      const suppliedPassword = String(form.elements.temporary_password.value || '').trim();
       const payload = {
         name: String(form.elements.label.value || '').trim() || 'share link',
-        password: String(form.elements.temporary_password.value || '').trim() || null,
+        password: suppliedPassword || null,
         expires_in_days: Number(form.elements.expires_in_days.value || 7),
         max_uses: Number(form.elements.usage_limit.value || 5),
       };
@@ -142,14 +143,16 @@ function initCreateShareForm() {
       );
       renderResult(result, uiText('share_created', 'Share link created'), [
         {
-          label: uiText('table_col_release', 'Release URL'),
-          value: data.install_url,
-          copyValue: data.install_url,
+          label: uiText('share_resolve_url', 'Resolve URL'),
+          value: data.resolve_url,
+          copyValue: data.resolve_url,
         },
         {
-          label: uiText('table_col_password', 'Password'),
-          value: data.temporary_password,
-          copyValue: data.temporary_password,
+          label: suppliedPassword
+            ? uiText('table_col_password', 'Password')
+            : uiText('share_resolve_secret', 'Resolve secret'),
+          value: suppliedPassword || data.resolve_secret,
+          copyValue: suppliedPassword || data.resolve_secret,
         },
         {
           label: uiText('table_col_expiry', 'Expiry'),

@@ -1,20 +1,11 @@
 /**
  * Shared authentication utilities and constants.
  *
- * Re-exports thin wrappers around config.js helpers so that the auth
- * sub-modules (auth-modal, auth-home, auth-console) share a single source
- * of truth for session storage keys, credential validation, and cookie-hint state.
+ * Owns session storage, credential validation, and cookie-hint state shared
+ * by auth-modal, auth-home, and auth-console.
  */
 
-import {
-  APP_SESSION,
-  AUTH_SESSION_CONFIG,
-  uiText,
-  logError,
-  getCsrfToken,
-  uiTemplate,
-  currentPageLanguage,
-} from './config.js';
+import { APP_SESSION, uiText, getCsrfToken } from './config.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -22,13 +13,6 @@ import {
 
 const EXPIRY_KEY = 'infinitas_auth_expiry';
 const DAYS_30 = 30 * 24 * 60 * 60 * 1000;
-
-// ---------------------------------------------------------------------------
-// Convenience re-exports from config (kept as wrapper functions for
-// backward compatibility with the call-sites in auth-session.js).
-// ---------------------------------------------------------------------------
-
-export { currentPageLanguage, uiText, uiTemplate, getCsrfToken };
 
 // ---------------------------------------------------------------------------
 // Session state helpers

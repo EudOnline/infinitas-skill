@@ -262,6 +262,8 @@
   "settings_label": "设置",
   "share_create_error": "创建失败",
   "share_created": "已创建",
+  "share_resolve_secret": "解析密钥",
+  "share_resolve_url": "解析地址",
   "share_revoke_error": "撤销失败",
   "tab_access": "访问",
   "tab_overview": "概览",
@@ -329,5 +331,13 @@
   "sort_ascending": "{label}：已按升序排序",
   "sort_descending": "{label}：已按降序排序",
   "confirm_revoke_token": "确定要撤销此 Token 吗？此操作不可逆。",
-  "confirm_revoke_share_link": "确定要撤销此分享链接吗？此操作不可逆。"
+  "confirm_revoke_share_link": "确定要撤销此分享链接吗？此操作不可逆。",
+  "confirm_revoke_exposure": "确定要撤销此可见性通道吗？此操作不可逆。",
+  "confirm_review_approve": "确定通过此审核吗？该决定会关闭审核单。",
+  "confirm_review_reject": "确定驳回此审核吗？该决定会关闭审核单。",
+  "action_review": "审核",
+  "action_approve": "通过",
+  "action_reject": "驳回",
+  "action_comment": "评论",
+  "hint_self_review_forbidden": "需由另一位维护者审核"
 }

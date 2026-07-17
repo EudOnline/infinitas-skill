@@ -1,5 +1,5 @@
 /**
- * Lifecycle page initializers — facade that re-exports from sub-modules.
+ * Lifecycle page initializers and shared interaction wiring.
  */
 import { uiText, currentPageLanguage } from './config.js';
 import {
@@ -91,6 +91,7 @@ function handleShareDetailClick(e) {
   }
   const revokeBtn = e.target.closest('[data-action="revoke-exposure"]');
   if (revokeBtn) {
+    if (!confirm(uiText('confirm_revoke_exposure', 'Are you sure you want to revoke this visibility channel? This action cannot be undone.'))) return;
     revokeExposure(revokeBtn.dataset.exposureId, revokeBtn);
     return;
   }
@@ -122,6 +123,7 @@ function handleReviewCaseClick(e) {
   }
   const approveBtn = e.target.closest('[data-action="review-approve"]');
   if (approveBtn) {
+    if (!confirm(uiText('confirm_review_approve', 'Approve this review case? This decision closes the case.'))) return;
     const caseId = approveBtn.dataset.reviewCaseId;
     const note = document.getElementById(`review-note-${caseId}`)?.value || '';
     submitReviewDecision(caseId, 'approve', note, approveBtn);
@@ -129,6 +131,7 @@ function handleReviewCaseClick(e) {
   }
   const rejectBtn = e.target.closest('[data-action="review-reject"]');
   if (rejectBtn) {
+    if (!confirm(uiText('confirm_review_reject', 'Reject this review case? This decision closes the case.'))) return;
     const caseId = rejectBtn.dataset.reviewCaseId;
     const note = document.getElementById(`review-note-${caseId}`)?.value || '';
     submitReviewDecision(caseId, 'reject', note, rejectBtn);

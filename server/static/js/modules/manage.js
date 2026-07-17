@@ -26,6 +26,16 @@ document.addEventListener('DOMContentLoaded', () => {
     activateTab(btn);
   });
 
+  function activateHashTab() {
+    const view = window.location.hash.slice(1);
+    if (!view) return;
+    const button = tabs.querySelector(`[data-view="${CSS.escape(view)}"]`);
+    if (button) activateTab(button);
+  }
+
+  activateHashTab();
+  window.addEventListener('hashchange', activateHashTab);
+
   // WAI-ARIA Tabs keyboard navigation
   tabs.addEventListener('keydown', (e) => {
     const btn = e.target.closest('[data-view]');

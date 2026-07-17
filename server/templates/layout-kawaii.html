@@ -23,7 +23,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Quicksand:wght@400;500;600;700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Quicksand:wght@400;500;600;700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     <noscript><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Quicksand:wght@400;500;600;700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet"></noscript>
 
     <script src="{{ static_url('/static/js/theme-init.js') }}"></script>
@@ -41,7 +41,7 @@
     data-copy-success="{{ ui['copy_success'] }}"
     data-copy-error="{{ ui['copy_error'] }}"
   >
-    <a href="#main-content" class="absolute -top-full left-1/2 -translate-x-1/2 z-[10000] py-3 px-6 bg-kawaii-primary text-white font-bold no-underline rounded-kawaii-md shadow-kawaii-elevated transition-[top] duration-200 focus:top-4">{{ ui['skip_to_main_content'] }}</a>
+    <a href="#main-content" class="absolute -top-full left-1/2 -translate-x-1/2 z-[10000] py-3 px-6 bg-kawaii-primary text-kawaii-paper font-bold no-underline rounded-kawaii-md shadow-kawaii-elevated transition-[top] duration-200 focus:top-4">{{ ui['skip_to_main_content'] }}</a>
     
     <header class="topbar animate-in">
       <a class="brand" href="{{ home_href or '/' }}">

@@ -1,13 +1,12 @@
 /**
  * Auth session initialization (ES module)
  */
-import { initHomeAuthSession, setToastRef as setHomeToastRef } from './modules/auth-home.js';
+import { initHomeAuthSession } from './modules/auth-home.js';
 import { initConsoleAuthSession, setToastRef as setConsoleToastRef } from './modules/auth-console.js';
 import { getSharedToast } from './modules/toast.js';
 
 function initAll() {
   const toast = getSharedToast();
-  setHomeToastRef(toast);
   setConsoleToastRef(toast);
 
   initHomeAuthSession();
