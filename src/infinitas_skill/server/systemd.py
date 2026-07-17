@@ -147,7 +147,7 @@ After=network-online.target
 Type=oneshot
 User={args.service_user}
 WorkingDirectory={args.repo_root}
-ExecStart=/usr/bin/env bash {args.repo_root}/scripts/mirror-registry.sh --remote {args.mirror_remote}{extra_flags}
+ExecStart={args.python_bin} -m infinitas_skill.cli.main registry sources --repo-root {args.repo_root} mirror --remote {args.mirror_remote}{extra_flags}
 """
 
 
@@ -211,7 +211,7 @@ WantedBy=timers.target
 """
 
 
-def write_file(path: Path, content: str):
+def write_file(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
     print(f"wrote {path}")
 

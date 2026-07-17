@@ -7,7 +7,9 @@ import argparse
 
 def configure_server_healthcheck_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument(
-        "--api-url", required=True, help="Hosted registry API base URL or /healthz URL"
+        "--api-url",
+        required=True,
+        help="Hosted registry API base URL or /api/v1/system/healthz URL",
     )
     parser.add_argument("--repo-path", required=True, help="Path to the server-owned git checkout")
     parser.add_argument(
@@ -39,9 +41,7 @@ def configure_server_backup_parser(parser: argparse.ArgumentParser) -> argparse.
     return parser
 
 
-def configure_server_render_systemd_parser(
-    parser: argparse.ArgumentParser,
-) -> argparse.ArgumentParser:
+def _configure_systemd_runtime_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--output-dir", required=True, help="Directory where rendered files will be written"
     )
@@ -82,6 +82,9 @@ def configure_server_render_systemd_parser(
     parser.add_argument(
         "--backup-label", default="scheduled", help="Backup label passed to the backup helper"
     )
+
+
+def _configure_systemd_schedule_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--mirror-remote",
         default="",
@@ -156,6 +159,13 @@ def configure_server_render_systemd_parser(
             "when webhook delivery is unavailable"
         ),
     )
+
+
+def configure_server_render_systemd_parser(
+    parser: argparse.ArgumentParser,
+) -> argparse.ArgumentParser:
+    _configure_systemd_runtime_args(parser)
+    _configure_systemd_schedule_args(parser)
     parser.add_argument(
         "--artifact-path",
         default="",

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import json
+from pathlib import Path
 
 from infinitas_skill.policy.review_commands import (
     build_recommend_reviewers_parser,
@@ -10,6 +12,8 @@ from infinitas_skill.policy.review_commands import (
     recommend_reviewers_main,
     review_status_main,
 )
+from infinitas_skill.policy.review_evidence import import_review_evidence
+from infinitas_skill.policy.reviews import resolve_skill
 from infinitas_skill.policy.service import run_check_policy_packs, run_check_promotion
 
 POLICY_TOP_LEVEL_HELP = "Policy validation and promotion tools"
@@ -92,7 +96,27 @@ def configure_policy_parser(parser: argparse.ArgumentParser) -> argparse.Argumen
     review_status.description = "Show review gate status for one skill"
     setattr(review_status, "help", "Show review gate status for one skill")
     review_status.set_defaults(_handler=lambda args: review_status_main(_argv_from_namespace(args)))
+
+    import_evidence = subparsers.add_parser(
+        "import-review-evidence",
+        help="Import normalized platform review evidence",
+    )
+    import_evidence.add_argument("skill")
+    import_evidence.add_argument("--input", required=True)
+    import_evidence.add_argument("--repo-root", default=".")
+    import_evidence.add_argument("--json", action="store_true")
+    import_evidence.set_defaults(_handler=lambda args: _emit_imported_evidence(args))
     return parser
+
+
+def _emit_imported_evidence(args: argparse.Namespace) -> int:
+    root = Path(args.repo_root).resolve()
+    payload = import_review_evidence(
+        resolve_skill(root, args.skill),
+        Path(args.input),
+    )
+    print(json.dumps(payload, ensure_ascii=False, indent=2 if args.json else None))
+    return 0
 
 
 def _argv_from_namespace(args: argparse.Namespace) -> list[str]:

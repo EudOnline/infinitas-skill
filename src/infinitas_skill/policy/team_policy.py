@@ -4,45 +4,32 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import Any
 
 from infinitas_skill.root import ROOT
 
 from .policy_pack import PolicyPackError, load_policy_domain_resolution
+from .primitives import normalize_string_list, unique_strings
 
 TEAM_NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
+JsonDict = dict[str, Any]
+
 
 class TeamPolicyError(Exception):
-    def __init__(self, errors):
+    def __init__(self, errors: list[str]) -> None:
         super().__init__("invalid team policy")
         self.errors = errors
 
 
-def unique_strings(values):
-    seen = set()
-    result = []
-    for value in values or []:
-        if value in seen:
-            continue
-        seen.add(value)
-        result.append(value)
-    return result
+def normalize_actor_list(values: object) -> list[str]:
+    return normalize_string_list(values)
 
 
-def normalize_actor_list(values):
-    if values is None:
-        return []
-    if not isinstance(values, list):
-        return []
-    return unique_strings(
-        [item.strip() for item in values if isinstance(item, str) and item.strip()]
-    )
-
-
-def validate_team_policy(payload):
-    errors = []
+def validate_team_policy(payload: object) -> tuple[list[str], dict[str, JsonDict]]:
+    errors: list[str] = []
     if not isinstance(payload, dict):
-        return ["team policy must be a JSON object"], []
+        return ["team policy must be a JSON object"], {}
 
     unknown_root = sorted(set(payload) - {"$schema", "version", "teams"})
     if unknown_root:
@@ -58,7 +45,7 @@ def validate_team_policy(payload):
         errors.append("team-policy teams must be an object")
         raw_teams = {}
 
-    normalized = {}
+    normalized: dict[str, JsonDict] = {}
     for team_name, raw_team in raw_teams.items():
         if not isinstance(team_name, str) or not TEAM_NAME_RE.match(team_name):
             errors.append(f"team-policy teams contains invalid team name {team_name!r}")
@@ -96,7 +83,7 @@ def validate_team_policy(payload):
     return errors, normalized
 
 
-def load_team_policy(root=ROOT):
+def load_team_policy(root: str | Path = ROOT) -> JsonDict:
     root = Path(root).resolve()
     path = root / "policy" / "team-policy.json"
     try:
@@ -126,19 +113,14 @@ def load_team_policy(root=ROOT):
     }
 
 
-def resolve_team(team_name, policy):
+def expand_team_refs(team_names: object, policy: object) -> JsonDict:
     policy = policy if isinstance(policy, dict) else {}
     teams = policy.get("teams") or {}
-    return teams.get(team_name)
-
-
-def expand_team_refs(team_names, policy):
-    policy = policy if isinstance(policy, dict) else {}
-    teams = policy.get("teams") or {}
-    resolved_teams = []
-    actors = []
-    missing = []
-    for raw_name in team_names or []:
+    resolved_teams: list[str] = []
+    actors: list[str] = []
+    missing: list[str] = []
+    raw_names = team_names if isinstance(team_names, list) else []
+    for raw_name in raw_names:
         if not isinstance(raw_name, str) or not raw_name.strip():
             continue
         team_name = raw_name.strip()

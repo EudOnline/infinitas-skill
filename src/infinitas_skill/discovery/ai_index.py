@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from .ai_index_builder import INSTALL_POLICY, OPENCLAW_INTEROP, SEMVER_RE, build_ai_index
+from .ai_index_builder import INSTALL_POLICY, OPENCLAW_INTEROP, build_ai_index
 from .ai_index_validation import validate_ai_index_payload
+from .primitives import SEMVER_RE
 
 __all__ = [
     "INSTALL_POLICY",

@@ -4,47 +4,17 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from .decision_metadata import canonical_decision_metadata
-
-_BLOCKING_COMPATIBILITY_STATES = {"blocked", "broken", "unsupported"}
-_VERIFIED_COMPATIBILITY_STATES = {"native", "adapted", "degraded"}
+from .primitives import supports_target_agent
 
 
-def _supports_target_agent(item: dict, target_agent: str | None) -> bool:
-    if target_agent is None:
-        return True
-
-    verified_support = item.get("verified_support")
-    verified_support = verified_support if isinstance(verified_support, dict) else {}
-    payload = verified_support.get(target_agent)
-    payload = payload if isinstance(payload, dict) else {}
-    state = payload.get("state")
-    if state in _BLOCKING_COMPATIBILITY_STATES:
-        return False
-
-    runtime = item.get("runtime")
-    runtime = runtime if isinstance(runtime, dict) else {}
-    readiness = runtime.get("readiness")
-    readiness = readiness if isinstance(readiness, dict) else {}
-    if (
-        target_agent == "openclaw"
-        and runtime.get("platform") == "openclaw"
-        and readiness.get("ready") is True
-    ):
-        return True
-
-    if state in _VERIFIED_COMPATIBILITY_STATES:
-        return True
-
-    return target_agent in (item.get("agent_compatible") or [])
-
-
-def _load_json(path: Path):
+def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _load_discovery_index(root: Path):
+def _load_discovery_index(root: Path) -> dict[str, Any]:
     return _load_json(root / "catalog" / "discovery-index.json")
 
 
@@ -83,7 +53,7 @@ def search_skills(
                 continue
         if publisher and item.get("publisher") != publisher:
             continue
-        if agent and not _supports_target_agent(item, agent):
+        if agent and not supports_target_agent(item, agent):
             continue
         if tag and tag not in (item.get("tags") or []):
             continue

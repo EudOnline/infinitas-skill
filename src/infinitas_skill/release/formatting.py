@@ -1,7 +1,9 @@
 """Formatting helpers for maintained release state output."""
 
+from typing import Any
 
-def format_release_state(state):
+
+def format_release_state(state: dict[str, Any]) -> str:
     lines = [
         f"skill: {state['skill']['name']}",
         f"version: {state['skill']['version']}",

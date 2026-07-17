@@ -5,8 +5,11 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Iterable
 from pathlib import Path
+from typing import Any
 
+from infinitas_skill.policy.review_evaluation import evaluate_review_state
 from infinitas_skill.policy.reviewer_rotation import (
     recommend_reviewers,
     render_reviewer_recommendations,
@@ -14,12 +17,11 @@ from infinitas_skill.policy.reviewer_rotation import (
 from infinitas_skill.policy.reviews import (
     ROOT,
     ReviewPolicyError,
-    evaluate_review_state,
     resolve_skill,
 )
 
 
-def print_csv_list(name, values):
+def print_csv_list(name: str, values: Iterable[str]) -> str:
     return f"{name}: {', '.join(values) if values else '-'}"
 
 
@@ -86,7 +88,7 @@ def build_reviewer_recommendation_payload(
     root: Path = ROOT,
     stage: str | None = None,
     as_active: bool = False,
-):
+) -> dict[str, Any]:
     if as_active and stage:
         raise ValueError("--as-active and --stage cannot be combined")
     skill_dir = resolve_skill(root, skill)
@@ -118,7 +120,9 @@ def recommend_reviewers_main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def render_review_status(evaluation, recommendations=None) -> str:
+def render_review_status(
+    evaluation: dict[str, Any], recommendations: dict[str, Any] | None = None
+) -> str:
     lines = [
         f"skill: {evaluation['skill']}@{evaluation['version']}",
         f"actual_stage: {evaluation['actual_stage']}",

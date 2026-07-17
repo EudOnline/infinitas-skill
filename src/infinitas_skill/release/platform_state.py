@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Any
+
 from infinitas_skill.compatibility.evidence import (
     CANONICAL_RUNTIME_PLATFORM,
     collect_canonical_runtime_support,
@@ -12,8 +15,12 @@ from infinitas_skill.compatibility.policy import load_compatibility_policy
 BLOCKING_PLATFORM_STATES = {"unknown", "blocked", "broken", "unsupported"}
 BLOCKING_FRESHNESS_STATES = {"stale", "unknown"}
 
+JsonDict = dict[str, Any]
 
-def collect_platform_compatibility_state(root, meta, identity):
+
+def collect_platform_compatibility_state(
+    root: Path, meta: JsonDict, identity: JsonDict
+) -> JsonDict:
     compatibility_policy = load_compatibility_policy(root)
     platform_contracts = load_platform_contracts(root)
     compatibility_evidence = load_compatibility_evidence(root)
@@ -44,12 +51,12 @@ def collect_platform_compatibility_state(root, meta, identity):
     declared_support = merged.get("declared_support") or []
     verified_support = merged.get("verified_support") or {}
     verified_support[CANONICAL_RUNTIME_PLATFORM] = canonical_runtime
-    historical_platforms = []
+    historical_platforms: list[str] = []
     for platform in declared_support + sorted(verified_support):
         if platform == CANONICAL_RUNTIME_PLATFORM or platform in historical_platforms:
             continue
         historical_platforms.append(platform)
-    blocking_platforms = []
+    blocking_platforms: list[JsonDict] = []
     item = dict(canonical_runtime or {})
     state = item.get("state") or "unknown"
     freshness_state = item.get("freshness_state") or "unknown"
@@ -69,8 +76,8 @@ def collect_platform_compatibility_state(root, meta, identity):
     }
 
 
-def format_blocking_platform_support(item):
-    parts = []
+def format_blocking_platform_support(item: JsonDict) -> str:
+    parts: list[str] = []
     state = item.get("state") or "unknown"
     freshness_state = item.get("freshness_state") or "unknown"
     parts.append(f"state={state}")

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-import re
+from collections.abc import Iterable
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -17,10 +17,9 @@ from infinitas_skill.openclaw.skill_contract import (
 from infinitas_skill.root import ROOT
 
 from .decision_metadata import canonical_decision_metadata
+from .primitives import semver_key
 
 logger = logging.getLogger(__name__)
-
-SEMVER_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:[-+]([A-Za-z0-9_.-]+))?$")
 
 INSTALL_POLICY = {
     "mode": "immutable-only",
@@ -51,36 +50,25 @@ OPENCLAW_INTEROP = {
 }
 
 
-def _utc_now_iso():
+def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def _semver_key(value):
-    if not isinstance(value, str):
-        return (-1, -1, -1, -1, "")
-    match = SEMVER_RE.match(value.strip())
-    if not match:
-        return (-1, -1, -1, -1, value)
-    major, minor, patch, suffix = match.groups()
-    stability = 1 if suffix is None else 0
-    return (int(major), int(minor), int(patch), stability, suffix or "")
-
-
-def _sort_versions(values):
+def _sort_versions(values: Iterable[object]) -> list[str]:
     unique = []
     for value in values:
         if isinstance(value, str) and value not in unique:
             unique.append(value)
-    return sorted(unique, key=_semver_key, reverse=True)
+    return sorted(unique, key=semver_key, reverse=True)
 
 
-def _relative_repo_path(value):
+def _relative_repo_path(value: object) -> bool:
     if not isinstance(value, str) or not value.strip():
         return False
     return not Path(value).is_absolute()
 
 
-def _load_json(path: Path):
+def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -115,8 +103,8 @@ def _load_runtime_model(root: Path) -> dict:
         return build_openclaw_runtime_model(ROOT)
 
 
-def _catalog_entry_by_key(entries):
-    lookup = {}
+def _catalog_entry_by_key(entries: Iterable[object]) -> dict[str, dict[str, Any]]:
+    lookup: dict[str, dict[str, Any]] = {}
     for entry in entries or []:
         if not isinstance(entry, dict):
             continue
@@ -124,14 +112,12 @@ def _catalog_entry_by_key(entries):
         if not key:
             continue
         current = lookup.get(key)
-        if current is None or _semver_key(entry.get("version")) > _semver_key(
-            current.get("version")
-        ):
+        if current is None or semver_key(entry.get("version")) > semver_key(current.get("version")):
             lookup[key] = entry
     return lookup
 
 
-def _meta_for_entry(root: Path, entry):
+def _meta_for_entry(root: Path, entry: dict[str, Any]) -> dict[str, Any]:
     rel_path = entry.get("path")
     if not isinstance(rel_path, str) or not rel_path:
         return {}
@@ -145,7 +131,7 @@ def _meta_for_entry(root: Path, entry):
         return {}
 
 
-def _publisher_for_entry(current, meta):
+def _publisher_for_entry(current: dict[str, Any], meta: dict[str, Any]) -> str | None:
     for candidate in [
         current.get("publisher") if isinstance(current, dict) else None,
         current.get("owner") if isinstance(current, dict) else None,
@@ -158,7 +144,7 @@ def _publisher_for_entry(current, meta):
     return None
 
 
-def _trust_state_from_version_entry(version_entry):
+def _trust_state_from_version_entry(version_entry: object) -> str:
     if not isinstance(version_entry, dict):
         return "unknown"
     if version_entry.get("attestation_signature_path"):
@@ -170,7 +156,7 @@ def _trust_state_from_version_entry(version_entry):
     return "unknown"
 
 
-def _last_verified_at(verified_support, meta):
+def _last_verified_at(verified_support: dict[str, Any], meta: dict[str, Any]) -> str | None:
     newest = None
     if isinstance(verified_support, dict):
         for payload in verified_support.values():
@@ -334,12 +320,6 @@ def _openclaw_runtime_payload(
         if marker not in skill_precedence:
             skill_precedence.append(marker)
 
-    legacy_agents = _string_list(entry.get("agent_compatible")) or _string_list(
-        meta.get("agent_compatible")
-    )
-    if "openclaw" not in legacy_agents:
-        legacy_agents.append("openclaw")
-
     return {
         "platform": "openclaw",
         "source_mode": runtime_contract.get("source_mode") or "metadata-only",
@@ -362,7 +342,7 @@ def _openclaw_runtime_payload(
     }
 
 
-def _openclaw_interop_payload(runtime_model: dict):
+def _openclaw_interop_payload(runtime_model: dict[str, Any]) -> dict[str, Any]:
     return {
         "runtime_targets": _runtime_targets(runtime_model),
         "import_supported": True,
@@ -373,6 +353,95 @@ def _openclaw_interop_payload(runtime_model: dict):
                 "default": False,
             }
         },
+    }
+
+
+def _distribution_version_map(entries: list[dict]) -> dict:
+    versions = {}
+    for dist in entries:
+        version = dist.get("version")
+        if not version:
+            continue
+        versions[version] = {
+            "manifest_path": dist.get("manifest_path"),
+            "distribution_manifest_path": dist.get("manifest_path"),
+            "bundle_path": dist.get("bundle_path"),
+            "bundle_sha256": dist.get("bundle_sha256"),
+            "attestation_path": dist.get("attestation_path"),
+            "attestation_signature_path": dist.get("attestation_signature_path"),
+            "published_at": dist.get("generated_at"),
+            "stability": "stable",
+            "installable": True,
+            "attestation_formats": ["ssh", "ci"] if dist.get("ci_attestation_path") else ["ssh"],
+            "trust_state": "verified" if dist.get("attestation_signature_path") else "attested",
+            "resolution": {"preferred_source": "distribution-manifest", "fallback_allowed": False},
+        }
+    return versions
+
+
+def _ai_skill_payload(
+    *,
+    root: Path,
+    current: dict[str, Any],
+    meta: dict[str, Any],
+    decision_metadata: dict[str, Any],
+    publisher: str | None,
+    versions: list[str],
+    version_map: dict[str, dict[str, Any]],
+    runtime_model: dict[str, Any],
+) -> dict[str, Any]:
+    raw_verified_support = current.get("verified_support")
+    verified_support = raw_verified_support if isinstance(raw_verified_support, dict) else {}
+    raw_requires = meta.get("requires")
+    requires = raw_requires if isinstance(raw_requires, dict) else {}
+    raw_entrypoints = meta.get("entrypoints")
+    entrypoints = raw_entrypoints if isinstance(raw_entrypoints, dict) else {}
+    latest_version = versions[0]
+    runtime_payload = _openclaw_runtime_payload(root, current, meta, requires, runtime_model)
+    agent_compatible = _string_list(current.get("agent_compatible")) or _string_list(
+        meta.get("agent_compatible")
+    )
+    if "openclaw" not in agent_compatible:
+        agent_compatible.append("openclaw")
+    return {
+        "name": current.get("name"),
+        "publisher": publisher,
+        "qualified_name": current.get("qualified_name")
+        or (
+            f"{publisher}/{current.get('name')}"
+            if publisher and current.get("name")
+            else current.get("name")
+        ),
+        "summary": current.get("summary") or "",
+        "tags": meta.get("tags") or [],
+        "maturity": decision_metadata["maturity"],
+        "quality_score": decision_metadata["quality_score"],
+        "capabilities": decision_metadata["capabilities"],
+        "last_verified_at": _last_verified_at(verified_support, meta),
+        "use_when": decision_metadata["use_when"],
+        "avoid_when": decision_metadata["avoid_when"],
+        "runtime_assumptions": decision_metadata["runtime_assumptions"],
+        "runtime": runtime_payload,
+        "agent_compatible": agent_compatible,
+        "compatibility": {
+            "declared_support": current.get("declared_support")
+            or current.get("agent_compatible")
+            or agent_compatible,
+            "verified_support": verified_support,
+        },
+        "verified_support": verified_support,
+        "trust_state": _trust_state_from_version_entry(version_map[latest_version]),
+        "default_install_version": latest_version,
+        "latest_version": latest_version,
+        "available_versions": versions,
+        "entrypoints": {"skill_md": entrypoints.get("skill_md") or "SKILL.md"},
+        "requires": {
+            "tools": requires.get("tools") or [],
+            "env": requires.get("env") or [],
+            "bins": requires.get("bins") or [],
+        },
+        "interop": {"openclaw": _openclaw_interop_payload(runtime_model)},
+        "versions": {version: version_map[version] for version in versions},
     }
 
 
@@ -399,86 +468,18 @@ def build_ai_index(*, root: Path, catalog_entries: list, distribution_entries: l
         meta = _meta_for_entry(root, current)
         decision_metadata = canonical_decision_metadata(meta)
         publisher = _publisher_for_entry(current, meta)
-        verified_support = current.get("verified_support") or {}
-        requires = meta.get("requires") if isinstance(meta.get("requires"), dict) else {}
-        entrypoints = meta.get("entrypoints") if isinstance(meta.get("entrypoints"), dict) else {}
-        version_map = {}
-        for dist in grouped[key]:
-            version = dist.get("version")
-            if not version:
-                continue
-            version_map[version] = {
-                "manifest_path": dist.get("manifest_path"),
-                "distribution_manifest_path": dist.get("manifest_path"),
-                "bundle_path": dist.get("bundle_path"),
-                "bundle_sha256": dist.get("bundle_sha256"),
-                "attestation_path": dist.get("attestation_path"),
-                "attestation_signature_path": dist.get("attestation_signature_path"),
-                "published_at": dist.get("generated_at"),
-                "stability": "stable",
-                "installable": True,
-                "attestation_formats": ["ssh", "ci"]
-                if dist.get("ci_attestation_path")
-                else ["ssh"],
-                "trust_state": "verified" if dist.get("attestation_signature_path") else "attested",
-                "resolution": {
-                    "preferred_source": "distribution-manifest",
-                    "fallback_allowed": False,
-                },
-            }
-        latest_version = versions[0]
-        latest_entry = version_map[latest_version]
-        runtime_payload = _openclaw_runtime_payload(root, current, meta, requires, runtime_model)
-        agent_compatible = _string_list(current.get("agent_compatible")) or _string_list(
-            meta.get("agent_compatible")
-        )
-        if "openclaw" not in agent_compatible:
-            agent_compatible.append("openclaw")
+        version_map = _distribution_version_map(grouped[key])
         skills.append(
-            {
-                "name": current.get("name"),
-                "publisher": publisher,
-                "qualified_name": current.get("qualified_name")
-                or (
-                    f"{publisher}/{current.get('name')}"
-                    if publisher and current.get("name")
-                    else current.get("name")
-                ),
-                "summary": current.get("summary") or "",
-                "tags": meta.get("tags") or [],
-                "maturity": decision_metadata["maturity"],
-                "quality_score": decision_metadata["quality_score"],
-                "capabilities": decision_metadata["capabilities"],
-                "last_verified_at": _last_verified_at(verified_support, meta),
-                "use_when": decision_metadata["use_when"],
-                "avoid_when": decision_metadata["avoid_when"],
-                "runtime_assumptions": decision_metadata["runtime_assumptions"],
-                "runtime": runtime_payload,
-                "agent_compatible": agent_compatible,
-                "compatibility": {
-                    "declared_support": current.get("declared_support")
-                    or current.get("agent_compatible")
-                    or agent_compatible,
-                    "verified_support": verified_support,
-                },
-                "verified_support": verified_support,
-                "trust_state": _trust_state_from_version_entry(latest_entry),
-                "default_install_version": latest_version,
-                "latest_version": latest_version,
-                "available_versions": versions,
-                "entrypoints": {
-                    "skill_md": entrypoints.get("skill_md") or "SKILL.md",
-                },
-                "requires": {
-                    "tools": requires.get("tools") or [],
-                    "env": requires.get("env") or [],
-                    "bins": requires.get("bins") or [],
-                },
-                "interop": {
-                    "openclaw": _openclaw_interop_payload(runtime_model),
-                },
-                "versions": {version: version_map[version] for version in versions},
-            }
+            _ai_skill_payload(
+                root=root,
+                current=current,
+                meta=meta,
+                decision_metadata=decision_metadata,
+                publisher=publisher,
+                versions=versions,
+                version_map=version_map,
+                runtime_model=runtime_model,
+            )
         )
 
     default_registry = None
@@ -500,6 +501,5 @@ def build_ai_index(*, root: Path, catalog_entries: list, distribution_entries: l
 
 __all__ = [
     "INSTALL_POLICY",
-    "SEMVER_RE",
     "build_ai_index",
 ]

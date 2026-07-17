@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple, cast
 
 from infinitas_skill.discovery.ai_index import validate_ai_index_payload
-from infinitas_skill.install.distribution import materialize_distribution_source
+from infinitas_skill.install.distribution_materialization import materialize_distribution_source
 from infinitas_skill.openclaw import load_openclaw_skill_contract
 
 from .canonical import load_skill_source

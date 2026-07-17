@@ -39,7 +39,16 @@ def build_registry_url(base_url: str, path: str) -> str:
         raise HostedRegistryError("missing hosted registry base_url")
     if not isinstance(path, str) or not path.strip():
         raise HostedRegistryError("missing hosted registry path")
-    return urljoin(base_url.rstrip("/") + "/", path.lstrip("/"))
+    base = urllib.parse.urlparse(base_url)
+    if base.scheme not in ("https", "http") or not base.netloc:
+        raise HostedRegistryError("hosted registry base_url must include an http(s) origin")
+    path_value = path.strip()
+    segments = urllib.parse.urlsplit(path_value).path.split("/")
+    if any(segment == ".." for segment in segments):
+        raise HostedRegistryError("hosted registry path may not contain '..'")
+    if urllib.parse.urlsplit(path_value).scheme or urllib.parse.urlsplit(path_value).netloc:
+        raise HostedRegistryError("hosted registry path must be relative")
+    return urljoin(base_url.rstrip("/") + "/", path_value.lstrip("/"))
 
 
 def _request_headers(token_env: str | None = None) -> dict:
@@ -53,6 +62,11 @@ def _request_headers(token_env: str | None = None) -> dict:
 
 
 class _RedirectLimiter(urllib.request.HTTPRedirectHandler):
+    def __init__(self, origin: tuple[str, str, int | None]) -> None:
+        super().__init__()
+        self._origin = origin
+        self._count = 0
+
     def redirect_request(
         self,
         req: urllib.request.Request,
@@ -62,14 +76,21 @@ class _RedirectLimiter(urllib.request.HTTPRedirectHandler):
         headers: HTTPMessage,
         newurl: str,
     ) -> urllib.request.Request | None:
-        if not hasattr(self, "_count"):
-            self._count = 0
         self._count += 1
         if self._count > 3:
             raise HostedRegistryError(f"too many redirects while fetching {req.full_url}")
         parsed = urllib.parse.urlparse(newurl)
         if parsed.scheme not in ("https", "http"):
             raise HostedRegistryError(f"redirect to unsupported scheme {parsed.scheme!r}")
+        redirect_origin = (
+            parsed.scheme.lower(),
+            (parsed.hostname or "").lower(),
+            parsed.port,
+        )
+        if redirect_origin != self._origin:
+            raise HostedRegistryError(
+                f"redirect changed registry origin from {self._origin[1]} to {parsed.hostname}"
+            )
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
@@ -81,7 +102,8 @@ def fetch_bytes(base_url: str, path: str, *, token_env: str | None = None) -> by
     request = urllib.request.Request(url, headers=_request_headers(token_env))
     ctx = ssl.create_default_context()
     https_handler = urllib.request.HTTPSHandler(context=ctx)
-    opener = urllib.request.build_opener(_RedirectLimiter, https_handler)
+    origin = (parsed.scheme.lower(), (parsed.hostname or "").lower(), parsed.port)
+    opener = urllib.request.build_opener(_RedirectLimiter(origin), https_handler)
     try:
         with opener.open(request) as response:
             data: bytes = response.read()

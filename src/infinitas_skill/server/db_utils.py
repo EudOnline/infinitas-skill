@@ -7,6 +7,7 @@ in 6 separate files.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
 
@@ -26,7 +27,7 @@ def server_engine_kwargs(database_url: str) -> dict[str, Any]:
 
 
 @contextmanager
-def standalone_session(database_url: str):
+def standalone_session(database_url: str) -> Iterator[Session]:
     """Open a standalone database session for CLI operations.
 
     Creates an engine, opens a session, yields it, and disposes the engine

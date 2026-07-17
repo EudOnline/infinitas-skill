@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 
-def candidate_view(candidate):
+def candidate_view(candidate: dict[str, Any]) -> dict[str, Any]:
     return {
         "name": candidate.get("name"),
         "publisher": candidate.get("publisher"),
@@ -19,7 +19,7 @@ def candidate_view(candidate):
     }
 
 
-def installed_view(installed):
+def installed_view(installed: dict[str, Any]) -> dict[str, Any]:
     return {
         "name": installed.get("name"),
         "publisher": installed.get("publisher"),
@@ -31,7 +31,13 @@ def installed_view(installed):
     }
 
 
-def plan_action(identity_key, candidate, installed_item, root_candidate, mode):
+def plan_action(
+    identity_key: str,
+    candidate: dict[str, Any],
+    installed_item: dict[str, Any] | None,
+    root_candidate: dict[str, Any],
+    mode: str,
+) -> str:
     root_identity = root_candidate.get("identity_key") or root_candidate.get("name")
     if not installed_item:
         return "sync" if identity_key == root_identity and mode == "sync" else "install"
@@ -52,11 +58,17 @@ def plan_action(identity_key, candidate, installed_item, root_candidate, mode):
     return "switch-upgrade"
 
 
-def build_plan(root_candidate, selected, installed, catalog, mode):
-    apply_order = []
-    visited = set()
+def build_plan(
+    root_candidate: dict[str, Any],
+    selected: dict[str, dict[str, Any]],
+    installed: dict[str, dict[str, Any]],
+    catalog: dict[str, Any],
+    mode: str,
+) -> dict[str, Any]:
+    apply_order: list[str] = []
+    visited: set[str] = set()
 
-    def visit(identity_key):
+    def visit(identity_key: str) -> None:
         if identity_key in visited:
             return
         visited.add(identity_key)
@@ -67,16 +79,20 @@ def build_plan(root_candidate, selected, installed, catalog, mode):
         )
         for dep in deps:
             dep_key = dep.get("identity_key") or dep.get("name")
-            if dep_key in selected:
+            if isinstance(dep_key, str) and dep_key in selected:
                 visit(dep_key)
         apply_order.append(identity_key)
 
     root_identity = root_candidate.get("identity_key") or root_candidate.get("name")
+    if not isinstance(root_identity, str) or not root_identity:
+        raise ValueError("root candidate is missing identity")
     visit(root_identity)
     requesters: dict[str, list[dict[str, Any]]] = {}
     for candidate in selected.values():
         for dep in candidate.get("depends_on", []):
             dep_key = dep.get("identity_key") or dep.get("name")
+            if not isinstance(dep_key, str) or not dep_key:
+                raise ValueError("dependency is missing identity")
             requesters.setdefault(dep_key, []).append(
                 {
                     "by": candidate.get("name"),

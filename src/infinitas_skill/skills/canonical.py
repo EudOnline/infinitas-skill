@@ -1,20 +1,20 @@
-"""Canonical and legacy skill source loading."""
+"""Canonical skill source loading."""
 
 from __future__ import annotations
 
 import json
 import re
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
 from .schema_version import validate_schema_version
 
 NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
-_FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n?", re.DOTALL)
 
 
 class CanonicalSkillError(Exception):
-    def __init__(self, errors):
+    def __init__(self, errors: str | Sequence[str]) -> None:
         if isinstance(errors, str):
             errors = [errors]
         self.errors = list(errors)
@@ -36,84 +36,13 @@ def is_canonical_skill_dir(path: Path) -> bool:
     return path.is_dir() and (path / "skill.json").is_file()
 
 
-def is_legacy_skill_dir(path: Path) -> bool:
-    return path.is_dir() and (path / "_meta.json").is_file() and (path / "SKILL.md").is_file()
-
-
-def parse_skill_frontmatter(skill_md_path: Path) -> dict:
-    content = skill_md_path.read_text(encoding="utf-8")
-    match = _FRONTMATTER_RE.match(content)
-    if not match:
-        raise CanonicalSkillError(f"missing YAML frontmatter in {skill_md_path}")
-    fields = {}
-    for raw_line in match.group(1).splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or ":" not in line:
-            continue
-        key, value = line.split(":", 1)
-        cleaned = value.strip()
-        if len(cleaned) >= 2 and cleaned[0] == cleaned[-1] and cleaned[0] in {'"', "'"}:
-            cleaned = cleaned[1:-1]
-        fields[key.strip()] = cleaned
-    return fields
-
-
-def _split_frontmatter_list(value: object) -> list[str]:
-    if not isinstance(value, str) or not value.strip():
-        return []
-    result = []
-    for item in value.split(","):
-        token = item.strip()
-        if token and token not in result:
-            result.append(token)
-    return result
-
-
-def _legacy_openclaw_runtime(frontmatter: dict) -> dict:
-    runtime = {
-        "requires": _split_frontmatter_list(frontmatter.get("metadata.openclaw.requires")),
-        "license": frontmatter.get("metadata.openclaw.license"),
-    }
-    if runtime["requires"] or runtime["license"]:
-        return runtime
-    return {}
-
-
-def _runtime_verification_alias(verification: dict) -> dict:
-    verification = verification if isinstance(verification, dict) else {}
-    required_platforms = verification.get("required_platforms")
-    smoke_prompts = verification.get("smoke_prompts")
-    return {
-        "required_runtimes": list(required_platforms or [])
-        if isinstance(required_platforms, list)
-        else [],
-        "smoke_prompts": list(smoke_prompts or []) if isinstance(smoke_prompts, list) else [],
-        "required_platforms_legacy": list(required_platforms or [])
-        if isinstance(required_platforms, list)
-        else [],
-        "required_platforms_deprecated": True,
-    }
-
-
 def _normalized_verification_payload(verification: dict) -> dict:
     verification = dict(verification or {}) if isinstance(verification, dict) else {}
     required_runtimes = verification.get("required_runtimes")
-    required_platforms = verification.get("required_platforms")
-    if isinstance(required_runtimes, list):
-        normalized_required = list(required_runtimes)
-    elif isinstance(required_platforms, list):
-        normalized_required = list(required_platforms)
-    else:
-        normalized_required = []
-
     smoke_prompts = verification.get("smoke_prompts")
-    normalized_smoke_prompts = list(smoke_prompts) if isinstance(smoke_prompts, list) else []
-
     return {
-        "required_platforms": normalized_required,
-        "required_runtimes": list(normalized_required),
-        "smoke_prompts": normalized_smoke_prompts,
-        "required_platforms_deprecated": "required_platforms" in verification,
+        "required_runtimes": list(required_runtimes) if isinstance(required_runtimes, list) else [],
+        "smoke_prompts": list(smoke_prompts) if isinstance(smoke_prompts, list) else [],
     }
 
 
@@ -133,47 +62,40 @@ def validate_canonical_payload(payload: dict) -> list[str]:
         value = payload.get(key)
         if not isinstance(value, str) or not value.strip():
             errors.append(f"{key} must be a non-empty string")
-    tool_intents = payload.get("tool_intents")
-    if not isinstance(tool_intents, dict):
-        errors.append("tool_intents must be an object")
-    else:
-        for key in ["required", "optional"]:
-            value = tool_intents.get(key)
-            if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
-                errors.append(f"tool_intents.{key} must be an array of strings")
-    verification = payload.get("verification")
-    if not isinstance(verification, dict):
-        errors.append("verification must be an object")
-    else:
-        required_runtimes = verification.get("required_runtimes")
-        required_platforms = verification.get("required_platforms")
-        required_runtime_values: list[Any]
-        required_runtime_field: str
-        if isinstance(required_runtimes, list):
-            required_runtime_values = required_runtimes
-            required_runtime_field = "verification.required_runtimes"
-        else:
-            required_runtime_values = required_platforms or []
-            required_runtime_field = "verification.required_platforms"
-        if not isinstance(required_runtime_values, list) or not all(
-            isinstance(item, str) for item in required_runtime_values
-        ):
-            errors.append(f"{required_runtime_field} must be an array of strings")
-        smoke_prompts = verification.get("smoke_prompts")
-        if smoke_prompts is not None and (
-            not isinstance(smoke_prompts, list)
-            or not all(isinstance(item, str) for item in smoke_prompts)
-        ):
-            errors.append("verification.smoke_prompts must be an array of strings when present")
-    distribution = payload.get("distribution")
-    if distribution is not None and not isinstance(distribution, dict):
-        errors.append("distribution must be an object when present")
-    degrades_to = payload.get("degrades_to")
-    if degrades_to is not None and not isinstance(degrades_to, dict):
-        errors.append("degrades_to must be an object when present")
-    openclaw_runtime = payload.get("openclaw_runtime")
-    if openclaw_runtime is not None and not isinstance(openclaw_runtime, dict):
-        errors.append("openclaw_runtime must be an object when present")
+    errors.extend(_validate_tool_intents(payload.get("tool_intents")))
+    errors.extend(_validate_verification(payload.get("verification")))
+    for field in ["distribution", "degrades_to", "openclaw_runtime"]:
+        value = payload.get(field)
+        if value is not None and not isinstance(value, dict):
+            errors.append(f"{field} must be an object when present")
+    return errors
+
+
+def _string_list(value: object) -> bool:
+    return isinstance(value, list) and all(isinstance(item, str) for item in value)
+
+
+def _validate_tool_intents(value: object) -> list[str]:
+    if not isinstance(value, dict):
+        return ["tool_intents must be an object"]
+    return [
+        f"tool_intents.{key} must be an array of strings"
+        for key in ["required", "optional"]
+        if not _string_list(value.get(key))
+    ]
+
+
+def _validate_verification(value: object) -> list[str]:
+    if not isinstance(value, dict):
+        return ["verification must be an object"]
+    errors = []
+    if "required_platforms" in value:
+        errors.append("verification.required_platforms is not supported")
+    if not _string_list(value.get("required_runtimes")):
+        errors.append("verification.required_runtimes must be an array of strings")
+    smoke_prompts = value.get("smoke_prompts")
+    if smoke_prompts is not None and not _string_list(smoke_prompts):
+        errors.append("verification.smoke_prompts must be an array of strings when present")
     return errors
 
 
@@ -206,7 +128,7 @@ def load_canonical_skill(path: Path) -> dict:
     if errors:
         raise CanonicalSkillError(errors)
     return {
-        "schema_version": payload.get("schema_version", 1),
+        "schema_version": payload["schema_version"],
         "name": payload.get("name"),
         "summary": payload.get("summary"),
         "description": payload.get("description"),
@@ -220,9 +142,6 @@ def load_canonical_skill(path: Path) -> dict:
         "platform_overrides": _load_platform_overrides(skill_dir),
         "distribution": dict(payload.get("distribution") or {}),
         "verification": _normalized_verification_payload(payload.get("verification") or {}),
-        "runtime_verification": _runtime_verification_alias(
-            _normalized_verification_payload(payload.get("verification") or {})
-        ),
         "degrades_to": dict(payload.get("degrades_to") or {}),
         "openclaw_runtime": dict(payload.get("openclaw_runtime") or {}),
         "source_mode": "canonical",
@@ -231,63 +150,10 @@ def load_canonical_skill(path: Path) -> dict:
     }
 
 
-def load_legacy_skill(path: Path) -> dict:
-    skill_dir = Path(path).resolve()
-    meta_path = skill_dir / "_meta.json"
-    skill_md_path = skill_dir / "SKILL.md"
-    if not meta_path.is_file() or not skill_md_path.is_file():
-        raise CanonicalSkillError(f"missing legacy skill files in {skill_dir}")
-    try:
-        meta = json.loads(meta_path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        raise CanonicalSkillError(f"invalid JSON in {meta_path}: {exc}") from exc
-    _schema_version, schema_errors = validate_schema_version(meta)
-    if schema_errors:
-        raise CanonicalSkillError(schema_errors)
-    frontmatter = parse_skill_frontmatter(skill_md_path)
-    name = meta.get("name")
-    if not isinstance(name, str) or not name.strip():
-        raise CanonicalSkillError("legacy skill metadata must define name")
-    openclaw_runtime = _legacy_openclaw_runtime(frontmatter)
-    source_mode = "legacy-migration" if openclaw_runtime else "legacy"
-    verification = _normalized_verification_payload(
-        {
-            "required_platforms": list(meta.get("agent_compatible") or []),
-            "smoke_prompts": [((meta.get("tests") or {}).get("smoke"))]
-            if ((meta.get("tests") or {}).get("smoke"))
-            else [],
-        }
-    )
-    return {
-        "schema_version": meta.get("schema_version", 1),
-        "name": name,
-        "summary": meta.get("summary") or "",
-        "description": frontmatter.get("description") or "",
-        "triggers": [],
-        "examples": [],
-        "instructions_body_path": str(skill_md_path),
-        "tool_intents": {
-            "required": [],
-            "optional": [],
-        },
-        "platform_overrides": {},
-        "distribution": dict(meta.get("distribution") or {}),
-        "verification": verification,
-        "runtime_verification": _runtime_verification_alias(verification),
-        "degrades_to": {},
-        "openclaw_runtime": openclaw_runtime,
-        "source_mode": source_mode,
-        "source_dir": str(skill_dir),
-        "payload_path": str(meta_path),
-    }
-
-
 def load_skill_source(path: Path) -> dict:
     candidate = Path(path).resolve()
     if is_canonical_skill_dir(candidate):
         return load_canonical_skill(candidate)
-    if is_legacy_skill_dir(candidate):
-        return load_legacy_skill(candidate)
     raise CanonicalSkillError(f"unsupported skill source layout: {candidate}")
 
 
@@ -295,10 +161,7 @@ __all__ = [
     "CanonicalSkillError",
     "REQUIRED_CANONICAL_FIELDS",
     "is_canonical_skill_dir",
-    "is_legacy_skill_dir",
-    "parse_skill_frontmatter",
     "validate_canonical_payload",
     "load_canonical_skill",
-    "load_legacy_skill",
     "load_skill_source",
 ]

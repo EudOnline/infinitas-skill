@@ -3,6 +3,7 @@
 import argparse
 import json
 import sys
+from typing import Any, TextIO
 
 from infinitas_skill.install.output import error_to_payload, plan_to_text
 from infinitas_skill.install.service import (
@@ -14,13 +15,13 @@ from infinitas_skill.install.service import (
 INSTALL_MODES = ("install", "sync")
 
 
-def _display_identity(item):
+def _display_identity(item: object) -> str | None:
     if not isinstance(item, dict):
         return None
     return item.get("qualified_name") or item.get("name")
 
 
-def emit_resolve_install_plan_error(exc, *, stderr=None):
+def emit_resolve_install_plan_error(exc: DependencyError, *, stderr: TextIO | None = None) -> None:
     stderr = stderr or sys.stderr
     payload = error_to_payload(exc)
 
@@ -90,7 +91,7 @@ def emit_resolve_install_plan_error(exc, *, stderr=None):
                 print(f"    - {key}: {value}", file=stderr)
 
 
-def emit_check_install_target_error(exc, *, stderr=None):
+def emit_check_install_target_error(exc: DependencyError, *, stderr: TextIO | None = None) -> None:
     stderr = stderr or sys.stderr
     payload = error_to_payload(exc)
 
@@ -144,7 +145,7 @@ def emit_check_install_target_error(exc, *, stderr=None):
             )
 
 
-def _load_source_info(source_json: str | None):
+def _load_source_info(source_json: str | None) -> dict[str, Any] | None:
     return json.loads(source_json) if source_json else None
 
 

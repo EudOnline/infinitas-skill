@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
-from typing import cast
+from typing import Any
 
 from infinitas_skill.policy.policy_pack import (
     PolicyPackError,
@@ -28,11 +28,14 @@ class AttestationError(Exception):
     pass
 
 
-def load_json(path):
+JsonDict = dict[str, Any]
+
+
+def load_json(path: str | Path) -> JsonDict:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def load_attestation_config(root=None):
+def load_attestation_config(root: str | Path | None = None) -> JsonDict:
     root = Path(root or ROOT).resolve()
     try:
         config = load_effective_policy_domain(root, "signing")
@@ -117,13 +120,13 @@ def load_attestation_config(root=None):
     }
 
 
-def signature_path_for(provenance_path, config=None):
+def signature_path_for(provenance_path: str | Path, config: JsonDict | None = None) -> Path:
     path = Path(provenance_path)
     cfg = config or load_attestation_config(path.parent.parent.parent if path.name else ROOT)
     return path.with_suffix(path.suffix + cfg["signature_ext"])
 
 
-def require_trusted_signers(config):
+def require_trusted_signers(config: JsonDict) -> list[str]:
     entries = signer_entries(config["allowed_signers_path"])
     if not entries:
         raise AttestationError(
@@ -134,7 +137,9 @@ def require_trusted_signers(config):
     return entries
 
 
-def resolve_attestation_signer(identity=None, release_state=None):
+def resolve_attestation_signer(
+    identity: str | None = None, release_state: JsonDict | None = None
+) -> str:
     signer = identity
     if not signer and release_state:
         signer = ((release_state.get("git") or {}).get("local_tag") or {}).get("signer")
@@ -147,7 +152,11 @@ def resolve_attestation_signer(identity=None, release_state=None):
     return signer
 
 
-def resolve_attestation_key(root=None, config=None, override=None):
+def resolve_attestation_key(
+    root: str | Path | None = None,
+    config: JsonDict | None = None,
+    override: str | None = None,
+) -> str:
     if override:
         return override
     root = Path(root or ROOT).resolve()
@@ -161,7 +170,9 @@ def resolve_attestation_key(root=None, config=None, override=None):
     return value
 
 
-def publish_attestation_to_transparency_log(provenance_path, root=None):
+def publish_attestation_to_transparency_log(
+    provenance_path: str | Path, root: str | Path | None = None
+) -> JsonDict:
     root = Path(root or ROOT).resolve()
     provenance_path = Path(provenance_path).resolve()
     cfg = load_attestation_config(root)
@@ -217,7 +228,11 @@ def publish_attestation_to_transparency_log(provenance_path, root=None):
     }
 
 
-def record_attestation_transparency_log(provenance_path, root=None, entry_path=None):
+def record_attestation_transparency_log(
+    provenance_path: str | Path,
+    root: str | Path | None = None,
+    entry_path: str | Path | None = None,
+) -> JsonDict:
     root = Path(root or ROOT).resolve()
     provenance_path = Path(provenance_path).resolve()
     payload = load_json(provenance_path)
@@ -243,190 +258,18 @@ def record_attestation_transparency_log(provenance_path, root=None, entry_path=N
     return result
 
 
-def validate_provenance_payload(payload):
-    errors = []
+def validate_provenance_payload(payload: object) -> list[str]:
+    from infinitas_skill.release.attestation_validation import (
+        validate_provenance_payload as validate_payload,
+    )
 
-    def require_string(mapping, key, label):
-        value = mapping.get(key) if isinstance(mapping, dict) else None
-        if not isinstance(value, str) or not value.strip():
-            errors.append(f"{label} must be a non-empty string")
-        return value
-
-    release = payload.get("release")
-    release_mode = "stable-release"
-    if isinstance(release, dict):
-        release_mode_value = release.get("release_mode")
-        if release_mode_value is not None:
-            if release_mode_value not in {"stable-release", "local-tag"}:
-                errors.append(
-                    "release.release_mode must be 'stable-release' or 'local-tag' when present"
-                )
-            else:
-                release_mode = cast(str, release_mode_value)
-
-    if payload.get("kind") != "skill-release-attestation":
-        errors.append("kind must be skill-release-attestation")
-    if payload.get("schema_version") != 1:
-        errors.append("schema_version must be 1")
-
-    skill = payload.get("skill")
-    if not isinstance(skill, dict):
-        errors.append("skill must be an object")
-    else:
-        require_string(skill, "name", "skill.name")
-        require_string(skill, "version", "skill.version")
-        require_string(skill, "path", "skill.path")
-        for key in ["owners", "maintainers"]:
-            value = skill.get(key)
-            if value is not None and not isinstance(value, list):
-                errors.append(f"skill.{key} must be an array when present")
-
-    git = payload.get("git")
-    if not isinstance(git, dict):
-        errors.append("git must be an object")
-    else:
-        require_string(git, "commit", "git.commit")
-        require_string(git, "expected_tag", "git.expected_tag")
-        require_string(git, "release_ref", "git.release_ref")
-        if git.get("signed_tag_verified") is not True:
-            errors.append("git.signed_tag_verified must be true")
-
-    source_snapshot = payload.get("source_snapshot")
-    if not isinstance(source_snapshot, dict):
-        errors.append("source_snapshot must be an object")
-    else:
-        require_string(source_snapshot, "tag", "source_snapshot.tag")
-        require_string(source_snapshot, "ref", "source_snapshot.ref")
-        require_string(source_snapshot, "commit", "source_snapshot.commit")
-        if source_snapshot.get("immutable") is not True:
-            errors.append("source_snapshot.immutable must be true")
-        pushed = source_snapshot.get("pushed")
-        if not isinstance(pushed, bool):
-            errors.append("source_snapshot.pushed must be boolean")
-        elif release_mode == "stable-release" and pushed is not True:
-            errors.append("source_snapshot.pushed must be true for stable-release attestations")
-        elif release_mode == "local-tag" and pushed is not False:
-            errors.append("source_snapshot.pushed must be false for local-tag attestations")
-
-    registry = payload.get("registry")
-    if not isinstance(registry, dict):
-        errors.append("registry must be an object")
-    else:
-        if not isinstance(registry.get("registries_consulted"), list):
-            errors.append("registry.registries_consulted must be an array")
-        if not isinstance(registry.get("resolved"), list):
-            errors.append("registry.resolved must be an array")
-
-    dependencies = payload.get("dependencies")
-    if not isinstance(dependencies, dict):
-        errors.append("dependencies must be an object")
-    else:
-        if not isinstance(dependencies.get("steps"), list):
-            errors.append("dependencies.steps must be an array")
-        if not isinstance(dependencies.get("registries_consulted"), list):
-            errors.append("dependencies.registries_consulted must be an array")
-
-    review = payload.get("review")
-    if not isinstance(review, dict):
-        errors.append("review must be an object")
-    else:
-        if not isinstance(review.get("reviewers"), list):
-            errors.append("review.reviewers must be an array")
-
-    if not isinstance(release, dict):
-        errors.append("release must be an object")
-    else:
-        releaser_identity = release.get("releaser_identity")
-        if releaser_identity is not None and (
-            not isinstance(releaser_identity, str) or not releaser_identity.strip()
-        ):
-            errors.append("release.releaser_identity must be a non-empty string when present")
-        if not isinstance(release.get("transfer_required"), bool):
-            errors.append("release.transfer_required must be boolean")
-        if not isinstance(release.get("transfer_authorized"), bool):
-            errors.append("release.transfer_authorized must be boolean")
-        for key in [
-            "authorized_signers",
-            "authorized_releasers",
-            "transfer_matches",
-            "competing_claims",
-        ]:
-            if not isinstance(release.get(key), list):
-                errors.append(f"release.{key} must be an array")
-
-    attestation = payload.get("attestation")
-    if not isinstance(attestation, dict):
-        errors.append("attestation must be an object")
-    else:
-        attestation_format = attestation.get("format")
-        if attestation_format not in {"ssh", "ci"}:
-            errors.append("attestation.format must be ssh or ci")
-        if attestation.get("policy_mode") not in {"advisory", "enforce"}:
-            errors.append("attestation.policy_mode must be advisory or enforce")
-        if not isinstance(attestation.get("require_verified_attestation_for_release_output"), bool):
-            errors.append(
-                "attestation.require_verified_attestation_for_release_output must be boolean"
-            )
-        if not isinstance(attestation.get("require_verified_attestation_for_distribution"), bool):
-            errors.append(
-                "attestation.require_verified_attestation_for_distribution must be boolean"
-            )
-        if attestation_format == "ssh":
-            require_string(attestation, "namespace", "attestation.namespace")
-            require_string(attestation, "allowed_signers", "attestation.allowed_signers")
-            require_string(attestation, "signature_file", "attestation.signature_file")
-            require_string(attestation, "signature_ext", "attestation.signature_ext")
-            require_string(attestation, "signer_identity", "attestation.signer_identity")
-        if attestation_format == "ci":
-            require_string(attestation, "generator", "attestation.generator")
-
-    ci = payload.get("ci")
-    if attestation and attestation.get("format") == "ci":
-        if not isinstance(ci, dict):
-            errors.append("ci must be an object for CI attestations")
-        else:
-            for key in [
-                "provider",
-                "repository",
-                "workflow",
-                "run_id",
-                "run_attempt",
-                "sha",
-                "ref",
-            ]:
-                require_string(ci, key, f"ci.{key}")
-
-    distribution = payload.get("distribution")
-    if distribution is not None:
-        if not isinstance(distribution, dict):
-            errors.append("distribution must be an object when present")
-        else:
-            manifest_path = distribution.get("manifest_path")
-            if manifest_path is not None and (
-                not isinstance(manifest_path, str) or not manifest_path.strip()
-            ):
-                errors.append("distribution.manifest_path must be a non-empty string when present")
-            bundle = distribution.get("bundle")
-            if not isinstance(bundle, dict):
-                errors.append("distribution.bundle must be an object")
-            else:
-                require_string(bundle, "path", "distribution.bundle.path")
-                if bundle.get("format") != "tar.gz":
-                    errors.append("distribution.bundle.format must be tar.gz")
-                require_string(bundle, "sha256", "distribution.bundle.sha256")
-                require_string(bundle, "root_dir", "distribution.bundle.root_dir")
-                bundle_size = bundle.get("size")
-                if not isinstance(bundle_size, int) or bundle_size < 0:
-                    errors.append("distribution.bundle.size must be a non-negative integer")
-                bundle_file_count = bundle.get("file_count")
-                if not isinstance(bundle_file_count, int) or bundle_file_count < 1:
-                    errors.append("distribution.bundle.file_count must be a positive integer")
-
-    return errors
+    if not isinstance(payload, dict):
+        return ["provenance payload must be an object"]
+    return validate_payload(payload)
 
 
-def _combined_output(result):
-    parts = []
+def _combined_output(result: subprocess.CompletedProcess[str]) -> str:
+    parts: list[str] = []
     if result.stdout:
         parts.append(result.stdout.strip())
     if result.stderr:
@@ -435,12 +278,20 @@ def _combined_output(result):
 
 
 def _verify_ssh_attestation(
-    provenance_path, payload, cfg, identity=None, allowed_signers=None, namespace=None, root=None
-):
+    provenance_path: str | Path,
+    payload: JsonDict,
+    cfg: JsonDict,
+    identity: str | None = None,
+    allowed_signers: str | Path | None = None,
+    namespace: str | None = None,
+    root: str | Path | None = None,
+) -> JsonDict:
     root = Path(root or ROOT).resolve()
     provenance_path = Path(provenance_path).resolve()
     attestation = payload["attestation"]
     identity = identity or attestation.get("signer_identity")
+    if not isinstance(identity, str) or not identity:
+        raise AttestationError("attestation signer identity is missing")
     expected_allowed_rel = cfg["allowed_signers_rel"]
     expected_namespace = cfg["namespace"]
     if allowed_signers:
@@ -476,6 +327,8 @@ def _verify_ssh_attestation(
     )
 
     signature_file = attestation.get("signature_file")
+    if not isinstance(signature_file, str) or not signature_file:
+        raise AttestationError("attestation signature_file is missing")
     signature_path = Path(signature_file)
     if not signature_path.is_absolute():
         signature_path = (provenance_path.parent / signature_path).resolve()
@@ -515,7 +368,7 @@ def _verify_ssh_attestation(
     }
 
 
-def verify_ci_attestation(provenance_path, root=None):
+def verify_ci_attestation(provenance_path: str | Path, root: str | Path | None = None) -> JsonDict:
     root = Path(root or ROOT).resolve()
     provenance_path = Path(provenance_path).resolve()
     try:
@@ -562,23 +415,23 @@ def verify_ci_attestation(provenance_path, root=None):
     }
 
 
-def _companion_ci_path(provenance_path):
+def _companion_ci_path(provenance_path: Path) -> Path:
     return provenance_path.with_name(f"{provenance_path.stem}.ci.json")
 
 
-def _companion_ssh_path(provenance_path):
+def _companion_ssh_path(provenance_path: Path) -> Path:
     name = provenance_path.name
     if name.endswith(".ci.json"):
         return provenance_path.with_name(f"{name[:-8]}.json")
     raise AttestationError(f"cannot derive SSH companion path from {provenance_path}")
 
 
-def _distribution_summary(payload):
+def _distribution_summary(payload: JsonDict) -> JsonDict | None:
     distribution = payload.get("distribution")
     if not isinstance(distribution, dict):
         return None
 
-    summary = {}
+    summary: JsonDict = {}
     if isinstance(distribution.get("manifest_path"), str) and distribution.get("manifest_path"):
         summary["manifest_path"] = distribution.get("manifest_path")
 
@@ -605,8 +458,12 @@ def _distribution_summary(payload):
 
 
 def verify_attestation(
-    provenance_path, identity=None, allowed_signers=None, namespace=None, root=None
-):
+    provenance_path: str | Path,
+    identity: str | None = None,
+    allowed_signers: str | Path | None = None,
+    namespace: str | None = None,
+    root: str | Path | None = None,
+) -> JsonDict:
     root = Path(root or ROOT).resolve()
     provenance_path = Path(provenance_path).resolve()
     try:
@@ -622,7 +479,7 @@ def verify_attestation(
 
     cfg = load_attestation_config(root)
     attestation = payload["attestation"]
-    formats_verified = []
+    formats_verified: list[str] = []
     if attestation.get("format") == "ci":
         result = verify_ci_attestation(provenance_path, root=root)
         formats_verified.append("ci")

@@ -6,12 +6,13 @@ import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from infinitas_skill.root import ROOT
 
 from .policy_pack import PolicyPackError, load_effective_policy_domain
-from .review_evidence import ReviewEvidenceError, load_review_evidence
+from .primitives import normalize_string_list, parse_timestamp, unique_strings
+from .review_evidence import load_review_evidence
 from .team_policy import TeamPolicyError, expand_team_refs, load_team_policy
 
 ALLOWED_DECISIONS = {"approved", "rejected"}
@@ -21,58 +22,28 @@ ALLOWED_STAGE = {"incubating", "active", "archived"}
 GROUP_NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 MIN_TIME = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
+JsonDict = dict[str, Any]
+
 
 class ReviewPolicyError(Exception):
-    def __init__(self, errors):
+    def __init__(self, errors: list[str]) -> None:
         super().__init__("invalid promotion policy")
         self.errors = errors
 
 
-def unique_strings(values):
-    seen = set()
-    result = []
-    for value in values:
-        if value in seen:
-            continue
-        seen.add(value)
-        result.append(value)
-    return result
+def normalize_team_list(values: object) -> list[str]:
+    return normalize_string_list(values)
 
 
-def normalize_team_list(values):
-    if values is None:
-        return []
-    if not isinstance(values, list):
-        return []
-    return unique_strings(
-        [item.strip() for item in values if isinstance(item, str) and item.strip()]
-    )
-
-
-def load_json(path: Path):
+def load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def write_json(path: Path, payload):
+def write_json(path: Path, payload: object) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def parse_timestamp(value):
-    if not isinstance(value, str) or not value.strip():
-        return None
-    text = value.strip()
-    if text.endswith("Z"):
-        text = text[:-1] + "+00:00"
-    try:
-        parsed = datetime.fromisoformat(text)
-    except ValueError:
-        return None
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
-
-
-def utc_now_iso():
+def utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
@@ -91,11 +62,11 @@ def resolve_skill(root: Path, arg: str) -> Path:
     raise SystemExit(f"cannot resolve skill: {arg}")
 
 
-def load_meta(skill_dir: Path):
+def load_meta(skill_dir: Path) -> JsonDict:
     return load_json(skill_dir / "_meta.json")
 
 
-def load_reviews(skill_dir: Path):
+def load_reviews(skill_dir: Path) -> JsonDict:
     path = skill_dir / "reviews.json"
     if path.exists():
         payload = load_json(path)
@@ -112,11 +83,9 @@ def load_reviews(skill_dir: Path):
     return payload
 
 
-def save_reviews(skill_dir: Path, reviews):
-    write_json(skill_dir / "reviews.json", reviews)
-
-
-def normalize_groups(raw_groups, root: Path = ROOT):
+def normalize_groups(
+    raw_groups: object, root: Path = ROOT
+) -> tuple[dict[str, JsonDict], list[str]]:
     errors: list[str] = []
     normalized: dict[str, Any] = {}
     if raw_groups is None:
@@ -183,7 +152,7 @@ def normalize_groups(raw_groups, root: Path = ROOT):
     return normalized, errors
 
 
-def normalize_quorum_rule(path, raw_rule):
+def normalize_quorum_rule(path: str, raw_rule: object) -> tuple[JsonDict, list[str]]:
     errors: list[str] = []
     normalized: dict[str, Any] = {}
     if raw_rule is None:
@@ -212,7 +181,57 @@ def normalize_quorum_rule(path, raw_rule):
     return normalized, errors
 
 
-def normalize_quorum(reviews_cfg):
+def _normalize_named_overrides(
+    raw_quorum: JsonDict,
+    *,
+    field: str,
+    allowed_names: set[str],
+    invalid_label: str,
+) -> tuple[dict[str, JsonDict], list[str]]:
+    path = f"reviews.quorum.{field}"
+    raw_overrides = raw_quorum.get(field, {})
+    if not isinstance(raw_overrides, dict):
+        return {}, [f"{path} must be an object"]
+    normalized: dict[str, JsonDict] = {}
+    errors: list[str] = []
+    for name, raw_rule in raw_overrides.items():
+        if name not in allowed_names:
+            errors.append(f"{path} contains invalid {invalid_label} {name!r}")
+            continue
+        rule, rule_errors = normalize_quorum_rule(f"{path}.{name}", raw_rule)
+        normalized[name] = rule
+        errors.extend(rule_errors)
+    return normalized, errors
+
+
+def _normalize_stage_risk_overrides(
+    raw_quorum: JsonDict,
+) -> tuple[dict[str, dict[str, JsonDict]], list[str]]:
+    path = "reviews.quorum.stage_risk_overrides"
+    raw_overrides = raw_quorum.get("stage_risk_overrides", {})
+    if not isinstance(raw_overrides, dict):
+        return {}, [f"{path} must be an object"]
+    normalized: dict[str, dict[str, JsonDict]] = {}
+    errors: list[str] = []
+    for stage, raw_risk_map in raw_overrides.items():
+        if stage not in ALLOWED_STAGE:
+            errors.append(f"{path} contains invalid stage {stage!r}")
+            continue
+        if not isinstance(raw_risk_map, dict):
+            errors.append(f"{path}.{stage} must be an object")
+            continue
+        normalized[stage] = {}
+        for risk_level, raw_rule in raw_risk_map.items():
+            if risk_level not in ALLOWED_RISK:
+                errors.append(f"{path}.{stage} contains invalid risk level {risk_level!r}")
+                continue
+            rule, rule_errors = normalize_quorum_rule(f"{path}.{stage}.{risk_level}", raw_rule)
+            normalized[stage][risk_level] = rule
+            errors.extend(rule_errors)
+    return normalized, errors
+
+
+def normalize_quorum(reviews_cfg: JsonDict) -> tuple[JsonDict, list[str]]:
     errors: list[str] = []
     normalized: dict[str, Any] = {
         "defaults": {},
@@ -228,29 +247,6 @@ def normalize_quorum(reviews_cfg):
         else:
             normalized["defaults"]["min_approvals"] = default_min
 
-    legacy_risk_overrides = reviews_cfg.get("risk_overrides")
-    if legacy_risk_overrides is not None:
-        if not isinstance(legacy_risk_overrides, dict):
-            errors.append("reviews.risk_overrides must be an object when present")
-        else:
-            for risk_level, raw_rule in legacy_risk_overrides.items():
-                if risk_level not in ALLOWED_RISK:
-                    errors.append(
-                        f"reviews.risk_overrides contains invalid risk level {risk_level!r}"
-                    )
-                    continue
-                if isinstance(raw_rule, int):
-                    if raw_rule < 0:
-                        errors.append(f"reviews.risk_overrides.{risk_level} must be non-negative")
-                    else:
-                        normalized["risk_overrides"][risk_level] = {"min_approvals": raw_rule}
-                    continue
-                rule, rule_errors = normalize_quorum_rule(
-                    f"reviews.risk_overrides.{risk_level}", raw_rule
-                )
-                normalized["risk_overrides"][risk_level] = rule
-                errors.extend(rule_errors)
-
     raw_quorum = reviews_cfg.get("quorum")
     if raw_quorum is None:
         return normalized, errors
@@ -264,67 +260,28 @@ def normalize_quorum(reviews_cfg):
     normalized["defaults"].update(defaults)
     errors.extend(default_errors)
 
-    stage_overrides = raw_quorum.get("stage_overrides", {})
-    if not isinstance(stage_overrides, dict):
-        errors.append("reviews.quorum.stage_overrides must be an object")
-    else:
-        for stage, raw_rule in stage_overrides.items():
-            if stage not in ALLOWED_STAGE:
-                errors.append(f"reviews.quorum.stage_overrides contains invalid stage {stage!r}")
-                continue
-            rule, rule_errors = normalize_quorum_rule(
-                f"reviews.quorum.stage_overrides.{stage}", raw_rule
-            )
-            normalized["stage_overrides"][stage] = rule
-            errors.extend(rule_errors)
-
-    risk_overrides = raw_quorum.get("risk_overrides", {})
-    if not isinstance(risk_overrides, dict):
-        errors.append("reviews.quorum.risk_overrides must be an object")
-    else:
-        for risk_level, raw_rule in risk_overrides.items():
-            if risk_level not in ALLOWED_RISK:
-                errors.append(
-                    f"reviews.quorum.risk_overrides contains invalid risk level {risk_level!r}"
-                )
-                continue
-            rule, rule_errors = normalize_quorum_rule(
-                f"reviews.quorum.risk_overrides.{risk_level}", raw_rule
-            )
-            normalized["risk_overrides"][risk_level] = rule
-            errors.extend(rule_errors)
-
-    stage_risk_overrides = raw_quorum.get("stage_risk_overrides", {})
-    if not isinstance(stage_risk_overrides, dict):
-        errors.append("reviews.quorum.stage_risk_overrides must be an object")
-    else:
-        for stage, raw_risk_map in stage_risk_overrides.items():
-            if stage not in ALLOWED_STAGE:
-                errors.append(
-                    f"reviews.quorum.stage_risk_overrides contains invalid stage {stage!r}"
-                )
-                continue
-            if not isinstance(raw_risk_map, dict):
-                errors.append(f"reviews.quorum.stage_risk_overrides.{stage} must be an object")
-                continue
-            normalized["stage_risk_overrides"].setdefault(stage, {})
-            for risk_level, raw_rule in raw_risk_map.items():
-                if risk_level not in ALLOWED_RISK:
-                    errors.append(
-                        "reviews.quorum.stage_risk_overrides."
-                        f"{stage} contains invalid risk level {risk_level!r}"
-                    )
-                    continue
-                rule, rule_errors = normalize_quorum_rule(
-                    f"reviews.quorum.stage_risk_overrides.{stage}.{risk_level}", raw_rule
-                )
-                normalized["stage_risk_overrides"][stage][risk_level] = rule
-                errors.extend(rule_errors)
+    for field, allowed_names, invalid_label in [
+        ("stage_overrides", ALLOWED_STAGE, "stage"),
+        ("risk_overrides", ALLOWED_RISK, "risk level"),
+    ]:
+        overrides, override_errors = _normalize_named_overrides(
+            raw_quorum,
+            field=field,
+            allowed_names=allowed_names,
+            invalid_label=invalid_label,
+        )
+        normalized[field] = overrides
+        errors.extend(override_errors)
+    stage_risk_overrides, stage_risk_errors = _normalize_stage_risk_overrides(raw_quorum)
+    normalized["stage_risk_overrides"] = stage_risk_overrides
+    errors.extend(stage_risk_errors)
 
     return normalized, errors
 
 
-def configured_reviewers(policy, root: Path = ROOT):
+def configured_reviewers(
+    policy: object, root: Path = ROOT
+) -> tuple[dict[str, JsonDict], dict[str, JsonDict]]:
     reviews_cfg = policy.get("reviews", {}) if isinstance(policy, dict) else {}
     groups, group_errors = normalize_groups(reviews_cfg.get("groups", {}), root=root)
     if group_errors:
@@ -338,12 +295,12 @@ def configured_reviewers(policy, root: Path = ROOT):
     return groups, reviewers
 
 
-def effective_quorum_rule(policy, stage, risk_level):
+def effective_quorum_rule(policy: object, stage: str, risk_level: str) -> JsonDict:
     reviews_cfg = policy.get("reviews", {}) if isinstance(policy, dict) else {}
     quorum, _ = normalize_quorum(reviews_cfg)
     rule = {"min_approvals": 0, "required_groups": []}
 
-    def apply(raw_rule):
+    def apply(raw_rule: JsonDict) -> None:
         if "min_approvals" in raw_rule:
             rule["min_approvals"] = raw_rule["min_approvals"]
         if "required_groups" in raw_rule:
@@ -356,7 +313,12 @@ def effective_quorum_rule(policy, stage, risk_level):
     return rule
 
 
-def owner_review_unavoidable(owner, reviewers, required_groups, min_approvals):
+def owner_review_unavoidable(
+    owner: str | None,
+    reviewers: dict[str, JsonDict] | None,
+    required_groups: list[str],
+    min_approvals: int,
+) -> bool:
     if not owner:
         return False
     non_owner_reviewers = {
@@ -365,7 +327,7 @@ def owner_review_unavoidable(owner, reviewers, required_groups, min_approvals):
     if len(non_owner_reviewers) < (min_approvals or 0):
         return True
     if required_groups:
-        covered_groups = set()
+        covered_groups: set[str] = set()
         for reviewer_data in non_owner_reviewers.values():
             covered_groups.update(reviewer_data.get("groups", []))
         if any(group_name not in covered_groups for group_name in required_groups):
@@ -373,8 +335,8 @@ def owner_review_unavoidable(owner, reviewers, required_groups, min_approvals):
     return False
 
 
-def validate_promotion_policy(policy, root: Path = ROOT):
-    errors = []
+def validate_promotion_policy(policy: object, root: Path = ROOT) -> list[str]:
+    errors: list[str] = []
     if not isinstance(policy, dict):
         return ["promotion policy must be a JSON object"]
     if "version" in policy:
@@ -382,78 +344,101 @@ def validate_promotion_policy(policy, root: Path = ROOT):
         if not isinstance(version, int) or version < 1:
             errors.append("version must be a positive integer")
 
-    active_requires = policy.get("active_requires")
-    if not isinstance(active_requires, dict):
-        errors.append("active_requires must be an object")
-    else:
-        review_states = active_requires.get("review_state", [])
-        if not isinstance(review_states, list) or not review_states:
-            errors.append("active_requires.review_state must be a non-empty array")
-        elif any(state not in ALLOWED_REVIEW_STATES for state in review_states):
-            errors.append(
-                f"active_requires.review_state must contain only {sorted(ALLOWED_REVIEW_STATES)}"
-            )
-        for key in ["require_changelog", "require_smoke_test", "require_owner"]:
-            if key in active_requires and not isinstance(active_requires.get(key), bool):
-                errors.append(f"active_requires.{key} must be boolean when present")
+    errors.extend(_validate_active_requires(policy.get("active_requires")))
 
     reviews_cfg = policy.get("reviews")
     if not isinstance(reviews_cfg, dict):
         errors.append("reviews must be an object")
         return errors
-
-    for key in [
-        "require_reviews_file",
-        "reviewer_must_differ_from_owner",
-        "allow_owner_when_no_distinct_reviewer",
-        "block_on_rejection",
-    ]:
-        if key in reviews_cfg and not isinstance(reviews_cfg.get(key), bool):
-            errors.append(f"reviews.{key} must be boolean when present")
+    errors.extend(_validate_review_flags(reviews_cfg))
 
     groups, group_errors = normalize_groups(reviews_cfg.get("groups", {}), root=root)
     errors.extend(group_errors)
     quorum, quorum_errors = normalize_quorum(reviews_cfg)
     errors.extend(quorum_errors)
 
-    def validate_rule_groups(path, rule):
-        for group_name in rule.get("required_groups", []):
-            if group_name not in groups:
-                errors.append(
-                    f"{path}.required_groups references unknown reviewer group {group_name!r}"
-                )
-
-    validate_rule_groups("reviews.quorum.defaults", quorum.get("defaults", {}))
-    for stage, rule in quorum.get("stage_overrides", {}).items():
-        validate_rule_groups(f"reviews.quorum.stage_overrides.{stage}", rule)
-    for risk_level, rule in quorum.get("risk_overrides", {}).items():
-        validate_rule_groups(f"reviews.quorum.risk_overrides.{risk_level}", rule)
-    for stage, risk_map in quorum.get("stage_risk_overrides", {}).items():
-        for risk_level, rule in risk_map.items():
-            validate_rule_groups(f"reviews.quorum.stage_risk_overrides.{stage}.{risk_level}", rule)
-
-    high_risk = policy.get("high_risk_active_requires", {})
-    if high_risk and not isinstance(high_risk, dict):
-        errors.append("high_risk_active_requires must be an object when present")
-    elif isinstance(high_risk, dict):
-        if "min_maintainers" in high_risk:
-            min_maintainers = high_risk.get("min_maintainers")
-            if not isinstance(min_maintainers, int) or min_maintainers < 0:
-                errors.append(
-                    "high_risk_active_requires.min_maintainers "
-                    "must be a non-negative integer when present"
-                )
-        if "require_requires_block" in high_risk and not isinstance(
-            high_risk.get("require_requires_block"), bool
-        ):
-            errors.append(
-                "high_risk_active_requires.require_requires_block must be boolean when present"
-            )
-
+    errors.extend(_validate_quorum_group_refs(groups, quorum))
+    errors.extend(_validate_high_risk(policy.get("high_risk_active_requires", {})))
     return errors
 
 
-def load_promotion_policy(root: Path = ROOT):
+def _validate_active_requires(value: object) -> list[str]:
+    if not isinstance(value, dict):
+        return ["active_requires must be an object"]
+    errors: list[str] = []
+    review_states = value.get("review_state", [])
+    if not isinstance(review_states, list) or not review_states:
+        errors.append("active_requires.review_state must be a non-empty array")
+    elif any(state not in ALLOWED_REVIEW_STATES for state in review_states):
+        errors.append(
+            f"active_requires.review_state must contain only {sorted(ALLOWED_REVIEW_STATES)}"
+        )
+    for key in ["require_changelog", "require_smoke_test", "require_owner"]:
+        if key in value and not isinstance(value.get(key), bool):
+            errors.append(f"active_requires.{key} must be boolean when present")
+    return errors
+
+
+def _validate_review_flags(reviews_cfg: JsonDict) -> list[str]:
+    keys = [
+        "require_reviews_file",
+        "reviewer_must_differ_from_owner",
+        "allow_owner_when_no_distinct_reviewer",
+        "block_on_rejection",
+    ]
+    return [
+        f"reviews.{key} must be boolean when present"
+        for key in keys
+        if key in reviews_cfg and not isinstance(reviews_cfg.get(key), bool)
+    ]
+
+
+def _validate_quorum_group_refs(groups: JsonDict, quorum: JsonDict) -> list[str]:
+    rules: list[tuple[str, JsonDict]] = [
+        ("reviews.quorum.defaults", quorum.get("defaults", {})),
+    ]
+    rules.extend(
+        (f"reviews.quorum.stage_overrides.{stage}", rule)
+        for stage, rule in quorum.get("stage_overrides", {}).items()
+    )
+    rules.extend(
+        (f"reviews.quorum.risk_overrides.{risk}", rule)
+        for risk, rule in quorum.get("risk_overrides", {}).items()
+    )
+    for stage, risk_map in quorum.get("stage_risk_overrides", {}).items():
+        rules.extend(
+            (f"reviews.quorum.stage_risk_overrides.{stage}.{risk}", rule)
+            for risk, rule in risk_map.items()
+        )
+    return [
+        f"{path}.required_groups references unknown reviewer group {group_name!r}"
+        for path, rule in rules
+        for group_name in rule.get("required_groups", [])
+        if group_name not in groups
+    ]
+
+
+def _validate_high_risk(value: object) -> list[str]:
+    if value and not isinstance(value, dict):
+        return ["high_risk_active_requires must be an object when present"]
+    if not isinstance(value, dict):
+        return []
+    errors: list[str] = []
+    min_maintainers = value.get("min_maintainers")
+    if "min_maintainers" in value and (not isinstance(min_maintainers, int) or min_maintainers < 0):
+        errors.append(
+            "high_risk_active_requires.min_maintainers must be a non-negative integer when present"
+        )
+    if "require_requires_block" in value and not isinstance(
+        value.get("require_requires_block"), bool
+    ):
+        errors.append(
+            "high_risk_active_requires.require_requires_block must be boolean when present"
+        )
+    return errors
+
+
+def load_promotion_policy(root: Path = ROOT) -> JsonDict:
     try:
         policy = load_effective_policy_domain(root, "promotion_policy")
     except PolicyPackError as exc:
@@ -464,9 +449,10 @@ def load_promotion_policy(root: Path = ROOT):
     return policy
 
 
-def latest_distinct_entries(entries):
+def latest_distinct_entries(entries: object) -> dict[str, JsonDict]:
     latest: dict[str, tuple[tuple[datetime, int], dict[str, Any]]] = {}
-    for index, raw_entry in enumerate(entries or []):
+    raw_entries = entries if isinstance(entries, list) else []
+    for index, raw_entry in enumerate(raw_entries):
         if not isinstance(raw_entry, dict):
             continue
         reviewer = raw_entry.get("reviewer")
@@ -480,9 +466,9 @@ def latest_distinct_entries(entries):
     return {reviewer: entry for reviewer, (_, entry) in sorted(latest.items())}
 
 
-def review_decision_entries(skill_dir: Path):
+def review_decision_entries(skill_dir: Path) -> tuple[JsonDict, list[JsonDict]]:
     reviews = load_reviews(skill_dir)
-    entries = []
+    entries: list[JsonDict] = []
     for raw_entry in reviews.get("entries", []):
         if not isinstance(raw_entry, dict):
             continue
@@ -500,196 +486,3 @@ def review_decision_entries(skill_dir: Path):
         entries.append(entry)
 
     return reviews, entries
-
-
-def evaluate_review_state(
-    skill_dir: Path,
-    root: Path = ROOT,
-    stage: Optional[str] = None,
-    as_active: bool = False,
-    policy=None,
-):
-    skill_dir = Path(skill_dir).resolve()
-    policy = policy or load_promotion_policy(root)
-    meta = load_meta(skill_dir)
-    try:
-        reviews, decision_entries = review_decision_entries(skill_dir)
-    except ReviewEvidenceError as exc:
-        raise ReviewPolicyError([str(exc)]) from exc
-    latest = latest_distinct_entries(decision_entries)
-    groups, reviewers = configured_reviewers(policy, root=root)
-    reviews_cfg = policy.get("reviews", {})
-    actual_stage = meta.get("status") or skill_dir.parent.name
-    evaluated_stage = "active" if as_active else (stage or actual_stage)
-    risk_level = meta.get("risk_level")
-    owner = meta.get("owner")
-    quorum_rule = effective_quorum_rule(policy, evaluated_stage, risk_level)
-    owner_fallback_allowed = reviews_cfg.get("allow_owner_when_no_distinct_reviewer") and (
-        owner_review_unavoidable(
-            owner,
-            reviewers,
-            quorum_rule.get("required_groups", []),
-            quorum_rule.get("min_approvals", 0),
-        )
-    )
-
-    approvals = []
-    rejections = []
-    latest_decisions = []
-    ignored_decisions = []
-    covered_groups = []
-    covered_group_set = set()
-
-    for reviewer, entry in sorted(latest.items()):
-        reviewer_groups = reviewers.get(reviewer, {}).get("groups", [])
-        reasons = []
-        decision = entry.get("decision")
-        if reviewer not in reviewers:
-            reasons.append("unconfigured reviewer")
-        if decision not in ALLOWED_DECISIONS:
-            reasons.append("invalid decision")
-        if (
-            reviewer == owner
-            and reviews_cfg.get("reviewer_must_differ_from_owner")
-            and not owner_fallback_allowed
-        ):
-            reasons.append("reviewer is owner")
-        counted = not reasons
-        item = {
-            "reviewer": reviewer,
-            "decision": decision,
-            "at": entry.get("at"),
-            "note": entry.get("note"),
-            "groups": reviewer_groups,
-            "source": entry.get("source"),
-            "source_kind": entry.get("source_kind"),
-            "source_ref": entry.get("source_ref"),
-            "url": entry.get("url"),
-            "counted": counted,
-            "reasons": reasons,
-        }
-        latest_decisions.append(item)
-        if not counted:
-            ignored_decisions.append(item)
-            continue
-        if decision == "approved":
-            approvals.append(item)
-            for group_name in reviewer_groups:
-                if group_name in covered_group_set:
-                    continue
-                covered_group_set.add(group_name)
-                covered_groups.append(group_name)
-        elif decision == "rejected":
-            rejections.append(item)
-
-    required_groups = quorum_rule.get("required_groups", [])
-    missing_groups = [
-        group_name for group_name in required_groups if group_name not in covered_group_set
-    ]
-    quorum_met = len(approvals) >= quorum_rule.get("min_approvals", 0) and not missing_groups
-    reviews_file_present = (skill_dir / "reviews.json").is_file()
-    has_activity = bool(reviews.get("requests") or decision_entries)
-    blocking_rejection_count = (
-        len(rejections) if reviews_cfg.get("block_on_rejection", False) else 0
-    )
-    review_gate_pass = (
-        (not reviews_cfg.get("require_reviews_file") or reviews_file_present)
-        and quorum_met
-        and blocking_rejection_count == 0
-    )
-
-    if blocking_rejection_count:
-        effective_review_state = "rejected"
-    elif review_gate_pass:
-        effective_review_state = "approved"
-    elif has_activity:
-        effective_review_state = "under-review"
-    else:
-        effective_review_state = "draft"
-
-    return {
-        "skill": meta.get("name", skill_dir.name),
-        "version": meta.get("version"),
-        "owner": owner,
-        "risk_level": risk_level,
-        "actual_stage": actual_stage,
-        "evaluated_stage": evaluated_stage,
-        "declared_review_state": meta.get("review_state"),
-        "effective_review_state": effective_review_state,
-        "reviews_file_present": reviews_file_present,
-        "review_request_count": len(reviews.get("requests", [])),
-        "required_approvals": quorum_rule.get("min_approvals", 0),
-        "required_groups": required_groups,
-        "covered_groups": covered_groups,
-        "missing_groups": missing_groups,
-        "approval_count": len(approvals),
-        "rejection_count": len(rejections),
-        "blocking_rejection_count": blocking_rejection_count,
-        "quorum_met": quorum_met,
-        "review_gate_pass": review_gate_pass,
-        "latest_decisions": latest_decisions,
-        "ignored_decisions": ignored_decisions,
-        "configured_groups": groups,
-        "configured_reviewers": sorted(reviewers),
-    }
-
-
-def sync_declared_review_state(
-    skill_dir: Path,
-    evaluation=None,
-    root: Path = ROOT,
-    stage: Optional[str] = None,
-    as_active: bool = False,
-    policy=None,
-):
-    skill_dir = Path(skill_dir).resolve()
-    evaluation = evaluation or evaluate_review_state(
-        skill_dir, root=root, stage=stage, as_active=as_active, policy=policy
-    )
-    meta_path = skill_dir / "_meta.json"
-    meta = load_json(meta_path)
-    meta["review_state"] = evaluation["effective_review_state"]
-    write_json(meta_path, meta)
-    return evaluation
-
-
-def request_review(skill_dir: Path, note: str = "", root: Path = ROOT):
-    skill_dir = Path(skill_dir).resolve()
-    policy = load_promotion_policy(root)
-    reviews = load_reviews(skill_dir)
-    reviews["requests"].append(
-        {
-            "requested_at": utc_now_iso(),
-            "note": note or None,
-        }
-    )
-    save_reviews(skill_dir, reviews)
-    evaluation = evaluate_review_state(skill_dir, root=root, policy=policy)
-    sync_declared_review_state(skill_dir, evaluation=evaluation, root=root, policy=policy)
-    return evaluation
-
-
-def record_review_decision(
-    skill_dir: Path, reviewer: str, decision: str, note: str = "", root: Path = ROOT
-):
-    skill_dir = Path(skill_dir).resolve()
-    policy = load_promotion_policy(root)
-    _, reviewers = configured_reviewers(policy, root=root)
-    if reviewer not in reviewers:
-        configured = ", ".join(sorted(reviewers)) if reviewers else "(none configured)"
-        raise ValueError(f"unknown reviewer: {reviewer} (configured reviewers: {configured})")
-    if decision not in ALLOWED_DECISIONS:
-        raise ValueError(f"invalid decision: {decision}")
-    reviews = load_reviews(skill_dir)
-    reviews["entries"].append(
-        {
-            "reviewer": reviewer,
-            "decision": decision,
-            "note": note or None,
-            "at": utc_now_iso(),
-        }
-    )
-    save_reviews(skill_dir, reviews)
-    evaluation = evaluate_review_state(skill_dir, root=root, policy=policy)
-    sync_declared_review_state(skill_dir, evaluation=evaluation, root=root, policy=policy)
-    return evaluation

@@ -6,9 +6,10 @@ import sqlite3
 import subprocess
 import sys
 from pathlib import Path
+from typing import NoReturn
 
 
-def fail(message: str):
+def fail(message: str) -> NoReturn:
     print(message, file=sys.stderr)
     raise SystemExit(1)
 

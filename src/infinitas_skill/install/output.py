@@ -1,13 +1,24 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
+from typing import Any, Protocol
 
-def error_to_payload(error):
-    payload = {"error": error.message}
+
+class ErrorPayload(Protocol):
+    @property
+    def message(self) -> str: ...
+
+    @property
+    def details(self) -> Mapping[Any, Any] | None: ...
+
+
+def error_to_payload(error: ErrorPayload) -> dict[str, Any]:
+    payload: dict[str, Any] = {"error": error.message}
     payload.update(error.details or {})
     return payload
 
 
-def plan_to_text(plan):
+def plan_to_text(plan: dict[str, Any]) -> str:
     lines = []
     root = plan.get("root") or {}
     root_display = root.get("qualified_name") or root.get("name")

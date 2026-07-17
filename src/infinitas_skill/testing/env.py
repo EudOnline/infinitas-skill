@@ -32,6 +32,11 @@ def preferred_python_bin_dir(root: Path, *, probe_command: str = _PYTHON_ENV_PRO
     probe_cwd = Path(tempfile.gettempdir())
     for candidate in candidates:
         candidate = Path(candidate).expanduser()
+        # Keep symlinks intact so that a venv entry point (e.g. .venv/bin/python3)
+        # still activates its site-packages when spawned in probe_cwd.  Only
+        # normalize to an absolute path when the input is relative.
+        if not candidate.is_absolute():
+            candidate = candidate.absolute()
         marker = str(candidate)
         if marker in seen or not candidate.exists():
             continue
@@ -45,6 +50,19 @@ def preferred_python_bin_dir(root: Path, *, probe_command: str = _PYTHON_ENV_PRO
         if result.returncode == 0:
             return candidate.parent
     return None
+
+
+def python_exe(root: Path, *, probe_command: str = _PYTHON_ENV_PROBE) -> Path:
+    """Return a python3 executable usable for running project CLI commands.
+
+    Prefers the venv entry point when ``sys.executable`` is not already inside
+    it, so scripts remain robust regardless of whether they are invoked directly
+    with a system interpreter or through ``.venv/bin/python3``.
+    """
+    bin_dir = preferred_python_bin_dir(root, probe_command=probe_command)
+    if bin_dir is not None:
+        return bin_dir / "python3"
+    return Path(sys.executable)
 
 
 def prepend_preferred_python_bin_to_path(
@@ -76,6 +94,11 @@ def build_regression_test_env(
         "INFINITAS_RELEASE_HELPER_CHECK_ALL_BLOCKS",
         DEFAULT_RELEASE_HELPER_CHECK_ALL_BLOCKS,
     )
+    # Prevent git/ssh from hanging on interactive prompts in CI or nested runs.
+    resolved_env.setdefault(
+        "GIT_SSH_COMMAND",
+        "ssh -o ConnectTimeout=5 -o BatchMode=yes",
+    )
     if add_pythonpath is not None:
         pythonpath = str(Path(add_pythonpath))
         current_pythonpath = resolved_env.get("PYTHONPATH")
@@ -95,4 +118,5 @@ __all__ = [
     "build_regression_test_env",
     "prepend_preferred_python_bin_to_path",
     "preferred_python_bin_dir",
+    "python_exe",
 ]

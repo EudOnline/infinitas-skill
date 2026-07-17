@@ -6,20 +6,29 @@ import argparse
 import json
 import os
 import sys
-from typing import Any
+from collections.abc import Callable
+from typing import Any, NoReturn
 
 import httpx
+
+from infinitas_skill.registry.catalog import configure_registry_catalog_parser
+from infinitas_skill.registry.local_ops import configure_registry_sources_parser
 
 REGISTRY_TOP_LEVEL_HELP = "Hosted registry control-plane tools"
 REGISTRY_PARSER_DESCRIPTION = "Hosted registry private-first control plane CLI"
 
 
-def fail(message: str):
+def fail(message: str) -> NoReturn:
     print(message, file=sys.stderr)
     raise SystemExit(1)
 
 
-def request_json(args, method: str, path: str, payload: dict | None = None) -> dict[str, Any]:
+def request_json(
+    args: argparse.Namespace,
+    method: str,
+    path: str,
+    payload: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     headers = {}
     if args.token:
         headers["Authorization"] = f"Bearer {args.token}"
@@ -37,19 +46,19 @@ def request_json(args, method: str, path: str, payload: dict | None = None) -> d
     return {"ok": True}
 
 
-def command_access_me(args):
+def command_access_me(args: argparse.Namespace) -> dict[str, Any]:
     return request_json(args, "GET", "/api/v1/access/me")
 
 
-def command_access_check_release(args):
+def command_access_check_release(args: argparse.Namespace) -> dict[str, Any]:
     return request_json(args, "GET", f"/api/v1/access/releases/{args.release_id}/check")
 
 
-def command_authoring_get_skill(args):
+def command_authoring_get_skill(args: argparse.Namespace) -> dict[str, Any]:
     return request_json(args, "GET", f"/api/v1/skills/{args.skill_id}")
 
 
-def _parse_json_object(raw: str, *, arg_name: str) -> dict:
+def _parse_json_object(raw: str, *, arg_name: str) -> dict[str, Any]:
     try:
         payload = json.loads(raw)
     except json.JSONDecodeError as exc:
@@ -59,7 +68,7 @@ def _parse_json_object(raw: str, *, arg_name: str) -> dict:
     return payload
 
 
-def command_authoring_create_skill(args):
+def command_authoring_create_skill(args: argparse.Namespace) -> dict[str, Any]:
     return request_json(
         args,
         "POST",
@@ -73,7 +82,7 @@ def command_authoring_create_skill(args):
     )
 
 
-def command_authoring_create_version(args):
+def command_authoring_create_version(args: argparse.Namespace) -> dict[str, Any]:
     metadata = _parse_json_object(args.metadata_json, arg_name="--metadata-json")
     payload = {
         "version": args.version,
@@ -85,19 +94,19 @@ def command_authoring_create_version(args):
     return request_json(args, "POST", f"/api/v1/skills/{args.skill_id}/versions", payload)
 
 
-def command_release_create(args):
+def command_release_create(args: argparse.Namespace) -> dict[str, Any]:
     return request_json(args, "POST", f"/api/v1/versions/{args.version_id}/releases", {})
 
 
-def command_release_get(args):
+def command_release_get(args: argparse.Namespace) -> dict[str, Any]:
     return request_json(args, "GET", f"/api/v1/releases/{args.release_id}")
 
 
-def command_release_artifacts(args):
+def command_release_artifacts(args: argparse.Namespace) -> dict[str, Any]:
     return request_json(args, "GET", f"/api/v1/releases/{args.release_id}/artifacts")
 
 
-def command_exposure_create(args):
+def command_exposure_create(args: argparse.Namespace) -> dict[str, Any]:
     return request_json(
         args,
         "POST",
@@ -111,8 +120,8 @@ def command_exposure_create(args):
     )
 
 
-def command_exposure_update(args):
-    payload = {}
+def command_exposure_update(args: argparse.Namespace) -> dict[str, Any]:
+    payload: dict[str, Any] = {}
     if args.listing_mode is not None:
         payload["listing_mode"] = args.listing_mode
     if args.install_mode is not None:
@@ -126,26 +135,26 @@ def command_exposure_update(args):
     return request_json(args, "PATCH", f"/api/v1/exposures/{args.exposure_id}", payload)
 
 
-def command_exposure_activate(args):
+def command_exposure_activate(args: argparse.Namespace) -> dict[str, Any]:
     return request_json(args, "POST", f"/api/v1/exposures/{args.exposure_id}/activate", {})
 
 
-def command_exposure_revoke(args):
+def command_exposure_revoke(args: argparse.Namespace) -> dict[str, Any]:
     return request_json(args, "POST", f"/api/v1/exposures/{args.exposure_id}/revoke", {})
 
 
-def command_review_open_case(args):
-    payload = {}
+def command_review_open_case(args: argparse.Namespace) -> dict[str, Any]:
+    payload: dict[str, Any] = {}
     if args.mode:
         payload["mode"] = args.mode
     return request_json(args, "POST", f"/api/v1/exposures/{args.exposure_id}/review-cases", payload)
 
 
-def command_review_get_case(args):
+def command_review_get_case(args: argparse.Namespace) -> dict[str, Any]:
     return request_json(args, "GET", f"/api/v1/review-cases/{args.review_case_id}")
 
 
-def command_review_decide(args):
+def command_review_decide(args: argparse.Namespace) -> dict[str, Any]:
     evidence = _parse_json_object(args.evidence_json, arg_name="--evidence-json")
     return request_json(
         args,
@@ -159,20 +168,18 @@ def command_review_decide(args):
     )
 
 
-def command_not_implemented(message: str):
-    fail(message)
-
-
-def _emit_json_result(result):
+def _emit_json_result(result: object) -> int:
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
 
-def _wrap_registry_handler(func):
+def _wrap_registry_handler(
+    func: Callable[[argparse.Namespace], object],
+) -> Callable[[argparse.Namespace], int]:
     return lambda args: _emit_json_result(func(args))
 
 
-def configure_registry_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+def _configure_registry_connection_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--base-url",
         default=os.environ.get("INFINITAS_REGISTRY_API_BASE_URL", "http://127.0.0.1:8000"),
@@ -183,11 +190,9 @@ def configure_registry_parser(parser: argparse.ArgumentParser) -> argparse.Argum
         default=os.environ.get("INFINITAS_REGISTRY_API_TOKEN", ""),
         help="Bearer token for hosted registry API",
     )
-    subparsers = parser.add_subparsers(
-        dest="registry_command",
-        metavar="{skills,versions,releases,exposures,grants,tokens,reviews}",
-    )
 
+
+def _configure_registry_authoring_commands(subparsers: argparse._SubParsersAction) -> None:
     skills = subparsers.add_parser("skills", help="Manage private-first skill records")
     skills_subparsers = skills.add_subparsers(dest="subcommand", metavar="{create,get}")
     skills_create = skills_subparsers.add_parser(
@@ -208,9 +213,7 @@ def configure_registry_parser(parser: argparse.ArgumentParser) -> argparse.Argum
     skills_get.add_argument("skill_id", type=int, help="Skill identifier")
     skills_get.set_defaults(_handler=_wrap_registry_handler(command_authoring_get_skill))
 
-    versions = subparsers.add_parser(
-        "versions", help="Create immutable skill versions directly"
-    )
+    versions = subparsers.add_parser("versions", help="Create immutable skill versions directly")
     versions_subparsers = versions.add_subparsers(dest="subcommand", metavar="{create}")
     versions_create = versions_subparsers.add_parser(
         "create", help="Create an immutable version for a skill"
@@ -256,6 +259,8 @@ def configure_registry_parser(parser: argparse.ArgumentParser) -> argparse.Argum
     releases_artifacts.add_argument("release_id", type=int, help="Release identifier")
     releases_artifacts.set_defaults(_handler=_wrap_registry_handler(command_release_artifacts))
 
+
+def _configure_registry_access_commands(subparsers: argparse._SubParsersAction) -> None:
     exposures = subparsers.add_parser("exposures", help="Manage audience exposure and share policy")
     exposures_subparsers = exposures.add_subparsers(
         dest="subcommand", metavar="{create,update,activate,revoke}"
@@ -290,39 +295,6 @@ def configure_registry_parser(parser: argparse.ArgumentParser) -> argparse.Argum
     exposures_revoke.add_argument("exposure_id", type=int, help="Exposure identifier")
     exposures_revoke.set_defaults(_handler=_wrap_registry_handler(command_exposure_revoke))
 
-    grants = subparsers.add_parser(
-        "grants", help="Inspect grant policy scaffolding for token-scoped access"
-    )
-    grants_subparsers = grants.add_subparsers(
-        dest="subcommand", metavar="{list,create-token,revoke}"
-    )
-    grants_list = grants_subparsers.add_parser(
-        "list", help="Reserved command for upcoming grant listing APIs"
-    )
-    grants_list.set_defaults(
-        _handler=_wrap_registry_handler(
-            lambda _args: command_not_implemented("grant listing API is not available yet")
-        )
-    )
-    grants_create_token = grants_subparsers.add_parser(
-        "create-token", help="Reserved command for issuing grant tokens"
-    )
-    grants_create_token.add_argument("grant_id", type=int, help="Grant identifier")
-    grants_create_token.set_defaults(
-        _handler=_wrap_registry_handler(
-            lambda _args: command_not_implemented("grant token issuing API is not available yet")
-        )
-    )
-    grants_revoke = grants_subparsers.add_parser(
-        "revoke", help="Reserved command for revoking a grant"
-    )
-    grants_revoke.add_argument("grant_id", type=int, help="Grant identifier")
-    grants_revoke.set_defaults(
-        _handler=_wrap_registry_handler(
-            lambda _args: command_not_implemented("grant revoke API is not available yet")
-        )
-    )
-
     tokens = subparsers.add_parser(
         "tokens", help="Inspect token identity and release authorization"
     )
@@ -337,6 +309,8 @@ def configure_registry_parser(parser: argparse.ArgumentParser) -> argparse.Argum
     tokens_check.add_argument("release_id", type=int, help="Release identifier")
     tokens_check.set_defaults(_handler=_wrap_registry_handler(command_access_check_release))
 
+
+def _configure_registry_review_commands(subparsers: argparse._SubParsersAction) -> None:
     reviews = subparsers.add_parser(
         "reviews", help="Manage review cases for public-facing exposures"
     )
@@ -361,6 +335,22 @@ def configure_registry_parser(parser: argparse.ArgumentParser) -> argparse.Argum
     reviews_decide.add_argument("--evidence-json", default="{}", help="Evidence JSON object")
     reviews_decide.set_defaults(_handler=_wrap_registry_handler(command_review_decide))
 
+    sources = subparsers.add_parser("sources", help="Manage repository registry sources")
+    configure_registry_sources_parser(sources)
+
+    catalog = subparsers.add_parser("catalog", help="Build generated registry catalog views")
+    configure_registry_catalog_parser(catalog)
+
+
+def configure_registry_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    _configure_registry_connection_args(parser)
+    subparsers = parser.add_subparsers(
+        dest="registry_command",
+        metavar="{skills,versions,releases,exposures,tokens,reviews}",
+    )
+    _configure_registry_authoring_commands(subparsers)
+    _configure_registry_access_commands(subparsers)
+    _configure_registry_review_commands(subparsers)
     return parser
 
 
@@ -369,7 +359,7 @@ def build_registry_parser(*, prog: str | None = None) -> argparse.ArgumentParser
     return configure_registry_parser(parser)
 
 
-def _add_common_args(parser):
+def _add_common_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--base-url",
         default=os.environ.get("INFINITAS_REGISTRY_API_BASE_URL", "http://127.0.0.1:8000"),
@@ -382,7 +372,7 @@ def _add_common_args(parser):
     )
 
 
-def build_registry_skills_parser(*, prog=None):
+def build_registry_skills_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=prog or "infinitas registry skills",
         description="Manage private-first skill records",
@@ -401,7 +391,7 @@ def build_registry_skills_parser(*, prog=None):
     return parser
 
 
-def build_registry_versions_parser(*, prog=None):
+def build_registry_versions_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=prog or "infinitas registry versions",
         description="Create immutable skill versions directly",
@@ -427,7 +417,7 @@ def build_registry_versions_parser(*, prog=None):
     return parser
 
 
-def build_registry_releases_parser(*, prog=None):
+def build_registry_releases_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=prog or "infinitas registry releases",
         description="Create and inspect immutable releases",
@@ -443,7 +433,7 @@ def build_registry_releases_parser(*, prog=None):
     return parser
 
 
-def build_registry_exposures_parser(*, prog=None):
+def build_registry_exposures_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=prog or "infinitas registry exposures",
         description="Manage audience exposure and share policy",
@@ -472,22 +462,7 @@ def build_registry_exposures_parser(*, prog=None):
     return parser
 
 
-def build_registry_grants_parser(*, prog=None):
-    parser = argparse.ArgumentParser(
-        prog=prog or "infinitas registry grants",
-        description="Inspect grant policy scaffolding for token-scoped access",
-    )
-    _add_common_args(parser)
-    sub = parser.add_subparsers(dest="subcommand", metavar="{list,create-token,revoke}")
-    sub.add_parser("list", help="Reserved command for upcoming grant listing APIs")
-    gt = sub.add_parser("create-token", help="Reserved command for issuing grant tokens")
-    gt.add_argument("grant_id", type=int, help="Grant identifier")
-    gr = sub.add_parser("revoke", help="Reserved command for revoking a grant")
-    gr.add_argument("grant_id", type=int, help="Grant identifier")
-    return parser
-
-
-def build_registry_tokens_parser(*, prog=None):
+def build_registry_tokens_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=prog or "infinitas registry tokens",
         description="Inspect token identity and release authorization",
@@ -500,7 +475,7 @@ def build_registry_tokens_parser(*, prog=None):
     return parser
 
 
-def build_registry_reviews_parser(*, prog=None):
+def build_registry_reviews_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=prog or "infinitas registry reviews",
         description="Manage review cases for public-facing exposures",
@@ -535,7 +510,6 @@ __all__ = [
     "REGISTRY_TOP_LEVEL_HELP",
     "build_registry_exposures_parser",
     "build_registry_versions_parser",
-    "build_registry_grants_parser",
     "build_registry_parser",
     "build_registry_releases_parser",
     "build_registry_reviews_parser",

@@ -4,8 +4,13 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
-SUPPORTED_SCHEMA_VERSION = 1
+from infinitas_skill.skills.schema_version import (
+    SUPPORTED_SCHEMA_VERSION,
+    validate_schema_version,
+)
+
 MANIFEST_FILENAME = ".infinitas-skill-install-manifest.json"
 
 
@@ -13,31 +18,14 @@ class InstallManifestError(Exception):
     pass
 
 
-def validate_schema_version(
-    payload, *, field="schema_version", default_version=SUPPORTED_SCHEMA_VERSION
-):
-    if not isinstance(payload, dict):
-        return default_version, [f"{field} validation requires an object payload"]
-    if field not in payload:
-        return default_version, []
-    value = payload.get(field)
-    if not isinstance(value, int):
-        return default_version, [f"{field} must be an integer"]
-    if value != SUPPORTED_SCHEMA_VERSION:
-        return value, [
-            f"unsupported {field} {value!r}; supported version is {SUPPORTED_SCHEMA_VERSION}"
-        ]
-    return value, []
-
-
-def manifest_path_for(path_or_dir):
+def manifest_path_for(path_or_dir: str | Path) -> Path:
     path = Path(path_or_dir)
     if path.name == MANIFEST_FILENAME:
         return path.resolve()
     return (path / MANIFEST_FILENAME).resolve()
 
 
-def default_install_manifest(repo=None):
+def default_install_manifest(repo: str | None = None) -> dict[str, Any]:
     return {
         "schema_version": SUPPORTED_SCHEMA_VERSION,
         "repo": repo,
@@ -47,9 +35,15 @@ def default_install_manifest(repo=None):
     }
 
 
-def _normalize_install_entry(value):
+def _normalize_install_entry(value: object) -> dict[str, Any]:
     if not isinstance(value, dict):
-        return value
+        raise InstallManifestError("install manifest entries must be objects")
+    if value.get("identity_mode") == "legacy":
+        raise InstallManifestError("legacy install manifest identity is not supported")
+    if value.get("publisher") == "_legacy" or any(
+        isinstance(item, str) and "/_legacy/" in item for item in value.values()
+    ):
+        raise InstallManifestError("legacy distribution paths are not supported")
     normalized = dict(value)
     last_checked_at = value.get("last_checked_at")
     normalized["last_checked_at"] = (
@@ -58,7 +52,7 @@ def _normalize_install_entry(value):
     return normalized
 
 
-def normalize_install_manifest(payload, *, repo=None):
+def normalize_install_manifest(payload: object, *, repo: str | None = None) -> dict[str, Any]:
     if payload is None:
         payload = {}
     if not isinstance(payload, dict):
@@ -98,7 +92,12 @@ def normalize_install_manifest(payload, *, repo=None):
     return normalized
 
 
-def load_install_manifest(path_or_dir, *, repo=None, allow_missing=False):
+def load_install_manifest(
+    path_or_dir: str | Path,
+    *,
+    repo: str | None = None,
+    allow_missing: bool = False,
+) -> dict[str, Any]:
     manifest_path = manifest_path_for(path_or_dir)
     if not manifest_path.exists():
         if allow_missing:
@@ -111,7 +110,9 @@ def load_install_manifest(path_or_dir, *, repo=None, allow_missing=False):
     return normalize_install_manifest(payload, repo=repo)
 
 
-def write_install_manifest(path_or_dir, payload, *, repo=None):
+def write_install_manifest(
+    path_or_dir: str | Path, payload: object, *, repo: str | None = None
+) -> Path:
     manifest_path = manifest_path_for(path_or_dir)
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     normalized = normalize_install_manifest(payload, repo=repo)

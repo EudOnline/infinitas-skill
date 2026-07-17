@@ -48,7 +48,6 @@ def load_openclaw_skill_contract(path: Path) -> dict:
 
     runtime = dict(source.get("openclaw_runtime") or {})
     verification = dict(source.get("verification") or {})
-    runtime_verification = dict(source.get("runtime_verification") or {})
     plugin_capabilities = normalize_plugin_capabilities(runtime.get("plugin_capabilities"))
     license_value = runtime.get("license") or (source.get("distribution") or {}).get("license")
     source_mode = source.get("source_mode") or "unknown"
@@ -64,26 +63,13 @@ def load_openclaw_skill_contract(path: Path) -> dict:
         runtime_payload["license"] = license_value.strip()
 
     verification_payload = {
-        "required_runtimes": list(runtime_verification.get("required_runtimes") or []),
-        "smoke_prompts": list(runtime_verification.get("smoke_prompts") or []),
-        "legacy": {
-            "required_platforms": list(
-                runtime_verification.get("required_platforms_legacy")
-                or verification.get("required_platforms")
-                or []
-            ),
-            "required_platforms_deprecated": bool(
-                verification.get("required_platforms_deprecated")
-                if "required_platforms_deprecated" in verification
-                else runtime_verification.get("required_platforms_deprecated")
-            ),
-        },
+        "required_runtimes": list(verification.get("required_runtimes") or []),
+        "smoke_prompts": list(verification.get("smoke_prompts") or []),
     }
 
     return {
         "platform": "openclaw",
         "source_mode": source_mode,
-        "migration_only": source_mode == "legacy-migration",
         "runtime": runtime_payload,
         "verification": verification_payload,
         "source": source,

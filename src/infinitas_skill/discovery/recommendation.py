@@ -55,13 +55,13 @@ def recommend_skills(
         runtime, runtime_readiness, workspace_targets = _runtime_summary(item)
         scoring_item = dict(item)
         if target_agent == "openclaw":
-            legacy = list(scoring_item.get("agent_compatible") or [])
+            compatible_agents = list(scoring_item.get("agent_compatible") or [])
             if (runtime.get("platform") == "openclaw") and (
                 (runtime.get("readiness") or {}).get("ready") is True
             ):
-                if "openclaw" not in legacy:
-                    legacy.append("openclaw")
-            scoring_item["agent_compatible"] = legacy
+                if "openclaw" not in compatible_agents:
+                    compatible_agents.append("openclaw")
+            scoring_item["agent_compatible"] = compatible_agents
         score, factors = score_item(
             scoring_item,
             task_tokens=task_tokens,

@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Any
+
 DECISION_METADATA_LIST_FIELDS = (
     "use_when",
     "avoid_when",
@@ -6,15 +10,17 @@ DECISION_METADATA_LIST_FIELDS = (
 )
 
 
-def _string_list(value):
+def _string_list(value: object) -> list[str]:
     if not isinstance(value, list):
         return []
     return [item.strip() for item in value if isinstance(item, str) and item.strip()]
 
 
-def canonical_decision_metadata(payload: dict | None) -> dict:
+def canonical_decision_metadata(payload: dict[str, Any] | None) -> dict[str, Any]:
     payload = payload if isinstance(payload, dict) else {}
-    metadata = {field: _string_list(payload.get(field)) for field in DECISION_METADATA_LIST_FIELDS}
+    metadata: dict[str, Any] = {
+        field: _string_list(payload.get(field)) for field in DECISION_METADATA_LIST_FIELDS
+    }
 
     maturity = payload.get("maturity")
     metadata["maturity"] = (

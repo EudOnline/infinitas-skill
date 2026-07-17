@@ -226,7 +226,7 @@ def apply_local_tag_findings(
                 "missing-local-tag",
                 (
                     f"expected release tag is missing: {expected_tag}; create it "
-                    f"with scripts/release-skill-tag.sh {meta_name} --create"
+                    f"with infinitas release tag {meta_name} --create"
                 ),
                 rule="stable releases require a signed verified local tag",
             )
@@ -250,7 +250,7 @@ def apply_local_tag_findings(
                 "unsigned-local-tag",
                 (
                     f"{expected_tag} is not signed; recreate it with "
-                    f"scripts/release-skill-tag.sh {meta_name} --create "
+                    f"infinitas release tag {meta_name} --create "
                     "--force"
                 ),
                 rule="stable releases require a signed verified local tag",

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from infinitas_skill.install.output import error_to_payload, plan_to_text
 from infinitas_skill.install.plan_builder import build_plan, candidate_view
@@ -26,6 +27,8 @@ from infinitas_skill.install.target_validation import (
 from infinitas_skill.openclaw.plugins import normalize_plugin_capabilities
 from infinitas_skill.openclaw.runtime_model import build_openclaw_runtime_model
 from infinitas_skill.root import ROOT
+
+JsonDict = dict[str, Any]
 
 
 def _string_list(value: object) -> list[str]:
@@ -54,7 +57,7 @@ def _bool_required(value: object) -> bool:
     return False
 
 
-def _openclaw_requires(meta: dict) -> dict[str, list[str]]:
+def _openclaw_requires(meta: JsonDict) -> dict[str, list[str]]:
     requires_raw = meta.get("requires")
     requires = requires_raw if isinstance(requires_raw, dict) else {}
     metadata_openclaw_raw = (meta.get("metadata") or {}).get("openclaw")
@@ -79,7 +82,7 @@ def _runtime_readiness(
     plugin_required: dict[str, list[str]],
     background_required: bool,
     subagents_required: bool,
-) -> dict:
+) -> JsonDict:
     ready = (
         (supports_plugins or not plugin_required)
         and (supports_background_tasks or not background_required)
@@ -98,9 +101,9 @@ def _runtime_readiness(
 
 def _build_openclaw_runtime_install_view(
     *,
-    root_candidate: dict,
-    install_target: dict,
-) -> dict:
+    root_candidate: JsonDict,
+    install_target: JsonDict,
+) -> JsonDict:
     meta_raw = root_candidate.get("meta")
     meta = meta_raw if isinstance(meta_raw, dict) else {}
     runtime_meta_raw = meta.get("openclaw_runtime")
@@ -139,22 +142,53 @@ def _build_openclaw_runtime_install_view(
     }
 
 
+def _pending_sort_key(item: JsonDict) -> tuple[object, object, object, object, object]:
+    return (
+        item.get("identity_key") or item.get("name") or "",
+        item.get("registry") or "",
+        item.get("version") or "*",
+        item.get("source_name") or "",
+        item.get("source_version") or "",
+    )
+
+
+def _next_requirement_group(
+    pending: list[JsonDict],
+) -> tuple[JsonDict, str, str, list[JsonDict], list[JsonDict]]:
+    pending_sorted = sorted(pending, key=_pending_sort_key)
+    requirement = pending_sorted[0]
+    identity_key = requirement.get("identity_key") or requirement.get("name")
+    if not isinstance(identity_key, str) or not identity_key:
+        raise DependencyError("dependency requirement is missing identity")
+    display_name = display_identity(requirement) or identity_key
+    same_name = [requirement]
+    rest: list[JsonDict] = []
+    for item in pending_sorted[1:]:
+        target = (
+            same_name if (item.get("identity_key") or item.get("name")) == identity_key else rest
+        )
+        target.append(item)
+    return requirement, identity_key, display_name, same_name, rest
+
+
 class DependencyPlanner:
-    def __init__(self, root: str | Path):
+    def __init__(self, root: str | Path) -> None:
         self.root = Path(root).resolve()
         self.catalog = scan_enabled_registry_skills(self.root)
 
     def plan(
         self,
-        root_candidate,
+        root_candidate: JsonDict,
         target_dir: str | Path | None = None,
         mode: str = "install",
-        install_target: dict | None = None,
-    ):
+        install_target: JsonDict | None = None,
+    ) -> JsonDict:
         install_target_payload = dict(install_target or {})
         installed_dir = install_target_payload.get("path") or target_dir
         installed = load_installed_state(installed_dir) if installed_dir else {}
         root_key = root_candidate.get("identity_key") or root_candidate.get("name")
+        if not isinstance(root_key, str) or not root_key:
+            raise DependencyError("root candidate is missing identity")
         selected = {root_key: root_candidate}
         pending = [
             self._prepare_requirement(root_candidate, entry)
@@ -181,7 +215,7 @@ class DependencyPlanner:
             }
         return plan
 
-    def _prepare_requirement(self, source_candidate, entry):
+    def _prepare_requirement(self, source_candidate: JsonDict, entry: JsonDict) -> JsonDict:
         return {
             **entry,
             "source_name": source_candidate.get("name"),
@@ -190,32 +224,15 @@ class DependencyPlanner:
             "source_registry": source_candidate.get("registry_name"),
         }
 
-    def _resolve_recursive(self, selected, pending, installed):
+    def _resolve_recursive(
+        self,
+        selected: dict[str, JsonDict],
+        pending: list[JsonDict],
+        installed: dict[str, JsonDict],
+    ) -> dict[str, JsonDict]:
         if not pending:
             return selected
-
-        pending_sorted = sorted(
-            pending,
-            key=lambda item: (
-                item.get("identity_key") or item.get("name") or "",
-                item.get("registry") or "",
-                item.get("version") or "*",
-                item.get("source_name") or "",
-                item.get("source_version") or "",
-            ),
-        )
-        requirement = pending_sorted[0]
-        identity_key = requirement.get("identity_key") or requirement.get("name")
-        display_name = display_identity(requirement) or requirement.get("name")
-
-        remaining = pending_sorted[1:]
-        same_name = [requirement]
-        rest = []
-        for item in remaining:
-            if (item.get("identity_key") or item.get("name")) == identity_key:
-                same_name.append(item)
-            else:
-                rest.append(item)
+        requirement, identity_key, display_name, same_name, rest = _next_requirement_group(pending)
 
         okay, problem = constraints_compatible(same_name)
         if not okay:
@@ -261,7 +278,26 @@ class DependencyPlanner:
                 },
             )
 
-        rejected = []
+        return self._resolve_candidates(
+            candidate_matches,
+            selected=selected,
+            rest=rest,
+            installed=installed,
+            display_name=display_name,
+            constraints=same_name,
+        )
+
+    def _resolve_candidates(
+        self,
+        candidate_matches: list[JsonDict],
+        *,
+        selected: dict[str, JsonDict],
+        rest: list[JsonDict],
+        installed: dict[str, JsonDict],
+        display_name: str,
+        constraints: list[JsonDict],
+    ) -> dict[str, JsonDict]:
+        rejected: list[JsonDict] = []
         for candidate in candidate_matches:
             conflict = selected_conflict_reason(candidate, selected)
             if conflict:
@@ -269,7 +305,16 @@ class DependencyPlanner:
                 continue
 
             next_selected = dict(selected)
-            next_selected[candidate.get("identity_key") or candidate.get("name")] = candidate
+            candidate_key = candidate.get("identity_key") or candidate.get("name")
+            if not isinstance(candidate_key, str) or not candidate_key:
+                rejected.append(
+                    {
+                        "candidate": candidate_view(candidate),
+                        "reason": "candidate is missing identity",
+                    }
+                )
+                continue
+            next_selected[candidate_key] = candidate
             next_pending = list(rest)
             for dep in candidate.get("depends_on", []):
                 next_pending.append(self._prepare_requirement(candidate, dep))
@@ -283,19 +328,19 @@ class DependencyPlanner:
             f"no compatible resolution path found for {display_name}",
             {
                 "skill": display_name,
-                "constraints": same_name,
+                "constraints": constraints,
                 "rejected_candidates": rejected,
             },
         )
 
 
 def plan_from_skill_dir(
-    skill_dir,
+    skill_dir: str | Path,
     target_dir: str | Path | None = None,
     source_registry: str | None = None,
-    source_info=None,
+    source_info: JsonDict | None = None,
     mode: str = "install",
-):
+) -> JsonDict:
     planner = DependencyPlanner(ROOT)
     root_candidate = candidate_from_skill_dir(
         skill_dir,
@@ -325,7 +370,7 @@ def plan_from_skill_dir(
     )
 
 
-def plan_from_registry_entry(entry: dict) -> dict:
+def plan_from_registry_entry(entry: JsonDict) -> JsonDict:
     kind = str(entry.get("kind") or entry.get("object_kind") or "skill")
 
     root = {

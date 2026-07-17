@@ -4,68 +4,60 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 from infinitas_skill.root import ROOT
 
 from .policy_pack import PolicyPackError, load_effective_policy_domain
+from .primitives import normalize_string_list, unique_strings
 from .team_policy import TeamPolicyError, expand_team_refs, load_team_policy
 
 SKILL_NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 PUBLISHER_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 QUALIFIED_NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*/[a-z0-9]+(?:-[a-z0-9]+)*$")
+PUBLISHER_FIELDS = {
+    "owners",
+    "owner_teams",
+    "maintainers",
+    "maintainer_teams",
+    "authorized_signers",
+    "authorized_signer_teams",
+    "authorized_releasers",
+    "authorized_releaser_teams",
+}
+
+JsonDict = dict[str, Any]
 
 
 class NamespacePolicyError(Exception):
-    def __init__(self, errors):
+    def __init__(self, errors: list[str]) -> None:
         super().__init__("invalid namespace policy")
         self.errors = errors
 
 
-def unique_strings(values):
-    seen = set()
-    result = []
-    for value in values:
-        if value in seen:
-            continue
-        seen.add(value)
-        result.append(value)
-    return result
+def normalize_actor_list(values: object) -> list[str]:
+    return normalize_string_list(values)
 
 
-def normalize_actor_list(values):
-    if values is None:
-        return []
-    if not isinstance(values, list):
-        return []
-    return unique_strings(
-        [item.strip() for item in values if isinstance(item, str) and item.strip()]
-    )
+def normalize_team_list(values: object) -> list[str]:
+    return normalize_string_list(values)
 
 
-def normalize_team_list(values):
-    if values is None:
-        return []
-    if not isinstance(values, list):
-        return []
-    return unique_strings(
-        [item.strip() for item in values if isinstance(item, str) and item.strip()]
-    )
-
-
-def parse_requested_skill(value):
+def parse_requested_skill(value: str | None) -> tuple[str | None, str | None]:
     text = (value or "").strip()
     if not text:
         return None, None
     if "/" not in text:
         return None, text
-    publisher, name = text.split("/", 1)
-    publisher = publisher.strip() or None
-    name = name.strip() or None
+    publisher_part, name_part = text.split("/", 1)
+    publisher = publisher_part.strip() or None
+    name = name_part.strip() or None
     return publisher, name
 
 
-def derive_qualified_name(name, publisher=None):
+def derive_qualified_name(name: object, publisher: object = None) -> str | None:
     if not isinstance(name, str) or not name.strip():
         return None
     skill_name = name.strip()
@@ -74,17 +66,18 @@ def derive_qualified_name(name, publisher=None):
     return skill_name
 
 
-def display_name(payload):
+def display_name(payload: object) -> str | None:
     if not isinstance(payload, dict):
         return None
-    return (
+    value = (
         payload.get("qualified_name")
         or derive_qualified_name(payload.get("name"), payload.get("publisher"))
         or payload.get("name")
     )
+    return value if isinstance(value, str) else None
 
 
-def normalize_skill_identity(meta):
+def normalize_skill_identity(meta: object) -> JsonDict:
     meta = meta if isinstance(meta, dict) else {}
     raw_name = meta.get("name")
     name = raw_name.strip() if isinstance(raw_name, str) and raw_name.strip() else None
@@ -112,7 +105,7 @@ def normalize_skill_identity(meta):
         "name": name,
         "publisher": publisher,
         "qualified_name": qualified_name,
-        "identity_mode": "qualified" if publisher else "legacy",
+        "identity_mode": "qualified" if publisher else None,
         "owner": owner,
         "owners": owners,
         "maintainers": maintainers,
@@ -120,9 +113,9 @@ def normalize_skill_identity(meta):
     }
 
 
-def validate_identity_metadata(meta):
+def validate_identity_metadata(meta: JsonDict) -> tuple[JsonDict, list[str]]:
     identity = normalize_skill_identity(meta)
-    errors = []
+    errors: list[str] = []
 
     name = identity.get("name")
     publisher = identity.get("publisher")
@@ -130,9 +123,10 @@ def validate_identity_metadata(meta):
     owners_value = meta.get("owners")
     author_value = meta.get("author")
 
-    if publisher is not None:
-        if not isinstance(meta.get("publisher"), str) or not PUBLISHER_RE.match(publisher):
-            errors.append(f"invalid publisher {meta.get('publisher')!r}")
+    if publisher is None:
+        errors.append("publisher must be a non-empty string")
+    elif not isinstance(meta.get("publisher"), str) or not PUBLISHER_RE.match(publisher):
+        errors.append(f"invalid publisher {meta.get('publisher')!r}")
     if qualified_name is not None:
         if not isinstance(qualified_name, str) or not qualified_name.strip():
             errors.append("qualified_name must be a non-empty string when present")
@@ -158,18 +152,7 @@ def validate_identity_metadata(meta):
     return identity, errors
 
 
-def load_namespace_policy(root=ROOT):
-    path = Path(root).resolve() / "policy" / "namespace-policy.json"
-    try:
-        payload = load_effective_policy_domain(root, "namespace_policy")
-    except PolicyPackError as exc:
-        raise NamespacePolicyError(exc.errors) from exc
-    try:
-        team_policy = load_team_policy(root)
-    except TeamPolicyError as exc:
-        raise NamespacePolicyError(exc.errors) from exc
-
-    errors = []
+def _validate_namespace_root(payload: JsonDict, errors: list[str]) -> tuple[object, bool]:
     unknown_root = sorted(
         set(payload) - {"$schema", "version", "compatibility", "publishers", "transfers"}
     )
@@ -190,168 +173,167 @@ def load_namespace_policy(root=ROOT):
     if not isinstance(allow_unqualified, bool):
         errors.append("namespace-policy compatibility.allow_unqualified_names must be boolean")
         allow_unqualified = True
+    return version, allow_unqualified
 
-    publishers = {}
+
+def _validate_publisher_lists(name: str, raw_entry: JsonDict, errors: list[str]) -> None:
+    actor_fields = ("owners", "maintainers", "authorized_signers", "authorized_releasers")
+    team_fields = (
+        "owner_teams",
+        "maintainer_teams",
+        "authorized_signer_teams",
+        "authorized_releaser_teams",
+    )
+    for field_name in actor_fields + team_fields:
+        value = raw_entry.get(field_name)
+        if value is not None and not isinstance(value, list):
+            errors.append(
+                f"namespace-policy publishers.{name}.{field_name} must be an array when present"
+            )
+
+
+def _resolve_publisher_entry(
+    name: str, raw_entry: JsonDict, team_policy: JsonDict, errors: list[str]
+) -> JsonDict:
+    unknown = sorted(set(raw_entry) - PUBLISHER_FIELDS)
+    if unknown:
+        errors.append(
+            f"namespace-policy publishers.{name} has unsupported keys: {', '.join(unknown)}"
+        )
+    _validate_publisher_lists(name, raw_entry, errors)
+    owners = normalize_actor_list(raw_entry.get("owners"))
+    maintainers = normalize_actor_list(raw_entry.get("maintainers"))
+    team_fields = {
+        "owner_teams": normalize_team_list(raw_entry.get("owner_teams")),
+        "maintainer_teams": normalize_team_list(raw_entry.get("maintainer_teams")),
+        "authorized_signer_teams": normalize_team_list(raw_entry.get("authorized_signer_teams")),
+        "authorized_releaser_teams": normalize_team_list(
+            raw_entry.get("authorized_releaser_teams")
+        ),
+    }
+    team_reports = {
+        field: expand_team_refs(team_names, team_policy)
+        for field, team_names in team_fields.items()
+    }
+    for field_name, report in team_reports.items():
+        for missing_team in report.get("missing_teams", []):
+            errors.append(
+                f"namespace-policy publishers.{name}.{field_name} references unknown team "
+                f"{missing_team!r}"
+            )
+    resolved_owners = unique_strings(owners + team_reports["owner_teams"].get("actors", []))
+    resolved_maintainers = unique_strings(
+        resolved_owners + maintainers + team_reports["maintainer_teams"].get("actors", [])
+    )
+    authorized_signers = normalize_actor_list(
+        raw_entry.get("authorized_signers")
+    ) or unique_strings(
+        resolved_maintainers + team_reports["authorized_signer_teams"].get("actors", [])
+    )
+    authorized_releasers = normalize_actor_list(
+        raw_entry.get("authorized_releasers")
+    ) or unique_strings(
+        resolved_maintainers + team_reports["authorized_releaser_teams"].get("actors", [])
+    )
+    if not owners and not team_fields["owner_teams"]:
+        errors.append(
+            f"namespace-policy publishers.{name} must include at least one owner actor "
+            "or owner team"
+        )
+    return {
+        "owners": owners,
+        "maintainers": maintainers,
+        "authorized_signers": authorized_signers,
+        "authorized_releasers": authorized_releasers,
+        "resolved_owners": resolved_owners,
+        "resolved_maintainers": resolved_maintainers,
+        **team_fields,
+    }
+
+
+def _load_publishers(
+    payload: JsonDict, team_policy: JsonDict, errors: list[str]
+) -> dict[str, JsonDict]:
     raw_publishers = payload.get("publishers", {})
     if not isinstance(raw_publishers, dict):
         errors.append("namespace-policy publishers must be an object")
-        raw_publishers = {}
+        return {}
+    publishers: dict[str, JsonDict] = {}
     for name, raw_entry in raw_publishers.items():
         if not isinstance(name, str) or not PUBLISHER_RE.match(name):
             errors.append(f"namespace-policy publishers contains invalid publisher name {name!r}")
-            continue
-        if not isinstance(raw_entry, dict):
+        elif not isinstance(raw_entry, dict):
             errors.append(f"namespace-policy publishers.{name} must be an object")
-            continue
-        unknown = sorted(
-            set(raw_entry)
-            - {
-                "owners",
-                "owner_teams",
-                "maintainers",
-                "maintainer_teams",
-                "authorized_signers",
-                "authorized_signer_teams",
-                "authorized_releasers",
-                "authorized_releaser_teams",
-            }
-        )
-        if unknown:
-            errors.append(
-                f"namespace-policy publishers.{name} has unsupported keys: {', '.join(unknown)}"
-            )
-        for field_name in [
-            "owners",
-            "maintainers",
-            "authorized_signers",
-            "authorized_releasers",
-        ]:
-            value = raw_entry.get(field_name)
-            if value is not None and not isinstance(value, list):
-                errors.append(
-                    f"namespace-policy publishers.{name}.{field_name} must be an array when present"
-                )
-        for field_name in [
-            "owner_teams",
-            "maintainer_teams",
-            "authorized_signer_teams",
-            "authorized_releaser_teams",
-        ]:
-            value = raw_entry.get(field_name)
-            if value is not None and not isinstance(value, list):
-                errors.append(
-                    f"namespace-policy publishers.{name}.{field_name} must be an array when present"
-                )
-        owners = normalize_actor_list(raw_entry.get("owners"))
-        owner_teams = normalize_team_list(raw_entry.get("owner_teams"))
-        maintainers = normalize_actor_list(raw_entry.get("maintainers"))
-        maintainer_teams = normalize_team_list(raw_entry.get("maintainer_teams"))
-        authorized_signer_teams = normalize_team_list(raw_entry.get("authorized_signer_teams"))
-        authorized_releaser_teams = normalize_team_list(raw_entry.get("authorized_releaser_teams"))
+        else:
+            publishers[name] = _resolve_publisher_entry(name, raw_entry, team_policy, errors)
+    return publishers
 
-        resolved_owner_teams = expand_team_refs(owner_teams, team_policy)
-        resolved_maintainer_teams = expand_team_refs(maintainer_teams, team_policy)
-        resolved_signer_teams = expand_team_refs(authorized_signer_teams, team_policy)
-        resolved_releaser_teams = expand_team_refs(authorized_releaser_teams, team_policy)
-        for field_name, report in [
-            ("owner_teams", resolved_owner_teams),
-            ("maintainer_teams", resolved_maintainer_teams),
-            ("authorized_signer_teams", resolved_signer_teams),
-            ("authorized_releaser_teams", resolved_releaser_teams),
-        ]:
-            for missing_team in report.get("missing_teams", []):
-                errors.append(
-                    "namespace-policy publishers."
-                    f"{name}.{field_name} references unknown team {missing_team!r}"
-                )
 
-        resolved_owners = unique_strings(owners + resolved_owner_teams.get("actors", []))
-        resolved_maintainers = unique_strings(
-            resolved_owners + maintainers + resolved_maintainer_teams.get("actors", [])
-        )
-        authorized_signers = normalize_actor_list(
-            raw_entry.get("authorized_signers")
-        ) or unique_strings(resolved_maintainers + resolved_signer_teams.get("actors", []))
-        authorized_releasers = normalize_actor_list(
-            raw_entry.get("authorized_releasers")
-        ) or unique_strings(resolved_maintainers + resolved_releaser_teams.get("actors", []))
-        if not owners and not owner_teams:
-            errors.append(
-                "namespace-policy publishers."
-                f"{name} must include at least one owner actor or owner team"
-            )
-        publishers[name] = {
-            "owners": owners,
-            "owner_teams": owner_teams,
-            "maintainers": maintainers,
-            "maintainer_teams": maintainer_teams,
-            "authorized_signers": authorized_signers,
-            "authorized_signer_teams": authorized_signer_teams,
-            "authorized_releasers": authorized_releasers,
-            "authorized_releaser_teams": authorized_releaser_teams,
-            "resolved_owners": resolved_owners,
-            "resolved_maintainers": resolved_maintainers,
-        }
+def _normalize_transfer(raw_entry: object, index: int, errors: list[str]) -> JsonDict | None:
+    label = f"namespace-policy transfers[{index}]"
+    if not isinstance(raw_entry, dict):
+        errors.append(f"{label} must be an object")
+        return None
+    unknown = sorted(set(raw_entry) - {"name", "from", "to", "approved_by", "note"})
+    if unknown:
+        errors.append(f"{label} has unsupported keys: {', '.join(unknown)}")
+    name = raw_entry.get("name")
+    from_publisher = raw_entry.get("from")
+    to_publisher = raw_entry.get("to")
+    approved_by = normalize_actor_list(raw_entry.get("approved_by"))
+    note = raw_entry.get("note")
+    if not isinstance(name, str) or not SKILL_NAME_RE.match(name):
+        errors.append(f"{label}.name must be a lowercase skill slug")
+        return None
+    for field_name, value in (("from", from_publisher), ("to", to_publisher)):
+        if value is not None and (not isinstance(value, str) or not PUBLISHER_RE.match(value)):
+            errors.append(f"{label}.{field_name} must be null or a publisher slug")
+            return None
+    if not approved_by:
+        errors.append(f"{label}.approved_by must include at least one actor")
+        return None
+    if note is not None and (not isinstance(note, str) or not note.strip()):
+        errors.append(f"{label}.note must be a non-empty string when present")
+        return None
+    return {
+        "name": name,
+        "from": from_publisher,
+        "to": to_publisher,
+        "approved_by": approved_by,
+        "note": note.strip() if isinstance(note, str) and note.strip() else None,
+    }
 
-    transfers = []
+
+def _load_transfers(payload: JsonDict, errors: list[str]) -> list[JsonDict]:
     raw_transfers = payload.get("transfers", [])
     if raw_transfers is None:
         raw_transfers = []
     if not isinstance(raw_transfers, list):
         errors.append("namespace-policy transfers must be an array")
-        raw_transfers = []
+        return []
+    transfers: list[JsonDict] = []
     for index, raw_entry in enumerate(raw_transfers, start=1):
-        if not isinstance(raw_entry, dict):
-            errors.append(f"namespace-policy transfers[{index}] must be an object")
-            continue
-        unknown = sorted(set(raw_entry) - {"name", "from", "to", "approved_by", "note"})
-        if unknown:
-            errors.append(
-                f"namespace-policy transfers[{index}] has unsupported keys: {', '.join(unknown)}"
-            )
-        name = raw_entry.get("name")
-        from_publisher = raw_entry.get("from")
-        to_publisher = raw_entry.get("to")
-        approved_by = normalize_actor_list(raw_entry.get("approved_by"))
-        note = raw_entry.get("note")
-        if not isinstance(name, str) or not SKILL_NAME_RE.match(name):
-            errors.append(
-                f"namespace-policy transfers[{index}].name must be a lowercase skill slug"
-            )
-            continue
-        if from_publisher is not None and (
-            not isinstance(from_publisher, str) or not PUBLISHER_RE.match(from_publisher)
-        ):
-            errors.append(
-                f"namespace-policy transfers[{index}].from must be null or a publisher slug"
-            )
-            continue
-        if to_publisher is not None and (
-            not isinstance(to_publisher, str) or not PUBLISHER_RE.match(to_publisher)
-        ):
-            errors.append(
-                f"namespace-policy transfers[{index}].to must be null or a publisher slug"
-            )
-            continue
-        if not approved_by:
-            errors.append(
-                f"namespace-policy transfers[{index}].approved_by must include at least one actor"
-            )
-            continue
-        if note is not None and (not isinstance(note, str) or not note.strip()):
-            errors.append(
-                f"namespace-policy transfers[{index}].note must be a non-empty string when present"
-            )
-            continue
-        transfers.append(
-            {
-                "name": name,
-                "from": from_publisher,
-                "to": to_publisher,
-                "approved_by": approved_by,
-                "note": note.strip() if isinstance(note, str) and note.strip() else None,
-            }
-        )
+        transfer = _normalize_transfer(raw_entry, index, errors)
+        if transfer is not None:
+            transfers.append(transfer)
+    return transfers
+
+
+def load_namespace_policy(root: str | Path = ROOT) -> JsonDict:
+    root_path = Path(root).resolve()
+    path = root_path / "policy" / "namespace-policy.json"
+    try:
+        payload = load_effective_policy_domain(root_path, "namespace_policy")
+    except PolicyPackError as exc:
+        raise NamespacePolicyError(exc.errors) from exc
+    try:
+        team_policy = load_team_policy(root_path)
+    except TeamPolicyError as exc:
+        raise NamespacePolicyError(exc.errors) from exc
+    errors: list[str] = []
+    version, allow_unqualified = _validate_namespace_root(payload, errors)
+    publishers = _load_publishers(payload, team_policy, errors)
+    transfers = _load_transfers(payload, errors)
 
     if errors:
         raise NamespacePolicyError(errors)
@@ -368,7 +350,7 @@ def load_namespace_policy(root=ROOT):
     }
 
 
-def iter_registry_skill_dirs(root=ROOT):
+def iter_registry_skill_dirs(root: str | Path = ROOT) -> Iterator[Path]:
     base_root = Path(root).resolve() / "skills"
     for stage in ["incubating", "active", "archived"]:
         stage_dir = base_root / stage
@@ -380,7 +362,12 @@ def iter_registry_skill_dirs(root=ROOT):
             yield child.resolve()
 
 
-def transfer_is_authorized(policy, name, from_publisher, to_publisher):
+def transfer_is_authorized(
+    policy: JsonDict,
+    name: object,
+    from_publisher: object,
+    to_publisher: object,
+) -> JsonDict | None:
     for entry in policy.get("transfers", []):
         if entry.get("name") != name:
             continue
@@ -392,57 +379,47 @@ def transfer_is_authorized(policy, name, from_publisher, to_publisher):
     return None
 
 
-def namespace_policy_report(skill_dir, root=ROOT, policy=None):
-    root = Path(root).resolve()
-    skill_dir = Path(skill_dir).resolve()
-    policy = policy or load_namespace_policy(root)
-    meta = json.loads((skill_dir / "_meta.json").read_text(encoding="utf-8"))
-    identity, identity_errors = validate_identity_metadata(meta)
-
-    errors = list(identity_errors)
-    warnings = []
-    publisher_entry = (
-        policy["publishers"].get(identity.get("publisher")) if identity.get("publisher") else None
-    )
-
-    if identity.get("publisher"):
-        if publisher_entry is None:
-            errors.append(
-                f"{skill_dir}: publisher {identity['publisher']!r} is not declared in "
-                "policy/namespace-policy.json"
-            )
-        else:
-            missing_owners = [
-                item
-                for item in identity.get("owners", [])
-                if item not in publisher_entry.get("resolved_owners", [])
-            ]
-            if missing_owners:
-                errors.append(
-                    f"{skill_dir}: owners {', '.join(missing_owners)} are not authorized "
-                    f"owners for publisher {identity['publisher']!r}"
-                )
-            allowed_maintainers = set(publisher_entry.get("resolved_owners", [])) | set(
-                publisher_entry.get("resolved_maintainers", [])
-            )
-            missing_maintainers = [
-                item for item in identity.get("maintainers", []) if item not in allowed_maintainers
-            ]
-            if missing_maintainers:
-                errors.append(
-                    f"{skill_dir}: maintainers {', '.join(missing_maintainers)} are not "
-                    f"authorized for publisher {identity['publisher']!r}"
-                )
-    elif not policy["compatibility"].get("allow_unqualified_names", True):
+def _publisher_authorization_errors(
+    skill_dir: Path, identity: JsonDict, publisher_entry: JsonDict | None
+) -> list[str]:
+    publisher = identity.get("publisher")
+    if not publisher:
+        return [f"{skill_dir}: publisher is required"]
+    if publisher_entry is None:
+        return [
+            f"{skill_dir}: publisher {publisher!r} is not declared in policy/namespace-policy.json"
+        ]
+    errors: list[str] = []
+    missing_owners = [
+        actor
+        for actor in identity.get("owners", [])
+        if actor not in publisher_entry.get("resolved_owners", [])
+    ]
+    if missing_owners:
         errors.append(
-            f"{skill_dir}: unqualified legacy skill names are disabled by "
-            "policy/namespace-policy.json"
+            f"{skill_dir}: owners {', '.join(missing_owners)} are not authorized owners for "
+            f"publisher {publisher!r}"
         )
+    allowed_maintainers = set(publisher_entry.get("resolved_owners", [])) | set(
+        publisher_entry.get("resolved_maintainers", [])
+    )
+    missing_maintainers = [
+        actor for actor in identity.get("maintainers", []) if actor not in allowed_maintainers
+    ]
+    if missing_maintainers:
+        errors.append(
+            f"{skill_dir}: maintainers {', '.join(missing_maintainers)} are not authorized for "
+            f"publisher {publisher!r}"
+        )
+    return errors
 
-    transfer_required = False
-    transfer_authorized = True
-    transfer_matches = []
-    competing_claims = []
+
+def _competing_claims(
+    skill_dir: Path, root: Path, identity: JsonDict, policy: JsonDict
+) -> tuple[list[JsonDict], list[JsonDict], list[str]]:
+    claims: list[JsonDict] = []
+    matches: list[JsonDict] = []
+    errors: list[str] = []
     for other_dir in iter_registry_skill_dirs(root):
         if other_dir == skill_dir:
             continue
@@ -451,18 +428,14 @@ def namespace_policy_report(skill_dir, root=ROOT, policy=None):
         except Exception:
             continue
         other = normalize_skill_identity(other_meta)
-        if not other.get("name"):
-            continue
-        same_name = other.get("name") == identity.get("name")
+        same_name = other.get("name") and other.get("name") == identity.get("name")
         same_qualified = bool(
             identity.get("qualified_name")
             and other.get("qualified_name") == identity.get("qualified_name")
         )
-        publisher_changed = other.get("publisher") != identity.get("publisher")
-        if not publisher_changed or not (same_name or same_qualified):
+        if other.get("publisher") == identity.get("publisher") or not (same_name or same_qualified):
             continue
-        transfer_required = True
-        competing_claims.append(
+        claims.append(
             {
                 "path": str(other_dir.relative_to(root)),
                 "stage": other_dir.parent.name,
@@ -474,30 +447,56 @@ def namespace_policy_report(skill_dir, root=ROOT, policy=None):
         match = transfer_is_authorized(
             policy, identity.get("name"), other.get("publisher"), identity.get("publisher")
         )
-        if not match and ("archived" in {skill_dir.parent.name, other_dir.parent.name}):
+        if not match and "archived" in {skill_dir.parent.name, other_dir.parent.name}:
             match = transfer_is_authorized(
                 policy, identity.get("name"), identity.get("publisher"), other.get("publisher")
             )
         if match:
-            transfer_matches.append(match)
-            continue
-        transfer_authorized = False
-        errors.append(
-            f"{skill_dir}: namespace transfer for {identity.get('name')!r} from "
-            f"{other.get('publisher')!r} to {identity.get('publisher')!r} is not "
-            "authorized by policy/namespace-policy.json"
-        )
+            matches.append(match)
+        else:
+            errors.append(
+                f"{skill_dir}: namespace transfer for {identity.get('name')!r} from "
+                f"{other.get('publisher')!r} to {identity.get('publisher')!r} is not authorized "
+                "by policy/namespace-policy.json"
+            )
+    return claims, matches, errors
 
+
+def _authorized_roles(
+    identity: JsonDict, publisher_entry: JsonDict | None
+) -> tuple[list[str], list[str]]:
     if publisher_entry:
-        authorized_signers = list(publisher_entry.get("authorized_signers", []))
-        authorized_releasers = list(publisher_entry.get("authorized_releasers", []))
-    else:
-        authorized_signers = unique_strings(
-            identity.get("owners", []) + identity.get("maintainers", [])
+        return (
+            list(publisher_entry.get("authorized_signers", [])),
+            list(publisher_entry.get("authorized_releasers", [])),
         )
-        authorized_releasers = unique_strings(
-            identity.get("owners", []) + identity.get("maintainers", [])
-        )
+    fallback = unique_strings(identity.get("owners", []) + identity.get("maintainers", []))
+    return fallback, list(fallback)
+
+
+def namespace_policy_report(
+    skill_dir: str | Path,
+    root: str | Path = ROOT,
+    policy: JsonDict | None = None,
+) -> JsonDict:
+    root = Path(root).resolve()
+    skill_dir = Path(skill_dir).resolve()
+    policy = policy or load_namespace_policy(root)
+    meta = json.loads((skill_dir / "_meta.json").read_text(encoding="utf-8"))
+    identity, identity_errors = validate_identity_metadata(meta)
+
+    errors = list(identity_errors)
+    warnings: list[str] = []
+    publisher_entry = (
+        policy["publishers"].get(identity.get("publisher")) if identity.get("publisher") else None
+    )
+
+    errors.extend(_publisher_authorization_errors(skill_dir, identity, publisher_entry))
+    competing_claims, transfer_matches, transfer_errors = _competing_claims(
+        skill_dir, root, identity, policy
+    )
+    errors.extend(transfer_errors)
+    authorized_signers, authorized_releasers = _authorized_roles(identity, publisher_entry)
 
     if not authorized_signers:
         warnings.append(
@@ -512,8 +511,8 @@ def namespace_policy_report(skill_dir, root=ROOT, policy=None):
         "authorized": not errors,
         "errors": errors,
         "warnings": warnings,
-        "transfer_required": transfer_required,
-        "transfer_authorized": transfer_authorized,
+        "transfer_required": bool(competing_claims),
+        "transfer_authorized": not transfer_errors,
         "transfer_matches": transfer_matches,
         "competing_claims": competing_claims,
         "delegated_teams": {

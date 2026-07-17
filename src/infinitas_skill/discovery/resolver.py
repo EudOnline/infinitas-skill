@@ -6,38 +6,7 @@ from infinitas_skill.install.registry_sources import load_registry_config
 
 from .ai_index import validate_ai_index_payload
 from .index import build_discovery_index, validate_discovery_index_payload
-
-_BLOCKING_COMPATIBILITY_STATES = {"blocked", "broken", "unsupported"}
-_VERIFIED_COMPATIBILITY_STATES = {"native", "adapted", "degraded"}
-
-
-def _supports_target_agent(item: dict, target_agent: str | None) -> bool:
-    if target_agent is None:
-        return True
-
-    verified_support = item.get("verified_support")
-    verified_support = verified_support if isinstance(verified_support, dict) else {}
-    payload = verified_support.get(target_agent)
-    payload = payload if isinstance(payload, dict) else {}
-    state = payload.get("state")
-    if state in _BLOCKING_COMPATIBILITY_STATES:
-        return False
-
-    runtime = item.get("runtime")
-    runtime = runtime if isinstance(runtime, dict) else {}
-    readiness = runtime.get("readiness")
-    readiness = readiness if isinstance(readiness, dict) else {}
-    if (
-        target_agent == "openclaw"
-        and runtime.get("platform") == "openclaw"
-        and readiness.get("ready") is True
-    ):
-        return True
-
-    if state in _VERIFIED_COMPATIBILITY_STATES:
-        return True
-
-    return target_agent in (item.get("agent_compatible") or [])
+from .primitives import supports_target_agent
 
 
 def load_discovery_index(root: Path) -> dict:
@@ -83,9 +52,7 @@ def filter_candidates(skills: list, query: str) -> list:
 def filter_by_agent(candidates: list, target_agent: str | None) -> list:
     if not target_agent:
         return list(candidates)
-    return [
-        candidate for candidate in candidates if _supports_target_agent(candidate, target_agent)
-    ]
+    return [candidate for candidate in candidates if supports_target_agent(candidate, target_agent)]
 
 
 def rank_candidates(
@@ -101,7 +68,7 @@ def rank_candidates(
         key=lambda item: (
             item.get("source_registry") != default_registry,
             exact_query not in {item.get("name"), item.get("qualified_name")},
-            target_agent is not None and not _supports_target_agent(item, target_agent),
+            target_agent is not None and not supports_target_agent(item, target_agent),
             -(item.get("source_priority") or 0),
             item.get("qualified_name") or "",
         ),
@@ -118,6 +85,47 @@ def candidate_view(item: dict) -> dict:
     }
 
 
+def _candidate_resolution(
+    candidates: list,
+    *,
+    query: str,
+    default_registry: str,
+    target_agent: str | None,
+    external: bool,
+) -> dict | None:
+    if not candidates:
+        return None
+    ranked = rank_candidates(
+        candidates,
+        default_registry=default_registry,
+        target_agent=target_agent,
+        query=query,
+    )
+    if len(ranked) == 1:
+        return {
+            "ok": True,
+            "query": query,
+            "state": "resolved-external" if external else "resolved-private",
+            "resolved": candidate_view(ranked[0]),
+            "candidates": [],
+            "requires_confirmation": external,
+            "recommended_next_step": (
+                "confirm and run infinitas install by-name"
+                if external
+                else "run infinitas install by-name"
+            ),
+        }
+    return {
+        "ok": True,
+        "query": query,
+        "state": "ambiguous",
+        "resolved": None,
+        "candidates": [candidate_view(item) for item in ranked],
+        "requires_confirmation": True,
+        "recommended_next_step": "choose a qualified_name",
+    }
+
+
 def resolve_skill(*, payload: dict, query: str, target_agent: str | None = None) -> dict:
     default_registry = str(payload.get("default_registry") or "self")
     all_candidates = filter_candidates(payload.get("skills") or [], query)
@@ -126,82 +134,30 @@ def resolve_skill(*, payload: dict, query: str, target_agent: str | None = None)
     ]
     private_compatible = filter_by_agent(private_candidates, target_agent)
 
-    if len(private_compatible) == 1:
-        resolved = candidate_view(
-            rank_candidates(
-                private_compatible,
-                default_registry=default_registry,
-                target_agent=target_agent,
-                query=query,
-            )[0]
-        )
-        return {
-            "ok": True,
-            "query": query,
-            "state": "resolved-private",
-            "resolved": resolved,
-            "candidates": [],
-            "requires_confirmation": False,
-            "recommended_next_step": "run infinitas install by-name",
-        }
-
-    if len(private_compatible) > 1:
-        ranked = rank_candidates(
-            private_compatible,
-            default_registry=default_registry,
-            target_agent=target_agent,
-            query=query,
-        )
-        return {
-            "ok": True,
-            "query": query,
-            "state": "ambiguous",
-            "resolved": None,
-            "candidates": [candidate_view(item) for item in ranked],
-            "requires_confirmation": True,
-            "recommended_next_step": "choose a qualified_name",
-        }
+    private_result = _candidate_resolution(
+        private_compatible,
+        query=query,
+        default_registry=default_registry,
+        target_agent=target_agent,
+        external=False,
+    )
+    if private_result is not None:
+        return private_result
 
     external_candidates = [
         item for item in all_candidates if item.get("source_registry") != default_registry
     ]
     external_compatible = filter_by_agent(external_candidates, target_agent)
 
-    if len(external_compatible) == 1:
-        resolved = candidate_view(
-            rank_candidates(
-                external_compatible,
-                default_registry=default_registry,
-                target_agent=target_agent,
-                query=query,
-            )[0]
-        )
-        return {
-            "ok": True,
-            "query": query,
-            "state": "resolved-external",
-            "resolved": resolved,
-            "candidates": [],
-            "requires_confirmation": True,
-            "recommended_next_step": "confirm and run infinitas install by-name",
-        }
-
-    if len(external_compatible) > 1:
-        ranked = rank_candidates(
-            external_compatible,
-            default_registry=default_registry,
-            target_agent=target_agent,
-            query=query,
-        )
-        return {
-            "ok": True,
-            "query": query,
-            "state": "ambiguous",
-            "resolved": None,
-            "candidates": [candidate_view(item) for item in ranked],
-            "requires_confirmation": True,
-            "recommended_next_step": "choose a qualified_name",
-        }
+    external_result = _candidate_resolution(
+        external_compatible,
+        query=query,
+        default_registry=default_registry,
+        target_agent=target_agent,
+        external=True,
+    )
+    if external_result is not None:
+        return external_result
 
     if all_candidates:
         ranked = rank_candidates(

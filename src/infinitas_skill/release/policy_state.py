@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Any
 
 from infinitas_skill.policy.exception_policy import (
     ExceptionPolicyError,
@@ -11,9 +12,9 @@ from infinitas_skill.policy.exception_policy import (
     match_active_exceptions,
 )
 from infinitas_skill.policy.policy_pack import PolicyPackError, load_policy_domain_resolution
+from infinitas_skill.policy.review_evaluation import evaluate_review_state
 from infinitas_skill.policy.reviews import (
     ReviewPolicyError,
-    evaluate_review_state,
     review_decision_entries,
 )
 from infinitas_skill.policy.skill_identity import (
@@ -24,8 +25,10 @@ from infinitas_skill.policy.skill_identity import (
 )
 from infinitas_skill.release.git_state import ReleaseError, git_config_value
 
+JsonDict = dict[str, Any]
 
-def load_signing_config(root):
+
+def load_signing_config(root: Path) -> JsonDict:
     try:
         resolution = load_policy_domain_resolution(root, "signing")
         config = resolution["effective"]
@@ -48,11 +51,11 @@ def load_signing_config(root):
     }
 
 
-def signer_entries(path):
+def signer_entries(path: str | Path) -> list[str]:
     path_obj = Path(path)
     if not path_obj.exists():
         return []
-    entries = []
+    entries: list[str] = []
     for line in path_obj.read_text(encoding="utf-8").splitlines():
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
@@ -61,21 +64,21 @@ def signer_entries(path):
     return entries
 
 
-def signing_key_path(root, signing):
+def signing_key_path(root: Path, signing: JsonDict) -> str | None:
     env_value = os.environ.get(signing["signing_key_env"])
     if env_value:
         return env_value
     return git_config_value(root, "user.signingkey")
 
 
-def resolve_releaser_identity(root):
+def resolve_releaser_identity(root: Path) -> str | None:
     env_value = os.environ.get("INFINITAS_SKILL_RELEASER")
     if env_value and env_value.strip():
         return env_value.strip()
     return git_config_value(root, "user.name") or git_config_value(root, "user.email")
 
 
-def _default_namespace_report():
+def _default_namespace_report() -> JsonDict:
     return {
         "policy_path": None,
         "policy_version": None,
@@ -90,9 +93,9 @@ def _default_namespace_report():
     }
 
 
-def review_audit_entries(skill_dir):
+def review_audit_entries(skill_dir: str | Path) -> list[JsonDict]:
     _reviews, review_entries = review_decision_entries(Path(skill_dir))
-    entries = []
+    entries: list[JsonDict] = []
     for item in review_entries:
         reviewer = item.get("reviewer")
         decision = item.get("decision")
@@ -113,11 +116,11 @@ def review_audit_entries(skill_dir):
     return entries
 
 
-def collect_policy_state(skill_dir, root):
+def collect_policy_state(skill_dir: Path, root: Path) -> JsonDict:
     namespace_report = _default_namespace_report()
-    namespace_policy_sources = []
-    issues = []
-    warnings = []
+    namespace_policy_sources: list[JsonDict] = []
+    issues: list[str] = []
+    warnings: list[str] = []
 
     try:
         namespace_resolution = load_policy_domain_resolution(root, "namespace_policy")

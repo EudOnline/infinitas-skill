@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 from urllib import error, request
 
 from infinitas_skill.server.repo_checks import check_artifacts, check_database, check_repo, fail
@@ -10,9 +11,9 @@ from infinitas_skill.server.repo_checks import check_artifacts, check_database, 
 
 def normalize_health_url(api_url: str) -> str:
     base = api_url.rstrip("/")
-    if base.endswith("/healthz"):
+    if base.endswith("/api/v1/system/healthz"):
         return base
-    return f"{base}/healthz"
+    return f"{base}/api/v1/system/healthz"
 
 
 def check_api(api_url: str) -> dict:
@@ -32,7 +33,7 @@ def check_api(api_url: str) -> dict:
     return {"url": health_url, "ok": True, "service": payload.get("service") or ""}
 
 
-def emit_healthcheck_summary(summary: dict, *, as_json: bool):
+def emit_healthcheck_summary(summary: dict[str, Any], *, as_json: bool) -> None:
     if as_json:
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         return

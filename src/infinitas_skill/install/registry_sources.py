@@ -3,176 +3,40 @@
 from __future__ import annotations
 
 import logging
-import re
 import subprocess
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
 
+from infinitas_skill.install.registry_source_primitives import (
+    AUTH_MODES,
+    FEDERATION_MODES,
+    STALE_POLICIES,
+    TRUST_TIERS,
+    canonical_pin_ref,
+    extract_git_host,
+    normalized_allowed_hosts,
+    normalized_allowed_refs,
+    normalized_auth,
+    normalized_federation,
+    normalized_pin,
+    normalized_refresh_policy,
+    normalized_update_policy,
+    qualified_name,
+    registry_remote_url,
+    resolve_registry_root,
+    short_pin_value,
+)
 from infinitas_skill.policy.policy_pack import load_effective_policy_domain
 
 logger = logging.getLogger(__name__)
 
-TRUST_TIERS = {"private", "trusted", "public", "untrusted"}
-PIN_MODES = {"branch", "tag", "commit"}
-UPDATE_MODES = {"local-only", "track", "pinned", "remote-only"}
-AUTH_MODES = {"none", "token"}
-FEDERATION_MODES = {"mirror", "federated"}
-STALE_POLICIES = {"ignore", "warn", "fail"}
-COMMIT_RE = re.compile(r"^[0-9a-fA-F]{40}$")
-PUBLISHER_SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
-
-def registry_sources_path(root: Path) -> Path:
-    return root / "config" / "registry-sources.json"
-
-
-def load_registry_config(root: Path):
+def load_registry_config(root: Path) -> dict[str, Any]:
     return load_effective_policy_domain(root, "registry_sources")
 
 
-def registry_remote_url(reg):
-    if not isinstance(reg, dict):
-        return None
-    for key in ["url", "base_url"]:
-        value = reg.get(key)
-        if isinstance(value, str) and value.strip():
-            return value.strip()
-    return None
-
-
-def extract_git_host(url):
-    if not isinstance(url, str) or not url.strip():
-        return None
-    value = url.strip()
-    if value.startswith("git@") and ":" in value:
-        return value.split("@", 1)[1].split(":", 1)[0].lower()
-    parsed = urlparse(value)
-    if parsed.hostname:
-        return parsed.hostname.lower()
-    return None
-
-
-def _clean_string_list(values):
-    if not isinstance(values, list):
-        return []
-    result = []
-    for value in values:
-        if not isinstance(value, str):
-            continue
-        item = value.strip()
-        if item and item not in result:
-            result.append(item)
-    return result
-
-
-def _clean_string_mapping(values):
-    if not isinstance(values, dict):
-        return {}
-    result = {}
-    for raw_key, raw_value in values.items():
-        if not isinstance(raw_key, str) or not isinstance(raw_value, str):
-            continue
-        key = raw_key.strip()
-        value = raw_value.strip()
-        if key and value:
-            result[key] = value
-    return result
-
-
-def _qualified_name(name, publisher=None, fallback=None):
-    if isinstance(name, str) and name.strip():
-        skill_name = name.strip()
-        if isinstance(publisher, str) and publisher.strip():
-            return f"{publisher.strip()}/{skill_name}"
-        return skill_name
-    if isinstance(fallback, str) and fallback.strip():
-        return fallback.strip()
-    return None
-
-
-def short_pin_value(mode, value):
-    if not isinstance(value, str):
-        return value
-    item = value.strip()
-    if mode == "branch" and item.startswith("refs/heads/"):
-        return item[len("refs/heads/") :]
-    if mode == "tag" and item.startswith("refs/tags/"):
-        return item[len("refs/tags/") :]
-    if mode == "branch" and item.startswith("origin/"):
-        return item.split("/", 1)[1]
-    return item
-
-
-def canonical_pin_ref(mode, value):
-    short = short_pin_value(mode, value)
-    if not isinstance(short, str) or not short:
-        return None
-    if mode == "branch":
-        return short if short.startswith("refs/heads/") else f"refs/heads/{short}"
-    if mode == "tag":
-        return short if short.startswith("refs/tags/") else f"refs/tags/{short}"
-    return None
-
-
-def normalized_pin(reg):
-    pin = reg.get("pin") if isinstance(reg.get("pin"), dict) else {}
-    if not pin and isinstance(reg.get("branch"), str) and reg.get("branch").strip():
-        pin = {"mode": "branch", "value": reg.get("branch").strip()}
-    mode = pin.get("mode")
-    value = pin.get("value")
-    if isinstance(value, str):
-        value = value.strip()
-    return {"mode": mode, "value": value}
-
-
-def normalized_update_policy(reg):
-    policy = reg.get("update_policy") if isinstance(reg.get("update_policy"), dict) else {}
-    if reg.get("kind") == "http":
-        mode = policy.get("mode", "remote-only")
-        return {"mode": mode}
-    default_mode = "local-only" if reg.get("kind") == "local" or reg.get("local_path") else "track"
-    mode = policy.get("mode", default_mode)
-    return {"mode": mode}
-
-
-def normalized_auth(reg):
-    auth = reg.get("auth") if isinstance(reg.get("auth"), dict) else {}
-    mode = auth.get("mode", "none")
-    env = auth.get("env")
-    if isinstance(env, str):
-        env = env.strip()
-    return {"mode": mode, "env": env or None}
-
-
-def normalized_federation(reg):
-    federation = reg.get("federation") if isinstance(reg.get("federation"), dict) else {}
-    mode = federation.get("mode")
-    require_immutable_artifacts = federation.get("require_immutable_artifacts")
-    return {
-        "mode": mode,
-        "allowed_publishers": _clean_string_list(federation.get("allowed_publishers")),
-        "publisher_map": _clean_string_mapping(federation.get("publisher_map")),
-        "require_immutable_artifacts": (
-            require_immutable_artifacts if isinstance(require_immutable_artifacts, bool) else False
-        ),
-    }
-
-
-def normalized_refresh_policy(reg):
-    policy = reg.get("refresh_policy") if isinstance(reg.get("refresh_policy"), dict) else {}
-    interval_hours = policy.get("interval_hours")
-    max_cache_age_hours = policy.get("max_cache_age_hours")
-    stale_policy = policy.get("stale_policy")
-    return {
-        "interval_hours": interval_hours if isinstance(interval_hours, int) else interval_hours,
-        "max_cache_age_hours": (
-            max_cache_age_hours if isinstance(max_cache_age_hours, int) else max_cache_age_hours
-        ),
-        "stale_policy": stale_policy,
-    }
-
-
-def registry_uses_refresh_cache(reg):
+def registry_uses_refresh_cache(reg: object) -> bool:
     if not isinstance(reg, dict):
         return False
     if reg.get("kind") != "git":
@@ -186,14 +50,16 @@ def registry_uses_refresh_cache(reg):
     )
 
 
-def registry_is_resolution_candidate(reg, *, explicit_registry=False):
+def registry_is_resolution_candidate(
+    reg: dict[str, Any], *, explicit_registry: bool = False
+) -> bool:
     mode = normalized_federation(reg).get("mode")
     if mode == "mirror" and not explicit_registry:
         return False
     return True
 
 
-def apply_registry_federation(reg, item):
+def apply_registry_federation(reg: dict[str, Any], item: object) -> dict[str, Any] | None:
     if not isinstance(item, dict):
         return None
 
@@ -201,7 +67,7 @@ def apply_registry_federation(reg, item):
     federation = normalized_federation(reg)
     mode = federation.get("mode")
     upstream_publisher = clone.get("publisher")
-    upstream_qualified_name = _qualified_name(
+    upstream_qualified_name = qualified_name(
         clone.get("name"), upstream_publisher, fallback=clone.get("qualified_name")
     )
 
@@ -221,49 +87,18 @@ def apply_registry_federation(reg, item):
         upstream_publisher, upstream_publisher
     )
     clone["publisher"] = local_publisher
-    clone["qualified_name"] = _qualified_name(
+    clone["qualified_name"] = qualified_name(
         clone.get("name"), local_publisher, fallback=upstream_qualified_name
     )
     clone["publisher_mapping_applied"] = clone.get("publisher") != upstream_publisher
     return clone
 
 
-def normalized_allowed_hosts(reg):
-    hosts = [value.lower() for value in _clean_string_list(reg.get("allowed_hosts"))]
-    host = extract_git_host(registry_remote_url(reg))
-    if not hosts and host:
-        hosts = [host]
-    return hosts
-
-
-def normalized_allowed_refs(reg):
-    refs = _clean_string_list(reg.get("allowed_refs"))
-    pin = normalized_pin(reg)
-    default_ref = canonical_pin_ref(pin.get("mode"), pin.get("value"))
-    if not refs and default_ref:
-        refs = [default_ref]
-    return refs
-
-
-def resolve_registry_root(root: Path, reg):
-    local_path = reg.get("local_path")
-    if local_path:
-        path = Path(local_path)
-        if not path.is_absolute():
-            path = (root / path).resolve()
-        return path
-    if reg.get("kind") == "git":
-        return (root / ".cache" / "registries" / reg.get("name")).resolve()
-    if reg.get("name") == "self":
-        return root
-    return None
-
-
-def _git_output(repo: Path, *args):
+def _git_output(repo: Path, *args: str) -> str:
     return subprocess.check_output(["git", "-C", str(repo), *args], text=True).strip()
 
 
-def safe_git_output(repo: Path, *args):
+def safe_git_output(repo: Path, *args: str) -> str | None:
     try:
         return _git_output(repo, *args)
     except Exception:
@@ -271,7 +106,7 @@ def safe_git_output(repo: Path, *args):
         return None
 
 
-def git_repo_identity(repo: Path, preferred_tag=None):
+def git_repo_identity(repo: Path, preferred_tag: str | None = None) -> dict[str, Any]:
     if not (repo / ".git").exists():
         return {
             "commit": None,
@@ -300,16 +135,17 @@ def git_repo_identity(repo: Path, preferred_tag=None):
     }
 
 
-def registry_identity(root: Path, reg):
+def registry_identity(root: Path, reg: dict[str, Any]) -> dict[str, Any]:
     pin = normalized_pin(reg)
     update_policy = normalized_update_policy(reg)
     auth = normalized_auth(reg)
     federation = normalized_federation(reg)
     refresh_policy = normalized_refresh_policy(reg)
     reg_root = resolve_registry_root(root, reg)
-    preferred_tag = (
+    raw_preferred_tag = (
         short_pin_value(pin.get("mode"), pin.get("value")) if pin.get("mode") == "tag" else None
     )
+    preferred_tag = raw_preferred_tag if isinstance(raw_preferred_tag, str) else None
     remote_url = registry_remote_url(reg)
     if reg.get("kind") == "git" and reg_root and reg_root.exists():
         git_identity = git_repo_identity(reg_root, preferred_tag=preferred_tag)
@@ -353,7 +189,7 @@ def registry_identity(root: Path, reg):
     }
 
 
-def find_registry(cfg, name):
+def find_registry(cfg: dict[str, Any], name: str) -> dict[str, Any] | None:
     for reg in cfg.get("registries", []):
         if reg.get("name") == name:
             return reg
@@ -434,211 +270,15 @@ def _validate_refresh_policy(reg: dict, name: str) -> list[str]:
 def _validate_federation(
     reg: dict, name: str, kind: str, trust: str, update_policy: dict, root: Path
 ) -> list[str]:
-    """Validate federation configuration."""
-    errors = []
-    federation = reg.get("federation")
-    federation_cfg = normalized_federation(reg)
+    from infinitas_skill.install.registry_source_validation import validate_federation
 
-    if federation is not None and not isinstance(federation, dict):
-        errors.append(f"registry {name!r} federation must be an object when present")
-        return errors
-
-    if not isinstance(federation, dict):
-        return errors
-
-    if federation_cfg.get("mode") not in FEDERATION_MODES:
-        errors.append(
-            f"registry {name!r} federation.mode must be one of {sorted(FEDERATION_MODES)}"
-        )
-
-    # Validate allowed_publishers
-    if federation.get("allowed_publishers") is not None:
-        raw_publishers = federation.get("allowed_publishers")
-        if not isinstance(raw_publishers, list) or not all(
-            isinstance(item, str) and item.strip() for item in raw_publishers
-        ):
-            errors.append(
-                f"registry {name!r} federation.allowed_publishers must be an array of "
-                "non-empty strings"
-            )
-        else:
-            invalid_publishers = [
-                item.strip() for item in raw_publishers if not PUBLISHER_SLUG_RE.match(item.strip())
-            ]
-            if invalid_publishers:
-                errors.append(
-                    f"registry {name!r} federation.allowed_publishers must use valid "
-                    "publisher slugs"
-                )
-
-    # Validate publisher_map
-    if federation.get("publisher_map") is not None:
-        raw_map = federation.get("publisher_map")
-        if not isinstance(raw_map, dict):
-            errors.append(
-                f"registry {name!r} federation.publisher_map must be an object when present"
-            )
-        else:
-            invalid_keys = []
-            invalid_values = []
-            for raw_key, raw_value in raw_map.items():
-                key = raw_key.strip() if isinstance(raw_key, str) else None
-                value = raw_value.strip() if isinstance(raw_value, str) else None
-                if not key or not PUBLISHER_SLUG_RE.match(key):
-                    invalid_keys.append(raw_key)
-                if not value or not PUBLISHER_SLUG_RE.match(value):
-                    invalid_values.append(raw_value)
-            if invalid_keys:
-                errors.append(
-                    f"registry {name!r} federation.publisher_map keys must be valid publisher slugs"
-                )
-            if invalid_values:
-                errors.append(
-                    f"registry {name!r} federation.publisher_map values must be valid "
-                    "publisher slugs"
-                )
-
-    if federation.get("require_immutable_artifacts") is not None and not isinstance(
-        federation.get("require_immutable_artifacts"), bool
-    ):
-        errors.append(
-            f"registry {name!r} federation.require_immutable_artifacts must be boolean when present"
-        )
-
-    # Cross-field validation
-    reg_root = resolve_registry_root(root, reg)
-    if reg_root == root:
-        errors.append(f"registry {name!r} cannot federate the working repository root")
-
-    if federation_cfg.get("mode") == "federated" and trust == "untrusted":
-        errors.append(
-            f"registry {name!r} untrusted registries cannot use federation.mode='federated'"
-        )
-
-    if (
-        federation_cfg.get("mode") == "federated"
-        and kind == "git"
-        and update_policy.get("mode") == "track"
-    ):
-        errors.append(
-            f"registry {name!r} federated git registries cannot use update_policy.mode='track'"
-        )
-
-    allowed_publishers = federation_cfg.get("allowed_publishers")
-    publisher_map = federation_cfg.get("publisher_map")
-    if allowed_publishers and publisher_map:
-        outside = sorted(key for key in publisher_map if key not in allowed_publishers)
-        if outside:
-            errors.append(
-                f"registry {name!r} publisher_map keys must be listed in "
-                "federation.allowed_publishers"
-            )
-
-    return errors
+    return validate_federation(reg, name, kind, trust, update_policy, root)
 
 
 def _validate_git_registry(reg: dict, name: str, trust: str, root: Path) -> list[str]:
-    """Validate git-specific registry fields."""
-    errors = []
-    local_path = reg.get("local_path")
-    branch = reg.get("branch")
-    pin = normalized_pin(reg)
-    update_policy = normalized_update_policy(reg)
-    allowed_refs = normalized_allowed_refs(reg)
-    allowed_hosts = normalized_allowed_hosts(reg)
+    from infinitas_skill.install.registry_source_validation import validate_git_registry
 
-    url = reg.get("url")
-    if not isinstance(url, str) or not url.strip():
-        errors.append(f"git registry {name!r} missing non-empty url")
-    if not isinstance(reg.get("pin"), dict):
-        errors.append(f"git registry {name!r} missing pin object")
-    if not isinstance(reg.get("update_policy"), dict):
-        errors.append(f"git registry {name!r} missing update_policy object")
-
-    # Pin validation
-    if not isinstance(pin.get("mode"), str) or pin.get("mode") not in PIN_MODES:
-        errors.append(f"registry {name!r} pin.mode must be one of {sorted(PIN_MODES)}")
-    if not isinstance(pin.get("value"), str) or not pin.get("value"):
-        errors.append(f"registry {name!r} pin.value must be a non-empty string")
-    if (
-        pin.get("mode") == "commit"
-        and isinstance(pin.get("value"), str)
-        and not COMMIT_RE.match(pin.get("value"))
-    ):
-        errors.append(f"registry {name!r} commit pins must use a full 40-character SHA")
-
-    # Branch validation
-    if branch is not None and (not isinstance(branch, str) or not branch.strip()):
-        errors.append(f"registry {name!r} branch must be a non-empty string when set")
-    if (
-        branch
-        and pin.get("mode") == "branch"
-        and short_pin_value("branch", pin.get("value")) != branch.strip()
-    ):
-        errors.append(f"registry {name!r} branch must match pin.value for branch pins")
-
-    # Update policy validation
-    if (
-        not isinstance(update_policy.get("mode"), str)
-        or update_policy.get("mode") not in UPDATE_MODES
-    ):
-        errors.append(f"registry {name!r} update_policy.mode must be one of {sorted(UPDATE_MODES)}")
-
-    # Allowed hosts validation
-    if reg.get("allowed_hosts") is not None:
-        raw_hosts = reg.get("allowed_hosts")
-        if not isinstance(raw_hosts, list) or not all(
-            isinstance(item, str) and item.strip() for item in raw_hosts
-        ):
-            errors.append(f"registry {name!r} allowed_hosts must be an array of non-empty strings")
-    host = extract_git_host(url)
-    if host and not allowed_hosts:
-        errors.append(f"registry {name!r} must declare allowed_hosts for remote git sources")
-    if host and host not in allowed_hosts:
-        errors.append(f"registry {name!r} url host {host!r} is not present in allowed_hosts")
-
-    # Allowed refs validation
-    if reg.get("allowed_refs") is not None:
-        raw_refs = reg.get("allowed_refs")
-        if not isinstance(raw_refs, list) or not all(
-            isinstance(item, str) and item.strip() for item in raw_refs
-        ):
-            errors.append(f"registry {name!r} allowed_refs must be an array of non-empty strings")
-    desired_ref = canonical_pin_ref(pin.get("mode"), pin.get("value"))
-    if pin.get("mode") in {"branch", "tag"}:
-        if not allowed_refs:
-            errors.append(f"registry {name!r} must declare allowed_refs for branch/tag pins")
-        elif desired_ref not in allowed_refs:
-            errors.append(
-                f"registry {name!r} pin ref {desired_ref!r} must be included in allowed_refs"
-            )
-
-    # Cross-field validation
-    if update_policy.get("mode") == "track" and pin.get("mode") != "branch":
-        errors.append(f"registry {name!r} track policy requires a branch pin")
-    if update_policy.get("mode") == "pinned" and pin.get("mode") not in {"tag", "commit"}:
-        errors.append(f"registry {name!r} pinned policy requires a tag or commit pin")
-    if update_policy.get("mode") == "local-only" and not local_path:
-        errors.append(f"registry {name!r} local-only policy requires local_path")
-    if local_path is not None and (not isinstance(local_path, str) or not local_path.strip()):
-        errors.append(f"registry {name!r} local_path must be a non-empty string when set")
-    if local_path and update_policy.get("mode") != "local-only":
-        errors.append(
-            f"registry {name!r} git registries with local_path must use "
-            "update_policy.mode=local-only"
-        )
-    if trust == "public" and update_policy.get("mode") == "track":
-        errors.append(f"registry {name!r} public registries must use pinned or local-only updates")
-    if trust == "untrusted" and update_policy.get("mode") != "local-only":
-        errors.append(f"registry {name!r} untrusted registries may only use local-only mode")
-
-    reg_root = resolve_registry_root(root, reg)
-    if local_path and reg_root == root and update_policy.get("mode") != "local-only":
-        errors.append(
-            f"registry {name!r} cannot sync the working repository root outside local-only mode"
-        )
-
-    return errors
+    return validate_git_registry(reg, name, trust, root)
 
 
 def _validate_local_registry(reg: dict, name: str) -> list[str]:
@@ -708,7 +348,7 @@ def _validate_http_registry(reg: dict, name: str, trust: str) -> list[str]:
     return errors
 
 
-def validate_registry_config(root: Path, cfg):
+def validate_registry_config(root: Path, cfg: dict[str, Any]) -> list[str]:
     errors = []
     registries = cfg.get("registries")
     if not isinstance(registries, list) or not registries:

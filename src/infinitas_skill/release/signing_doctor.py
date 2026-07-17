@@ -6,6 +6,7 @@ import argparse
 import json
 import subprocess
 from pathlib import Path
+from typing import Any
 
 from infinitas_skill.release.attestation import (
     AttestationError,
@@ -15,17 +16,12 @@ from infinitas_skill.release.attestation import (
 from infinitas_skill.release.signing_bootstrap import (
     SigningBootstrapError,
     parse_allowed_signers,
-    public_key_from_key_path,
-    signer_identities_for_key,
 )
+from infinitas_skill.release.signing_doctor_key import make_check
 from infinitas_skill.release.state import (
     ROOT,
-    ReleaseError,
-    collect_release_state,
     load_signing_config,
     resolve_releaser_identity,
-    resolve_skill,
-    signing_key_path,
 )
 
 
@@ -60,18 +56,7 @@ def parse_signing_doctor_args(
     return build_signing_doctor_parser(prog=prog).parse_args(argv)
 
 
-def make_check(check_id, status, summary, *, detail=None, fixes=None, data=None):
-    return {
-        "id": check_id,
-        "status": status,
-        "summary": summary,
-        "detail": detail,
-        "fixes": fixes or [],
-        "data": data or {},
-    }
-
-
-def summarize_overall(checks):
+def summarize_overall(checks: list[dict[str, Any]]) -> str:
     statuses = [check["status"] for check in checks]
     if "fail" in statuses:
         return "fail"
@@ -80,8 +65,8 @@ def summarize_overall(checks):
     return "ok"
 
 
-def release_fix_suggestions(error, skill_name, branch=None):
-    fixes = []
+def release_fix_suggestions(error: str, skill_name: str, branch: str | None = None) -> list[str]:
+    fixes: list[str] = []
     if "worktree is dirty" in error:
         fixes.append(
             "Commit or stash local changes, then rerun `python3 scripts/doctor-signing.py "
@@ -102,11 +87,11 @@ def release_fix_suggestions(error, skill_name, branch=None):
     elif "expected release tag is missing" in error:
         fixes.append(
             "Create and push the release tag with "
-            f"`scripts/release-skill.sh {skill_name} --push-tag`"
+            f"`infinitas release publish {skill_name} --push-tag`"
         )
     elif "not pushed to" in error:
         fixes.append(
-            f"Push the release tag with `scripts/release-skill.sh {skill_name} --push-tag` "
+            f"Push the release tag with `infinitas release publish {skill_name} --push-tag` "
             "or `git push origin refs/tags/...`"
         )
     elif "did not verify against repo-managed signers" in error:
@@ -117,7 +102,7 @@ def release_fix_suggestions(error, skill_name, branch=None):
     return fixes
 
 
-def render_signing_doctor_report(report) -> str:
+def render_signing_doctor_report(report: dict[str, Any]) -> str:
     lines = [
         "doctor: signing bootstrap and release readiness",
         f"overall: {report['overall_status'].upper()}",
@@ -224,94 +209,9 @@ def _check_signing_key(
     identity: str | None,
     root: Path,
 ) -> tuple[list[str], list[dict]]:
-    """Validate signing key configuration. Returns (inferred_identities, checks)."""
-    configured_key = signing_key_path(root, signing)
-    if not configured_key:
-        identity_hint = identity or "release-signer"
-        return [], [
-            make_check(
-                "signing-key",
-                "fail",
-                "No SSH signing key is configured for stable release tags",
-                detail=(
-                    f"Set `{signing['signing_key_env']}` or `git config user.signingkey` "
-                    "to a private SSH key path."
-                ),
-                fixes=[
-                    "Create a key with "
-                    f"`uv run infinitas release bootstrap-signing init-key "
-                    f"--identity {identity_hint} --output "
-                    "~/.ssh/infinitas-skill-release-signing`",
-                    "Point git at that key with "
-                    "`uv run infinitas release bootstrap-signing configure-git "
-                    "--key ~/.ssh/infinitas-skill-release-signing`",
-                ],
-            )
-        ]
+    from infinitas_skill.release.signing_doctor_key import check_signing_key
 
-    key_path = Path(configured_key).expanduser()
-    if not key_path.exists():
-        return [], [
-            make_check(
-                "signing-key",
-                "fail",
-                f"Configured SSH signing key does not exist: {key_path}",
-                detail=(
-                    "Release tag creation cannot succeed until the configured "
-                    "private key path is present."
-                ),
-                fixes=[
-                    "Update the key path in git config or recreate the key with "
-                    "`uv run infinitas release bootstrap-signing init-key ...`"
-                ],
-            )
-        ]
-
-    try:
-        configured_public_key = public_key_from_key_path(key_path)
-    except SigningBootstrapError as exc:
-        return [], [
-            make_check(
-                "signing-key",
-                "fail",
-                "Cannot read configured SSH signing key",
-                detail=str(exc),
-            )
-        ]
-
-    inferred_identities = signer_identities_for_key(allowed_entries, configured_public_key)
-    if allowed_entries and not inferred_identities:
-        identity_hint = identity or "release-signer"
-        return [], [
-            make_check(
-                "signing-key-trust",
-                "fail",
-                "Configured SSH signing key is not trusted by the repository",
-                detail=(
-                    f"The key at `{key_path}` is not present in `{signing['allowed_signers_rel']}`."
-                ),
-                fixes=[
-                    "Run "
-                    f"`uv run infinitas release bootstrap-signing "
-                    f"add-allowed-signer --identity {identity_hint} "
-                    f"--key {key_path}`",
-                    f"Commit and push the updated `{signing['allowed_signers_rel']}` "
-                    "before tagging",
-                ],
-            )
-        ]
-
-    detail = f"Configured key path: {key_path}"
-    if inferred_identities:
-        detail += "; matched identities: " + ", ".join(inferred_identities)
-    return inferred_identities, [
-        make_check(
-            "signing-key",
-            "ok",
-            "An SSH signing key is configured for release tags",
-            detail=detail,
-        )
-    ]
+    return check_signing_key(signing, allowed_entries, identity, root)
 
 
 def _check_git_gpg_format(root: Path) -> list[dict]:
@@ -506,7 +406,7 @@ def _check_release_tag(skill_state: dict, skill_name: str) -> list[dict]:
                 detail="Tag signing is ready once the bootstrap checks above are green.",
                 fixes=[
                     f"Create and push the first stable tag with "
-                    f"`scripts/release-skill.sh {skill_name} --push-tag`"
+                    f"`infinitas release publish {skill_name} --push-tag`"
                 ],
             )
         ]
@@ -527,7 +427,7 @@ def _check_release_tag(skill_state: dict, skill_name: str) -> list[dict]:
                 "release-tag",
                 "info",
                 f"Release tag {expected_tag} is signed locally but not pushed yet",
-                fixes=[f"Push it with `scripts/release-skill.sh {skill_name} --push-tag`"],
+                fixes=[f"Push it with `infinitas release publish {skill_name} --push-tag`"],
             )
         ]
 
@@ -540,7 +440,7 @@ def _check_release_tag(skill_state: dict, skill_name: str) -> list[dict]:
             detail=detail,
             fixes=[
                 "Recreate it with "
-                f"`scripts/release-skill-tag.sh {skill_name} --create --force` "
+                f"`infinitas release tag {skill_name} --create --force` "
                 "after fixing the signer bootstrap"
             ],
         )
@@ -569,7 +469,7 @@ def _check_attestation(
                     detail=str(exc),
                     fixes=[
                         "Repair the signing bootstrap or regenerate provenance with "
-                        "`scripts/release-skill.sh <skill> --write-provenance`"
+                        "`infinitas release publish <skill> --write-attestation`"
                     ],
                 )
             ]
@@ -591,7 +491,7 @@ def _check_attestation(
                 detail=(
                     "Doctor cannot verify an attestation bundle until the JSON payload exists."
                 ),
-                fixes=["Create it with `scripts/release-skill.sh <skill> --write-provenance`"],
+                fixes=["Create it with `infinitas release publish <skill> --write-attestation`"],
             )
         ]
 
@@ -606,8 +506,8 @@ def _check_attestation(
             ),
             fixes=[
                 "Write it with "
-                "`scripts/release-skill.sh <skill> --notes-out "
-                "/tmp/<skill>-release.md --write-provenance`"
+                "`infinitas release publish <skill> --notes-out "
+                "/tmp/<skill>-release.md --write-attestation`"
             ],
         )
     ]
@@ -616,130 +516,8 @@ def _check_attestation(
 # ── Main report builder ───────────────────────────────────────────────────────
 
 
-def build_signing_doctor_report(
-    *,
-    skill: str | None = None,
-    identity: str | None = None,
-    provenance: str | None = None,
-    root: Path = ROOT,
-):
-    checks = []
-    skill_dir = None
-    skill_state = None
-    skill_name = skill or "<skill>"
-    inferred_signer_identities = []
-    expected_provenance = None
-
-    # 1. Load signing config
-    signing, config_checks = _check_signing_config(root)
-    if config_checks:
-        return {
-            "overall_status": "fail",
-            "skill": None,
-            "expected_provenance": None,
-            "inferred_signer_identities": [],
-            "checks": config_checks,
-        }
-    signing = signing or {}
-
-    # 2. Check allowed signers
-    allowed_entries, signers_checks = _check_allowed_signers(signing, identity)
-    checks.extend(signers_checks)
-
-    # 3. Check signing key
-    key_identities, key_checks = _check_signing_key(signing, allowed_entries, identity, root)
-    inferred_signer_identities = key_identities
-    checks.extend(key_checks)
-
-    # 4. Check git gpg.format
-    checks.extend(_check_git_gpg_format(root))
-
-    # 5. Resolve skill and check release state
-    if skill:
-        try:
-            skill_dir = resolve_skill(root, skill)
-            skill_name = skill_dir.name
-            skill_state = collect_release_state(skill_dir, mode="preflight", root=root)
-        except ReleaseError as exc:
-            checks.append(
-                make_check(
-                    "release-preflight",
-                    "fail",
-                    f"Cannot resolve release state for {skill}",
-                    detail=str(exc),
-                )
-            )
-        else:
-            skill_meta = skill_state.get("skill") or {}
-            publisher = skill_meta.get("publisher")
-
-            # Determine provenance path
-            has_provenance_artifact = False
-            if provenance:
-                has_provenance_artifact = Path(provenance).expanduser().resolve().exists()
-            expected_provenance_candidate = (
-                Path(root)
-                / "catalog"
-                / "provenance"
-                / f"{skill_meta.get('name')}-{skill_meta.get('version')}.json"
-            )
-            if not provenance and expected_provenance_candidate.exists():
-                has_provenance_artifact = True
-
-            # 6. Check release preflight
-            prov, preflight_checks = _check_release_preflight(
-                skill_state, skill_name, has_provenance_artifact, root
-            )
-            if prov and expected_provenance is None:
-                expected_provenance = prov
-            checks.extend(preflight_checks)
-
-            # 7. Check namespace signer policy
-            checks.extend(
-                _check_namespace_signer_policy(skill_state, publisher, inferred_signer_identities)
-            )
-
-            # 8. Check namespace releaser policy
-            checks.extend(_check_namespace_releaser_policy(skill_state, publisher, root))
-
-            # 9. Check release tag
-            checks.extend(_check_release_tag(skill_state, skill_name))
-
-    # 10. Check attestation
-    provenance_path = Path(provenance).resolve() if provenance else expected_provenance
-    checks.extend(_check_attestation(provenance_path, provenance, identity, root))
-
-    return {
-        "overall_status": summarize_overall(checks),
-        "skill": str(skill_dir.relative_to(root)) if skill_dir else None,
-        "expected_provenance": (
-            str(provenance_path.relative_to(root))
-            if provenance_path and provenance_path.is_relative_to(root)
-            else (str(provenance_path) if provenance_path else None)
-        ),
-        "inferred_signer_identities": inferred_signer_identities,
-        "checks": checks,
-    }
-
-
-def signing_doctor_main(argv: list[str] | None = None) -> int:
-    args = parse_signing_doctor_args(argv)
-    report = build_signing_doctor_report(
-        skill=args.skill,
-        identity=args.identity,
-        provenance=args.provenance,
-        root=ROOT,
-    )
-    if args.json:
-        print(json.dumps(report, ensure_ascii=False, indent=2))
-    else:
-        print(render_signing_doctor_report(report))
-    return 1 if report["overall_status"] == "fail" else 0
-
-
 __all__ = [
     "ROOT",
-    "build_signing_doctor_report",
     "build_signing_doctor_parser",
     "configure_signing_doctor_parser",
     "git_config_value",
@@ -747,6 +525,5 @@ __all__ = [
     "parse_signing_doctor_args",
     "release_fix_suggestions",
     "render_signing_doctor_report",
-    "signing_doctor_main",
     "summarize_overall",
 ]

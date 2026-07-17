@@ -9,6 +9,7 @@ import subprocess
 import tarfile
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from infinitas_skill.server.repo_checks import (
     fail,
@@ -103,7 +104,7 @@ def build_prune_summary(root: Path, keep_last: int) -> dict:
     }
 
 
-def emit_backup_summary(summary: dict, *, as_json: bool):
+def emit_backup_summary(summary: dict[str, Any], *, as_json: bool) -> None:
     if as_json:
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         return
@@ -113,7 +114,7 @@ def emit_backup_summary(summary: dict, *, as_json: bool):
     print(f"OK: artifact archive {summary['files']['artifacts']}")
 
 
-def emit_prune_summary(summary: dict, *, as_json: bool):
+def emit_prune_summary(summary: dict[str, Any], *, as_json: bool) -> None:
     if as_json:
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         return

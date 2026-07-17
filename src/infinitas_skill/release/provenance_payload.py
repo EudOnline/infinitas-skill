@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from pathlib import Path
+from typing import Any, TypeVar
 
-from infinitas_skill.install.distribution import inspect_distribution_bundle
+from infinitas_skill.install.distribution_core import inspect_distribution_bundle
 from infinitas_skill.install.registry_sources import (
     find_registry,
     load_registry_config,
@@ -14,10 +16,13 @@ from infinitas_skill.install.registry_sources import (
 from infinitas_skill.install.service import plan_from_skill_dir
 from infinitas_skill.release.state import ROOT, ReleaseError, collect_release_state, resolve_skill
 
+JsonDict = dict[str, Any]
+T = TypeVar("T")
 
-def unique(values):
-    result = []
-    seen = set()
+
+def unique(values: Iterable[T | None]) -> list[T]:
+    result: list[T] = []
+    seen: set[T] = set()
     for value in values:
         if not value or value in seen:
             continue
@@ -27,15 +32,20 @@ def unique(values):
 
 
 def collect_release_context(
-    skill,
-    root=None,
-    releaser=None,
-    ignore_errors=None,
-    release_mode="stable-release",
-):
+    skill: str | Path,
+    root: str | Path | None = None,
+    releaser: str | None = None,
+    ignore_errors: list[str] | None = None,
+    release_mode: str = "stable-release",
+) -> JsonDict:
     root = Path(root or ROOT).resolve()
     skill_dir = resolve_skill(root, skill)
-    state = collect_release_state(skill_dir, mode=release_mode, root=root)
+    state = collect_release_state(
+        skill_dir,
+        mode=release_mode,
+        root=root,
+        releaser=releaser,
+    )
     ignore_errors = ignore_errors or []
     filtered_errors = [
         error for error in state["errors"] if not any(ignored in error for ignored in ignore_errors)
@@ -66,7 +76,7 @@ def collect_release_context(
         + list(dependency_plan.get("registries_consulted", []))
         + [step.get("registry") for step in dependency_plan.get("steps", [])]
     )
-    resolved_registries = []
+    resolved_registries: list[JsonDict] = []
     for name in consulted_registries:
         reg = find_registry(registry_cfg, name)
         if reg:
@@ -111,7 +121,7 @@ def collect_release_context(
     }
 
 
-def build_common_payload(context):
+def build_common_payload(context: JsonDict) -> JsonDict:
     meta = context["meta"]
     state = context["state"]
     release_mode = context.get("release_mode") or "stable-release"
@@ -178,7 +188,7 @@ def build_common_payload(context):
     }
 
 
-def build_distribution_payload(args):
+def build_distribution_payload(args: Any) -> JsonDict | None:
     if not args.distribution_bundle_path:
         return None
     bundle_source_path = getattr(args, "distribution_bundle_source_path", None)
@@ -204,7 +214,9 @@ def build_distribution_payload(args):
     }
 
 
-def build_transparency_log_payload(args, attestation_config):
+def build_transparency_log_payload(
+    args: Any, attestation_config: JsonDict | None
+) -> JsonDict | None:
     transparency_cfg = (attestation_config or {}).get("transparency_log") or {}
     mode = transparency_cfg.get("mode", "disabled")
     entry_path = getattr(args, "transparency_log_entry_path", None)

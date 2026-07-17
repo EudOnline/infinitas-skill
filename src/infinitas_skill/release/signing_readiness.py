@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from typing import Any
 
 from infinitas_skill.release.attestation import AttestationError, verify_attestation
 from infinitas_skill.release.signing_bootstrap import (
@@ -21,6 +22,8 @@ from infinitas_skill.release.state import (
     resolve_skill,
     signing_key_path,
 )
+
+JsonDict = dict[str, Any]
 
 
 def configure_signing_readiness_parser(
@@ -52,7 +55,7 @@ def parse_signing_readiness_args(
     return build_signing_readiness_parser(prog=prog).parse_args(argv)
 
 
-def status_from(findings):
+def status_from(findings: JsonDict) -> str:
     if findings.get("errors"):
         return "fail"
     if findings.get("warnings"):
@@ -60,7 +63,7 @@ def status_from(findings):
     return "ok"
 
 
-def ensure_skill_targets(root, requested):
+def ensure_skill_targets(root: str | Path, requested: list[str]) -> list[str]:
     if requested:
         return requested
     active_root = Path(root) / "skills" / "active"
@@ -73,9 +76,9 @@ def ensure_skill_targets(root, requested):
     ]
 
 
-def summarize_trusted_signers(signing):
-    warnings = []
-    errors = []
+def summarize_trusted_signers(signing: JsonDict) -> tuple[list[JsonDict], JsonDict]:
+    warnings: list[str] = []
+    errors: list[str] = []
     try:
         entries = parse_allowed_signers(signing["allowed_signers_path"])
     except SigningBootstrapError as exc:
@@ -83,7 +86,7 @@ def summarize_trusted_signers(signing):
         errors.append(str(exc))
     if not entries:
         warnings.append("no trusted signer entries are committed yet")
-    identities = []
+    identities: list[str] = []
     for entry in entries:
         identity = entry.get("identity")
         if identity and identity not in identities:
@@ -99,9 +102,11 @@ def summarize_trusted_signers(signing):
     return entries, summary
 
 
-def summarize_signing_key(root, signing, allowed_entries):
-    warnings = []
-    errors = []
+def summarize_signing_key(
+    root: Path, signing: JsonDict, allowed_entries: list[JsonDict]
+) -> JsonDict:
+    warnings: list[str] = []
+    errors: list[str] = []
     key_value = signing_key_path(root, signing)
     key_path = Path(key_value).expanduser() if key_value else None
     exists = bool(key_path and key_path.exists())
@@ -112,6 +117,7 @@ def summarize_signing_key(root, signing, allowed_entries):
     elif not exists:
         warnings.append(f"configured SSH signing key does not exist: {key_path}")
     else:
+        assert key_path is not None
         try:
             public_key = public_key_from_key_path(key_path)
         except SigningBootstrapError as exc:
@@ -136,7 +142,7 @@ def summarize_signing_key(root, signing, allowed_entries):
     }
 
 
-def summarize_provenance(provenance_path, *, root=ROOT):
+def summarize_provenance(provenance_path: str | Path, *, root: Path = ROOT) -> JsonDict:
     provenance_path = Path(provenance_path)
     if not provenance_path.exists():
         return {
@@ -172,7 +178,7 @@ def summarize_provenance(provenance_path, *, root=ROOT):
     }
 
 
-def summarize_skill(root, target):
+def summarize_skill(root: Path, target: str) -> JsonDict:
     try:
         skill_dir = resolve_skill(root, target)
     except ReleaseError as exc:
@@ -207,8 +213,8 @@ def summarize_skill(root, target):
         not authorized_releasers or releaser_identity in authorized_releasers
     )
 
-    warnings = []
-    errors = []
+    warnings: list[str] = []
+    errors: list[str] = []
 
     if not local_tag.get("exists"):
         warnings.append("stable release tag is missing")
@@ -255,7 +261,7 @@ def summarize_skill(root, target):
     }
 
 
-def build_signing_readiness_report(root, skill_targets):
+def build_signing_readiness_report(root: Path, skill_targets: list[str]) -> JsonDict:
     signing = load_signing_config(root)
     allowed_entries, trusted_signers = summarize_trusted_signers(signing)
     signing_key = summarize_signing_key(root, signing, allowed_entries)
@@ -288,7 +294,7 @@ def build_signing_readiness_report(root, skill_targets):
     }
 
 
-def render_signing_readiness_report(report) -> str:
+def render_signing_readiness_report(report: JsonDict) -> str:
     lines = [f"overall: {report['overall_status'].upper()}"]
     trusted = report.get("trusted_signers") or {}
     lines.append(

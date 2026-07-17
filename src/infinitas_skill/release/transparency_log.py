@@ -2,47 +2,46 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 from pathlib import Path
+from typing import Any
 from urllib import error, request
+
+from infinitas_skill.hashing import sha256_file
 
 
 class TransparencyLogError(Exception):
     pass
 
 
-def load_json(path):
+JsonDict = dict[str, Any]
+
+
+def load_json(path: str | Path) -> JsonDict:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def write_json(path, payload):
+def write_json(path: str | Path, payload: object) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def sha256_file(path):
-    digest = hashlib.sha256()
-    with Path(path).open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def _require_string(value, label):
+def _require_string(value: object, label: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise TransparencyLogError(f"{label} must be a non-empty string")
     return value
 
 
-def _require_non_negative_int(value, label):
+def _require_non_negative_int(value: object, label: str) -> int:
     if not isinstance(value, int) or value < 0:
         raise TransparencyLogError(f"{label} must be a non-negative integer")
     return value
 
 
-def build_transparency_log_request(provenance_path, payload=None):
+def build_transparency_log_request(
+    provenance_path: str | Path, payload: JsonDict | None = None
+) -> JsonDict:
     provenance_path = Path(provenance_path).resolve()
     payload = payload or load_json(provenance_path)
     attestation = payload.get("attestation") or {}
@@ -67,7 +66,9 @@ def build_transparency_log_request(provenance_path, payload=None):
     }
 
 
-def normalize_transparency_log_entry(response_payload, *, endpoint, request_payload):
+def normalize_transparency_log_entry(
+    response_payload: object, *, endpoint: str, request_payload: JsonDict
+) -> JsonDict:
     if not isinstance(response_payload, dict):
         raise TransparencyLogError("transparency log returned a malformed JSON object")
 
@@ -120,7 +121,11 @@ def normalize_transparency_log_entry(response_payload, *, endpoint, request_payl
     }
 
 
-def resolve_transparency_log_entry_path(provenance_path, descriptor=None, root=None):
+def resolve_transparency_log_entry_path(
+    provenance_path: str | Path,
+    descriptor: object = None,
+    root: str | Path | None = None,
+) -> Path:
     provenance_path = Path(provenance_path).resolve()
     descriptor = descriptor if isinstance(descriptor, dict) else {}
     entry_ref = descriptor.get("entry_path")
@@ -134,13 +139,13 @@ def resolve_transparency_log_entry_path(provenance_path, descriptor=None, root=N
     return provenance_path.with_name(f"{provenance_path.stem}.transparency.json")
 
 
-def _relative_or_absolute(root, path):
+def _relative_or_absolute(root: str | Path, path: str | Path) -> str:
     root = Path(root).resolve()
     path = Path(path).resolve()
     return str(path.relative_to(root)) if path.is_relative_to(root) else str(path)
 
 
-def verify_transparency_log_entry(entry_path, provenance_path):
+def verify_transparency_log_entry(entry_path: str | Path, provenance_path: str | Path) -> JsonDict:
     entry_path = Path(entry_path).resolve()
     provenance_path = Path(provenance_path).resolve()
     payload = load_json(entry_path)
@@ -158,12 +163,15 @@ def verify_transparency_log_entry(entry_path, provenance_path):
     )
 
 
-def summarize_transparency_log_state(provenance_path, payload=None, root=None):
+def summarize_transparency_log_state(
+    provenance_path: str | Path,
+    payload: JsonDict | None = None,
+    root: str | Path | None = None,
+) -> JsonDict | None:
     provenance_path = Path(provenance_path).resolve()
-    payload = payload or load_json(provenance_path)
-    descriptor = (
-        payload.get("transparency_log") if isinstance(payload.get("transparency_log"), dict) else {}
-    )
+    resolved_payload = payload or load_json(provenance_path)
+    descriptor_raw = resolved_payload.get("transparency_log")
+    descriptor: JsonDict = dict(descriptor_raw) if isinstance(descriptor_raw, dict) else {}
     if not descriptor:
         default_entry_path = provenance_path.with_name(f"{provenance_path.stem}.transparency.json")
         if not default_entry_path.exists():
@@ -204,7 +212,9 @@ def summarize_transparency_log_state(provenance_path, payload=None, root=None):
     return summary
 
 
-def submit_transparency_log_entry(endpoint, request_payload, timeout_seconds=5):
+def submit_transparency_log_entry(
+    endpoint: str, request_payload: JsonDict, timeout_seconds: int = 5
+) -> JsonDict:
     endpoint = _require_string(endpoint, "transparency log endpoint")
     if not isinstance(timeout_seconds, int) or timeout_seconds < 1:
         raise TransparencyLogError("transparency log timeout_seconds must be a positive integer")

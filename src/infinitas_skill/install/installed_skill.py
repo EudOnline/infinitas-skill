@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Any
+
 from infinitas_skill.install.install_manifest import InstallManifestError, load_install_manifest
 
 
@@ -9,7 +12,9 @@ class InstalledSkillError(Exception):
     pass
 
 
-def load_installed_skill(target_dir, requested_name):
+def load_installed_skill(
+    target_dir: str | Path, requested_name: str
+) -> tuple[dict[str, Any], dict[str, Any]]:
     try:
         manifest = load_install_manifest(target_dir)
     except InstallManifestError as exc:

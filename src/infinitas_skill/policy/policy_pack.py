@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, cast
 
@@ -34,18 +35,18 @@ SELECTION_KEYS = {
 
 
 class PolicyPackError(Exception):
-    def __init__(self, errors):
+    def __init__(self, errors: str | Sequence[object]) -> None:
         if isinstance(errors, str):
             errors = [errors]
         self.errors = [str(item) for item in errors if str(item)]
         super().__init__("; ".join(self.errors))
 
 
-def _is_nonempty_string(value):
+def _is_nonempty_string(value: object) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
 
-def _load_json_object(path: Path, missing_label: str):
+def _load_json_object(path: Path, missing_label: str) -> dict[str, Any]:
     if not path.exists():
         raise PolicyPackError([f"missing {missing_label}: {path}"])
     try:
@@ -57,8 +58,8 @@ def _load_json_object(path: Path, missing_label: str):
     return payload
 
 
-def _validate_selection(payload):
-    errors = []
+def _validate_selection(payload: dict[str, Any]) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
     unknown = sorted(set(payload) - SELECTION_KEYS)
     if unknown:
         errors.append(f"policy-pack selection has unsupported keys: {', '.join(unknown)}")
@@ -79,9 +80,9 @@ def _validate_selection(payload):
     if not isinstance(active_packs, list) or not active_packs:
         errors.append("policy-pack selection active_packs must be a non-empty array")
         return errors, []
-    clean_names = []
-    duplicates = []
-    seen = set()
+    clean_names: list[str] = []
+    duplicates: list[str] = []
+    seen: set[str] = set()
     for item in active_packs:
         if not _is_nonempty_string(item):
             errors.append("policy-pack selection active_packs entries must be non-empty strings")
@@ -96,8 +97,8 @@ def _validate_selection(payload):
     return errors, clean_names
 
 
-def _validate_pack(payload, expected_name):
-    errors = []
+def _validate_pack(payload: dict[str, Any], expected_name: str) -> list[str]:
+    errors: list[str] = []
     unknown = sorted(set(payload) - PACK_KEYS)
     if unknown:
         errors.append(f"policy pack {expected_name!r} has unsupported keys: {', '.join(unknown)}")
@@ -107,7 +108,7 @@ def _validate_pack(payload, expected_name):
     if not isinstance(schema_version, int) or schema_version < 1:
         errors.append(f"policy pack {expected_name!r} schema_version must be an integer >= 1")
     name = payload.get("name")
-    if not _is_nonempty_string(name):
+    if not isinstance(name, str) or not name.strip():
         errors.append(f"policy pack {expected_name!r} name must be a non-empty string")
     elif name.strip() != expected_name:
         errors.append(f"policy pack {expected_name!r} name must match file stem, got {name!r}")
@@ -126,7 +127,7 @@ def _validate_pack(payload, expected_name):
     return errors
 
 
-def _merge_values(base, overlay):
+def _merge_values(base: Any, overlay: Any) -> Any:
     if isinstance(base, dict) and isinstance(overlay, dict):
         result = {key: copy.deepcopy(value) for key, value in base.items()}
         for key, value in overlay.items():
@@ -138,13 +139,13 @@ def _merge_values(base, overlay):
     return copy.deepcopy(overlay)
 
 
-def _merge_exception_lists(base, overlay):
+def _merge_exception_lists(base: object, overlay: object) -> list[Any]:
     base_items = base if isinstance(base, list) else []
     overlay_items = overlay if isinstance(overlay, list) else []
 
-    ordered_ids = []
-    merged = {}
-    extras = []
+    ordered_ids: list[str] = []
+    merged: dict[str, Any] = {}
+    extras: list[Any] = []
     for source in [base_items, overlay_items]:
         for item in source:
             if isinstance(item, dict):
@@ -164,7 +165,9 @@ def _merge_exception_lists(base, overlay):
     return result
 
 
-def _merge_domain_payload(domain, base, overlay):
+def _merge_domain_payload(
+    domain: str, base: dict[str, Any], overlay: dict[str, Any]
+) -> dict[str, Any]:
     merged = _merge_values(base, overlay)
     if domain != "exception_policy":
         return merged
@@ -177,7 +180,7 @@ def _merge_domain_payload(domain, base, overlay):
     return merged
 
 
-def load_policy_pack_selection(root: Path) -> dict:
+def load_policy_pack_selection(root: Path) -> dict[str, Any]:
     root = Path(root).resolve()
     path = root / "policy" / "policy-packs.json"
     if not path.exists():
@@ -195,7 +198,7 @@ def load_policy_pack_selection(root: Path) -> dict:
     }
 
 
-def load_policy_pack(root: Path, name: str) -> dict:
+def load_policy_pack(root: Path, name: str) -> dict[str, Any]:
     root = Path(root).resolve()
     pack_path = root / "policy" / "packs" / f"{name}.json"
     payload = _load_json_object(pack_path, "policy pack file")
@@ -205,14 +208,14 @@ def load_policy_pack(root: Path, name: str) -> dict:
     return cast(dict[Any, Any], payload)
 
 
-def load_policy_domain_resolution(root: Path, domain: str) -> dict:
+def load_policy_domain_resolution(root: Path, domain: str) -> dict[str, Any]:
     root = Path(root).resolve()
     if domain not in SUPPORTED_DOMAINS:
         raise PolicyPackError([f"unsupported policy domain: {domain!r}"])
 
     effective: dict[str, Any] = {}
     saw_source = False
-    effective_sources = []
+    effective_sources: list[dict[str, str]] = []
     selection = load_policy_pack_selection(root)
     for name in selection.get("active_packs", []):
         pack = load_policy_pack(root, name)
@@ -258,6 +261,6 @@ def load_policy_domain_resolution(root: Path, domain: str) -> dict:
     }
 
 
-def load_effective_policy_domain(root: Path, domain: str) -> dict:
+def load_effective_policy_domain(root: Path, domain: str) -> dict[str, Any]:
     result = load_policy_domain_resolution(root, domain)["effective"]
     return cast(dict[Any, Any], result)

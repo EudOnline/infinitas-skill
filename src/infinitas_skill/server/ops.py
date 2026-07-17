@@ -34,6 +34,7 @@ from infinitas_skill.server.ops_parsers import (
     configure_server_worker_parser,
 )
 from infinitas_skill.server.repo_checks import require_sqlite_db, sqlite_path_from_url
+from infinitas_skill.server.restore import run_server_restore_rehearsal
 from infinitas_skill.server.systemd import run_server_render_systemd
 
 SERVER_TOP_LEVEL_HELP = "Hosted server operations tools"
@@ -120,7 +121,7 @@ def build_inspection_summary(
     return summary
 
 
-def emit_inspection_summary(summary: dict[str, Any], as_json: bool):
+def emit_inspection_summary(summary: dict[str, Any], as_json: bool) -> None:
     if as_json:
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         return
@@ -147,7 +148,7 @@ def emit_inspection_summary(summary: dict[str, Any], as_json: bool):
 def run_server_worker(
     *, poll_interval: float = 5.0, once: bool = False, limit: int | None = None
 ) -> int:
-    from server.db import ensure_database_ready
+    from server.lifecycle import ensure_database_ready
     from server.worker import run_worker_loop
 
     ensure_database_ready()
@@ -193,12 +194,7 @@ def run_server_inspect_state(
     return 2 if summary["alerts"] else 0
 
 
-def configure_server_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
-    subparsers = parser.add_subparsers(
-        dest="server_command",
-        metavar="{healthcheck,backup,render-systemd,prune-backups,worker,inspect-state}",
-    )
-
+def _configure_server_core_commands(subparsers: argparse._SubParsersAction) -> None:
     healthcheck = subparsers.add_parser(
         "healthcheck",
         help="Run hosted server health checks",
@@ -241,6 +237,8 @@ def configure_server_parser(parser: argparse.ArgumentParser) -> argparse.Argumen
     configure_server_render_systemd_parser(render_systemd)
     render_systemd.set_defaults(_handler=run_server_render_systemd)
 
+
+def _configure_server_runtime_commands(subparsers: argparse._SubParsersAction) -> None:
     prune_backups = subparsers.add_parser(
         "prune-backups",
         help="Prune older hosted registry backup snapshots",
@@ -289,6 +287,29 @@ def configure_server_parser(parser: argparse.ArgumentParser) -> argparse.Argumen
         )
     )
 
+    restore = subparsers.add_parser(
+        "restore-rehearsal",
+        help="Rehearse restoring a hosted registry backup",
+    )
+    restore.add_argument("--backup-dir", required=True)
+    restore.add_argument("--output-dir", required=True)
+    restore.add_argument("--json", action="store_true")
+    restore.set_defaults(
+        _handler=lambda args: run_server_restore_rehearsal(
+            backup_dir=args.backup_dir,
+            output_dir=args.output_dir,
+            as_json=args.json,
+        )
+    )
+
+
+def configure_server_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    subparsers = parser.add_subparsers(
+        dest="server_command",
+        metavar="{healthcheck,backup,render-systemd,prune-backups,worker,inspect-state}",
+    )
+    _configure_server_core_commands(subparsers)
+    _configure_server_runtime_commands(subparsers)
     return parser
 
 

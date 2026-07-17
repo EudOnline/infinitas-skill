@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from infinitas_skill.policy.skill_identity import normalize_skill_identity
 from infinitas_skill.release.transparency_log import (
@@ -12,15 +13,26 @@ from infinitas_skill.release.transparency_log import (
 )
 
 
-def load_json(path):
+class AttestationStateError(Exception):
+    pass
+
+
+JsonDict = dict[str, Any]
+
+
+def load_json(path: str | Path) -> JsonDict:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def _release_artifact_paths(root, meta):
+def _release_artifact_paths(root: str | Path, meta: JsonDict) -> dict[str, Path]:
     identity = normalize_skill_identity(meta)
-    publisher = identity.get("publisher") or "_legacy"
+    publisher = identity.get("publisher")
+    if not publisher:
+        raise AttestationStateError("release metadata requires publisher")
     name = meta.get("name")
     version = meta.get("version")
+    if not isinstance(name, str) or not isinstance(version, str):
+        raise AttestationStateError("release metadata requires name and version")
     root_path = Path(root)
     return {
         "provenance": root_path / "catalog" / "provenance" / f"{name}-{version}.json",
@@ -30,10 +42,10 @@ def _release_artifact_paths(root, meta):
     }
 
 
-def _normalize_file_manifest(entries):
+def _normalize_file_manifest(entries: object) -> list[JsonDict] | None:
     if not isinstance(entries, list):
         return None
-    normalized = []
+    normalized: list[JsonDict] = []
     for entry in entries:
         if not isinstance(entry, dict):
             return None
@@ -49,7 +61,7 @@ def _normalize_file_manifest(entries):
     return normalized
 
 
-def _normalize_build(build):
+def _normalize_build(build: object) -> JsonDict | None:
     if not isinstance(build, dict):
         return None
     return {
@@ -64,10 +76,10 @@ def _normalize_build(build):
     }
 
 
-def collect_reproducibility_state(root, meta):
+def collect_reproducibility_state(root: str | Path, meta: JsonDict) -> JsonDict:
     paths = _release_artifact_paths(root, meta)
     root_path = Path(root)
-    summary = {
+    summary: dict[str, Any] = {
         "available": False,
         "consistent": True,
         "issues": [],
@@ -144,7 +156,7 @@ def collect_reproducibility_state(root, meta):
     return summary
 
 
-def collect_transparency_log_state(root, meta):
+def collect_transparency_log_state(root: str | Path, meta: JsonDict) -> JsonDict | None:
     provenance_path = _release_artifact_paths(root, meta)["provenance"]
     if not provenance_path.exists():
         return None

@@ -1,15 +1,18 @@
 """Platform contract freshness checks and CLI helpers."""
 
 import argparse
+import json
 import sys
 from datetime import date
 from pathlib import Path
+from typing import TextIO
 
 from infinitas_skill.compatibility.contracts import (
     load_platform_profile_contract,
     validate_platform_contract,
 )
 from infinitas_skill.root import ROOT
+from infinitas_skill.skills.render import RenderSkillError, render_skill_from_dir
 
 REQUIRED_PLATFORM_DOCS = {
     "claude": "Claude Platform Contract",
@@ -17,6 +20,8 @@ REQUIRED_PLATFORM_DOCS = {
     "openclaw": "OpenClaw Platform Contract",
 }
 STALE_POLICIES = ("warn", "fail")
+COMPATIBILITY_TOP_LEVEL_HELP = "Platform contract and rendering tools"
+COMPATIBILITY_PARSER_DESCRIPTION = "Validate platform contracts and render canonical skills"
 
 
 def collect_platform_contract_result(
@@ -110,7 +115,9 @@ def collect_platform_contracts_report(
     }
 
 
-def emit_platform_contracts_report(report: dict, *, stdout=None, stderr=None) -> None:
+def emit_platform_contracts_report(
+    report: dict, *, stdout: TextIO | None = None, stderr: TextIO | None = None
+) -> None:
     stdout = stdout or sys.stdout
     stderr = stderr or sys.stderr
     for item in report.get("documents", []):
@@ -176,6 +183,64 @@ def run_check_platform_contracts(
     return 0
 
 
+def configure_render_skill_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    parser.add_argument("--skill-dir", required=True)
+    parser.add_argument("--platform", required=True, choices=("claude", "codex", "openclaw"))
+    parser.add_argument("--out", required=True)
+    parser.add_argument("--repo-root", default=".")
+    parser.add_argument("--json", action="store_true")
+    return parser
+
+
+def run_render_skill(
+    *,
+    root: str | Path,
+    skill_dir: str,
+    platform: str,
+    out_dir: str,
+    as_json: bool = False,
+) -> int:
+    try:
+        payload = render_skill_from_dir(
+            root=Path(root).resolve(),
+            skill_dir=Path(skill_dir),
+            platform=platform,
+            out_dir=Path(out_dir),
+        )
+    except RenderSkillError as exc:
+        print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False), file=sys.stderr)
+        return 1
+    print(json.dumps(payload, ensure_ascii=False, indent=2 if as_json else None))
+    return 0
+
+
+def configure_compatibility_cli(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    subparsers = parser.add_subparsers(dest="compatibility_command")
+    contracts = subparsers.add_parser(
+        "check-platform-contracts",
+        help="Check platform contract-watch documents",
+    )
+    configure_platform_contracts_parser(contracts)
+    contracts.set_defaults(
+        _handler=lambda args: run_check_platform_contracts(
+            max_age_days=args.max_age_days,
+            stale_policy=args.stale_policy,
+        )
+    )
+    render = subparsers.add_parser("render", help="Render a canonical skill for one platform")
+    configure_render_skill_parser(render)
+    render.set_defaults(
+        _handler=lambda args: run_render_skill(
+            root=args.repo_root,
+            skill_dir=args.skill_dir,
+            platform=args.platform,
+            out_dir=args.out,
+            as_json=args.json,
+        )
+    )
+    return parser
+
+
 def platform_contracts_main(argv: list[str] | None = None, *, prog: str | None = None) -> int:
     args = parse_platform_contracts_args(argv, prog=prog)
     return run_check_platform_contracts(
@@ -187,6 +252,8 @@ def platform_contracts_main(argv: list[str] | None = None, *, prog: str | None =
 __all__ = [
     "REQUIRED_PLATFORM_DOCS",
     "STALE_POLICIES",
+    "COMPATIBILITY_PARSER_DESCRIPTION",
+    "COMPATIBILITY_TOP_LEVEL_HELP",
     "build_platform_contracts_parser",
     "collect_platform_contract_result",
     "collect_platform_contracts_report",
@@ -195,4 +262,7 @@ __all__ = [
     "parse_platform_contracts_args",
     "platform_contracts_main",
     "run_check_platform_contracts",
+    "configure_compatibility_cli",
+    "configure_render_skill_parser",
+    "run_render_skill",
 ]

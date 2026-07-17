@@ -6,6 +6,7 @@ import json
 import os
 import re
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +18,15 @@ class ReleaseError(Exception):
     pass
 
 
-def git(root, *args, check=True, extra_config=None):
+JsonDict = dict[str, Any]
+
+
+def git(
+    root: str | Path,
+    *args: str,
+    check: bool = True,
+    extra_config: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
     command = ["git", "-C", str(root)]
     for key, value in (extra_config or {}).items():
         command.extend(["-c", f"{key}={value}"])
@@ -29,11 +38,11 @@ def git(root, *args, check=True, extra_config=None):
     return result
 
 
-def load_json(path):
+def load_json(path: str | Path) -> JsonDict:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def resolve_skill(root, target):
+def resolve_skill(root: str | Path, target: str | Path) -> Path:
     candidate = Path(target)
     if candidate.is_dir() and (candidate / "_meta.json").exists():
         return candidate.resolve()
@@ -44,15 +53,15 @@ def resolve_skill(root, target):
     raise ReleaseError(f"cannot resolve skill: {target}")
 
 
-def expected_skill_tag(skill_dir):
+def expected_skill_tag(skill_dir: str | Path) -> tuple[JsonDict, str]:
     meta = load_json(Path(skill_dir) / "_meta.json")
     return meta, f"skill/{meta['name']}/v{meta['version']}"
 
 
-def signer_entries(path):
+def signer_entries(path: str | Path) -> list[str]:
     if not Path(path).exists():
         return []
-    entries = []
+    entries: list[str] = []
     for line in Path(path).read_text(encoding="utf-8").splitlines():
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
@@ -61,7 +70,7 @@ def signer_entries(path):
     return entries
 
 
-def signing_key_path(root, signing):
+def signing_key_path(root: str | Path, signing: JsonDict) -> str | None:
     env_value = os.environ.get(signing["signing_key_env"])
     if env_value:
         return env_value
@@ -70,18 +79,18 @@ def signing_key_path(root, signing):
     return value or None
 
 
-def tracked_upstream(root):
+def tracked_upstream(root: str | Path) -> str | None:
     result = git(root, "rev-parse", "--abbrev-ref", "@{upstream}", check=False)
     return result.stdout.strip() if result.returncode == 0 else None
 
 
-def split_remote(upstream, default_remote):
+def split_remote(upstream: str | None, default_remote: str | None) -> str | None:
     if upstream and "/" in upstream:
         return upstream.split("/", 1)[0]
     return default_remote
 
 
-def ahead_behind(root, upstream):
+def ahead_behind(root: str | Path, upstream: str | None) -> tuple[int | None, int | None]:
     if not upstream:
         return None, None
     result = git(root, "rev-list", "--left-right", "--count", f"HEAD...{upstream}")
@@ -89,24 +98,30 @@ def ahead_behind(root, upstream):
     return int(ahead_text), int(behind_text)
 
 
-def repo_url(root):
+def repo_url(root: str | Path) -> str | None:
     result = git(root, "config", "--get", "remote.origin.url", check=False)
     return result.stdout.strip() or None
 
 
-def git_config_value(root, key):
+def git_config_value(root: str | Path, key: str) -> str | None:
     result = git(root, "config", "--get", key, check=False)
     return result.stdout.strip() or None
 
 
-def _tag_signature_markers(root, tag_name):
+def _tag_signature_markers(root: str | Path, tag_name: str) -> str:
     result = git(root, "cat-file", "-p", tag_name, check=False)
     if result.returncode != 0:
         return ""
     return result.stdout
 
 
-def local_tag_state(root, tag_name, signing, *, allowed_signer_entries=None):
+def local_tag_state(
+    root: str | Path,
+    tag_name: str,
+    signing: JsonDict,
+    *,
+    allowed_signer_entries: Sequence[object] | None = None,
+) -> JsonDict:
     state: dict[str, Any] = {
         "exists": False,
         "ref_type": None,
@@ -171,8 +186,8 @@ def local_tag_state(root, tag_name, signing, *, allowed_signer_entries=None):
     return state
 
 
-def remote_tag_state(root, remote_name, tag_name):
-    state = {
+def remote_tag_state(root: str | Path, remote_name: str | None, tag_name: str) -> JsonDict:
+    state: JsonDict = {
         "name": remote_name,
         "query_ok": True,
         "query_error": None,

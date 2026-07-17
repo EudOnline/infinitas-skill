@@ -5,12 +5,15 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
-from infinitas_skill.install.registry_sources import (
+from infinitas_skill.install.registry_source_primitives import (
     normalized_refresh_policy,
     resolve_registry_root,
 )
 from infinitas_skill.registry._util import utc_now_iso
+
+JsonDict = dict[str, Any]
 
 
 def refresh_state_dir(root: Path) -> Path:
@@ -21,7 +24,7 @@ def refresh_state_path(root: Path, registry_name: str) -> Path:
     return refresh_state_dir(root) / f"{registry_name}.json"
 
 
-def parse_timestamp(value):
+def parse_timestamp(value: object) -> datetime | None:
     if not isinstance(value, str) or not value.strip():
         return None
     text = value.strip()
@@ -43,10 +46,10 @@ def write_refresh_state(
     kind: str,
     cache_path: Path,
     source_commit: str,
-    source_ref=None,
-    source_tag=None,
-    refreshed_at=None,
-):
+    source_ref: str | None = None,
+    source_tag: str | None = None,
+    refreshed_at: str | None = None,
+) -> tuple[Path, JsonDict]:
     payload = {
         "registry": registry_name,
         "kind": kind,
@@ -62,7 +65,7 @@ def write_refresh_state(
     return path, payload
 
 
-def load_refresh_state(root: Path, registry_name: str):
+def load_refresh_state(root: Path, registry_name: str) -> tuple[Path, JsonDict | None]:
     path = refresh_state_path(root, registry_name)
     if not path.exists():
         return path, None
@@ -72,8 +75,10 @@ def load_refresh_state(root: Path, registry_name: str):
     return path, payload
 
 
-def evaluate_refresh_status(root: Path, reg, *, now=None):
+def evaluate_refresh_status(root: Path, reg: JsonDict, *, now: datetime | None = None) -> JsonDict:
     registry_name = reg.get("name")
+    if not isinstance(registry_name, str) or not registry_name:
+        raise ValueError("registry is missing name")
     state_path, state = load_refresh_state(root, registry_name)
     policy = normalized_refresh_policy(reg)
     now_dt = now if isinstance(now, datetime) else datetime.now(timezone.utc)
@@ -95,45 +100,15 @@ def evaluate_refresh_status(root: Path, reg, *, now=None):
         value is not None for value in [interval_hours, max_cache_age_hours, stale_policy]
     )
 
-    freshness_state = "not-configured"
-    if has_policy and state is None:
-        if stale_policy == "fail":
-            freshness_state = "stale-fail"
-        elif stale_policy == "warn":
-            freshness_state = "stale-warning"
-        elif stale_policy == "ignore":
-            freshness_state = "stale-ignored"
-        else:
-            freshness_state = "missing-state"
-    elif has_policy and refreshed_at is None:
-        if stale_policy == "fail":
-            freshness_state = "stale-fail"
-        elif stale_policy == "warn":
-            freshness_state = "stale-warning"
-        elif stale_policy == "ignore":
-            freshness_state = "stale-ignored"
-        else:
-            freshness_state = "missing-state"
-    elif has_policy and age_hours is not None:
-        if isinstance(max_cache_age_hours, int) and age_hours > max_cache_age_hours:
-            if stale_policy == "fail":
-                freshness_state = "stale-fail"
-            elif stale_policy == "warn":
-                freshness_state = "stale-warning"
-            else:
-                freshness_state = "stale-ignored"
-        elif isinstance(interval_hours, int) and age_hours > interval_hours:
-            freshness_state = "refresh-due"
-        else:
-            freshness_state = "fresh"
-
-    cache_path = None
-    cache_path_value = state.get("cache_path") if isinstance(state, dict) else None
-    if isinstance(cache_path_value, str) and cache_path_value.strip():
-        cache_path = cache_path_value.strip()
-    else:
-        reg_root = resolve_registry_root(root, reg)
-        cache_path = str(reg_root.resolve()) if reg_root else None
+    freshness_state = _freshness_state(
+        has_policy=has_policy,
+        has_timestamp=refreshed_at is not None,
+        age_hours=age_hours,
+        interval_hours=interval_hours,
+        max_cache_age_hours=max_cache_age_hours,
+        stale_policy=stale_policy,
+    )
+    cache_path = _cache_path(root, reg, state)
 
     return {
         "registry": registry_name,
@@ -154,8 +129,53 @@ def evaluate_refresh_status(root: Path, reg, *, now=None):
     }
 
 
-def _format_hours(value):
-    if value is None:
+def _stale_state(stale_policy: object, *, missing: bool = False) -> str:
+    states = {
+        "fail": "stale-fail",
+        "warn": "stale-warning",
+        "ignore": "stale-ignored",
+    }
+    return states.get(
+        stale_policy if isinstance(stale_policy, str) else "",
+        "missing-state" if missing else "stale-ignored",
+    )
+
+
+def _freshness_state(
+    *,
+    has_policy: bool,
+    has_timestamp: bool,
+    age_hours: float | None,
+    interval_hours: object,
+    max_cache_age_hours: object,
+    stale_policy: object,
+) -> str:
+    if not has_policy:
+        return "not-configured"
+    if not has_timestamp:
+        return _stale_state(stale_policy, missing=True)
+    cache_expired = (
+        isinstance(max_cache_age_hours, int)
+        and age_hours is not None
+        and age_hours > max_cache_age_hours
+    )
+    if cache_expired:
+        return _stale_state(stale_policy)
+    if isinstance(interval_hours, int) and age_hours is not None and age_hours > interval_hours:
+        return "refresh-due"
+    return "fresh"
+
+
+def _cache_path(root: Path, reg: JsonDict, state: JsonDict | None) -> str | None:
+    value = state.get("cache_path") if isinstance(state, dict) else None
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    reg_root = resolve_registry_root(root, reg)
+    return str(reg_root.resolve()) if reg_root else None
+
+
+def _format_hours(value: object) -> str:
+    if not isinstance(value, (int, float)):
         return "unknown age"
     rounded = round(float(value), 2)
     if rounded.is_integer():
@@ -163,7 +183,7 @@ def _format_hours(value):
     return f"{rounded}h"
 
 
-def refresh_resolution_message(status):
+def refresh_resolution_message(status: object) -> str | None:
     if not isinstance(status, dict):
         return None
 
@@ -172,7 +192,7 @@ def refresh_resolution_message(status):
         return None
 
     registry_name = status.get("registry") or "unknown"
-    refresh_command = f"scripts/sync-registry-source.sh {registry_name}"
+    refresh_command = f"infinitas registry sources sync {registry_name}"
     has_state = bool(status.get("has_state"))
     refreshed_at = status.get("refreshed_at")
     age_hours = status.get("age_hours")
@@ -199,7 +219,7 @@ def refresh_resolution_message(status):
     )
 
 
-def refresh_status_blocks_resolution(status):
+def refresh_status_blocks_resolution(status: object) -> bool:
     return isinstance(status, dict) and status.get("freshness_state") == "stale-fail"
 
 

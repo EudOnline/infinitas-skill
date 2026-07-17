@@ -35,12 +35,14 @@ KNOWN_STATES = {
 }
 CANONICAL_RUNTIME_PLATFORM = "openclaw"
 
+JsonDict = dict[str, Any]
+
 
 def compatibility_evidence_root(root: Path) -> Path:
     return Path(root).resolve() / EVIDENCE_ROOT
 
 
-def normalize_platform_name(value):
+def normalize_platform_name(value: object) -> str | None:
     if not isinstance(value, str):
         return None
     token = value.strip().lower()
@@ -49,16 +51,16 @@ def normalize_platform_name(value):
     return PLATFORM_ALIASES.get(token, token)
 
 
-def normalize_declared_support(values):
-    normalized = []
-    for item in values or []:
+def normalize_declared_support(values: object) -> list[str]:
+    normalized: list[str] = []
+    for item in values if isinstance(values, list) else []:
         platform = normalize_platform_name(item)
         if platform and platform not in normalized:
             normalized.append(platform)
     return normalized
 
 
-def _parse_iso8601(value):
+def _parse_iso8601(value: object) -> datetime:
     if not isinstance(value, str) or not value.strip():
         raise ValueError("must be a non-empty string")
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -67,8 +69,8 @@ def _parse_iso8601(value):
     return parsed
 
 
-def _normalize_payload(payload):
-    item = dict(payload or {})
+def _normalize_payload(payload: object) -> JsonDict:
+    item = dict(payload) if isinstance(payload, dict) else {}
     item["platform"] = normalize_platform_name(item.get("platform"))
     skill = item.get("skill") or item.get("name") or item.get("qualified_name")
     item["skill"] = skill.strip() if isinstance(skill, str) else skill
@@ -89,12 +91,21 @@ def _normalize_payload(payload):
     return item
 
 
-def validate_compatibility_evidence_payload(payload, *, path: Path | None = None):
-    errors = []
+def validate_compatibility_evidence_payload(
+    payload: object, *, path: Path | None = None
+) -> list[str]:
     if not isinstance(payload, dict):
         return ["compatibility evidence payload must be an object"]
 
     item = _normalize_payload(payload)
+    errors = _validate_evidence_fields(item)
+    if path is not None:
+        errors.extend(_validate_evidence_path(item, Path(path)))
+    return errors
+
+
+def _validate_evidence_fields(item: JsonDict) -> list[str]:
+    errors: list[str] = []
     if not item.get("platform"):
         errors.append("platform must be a non-empty string")
     if not isinstance(item.get("skill"), str) or not item.get("skill"):
@@ -118,48 +129,41 @@ def validate_compatibility_evidence_payload(payload, *, path: Path | None = None
     checker = item.get("checker")
     if checker is not None and (not isinstance(checker, str) or not checker):
         errors.append("checker must be a non-empty string when present")
-
-    if path is not None:
-        path = Path(path)
-        if path.suffix != ".json":
-            errors.append("evidence path must end with .json")
-        else:
-            version_from_path = path.stem
-            if isinstance(version, str) and version and version_from_path != version:
-                errors.append(
-                    f"path version {version_from_path!r} does not match payload version {version!r}"
-                )
-            if len(path.parts) >= 3:
-                skill_from_path = path.parts[-2]
-                platform_from_path = normalize_platform_name(path.parts[-3])
-                if isinstance(item.get("skill"), str) and item["skill"]:
-                    skill_names = {item["skill"]}
-                    qualified_name = item.get("qualified_name")
-                    if isinstance(qualified_name, str) and qualified_name:
-                        skill_names.add(qualified_name)
-                        skill_names.add(qualified_name.split("/")[-1])
-                    if skill_from_path not in skill_names:
-                        errors.append(
-                            f"path skill {skill_from_path!r} does not match payload skill "
-                            f"{item['skill']!r}"
-                        )
-                if item.get("platform") and platform_from_path != item["platform"]:
-                    errors.append(
-                        f"path platform {platform_from_path!r} does not match payload "
-                        f"platform {item['platform']!r}"
-                    )
-
     return errors
 
 
-def write_compatibility_evidence(path: Path, payload: dict) -> None:
-    item = _normalize_payload(payload)
-    errors = validate_compatibility_evidence_payload(item, path=path)
-    if errors:
-        raise ValueError("; ".join(errors))
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(item, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+def _validate_evidence_path(item: JsonDict, path: Path) -> list[str]:
+    if path.suffix != ".json":
+        return ["evidence path must end with .json"]
+    errors: list[str] = []
+    version = item.get("version")
+    if isinstance(version, str) and version and path.stem != version:
+        errors.append(f"path version {path.stem!r} does not match payload version {version!r}")
+    if len(path.parts) < 3:
+        return errors
+    skill_names = _evidence_skill_names(item)
+    if skill_names and path.parts[-2] not in skill_names:
+        errors.append(
+            f"path skill {path.parts[-2]!r} does not match payload skill {item['skill']!r}"
+        )
+    platform_from_path = normalize_platform_name(path.parts[-3])
+    if item.get("platform") and platform_from_path != item["platform"]:
+        errors.append(
+            f"path platform {platform_from_path!r} does not match payload platform "
+            f"{item['platform']!r}"
+        )
+    return errors
+
+
+def _evidence_skill_names(item: JsonDict) -> set[str]:
+    skill = item.get("skill")
+    if not isinstance(skill, str) or not skill:
+        return set()
+    names = {skill}
+    qualified_name = item.get("qualified_name")
+    if isinstance(qualified_name, str) and qualified_name:
+        names.update({qualified_name, qualified_name.split("/")[-1]})
+    return names
 
 
 def load_compatibility_evidence(root: Path) -> list[dict]:
@@ -202,17 +206,17 @@ def load_platform_contracts(root: Path) -> dict[str, dict]:
     return contracts
 
 
-def _evidence_sort_key(item):
+def _evidence_sort_key(item: JsonDict) -> tuple[datetime, str]:
     checked_at = item.get("checked_at")
     try:
         parsed = _parse_iso8601(checked_at)
     except Exception:
         logger.debug("failed to parse evidence date: %s", checked_at)
-        parsed = datetime.min
+        parsed = datetime.min.replace(tzinfo=timezone.utc)
     return (parsed, item.get("evidence_path") or "")
 
 
-def _skill_matches(item, evidence):
+def _skill_matches(item: object, evidence: object) -> bool:
     if not isinstance(item, dict) or not isinstance(evidence, dict):
         return False
     version = item.get("version")
@@ -223,7 +227,7 @@ def _skill_matches(item, evidence):
     if isinstance(evidence.get("qualified_name"), str) and evidence["qualified_name"]:
         return evidence["qualified_name"] == qualified_name
 
-    names = set()
+    names: set[str] = set()
     if isinstance(item.get("name"), str) and item["name"]:
         names.add(item["name"])
     if isinstance(qualified_name, str) and qualified_name:

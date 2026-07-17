@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from infinitas_skill.install.install_manifest import (
     SUPPORTED_SCHEMA_VERSION,
@@ -23,7 +24,7 @@ DEFAULT_NEVER_VERIFIED_POLICY = "warn"
 DEFAULT_MAX_INLINE_EVENTS = 20
 
 
-def default_install_integrity_policy():
+def default_install_integrity_policy() -> dict[str, Any]:
     return {
         "$schema": "../schemas/install-integrity-policy.schema.json",
         "schema_version": SUPPORTED_SCHEMA_VERSION,
@@ -38,7 +39,7 @@ def default_install_integrity_policy():
     }
 
 
-def normalize_install_integrity_policy(payload):
+def normalize_install_integrity_policy(payload: object) -> dict[str, Any]:
     base = default_install_integrity_policy()
     if payload is None:
         return base
@@ -98,7 +99,7 @@ def normalize_install_integrity_policy(payload):
     return normalized
 
 
-def load_install_integrity_policy(root=ROOT):
+def load_install_integrity_policy(root: str | Path = ROOT) -> dict[str, Any]:
     root = Path(root or ROOT).resolve()
     path = (root / POLICY_PATH).resolve()
     if not path.exists():

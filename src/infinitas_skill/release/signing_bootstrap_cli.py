@@ -98,7 +98,7 @@ def parse_signing_bootstrap_args(
     return build_signing_bootstrap_parser(prog=prog).parse_args(argv)
 
 
-def run_init_key(args) -> None:
+def run_init_key(args: argparse.Namespace) -> None:
     output = Path(args.output).expanduser()
     pub_path = Path(str(output) + ".pub")
     if not args.force and (output.exists() or pub_path.exists()):
@@ -122,7 +122,7 @@ def run_init_key(args) -> None:
     )
 
 
-def run_add_allowed_signer(args) -> None:
+def run_add_allowed_signer(args: argparse.Namespace) -> None:
     public_key = public_key_from_key_path(args.key)
     result = upsert_allowed_signer(Path(args.allowed_signers), args.identity, public_key)
     status = "updated" if result["changed"] else "unchanged"
@@ -134,7 +134,7 @@ def run_add_allowed_signer(args) -> None:
     )
 
 
-def run_configure_git(args) -> None:
+def run_configure_git(args: argparse.Namespace) -> None:
     key_path = Path(args.key).expanduser()
     if not key_path.exists():
         raise SigningBootstrapError(f"key path does not exist: {key_path}")
@@ -146,7 +146,7 @@ def run_configure_git(args) -> None:
     print(f"user.signingkey={effective_key}")
 
 
-def run_authorize_publisher(args) -> None:
+def run_authorize_publisher(args: argparse.Namespace) -> None:
     if not args.signer and not args.releaser:
         raise SigningBootstrapError(
             "authorize-publisher requires at least one --signer or --releaser"

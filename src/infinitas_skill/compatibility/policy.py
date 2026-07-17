@@ -19,7 +19,7 @@ def default_compatibility_policy() -> dict[Any, Any]:
     return cast(dict[Any, Any], json.loads(json.dumps(DEFAULT_COMPATIBILITY_POLICY)))
 
 
-def validate_compatibility_policy_payload(payload) -> list[str]:
+def validate_compatibility_policy_payload(payload: object) -> list[str]:
     errors = []
     if not isinstance(payload, dict):
         return ["compatibility policy payload must be an object"]

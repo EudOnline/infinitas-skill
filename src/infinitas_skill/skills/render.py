@@ -1,8 +1,4 @@
-"""Platform render helpers for migration/export flows.
-
-OpenClaw runtime semantics are owned by ``infinitas_skill.openclaw``.
-This module remains for cross-platform export compatibility during migration.
-"""
+"""Render canonical skills for supported platforms."""
 
 from __future__ import annotations
 
@@ -128,7 +124,7 @@ def render_skill_markdown(source: dict, platform: str, profile: dict) -> str:
     )
 
 
-def _copy_support_dir(source_dir: Path, target_dir: Path, name: str):
+def _copy_support_dir(source_dir: Path, target_dir: Path, name: str) -> list[str]:
     src = source_dir / name
     if not src.exists():
         return []
@@ -139,22 +135,41 @@ def _copy_support_dir(source_dir: Path, target_dir: Path, name: str):
     return [str(path.relative_to(target_dir)) for path in sorted(dest.rglob("*")) if path.is_file()]
 
 
-def _copy_legacy_entries(source_dir: Path, target_dir: Path):
+def _emit_platform_files(source: dict, platform: str, out_dir: Path) -> list[str]:
+    overrides = (source.get("platform_overrides") or {}).get(platform) or {}
     files: list[str] = []
-    for entry in sorted(source_dir.iterdir()):
-        if entry.name == "SKILL.md":
-            continue
-        dest = target_dir / entry.name
-        if entry.is_dir():
-            shutil.copytree(entry, dest)
-            files.extend(
-                str(path.relative_to(target_dir))
-                for path in sorted(dest.rglob("*"))
-                if path.is_file()
-            )
-        else:
-            shutil.copy2(entry, dest)
-            files.append(str(dest.relative_to(target_dir)))
+    if platform == "claude" and overrides.get("command_wrapper_name"):
+        commands_dir = out_dir / "commands"
+        commands_dir.mkdir(parents=True, exist_ok=True)
+        wrapper = commands_dir / f"{overrides['command_wrapper_name']}.md"
+        wrapper.write_text(
+            "---\n"
+            f'description: "Wrapper for {source.get("name")}"\n'
+            "---\n\n"
+            f"Use the `{source.get('name')}` skill when this command is invoked.\n",
+            encoding="utf-8",
+        )
+        files.append(str(wrapper.relative_to(out_dir)))
+    if platform == "codex" and overrides.get("emit_openai_yaml"):
+        agents_dir = out_dir / "agents"
+        agents_dir.mkdir(parents=True, exist_ok=True)
+        openai_yaml = agents_dir / "openai.yaml"
+        openai_yaml.write_text(
+            f"name: {source.get('name')}\n"
+            f"description: {source.get('description')}\n"
+            "entrypoint: SKILL.md\n",
+            encoding="utf-8",
+        )
+        files.append(str(openai_yaml.relative_to(out_dir)))
+    if platform == "codex" and overrides.get("emit_agents_md_snippet"):
+        agents_md = out_dir / "AGENTS.md"
+        agents_md.write_text(
+            "# Codex Skill Bootstrap\n\n"
+            f"Load `{source.get('name')}` from `.agents/skills/{source.get('name')}` "
+            "when its trigger conditions match.\n",
+            encoding="utf-8",
+        )
+        files.append(str(agents_md.relative_to(out_dir)))
     return files
 
 
@@ -165,14 +180,12 @@ def render_skill(source: dict, platform: str, out_dir: Path, profile: dict) -> d
         shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     files = []
-    if source.get("source_mode") in {"legacy", "legacy-migration"}:
-        files.extend(_copy_legacy_entries(source_dir, out_dir))
-    else:
-        for dirname in ["references", "assets", "scripts"]:
-            files.extend(_copy_support_dir(source_dir, out_dir, dirname))
+    for dirname in ["references", "assets", "scripts"]:
+        files.extend(_copy_support_dir(source_dir, out_dir, dirname))
     skill_md = render_skill_markdown(source, platform, profile)
     (out_dir / "SKILL.md").write_text(skill_md, encoding="utf-8")
-    files = ["SKILL.md"] + [item for item in files if item != "SKILL.md"]
+    files.extend(_emit_platform_files(source, platform, out_dir))
+    files = ["SKILL.md"] + sorted({item for item in files if item != "SKILL.md"})
     return {
         "platform": platform,
         "profile_version": (profile.get("contract") or {}).get("last_verified"),

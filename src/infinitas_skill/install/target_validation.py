@@ -7,19 +7,94 @@ from typing import Any
 from infinitas_skill.install.install_manifest import InstallManifestError, load_install_manifest
 from infinitas_skill.install.source_resolution import (
     DependencyError,
-    compare_versions,
     constraint_display,
-    constraint_is_exact,
     display_identity,
     identity_key_for,
     load_meta,
     normalize_meta_dependencies,
     unique,
+)
+from infinitas_skill.install.version_constraints import (
+    compare_versions,
+    constraint_is_exact,
     version_satisfies,
 )
 from infinitas_skill.openclaw.workspace import resolve_openclaw_skill_dirs
 from infinitas_skill.policy.skill_identity import normalize_skill_identity
 from infinitas_skill.root import ROOT
+
+JsonDict = dict[str, Any]
+
+
+class CandidateComparator:
+    def __init__(
+        self,
+        *,
+        preferred: list[str],
+        installed_item: JsonDict | None,
+        exact_only: bool,
+    ) -> None:
+        self.preferred = preferred
+        self.installed_item = installed_item
+        self.stage_order = (
+            {"archived": 0, "active": 1, "incubating": 2}
+            if exact_only
+            else {"active": 0, "incubating": 1, "archived": 2}
+        )
+
+    @staticmethod
+    def _compare_values(left: Any, right: Any) -> int:
+        if left == right:
+            return 0
+        return -1 if left < right else 1
+
+    def _registry_rank(self, candidate: JsonDict) -> int:
+        name = candidate.get("registry_name")
+        if isinstance(name, str) and name in self.preferred:
+            return self.preferred.index(name)
+        return len(self.preferred) + candidate.get("registry_order", 0)
+
+    def _stage_rank(self, candidate: JsonDict) -> int:
+        stage = candidate.get("stage")
+        return self.stage_order.get(stage, 9) if isinstance(stage, str) else 9
+
+    @staticmethod
+    def _stable_key(candidate: JsonDict) -> tuple[str, str, str]:
+        return (
+            candidate.get("registry_name") or "",
+            candidate.get("dir_name") or "",
+            candidate.get("path") or "",
+        )
+
+    def __call__(self, left: JsonDict, right: JsonDict) -> int:
+        comparisons = [
+            (
+                0 if installed_identity_matches(left, self.installed_item) else 1,
+                0 if installed_identity_matches(right, self.installed_item) else 1,
+            ),
+            (self._registry_rank(left), self._registry_rank(right)),
+            (
+                0 if left.get("source_type") == "distribution-manifest" else 1,
+                0 if right.get("source_type") == "distribution-manifest" else 1,
+            ),
+            (self._stage_rank(left), self._stage_rank(right)),
+        ]
+        for left_value, right_value in comparisons:
+            result = self._compare_values(left_value, right_value)
+            if result:
+                return result
+        version_result = compare_versions(
+            right.get("version") or "0.0.0", left.get("version") or "0.0.0"
+        )
+        if version_result:
+            return version_result
+        snapshot_result = self._compare_values(
+            right.get("snapshot_created_at") or "",
+            left.get("snapshot_created_at") or "",
+        )
+        return snapshot_result or self._compare_values(
+            self._stable_key(left), self._stable_key(right)
+        )
 
 
 def _is_relative_to(path: Path, base: Path) -> bool:
@@ -35,7 +110,7 @@ def resolve_openclaw_install_target(
     workspace_root: Path,
     target_dir: str | Path | None = None,
     workspace_scope: str = "workspace",
-) -> dict:
+) -> JsonDict:
     workspace_root = Path(workspace_root).resolve()
     candidates = [
         Path(path).resolve() for path in resolve_openclaw_skill_dirs(workspace_root, root=ROOT)
@@ -76,13 +151,13 @@ def resolve_openclaw_install_target(
     }
 
 
-def load_installed_state(target_dir):
+def load_installed_state(target_dir: str | Path) -> dict[str, JsonDict]:
     target = Path(target_dir)
     try:
         manifest = load_install_manifest(target, allow_missing=True)
     except InstallManifestError as exc:
         raise DependencyError(str(exc)) from exc
-    installed = {}
+    installed: dict[str, JsonDict] = {}
     manifest_skills = manifest.get("skills") or {}
     if target.exists():
         for child in sorted(
@@ -92,8 +167,13 @@ def load_installed_state(target_dir):
             normalized = normalize_meta_dependencies(meta)
             identity = normalize_skill_identity(meta)
             identity_key = identity_key_for(identity) or meta.get("name") or child.name
+            if not isinstance(identity_key, str):
+                raise DependencyError(f"installed skill is missing identity: {child}")
             entry: dict[str, Any] = {}
-            for key in unique([identity_key, meta.get("name"), child.name]):
+            lookup_keys = [
+                key for key in [identity_key, meta.get("name"), child.name] if isinstance(key, str)
+            ]
+            for key in unique(lookup_keys):
                 if key and key in manifest_skills:
                     entry = manifest_skills.get(key) or {}
                     break
@@ -114,14 +194,15 @@ def load_installed_state(target_dir):
             }
     for name, entry in manifest_skills.items():
         identity_key = entry.get("qualified_name") or entry.get("name") or name
+        if not isinstance(identity_key, str):
+            raise DependencyError(f"manifest skill is missing identity: {name}")
         if identity_key in installed:
             continue
         installed[identity_key] = {
             "name": entry.get("name") or name,
             "publisher": entry.get("publisher"),
             "qualified_name": entry.get("qualified_name"),
-            "identity_mode": entry.get("identity_mode")
-            or ("qualified" if entry.get("qualified_name") else "legacy"),
+            "identity_mode": entry.get("identity_mode") or "qualified",
             "identity_key": identity_key,
             "version": entry.get("version") or entry.get("locked_version"),
             "locked_version": entry.get("locked_version"),
@@ -134,7 +215,7 @@ def load_installed_state(target_dir):
     return installed
 
 
-def entry_matches_skill(entry, skill):
+def entry_matches_skill(entry: JsonDict, skill: JsonDict) -> bool:
     if entry.get("qualified_name"):
         if entry.get("qualified_name") != skill.get("qualified_name"):
             return False
@@ -151,14 +232,18 @@ def entry_matches_skill(entry, skill):
     return version_satisfies(version, entry.get("version") or "*")
 
 
-def constraints_compatible(constraints):
-    registries = unique([entry.get("registry") for entry in constraints if entry.get("registry")])
+def constraints_compatible(constraints: list[JsonDict]) -> tuple[bool, str | None]:
+    registries = unique(
+        registry
+        for entry in constraints
+        if isinstance((registry := entry.get("registry")), str) and registry
+    )
     if len(registries) > 1:
         return False, f"conflicting registry hints: {', '.join(registries)}"
     return True, None
 
 
-def installed_identity_matches(candidate, installed):
+def installed_identity_matches(candidate: JsonDict, installed: JsonDict | None) -> bool:
     if not installed:
         return False
     candidate_identity = (
@@ -178,7 +263,7 @@ def installed_identity_matches(candidate, installed):
     return True
 
 
-def candidate_satisfies_all(candidate, constraints):
+def candidate_satisfies_all(candidate: JsonDict, constraints: list[JsonDict]) -> bool:
     for entry in constraints:
         if entry.get("registry") and entry.get("registry") != candidate.get("registry_name"):
             return False
@@ -193,20 +278,35 @@ def candidate_satisfies_all(candidate, constraints):
     return bool(candidate.get("installable", True))
 
 
-def preferred_registries(constraints, catalog):
-    explicit = unique([entry.get("registry") for entry in constraints if entry.get("registry")])
+def preferred_registries(constraints: list[JsonDict], catalog: JsonDict) -> list[str]:
+    explicit = unique(
+        registry
+        for entry in constraints
+        if isinstance((registry := entry.get("registry")), str) and registry
+    )
     if explicit:
         return explicit
     from_sources = unique(
-        [entry.get("source_registry") for entry in constraints if entry.get("source_registry")]
+        registry
+        for entry in constraints
+        if isinstance((registry := entry.get("source_registry")), str) and registry
     )
-    configured = [reg.get("name") for reg in catalog.get("registries", [])]
+    configured = [
+        name
+        for reg in catalog.get("registries", [])
+        if isinstance((name := reg.get("name")), str) and name
+    ]
     return unique(from_sources + configured)
 
 
-def matching_candidates(requirement, constraints, installed_item, catalog):
+def matching_candidates(
+    requirement: JsonDict,
+    constraints: list[JsonDict],
+    installed_item: JsonDict | None,
+    catalog: JsonDict,
+) -> list[JsonDict]:
     preferred = preferred_registries(constraints, catalog)
-    candidates = []
+    candidates: list[JsonDict] = []
     identity_key = requirement.get("identity_key") or requirement.get("name")
     candidate_pool = catalog["by_identity"].get(
         identity_key, catalog["by_name"].get(requirement.get("name"), [])
@@ -215,65 +315,15 @@ def matching_candidates(requirement, constraints, installed_item, catalog):
         if candidate_satisfies_all(candidate, constraints):
             candidates.append(candidate)
 
-    exact_only = all(constraint_is_exact(entry.get("version") or "*") for entry in constraints)
-
-    def compare(left, right):
-        left_installed = 0 if installed_identity_matches(left, installed_item) else 1
-        right_installed = 0 if installed_identity_matches(right, installed_item) else 1
-        if left_installed != right_installed:
-            return -1 if left_installed < right_installed else 1
-        left_registry = (
-            preferred.index(left.get("registry_name"))
-            if left.get("registry_name") in preferred
-            else len(preferred) + left.get("registry_order", 0)
-        )
-        right_registry = (
-            preferred.index(right.get("registry_name"))
-            if right.get("registry_name") in preferred
-            else len(preferred) + right.get("registry_order", 0)
-        )
-        if left_registry != right_registry:
-            return -1 if left_registry < right_registry else 1
-        left_source = 0 if left.get("source_type") == "distribution-manifest" else 1
-        right_source = 0 if right.get("source_type") == "distribution-manifest" else 1
-        if left_source != right_source:
-            return -1 if left_source < right_source else 1
-        stage_order = (
-            {"archived": 0, "active": 1, "incubating": 2}
-            if exact_only
-            else {"active": 0, "incubating": 1, "archived": 2}
-        )
-        left_stage = stage_order.get(left.get("stage"), 9)
-        right_stage = stage_order.get(right.get("stage"), 9)
-        if left_stage != right_stage:
-            return -1 if left_stage < right_stage else 1
-        version_cmp = compare_versions(
-            right.get("version") or "0.0.0", left.get("version") or "0.0.0"
-        )
-        if version_cmp:
-            return version_cmp
-        left_snapshot = left.get("snapshot_created_at") or ""
-        right_snapshot = right.get("snapshot_created_at") or ""
-        if left_snapshot != right_snapshot:
-            return -1 if left_snapshot > right_snapshot else 1
-        left_key = (
-            left.get("registry_name") or "",
-            left.get("dir_name") or "",
-            left.get("path") or "",
-        )
-        right_key = (
-            right.get("registry_name") or "",
-            right.get("dir_name") or "",
-            right.get("path") or "",
-        )
-        if left_key == right_key:
-            return 0
-        return -1 if left_key < right_key else 1
-
-    return sorted(candidates, key=cmp_to_key(compare))
+    comparator = CandidateComparator(
+        preferred=preferred,
+        installed_item=installed_item,
+        exact_only=all(constraint_is_exact(entry.get("version") or "*") for entry in constraints),
+    )
+    return sorted(candidates, key=cmp_to_key(comparator))
 
 
-def selected_conflict_reason(candidate, selected):
+def selected_conflict_reason(candidate: JsonDict, selected: dict[str, JsonDict]) -> str | None:
     candidate_identity = candidate.get("identity_key") or candidate.get("name")
     for other_identity, other in selected.items():
         if other_identity == candidate_identity:
@@ -298,7 +348,12 @@ def selected_conflict_reason(candidate, selected):
     return None
 
 
-def validate_final_state(root_candidate, selected, installed, mode):
+def validate_final_state(
+    root_candidate: JsonDict,
+    selected: dict[str, JsonDict],
+    installed: dict[str, JsonDict],
+    mode: str,
+) -> None:
     from infinitas_skill.install.plan_builder import candidate_view, installed_view
 
     selected_names = set(selected)
@@ -338,12 +393,12 @@ def validate_final_state(root_candidate, selected, installed, mode):
                     )
     root_identity = root_candidate.get("identity_key") or root_candidate.get("name")
     for identity_key, candidate in selected.items():
-        installed_item = installed.get(identity_key)
-        if not installed_item:
+        selected_installed_item = installed.get(identity_key)
+        if not selected_installed_item:
             continue
         if mode == "install" and identity_key == root_identity:
             continue
-        locked_version = installed_item.get("locked_version")
+        locked_version = selected_installed_item.get("locked_version")
         if locked_version and candidate.get("version") != locked_version:
             raise DependencyError(
                 f"unsafe upgrade plan for {display_identity(candidate) or identity_key}: "
@@ -351,7 +406,7 @@ def validate_final_state(root_candidate, selected, installed, mode):
                 {
                     "skill": display_identity(candidate) or identity_key,
                     "selected": candidate_view(candidate),
-                    "installed": installed_view(installed_item),
+                    "installed": installed_view(selected_installed_item),
                     "reason": "locked-version-mismatch",
                 },
             )

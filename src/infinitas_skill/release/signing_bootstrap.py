@@ -16,18 +16,21 @@ class SigningBootstrapError(Exception):
     pass
 
 
-def load_json(path):
+JsonDict = dict[str, Any]
+
+
+def load_json(path: str | Path) -> JsonDict:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def write_json(path, payload):
+def write_json(path: str | Path, payload: object) -> None:
     Path(path).write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
 
 
-def normalize_public_key(value):
+def normalize_public_key(value: str | None) -> str | None:
     tokens = (value or "").strip().split()
     for index, token in enumerate(tokens):
         if token.startswith(KEY_PREFIXES):
@@ -37,7 +40,7 @@ def normalize_public_key(value):
     return None
 
 
-def parse_allowed_signers(path):
+def parse_allowed_signers(path: str | Path) -> list[JsonDict]:
     entries: list[dict[str, Any]] = []
     path = Path(path)
     if not path.exists():
@@ -64,7 +67,7 @@ def parse_allowed_signers(path):
     return entries
 
 
-def public_key_from_private_key(path):
+def public_key_from_private_key(path: str | Path) -> str:
     result = subprocess.run(
         ["ssh-keygen", "-y", "-f", str(path)],
         text=True,
@@ -76,14 +79,14 @@ def public_key_from_private_key(path):
     return result.stdout.strip()
 
 
-def public_key_from_file(path):
+def public_key_from_file(path: str | Path) -> str:
     text = Path(path).read_text(encoding="utf-8").strip()
     if not normalize_public_key(text):
         raise SigningBootstrapError(f"{path} does not contain a valid SSH public key")
     return text
 
 
-def public_key_from_key_path(path):
+def public_key_from_key_path(path: str | Path) -> str:
     key_path = Path(path).expanduser()
     if not key_path.exists():
         raise SigningBootstrapError(f"key path does not exist: {key_path}")
@@ -92,13 +95,13 @@ def public_key_from_key_path(path):
     return public_key_from_private_key(key_path)
 
 
-def upsert_allowed_signer(path, identity, public_key):
+def upsert_allowed_signer(path: str | Path, identity: str, public_key: str) -> JsonDict:
     allowed_path = Path(path)
     existing_lines = (
         allowed_path.read_text(encoding="utf-8").splitlines() if allowed_path.exists() else []
     )
     desired_line = f"{identity} {public_key.strip()}"
-    new_lines = []
+    new_lines: list[str] = []
     replaced = False
     changed = False
     matched_existing = False
@@ -136,7 +139,7 @@ def upsert_allowed_signer(path, identity, public_key):
     }
 
 
-def configure_git_signing(root, key_path, scope="local"):
+def configure_git_signing(root: str | Path, key_path: str | Path, scope: str = "local") -> None:
     commands = [
         ["git", "config", "gpg.format", "ssh"],
         ["git", "config", "user.signingkey", str(Path(key_path).expanduser())],
@@ -150,15 +153,24 @@ def configure_git_signing(root, key_path, scope="local"):
             raise SigningBootstrapError(message)
 
 
-def update_namespace_policy(path, publisher, *, signers=None, releasers=None):
+def update_namespace_policy(
+    path: str | Path,
+    publisher: str,
+    *,
+    signers: list[str] | None = None,
+    releasers: list[str] | None = None,
+) -> JsonDict:
     policy_path = Path(path)
     payload = load_json(policy_path)
-    publishers = payload.get("publishers") if isinstance(payload.get("publishers"), dict) else {}
+    raw_publishers = payload.get("publishers")
+    publishers: JsonDict = dict(raw_publishers) if isinstance(raw_publishers, dict) else {}
     if publisher not in publishers:
         raise SigningBootstrapError(f"publisher {publisher!r} is not declared in {policy_path}")
     entry = publishers[publisher]
+    if not isinstance(entry, dict):
+        raise SigningBootstrapError(f"publisher {publisher!r} must be an object")
     changed = False
-    summary = {}
+    summary: JsonDict = {}
     for key, additions in [
         ("authorized_signers", signers or []),
         ("authorized_releasers", releasers or []),
@@ -166,7 +178,7 @@ def update_namespace_policy(path, publisher, *, signers=None, releasers=None):
         current = entry.get(key)
         if not isinstance(current, list):
             current = []
-        merged = []
+        merged: list[str] = []
         for value in [*current, *additions]:
             if not isinstance(value, str):
                 continue
@@ -183,7 +195,7 @@ def update_namespace_policy(path, publisher, *, signers=None, releasers=None):
     return {"changed": changed, "summary": summary}
 
 
-def current_git_value(root, key):
+def current_git_value(root: str | Path, key: str) -> str | None:
     result = subprocess.run(
         ["git", "config", "--get", key],
         cwd=root,
@@ -196,18 +208,18 @@ def current_git_value(root, key):
     return value or None
 
 
-def signer_identities_for_key(entries, public_key):
+def signer_identities_for_key(entries: list[JsonDict], public_key: str) -> list[str]:
     normalized = normalize_public_key(public_key)
     if not normalized:
         return []
-    matches = []
+    matches: list[str] = []
     for entry in entries:
         if entry.get("normalized_key") == normalized and entry.get("identity") not in matches:
             matches.append(entry["identity"])
     return matches
 
 
-def default_allowed_signers_path(root=ROOT):
+def default_allowed_signers_path(root: str | Path = ROOT) -> Path:
     config = load_json(Path(root) / "config" / "signing.json")
     tag_cfg = config.get("git_tag") or {}
     allowed_rel = (
@@ -216,7 +228,7 @@ def default_allowed_signers_path(root=ROOT):
     return (Path(root) / allowed_rel).resolve()
 
 
-def default_namespace_policy_path(root=ROOT):
+def default_namespace_policy_path(root: str | Path = ROOT) -> Path:
     return (Path(root) / "policy" / "namespace-policy.json").resolve()
 
 

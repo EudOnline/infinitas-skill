@@ -105,7 +105,7 @@ def build_jobs_inspection_summary(
     limit: int,
     now: datetime | None = None,
 ) -> dict[str, Any]:
-    from server.models import Job
+    from server.modules.jobs.models import Job
 
     checked_at = now or datetime.now(timezone.utc)
     status_counts = {
