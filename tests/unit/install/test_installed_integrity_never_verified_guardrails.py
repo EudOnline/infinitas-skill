@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from infinitas_skill.install.installed_integrity import evaluate_installed_mutation_readiness
+from infinitas_skill.install.installed_integrity_readiness import (
+    evaluate_installed_mutation_readiness,
+)
 from infinitas_skill.install.integrity_policy import (
     InstallIntegrityPolicyError,
     default_install_integrity_policy,
@@ -15,15 +17,11 @@ def _refreshable_never_verified_item() -> dict:
         "name": "demo-skill",
         "integrity": {"state": "verified"},
         "source_distribution_manifest": (
-            "catalog/distributions/_legacy/demo-skill/1.2.3/manifest.json"
+            "catalog/distributions/owner/demo-skill/1.2.3/manifest.json"
         ),
         "source_attestation_path": "catalog/provenance/demo-skill-1.2.3.json",
         "integrity_capability": "supported",
     }
-
-
-def _legacy_never_verified_item() -> dict:
-    return {"name": "legacy-skill", "integrity": {"state": "unknown"}}
 
 
 def _stale_item() -> dict:
@@ -32,7 +30,7 @@ def _stale_item() -> dict:
         "integrity": {"state": "verified", "last_verified_at": "2026-03-10T00:00:00Z"},
         "last_checked_at": "2026-03-10T00:00:00Z",
         "source_distribution_manifest": (
-            "catalog/distributions/_legacy/stale-skill/1.2.3/manifest.json"
+            "catalog/distributions/owner/stale-skill/1.2.3/manifest.json"
         ),
         "source_attestation_path": "catalog/provenance/stale-skill-1.2.3.json",
         "integrity_capability": "supported",
@@ -117,32 +115,8 @@ def test_refreshable_never_verified_mutation_readiness(
     if reason_code is None:
         assert warning == ""
     else:
-        assert "report-installed-integrity.py" in warning
+        assert "infinitas install report" in warning
         assert "--refresh" in warning
-
-
-@pytest.mark.parametrize(
-    "policy,readiness,blocking,reason_code",
-    [
-        ("ignore", "ready", False, None),
-        ("warn", "warning", False, "never-verified-installed-integrity"),
-        ("fail", "blocked", True, "never-verified-installed-integrity"),
-    ],
-)
-def test_legacy_never_verified_mutation_readiness(
-    policy: str, readiness: str, blocking: bool, reason_code: str | None
-) -> None:
-    decision = evaluate_installed_mutation_readiness(
-        _legacy_never_verified_item(),
-        policy=_policy_with(never_verified_policy=policy),
-        now="2026-03-13T00:00:00Z",
-    )
-    assert decision["freshness_state"] == "never-verified"
-    assert decision["mutation_readiness"] == readiness
-    assert decision["mutation_policy"] == policy
-    assert decision["blocking"] is blocking
-    assert decision["mutation_reason_code"] == reason_code
-    assert decision["recovery_action"] == "reinstall"
 
 
 def test_stale_decision_stays_distinct_from_never_verified() -> None:

@@ -112,8 +112,8 @@ def test_grant_token_cannot_access_private_exposure_release(
 
         from server.app import create_app
         from server.db import get_session_factory
-        from server.models import AccessGrant
         from server.modules.access import service as access_service
+        from server.modules.access.models import AccessGrant
 
         client = TestClient(create_app())
         owner_headers = {"Authorization": "Bearer fixture-maintainer-token"}

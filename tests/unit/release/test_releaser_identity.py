@@ -25,7 +25,7 @@ def test_resolve_releaser_identity_prefers_environment_override(
 def test_collect_transparency_log_state_reports_verification_errors(
     monkeypatch, tmp_path: Path
 ) -> None:
-    meta = {"name": "demo-skill", "version": "1.2.3"}
+    meta = {"name": "demo-skill", "publisher": "owner", "version": "1.2.3"}
     provenance = tmp_path / "catalog" / "provenance" / "demo-skill-1.2.3.json"
     provenance.parent.mkdir(parents=True, exist_ok=True)
     provenance.write_text(

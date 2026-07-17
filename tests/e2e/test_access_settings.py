@@ -2,7 +2,7 @@ from __future__ import annotations
 
 
 def test_access_page_loads_token_surface(authenticated_page, live_server):
-    authenticated_page.goto(f"{live_server}/access?lang=en")
+    authenticated_page.goto(f"{live_server}/manage?lang=en#tokens")
     authenticated_page.wait_for_load_state("networkidle")
     visible_text = authenticated_page.locator("body").inner_text()
 

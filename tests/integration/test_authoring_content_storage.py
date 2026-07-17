@@ -197,3 +197,45 @@ def test_create_version_freezes_content_and_metadata_digests() -> None:
         assert _canonical_metadata_json(metadata) in payload["sealed_manifest_json"]
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_list_skill_versions_requires_owner() -> None:
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-authoring-list-versions-test-"))
+    try:
+        configure_env(tmpdir)
+
+        from fastapi.testclient import TestClient
+
+        from server.app import create_app
+
+        client = TestClient(create_app())
+        headers = {"Authorization": "Bearer fixture-maintainer-token"}
+        skill_id = _create_skill(client)
+
+        content_refs = {
+            "0.1.0": "git+https://example.com/uploaded-skill.git#0123456789abcdef0123456789abcdef01234567",
+            "0.2.0": "git+https://example.com/uploaded-skill.git#fedcba9876543210fedcba9876543210fedcba98",
+        }
+        for version, content_ref in content_refs.items():
+            response = client.post(
+                f"/api/v1/skills/{skill_id}/versions",
+                headers=headers,
+                json={
+                    "version": version,
+                    "content_mode": "external_ref",
+                    "content_ref": content_ref,
+                    "metadata": {"entrypoint": "SKILL.md"},
+                },
+            )
+            assert response.status_code == 201, response.text
+
+        list_response = client.get(f"/api/v1/skills/{skill_id}/versions", headers=headers)
+        assert list_response.status_code == 200, list_response.text
+        versions = list_response.json()
+        assert len(versions) == 2
+        assert [v["version"] for v in versions] == ["0.2.0", "0.1.0"]
+
+        anonymous_response = client.get(f"/api/v1/skills/{skill_id}/versions")
+        assert anonymous_response.status_code == 401, anonymous_response.text
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)

@@ -14,6 +14,13 @@ def test_login_page_exists(page, live_server):
     password_input = page.query_selector("#login-password-input")
     assert password_input is not None
 
+    password_toggle = page.query_selector("#login-password-toggle")
+    assert password_toggle is not None
+    box = password_toggle.bounding_box()
+    assert box is not None
+    assert box["width"] >= 44
+    assert box["height"] >= 44
+
 
 def test_login_with_valid_token(live_server, browser):
     context = browser.new_context()
@@ -22,9 +29,11 @@ def test_login_with_valid_token(live_server, browser):
     pg.wait_for_selector("#login-username-input")
     pg.fill("#login-username-input", "e2e-maintainer")
     pg.fill("#login-password-input", "e2e-maintainer-password")
-    pg.click("#login-login-btn")
-    pg.wait_for_load_state("networkidle")
-    assert "/login" not in pg.url or pg.url.endswith("/")
+    with pg.expect_response("**/api/v1/auth/login*") as response_info:
+        pg.click("#login-login-btn")
+    response = response_info.value
+    assert response.status == 200
+    pg.wait_for_url(f"{live_server}/?lang=en")
     context.close()
 
 

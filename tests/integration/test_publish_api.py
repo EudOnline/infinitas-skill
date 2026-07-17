@@ -4,7 +4,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from infinitas_skill.install.distribution import verify_distribution_manifest
+from infinitas_skill.install.distribution_verification import verify_distribution_manifest
 from tests.integration.test_private_registry_release_materialization import (
     _configure_env,
     _prepare_signing_repo,

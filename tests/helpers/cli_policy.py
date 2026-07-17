@@ -7,6 +7,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 ACTIVE_SKILL = ROOT / "skills" / "active" / "operate-infinitas-skill"
 
+# Ensure subprocess CLI invocations use the project venv even when this helper
+# is imported by a test launched with a system Python interpreter.
+_VENV_PYTHON = ROOT / ".venv" / "bin" / "python3"
+if _VENV_PYTHON.exists() and sys.executable != str(_VENV_PYTHON):
+    sys.executable = str(_VENV_PYTHON)
+
 
 def fail(message):
     raise AssertionError(message)
@@ -216,13 +222,3 @@ def assert_policy_review_commands_route_through_package_modules():
     ]:
         if not modules.get(module_name):
             fail(f"policy review command did not route through {module_name}")
-
-
-def main():
-    assert_policy_cli_help_lists_maintained_subcommands()
-    assert_policy_check_packs_reports_success()
-    assert_policy_check_promotion_returns_expected_json()
-    assert_policy_routes_through_package_service()
-    assert_policy_recommend_reviewers_returns_expected_json()
-    assert_policy_review_status_returns_expected_json()
-    assert_policy_review_commands_route_through_package_modules()

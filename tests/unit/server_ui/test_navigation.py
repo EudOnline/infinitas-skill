@@ -1,12 +1,7 @@
 from __future__ import annotations
 
-from server.ui.navigation import (
-    _build_exposure_policy,
-    _derive_exposure_action_state,
-    build_site_nav,
-    first_by_id,
-    group_by,
-)
+from server.modules.exposure.policy import build_exposure_policy, derive_exposure_action_state
+from server.ui.navigation import build_site_nav, first_by_id, group_by
 
 
 class FakeItem:
@@ -78,11 +73,11 @@ class TestBuildSiteNav:
 
 class TestBuildExposurePolicy:
     def test_private_policy(self):
-        policy = _build_exposure_policy()
+        policy = build_exposure_policy()
         assert policy["private"]["effective_review_requirement"] == "none"
 
     def test_public_policy(self):
-        policy = _build_exposure_policy()
+        policy = build_exposure_policy()
         assert policy["public"]["effective_review_requirement"] == "blocking"
 
 
@@ -94,29 +89,29 @@ class TestDeriveExposureActionState:
 
     def test_active_state(self):
         exposure = self.FakeExposure("active")
-        result = _derive_exposure_action_state(exposure=exposure, review_case_state="open")
+        result = derive_exposure_action_state(exposure=exposure, review_case_state="open")
         assert result["can_activate"] is False
         assert result["can_revoke"] is True
 
     def test_revoked_state(self):
         exposure = self.FakeExposure("revoked")
-        result = _derive_exposure_action_state(exposure=exposure, review_case_state="open")
+        result = derive_exposure_action_state(exposure=exposure, review_case_state="open")
         assert result["can_activate"] is False
         assert result["can_revoke"] is False
 
     def test_pending_blocking_approved(self):
         exposure = self.FakeExposure("pending_policy", "blocking")
-        result = _derive_exposure_action_state(exposure=exposure, review_case_state="approved")
+        result = derive_exposure_action_state(exposure=exposure, review_case_state="approved")
         assert result["can_activate"] is True
         assert result["activation_block_reason"] == ""
 
     def test_pending_blocking_open(self):
         exposure = self.FakeExposure("pending_policy", "blocking")
-        result = _derive_exposure_action_state(exposure=exposure, review_case_state="open")
+        result = derive_exposure_action_state(exposure=exposure, review_case_state="open")
         assert result["can_activate"] is False
         assert result["activation_block_reason"] == "blocking_review_open"
 
     def test_pending_no_blocking(self):
         exposure = self.FakeExposure("pending_policy", "none")
-        result = _derive_exposure_action_state(exposure=exposure, review_case_state="open")
+        result = derive_exposure_action_state(exposure=exposure, review_case_state="open")
         assert result["can_activate"] is True

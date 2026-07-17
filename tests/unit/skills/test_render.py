@@ -8,7 +8,6 @@ import pytest
 
 from src.infinitas_skill.skills.render import (
     RenderSkillError,
-    _copy_legacy_entries,
     _copy_support_dir,
     apply_tool_intent_mapping,
     load_platform_profile,
@@ -133,20 +132,6 @@ class TestCopySupportDir:
             assert _copy_support_dir(source, target, "missing") == []
 
 
-class TestCopyLegacyEntries:
-    def test_copies_all_except_skill_md(self):
-        with TemporaryDirectory() as td:
-            source = Path(td) / "src"
-            target = Path(td) / "out"
-            source.mkdir()
-            target.mkdir()
-            (source / "SKILL.md").write_text("# Skill", encoding="utf-8")
-            (source / "_meta.json").write_text("{}", encoding="utf-8")
-            files = _copy_legacy_entries(source, target)
-            assert "_meta.json" in files
-            assert "SKILL.md" not in files
-
-
 class TestRenderSkill:
     def test_render_canonical(self):
         with TemporaryDirectory() as td:
@@ -171,21 +156,34 @@ class TestRenderSkill:
             assert "SKILL.md" in result["files"]
             assert (out_dir / "SKILL.md").exists()
 
-    def test_render_legacy(self):
+    @pytest.mark.parametrize(
+        ("platform", "overrides", "expected_file"),
+        [
+            ("claude", {"command_wrapper_name": "test-skill"}, "commands/test-skill.md"),
+            ("codex", {"emit_openai_yaml": True}, "agents/openai.yaml"),
+            ("codex", {"emit_agents_md_snippet": True}, "AGENTS.md"),
+        ],
+    )
+    def test_render_emits_platform_overlay_files(
+        self, platform: str, overrides: dict, expected_file: str
+    ) -> None:
         with TemporaryDirectory() as td:
             source_dir = Path(td) / "skill"
             source_dir.mkdir()
-            (source_dir / "SKILL.md").write_text("# Legacy", encoding="utf-8")
-            (source_dir / "_meta.json").write_text("{}", encoding="utf-8")
+            instructions = source_dir / "instructions.md"
+            instructions.write_text("# Instructions", encoding="utf-8")
             source = {
-                "name": "legacy-skill",
-                "description": "Legacy",
-                "instructions_body_path": str(source_dir / "SKILL.md"),
+                "name": "test-skill",
+                "description": "A test skill",
+                "instructions_body_path": str(instructions),
                 "tool_intents": {"required": [], "optional": []},
-                "platform_overrides": {},
+                "platform_overrides": {platform: overrides},
                 "source_dir": str(source_dir),
-                "source_mode": "legacy",
+                "source_mode": "canonical",
             }
             out_dir = Path(td) / "out"
-            result = render_skill(source, "claude", out_dir, {"platform": "claude"})
-            assert "SKILL.md" in result["files"]
+
+            result = render_skill(source, platform, out_dir, {"platform": platform})
+
+            assert expected_file in result["files"]
+            assert (out_dir / expected_file).is_file()

@@ -1,5 +1,3 @@
-# ruff: noqa: E402
-
 import json
 import shutil
 import subprocess
@@ -8,12 +6,15 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
 from tests.helpers.env import make_test_env
 from tests.helpers.repo_copy import copy_repo_without_local_state
+
+ROOT = Path(__file__).resolve().parents[2]
+# Ensure subprocess CLI invocations use the project venv even when this helper
+# is imported by a test launched with a system Python interpreter.
+_VENV_PYTHON = ROOT / ".venv" / "bin" / "python3"
+if _VENV_PYTHON.exists() and sys.executable != str(_VENV_PYTHON):
+    sys.executable = str(_VENV_PYTHON)
 
 FIXTURE_NAME = "bootstrap-fixture"
 FIXTURE_VERSION = "1.2.3"
@@ -39,6 +40,16 @@ def run(command, cwd, expect=0, env=None):
     return result
 
 
+def run_cli(repo: Path, args: list[str], *, expect: int = 0):
+    env = make_test_env({"PYTHONPATH": str(repo / "src")})
+    return run(
+        [sys.executable, "-m", "infinitas_skill.cli.main", *args],
+        cwd=repo,
+        expect=expect,
+        env=env,
+    )
+
+
 def write_json(path: Path, payload):
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -58,7 +69,7 @@ def fresh_checked_at(platform: str):
 def scaffold_fixture(repo: Path):
     fixture_dir = repo / "skills" / "active" / FIXTURE_NAME
     if fixture_dir.exists():
-        shutil.rmtree(fixture_dir)
+        shutil.rmtree(fixture_dir, ignore_errors=True)
     shutil.copytree(ROOT / "templates" / "basic-skill", fixture_dir)
     meta = json.loads((fixture_dir / "_meta.json").read_text(encoding="utf-8"))
     meta.update(
@@ -131,7 +142,7 @@ def seed_platform_evidence(repo: Path, fixtures, *, clear_existing=True):
         evidence_root = repo / "catalog" / "compatibility-evidence"
         for path in evidence_root.glob(f"*/{FIXTURE_NAME}"):
             if path.is_dir():
-                shutil.rmtree(path)
+                shutil.rmtree(path, ignore_errors=True)
 
     for platform, checked_at, state in fixtures:
         path = (
@@ -215,7 +226,7 @@ def prepare_repo():
     run(["git", "add", "."], cwd=repo)
     run(["git", "commit", "-m", "fixture repo"], cwd=repo)
     run(["git", "push", "-u", "origin", "main"], cwd=repo)
-    run([str(repo / "scripts" / "build-catalog.sh")], cwd=repo)
+    run_cli(repo, ["registry", "catalog", "build"])
     run(["git", "add", "catalog"], cwd=repo)
     run(["git", "commit", "-m", "build fixture catalog"], cwd=repo)
     run(["git", "push"], cwd=repo)
@@ -230,18 +241,17 @@ def assert_contains(text, needle, label):
 def assert_signing_bootstrap_rehearsal_passes():
     tmpdir, repo = prepare_repo()
     try:
-        doctor_before = run(
+        doctor_before = run_cli(
+            repo,
             [
-                sys.executable,
-                str(repo / "scripts" / "doctor-signing.py"),
+                "release",
+                "doctor-signing",
                 FIXTURE_NAME,
                 "--identity",
                 "release-test",
                 "--json",
             ],
-            cwd=repo,
             expect=1,
-            env=make_test_env(),
         )
         before_report = json.loads(doctor_before.stdout)
         failing_checks = {
@@ -255,47 +265,45 @@ def assert_signing_bootstrap_rehearsal_passes():
             fail(f"expected signing-key failure before bootstrap, got {failing_checks!r}")
 
         key_path = tmpdir / "release-test-key"
-        run(
+        run_cli(
+            repo,
             [
-                sys.executable,
-                str(repo / "scripts" / "bootstrap-signing.py"),
+                "release",
+                "bootstrap-signing",
                 "init-key",
                 "--identity",
                 "release-test",
                 "--output",
                 str(key_path),
             ],
-            cwd=repo,
-            env=make_test_env(),
         )
-        run(
+        run_cli(
+            repo,
             [
-                sys.executable,
-                str(repo / "scripts" / "bootstrap-signing.py"),
+                "release",
+                "bootstrap-signing",
                 "add-allowed-signer",
                 "--identity",
                 "release-test",
                 "--key",
                 str(key_path),
             ],
-            cwd=repo,
-            env=make_test_env(),
         )
-        run(
+        run_cli(
+            repo,
             [
-                sys.executable,
-                str(repo / "scripts" / "bootstrap-signing.py"),
+                "release",
+                "bootstrap-signing",
                 "configure-git",
                 "--key",
                 str(key_path),
             ],
-            cwd=repo,
-            env=make_test_env(),
         )
-        run(
+        run_cli(
+            repo,
             [
-                sys.executable,
-                str(repo / "scripts" / "bootstrap-signing.py"),
+                "release",
+                "bootstrap-signing",
                 "authorize-publisher",
                 "--publisher",
                 "lvxiaoer",
@@ -304,24 +312,21 @@ def assert_signing_bootstrap_rehearsal_passes():
                 "--releaser",
                 "Release Fixture",
             ],
-            cwd=repo,
-            env=make_test_env(),
         )
         run(["git", "add", "config/allowed_signers", "policy/namespace-policy.json"], cwd=repo)
         run(["git", "commit", "-m", "bootstrap release signer"], cwd=repo)
         run(["git", "push"], cwd=repo)
 
-        doctor_ready = run(
+        doctor_ready = run_cli(
+            repo,
             [
-                sys.executable,
-                str(repo / "scripts" / "doctor-signing.py"),
+                "release",
+                "doctor-signing",
                 FIXTURE_NAME,
                 "--identity",
                 "release-test",
                 "--json",
             ],
-            cwd=repo,
-            env=make_test_env(),
         )
         ready_report = json.loads(doctor_ready.stdout)
         if ready_report.get("overall_status") != "ok":
@@ -333,17 +338,17 @@ def assert_signing_bootstrap_rehearsal_passes():
             fail(f"expected release-tag info status before tagging, got {release_tag_checks!r}")
 
         notes_path = tmpdir / "bootstrap-release-notes.md"
-        release_result = run(
+        release_result = run_cli(
+            repo,
             [
-                str(repo / "scripts" / "release-skill.sh"),
+                "release",
+                "publish",
                 FIXTURE_NAME,
                 "--push-tag",
                 "--notes-out",
                 str(notes_path),
-                "--write-provenance",
+                "--write-attestation",
             ],
-            cwd=repo,
-            env=make_test_env(),
         )
         assert_contains(
             release_result.stdout + release_result.stderr,
@@ -352,10 +357,11 @@ def assert_signing_bootstrap_rehearsal_passes():
         )
 
         provenance_path = repo / "catalog" / "provenance" / f"{FIXTURE_NAME}-{FIXTURE_VERSION}.json"
-        doctor_after = run(
+        doctor_after = run_cli(
+            repo,
             [
-                sys.executable,
-                str(repo / "scripts" / "doctor-signing.py"),
+                "release",
+                "doctor-signing",
                 FIXTURE_NAME,
                 "--identity",
                 "release-test",
@@ -363,8 +369,6 @@ def assert_signing_bootstrap_rehearsal_passes():
                 str(provenance_path),
                 "--json",
             ],
-            cwd=repo,
-            env=make_test_env(),
         )
         after_report = json.loads(doctor_after.stdout)
         if after_report.get("overall_status") not in {"ok", "warn"}:
@@ -388,8 +392,4 @@ def assert_signing_bootstrap_rehearsal_passes():
             "release notes snapshot block",
         )
     finally:
-        shutil.rmtree(tmpdir)
-
-
-def main():
-    assert_signing_bootstrap_rehearsal_passes()
+        shutil.rmtree(tmpdir, ignore_errors=True)

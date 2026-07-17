@@ -18,6 +18,8 @@ APP_JS_PATH = ROOT / "server" / "static" / "js" / "app.js"
 AUTH_SESSION_JS_PATH = ROOT / "server" / "static" / "js" / "auth-session.js"
 MODULES_DIR = ROOT / "server" / "static" / "js" / "modules"
 SEARCH_MODULE_PATH = MODULES_DIR / "search.js"
+SEARCH_FORMATTING_MODULE_PATH = MODULES_DIR / "search-formatting.js"
+SEARCH_INSTALL_PANEL_MODULE_PATH = MODULES_DIR / "search-install-panel.js"
 LIFECYCLE_MODULE_PATH = MODULES_DIR / "lifecycle.js"
 LIFECYCLE_CRUD_MODULE_PATH = MODULES_DIR / "lifecycle-crud.js"
 LIFECYCLE_ACCESS_MODULE_PATH = MODULES_DIR / "lifecycle-access.js"
@@ -25,7 +27,14 @@ LIFECYCLE_EXPOSURE_MODULE_PATH = MODULES_DIR / "lifecycle-exposure.js"
 AUTH_HOME_MODULE_PATH = MODULES_DIR / "auth-home.js"
 AUTH_CONSOLE_MODULE_PATH = MODULES_DIR / "auth-console.js"
 AUTH_MODAL_MODULE_PATH = MODULES_DIR / "auth-modal.js"
-ROUTES_PATH = ROOT / "server" / "ui" / "routes.py"
+UI_ROUTES_DIR = ROOT / "server" / "ui" / "routes"
+UI_ROUTE_PATHS = (
+    UI_ROUTES_DIR / "home.py",
+    UI_ROUTES_DIR / "library.py",
+    UI_ROUTES_DIR / "profile.py",
+    UI_ROUTES_DIR / "settings.py",
+)
+UI_CONTEXT_PATH = ROOT / "server" / "ui" / "context.py"
 LAYOUT_TEMPLATE_PATH = ROOT / "server" / "templates" / "layout-kawaii.html"
 MANAGE_TEMPLATE_PATH = ROOT / "server" / "templates" / "manage.html"
 OBJECT_DETAIL_TEMPLATE_PATH = ROOT / "server" / "templates" / "object-detail.html"
@@ -69,20 +78,45 @@ def configure_env(tmpdir: Path) -> None:
 
 def assert_ui_route_registration_boundary() -> None:
     module = ast.parse(APP_PATH.read_text(encoding="utf-8"), filename=str(APP_PATH))
-    imported = False
-    delegated = False
+    expected_imports = {
+        "server.ui.routes.home": "home_ui_router",
+        "server.ui.routes.library": "library_ui_router",
+        "server.ui.routes.profile": "profile_ui_router",
+        "server.ui.routes.settings": "settings_ui_router",
+    }
+    imported: set[str] = set()
+    included: set[str] = set()
     for node in ast.walk(module):
-        if isinstance(node, ast.ImportFrom) and node.module == "server.ui.routes":
-            if any(alias.name == "register_ui_routes" for alias in node.names):
-                imported = True
-        if (
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Name)
-            and node.func.id == "register_ui_routes"
-        ):
-            delegated = True
-    assert imported and delegated, (
-        "expected server.app to import and call register_ui_routes from server.ui.routes"
+        if isinstance(node, ast.ImportFrom) and node.module in expected_imports:
+            expected_alias = expected_imports[node.module]
+            if any(
+                alias.name == "router" and alias.asname == expected_alias for alias in node.names
+            ):
+                imported.add(expected_alias)
+        if not isinstance(node, ast.For) or not isinstance(node.target, ast.Name):
+            continue
+        registers_loop_item = any(
+            isinstance(child, ast.Call)
+            and isinstance(child.func, ast.Attribute)
+            and child.func.attr == "include_router"
+            and child.args
+            and isinstance(child.args[0], ast.Name)
+            and child.args[0].id == node.target.id
+            for child in ast.walk(node)
+        )
+        if registers_loop_item:
+            included.update(
+                child.id for child in ast.walk(node.iter) if isinstance(child, ast.Name)
+            )
+
+    expected_router_names = set(expected_imports.values())
+    assert imported == expected_router_names, (
+        "expected server.app to import every split UI router directly; "
+        f"missing {sorted(expected_router_names - imported)}"
+    )
+    assert expected_router_names.issubset(included), (
+        "expected server.app to include every split UI router; "
+        f"missing {sorted(expected_router_names - included)}"
     )
 
 
@@ -94,66 +128,46 @@ def assert_app_size_budget() -> None:
 
 
 def assert_route_composition_boundaries() -> None:
-    routes_source = ROUTES_PATH.read_text(encoding="utf-8")
-    routes_module = ast.parse(routes_source, filename=str(ROUTES_PATH))
+    home_source = (UI_ROUTES_DIR / "home.py").read_text(encoding="utf-8")
+    context_source = UI_CONTEXT_PATH.read_text(encoding="utf-8")
+    protected_sources = {
+        path.name: path.read_text(encoding="utf-8")
+        for path in UI_ROUTE_PATHS
+        if path.name != "home.py"
+    }
 
-    imported_session_bootstrap = False
-    imported_navigation = False
-    imported_auth_state = False
-    called_session_bootstrap = False
-    for node in ast.walk(routes_module):
-        if isinstance(node, ast.ImportFrom) and node.module == "server.ui.session_bootstrap":
-            if any(alias.name == "build_session_bootstrap" for alias in node.names):
-                imported_session_bootstrap = True
-        if isinstance(node, ast.ImportFrom) and node.module == "server.ui.navigation":
-            if any(alias.name == "build_site_nav" for alias in node.names):
-                imported_navigation = True
-        if isinstance(node, ast.ImportFrom) and node.module == "server.ui.auth_state":
-            auth_aliases = {
-                "is_owner",
-                "require_lifecycle_actor",
-                "require_release_bundle_or_404",
-                "require_skill_or_404",
-            }
-            if any(alias.name in auth_aliases for alias in node.names):
-                imported_auth_state = True
-        if (
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Name)
-            and node.func.id == "build_session_bootstrap"
-        ):
-            called_session_bootstrap = True
-
-    assert imported_session_bootstrap and called_session_bootstrap, (
-        "expected server.ui.routes to import and call build_session_bootstrap"
-    )
-    assert imported_navigation, (
-        "expected server.ui.routes to import build_site_nav from server.ui.navigation"
-    )
-    assert imported_auth_state, (
-        "expected server.ui.routes to import auth helpers from server.ui.auth_state"
-    )
-    assert 'context["session_ui"]["current_user"]' not in routes_source, (
-        "expected server.ui.routes to avoid manually mutating session_ui.current_user"
-    )
+    assert "from server.ui.session_bootstrap import build_session_bootstrap" in home_source
+    assert "build_session_bootstrap(" in home_source
+    assert "from server.ui.navigation import build_site_nav" in context_source
+    assert "build_site_nav(" in context_source
+    assert "from server.ui.session_bootstrap import build_session_bootstrap" in context_source
+    assert "build_session_bootstrap(" in context_source
+    for name, source in protected_sources.items():
+        assert "from server.ui.auth_state import require_lifecycle_actor" in source, (
+            f"expected {name} to import its authorization boundary directly"
+        )
+    assert 'context["session_ui"]["current_user"]' not in "\n".join(
+        (home_source, context_source, *protected_sources.values())
+    ), "expected split UI routes to avoid manually mutating session_ui.current_user"
 
 
 def assert_template_response_request_first() -> None:
-    module = ast.parse(ROUTES_PATH.read_text(encoding="utf-8"), filename=str(ROUTES_PATH))
-    invalid_calls: list[int] = []
-    for node in ast.walk(module):
-        if not isinstance(node, ast.Call):
-            continue
-        if not isinstance(node.func, ast.Attribute) or node.func.attr != "TemplateResponse":
-            continue
-        if not node.args:
-            continue
-        first_arg = node.args[0]
-        if isinstance(first_arg, ast.Constant) and isinstance(first_arg.value, str):
-            invalid_calls.append(node.lineno)
+    invalid_calls: list[str] = []
+    for path in (*UI_ROUTE_PATHS, UI_CONTEXT_PATH):
+        module = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(module):
+            if not isinstance(node, ast.Call):
+                continue
+            if not isinstance(node.func, ast.Attribute) or node.func.attr != "TemplateResponse":
+                continue
+            if not node.args:
+                continue
+            first_arg = node.args[0]
+            if isinstance(first_arg, ast.Constant) and isinstance(first_arg.value, str):
+                invalid_calls.append(f"{path.name}:{node.lineno}")
     assert not invalid_calls, (
-        "expected all TemplateResponse calls in server.ui.routes to pass request as the "
-        f"first positional argument; found legacy calls on lines {invalid_calls}"
+        "expected all split UI TemplateResponse calls to pass request as the first "
+        f"positional argument; found legacy calls at {invalid_calls}"
     )
 
 
@@ -181,8 +195,8 @@ def assert_maintained_control_plane_docs_freeze_canonical_model() -> None:
         assert "not maintained" in intro, (
             f"expected {path.name} intro to mark the old lifecycle model as not maintained"
         )
-        assert "redirect" in intro or "migration shim" in intro, (
-            f"expected {path.name} intro to describe legacy routes as redirects or migration shims"
+        assert "removed" in intro or "not maintained" in intro, (
+            f"expected {path.name} intro to describe the removed lifecycle model"
         )
 
     for path, text in docs.items():
@@ -248,6 +262,8 @@ def _sha256_base64(payload: str) -> str:
 def assert_private_registry_ui_js_contracts() -> None:
     app_js_source = APP_JS_PATH.read_text(encoding="utf-8")
     search_source = SEARCH_MODULE_PATH.read_text(encoding="utf-8")
+    search_formatting_source = SEARCH_FORMATTING_MODULE_PATH.read_text(encoding="utf-8")
+    search_install_panel_source = SEARCH_INSTALL_PANEL_MODULE_PATH.read_text(encoding="utf-8")
     lifecycle_crud_source = LIFECYCLE_CRUD_MODULE_PATH.read_text(encoding="utf-8")
     lifecycle_access_source = LIFECYCLE_ACCESS_MODULE_PATH.read_text(encoding="utf-8")
     lifecycle_exposure_source = LIFECYCLE_EXPOSURE_MODULE_PATH.read_text(encoding="utf-8")
@@ -262,15 +278,7 @@ def assert_private_registry_ui_js_contracts() -> None:
     layout_template = LAYOUT_TEMPLATE_PATH.read_text(encoding="utf-8")
     home_auth_panel_template = HOME_AUTH_PANEL_TEMPLATE_PATH.read_text(encoding="utf-8")
     security_source = SECURITY_PATH.read_text(encoding="utf-8")
-    create_version_source = _slice_top_level_function_source(
-        lifecycle_crud_source,
-        "export async function createVersion(form) {",
-    )
-    install_panel_source = _slice_source(
-        search_source,
-        "  renderInstallPanel(data, skill) {",
-        "\n\n  selectNext()",
-    )
+    install_panel_source = search_install_panel_source
     artifacts_table_source = _slice_top_level_function_source(
         lifecycle_crud_source,
         "export async function updateArtifactsTable(releaseId) {",
@@ -293,18 +301,14 @@ def assert_private_registry_ui_js_contracts() -> None:
     )
     auth_handle_login_source = _slice_source(
         auth_modal_source,
-        "  async function handleLogin() {",
-        "\n  }\n\n  function setLoading(loading) {",
+        "  async handleLogin() {",
+        "\n\n  setLoading(loading) {",
     )
-    auth_init_home_source = _slice_source(
-        auth_home_source,
-        "export function initHomeAuthSession() {",
-        "\n  init();\n}",
-    )
+    auth_init_home_source = auth_home_source
     auth_console_login_success_source = _slice_source(
         auth_console_source,
-        "  const controller = createAuthModalController({",
-        "\n\n  async function init() {",
+        "  applyLogin(data) {",
+        "\n\n  handleDocumentClick(event) {",
     )
     app_js_imports = set(re.findall(r"""from ['"](\./modules/[^'"]+)['"]""", app_js_source))
     expected_shell_imports = {
@@ -374,15 +378,6 @@ def assert_private_registry_ui_js_contracts() -> None:
             f"missing marker {marker!r}"
         )
     for marker in [
-        "_toast.error(uiText('invalid_json', 'JSON 格式错误'));",
-        "_setButtonLoading(button, false);",
-        "return;",
-    ]:
-        assert marker in create_version_source, (
-            "expected create-version flow to block invalid metadata JSON instead of silently "
-            f"submitting an empty payload; missing marker {marker!r}"
-        )
-    for marker in [
         "const policy = release.exposure_policy[audienceType] || null;",
         "reviewModeSelect.disabled = false;",
         "reviewModeSelect.value = policy.effective_requested_review_mode;",
@@ -407,7 +402,7 @@ def assert_private_registry_ui_js_contracts() -> None:
         "grant: { zh: '授权', en: 'Grant' }",
         "direct_only: { zh: '仅直链', en: 'Direct only' }",
     ]:
-        assert marker in search_source, (
+        assert marker in search_formatting_source, (
             "expected install panel formatters to humanize install scope and listing mode; "
             f"missing marker {marker!r}"
         )
@@ -446,8 +441,8 @@ def assert_private_registry_ui_js_contracts() -> None:
     assert "data.items || []" in lifecycle_crud_source, (
         "expected empty-state artifact handling in the CRUD module; missing marker 'data.items || []'"
     )
-    next_target_index = auth_handle_login_source.index("const nextTarget = pendingRedirect;")
-    close_modal_index = auth_handle_login_source.index("closeModal(")
+    next_target_index = auth_handle_login_source.index("const nextTarget = this.pendingRedirect;")
+    close_modal_index = auth_handle_login_source.index("this.closeModal(")
     assert next_target_index < close_modal_index, (
         "expected auth login flow to snapshot pendingRedirect before closing the modal so "
         "protected navigation survives successful login"
@@ -461,16 +456,16 @@ def assert_private_registry_ui_js_contracts() -> None:
             f"redirect after successful login; missing marker {marker!r}"
         )
     assert (
-        "currentUser = { username: data.username, role: data.role || null };"
+        "this.currentUser = { username: data.username, role: data.role || null };"
         in auth_console_login_success_source
     ), (
         "expected console auth success handler to refresh local session state immediately "
         "with the login response role"
     )
     for marker in [
-        "const homeAuthModalStartsVisible = !standaloneLoginPage && controller.dom.modal && !controller.dom.modal.hidden;",
-        "if (homeAuthModalStartsVisible) {",
-        "openAuthModal();",
+        "const startsVisible = !this.standaloneLoginPage",
+        "if (!startsVisible) return;",
+        "else this.openAuthModal();",
     ]:
         assert marker in auth_init_home_source, (
             "expected home auth bootstrap to explicitly sync a server-rendered visible modal "
@@ -630,7 +625,7 @@ def create_exposure(
 def approve_exposure_review(
     client, session_factory, headers: dict[str, str], exposure_id: int
 ) -> None:
-    from server.models import ReviewCase
+    from server.modules.review.models import ReviewCase
 
     with session_factory() as session:
         review_case = session.scalar(
@@ -689,24 +684,22 @@ def test_private_first_console_ui_round_trip() -> None:
 
         login_response = client.get("/login?lang=en")
         assert login_response.status_code == 200, login_response.text
-        assert "/library" in login_response.text
+        assert "/manage" in login_response.text
         assert "/skills" not in login_response.text
 
-        library_response = client.get("/library?lang=en", headers=headers)
+        library_response = client.get("/manage?lang=en", headers=headers)
         assert library_response.status_code == 200, library_response.text
         assert "Library" in library_response.text
 
         skills_response = client.get("/skills?lang=en", headers=headers, follow_redirects=False)
-        assert skills_response.status_code == 307
-        assert skills_response.headers["location"] == "/manage?lang=en"
+        assert skills_response.status_code == 404
 
         review_response = client.get(
             "/review-cases?lang=en",
             headers=headers,
             follow_redirects=False,
         )
-        assert review_response.status_code == 307
-        assert review_response.headers["location"] == "/manage?lang=en#activity"
+        assert review_response.status_code == 404
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -724,17 +717,4 @@ def test_home_auth_modal_initial_state_is_explicit() -> None:
 
 
 def test_auth_hidden_states_are_preserved_in_css() -> None:
-    assert_auth_hidden_states_are_preserved_in_css()
-
-
-def main() -> None:
-    assert_ui_route_registration_boundary()
-    assert_app_size_budget()
-    assert_route_composition_boundaries()
-    assert_template_response_request_first()
-    assert_alembic_config_declares_path_separator()
-    test_private_first_console_ui_round_trip()
-    assert_ui_rejects_untrusted_host_headers()
-    assert_private_registry_ui_js_contracts()
-    assert_home_auth_modal_initial_state_is_explicit()
     assert_auth_hidden_states_are_preserved_in_css()

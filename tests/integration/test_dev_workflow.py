@@ -71,16 +71,8 @@ def _read(rel_path: str) -> str:
 
 def test_make_targets_and_docs_expose_dev_workflow_entrypoints() -> None:
     makefile = _read("Makefile")
-    lint_command = (
-        "uv run ruff check src/infinitas_skill server/ui server/api server/modules "
-        "server/auth.py server/db.py server/settings.py server/middleware.py server/app.py "
-        "tests/integration tests/unit"
-    )
-    fmt_command = (
-        "uv run ruff format src/infinitas_skill server/ui server/api server/modules "
-        "server/auth.py server/db.py server/settings.py server/middleware.py server/app.py "
-        "tests/integration tests/unit"
-    )
+    lint_command = ".venv/bin/ruff check ."
+    fmt_command = ".venv/bin/ruff format ."
     required_targets = [
         "bootstrap",
         "test-fast",
@@ -103,12 +95,14 @@ def test_make_targets_and_docs_expose_dev_workflow_entrypoints() -> None:
     readme = _read("README.md")
     assert "make test-fast" in readme, "README.md should mention make test-fast"
     assert "make test-full" in readme, "README.md should mention make test-full"
+    assert "make lint-budgets" not in readme, "README.md should not advertise removed debt budgets"
     assert lint_command in readme, "README.md should include raw lint-maintained fallback command"
 
     testing_doc = _read("docs/reference/testing.md")
     assert "make lint-maintained" in testing_doc, (
         "docs/reference/testing.md should mention make lint-maintained"
     )
+    assert "make lint-budgets" not in testing_doc
     assert "uv sync" in testing_doc, (
         "docs/reference/testing.md should include bootstrap raw fallback (uv sync)"
     )
@@ -203,68 +197,13 @@ def test_installed_integrity_script_libs_stay_deleted() -> None:
         )
 
 
-def test_release_fixture_scripts_share_python_env_helper() -> None:
-    expected_marker = "build_regression_test_env"
-    script_paths = [
-        "scripts/test-ai-index.py",
-        "scripts/test-attestation-verification.py",
-        "scripts/test-discovery-index.py",
-        "scripts/test-distribution-install.py",
-        "scripts/test-explain-install.py",
-        "scripts/test-install-by-name.py",
-        "scripts/test-installed-integrity-history-retention.py",
-        "scripts/test-installed-integrity-report.py",
-        "scripts/test-openclaw-export.py",
-        "scripts/test-record-verified-support.py",
-        "scripts/test-release-reproducibility.py",
-        "scripts/test-release-invariants.py",
-        "scripts/test-signing-readiness-report.py",
-        "scripts/test-skill-update.py",
-        "scripts/test-transparency-log.py",
-    ]
-    forbidden_markers = [
-        "def _preferred_python_bin",
-        "from alembic import command; import pytest",
-        "Path(tempfile.gettempdir())",
-    ]
-    forbidden_patterns = [
-        r"REQUIRE_TEST_FLAGS\s*=",
-        r"env\[['\"]INFINITAS_SKIP_RELEASE_TESTS['\"]\]\s*=",
-        r"env\[['\"]INFINITAS_SKIP_ATTESTATION_TESTS['\"]\]\s*=",
-        r"env\[['\"]INFINITAS_SKIP_DISTRIBUTION_TESTS['\"]\]\s*=",
-        r"env\[['\"]INFINITAS_SKIP_BOOTSTRAP_TESTS['\"]\]\s*=",
-        r"env\[['\"]INFINITAS_SKIP_AI_WRAPPER_TESTS['\"]\]\s*=",
-        r"env\[['\"]INFINITAS_SKIP_COMPAT_PIPELINE_TESTS['\"]\]\s*=",
-        r"env\[['\"]INFINITAS_SKIP_INSTALLED_INTEGRITY_TESTS['\"]\]\s*=",
-        r"for key in REQUIRE_TEST_FLAGS:",
-    ]
-
+def test_script_tests_are_replaced_by_pytest_modules() -> None:
     helper_text = _read("src/infinitas_skill/testing/env.py")
     assert "def build_regression_test_env(" in helper_text, (
         "shared regression test environment builder should live under "
         "src/infinitas_skill/testing/env.py"
     )
-    assert "def prepend_preferred_python_bin_to_path(" in helper_text, (
-        "shared test environment helper should live under src/infinitas_skill/testing/env.py"
-    )
-    assert "INFINITAS_RELEASE_HELPER_CHECK_ALL_BLOCKS" in helper_text, (
-        "shared regression env helper should centralize the nested "
-        "release-helper check-all override"
-    )
-
-    for rel_path in script_paths:
-        text = _read(rel_path)
-        assert expected_marker in text, (
-            f"{rel_path} should use the shared regression test environment builder"
-        )
-        for marker in forbidden_markers:
-            assert marker not in text, (
-                f"{rel_path} should not keep duplicated regression env boilerplate: {marker}"
-            )
-        for pattern in forbidden_patterns:
-            assert not re.search(pattern, text), (
-                f"{rel_path} should not keep duplicated regression env boilerplate: {pattern}"
-            )
+    assert not list((ROOT / "scripts").glob("test-*.py"))
 
 
 def test_discovery_consumer_script_libs_stay_deleted() -> None:
@@ -293,19 +232,11 @@ def test_skill_surface_script_libs_stay_deleted() -> None:
         )
 
 
-def test_openclaw_skill_surface_is_explicitly_migration_scoped() -> None:
-    openclaw_bridge = _read("src/infinitas_skill/skills/openclaw.py")
+def test_skill_renderer_accepts_only_canonical_sources() -> None:
     render_helpers = _read("src/infinitas_skill/skills/render.py")
 
-    assert "migration tooling" in openclaw_bridge, (
-        "skills/openclaw.py should be explicitly described as migration tooling"
-    )
-    assert "migration/export support" in render_helpers, (
-        "skills/render.py should explicitly describe OpenClaw rendering as migration/export support"
-    )
-    assert "legacy-migration" in render_helpers, (
-        "skills/render.py should handle legacy-migration sources coherently"
-    )
+    assert "legacy-migration" not in render_helpers
+    assert "_copy_legacy_entries" not in render_helpers
 
 
 def test_registry_script_libs_stay_deleted() -> None:
@@ -334,71 +265,23 @@ def test_signing_and_review_script_libs_stay_deleted() -> None:
 
 
 def test_signing_operator_scripts_stay_package_owned() -> None:
-    expected_wrapper_markers = {
-        "scripts/bootstrap-signing.py": [
-            "from infinitas_skill.release.signing_bootstrap_cli import signing_bootstrap_cli_main",
-        ],
-        "scripts/doctor-signing.py": [
-            "from infinitas_skill.release.signing_doctor import signing_doctor_main",
-        ],
-        "scripts/report-signing-readiness.py": [
-            "from infinitas_skill.release.signing_readiness import signing_readiness_main",
-        ],
-    }
-    forbidden_markers = [
-        "def run_init_key",
-        "def run_add_allowed_signer",
-        "def run_configure_git",
-        "def run_authorize_publisher",
-        "def release_fix_suggestions",
-        "def summarize_trusted_signers",
-        "def summarize_skill",
-        "def build_report",
-        "def render_human",
-        "def make_check",
-    ]
-
-    for rel_path, wrapper_markers in expected_wrapper_markers.items():
-        text = _read(rel_path)
-        for marker in wrapper_markers:
-            assert marker in text, (
-                f"{rel_path} should stay a thin wrapper around package-native "
-                "signing operator modules"
-            )
-        for marker in forbidden_markers:
-            assert marker not in text, (
-                f"{rel_path} should not keep duplicated signing operator logic: {marker}"
-            )
+    removed_scripts = (
+        "scripts/bootstrap-signing.py",
+        "scripts/doctor-signing.py",
+        "scripts/report-signing-readiness.py",
+    )
+    assert all(not (ROOT / path).exists() for path in removed_scripts)
+    release_cli = _read("src/infinitas_skill/release/cli.py")
+    for command in ("bootstrap-signing", "doctor-signing", "signing-readiness"):
+        assert command in release_cli
 
 
 def test_review_operator_scripts_stay_package_owned() -> None:
-    expected_wrapper_markers = {
-        "scripts/recommend-reviewers.py": [
-            "from infinitas_skill.policy.review_commands import recommend_reviewers_main",
-        ],
-        "scripts/review-status.py": [
-            "from infinitas_skill.policy.review_commands import review_status_main",
-        ],
-    }
-    forbidden_markers = [
-        "def print_csv_list",
-        "def parse_args",
-        "def main",
-        "render_reviewer_recommendations",
-        "evaluate_review_state",
-    ]
-
-    for rel_path, wrapper_markers in expected_wrapper_markers.items():
-        text = _read(rel_path)
-        for marker in wrapper_markers:
-            assert marker in text, (
-                f"{rel_path} should stay a thin wrapper around package-native "
-                "review command modules"
-            )
-        for marker in forbidden_markers:
-            assert marker not in text, (
-                f"{rel_path} should not keep duplicated review command logic: {marker}"
-            )
+    removed_scripts = ("scripts/recommend-reviewers.py", "scripts/review-status.py")
+    assert all(not (ROOT / path).exists() for path in removed_scripts)
+    policy_cli = _read("src/infinitas_skill/policy/cli.py")
+    for command in ("recommend-reviewers", "review-status"):
+        assert command in policy_cli
 
 
 def test_share_links_module_is_consolidated_into_access() -> None:
@@ -408,9 +291,9 @@ def test_share_links_module_is_consolidated_into_access() -> None:
     )
     for rel_path in [
         "server/app.py",
-        "server/api/library.py",
-        "server/ui/library_shares.py",
-        "server/api/activity.py",
+        "server/modules/access/share_links.py",
+        "server/modules/access/share_links_router.py",
+        "server/modules/library/shares.py",
     ]:
         text = _read(rel_path)
         assert "server.modules.shares" not in text, (

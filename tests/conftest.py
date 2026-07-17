@@ -1,37 +1,52 @@
 from __future__ import annotations
 
 import os
-import sys
 from pathlib import Path
 
+# Existing tests construct TestClient directly. Patch the imported class once so
+# every such client executes the application's migration/bootstrap lifespan.
+import fastapi.testclient
 import pytest
 from sqlalchemy.orm import Session, close_all_sessions
 
-ROOT = Path(__file__).resolve().parents[1]
-for path in (ROOT, ROOT / "src"):
-    path_text = str(path)
-    if path_text not in sys.path:
-        sys.path.insert(0, path_text)
+from tests.helpers.cli import CliResult, run_cli
+from tests.helpers.env import make_test_env
+from tests.helpers.repo_copy import copy_repo_without_local_state
+from tests.helpers.signing import add_allowed_signer, generate_signing_key
+from tests.helpers.test_client import LifespanTestClient, close_test_clients
 
-from tests.helpers.cli import CliResult, run_cli  # noqa: E402
-from tests.helpers.env import make_test_env  # noqa: E402
-from tests.helpers.repo_copy import copy_repo_without_local_state  # noqa: E402
-from tests.helpers.signing import add_allowed_signer, generate_signing_key  # noqa: E402
+fastapi.testclient.TestClient = LifespanTestClient
+
+ROOT = Path(__file__).resolve().parents[1]
 
 pytest_plugins = ["tests.fixtures.repo_state"]
 
 
+def _clear_database_state() -> None:
+    from server.db import get_engine, get_session_factory
+
+    close_all_sessions()
+    if get_engine.cache_info().currsize:
+        get_engine().dispose()
+    get_session_factory.cache_clear()
+    get_engine.cache_clear()
+
+
 @pytest.fixture(autouse=True)
 def clear_server_caches():
-    from server.db import get_engine, get_session_factory
+    original_server_environment = {
+        key: value for key, value in os.environ.items() if key.startswith("INFINITAS_")
+    }
     from server.settings import get_settings
 
-    get_session_factory.cache_clear()
-    get_engine.cache_clear()
+    _clear_database_state()
     get_settings.cache_clear()
     yield
-    get_session_factory.cache_clear()
-    get_engine.cache_clear()
+    close_test_clients()
+    _clear_database_state()
+    for key in [key for key in os.environ if key.startswith("INFINITAS_")]:
+        os.environ.pop(key, None)
+    os.environ.update(original_server_environment)
     get_settings.cache_clear()
 
 
@@ -74,7 +89,7 @@ def db(tmp_path: Path) -> Session:
     from server.db import get_engine, get_session_factory
 
     # Create engine and run migrations
-    engine = get_engine()
+    get_engine()
     session_factory = get_session_factory()
 
     # Run migrations

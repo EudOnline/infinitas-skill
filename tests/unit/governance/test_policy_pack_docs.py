@@ -18,7 +18,7 @@ pytestmark = pytest.mark.governance
         ("docs/reference/promotion-policy.md", "policy/policy-packs.json"),
         ("docs/ops/signing-bootstrap.md", "policy/policy-packs.json"),
         ("docs/reference/multi-registry.md", "policy/policy-packs.json"),
-        ("scripts/check-all.sh", "python3 -m infinitas_skill.cli.main policy check-packs"),
+        ("scripts/check-all.sh", ".venv/bin/infinitas policy check-packs"),
     ],
 )
 def test_policy_pack_referenced_in_surface(rel: str, needle: str) -> None:

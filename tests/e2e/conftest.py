@@ -27,6 +27,7 @@ def _find_free_port() -> int:
 
 @pytest.fixture(scope="session")
 def live_server(tmpdir_session):
+    os.environ["INFINITAS_SERVER_ENV"] = "test"
     os.environ["INFINITAS_SERVER_DATABASE_URL"] = f"sqlite:///{tmpdir_session / 'server.db'}"
     os.environ["INFINITAS_SERVER_SECRET_KEY"] = "test-secret-key"
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(tmpdir_session / "artifacts")
@@ -74,13 +75,23 @@ def page(live_server, browser):
 
 @pytest.fixture
 def authenticated_page(live_server, browser):
+    from server.db import get_session_factory
+    from server.rate_limit import get_rate_limiter
+
+    get_rate_limiter().reset_all()
+    session_factory = get_session_factory()
+    with session_factory() as db:
+        get_rate_limiter(db).reset_all()
+        db.commit()
     context = browser.new_context()
     pg = context.new_page()
     pg.goto(f"{live_server}/login?lang=en")
     pg.wait_for_selector("#login-username-input")
     pg.fill("#login-username-input", "e2e-maintainer")
     pg.fill("#login-password-input", "e2e-maintainer-password")
-    pg.click("#login-login-btn")
+    with pg.expect_response("**/api/v1/auth/login*") as response_info:
+        pg.click("#login-login-btn")
+    assert response_info.value.status == 200
     pg.wait_for_url(f"{live_server}/?lang=en")
     pg.wait_for_load_state("networkidle")
     yield pg

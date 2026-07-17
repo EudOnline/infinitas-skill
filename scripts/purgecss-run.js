@@ -64,7 +64,8 @@ async function run() {
     },
   });
 
-  const purgedPath = 'server/static/css/.input.purged.css';
+  const purgedPath = 'build/static/input.purged.css';
+  fs.mkdirSync('build/static', { recursive: true });
   fs.writeFileSync(purgedPath, result[0].css);
   const saved = result[0].rejected?.length || 0;
   console.log(`PurgeCSS complete. Removed ${saved} unused selectors. Written to ${purgedPath}`);

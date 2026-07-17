@@ -114,8 +114,8 @@ def test_openclaw_runtime_docs_are_canonical_entrypoints() -> None:
     assert adr_path.exists()
     assert runtime_contract_path.exists()
     assert "OpenClaw is now the canonical agent runtime" in readme
-    assert "`agent_compatible` as legacy migration metadata" in compatibility_contract
-    assert "legacy and transitional" in compatibility_matrix
+    assert "`agent_compatible` is current declared support" in compatibility_contract
+    assert "OpenClaw is the canonical runtime" in compatibility_matrix
 
 
 def test_openclaw_canonical_runtime_docs_preserve_backend_control_plane_boundary() -> None:
@@ -130,7 +130,7 @@ def test_openclaw_canonical_runtime_docs_preserve_backend_control_plane_boundary
     assert "adr/0003-openclaw-runtime-canonical.md" in docs_readme
     assert "reference/openclaw-runtime-contract.md" in docs_readme
     assert "openclaw-runtime-contract.md" in reference_readme
-    assert "legacy and transitional" in compatibility_matrix
+    assert "OpenClaw is the canonical runtime" in compatibility_matrix
 
 
 def test_legacy_ai_landing_is_removed_from_docs_entrypoints() -> None:

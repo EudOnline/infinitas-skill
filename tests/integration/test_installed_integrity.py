@@ -17,9 +17,3 @@ def test_installed_integrity_stale_mutation_guardrails() -> None:
 
 def test_installed_integrity_docs_exist() -> None:
     assert_installed_integrity_docs_exist()
-
-
-def main() -> None:
-    assert_installed_integrity_clean_drift_and_repair()
-    assert_installed_integrity_stale_mutation_guardrails()
-    assert_installed_integrity_docs_exist()

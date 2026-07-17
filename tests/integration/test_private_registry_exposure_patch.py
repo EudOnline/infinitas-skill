@@ -154,6 +154,54 @@ def test_patch_exposure_rejects_requested_review_mode_mutation(
     assert get_response.status_code == 200, get_response.text
 
 
+def test_revoked_public_exposure_is_immediately_removed_from_install_resolution(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    _prepare_signing_repo(temp_repo_copy, signing_key)
+    configure_env(tmp_path)
+    os.environ["INFINITAS_SERVER_REPO_PATH"] = str(temp_repo_copy)
+
+    from server.app import create_app
+
+    client = TestClient(create_app())
+    headers = {"Authorization": "Bearer fixture-maintainer-token"}
+    slug = "immediate-revocation-skill"
+    release_id = create_ready_release(client, headers, slug=slug)
+    created = client.post(
+        f"/api/v1/releases/{release_id}/exposures",
+        headers=headers,
+        json={
+            "audience_type": "public",
+            "listing_mode": "listed",
+            "install_mode": "enabled",
+            "requested_review_mode": "none",
+        },
+    )
+    assert created.status_code == 201, created.text
+    exposure_id = int(created.json()["id"])
+    from server.db import get_session_factory
+    from server.modules.exposure.models import Exposure
+
+    with get_session_factory()() as session:
+        exposure = session.get(Exposure, exposure_id)
+        assert exposure is not None
+        exposure.state = "active"
+        session.commit()
+    install_path = f"/api/v1/install/public/fixture-maintainer/{slug}@0.1.0"
+
+    before = client.get(install_path)
+    assert before.status_code == 200, before.text
+
+    revoked = client.post(f"/api/v1/exposures/{exposure_id}/revoke", headers=headers)
+    assert revoked.status_code == 200, revoked.text
+
+    after = client.get(install_path)
+    assert after.status_code == 404, after.text
+
+
 def test_exposure_endpoints_reject_unknown_listing_and_install_modes(
     monkeypatch,
     tmp_path: Path,

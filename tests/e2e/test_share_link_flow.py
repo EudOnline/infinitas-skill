@@ -2,7 +2,7 @@ from __future__ import annotations
 
 
 def test_shares_page_loads_admin_share_link_surface(authenticated_page, live_server):
-    authenticated_page.goto(f"{live_server}/shares?lang=en")
+    authenticated_page.goto(f"{live_server}/manage?lang=en#shares")
     authenticated_page.wait_for_load_state("networkidle")
     visible_text = authenticated_page.locator("body").inner_text()
 

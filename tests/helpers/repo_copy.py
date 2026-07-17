@@ -14,6 +14,13 @@ _LOCAL_STATE_PATTERNS = (
     ".pytest_cache",
     ".ruff_cache",
     ".mypy_cache",
+    ".coverage",
+    ".coverage.*",
+    "coverage.xml",
+    "htmlcov",
+    "node_modules",
+    "build",
+    "*.egg-info",
     "__pycache__",
     "*.pyc",
 )

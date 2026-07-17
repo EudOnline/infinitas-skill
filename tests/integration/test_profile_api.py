@@ -183,7 +183,7 @@ class TestProfileMeOperationHistory:
 
         # Insert audit events directly into the DB
         from server.db import get_session_factory
-        from server.models import AuditEvent
+        from server.modules.audit.models import AuditEvent
 
         factory = get_session_factory()
         with factory() as session:
@@ -221,7 +221,7 @@ class TestProfileMeOperationHistory:
         cred_id = profile.json()["identity"]["credential_id"]
 
         from server.db import get_session_factory
-        from server.models import AuditEvent
+        from server.modules.audit.models import AuditEvent
 
         factory = get_session_factory()
         with factory() as session:
@@ -253,7 +253,7 @@ class TestProfileMeOperationHistory:
         cred_id = profile.json()["identity"]["credential_id"]
 
         from server.db import get_session_factory
-        from server.models import AuditEvent
+        from server.modules.audit.models import AuditEvent
 
         factory = get_session_factory()
         with factory() as session:
@@ -301,15 +301,11 @@ class TestProfileMePolicy:
         principal_id = profile.json()["identity"]["principal_id"]
 
         from server.db import get_session_factory
-        from server.models import (
-            AccessGrant,
-            Credential,
-            Exposure,
-            Principal,
-            Release,
-            Skill,
-            SkillVersion,
-        )
+        from server.modules.access.models import AccessGrant
+        from server.modules.authoring.models import Skill, SkillVersion
+        from server.modules.exposure.models import Exposure
+        from server.modules.identity.models import Credential, Principal
+        from server.modules.release.models import Release
 
         factory = get_session_factory()
         with factory() as session:
@@ -369,7 +365,7 @@ class TestProfileMePolicy:
             session.flush()
 
             # Create a credential linked to this grant
-            from server.modules.access.service import hash_token
+            from server.modules.identity.service import hash_token
 
             raw = "grant_test_token_for_policy"
             cred = Credential(
@@ -507,8 +503,8 @@ class TestProfileAdminViewData:
         client = _profile_client(tmp_path)
         # Create a second user and credential via DB
         from server.db import get_session_factory
-        from server.models import Credential, Principal, User
-        from server.modules.access.service import hash_token
+        from server.modules.identity.models import Credential, Principal, User
+        from server.modules.identity.service import hash_token
 
         factory = get_session_factory()
         with factory() as session:
@@ -712,7 +708,7 @@ class TestCredentialPolicyUpdateData:
 
         # Verify stored in resource_selector_json
         from server.db import get_session_factory
-        from server.models import Credential
+        from server.modules.identity.models import Credential
 
         factory = get_session_factory()
         with factory() as session:
@@ -731,16 +727,12 @@ class TestCredentialPolicyUpdateData:
         principal_id = profile.json()["identity"]["principal_id"]
 
         from server.db import get_session_factory
-        from server.models import (
-            AccessGrant,
-            Credential,
-            Exposure,
-            Principal,
-            Release,
-            Skill,
-            SkillVersion,
-        )
-        from server.modules.access.service import hash_token
+        from server.modules.access.models import AccessGrant
+        from server.modules.authoring.models import Skill, SkillVersion
+        from server.modules.exposure.models import Exposure
+        from server.modules.identity.models import Credential, Principal
+        from server.modules.identity.service import hash_token
+        from server.modules.release.models import Release
 
         factory = get_session_factory()
         with factory() as session:

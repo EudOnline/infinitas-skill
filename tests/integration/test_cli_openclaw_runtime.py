@@ -8,6 +8,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
+# Ensure subprocess CLI invocations use the project venv even when this test
+# file is imported by a system Python interpreter.
+_VENV_PYTHON = ROOT / ".venv" / "bin" / "python3"
+if _VENV_PYTHON.exists() and sys.executable != str(_VENV_PYTHON):
+    sys.executable = str(_VENV_PYTHON)
+
 
 def _run_cli(
     args: list[str], *, env: dict[str, str] | None = None
@@ -115,10 +121,7 @@ def test_infinitas_openclaw_skill_validate_returns_contract_payload(tmp_path: Pa
         "channels": ["chat"],
     }
     assert payload["contract"]["verification"]["required_runtimes"] == ["openclaw"]
-    assert payload["contract"]["verification"]["legacy"] == {
-        "required_platforms": ["openclaw"],
-        "required_platforms_deprecated": False,
-    }
+    assert "legacy" not in payload["contract"]["verification"]
 
 
 def test_infinitas_openclaw_plugin_inspect_normalizes_capabilities(tmp_path: Path) -> None:
@@ -145,3 +148,32 @@ def test_infinitas_openclaw_plugin_inspect_normalizes_capabilities(tmp_path: Pat
         "tools": ["shell", "edit"],
         "channels": ["chat"],
     }
+
+
+def test_infinitas_openclaw_import_can_plan_without_repository_scripts(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    _write_text(
+        source / "SKILL.md",
+        "---\nname: imported-skill\ndescription: Imported fixture.\n---\n\n# Imported\n",
+    )
+
+    result = _run_cli(
+        [
+            "openclaw",
+            "skill",
+            "import",
+            str(source),
+            "--owner",
+            "lvxiaoer",
+            "--publisher",
+            "lvxiaoer",
+            "--mode",
+            "confirm",
+            "--json",
+        ]
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["state"] == "planned"
+    assert payload["qualified_name"] == "lvxiaoer/imported-skill"

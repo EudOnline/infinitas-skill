@@ -15,6 +15,12 @@ from tests.helpers.signing_bootstrap import (
 )
 
 ROOT = Path(__file__).resolve().parents[2]
+
+# Ensure subprocess CLI invocations use the project venv even when this test
+# file is imported by a system Python interpreter.
+_VENV_PYTHON = ROOT / ".venv" / "bin" / "python3"
+if _VENV_PYTHON.exists() and sys.executable != str(_VENV_PYTHON):
+    sys.executable = str(_VENV_PYTHON)
 SKILL_NAME = "operate-infinitas-skill"
 MODE = "local-preflight"
 
@@ -97,7 +103,19 @@ def assert_release_cli_help_lists_maintained_subcommands() -> None:
         env=_cli_env(),
     )
     help_text = cli.stdout + cli.stderr
-    for command in ["check-state", "signing-readiness", "doctor-signing", "bootstrap-signing"]:
+    for command in [
+        "check-state",
+        "signing-readiness",
+        "doctor-signing",
+        "bootstrap-signing",
+        "tag",
+        "publish",
+        "generate-ci-attestation",
+        "generate-distribution-manifest",
+        "sign-attestation",
+        "verify-attestation",
+        "verify-ci-attestation",
+    ]:
         assert command in help_text, f"expected {command!r} in infinitas release help"
 
 
@@ -245,7 +263,7 @@ def test_release_preflight_uses_openclaw_as_canonical_platform_gate() -> None:
         if tmpdir.exists():
             import shutil
 
-            shutil.rmtree(tmpdir)
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
     platform_compatibility = (state.get("release") or {}).get("platform_compatibility") or {}
     assert platform_compatibility.get("canonical_runtime_platform") == "openclaw"
@@ -287,7 +305,7 @@ def test_release_preflight_blocks_when_openclaw_runtime_is_stale() -> None:
         if tmpdir.exists():
             import shutil
 
-            shutil.rmtree(tmpdir)
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
     platform_compatibility = (state.get("release") or {}).get("platform_compatibility") or {}
     blocking_platforms = platform_compatibility.get("blocking_platforms") or []
@@ -321,14 +339,4 @@ def test_release_bootstrap_signing_help_is_available() -> None:
 
 
 def test_release_signing_commands_route_through_package_modules() -> None:
-    assert_release_signing_commands_route_through_package_modules()
-
-
-def main() -> None:
-    assert_release_state_returns_expected_json()
-    assert_release_cli_help_lists_maintained_subcommands()
-    assert_release_state_routes_through_package_modules()
-    assert_release_signing_readiness_returns_expected_json()
-    assert_release_doctor_signing_returns_expected_json()
-    assert_release_bootstrap_signing_help_is_available()
     assert_release_signing_commands_route_through_package_modules()

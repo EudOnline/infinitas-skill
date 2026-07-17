@@ -26,6 +26,9 @@ def _test_client(tmp_path: Path) -> TestClient:
         '"role":"maintainer","token":"rate-test-token"}]'
     )
     os.environ["INFINITAS_SERVER_ALLOWED_HOSTS"] = '["localhost","127.0.0.1","testserver"]'
+    from server.rate_limit import get_rate_limiter
+
+    get_rate_limiter().reset_all()
     return TestClient(create_app())
 
 
@@ -62,6 +65,20 @@ class TestRateLimiting:
         # At least some requests should be rate limited
         assert rate_limited_count >= 1, "Expected rate limiting to kick in"
 
+    def test_rotating_user_agent_does_not_bypass_login_limit(self, tmp_path: Path) -> None:
+        client = _test_client(tmp_path)
+
+        statuses = []
+        for index in range(12):
+            response = client.post(
+                "/api/v1/auth/login",
+                headers={"User-Agent": f"rotating-agent-{index}"},
+                json={"username": "rate-tester", "password": f"wrong-password-{index}"},
+            )
+            statuses.append(response.status_code)
+
+        assert 429 in statuses
+
     def test_rate_limit_includes_retry_after(self, tmp_path: Path) -> None:
         """Test that rate limited responses include retry information."""
         client = _test_client(tmp_path)
@@ -76,7 +93,9 @@ class TestRateLimiting:
                 # Check response has appropriate message
                 data = response.json()
                 assert "detail" in data
-                assert "too many" in data["detail"].lower() or "rate limit" in data["detail"].lower()
+                assert (
+                    "too many" in data["detail"].lower() or "rate limit" in data["detail"].lower()
+                )
                 break
 
     def test_different_users_have_separate_limits(self, tmp_path: Path) -> None:
@@ -98,7 +117,7 @@ class TestRateLimiting:
             json={"username": "user2", "password": "wrong"},
         )
         # Should be rate limited since it's the same IP
-        assert response.status_code in (401, 429)
+        assert response.status_code == 429
 
 
 class TestAuthenticatedRateLimiting:
@@ -112,8 +131,7 @@ class TestAuthenticatedRateLimiting:
         # Authenticated requests should have reasonable limits
         for i in range(10):
             response = client.get("/api/v1/activity", headers=headers)
-            # Should succeed or 401 (if permission issue), not 429
-            assert response.status_code in (200, 401)
+            assert response.status_code == 200
 
     def test_different_ips_tracked_separately(self, tmp_path: Path) -> None:
         """Test that rate limiting tracks different IP addresses separately."""
@@ -127,7 +145,7 @@ class TestAuthenticatedRateLimiting:
             "/api/v1/auth/login",
             json={"username": "test-user", "password": "wrong"},
         )
-        assert response.status_code in (401, 429)
+        assert response.status_code == 401
 
 
 class TestRateLimitRecovery:
@@ -157,4 +175,4 @@ class TestRateLimitRecovery:
             json={"username": "reset-test", "password": "wrong"},
         )
         # Should be rate limited or fail auth
-        assert response.status_code in (401, 429)
+        assert response.status_code == 429

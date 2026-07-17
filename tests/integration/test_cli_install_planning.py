@@ -10,6 +10,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
+# Ensure subprocess CLI invocations use the project venv even when this test
+# file is imported by a system Python interpreter.
+_VENV_PYTHON = ROOT / ".venv" / "bin" / "python3"
+if _VENV_PYTHON.exists() and sys.executable != str(_VENV_PYTHON):
+    sys.executable = str(_VENV_PYTHON)
+
 
 def _run(
     command: list[str],
@@ -65,6 +71,7 @@ def _prepare_target(repo: Path) -> Path:
     _write_json(
         target / ".infinitas-skill-install-manifest.json",
         {
+            "schema_version": 1,
             "repo": "https://example.invalid/repo.git",
             "updated_at": "2026-03-12T00:00:00Z",
             "skills": {
@@ -233,7 +240,7 @@ def test_install_cli_handles_success_and_failure_paths() -> None:
             expect_returncode=1,
         )
     finally:
-        shutil.rmtree(tmpdir)
+        shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 def test_install_cli_routes_through_extracted_modules_for_both_commands() -> None:
@@ -263,9 +270,4 @@ def test_install_cli_routes_through_extracted_modules_for_both_commands() -> Non
             ],
         )
     finally:
-        shutil.rmtree(tmpdir)
-
-
-def main() -> None:
-    test_install_cli_handles_success_and_failure_paths()
-    test_install_cli_routes_through_extracted_modules_for_both_commands()
+        shutil.rmtree(tmpdir, ignore_errors=True)

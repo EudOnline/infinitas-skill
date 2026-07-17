@@ -48,10 +48,8 @@ class TestRoleBasedAccess:
         client = _test_client(tmp_path)
         headers = {"Authorization": "Bearer reader-token"}
 
-        # Reader might be able to view but not modify
         response = client.get("/api/v1/activity", headers=headers)
-        # Could be 403 (forbidden) or 401 (if reader isn't recognized)
-        assert response.status_code in (200, 401, 403)
+        assert response.status_code == 403
 
     def test_contributor_can_access_basic_endpoints(self, tmp_path: Path) -> None:
         """Test that contributors can access basic endpoints."""
@@ -108,10 +106,7 @@ class TestTokenAuthorization:
         ]
 
         for token_header in malformed_tokens:
-            response = client.get(
-                "/api/v1/activity",
-                headers={"Authorization": token_header}
-            )
+            response = client.get("/api/v1/activity", headers={"Authorization": token_header})
             assert response.status_code == 401
 
 
@@ -156,12 +151,8 @@ class TestCrossUserAccess:
         headers = {"Authorization": "Bearer contributor-token"}
 
         # Try to list tokens for a different user's object
-        response = client.get(
-            "/api/v1/object-tokens/999",
-            headers=headers
-        )
-        # Should be 403 or 404 (not found is acceptable for security)
-        assert response.status_code in (403, 404)
+        response = client.get("/api/v1/object-tokens/objects/999/tokens", headers=headers)
+        assert response.status_code == 404
 
     def test_user_cannot_modify_others_resources(self, tmp_path: Path) -> None:
         """Test that users cannot modify others' resources."""
@@ -169,9 +160,5 @@ class TestCrossUserAccess:
         headers = {"Authorization": "Bearer contributor-token"}
 
         # Try to revoke a token owned by someone else
-        response = client.post(
-            "/api/v1/tokens/999/revoke",
-            headers=headers
-        )
-        # Should be 403 or 404
-        assert response.status_code in (403, 404)
+        response = client.post("/api/v1/object-tokens/tokens/999/revoke", headers=headers)
+        assert response.status_code == 404

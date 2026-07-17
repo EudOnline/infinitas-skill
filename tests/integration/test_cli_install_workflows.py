@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 import os
 import shutil
@@ -9,6 +10,13 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+CLI_MAIN_PATH = ROOT / "src" / "infinitas_skill" / "cli" / "main.py"
+
+# Ensure subprocess CLI invocations use the project venv even when this test
+# file is imported by a system Python interpreter.
+_VENV_PYTHON = ROOT / ".venv" / "bin" / "python3"
+if _VENV_PYTHON.exists() and sys.executable != str(_VENV_PYTHON):
+    sys.executable = str(_VENV_PYTHON)
 OPENCLAW_RUNTIME = {
     "platform": "openclaw",
     "source_mode": "legacy",
@@ -83,6 +91,29 @@ def _run_cli(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
         cwd=repo,
         env=_cli_env(repo),
     )
+
+
+def test_cli_main_delegates_install_registration_to_one_registrar() -> None:
+    tree = ast.parse(CLI_MAIN_PATH.read_text(encoding="utf-8"), filename=str(CLI_MAIN_PATH))
+    install_imports = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom)
+        and node.module is not None
+        and node.module.startswith("infinitas_skill.install")
+    ]
+    assert len(install_imports) == 1
+    assert {
+        (node.module, tuple(alias.name for alias in node.names)) for node in install_imports
+    } == {
+        ("infinitas_skill.install.cli", ("configure_install_cli",)),
+    }
+    calls = {
+        node.func.id
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+    assert "configure_install_cli" in calls
 
 
 def _discovery_index_payload() -> dict:
@@ -356,4 +387,4 @@ def test_install_cli_exposes_resolve_and_by_name_workflows() -> None:
         assert install_payload["requires_confirmation"] is True
         assert install_payload["qualified_name"] == "partner/external-only-skill"
     finally:
-        shutil.rmtree(tmpdir)
+        shutil.rmtree(tmpdir, ignore_errors=True)

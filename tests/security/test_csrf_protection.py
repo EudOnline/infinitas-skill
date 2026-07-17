@@ -98,7 +98,11 @@ class TestCSRFProtection:
 
         # In test mode, we just verify the cookie exists
         # Production environment would have specific security attributes
-        cookie_value = csrf_cookie if isinstance(csrf_cookie, str) else getattr(csrf_cookie, "value", csrf_cookie)
+        cookie_value = (
+            csrf_cookie
+            if isinstance(csrf_cookie, str)
+            else getattr(csrf_cookie, "value", csrf_cookie)
+        )
         assert cookie_value is not None
         assert len(cookie_value) > 0
 

@@ -18,9 +18,6 @@ REQUIRED_FIELDS = ["audience", "owner", "source_of_truth", "last_reviewed", "sta
 BAD_LINK_PATTERN = re.compile(r"/Users/.+?/\.worktrees/")
 LEGACY_ROOT_ALLOWLIST = {
     "README.md",
-    "project-closeout.md",
-    "registry-snapshot-mirrors.md",
-    "release-strategy.md",
 }
 SECTION_LANDINGS = {
     "guide": DOCS_ROOT / "guide" / "README.md",

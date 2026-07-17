@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from server.auth import (
+from server.modules.identity.auth import (
     _decode_auth_session_cookie,
     _extract_bearer_token,
     _session_signature,
@@ -25,7 +25,7 @@ class TestExtractBearerToken:
         assert _extract_bearer_token("") is None
 
     def test_lowercase_bearer(self):
-        assert _extract_bearer_token("bearer my-token") is None
+        assert _extract_bearer_token("bearer my-token") == "my-token"
 
 
 class TestUrlsafeB64:

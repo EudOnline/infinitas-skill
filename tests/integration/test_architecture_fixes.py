@@ -9,18 +9,13 @@ import pytest
 from sqlalchemy.orm import Session
 
 from server.db import _engine_kwargs
-from server.models import (
-    AccessGrant,
-    Credential,
-    Exposure,
-    Principal,
-    Release,
-    Skill,
-    SkillVersion,
-    User,
-)
 from server.modules.access.authn import AccessContext
 from server.modules.access.authz import can_access_releases
+from server.modules.access.models import AccessGrant
+from server.modules.authoring.models import Skill, SkillVersion
+from server.modules.exposure.models import Exposure
+from server.modules.identity.models import Credential, Principal, User
+from server.modules.release.models import Release
 from server.rate_limit import DBRateLimiter, MemoryRateLimiter
 from server.ui.assets import load_asset_hashes, static_url_factory
 
@@ -36,7 +31,8 @@ def db(monkeypatch, tmp_path: Path):
     monkeypatch.setenv("INFINITAS_SERVER_BOOTSTRAP_USERS", "[]")
     monkeypatch.setenv("INFINITAS_SERVER_ALLOWED_HOSTS", '["localhost","testserver"]')
 
-    from server.db import ensure_database_ready, get_engine, get_session_factory
+    from server.db import get_engine, get_session_factory
+    from server.lifecycle import ensure_database_ready
 
     get_engine.cache_clear()
     get_session_factory.cache_clear()
@@ -260,8 +256,8 @@ class TestAssetHashHelpers:
 
 
 class TestEngineKwargs:
-    def test_sqlite_uses_static_pool(self):
-        kwargs = _engine_kwargs("sqlite:///test.db")
+    def test_memory_sqlite_uses_static_pool(self):
+        kwargs = _engine_kwargs("sqlite:///:memory:")
         from sqlalchemy.pool import StaticPool
 
         assert kwargs["poolclass"] is StaticPool

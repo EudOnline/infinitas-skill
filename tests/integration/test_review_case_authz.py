@@ -135,7 +135,7 @@ def test_review_case_api_requires_release_ownership(
 
     from server.app import create_app
     from server.db import get_session_factory
-    from server.models import ReviewCase
+    from server.modules.review.models import ReviewCase
 
     client = TestClient(create_app())
     owner_headers = {"Authorization": "Bearer fixture-maintainer-token"}

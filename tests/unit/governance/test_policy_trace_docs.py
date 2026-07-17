@@ -17,7 +17,7 @@ pytestmark = pytest.mark.governance
         ("README.md", "policy/team-policy.json"),
         ("README.md", "uv run infinitas policy check-promotion <skill> --json"),
         ("README.md", "uv run infinitas release check-state operate-infinitas-skill --json"),
-        ("README.md", "scripts/validate-registry.py --json"),
+        ("README.md", "uv run infinitas registry catalog build"),
         ("docs/reference/policy-packs.md", "--debug-policy"),
         ("docs/reference/policy-packs.md", "policy_trace"),
         ("docs/reference/policy-packs.md", "validation_errors"),

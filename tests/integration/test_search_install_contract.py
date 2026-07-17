@@ -8,12 +8,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 
-from server.modules.discovery.projections import cleanup_expired_cache_entries
 from tests.helpers.signing import add_allowed_signer, configure_git_ssh_signing
-
-
-def _clear_discovery_cache() -> None:
-    cleanup_expired_cache_entries(ttl=0)
 
 
 def configure_env(tmpdir: Path) -> Path:
@@ -137,8 +132,8 @@ def create_grant_token(
     exposure_id: int,
     created_by_principal_id: int | None = None,
 ) -> str:
-    from server.models import AccessGrant
     from server.modules.access import service as access_service
+    from server.modules.access.models import AccessGrant
 
     with session_factory() as session:
         grant = AccessGrant(
@@ -159,7 +154,7 @@ def create_grant_token(
 def approve_exposure_review(
     client, session_factory, headers: dict[str, str], exposure_id: int
 ) -> None:
-    from server.models import ReviewCase
+    from server.modules.review.models import ReviewCase
 
     with session_factory() as session:
         review_case = session.scalar(
@@ -416,7 +411,7 @@ def test_me_search_accepts_browser_session_cookie_authentication(
     from fastapi.testclient import TestClient
 
     from server.app import create_app
-    from server.auth import AUTH_COOKIE_NAME
+    from server.modules.identity.auth import AUTH_COOKIE_NAME
 
     client = TestClient(create_app())
     token_headers = {"Authorization": "Bearer fixture-maintainer-token"}
@@ -446,7 +441,6 @@ def test_me_search_accepts_browser_session_cookie_authentication(
     assert session_cookie, "expected login to issue a browser session cookie"
 
     client.cookies.set(AUTH_COOKIE_NAME, session_cookie)
-    _clear_discovery_cache()
     response = client.get("/api/v1/search?q=cookie-search&scope=me")
     assert response.status_code == 200, response.text
 
@@ -459,6 +453,43 @@ def test_me_search_accepts_browser_session_cookie_authentication(
     )
     assert cookie_entry["install_scope"] == "me"
     assert cookie_entry["audience_type"] == "private"
+
+
+def test_release_projection_pagination_returns_distinct_pages(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    _prepare_signing_repo(temp_repo_copy, signing_key)
+    configure_env(tmp_path)
+    os.environ["INFINITAS_SERVER_REPO_PATH"] = str(temp_repo_copy)
+
+    from fastapi.testclient import TestClient
+
+    from server.app import create_app
+    from server.db import get_session_factory
+    from server.modules.discovery.projections import build_release_projections
+
+    client = TestClient(create_app())
+    headers = {"Authorization": "Bearer fixture-maintainer-token"}
+    for slug in ("projection-page-alpha", "projection-page-beta"):
+        release_id = create_ready_release(client, headers, slug=slug, display_name=slug)
+        create_exposure(
+            client,
+            headers,
+            release_id=release_id,
+            audience_type="grant",
+            listing_mode="listed",
+            requested_review_mode="none",
+        )
+
+    with get_session_factory()() as session:
+        first_page = build_release_projections(session, limit=1, offset=0)
+        second_page = build_release_projections(session, limit=1, offset=1)
+
+    assert len(first_page) == len(second_page) == 1
+    assert first_page[0].release_id != second_page[0].release_id
 
 
 def test_grant_search_uses_grant_install_scope_for_grant_credentials(

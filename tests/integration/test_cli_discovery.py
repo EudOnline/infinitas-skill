@@ -8,6 +8,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
+# Ensure subprocess CLI invocations use the project venv even when this test
+# file is imported by a system Python interpreter.
+_VENV_PYTHON = ROOT / ".venv" / "bin" / "python3"
+if _VENV_PYTHON.exists() and sys.executable != str(_VENV_PYTHON):
+    sys.executable = str(_VENV_PYTHON)
+
 
 def _cli_env() -> dict[str, str]:
     return dict(os.environ, PYTHONPATH=str(ROOT / "src"))

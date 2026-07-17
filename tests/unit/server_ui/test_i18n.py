@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import Request
 
-from server.ui.i18n import (
+from server.i18n import (
     load_locale,
     pick_lang,
     request_path_with_query,

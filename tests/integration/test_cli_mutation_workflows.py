@@ -10,10 +10,12 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
 
+# Ensure subprocess CLI invocations use the project venv even when this test
+# file is imported by a system Python interpreter.
+_VENV_PYTHON = ROOT / ".venv" / "bin" / "python3"
+if _VENV_PYTHON.exists() and sys.executable != str(_VENV_PYTHON):
+    sys.executable = str(_VENV_PYTHON)
 FIXTURE_NAME = "release-fixture"
 V1 = "1.2.3"
 V2 = "1.2.4"
@@ -103,10 +105,12 @@ def _update_fixture(repo: Path, version: str) -> None:
             "version": version,
             "status": "active",
             "summary": f"Fixture skill version {version} for CLI mutation workflow tests",
-            "owner": "release-test",
-            "owners": ["release-test"],
-            "maintainers": ["Release Fixture"],
-            "author": "release-test",
+            "publisher": "lvxiaoer",
+            "qualified_name": f"lvxiaoer/{FIXTURE_NAME}",
+            "owner": "lvxiaoer",
+            "owners": ["lvxiaoer"],
+            "maintainers": ["lvxiaoer"],
+            "author": "lvxiaoer",
             "review_state": "approved",
             "distribution": {
                 "installable": True,
@@ -158,7 +162,7 @@ def _update_fixture(repo: Path, version: str) -> None:
 def _scaffold_fixture(repo: Path, version: str) -> None:
     fixture_dir = repo / "skills" / "active" / FIXTURE_NAME
     if fixture_dir.exists():
-        shutil.rmtree(fixture_dir)
+        shutil.rmtree(fixture_dir, ignore_errors=True)
     shutil.copytree(ROOT / "templates" / "basic-skill", fixture_dir)
     _update_fixture(repo, version)
 
@@ -189,13 +193,13 @@ def _prepare_repo() -> tuple[Path, Path]:
     _run(["git", "add", "."], cwd=repo)
     _run(["git", "commit", "-m", "fixture repo"], cwd=repo)
     _run(["git", "push", "-u", "origin", "main"], cwd=repo)
-    _run([str(repo / "scripts" / "build-catalog.sh")], cwd=repo)
+    _run_cli(repo, ["registry", "catalog", "build"])
     _run(["git", "add", "catalog"], cwd=repo)
     _run(["git", "commit", "-m", "build fixture catalog"], cwd=repo)
     _run(["git", "push"], cwd=repo)
 
     key_path = tmpdir / "release-test-key"
-    identity = "release-test"
+    identity = "lvxiaoer"
     _run(
         ["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", identity, "-f", str(key_path)],
         cwd=repo,
@@ -209,35 +213,38 @@ def _prepare_repo() -> tuple[Path, Path]:
     _run(["git", "commit", "-m", "add release signer"], cwd=repo)
     _run(["git", "push"], cwd=repo)
 
-    env = _regression_env(repo)
-    _run(
+    _run_cli(
+        repo,
         [
-            str(repo / "scripts" / "release-skill.sh"),
+            "release",
+            "publish",
             FIXTURE_NAME,
             "--push-tag",
-            "--write-provenance",
+            "--write-attestation",
+            "--releaser",
+            "lvxiaoer",
         ],
-        cwd=repo,
-        env=env,
     )
 
     _update_fixture(repo, V2)
-    _run([str(repo / "scripts" / "build-catalog.sh")], cwd=repo)
+    _run_cli(repo, ["registry", "catalog", "build"])
     _run(["git", "add", f"skills/active/{FIXTURE_NAME}", "catalog"], cwd=repo)
     _run(["git", "commit", "-m", f"fixture {V2}"], cwd=repo)
     _run(["git", "push"], cwd=repo)
-    _run(
+    _run_cli(
+        repo,
         [
-            str(repo / "scripts" / "release-skill.sh"),
+            "release",
+            "publish",
             FIXTURE_NAME,
             "--push-tag",
-            "--write-provenance",
+            "--write-attestation",
+            "--releaser",
+            "lvxiaoer",
         ],
-        cwd=repo,
-        env=env,
     )
 
-    shutil.rmtree(repo / "skills" / "active" / FIXTURE_NAME)
+    shutil.rmtree(repo / "skills" / "active" / FIXTURE_NAME, ignore_errors=True)
     return tmpdir, repo
 
 
@@ -313,4 +320,4 @@ def test_install_cli_exposes_exact_sync_switch_and_rollback_workflows() -> None:
         current = (manifest.get("skills") or {}).get(FIXTURE_NAME) or {}
         assert current.get("installed_version") == V1
     finally:
-        shutil.rmtree(tmpdir)
+        shutil.rmtree(tmpdir, ignore_errors=True)

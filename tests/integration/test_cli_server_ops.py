@@ -11,12 +11,20 @@ from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from server.models import Base, Job
+import server.model_registry  # noqa: F401
+from server.model_base import Base
+from server.modules.jobs.models import Job
 from tests.fixtures.repo_state import create_repo_state
 from tests.helpers.ops_support.server_ops import HealthServer
 from tests.helpers.ops_support.server_ops import run_command as shared_run_command
 
 ROOT = Path(__file__).resolve().parents[2]
+
+# Ensure subprocess CLI invocations use the project venv even when this test
+# file is imported by a system Python interpreter.
+_VENV_PYTHON = ROOT / ".venv" / "bin" / "python3"
+if _VENV_PYTHON.exists() and sys.executable != str(_VENV_PYTHON):
+    sys.executable = str(_VENV_PYTHON)
 
 
 def _run(
@@ -103,7 +111,7 @@ def assert_server_healthcheck_reports_expected_summary() -> None:
         cli_payload = _load_json_output(cli, label="infinitas server healthcheck")
         assert cli_payload.get("ok") is True
         assert cli_payload.get("api", {}).get("ok") is True
-        assert cli_payload.get("api", {}).get("url", "").endswith("/healthz")
+        assert cli_payload.get("api", {}).get("url", "").endswith("/api/v1/system/healthz")
         assert cli_payload.get("repo", {}).get("clean") is True
         assert cli_payload.get("artifacts", {}).get("ai_index") is True
         assert cli_payload.get("database", {}).get("kind") == "sqlite"
@@ -194,9 +202,3 @@ def test_server_inspect_state_reports_job_lease_health(tmp_path: Path) -> None:
     assert payload["jobs"]["ages"]["oldest_queued_seconds"] >= 2690
     assert payload["jobs"]["recent_stale_running"][0]["release_id"] == 101
     assert payload["jobs"]["recent_reclaimed"][0]["attempt_count"] == 2
-
-
-def main() -> None:
-    assert_server_cli_help_lists_maintained_subcommands()
-    assert_server_ops_split_into_modules()
-    assert_server_healthcheck_reports_expected_summary()

@@ -33,7 +33,7 @@ def test_console_grid_has_six_cards(authenticated_page, live_server):
 
 def test_mobile_nav_scrolls_horizontally(authenticated_page, live_server):
     authenticated_page.set_viewport_size({"width": 390, "height": 844})
-    authenticated_page.goto(f"{live_server}/library?lang=en")
+    authenticated_page.goto(f"{live_server}/manage?lang=en")
     authenticated_page.wait_for_load_state("networkidle")
 
     nav = authenticated_page.query_selector(".nav")

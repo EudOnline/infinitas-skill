@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from infinitas_skill.registry.cli import build_registry_parser
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -41,4 +43,15 @@ def test_web_admin_and_agent_docs_freeze_the_new_product_contract() -> None:
 
     assert "Maintainer-only console" not in combined
     assert "maintainer-console" not in combined
+    assert "infinitas registry grants" not in combined
+    assert "grant listing API is not available yet" not in combined
+    assert "`agent_preset` and `agent_code` are first-class" not in combined
     assert "Compatibility authoring flow" not in combined
+
+
+def test_registry_cli_does_not_advertise_unimplemented_grants(capsys) -> None:
+    parser = build_registry_parser(prog="infinitas registry")
+
+    parser.print_help()
+
+    assert "grants" not in capsys.readouterr().out

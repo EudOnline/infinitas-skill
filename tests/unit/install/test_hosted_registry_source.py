@@ -1,13 +1,21 @@
 from __future__ import annotations
 
+from http.client import HTTPMessage
+from io import BytesIO
 from pathlib import Path
+from urllib.request import Request
 
 import pytest
 
+from infinitas_skill.install.http_registry import (
+    HostedRegistryError,
+    _RedirectLimiter,
+    build_registry_url,
+)
+from infinitas_skill.install.registry_source_primitives import resolve_registry_root
 from infinitas_skill.install.registry_sources import (
     find_registry,
     registry_identity,
-    resolve_registry_root,
     validate_registry_config,
 )
 
@@ -81,3 +89,43 @@ def test_http_registry_identity_resolves_without_local_clone() -> None:
     assert identity["registry_root"] is None
     assert identity.get("registry_commit") is None
     assert identity.get("registry_tag") is None
+
+
+def test_registry_url_keeps_relative_paths_under_base_path() -> None:
+    assert build_registry_url("https://skills.example.com/registry", "catalog/index.json") == (
+        "https://skills.example.com/registry/catalog/index.json"
+    )
+
+
+@pytest.mark.parametrize("path", ["../internal", "catalog/../../internal", "https://evil.test/x"])
+def test_registry_url_rejects_base_escape(path: str) -> None:
+    with pytest.raises(HostedRegistryError):
+        build_registry_url("https://skills.example.com/registry", path)
+
+
+def test_registry_redirect_rejects_cross_origin_and_preserves_same_origin_auth() -> None:
+    request = Request(
+        "https://skills.example.com/registry/index.json",
+        headers={"Authorization": "Bearer secret"},
+    )
+    handler = _RedirectLimiter(("https", "skills.example.com", None))
+    redirected = handler.redirect_request(
+        request,
+        BytesIO(),
+        302,
+        "Found",
+        HTTPMessage(),
+        "https://skills.example.com/registry/current.json",
+    )
+    assert redirected is not None
+    assert redirected.get_header("Authorization") == "Bearer secret"
+
+    with pytest.raises(HostedRegistryError):
+        handler.redirect_request(
+            request,
+            BytesIO(),
+            302,
+            "Found",
+            HTTPMessage(),
+            "https://evil.example/steal",
+        )

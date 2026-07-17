@@ -9,8 +9,10 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from infinitas_skill.install.distribution import verify_distribution_manifest
-from server.models import Artifact, Job, Release, utcnow
+from infinitas_skill.install.distribution_verification import verify_distribution_manifest
+from server.model_base import utcnow
+from server.modules.jobs.models import Job
+from server.modules.release.models import Artifact, Release
 from tests.helpers.signing import add_allowed_signer, configure_git_ssh_signing
 
 

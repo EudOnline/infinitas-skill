@@ -3,12 +3,15 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from threading import Barrier, Event
+from types import SimpleNamespace
 
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import Query, Session, sessionmaker
 
+import server.model_registry  # noqa: F401
 from server.jobs import claim_next_job, enqueue_job
-from server.models import Base, Job, utcnow
+from server.model_base import Base, utcnow
+from server.modules.jobs.models import Job
 
 
 def _configure_worker_env(monkeypatch, tmp_path) -> None:
@@ -103,6 +106,7 @@ def test_claim_next_job_is_atomic_under_concurrency(monkeypatch, tmp_path) -> No
             payload={"release_id": 42},
             requested_by=None,
         )
+        session.commit()
 
     start = Event()
     barrier = Barrier(2)
@@ -122,6 +126,7 @@ def test_claim_next_job_is_atomic_under_concurrency(monkeypatch, tmp_path) -> No
         start.wait(timeout=5)
         with session_factory() as session:
             job = claim_next_job(session)
+            session.commit()
             return None if job is None else int(job.id)
 
     with ThreadPoolExecutor(max_workers=2) as executor:
@@ -161,6 +166,7 @@ def test_claim_next_job_sets_lease_metadata_for_queued_work(tmp_path) -> None:
             payload={"release_id": 42},
             requested_by=None,
         )
+        session.commit()
 
     with session_factory() as session:
         job = claim_next_job(session)
@@ -171,6 +177,7 @@ def test_claim_next_job_sets_lease_metadata_for_queued_work(tmp_path) -> None:
         assert job.lease_expires_at is not None
         assert job.lease_expires_at > job.heartbeat_at
         assert job.attempt_count == 1
+        session.commit()
 
     engine.dispose()
 
@@ -215,6 +222,7 @@ def test_claim_next_job_reclaims_stale_running_job_after_lease_expiry(tmp_path) 
         assert reclaimed.lease_expires_at is not None
         assert reclaimed.lease_expires_at > reclaimed.heartbeat_at
         assert reclaimed.attempt_count == 2
+        session.commit()
 
     engine.dispose()
 
@@ -276,6 +284,59 @@ def test_process_job_refreshes_lease_before_work_and_clears_it_on_completion(
         assert job.finished_at is not None
         assert job.heartbeat_at is None
         assert job.lease_expires_at is None
+
+
+def test_materialization_checkpoints_commit_lease_renewals(monkeypatch, tmp_path) -> None:
+    _configure_worker_env(monkeypatch, tmp_path)
+
+    from server import worker as worker_module
+    from server.db import get_engine, get_session_factory
+
+    Base.metadata.create_all(get_engine())
+    session_factory = get_session_factory()
+    callbacks = 0
+
+    with session_factory() as session:
+        job = Job(
+            kind="materialize_release",
+            status="running",
+            payload_json='{"release_id": 42}',
+            release_id=42,
+            heartbeat_at=utcnow() - timedelta(minutes=10),
+            lease_expires_at=utcnow() - timedelta(minutes=1),
+            attempt_count=1,
+        )
+        session.add(job)
+        session.commit()
+        job_id = int(job.id)
+
+    def fake_materialize_release(*_args, heartbeat=None, **_kwargs):
+        nonlocal callbacks
+        assert heartbeat is not None
+        for _ in range(3):
+            heartbeat()
+            callbacks += 1
+        return SimpleNamespace(id=42), [object(), object(), object(), object()]
+
+    monkeypatch.setattr(worker_module, "materialize_release", fake_materialize_release)
+    monkeypatch.setattr(worker_module, "refresh_projection_snapshot", lambda *_args: None)
+
+    with session_factory() as session:
+        job = session.get(Job, job_id)
+        assert job is not None
+        worker_module._process_materialize_release_job(
+            session,
+            job,
+            worker_module.get_settings(),
+        )
+
+    assert callbacks == 3
+    with session_factory() as session:
+        renewed = session.get(Job, job_id)
+        assert renewed is not None
+        assert renewed.heartbeat_at is not None
+        assert renewed.lease_expires_at is not None
+        assert renewed.lease_expires_at > renewed.heartbeat_at
 
 
 def test_process_job_clears_lease_metadata_when_work_fails(monkeypatch, tmp_path) -> None:

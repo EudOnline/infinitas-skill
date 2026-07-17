@@ -100,66 +100,64 @@ class TestJsonObject:
 
 
 class TestShareState:
-    def _make_grant(self, state="active"):
+    def _make_grant(self, state="active", *, expires_at=None, usage_limit=None, usage_count=0):
         """Create a mock grant-like object."""
 
         class MockGrant:
             def __init__(self, state):
                 self.state = state
+                self.expires_at = expires_at
+                self.usage_limit = usage_limit
+                self.usage_count = usage_count
 
         return MockGrant(state)
 
     def test_revoked_grant(self):
         svc = _get_shares_service()
         grant = self._make_grant(state="revoked")
-        assert svc["_share_state"](grant, {}) == "revoked"
+        assert svc["_share_state"](grant) == "revoked"
 
     def test_active_grant_no_expiry(self):
         svc = _get_shares_service()
         grant = self._make_grant(state="active")
-        assert svc["_share_state"](grant, {}) == "active"
+        assert svc["_share_state"](grant) == "active"
 
     def test_expired_grant(self):
         svc = _get_shares_service()
         past = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
-        grant = self._make_grant(state="active")
-        assert svc["_share_state"](grant, {"expires_at": past}) == "expired"
+        grant = self._make_grant(state="active", expires_at=datetime.fromisoformat(past))
+        assert svc["_share_state"](grant) == "expired"
 
     def test_exhausted_grant(self):
         svc = _get_shares_service()
-        grant = self._make_grant(state="active")
-        constraints = {"max_uses": 5, "used_count": 5}
-        assert svc["_share_state"](grant, constraints) == "exhausted"
+        grant = self._make_grant(state="active", usage_limit=5, usage_count=5)
+        assert svc["_share_state"](grant) == "exhausted"
 
     def test_active_grant_with_uses_remaining(self):
         svc = _get_shares_service()
-        grant = self._make_grant(state="active")
-        constraints = {"max_uses": 5, "used_count": 3}
-        assert svc["_share_state"](grant, constraints) == "active"
+        grant = self._make_grant(state="active", usage_limit=5, usage_count=3)
+        assert svc["_share_state"](grant) == "active"
 
     def test_active_grant_with_usage_limit(self):
         svc = _get_shares_service()
-        grant = self._make_grant(state="active")
-        constraints = {"usage_limit": 10, "usage_count": 7}
-        assert svc["_share_state"](grant, constraints) == "active"
+        grant = self._make_grant(state="active", usage_limit=10, usage_count=7)
+        assert svc["_share_state"](grant) == "active"
 
     def test_future_expiry_is_active(self):
         svc = _get_shares_service()
         future = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
-        grant = self._make_grant(state="active")
-        assert svc["_share_state"](grant, {"expires_at": future}) == "active"
+        grant = self._make_grant(state="active", expires_at=datetime.fromisoformat(future))
+        assert svc["_share_state"](grant) == "active"
 
     def test_exactly_at_limit_is_exhausted(self):
         svc = _get_shares_service()
-        grant = self._make_grant(state="active")
-        constraints = {"max_uses": 1, "used_count": 1}
-        assert svc["_share_state"](grant, constraints) == "exhausted"
+        grant = self._make_grant(state="active", usage_limit=1, usage_count=1)
+        assert svc["_share_state"](grant) == "exhausted"
 
     def test_zero_uses_is_active(self):
         svc = _get_shares_service()
-        grant = self._make_grant(state="active")
-        constraints = {"max_uses": 5, "used_count": 0}
-        assert svc["_share_state"](grant, constraints) == "active"
+        grant = self._make_grant(state="active", usage_limit=5, usage_count=0)
+        assert svc["_share_state"](grant) == "active"
 
 
 # ── _password_credential helper ──────────────────────────────────────────────
@@ -178,7 +176,7 @@ class TestPasswordCredential:
     def test_finds_password_credential(self):
         svc = _get_shares_service()
         creds = [
-            self._make_credential("share_secret"),
+            self._make_credential("share_capability"),
             self._make_credential("share_password"),
         ]
         result = svc["_password_credential"](creds)
@@ -188,7 +186,7 @@ class TestPasswordCredential:
     def test_returns_none_when_no_password(self):
         svc = _get_shares_service()
         creds = [
-            self._make_credential("share_secret"),
+            self._make_credential("share_capability"),
         ]
         result = svc["_password_credential"](creds)
         assert result is None

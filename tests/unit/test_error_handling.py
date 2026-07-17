@@ -134,8 +134,8 @@ class TestAPIErrorResponses:
             "/api/v1/skills",
             json={"slug": "invalid$slug", "display_name": "Test"},
         )
-        # Should be 422 or 401 (if auth required)
-        assert response.status_code in (401, 422)
+        # Authentication is evaluated before request-body validation.
+        assert response.status_code == 401
 
 
 class TestDatabaseTransactionBehavior:
@@ -168,7 +168,8 @@ class TestDatabaseTransactionBehavior:
         session = session_factory()
 
         try:
-            from server.models import Principal, Skill
+            from server.modules.authoring.models import Skill
+            from server.modules.identity.models import Principal
 
             # Create a principal
             principal = Principal(
@@ -229,7 +230,7 @@ class TestDatabaseTransactionBehavior:
         session = session_factory()
 
         try:
-            from server.models import Principal
+            from server.modules.identity.models import Principal
 
             # Create a principal
             principal = Principal(

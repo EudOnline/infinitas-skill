@@ -23,7 +23,7 @@ def db(tmp_path: Path) -> Session:
     os.environ["INFINITAS_SERVER_SECRET_KEY"] = "pag-test-secret-32chars-long-min"
     os.environ["INFINITAS_SERVER_ENV"] = "test"
 
-    engine = get_engine()
+    get_engine()
     session_factory = get_session_factory()
 
     # Run migrations
@@ -51,7 +51,8 @@ class TestPaginationBasics:
         """Test pagination with empty result set."""
         from sqlalchemy import select
 
-        from server.models import Principal, Skill
+        from server.modules.authoring.models import Skill
+        from server.modules.identity.models import Principal
 
         principal = Principal(
             slug="empty-pagination",
@@ -62,12 +63,7 @@ class TestPaginationBasics:
         db.flush()
 
         # Query with pagination on empty set
-        stmt = (
-            select(Skill)
-            .where(Skill.namespace_id == principal.id)
-            .limit(10)
-            .offset(0)
-        )
+        stmt = select(Skill).where(Skill.namespace_id == principal.id).limit(10).offset(0)
         results = list(db.scalars(stmt).all())
 
         assert len(results) == 0
@@ -76,7 +72,8 @@ class TestPaginationBasics:
         """Test that pagination respects the limit parameter."""
         from sqlalchemy import select
 
-        from server.models import Principal, Skill
+        from server.modules.authoring.models import Skill
+        from server.modules.identity.models import Principal
 
         principal = Principal(
             slug="limit-pagination",
@@ -98,11 +95,7 @@ class TestPaginationBasics:
         db.flush()
 
         # Test with limit 10
-        stmt = (
-            select(Skill)
-            .where(Skill.namespace_id == principal.id)
-            .limit(10)
-        )
+        stmt = select(Skill).where(Skill.namespace_id == principal.id).limit(10)
         results = list(db.scalars(stmt).all())
 
         assert len(results) == 10
@@ -111,7 +104,8 @@ class TestPaginationBasics:
         """Test that pagination respects the offset parameter."""
         from sqlalchemy import select
 
-        from server.models import Principal, Skill
+        from server.modules.authoring.models import Skill
+        from server.modules.identity.models import Principal
 
         principal = Principal(
             slug="offset-pagination",
@@ -164,7 +158,8 @@ class TestPaginationBasics:
         """Test that pagination beyond available data returns empty set."""
         from sqlalchemy import select
 
-        from server.models import Principal, Skill
+        from server.modules.authoring.models import Skill
+        from server.modules.identity.models import Principal
 
         principal = Principal(
             slug="beyond-pagination",
@@ -186,12 +181,7 @@ class TestPaginationBasics:
         db.flush()
 
         # Request page beyond available data
-        stmt = (
-            select(Skill)
-            .where(Skill.namespace_id == principal.id)
-            .limit(10)
-            .offset(100)
-        )
+        stmt = select(Skill).where(Skill.namespace_id == principal.id).limit(10).offset(100)
         results = list(db.scalars(stmt).all())
 
         assert len(results) == 0
@@ -211,12 +201,18 @@ class TestPaginationParameters:
 
     def test_max_limit_is_enforced(self, db: Session) -> None:
         """Test that maximum pagination limit is enforced."""
-        from server.pagination import PaginationParams
+        import inspect
 
-        # Try to create params with excessive limit using from_query
-        params = PaginationParams.from_query(limit=1000)
-        # Should be capped at a reasonable maximum
-        assert params.limit <= 100
+        from annotated_types import Le
+
+        from server.pagination import query_pagination_params
+
+        limit_query = inspect.signature(query_pagination_params).parameters["limit"].default
+        max_limits = [
+            constraint.le for constraint in limit_query.metadata if isinstance(constraint, Le)
+        ]
+
+        assert max_limits == [100]
 
     def test_skip_parameter_works(self, db: Session) -> None:
         """Test that skip parameter works correctly."""
@@ -236,7 +232,8 @@ class TestPaginationPerformance:
 
         from sqlalchemy import select
 
-        from server.models import Principal, Skill
+        from server.modules.authoring.models import Skill
+        from server.modules.identity.models import Principal
 
         principal = Principal(
             slug="large-offset",
@@ -259,12 +256,7 @@ class TestPaginationPerformance:
 
         # Query with large offset
         start = perf_counter()
-        stmt = (
-            select(Skill)
-            .where(Skill.namespace_id == principal.id)
-            .limit(10)
-            .offset(90)
-        )
+        stmt = select(Skill).where(Skill.namespace_id == principal.id).limit(10).offset(90)
         results = list(db.scalars(stmt).all())
         elapsed = perf_counter() - start
 
@@ -278,7 +270,8 @@ class TestPaginationPerformance:
 
         from sqlalchemy import func, select
 
-        from server.models import Principal, Skill
+        from server.modules.authoring.models import Skill
+        from server.modules.identity.models import Principal
 
         principal = Principal(
             slug="count-query",
@@ -301,9 +294,7 @@ class TestPaginationPerformance:
 
         # Count query
         start = perf_counter()
-        stmt = select(func.count()).select_from(Skill).where(
-            Skill.namespace_id == principal.id
-        )
+        stmt = select(func.count()).select_from(Skill).where(Skill.namespace_id == principal.id)
         count = db.scalar(stmt)
         elapsed = perf_counter() - start
 

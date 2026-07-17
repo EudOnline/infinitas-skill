@@ -14,7 +14,9 @@ def _activity_client(tmp_path: Path) -> TestClient:
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(tmp_path / "artifacts")
     os.environ["INFINITAS_SERVER_BOOTSTRAP_USERS"] = (
         '[{"username":"act-tester","display_name":"Act Tester",'
-        '"role":"maintainer","token":"act-test-token"}]'
+        '"role":"maintainer","token":"act-test-token"},'
+        '{"username":"act-contributor","display_name":"Act Contributor",'
+        '"role":"contributor","token":"act-contributor-token"}]'
     )
     os.environ["INFINITAS_SERVER_ALLOWED_HOSTS"] = '["localhost","127.0.0.1","testserver"]'
     return TestClient(create_app())
@@ -56,6 +58,46 @@ class TestActivityList:
         client = _activity_client(tmp_path)
         response = client.get("/api/v1/activity")
         assert response.status_code == 401
+
+    def test_contributor_activity_is_scoped_to_own_principal(self, tmp_path: Path):
+        client = _activity_client(tmp_path)
+
+        from sqlalchemy import select
+
+        from server.db import get_session_factory
+        from server.modules.audit.service import append_audit_event
+        from server.modules.identity.models import Principal
+
+        with get_session_factory()() as session:
+            maintainer = session.scalar(select(Principal).where(Principal.slug == "act-tester"))
+            contributor = session.scalar(
+                select(Principal).where(Principal.slug == "act-contributor")
+            )
+            assert maintainer is not None and contributor is not None
+            append_audit_event(
+                session,
+                aggregate_type="token",
+                aggregate_id="maintainer-event",
+                event_type="token.created",
+                owner_principal_id=maintainer.id,
+            )
+            append_audit_event(
+                session,
+                aggregate_type="token",
+                aggregate_id="contributor-event",
+                event_type="token.created",
+                owner_principal_id=contributor.id,
+            )
+            session.commit()
+
+        response = client.get(
+            "/api/v1/activity",
+            headers={"Authorization": "Bearer act-contributor-token"},
+        )
+        assert response.status_code == 200, response.text
+        aggregate_ids = {item["aggregate_id"] for item in response.json()["items"]}
+        assert "contributor-event" in aggregate_ids
+        assert "maintainer-event" not in aggregate_ids
 
 
 class TestTokenActivity:

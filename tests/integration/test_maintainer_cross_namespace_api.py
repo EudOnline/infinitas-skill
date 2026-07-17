@@ -81,7 +81,7 @@ def test_maintainer_can_administer_contributor_owned_lifecycle_resources(
 
         from server.app import create_app
         from server.db import get_session_factory
-        from server.models import ReviewCase
+        from server.modules.review.models import ReviewCase
         from server.worker import run_worker_loop
 
         client = TestClient(create_app())

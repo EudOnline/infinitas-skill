@@ -8,14 +8,9 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from server.auth import AUTH_COOKIE_NAME
-from server.models import Artifact
-from server.modules.discovery.projections import cleanup_expired_cache_entries
+from server.modules.identity.auth import AUTH_COOKIE_NAME
+from server.modules.release.models import Artifact
 from tests.helpers.signing import add_allowed_signer, configure_git_ssh_signing
-
-
-def _clear_discovery_cache() -> None:
-    cleanup_expired_cache_entries(ttl=0)
 
 
 def _run(command: list[str], *, cwd: Path) -> None:
@@ -152,7 +147,7 @@ def _approve_exposure_review(
     exposure_id: int,
 ) -> None:
     from server.db import get_session_factory
-    from server.models import ReviewCase
+    from server.modules.review.models import ReviewCase
 
     with get_session_factory()() as session:
         review_case = session.scalar(
@@ -204,8 +199,6 @@ def test_registry_read_tokens_gate_registry_routes_without_breaking_user_credent
         authorization=maintainer_authorization,
         exposure_id=int(exposure.json()["id"]),
     )
-
-    _clear_discovery_cache()
 
     anonymous = client.get("/api/v1/registry/ai-index.json")
     assert anonymous.status_code == 401, anonymous.text
@@ -324,8 +317,6 @@ def test_registry_metadata_uses_current_release_bundle_artifact(
         )
         session.commit()
 
-    _clear_discovery_cache()
-
     compatibility = client.get(
         "/api/v1/registry/compatibility.json",
         headers={"Authorization": "Bearer registry-reader-token"},
@@ -404,8 +395,6 @@ def test_invalid_manifest_hides_release_from_catalog_and_registry(
         for item in (catalog.json().get("items") or [])
     )
 
-    _clear_discovery_cache()
-
     registry_ai_index = client.get(
         "/api/v1/registry/ai-index.json",
         headers={"Authorization": "Bearer registry-reader-token"},
@@ -427,7 +416,7 @@ def test_public_registry_ignores_invalid_cookie_and_bearer_token(
     _configure_public_env(monkeypatch, tmp_path=tmp_path, repo=temp_repo_copy)
 
     from server.app import create_app
-    from server.auth import AUTH_COOKIE_NAME
+    from server.modules.identity.auth import AUTH_COOKIE_NAME
     from server.worker import run_worker_loop
 
     client = TestClient(create_app())
@@ -452,8 +441,6 @@ def test_public_registry_ignores_invalid_cookie_and_bearer_token(
         authorization=maintainer_authorization,
         exposure_id=int(exposure.json()["id"]),
     )
-
-    _clear_discovery_cache()
 
     anonymous = client.get("/api/v1/registry/ai-index.json")
     assert anonymous.status_code == 200, anonymous.text
@@ -515,8 +502,6 @@ def test_public_registry_hides_release_when_materialized_artifacts_are_missing(
     )
     assert manifest_path.exists(), f"expected manifest fixture at {manifest_path}"
     manifest_path.unlink()
-
-    _clear_discovery_cache()
 
     anonymous = client.get("/api/v1/registry/ai-index.json")
     assert anonymous.status_code == 200, anonymous.text
@@ -591,4 +576,19 @@ def test_production_rejects_non_array_registry_read_tokens(monkeypatch, tmp_path
 
     get_settings.cache_clear()
     with pytest.raises(RuntimeError, match="INFINITAS_REGISTRY_READ_TOKENS"):
+        get_settings()
+
+
+def test_production_cannot_enable_insecure_defaults(monkeypatch, tmp_path: Path) -> None:
+    from server.settings import get_settings
+
+    monkeypatch.setenv("INFINITAS_SERVER_ENV", "production")
+    monkeypatch.setenv("INFINITAS_SERVER_ALLOW_INSECURE_DEFAULTS", "1")
+    monkeypatch.setenv("INFINITAS_SERVER_DATABASE_URL", f"sqlite:///{tmp_path / 'server.db'}")
+    monkeypatch.setenv("INFINITAS_SERVER_ALLOWED_HOSTS", json.dumps(["registry.example.com"]))
+    monkeypatch.setenv("INFINITAS_SERVER_BOOTSTRAP_USERS", "[]")
+    monkeypatch.delenv("INFINITAS_SERVER_SECRET_KEY", raising=False)
+
+    get_settings.cache_clear()
+    with pytest.raises(RuntimeError, match="INFINITAS_SERVER_SECRET_KEY"):
         get_settings()

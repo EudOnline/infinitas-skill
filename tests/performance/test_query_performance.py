@@ -34,14 +34,13 @@ def _test_client(tmp_path: Path) -> TestClient:
 @pytest.fixture
 def db(tmp_path: Path) -> Session:
     """Create a database session for performance testing."""
-    from server.db import get_engine, get_session_factory
+    from server.db import get_session_factory
 
     db_path = tmp_path / "perf.db"
     os.environ["INFINITAS_SERVER_DATABASE_URL"] = f"sqlite:///{db_path}"
     os.environ["INFINITAS_SERVER_SECRET_KEY"] = "perf-test-secret-32chars-long-min"
     os.environ["INFINITAS_SERVER_ENV"] = "test"
 
-    engine = get_engine()
     session_factory = get_session_factory()
 
     # Run migrations
@@ -67,7 +66,8 @@ class TestQueryPerformance:
 
     def test_skill_by_id_query_is_fast(self, db: Session) -> None:
         """Test that querying skill by ID is fast."""
-        from server.models import Principal, Skill
+        from server.modules.authoring.models import Skill
+        from server.modules.identity.models import Principal
 
         # Create test data
         principal = Principal(
@@ -97,7 +97,8 @@ class TestQueryPerformance:
 
     def test_indexed_queries_are_fast(self, db: Session) -> None:
         """Test that indexed queries perform well."""
-        from server.models import Principal, Skill
+        from server.modules.authoring.models import Skill
+        from server.modules.identity.models import Principal
 
         # Create test data
         principal = Principal(
@@ -134,7 +135,8 @@ class TestQueryPerformance:
         """Test that count queries use indexes efficiently."""
         from sqlalchemy import func, select
 
-        from server.models import Principal, Skill
+        from server.modules.authoring.models import Skill
+        from server.modules.identity.models import Principal
 
         # Create test data
         principal = Principal(
@@ -157,9 +159,7 @@ class TestQueryPerformance:
 
         # Measure count query
         start = perf_counter()
-        stmt = select(func.count()).select_from(Skill).where(
-            Skill.namespace_id == principal.id
-        )
+        stmt = select(func.count()).select_from(Skill).where(Skill.namespace_id == principal.id)
         count = db.scalar(stmt)
         elapsed = perf_counter() - start
 
@@ -174,7 +174,8 @@ class TestPaginationPerformance:
         """Test that pagination properly limits result sets."""
         from sqlalchemy import select
 
-        from server.models import Principal, Skill
+        from server.modules.authoring.models import Skill
+        from server.modules.identity.models import Principal
 
         # Create test data
         principal = Principal(
@@ -200,11 +201,7 @@ class TestPaginationPerformance:
 
         # Test pagination with limit
         start = perf_counter()
-        stmt = (
-            select(Skill)
-            .where(Skill.namespace_id == principal.id)
-            .limit(20)
-        )
+        stmt = select(Skill).where(Skill.namespace_id == principal.id).limit(20)
         results = list(db.scalars(stmt).all())
         elapsed = perf_counter() - start
 
@@ -215,7 +212,8 @@ class TestPaginationPerformance:
         """Test that pagination offset works correctly."""
         from sqlalchemy import select
 
-        from server.models import Principal, Skill
+        from server.modules.authoring.models import Skill
+        from server.modules.identity.models import Principal
 
         # Create test data
         principal = Principal(
@@ -272,7 +270,8 @@ class TestN1QueryPrevention:
         """Test that listing entities doesn't cause N+1 queries."""
         from sqlalchemy import select
 
-        from server.models import Principal, Skill
+        from server.modules.authoring.models import Skill
+        from server.modules.identity.models import Principal
 
         # Create test data
         principal = Principal(

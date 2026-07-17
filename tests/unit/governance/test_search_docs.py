@@ -25,7 +25,7 @@ _FEDERATION = "skills/active/federation-registry-ops/SKILL.md"
         ("docs/reference/cli-reference.md", "infinitas discovery inspect"),
         ("docs/reference/cli-reference.md", "discovery inspect"),
         ("README.md", "docs/reference/cli-reference.md"),
-        ("server/static/js/modules/search.js", "uv run infinitas discovery inspect"),
+        ("server/static/js/modules/search-results.js", "uv run infinitas discovery inspect"),
     ],
 )
 def test_search_doc_surface_mentions(rel: str, needle: str) -> None:

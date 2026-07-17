@@ -3,10 +3,8 @@
 These tests cover the side-effect-free helper functions that can be tested
 in isolation without database, filesystem, or subprocess dependencies.
 
-Note: Importing server.modules.release.materializer triggers the
-server.models ↔ server.modules.release.models circular re-export chain.
-We import server.models first to establish the Base class before the
-release models try to inherit from it.
+The release bundle helpers import directly from their owning modules and do not
+need a central model facade bootstrap.
 """
 
 from __future__ import annotations
@@ -16,9 +14,6 @@ import io
 import json
 import tarfile
 
-# Bootstrap the model layer to break the circular import:
-# server.models must be loaded before server.modules.release.models
-import server.models  # noqa: F401
 from server.modules.release.bundle import (
     artifact_object_path,
     bundle_bytes,

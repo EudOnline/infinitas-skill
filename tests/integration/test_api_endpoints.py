@@ -179,7 +179,7 @@ class TestAuthFlow:
     def test_protected_endpoint_requires_auth(self, tmp_path: Path):
         client = _api_client(tmp_path, bootstrap_users=_BOOTSTRAP_USER)
         response = client.get("/api/v1/profile/me")
-        assert response.status_code in (401, 302, 403)
+        assert response.status_code == 401
 
 
 # ---------------------------------------------------------------------------

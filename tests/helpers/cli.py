@@ -13,6 +13,14 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[2]
+
+# Ensure subprocess CLI invocations use the project venv even when this helper
+# is imported by a test launched with a system Python interpreter.
+_VENV_PYTHON = ROOT / ".venv" / "bin" / "python3"
+if _VENV_PYTHON.exists() and sys.executable != str(_VENV_PYTHON):
+    sys.executable = str(_VENV_PYTHON)
+
 
 @dataclass
 class CliResult:
@@ -32,8 +40,7 @@ class CliResult:
             return json.loads(self.stdout)
         except json.JSONDecodeError as exc:
             raise AssertionError(
-                f"stdout was not valid JSON ({exc})\n"
-                f"stdout:\n{self.stdout}\nstderr:\n{self.stderr}"
+                f"stdout was not valid JSON ({exc})\nstdout:\n{self.stdout}\nstderr:\n{self.stderr}"
             ) from exc
 
 
