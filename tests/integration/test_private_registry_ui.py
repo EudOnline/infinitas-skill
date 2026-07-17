@@ -12,6 +12,8 @@ from pathlib import Path
 
 from sqlalchemy import select
 
+from tests.helpers.hosted_content import upload_skill_content
+
 ROOT = Path(__file__).resolve().parents[2]
 APP_PATH = ROOT / "server" / "app.py"
 APP_JS_PATH = ROOT / "server" / "static" / "js" / "app.js"
@@ -499,6 +501,12 @@ def assert_private_registry_ui_js_contracts() -> None:
     assert "{{ static_url('/static/js/theme-init.js') }}" in layout_template, (
         "expected layout-kawaii template to load the external theme-init.js bootstrap"
     )
+    assert "fonts.googleapis.com" not in layout_template, (
+        "expected the registry console to avoid third-party font requests"
+    )
+    assert "fonts.gstatic.com" not in security_source, (
+        "expected the CSP to keep font loading same-origin only"
+    )
     script_src_directive = security_source.split("script-src")[1].split(";")[0]
     assert "'self'" in script_src_directive and "'sha256-" not in script_src_directive, (
         "expected CSP script-src to allow same-origin external scripts without inline hashes"
@@ -571,13 +579,14 @@ def create_ready_release(client, headers: dict[str, str], *, slug: str, display_
     )
     assert create_skill_response.status_code == 201, create_skill_response.text
     skill_id = int(create_skill_response.json()["id"])
+    content = upload_skill_content(client, skill_id, slug, "0.1.0", headers)
 
     create_version_response = client.post(
         f"/api/v1/skills/{skill_id}/versions",
         headers=headers,
         json={
             "version": "0.1.0",
-            "content_ref": f"git+https://example.com/{slug}.git#0123456789abcdef0123456789abcdef01234567",
+            "content_id": content["content_id"],
             "metadata": {
                 "entrypoint": "SKILL.md",
                 "language": "zh-CN",

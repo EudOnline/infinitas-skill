@@ -10,8 +10,8 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "build:css": "tailwindcss -i build/static/input.purged.css -o server/static/css/output.css --minify",
-    "watch:css": "tailwindcss -i server/static/css/input.css -o server/static/css/output.css --watch",
+    "build:css": "BROWSERSLIST_IGNORE_OLD_DATA=1 tailwindcss -i build/static/input.purged.css -o server/static/css/output.css --minify",
+    "watch:css": "BROWSERSLIST_IGNORE_OLD_DATA=1 tailwindcss -i server/static/css/input.css -o server/static/css/output.css --watch",
     "purge:css": "node scripts/purgecss-run.js",
     "build": "npm run purge:css && npm run build:css && node scripts/build-asset-hashes.js",
     "watch": "npm run watch:css",

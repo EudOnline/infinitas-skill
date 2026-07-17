@@ -59,8 +59,8 @@ module.exports = {
         'kawaii-code-surface-hover': 'var(--kawaii-code-surface-hover)',
       },
       fontFamily: {
-        display: ['Quicksand', 'ZCOOL KuaiLe', 'sans-serif'],
-        body: ['Nunito', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        display: ['var(--font-display)'],
+        body: ['var(--font-body)'],
         mono: ['SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
       },
       borderRadius: {

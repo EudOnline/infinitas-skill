@@ -52,6 +52,7 @@ def library_object_page(
         page_eyebrow=pick_lang(lang, "详情", "Detail"),
     )
     context["library_href"] = with_lang("/manage", lang)
+    context["suppress_console_header"] = True
     context["object"] = {
         **detail["object"],
         "current_visibility": detail["object"]["current_visibility"]["audience_type"] or "private",
@@ -110,6 +111,7 @@ def library_release_page(
         "shares_href": with_lang("/manage#shares", lang),
         "access_href": with_lang("/manage#tokens", lang),
     }
+    context["suppress_console_header"] = True
     context["artifact_rows"] = detail["artifact_rows"]
     context["visibility_rows"] = detail["visibility_rows"]
     return templates_for(request).TemplateResponse(request, "release-detail-v2.html", context)

@@ -1,16 +1,11 @@
 {% extends "layout-kawaii.html" %}
 
 {% block body %}
-<section class="kawaii-card animate-in mb-4">
-  <div class="flex flex-wrap items-center gap-3">
-    <h1 class="font-display text-[clamp(1.25rem,3vw,1.8rem)] font-extrabold leading-tight text-kawaii-ink">{{ ui['page_settings_title'] }}</h1>
-    <span class="text-xs text-kawaii-ink-soft">{{ environment or 'production' }} · v{{ registry_version or '-' }}</span>
-  </div>
-</section>
+<p class="text-xs text-kawaii-ink-soft mb-3">{{ environment or 'production' }} · v{{ registry_version or '-' }}</p>
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
   <section class="kawaii-card animate-in">
-    <h3 class="font-display text-sm font-bold text-kawaii-ink mb-3">{{ ui['heading_admin_token'] }}</h3>
+    <h2 class="font-display text-sm font-bold text-kawaii-ink mb-3">{{ ui['heading_admin_token'] }}</h2>
     <div class="p-3 bg-kawaii-panel-soft rounded-kawaii-lg border border-kawaii-line">
       <code class="block text-sm break-all text-kawaii-ink">{{ admin_token_env_name or 'INFINITAS_REGISTRY_API_TOKEN' }}=&lt;your-token&gt;</code>
     </div>
@@ -21,12 +16,12 @@
   </section>
 
   <section class="kawaii-card animate-in">
-    <h3 class="font-display text-sm font-bold text-kawaii-ink mb-3">{{ ui['heading_reference'] }}</h3>
+    <h2 class="font-display text-sm font-bold text-kawaii-ink mb-3">{{ ui['heading_reference'] }}</h2>
     <p class="text-sm text-kawaii-ink-soft">{{ ui['safety_note_1'] }}</p>
   </section>
 
   <section class="kawaii-card animate-in md:col-span-2">
-    <h3 class="font-display text-sm font-bold text-kawaii-ink mb-3">{{ ui['heading_registry_scope'] }}</h3>
+    <h2 class="font-display text-sm font-bold text-kawaii-ink mb-3">{{ ui['heading_registry_scope'] }}</h2>
     <dl class="detail-meta">
       <div><dt>{{ ui['label_object_types'] }}</dt><dd>{{ object_kinds | join(', ') }}</dd></div>
       <div><dt>{{ ui['label_admin_env'] }}</dt><dd><code class="table-code">{{ admin_token_env_name or 'INFINITAS_REGISTRY_API_TOKEN' }}</code></dd></div>

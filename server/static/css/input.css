@@ -51,8 +51,8 @@
     --radius-xl: 1.35rem;
     --radius-full: 9999px;
     --ease-out-quiet: cubic-bezier(0.25, 1, 0.5, 1);
-    --font-display: "Quicksand", "ZCOOL KuaiLe", sans-serif;
-    --font-body: "Nunito", sans-serif;
+    --font-display: ui-rounded, "Avenir Next Rounded", "Hiragino Maru Gothic ProN", "Trebuchet MS", sans-serif;
+    --font-body: "Avenir Next", "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif;
     --font-mono: "SFMono-Regular", "Menlo", "Consolas", monospace;
   }
   html[data-color-scheme="dark"] {
@@ -492,11 +492,6 @@
     background: var(--kawaii-accent-soft);
     border-radius: var(--radius-full);
   }
-  .user-panel-bg-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.5rem;
-  }
   .kawaii-card {
     position: relative;
     padding: clamp(1rem, 2vw, 1.5rem);
@@ -886,9 +881,6 @@
   html[data-color-scheme="dark"] .toast--info {
     border-color: var(--kawaii-info);
   }
-  .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0);
-  }
   .scrollbar-hide {
     scrollbar-width: none;
   }
@@ -941,12 +933,30 @@
     overflow-x: auto;
   }
 }
+@media (max-width: 767px) {
+  .topbar-controls { position: relative; }
+  #topbar-settings {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    z-index: 110;
+    display: none;
+    width: min(18rem, calc(100vw - 1.2rem));
+    padding: 0.65rem;
+    background: var(--kawaii-surface-elevated);
+    border: 1px solid var(--kawaii-line);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-elevated);
+  }
+  #topbar-settings.is-open { display: flex; }
+}
 @media (max-width: 640px) {
   .topbar {
     top: 0.4rem;
     width: calc(100vw - 0.8rem);
     padding: 0.6rem;
   }
+  .brand-subtitle, .topbar-status, .search-shortcut { display: none; }
   .search-dropdown {
     position: fixed;
     top: 8.5rem;

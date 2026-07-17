@@ -14,10 +14,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self'; "
-            "style-src 'self' https://fonts.googleapis.com "
+            "style-src 'self' "
             "'sha256-Bn5g5YFE2knf3df736jiCF0Yao9wmuW+tCibG1uamiE='; "
-            "img-src 'self' data: https://images.unsplash.com; "
-            "font-src 'self' https://fonts.gstatic.com; "
+            "img-src 'self' data:; "
+            "font-src 'self'; "
             "connect-src 'self'; "
             "frame-ancestors 'none'; "
             "base-uri 'self'"

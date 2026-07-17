@@ -9,7 +9,7 @@
         {{ session_ui.get('current_user', {}).get('username', '?')[:1] | upper }}
       </div>
       <div>
-        <h1 class="font-display text-lg font-bold text-kawaii-ink">{{ ui.get('profile_title', '智能体档案') }}</h1>
+        <h2 class="font-display text-lg font-bold text-kawaii-ink">{{ ui.get('profile_title', '智能体档案') }}</h2>
         <p class="text-xs text-kawaii-ink-muted">{{ session_ui.get('current_user', {}).get('username', ui.get('anonymous', '匿名')) }}</p>
       </div>
     </div>

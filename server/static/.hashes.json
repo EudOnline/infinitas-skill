@@ -1,11 +1,10 @@
 {
-  "css/output.css": "02e6de35886a",
+  "css/output.css": "317c4d8eba35",
   "app.js": "c6667eeb4e41",
   "auth-session.js": "7501f00f95cf",
   "modules/api.js": "81c9b423467b",
-  "modules/auth-background.js": "010b14c38d9c",
   "modules/auth-console.js": "013c3551574a",
-  "modules/auth-home.js": "acc7117ae602",
+  "modules/auth-home.js": "bccd7b3324ad",
   "modules/auth-modal.js": "1706825ec515",
   "modules/auth-shared.js": "685939a6106c",
   "modules/card-swipe.js": "723ead600f32",

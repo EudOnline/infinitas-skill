@@ -4,7 +4,7 @@
 
 {%- macro console_table_shell(title, empty_text, items, filterable=False) -%}
 <section class="console-table-shell" data-reveal>
-  <h3 class="font-display text-sm font-bold text-kawaii-ink mb-2">{{ title }}</h3>
+  <h2 class="font-display text-sm font-bold text-kawaii-ink mb-2">{{ title }}</h2>
   {% if filterable and items %}
   <input type="text" class="table-filter-input mb-2 w-full px-3 py-2.5 rounded-lg border border-kawaii-line bg-kawaii-panel text-base md:text-sm text-kawaii-ink focus:outline-none focus:ring-2 focus:ring-kawaii-primary/40 min-h-[2.75rem]" placeholder="{{ (ui['filter_placeholder'] if ui is defined else none) | default('Filter...') }}" aria-label="{{ (ui['filter_aria_label'] if ui is defined else none) | default('Filter table') }}" data-table-filter>
   {% endif %}

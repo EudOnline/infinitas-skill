@@ -21,11 +21,6 @@
     <title>{{ title or "infinitas skill registry ✨" }}</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='20' fill='%23ffb6c1'/%3E%3Cpath d='M20 32c4-6 8-10 14-10 6 0 10 4 14 10 4 6 8 10 14 10' stroke='%23fff' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M44 32c-4 6-8 10-14 10-6 0-10-4-14-10-4-6-8-10-14-10' stroke='%23fff' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='48' cy='16' r='6' fill='%23ffd700'/%3E%3C/svg%3E" />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Quicksand:wght@400;500;600;700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
-    <noscript><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Quicksand:wght@400;500;600;700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet"></noscript>
-
     <script src="{{ static_url('/static/js/theme-init.js') }}"></script>
     <meta name="color-scheme" content="light dark" />
     <style>
@@ -47,7 +42,7 @@
       <a class="brand" href="{{ home_href or '/' }}">
         <div class="flex flex-col min-w-0">
           <div class="font-display text-[1.08rem] font-bold tracking-tight text-kawaii-ink">infinitas-skill</div>
-          <div class="text-[0.76rem] text-kawaii-ink-soft font-semibold">{{ ui['brand_subtitle'] }}</div>
+          <div class="brand-subtitle text-[0.76rem] text-kawaii-ink-soft font-semibold">{{ ui['brand_subtitle'] }}</div>
         </div>
       </a>
       
@@ -139,14 +134,14 @@
           </div>
         </div>
         {% endif %}
-        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-kawaii-success/15 border border-kawaii-success/30 rounded-full text-sm font-bold text-kawaii-success">{{ ui['page_kicker'] if ui and ui['page_kicker'] else page_kicker or page_eyebrow or ui['page_kicker_fallback'] }}</div>
+        <div class="topbar-status inline-flex items-center gap-2 px-4 py-1.5 bg-kawaii-success/15 border border-kawaii-success/30 rounded-full text-sm font-bold text-kawaii-success">{{ ui['page_kicker'] if ui and ui['page_kicker'] else page_kicker or page_eyebrow or ui['page_kicker_fallback'] }}</div>
       </div>
       </div>
     </header>
 
-    <main class="w-full max-w-[1200px] mx-auto px-4 md:px-6 pb-20 md:pb-12" id="main-content" tabindex="-1" aria-label="{{ ui['aria_main_content'] }}">
+    <main class="w-full max-w-[1200px] mx-auto px-4 md:px-6 pb-12" id="main-content" tabindex="-1" aria-label="{{ ui['aria_main_content'] }}">
       <div class="site-shell">
-      {% if page_mode == "console" %}
+      {% if page_mode == "console" and not suppress_console_header %}
       <section class="mb-4">
         <article class="mb-4 kawaii-card animate-in">
           <div class="mb-4">
@@ -268,7 +263,6 @@
 
     <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div>
 
-    {% include "partials/tab-bar.html" %}
     <script type="module" src="{{ static_url('/static/js/app.js') }}"></script>
     <script type="module" src="{{ static_url('/static/js/auth-session.js') }}"></script>
   </body>

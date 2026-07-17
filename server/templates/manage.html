@@ -2,12 +2,6 @@
 
 {% block body %}
 <div class="space-y-4">
-  {# Header #}
-  <section class="kawaii-card animate-in">
-    <h1 class="font-display text-lg font-bold text-kawaii-ink">{{ ui.get('manage_title', '管理') }}</h1>
-    <p class="text-xs text-kawaii-ink-muted mt-1">{{ ui.get('manage_subtitle', '技能与访问管理') }}</p>
-  </section>
-
   {# Sub-view filter chips #}
   <div class="flex gap-2 flex-wrap" data-manage-tabs role="tablist" aria-label="{{ ui.get('manage_title', '管理') }}">
     <button class="toggle-chip is-active" data-view="library" role="tab" aria-selected="true" aria-controls="manage-panel-library">{{ ui.get('tab_library', '对象库') }}</button>

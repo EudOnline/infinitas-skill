@@ -120,3 +120,20 @@ def test_user_panel_opens_and_shows_username(authenticated_page, live_server):
 
     trigger.click()
     authenticated_page.wait_for_timeout(300)
+
+
+def test_console_pages_have_one_h1_and_compact_mobile_chrome(authenticated_page, live_server):
+    authenticated_page.set_viewport_size({"width": 320, "height": 720})
+    for path in ("/manage", "/settings", "/profile"):
+        authenticated_page.goto(f"{live_server}{path}?lang=en")
+        authenticated_page.wait_for_load_state("networkidle")
+        assert authenticated_page.locator("main h1").count() == 1
+        assert authenticated_page.locator("nav.fixed.bottom-0").count() == 0
+
+    topbar = authenticated_page.locator(".topbar")
+    box = topbar.bounding_box()
+    assert box is not None and box["height"] < 220
+    settings = authenticated_page.locator("#topbar-settings")
+    assert settings.evaluate("element => getComputedStyle(element).display") == "none"
+    authenticated_page.locator("#mobile-settings-toggle").click()
+    assert settings.evaluate("element => getComputedStyle(element).display") == "flex"

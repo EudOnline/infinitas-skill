@@ -8,7 +8,6 @@ import {
   initialSessionUser,
   requestSessionCleanup,
 } from './auth-shared.js';
-import { AuthBackgroundController } from './auth-background.js';
 import { AUTH_SESSION_CONFIG, logError, uiTemplate, uiText } from './config.js';
 import { createAuthModalController } from './auth-modal.js';
 
@@ -34,11 +33,6 @@ class HomeAuthSession {
     this.suppressInitialModal = config.suppressInitialModal === true;
     this.currentUser = initialSessionUser();
     this.isUserPanelOpen = false;
-    this.background = new AuthBackgroundController({
-      presets: config.bgPresets || { light: [], dark: [] },
-      isLoggedIn: () => Boolean(this.currentUser),
-      isPanelOpen: () => this.isUserPanelOpen,
-    });
     this.controller = createAuthModalController({
       prefix: this.standaloneLoginPage ? 'login-' : '',
       modalTitle: uiText('auth_modal_title', 'Authentication'),
@@ -100,7 +94,6 @@ class HomeAuthSession {
     if (username) username.textContent = this.currentUser.username;
     if (expiry) expiry.textContent = this.sessionMeta();
     if (avatar) avatar.textContent = this.currentUser.username.charAt(0).toUpperCase();
-    this.background.renderSelector(this.background.currentTheme());
   }
 
   renderAuthState() {
@@ -126,7 +119,6 @@ class HomeAuthSession {
     panel.classList.remove('user-panel--flip');
     trigger.setAttribute('aria-expanded', String(this.isUserPanelOpen));
     if (!this.isUserPanelOpen) return;
-    if (this.currentUser) this.background.renderSelector(this.background.currentTheme());
     requestAnimationFrame(() => this.flipPanelIntoViewport(panel));
   }
 
@@ -146,7 +138,6 @@ class HomeAuthSession {
     this.currentUser = { username: payload.username, role: payload.role || null };
     setAuthCookieHint(true);
     this.renderAuthState();
-    await this.background.loadRemote();
     return this.currentUser;
   }
 
@@ -159,7 +150,6 @@ class HomeAuthSession {
   async initAuthState() {
     if (this.currentUser) {
       setAuthCookieHint(true);
-      await this.background.loadRemote();
       return;
     }
     if (!hasAuthCookieHint() && remainingDays() <= 0) {
@@ -181,8 +171,6 @@ class HomeAuthSession {
     this.currentUser = null;
     this.renderAuthState();
     this.closeUserPanel();
-    document.body.style.removeProperty('--bg-image');
-    document.body.style.removeProperty('--bg-image-dark');
     document.dispatchEvent(new CustomEvent(
       'infinitas:auth-changed',
       { detail: { authenticated: false } },
@@ -240,7 +228,6 @@ class HomeAuthSession {
   }
 
   async init() {
-    this.background.init();
     this.renderAuthState();
     await this.initAuthState();
     if (this.standaloneLoginPage && this.currentUser) {
