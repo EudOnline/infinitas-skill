@@ -32,6 +32,122 @@ cannot make the repository gate nondeterministic.
 
 ---
 
+## [ERR-20260717-003] ad-hoc-testclient-missed-lifespan
+
+**Logged**: 2026-07-17T01:32:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+
+An ad-hoc audit reproduction instantiated the integration client without entering the repository's lifespan-aware test wrapper, so the temporary database was not migrated.
+
+### Error
+
+```text
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: credentials
+```
+
+### Context
+
+- The diagnostic reused integration helpers outside pytest.
+- The repository patches `fastapi.testclient.TestClient` through `tests/conftest.py`; importing helpers alone does not reproduce pytest fixture and lifespan setup.
+- No repository runtime state was changed because the script used a temporary directory.
+
+### Suggested Fix
+
+For ad-hoc API diagnostics, either run a temporary pytest case under the repository test harness or explicitly enter the lifespan-aware client as a context manager after applying the same cache/environment setup.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: tests/conftest.py, tests/helpers/test_client.py, tests/integration/conftest.py
+
+### Resolution
+
+- **Resolved**: 2026-07-17T01:32:00Z
+- **Notes**: Stopped using the incomplete reproduction path and switched to transaction-level and test-harness-backed evidence.
+
+---
+
+## [ERR-20260717-004] zsh-backtick-regex-expansion
+
+**Logged**: 2026-07-17T01:37:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+
+A shell diagnostic embedded a backtick in a double-quoted regular expression, causing zsh command-substitution parsing before `rg` could run.
+
+### Error
+
+```text
+zsh:1: unmatched '
+zsh:1: parse error in command substitution
+```
+
+### Context
+
+- The intended read-only command searched JavaScript string literals for API paths.
+- No repository state was changed.
+
+### Suggested Fix
+
+Avoid backticks in shell command strings passed through the command runner; use simpler single-purpose `rg` patterns or escape via a file-backed pattern when matching JavaScript template literals is necessary.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: server/static/js/
+
+### Resolution
+
+- **Resolved**: 2026-07-17T01:37:00Z
+- **Notes**: Replaced the combined expression with safe literal searches.
+
+---
+
+## [ERR-20260717-005] artifact-list-response-wrapper
+
+**Logged**: 2026-07-17T01:43:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+
+An ad-hoc artifact audit treated the release artifact response object as a bare list instead of reading its `items` field.
+
+### Error
+
+```text
+TypeError: string indices must be integers, not 'str'
+```
+
+### Context
+
+- Release materialization completed successfully.
+- The temporary diagnostic diverged from the endpoint's `ArtifactListView` response model.
+
+### Suggested Fix
+
+Inspect or reuse the endpoint response model before writing one-off API diagnostics, especially for list endpoints that return pagination wrappers.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: server/modules/release/schemas.py, server/modules/release/router.py
+
+### Resolution
+
+- **Resolved**: 2026-07-17T01:43:00Z
+- **Notes**: Updated the temporary diagnostic to read `response.json()["items"]`.
+
+---
+
 ## [ERR-20260717-001] staged-diff-check-did-not-gate-commit
 
 **Logged**: 2026-07-17T00:00:00Z
