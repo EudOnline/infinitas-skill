@@ -268,3 +268,82 @@ def test_share_link_usage_limit_is_atomic_under_concurrency(
         statuses = sorted(executor.map(lambda _index: resolve(), range(2)))
 
     assert statuses == [200, 410]
+
+
+def test_wrong_share_password_attempts_persist_and_return_retry_after(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    client = _prepare_library_client(
+        monkeypatch,
+        tmp_path=tmp_path,
+        temp_repo_copy=temp_repo_copy,
+        signing_key=signing_key,
+    )
+    headers = {"Authorization": "Bearer fixture-maintainer-token"}
+    _object_id, release_id = _prepared_object_and_release(client, headers=headers)
+    created = client.post(
+        f"/api/v1/share-links/releases/{release_id}/share-links",
+        headers=headers,
+        json={"name": "brute-force-password", "password": "1234"},
+    )
+    share_id = int(created.json()["id"])
+
+    responses = [
+        client.post(
+            f"/api/v1/share-links/{share_id}/resolve",
+            json={"password": "wrong"},
+        )
+        for _ in range(21)
+    ]
+    assert [response.status_code for response in responses[:20]] == [403] * 20
+    assert responses[20].status_code == 429
+    assert responses[20].headers["retry-after"] == "60"
+
+    from server.db import get_session_factory
+    from server.rate_limit import RateLimitEntry
+
+    with get_session_factory()() as session:
+        bucket = (
+            session.query(RateLimitEntry)
+            .filter(RateLimitEntry.key.startswith(f"share-resolve:{share_id}:"))
+            .one()
+        )
+        assert bucket.attempt_count == 20
+        assert "testclient" not in bucket.key
+
+
+def test_wrong_share_capability_limit_is_atomic_under_concurrency(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    client = _prepare_library_client(
+        monkeypatch,
+        tmp_path=tmp_path,
+        temp_repo_copy=temp_repo_copy,
+        signing_key=signing_key,
+    )
+    headers = {"Authorization": "Bearer fixture-maintainer-token"}
+    _object_id, release_id = _prepared_object_and_release(client, headers=headers)
+    created = client.post(
+        f"/api/v1/share-links/releases/{release_id}/share-links",
+        headers=headers,
+        json={"name": "brute-force-capability"},
+    )
+    share_id = int(created.json()["id"])
+
+    def resolve_wrong_secret(_index: int) -> int:
+        return client.post(
+            f"/api/v1/share-links/{share_id}/resolve",
+            json={"secret": "wrong-secret"},
+        ).status_code
+
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        statuses = list(executor.map(resolve_wrong_secret, range(25)))
+
+    assert statuses.count(403) == 20
+    assert statuses.count(429) == 5

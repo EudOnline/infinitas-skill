@@ -7,12 +7,12 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 import server.modules.access.share_links as share_service
-from server.db import get_db
+from server.db import get_db, session_scope
 from server.modules.access.authn import AccessContext
 from server.modules.access.schemas import ShareLinkListView, ShareLinkView
 from server.modules.identity.auth import get_current_access_context
 from server.modules.identity.guards import require_actor_ref as _require_actor
-from server.rate_limit import get_rate_limiter, resolve_client_ip
+from server.rate_limit import DBRateLimiter, resolve_rate_limit_key
 
 router = APIRouter(prefix="/api/v1/share-links", tags=["share-links"])
 
@@ -43,6 +43,25 @@ def _translate_error(exc: share_service.ShareLinkError) -> HTTPException:
     return HTTPException(status_code=409, detail=detail)
 
 
+def _enforce_share_rate_limit(request: Request, *, operation: str, share_id: int | None) -> None:
+    client_key = resolve_rate_limit_key(request)
+    object_key = f":{share_id}" if share_id is not None else ""
+    rate_limit_key = f"share-{operation}{object_key}:{client_key}"
+    with session_scope() as rate_limit_db:
+        allowed = DBRateLimiter(rate_limit_db).consume(
+            rate_limit_key,
+            max_attempts=_SHARE_RATE_MAX,
+            window_seconds=_SHARE_RATE_WINDOW,
+        )
+    if allowed:
+        return
+    raise HTTPException(
+        status_code=429,
+        detail=f"Too many share {operation} requests. Please try again later.",
+        headers={"Retry-After": str(_SHARE_RATE_WINDOW)},
+    )
+
+
 @router.post(
     "/releases/{release_id}/share-links",
     response_model=ShareLinkView,
@@ -55,19 +74,7 @@ def create_share_link(
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    client_ip = resolve_client_ip(request)
-    limiter = get_rate_limiter(db)
-    rate_limit_key = f"share-create:{client_ip}"
-    if not limiter.check(
-        rate_limit_key,
-        max_attempts=_SHARE_RATE_MAX,
-        window_seconds=_SHARE_RATE_WINDOW,
-    ):
-        raise HTTPException(
-            status_code=429,
-            detail="Too many share link requests. Please try again later.",
-        )
-    limiter.record(rate_limit_key)
+    _enforce_share_rate_limit(request, operation="create", share_id=None)
     actor = _require_actor(context)
     try:
         share = share_service.create_share_link(
@@ -123,19 +130,7 @@ def resolve_share_link(
     request: Request,
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    client_ip = resolve_client_ip(request)
-    limiter = get_rate_limiter(db)
-    rate_limit_key = f"share-resolve:{client_ip}"
-    if not limiter.check(
-        rate_limit_key,
-        max_attempts=_SHARE_RATE_MAX,
-        window_seconds=_SHARE_RATE_WINDOW,
-    ):
-        raise HTTPException(
-            status_code=429,
-            detail="Too many resolve requests. Please try again later.",
-        )
-    limiter.record(rate_limit_key)
+    _enforce_share_rate_limit(request, operation="resolve", share_id=share_id)
     try:
         share = share_service.resolve_share_link(
             db,

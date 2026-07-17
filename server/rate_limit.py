@@ -11,10 +11,12 @@ import hashlib
 import time
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+from typing import Any, cast
 
 from fastapi import Request
-from sqlalchemy import DateTime, Integer, String, delete, func, select
+from sqlalchemy import DateTime, Integer, String, UniqueConstraint, delete, func, select
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from server.model_base import Base, utcnow
@@ -74,6 +76,9 @@ class RateLimitEntry(Base):
     """Shared rate-limit bucket storage for multi-process deployments."""
 
     __tablename__ = "rate_limit_entries"
+    __table_args__ = (
+        UniqueConstraint("key", "window_start", name="uq_rate_limit_entries_key_window_start"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     key: Mapped[str] = mapped_column(String(255), index=True)
@@ -206,6 +211,33 @@ class DBRateLimiter(RateLimiter):
         self._db.execute(delete(RateLimitEntry))
         self._db.flush()
 
+    def consume(self, key: str, *, max_attempts: int, window_seconds: int) -> bool:
+        """Atomically consume one attempt in the current fixed window."""
+        now = utcnow()
+        window_start = _window_start(window_seconds)
+        self._db.execute(
+            delete(RateLimitEntry).where(
+                RateLimitEntry.window_start < now - timedelta(seconds=window_seconds * 2)
+            )
+        )
+        statement = sqlite_insert(RateLimitEntry).values(
+            key=key,
+            window_start=window_start,
+            attempt_count=1,
+            created_at=now,
+            updated_at=now,
+        )
+        statement = statement.on_conflict_do_update(
+            index_elements=[RateLimitEntry.key, RateLimitEntry.window_start],
+            set_={
+                "attempt_count": RateLimitEntry.attempt_count + 1,
+                "updated_at": now,
+            },
+            where=RateLimitEntry.attempt_count < max_attempts,
+        )
+        result = self._db.execute(statement)
+        return cast(Any, result).rowcount == 1
+
 
 # Global singleton for memory-backed rate limiting.
 _memory_limiter = MemoryRateLimiter()
@@ -221,3 +253,10 @@ def get_rate_limiter(db: Session | None = None) -> RateLimiter:
     if db is not None:
         return DBRateLimiter(db)
     return _memory_limiter
+
+
+def _window_start(window_seconds: int) -> datetime:
+    now = utcnow()
+    epoch = int(now.timestamp())
+    bucket_epoch = epoch - (epoch % window_seconds)
+    return datetime.fromtimestamp(bucket_epoch, tz=timezone.utc)
