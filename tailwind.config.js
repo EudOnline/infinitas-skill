@@ -26,11 +26,9 @@ module.exports = {
         'kawaii-primary': 'rgb(var(--kawaii-primary-rgb) / <alpha-value>)',
         'kawaii-primary-soft': 'var(--kawaii-primary-soft)',
         'kawaii-primary-deep': 'var(--kawaii-primary-deep)',
-        'kawaii-primary-glow': 'var(--kawaii-primary-glow)',
         'kawaii-secondary': 'var(--kawaii-secondary)',
         'kawaii-secondary-soft': 'var(--kawaii-secondary-soft)',
         'kawaii-secondary-deep': 'var(--kawaii-secondary-deep)',
-        'kawaii-secondary-glow': 'var(--kawaii-secondary-glow)',
         'kawaii-mint': 'var(--kawaii-mint)',
         'kawaii-lavender': 'var(--kawaii-lavender)',
         'kawaii-lemon': 'var(--kawaii-lemon)',
@@ -74,25 +72,16 @@ module.exports = {
       boxShadow: {
         'kawaii-soft': 'var(--shadow-soft)',
         'kawaii-elevated': 'var(--shadow-elevated)',
-        'kawaii-glow': 'var(--shadow-glow)',
-        'candy-3d': 'var(--candy-3d)',
-        'candy-3d-active': 'var(--candy-3d-active)',
       },
       backgroundImage: {
-        'gradient-hero': 'var(--gradient-hero)',
         'gradient-card': 'var(--gradient-card)',
-        'gradient-button-primary': 'var(--gradient-button-primary)',
-        'gradient-button-secondary': 'var(--gradient-button-secondary)',
       },
       transitionTimingFunction: {
         'smooth': 'cubic-bezier(0.4, 0, 0.2, 1)',
         'out-quiet': 'cubic-bezier(0.25, 1, 0.5, 1)',
         'out-gentle': 'cubic-bezier(0.22, 1, 0.36, 1)',
-        'playful': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
       },
       animation: {
-        'background-float': 'background-float 20s ease-in-out infinite',
-        'nebula-float': 'nebula-float 25s ease-in-out infinite',
         'toast-in': 'toast-in 300ms ease',
         'toast-out': 'toast-out 300ms ease forwards',
         'panel-in': 'panel-in 200ms cubic-bezier(0.25, 1, 0.5, 1)',
@@ -103,15 +92,6 @@ module.exports = {
         'shake': 'shake 300ms ease',
       },
       keyframes: {
-        'background-float': {
-          '0%, 100%': { backgroundPosition: '0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%' },
-          '50%': { backgroundPosition: '2% 3%, -2% -3%, 1% -2%, -1% 2%, 0% 0%' },
-        },
-        'nebula-float': {
-          '0%, 100%': { backgroundPosition: '0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%' },
-          '33%': { backgroundPosition: '3% 2%, -2% 3%, 2% -3%, -3% 2%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%' },
-          '66%': { backgroundPosition: '-2% 3%, 3% -2%, -3% 2%, 2% -3%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%' },
-        },
         'toast-in': {
           from: { opacity: '0', transform: 'translateX(100%)' },
           to: { opacity: '1', transform: 'translateX(0)' },

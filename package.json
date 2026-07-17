@@ -1,8 +1,7 @@
 {
   "name": "infinitas-skill",
-  "version": "1.0.0",
-  "description": "--- audience: contributors, operators, integrators owner: repository maintainers source_of_truth: repo entry page last_reviewed: 2026-04-08 status: maintained ---",
-  "main": "index.js",
+  "version": "0.1.0",
+  "description": "Hosted control plane for the infinitas private skill registry",
   "directories": {
     "doc": "docs",
     "test": "tests"
@@ -11,7 +10,7 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "build:css": "tailwindcss -i server/static/css/.input.purged.css -o server/static/css/output.css --minify",
+    "build:css": "tailwindcss -i build/static/input.purged.css -o server/static/css/output.css --minify",
     "watch:css": "tailwindcss -i server/static/css/input.css -o server/static/css/output.css --watch",
     "purge:css": "node scripts/purgecss-run.js",
     "build": "npm run purge:css && npm run build:css && node scripts/build-asset-hashes.js",
@@ -24,12 +23,11 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
     "autoprefixer": "^10.4.27",
-    "playwright": "^1.59.1",
-    "postcss": "^8.5.9",
+    "postcss": "^8.5.10",
     "purgecss": "^8.0.0",
     "tailwindcss": "^3.4.19"
   }

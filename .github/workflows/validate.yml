@@ -3,6 +3,7 @@ name: validate-registry
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
 
 jobs:
@@ -32,17 +33,19 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
 
-      - name: Check CI attestation workflow contract
-        run: python3 scripts/test-ci-attestation-workflow.py
+      - name: Install Python dependencies
+        run: uv sync --all-groups
 
-      - name: Install hosted registry test dependencies
-        run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install .
-          python3 -m pip install "pytest>=8,<9" "ruff>=0.11,<1"
+      - name: Check unit contracts
+        run: .venv/bin/pytest tests/unit -q --override-ini=addopts=
 
       - name: Run maintained fast gate
         run: make ci-fast
+
+      - name: Verify database and API contracts
+        run: |
+          .venv/bin/pytest tests/integration/test_alembic_metadata.py -q --override-ini=addopts=
+          .venv/bin/python scripts/generate-openapi.py --check
 
       - name: Run maintainability-aware closeout verification matrix
         env:

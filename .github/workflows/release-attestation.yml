@@ -49,6 +49,12 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+
+      - name: Install Python dependencies
+        run: uv sync --all-groups
+
       - name: Validate release inputs
         run: |
           test -n "$SKILL_NAME"
@@ -56,41 +62,13 @@ jobs:
           test -n "$MANIFEST_PATH"
           test -f "$MANIFEST_PATH"
 
-      - name: Rebuild release provenance
-        run: |
-          python3 scripts/generate-provenance.py "$SKILL_NAME" \
-            --distribution-manifest-path "$MANIFEST_PATH" \
-            > /tmp/release-attestation-provenance.json
-
       - name: Emit CI attestation sidecar
         run: |
           mkdir -p catalog/provenance
-          python3 - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          out = Path('catalog/provenance') / f"{os.environ['SKILL_NAME']}-{os.environ['SKILL_VERSION']}.ci.json"
-          payload = {
-              'kind': 'skill-release-attestation',
-              'attestation': {
-                  'format': 'ci',
-                  'generator': 'release-attestation.yml',
-              },
-              'ci': {
-                  'provider': 'github-actions',
-                  'repository': os.environ['GITHUB_REPOSITORY'],
-                  'workflow': os.environ['GITHUB_WORKFLOW'],
-                  'run_id': os.environ['GITHUB_RUN_ID'],
-                  'run_attempt': os.environ['GITHUB_RUN_ATTEMPT'],
-                  'sha': os.environ['GITHUB_SHA'],
-                  'ref': os.environ['GITHUB_REF'],
-                  'manifest_path': os.environ['MANIFEST_PATH'],
-              },
-          }
-          out.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-          print(out)
-          PY
+          .venv/bin/infinitas release generate-ci-attestation "$SKILL_NAME" \
+            --output-name "$SKILL_NAME-$SKILL_VERSION.ci.json" \
+            --distribution-manifest-path "$MANIFEST_PATH" \
+            > "catalog/provenance/$SKILL_NAME-$SKILL_VERSION.ci.json"
 
       - name: Upload CI attestation artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

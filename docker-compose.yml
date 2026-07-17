@@ -168,7 +168,9 @@ services:
           if [[ -n "$${INFINITAS_SERVER_MIRROR_BRANCH:-}" ]]; then
             args+=(--branch "$$INFINITAS_SERVER_MIRROR_BRANCH")
           fi
-          exec bash "$$INFINITAS_SERVER_REPO_PATH/scripts/mirror-registry.sh" "$${args[@]}"
+          export PYTHONPATH="$$INFINITAS_SERVER_REPO_PATH/src$${PYTHONPATH:+:$$PYTHONPATH}"
+          exec python3 -m infinitas_skill.cli.main registry sources \
+            --repo-root "$$INFINITAS_SERVER_REPO_PATH" mirror "$${args[@]}"
     depends_on:
       init-repo:
         condition: service_completed_successfully
