@@ -70,11 +70,11 @@ If it is set to a JSON array of bearer tokens, hosted installers must send one o
 The repository now includes a container image path for the hosted registry:
 
 - `Dockerfile` packages the hosted API, worker entrypoints, ops scripts, and templates
-- `.github/workflows/container-image.yml` builds `linux/amd64` and `linux/arm64` images
+- `.github/workflows/validate.yml` runs the release gate once, then builds `linux/amd64` and `linux/arm64` images in a dependent job
 - pull requests build the image without pushing
 - pushes to `main`, version tags matching `v*`, and manual workflow runs publish to GHCR as `ghcr.io/<owner>/infinitas-skill`
 
-The workflow emits branch, semver, `sha-*`, and default-branch `latest` tags. The image contains a full runtime snapshot of the repository contents needed by the hosted control plane, and compose seeds that snapshot into a writable runtime repo on first boot.
+The workflow emits branch, semver, `sha-*`, and default-branch `latest` tags. Image publication and provenance attestation cannot run until the complete validation job passes. The image contains a full runtime snapshot of the repository contents needed by the hosted control plane, and compose seeds that snapshot into a writable runtime repo on first boot.
 
 ## Docker Compose deployment
 
@@ -98,7 +98,7 @@ mkdir -p .deploy/{repo,data,artifacts,backups,home}
 # - keep INFINITAS_SERVER_ENV=production
 # - set INFINITAS_SERVER_ALLOWED_HOSTS for local access, for example ["127.0.0.1","localhost"]
 # - replace INFINITAS_SERVER_SECRET_KEY=change-me
-# - replace the bootstrap operator credentials in INFINITAS_SERVER_BOOTSTRAP_USERS
+# - replace every bootstrap browser password and Agent token with distinct secure values
 
 # If git push uses SSH, place credentials under .deploy/home/.ssh and ensure permissions are strict.
 # Optionally copy or create .deploy/home/.gitconfig for user.name / user.email / signing policy.

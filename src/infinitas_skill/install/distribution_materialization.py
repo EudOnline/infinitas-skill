@@ -47,7 +47,7 @@ def safely_extract_bundle(
             if not resolved.is_relative_to(destination):
                 raise DistributionError(f"unsafe bundle member path: {member.name}")
             safe_members.append(member)
-        archive.extractall(destination, members=safe_members)
+        archive.extractall(destination, members=safe_members, filter="data")
     if expected_root:
         source_dir = destination / expected_root
         if not source_dir.is_dir():

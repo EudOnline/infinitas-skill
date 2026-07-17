@@ -32,6 +32,164 @@ cannot make the repository gate nondeterministic.
 
 ---
 
+## [ERR-20260717-007] apply-patch-font-config-context
+
+**Logged**: 2026-07-17T00:00:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: config
+
+### Summary
+
+A Tailwind font configuration patch failed because it was built from search output instead of the exact current file context.
+
+### Error
+
+```text
+apply_patch verification failed: Failed to find expected lines in tailwind.config.js
+```
+
+### Context
+
+- The intended change was correct, but the patch omitted the existing `mono` entry and did not first read the exact block.
+- No repository content was changed by the failed patch.
+
+### Suggested Fix
+
+Read the exact target block before applying a contextual patch, especially in configuration files with adjacent entries.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: tailwind.config.js
+- See Also: exact-context patch guidance already recorded in this file
+
+### Resolution
+
+- **Resolved**: 2026-07-17T00:00:00Z
+- **Notes**: Re-read the exact block and applied a context-accurate patch.
+
+---
+
+## [ERR-20260717-008] tailwind-bundled-browserslist-warning
+
+**Logged**: 2026-07-17T07:35:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: frontend
+
+### Summary
+
+Updating `caniuse-lite` succeeded, but Tailwind 3.4 still emitted an outdated-data warning from its bundled fallback dependency snapshot.
+
+### Error
+
+```text
+Browserslist: caniuse-lite is outdated. Please run:
+  npx update-browserslist-db@latest
+```
+
+### Context
+
+- The lockfile and local external dependency both resolved to `caniuse-lite@1.0.30001806`.
+- Browserslist's latest recorded browser release was only 15 days old.
+- The stale warning string came from `tailwindcss/peers/index.js`; the CLI still resolved the project's current external Autoprefixer for CSS processing.
+
+### Suggested Fix
+
+Keep the external Browserslist data current and suppress only Tailwind 3's stale bundled fallback warning during its build/watch commands.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: package.json, package-lock.json
+
+### Resolution
+
+- **Resolved**: 2026-07-17T07:35:00Z
+- **Notes**: Updated the lockfile and set `BROWSERSLIST_IGNORE_OLD_DATA=1` only around Tailwind CLI commands.
+
+---
+
+## [ERR-20260717-009] system-python314-missing-test-dependencies
+
+**Logged**: 2026-07-17T07:40:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+
+The first Python 3.14 compatibility test used the system interpreter, whose distro packages lacked `httpx` required by the repository test bootstrap.
+
+### Error
+
+```text
+RuntimeError: The starlette.testclient module requires the httpx package to be installed.
+```
+
+### Context
+
+- The failure occurred while importing `tests/conftest.py`, before the tar extraction test ran.
+- The project environment remained unchanged.
+
+### Suggested Fix
+
+Run cross-version checks in an isolated environment populated from the project lockfile instead of relying on system Python packages.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: tests/unit/install/test_distribution_materialization.py, uv.lock
+
+### Resolution
+
+- **Resolved**: 2026-07-17T07:40:00Z
+- **Notes**: Switched the compatibility check to a temporary uv-managed Python 3.14 environment.
+
+---
+
+## [ERR-20260717-006] skill-creator-validator-missing-pyyaml-in-project-venv
+
+**Logged**: 2026-07-17T06:00:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+
+The external `skill-creator` quick validator could not start in the project venv because PyYAML
+is not a project dependency.
+
+### Error
+
+```text
+ModuleNotFoundError: No module named 'yaml'
+```
+
+### Context
+
+- Command: `.venv/bin/python .../skill-creator/scripts/quick_validate.py skills/active/...`
+- The validator is environment-owned and imports PyYAML; the project runtime does not need that
+  dependency.
+
+### Suggested Fix
+
+Run the environment-owned validator with an interpreter that already provides its dependencies,
+without adding an unrelated dependency to the project lockfile.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: skills/active/*/SKILL.md
+
+### Resolution
+
+- **Resolved**: 2026-07-17T06:01:00Z
+- **Notes**: Re-ran the validator with `/usr/bin/python3`, which provides PyYAML 6.0.3.
+
+---
+
 ## [ERR-20260717-003] ad-hoc-testclient-missed-lifespan
 
 **Logged**: 2026-07-17T01:32:00Z

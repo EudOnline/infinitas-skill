@@ -245,17 +245,24 @@ def test_check_all_runs_direct_quality_gates() -> None:
     assert "scripts/check-all.sh" in workflow
 
 
-def test_tagged_container_publication_runs_the_release_gate_first() -> None:
-    validate_workflow = VALIDATE_WORKFLOW_PATH.read_text(encoding="utf-8")
-    container_workflow = (ROOT / ".github" / "workflows" / "container-image.yml").read_text(
-        encoding="utf-8"
-    )
+def test_container_publication_depends_on_the_single_release_gate() -> None:
+    workflow = VALIDATE_WORKFLOW_PATH.read_text(encoding="utf-8")
 
-    assert "tags: ['v*']" in validate_workflow
-    assert "scripts/check-all.sh" in container_workflow
-    assert container_workflow.index("scripts/check-all.sh") < container_workflow.index(
-        "docker/build-push-action"
-    )
+    assert "tags: ['v*']" in workflow
+    assert workflow.count("scripts/check-all.sh") == 1
+    assert "build-container:" in workflow
+    assert "needs: [validate, python-314-archive-preview]" in workflow
+    assert workflow.index("scripts/check-all.sh") < workflow.index("docker/build-push-action")
+    assert "make ci-fast" not in workflow
+    assert "tests/unit -q --override-ini=addopts=" not in workflow
+
+
+def test_validate_workflow_previews_archive_extraction_on_python_314() -> None:
+    workflow = VALIDATE_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "python-314-archive-preview:" in workflow
+    assert "python-version: '3.14'" in workflow
+    assert "tests/unit/install/test_distribution_materialization.py" in workflow
 
 
 def test_validate_workflow_covers_frontend_build_contract() -> None:
@@ -265,7 +272,7 @@ def test_validate_workflow_covers_frontend_build_contract() -> None:
 
     assert "actions/setup-node" in workflow
     assert "npm ci" in workflow
-    assert "npm run build" in workflow
+    assert "scripts/check-all.sh" in workflow
     assert isinstance(test_script, str) and "no test specified" not in test_script
 
 

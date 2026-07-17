@@ -98,6 +98,8 @@ writing a database.
 ./scripts/check-all.sh
 ```
 
+GitHub Actions runs this complete gate once per pull request, `main` push, version tag, or manual dispatch. The multi-architecture container build is a dependent job in the same workflow, so image publication reuses the validation result instead of repeating the test matrix.
+
 Equivalent explicit matrix:
 
 ```bash
@@ -116,4 +118,4 @@ git diff --check
 
 ## Environment notes
 
-CI uses Python 3.11. Some Python 3.13 environments can block synchronous FastAPI `TestClient` worker-thread execution; a test that produces no assertion output and never returns should be rechecked under Python 3.11 before changing application behavior. Browser E2E also requires permission to bind a local socket and an installed Playwright browser.
+The authoritative CI matrix uses Python 3.11, with a focused Python 3.14 preview for secure distribution archive extraction. Some Python 3.13 environments can block synchronous FastAPI `TestClient` worker-thread execution; a test that produces no assertion output and never returns should be rechecked under Python 3.11 before changing application behavior. Browser E2E also requires permission to bind a local socket and an installed Playwright browser.
