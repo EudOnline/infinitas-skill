@@ -41,3 +41,26 @@ def test_focus_mode_toggle(authenticated_page):
     html = authenticated_page.query_selector("html")
     class_list = html.get_attribute("class") or ""
     assert "focus-mode" not in class_list
+
+
+def test_primary_interface_is_visible_with_normal_motion(authenticated_page, live_server):
+    authenticated_page.emulate_media(reduced_motion="no-preference")
+    authenticated_page.goto(f"{live_server}/manage?lang=en")
+    authenticated_page.wait_for_load_state("networkidle")
+    authenticated_page.wait_for_timeout(400)
+
+    for selector in (".topbar", "#main-content .kawaii-card"):
+        element = authenticated_page.locator(selector).first
+        assert element.count() == 1
+        assert float(element.evaluate("el => getComputedStyle(el).opacity")) == 1.0
+
+
+def test_primary_interface_is_visible_with_reduced_motion(authenticated_page, live_server):
+    authenticated_page.emulate_media(reduced_motion="reduce")
+    authenticated_page.goto(f"{live_server}/manage?lang=en")
+    authenticated_page.wait_for_load_state("networkidle")
+
+    for selector in (".topbar", "#main-content .kawaii-card"):
+        element = authenticated_page.locator(selector).first
+        assert element.count() == 1
+        assert float(element.evaluate("el => getComputedStyle(el).opacity")) == 1.0
