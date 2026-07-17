@@ -3,10 +3,12 @@ from __future__ import annotations
 import json
 from typing import Any, Sequence
 
-from sqlalchemy import select
+from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
-from server.models import AuditEvent, Release, Skill
+from server.modules.audit.models import AuditEvent
+from server.modules.authoring.models import Skill
+from server.modules.release.models import Release
 from server.modules.shared.formatting import iso_format
 
 
@@ -18,8 +20,24 @@ def json_payload(event: AuditEvent) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
-def activity_query():
-    return select(AuditEvent).order_by(AuditEvent.occurred_at.desc(), AuditEvent.id.desc())
+def activity_query(*, owner_principal_id: int | None = None) -> Select[tuple[AuditEvent]]:
+    query = select(AuditEvent)
+    if owner_principal_id is not None:
+        query = query.where(AuditEvent.owner_principal_id == owner_principal_id)
+    return query.order_by(AuditEvent.occurred_at.desc(), AuditEvent.id.desc())
+
+
+def load_activity_events(
+    db: Session,
+    *,
+    limit: int = 100,
+    owner_principal_id: int | None = None,
+) -> list[AuditEvent]:
+    """Load a bounded activity feed using the shared ownership rules."""
+    capped_limit = max(1, min(int(limit or 100), 500))
+    return list(
+        db.scalars(activity_query(owner_principal_id=owner_principal_id).limit(capped_limit)).all()
+    )
 
 
 def _prefetch_related(
@@ -68,7 +86,10 @@ def _object_payload(
     object_id = payload.get("object_id")
     if not object_id:
         return None
-    oid = int(object_id)
+    try:
+        oid = int(object_id)
+    except (TypeError, ValueError):
+        return None
     skill = skills_by_id.get(oid)
     if skill is None:
         return {"id": oid, "name": None, "kind": None}
@@ -85,40 +106,20 @@ def _release_payload(
     release_id = payload.get("release_id")
     if not release_id:
         return None
-    rid = int(release_id)
+    try:
+        rid = int(release_id)
+    except (TypeError, ValueError):
+        return None
     release = releases_by_id.get(rid)
     if release is None:
         return {"id": rid, "state": None}
     return {"id": release.id, "state": release.state}
 
 
-def normalize_event(db: Session, event: AuditEvent) -> dict[str, Any]:
-    """Enrich an audit event with resolved object/release references.
-
-    .. deprecated::
-        Use :func:`normalize_events` for batch normalization instead of calling
-        this in a loop — it performs 2 SQL queries per call.
-    """
-    payload = json_payload(event)
-    return {
-        "id": event.id,
-        "actor": event.actor_ref or "system",
-        "action": event.event_type,
-        "object": _object_payload(payload, _prefetch_related(db, [event])[0]),
-        "release": _release_payload(payload, _prefetch_related(db, [event])[1]),
-        "outcome": payload.get("outcome") or "success",
-        "timestamp": iso_format(event.occurred_at),
-        "aggregate_type": event.aggregate_type,
-        "aggregate_id": event.aggregate_id,
-        "detail": payload,
-    }
-
-
 def normalize_events(db: Session, events: Sequence[AuditEvent]) -> list[dict[str, Any]]:
     """Batch-normalize audit events with resolved object/release references.
 
-    Performs exactly 2 SQL queries regardless of event count (vs 2*N for the
-    per-event :func:`normalize_event`).
+    Performs exactly 2 SQL queries regardless of event count.
     """
     skills_by_id, releases_by_id = _prefetch_related(db, list(events))
     results: list[dict[str, Any]] = []

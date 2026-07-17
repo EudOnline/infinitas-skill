@@ -3,13 +3,16 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from server.auth import get_current_access_context
 from server.db import get_db
 from server.modules.access.authn import AccessContext
 from server.modules.access.authz import can_access_release, require_any_scope
+from server.modules.access.object_tokens import router as object_tokens_router
 from server.modules.access.schemas import AccessIdentityView, ReleaseAccessCheckView
+from server.modules.access.share_links_router import router as share_links_router
+from server.modules.identity.auth import get_current_access_context
 
 router = APIRouter(prefix="/api/v1/access", tags=["access"])
+routers = (router, object_tokens_router, share_links_router)
 
 
 def _identity_view(context: AccessContext) -> AccessIdentityView:
@@ -28,7 +31,9 @@ def _identity_view(context: AccessContext) -> AccessIdentityView:
 
 
 @router.get("/me", response_model=AccessIdentityView)
-def read_access_me(context: AccessContext = Depends(get_current_access_context)):
+def read_access_me(
+    context: AccessContext = Depends(get_current_access_context),
+) -> AccessIdentityView:
     return _identity_view(context)
 
 
@@ -37,7 +42,7 @@ def check_release_access(
     release_id: int,
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
-):
+) -> ReleaseAccessCheckView:
     scope_granted = require_any_scope(context, {"artifact:download", "release:read", "api:user"})
     if not scope_granted:
         raise HTTPException(status_code=403, detail="insufficient scope")

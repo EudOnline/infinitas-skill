@@ -5,9 +5,10 @@ from typing import Sequence
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from server.models import AccessGrant, Exposure
 from server.modules.access.authn import AccessContext
+from server.modules.access.models import AccessGrant
 from server.modules.access.service import grant_allows_release
+from server.modules.exposure.models import Exposure
 
 
 def require_any_scope(context: AccessContext, allowed_scopes: set[str]) -> bool:

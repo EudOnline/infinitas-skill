@@ -7,6 +7,7 @@ import re
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+import server.modules.authoring.repository as repository
 from server.exceptions_base import (
     ConflictError as BaseConflictError,
 )
@@ -16,7 +17,6 @@ from server.exceptions_base import (
 from server.exceptions_base import (
     NotFoundError as BaseNotFoundError,
 )
-from server.modules.authoring import repository
 from server.modules.authoring.models import Skill, SkillVersion
 from server.modules.authoring.schemas import SkillCreateRequest
 from server.modules.release.models import Artifact
@@ -41,18 +41,6 @@ class ForbiddenError(AuthoringError, BaseForbiddenError):
 def canonical_metadata_json(metadata: dict | None) -> str:
     payload = metadata if isinstance(metadata, dict) else {}
     return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-
-
-def load_metadata(raw: str | None) -> dict:
-    if not raw:
-        return {}
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError:
-        return {}
-    if not isinstance(payload, dict):
-        return {}
-    return payload
 
 
 def sha256_prefixed(raw: str) -> str:
@@ -230,8 +218,7 @@ def create_skill_version_snapshot(
         sealed_manifest_json=canonical_manifest_json(version_manifest),
         created_by_principal_id=actor_principal_id,
     )
-    db.commit()
-    db.refresh(skill_version)
+    db.flush()
     return skill_version
 
 
@@ -258,8 +245,7 @@ def create_skill(
         default_visibility_profile=payload.default_visibility_profile,
         created_by_principal_id=actor_principal_id,
     )
-    db.commit()
-    db.refresh(skill)
+    db.flush()
     return skill
 
 
@@ -270,8 +256,27 @@ def get_skill_or_404(db: Session, skill_id: int) -> Skill:
     return skill
 
 
+def list_skill_versions(
+    db: Session,
+    *,
+    skill_id: int,
+    actor_principal_id: int,
+    is_maintainer: bool = False,
+    limit: int | None = None,
+    offset: int | None = None,
+) -> list[SkillVersion]:
+    skill = get_skill_or_404(db, skill_id)
+    assert_namespace_owner(
+        db,
+        skill,
+        principal_id=actor_principal_id,
+        is_maintainer=is_maintainer,
+    )
+    return repository.list_skill_versions(db, skill_id=skill.id, limit=limit, offset=offset)
+
+
 def _check_team_access(db: Session, namespace_id: int, principal_id: int) -> bool:
-    from server.modules.access.models import Team, TeamMembership
+    from server.modules.identity.models import Team, TeamMembership
 
     return (
         db.scalar(
@@ -298,5 +303,3 @@ def assert_namespace_owner(
     if _check_team_access(db, skill.namespace_id, principal_id):
         return
     raise ForbiddenError("skill namespace access denied")
-
-

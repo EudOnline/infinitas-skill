@@ -12,6 +12,25 @@ from typing import cast
 from sqlalchemy import DateTime
 
 
+def humanize_identifier(value: str | None) -> str:
+    if not value:
+        return "-"
+    return value.replace("_", " ").replace("-", " ").strip().title()
+
+
+def humanize_timestamp(value: str | None) -> str:
+    if not value:
+        return "-"
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return value
+    stamp = parsed.strftime("%Y-%m-%d %H:%M")
+    if parsed.tzinfo is not None and parsed.utcoffset() is not None:
+        stamp = f"{stamp} UTC"
+    return stamp
+
+
 def iso_format(value: DateTime | datetime | None) -> str | None:
     """Format *value* as ISO-8601 with ``Z`` suffix for UTC.
 

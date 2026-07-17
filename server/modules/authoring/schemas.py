@@ -1,37 +1,12 @@
 from __future__ import annotations
 
-import json
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
 from server.modules.authoring.models import Skill, SkillVersion
 from server.modules.shared.formatting import iso_format as _iso
-
-
-def _load_metadata(raw: str | None) -> dict:
-    if not raw:
-        return {}
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError:
-        return {}
-    if not isinstance(payload, dict):
-        return {}
-    return payload
-
-
-def _load_manifest(raw: str | None) -> dict:
-    if not raw:
-        return {}
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError:
-        return {}
-    if not isinstance(payload, dict):
-        return {}
-    return payload
-
+from server.modules.shared.json import loads_json_object
 
 SLUG_PATTERN = r"^[a-z0-9]+(?:-[a-z0-9]+)*$"
 SEMVER_PATTERN = (
@@ -44,7 +19,7 @@ class SkillCreateRequest(BaseModel):
     slug: str = Field(min_length=1, max_length=200, pattern=SLUG_PATTERN)
     display_name: str = Field(min_length=1, max_length=200)
     summary: str = ""
-    default_visibility_profile: str | None = None
+    default_visibility_profile: str | None = Field(default=None, max_length=64)
 
 
 class SkillVersionCreateRequest(BaseModel):
@@ -103,9 +78,7 @@ class SkillVersionView(BaseModel):
             content_digest=version.content_digest,
             metadata_digest=version.metadata_digest,
             sealed_manifest_json=version.sealed_manifest_json,
-            sealed_manifest=_load_manifest(version.sealed_manifest_json),
+            sealed_manifest=loads_json_object(version.sealed_manifest_json),
             created_by_principal_id=version.created_by_principal_id,
             created_at=_iso(version.created_at) or "",
         )
-
-

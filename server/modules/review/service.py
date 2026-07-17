@@ -6,14 +6,17 @@ from typing import Any, cast
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+import server.modules.review.default_policy as default_policy
 from server.exceptions_base import (
     ConflictError as BaseConflictError,
 )
 from server.exceptions_base import (
     NotFoundError as BaseNotFoundError,
 )
-from server.models import Exposure, ReviewCase, ReviewDecision, ReviewPolicy, User, utcnow
-from server.modules.review import default_policy
+from server.model_base import utcnow
+from server.modules.exposure.models import Exposure
+from server.modules.identity.models import User
+from server.modules.review.models import ReviewCase, ReviewDecision, ReviewPolicy
 
 
 class ReviewError(Exception):
@@ -170,7 +173,5 @@ def record_decision(
 
     db.add(review_case)
     db.add(exposure)
-    db.commit()
-    db.refresh(review_case)
-    db.refresh(exposure)
+    db.flush()
     return review_case, exposure

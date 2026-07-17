@@ -3,16 +3,16 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from server.auth import get_current_access_context
+import server.modules.exposure.service as service
 from server.db import get_db
 from server.modules.access.authn import AccessContext
 from server.modules.access.authz import require_any_scope
-from server.modules.exposure import service
 from server.modules.exposure.schemas import (
     ExposureCreateRequest,
     ExposurePatchRequest,
     ExposureView,
 )
+from server.modules.identity.auth import get_current_access_context
 
 router = APIRouter(prefix="/api/v1", tags=["exposure"])
 
@@ -20,9 +20,7 @@ router = APIRouter(prefix="/api/v1", tags=["exposure"])
 def _require_exposure_principal(context: AccessContext) -> int:
     if context.principal is None:
         raise HTTPException(status_code=403, detail="exposure principal required")
-    if not require_any_scope(
-        context, {"api:user", "exposure:write", "release:write", "authoring:write"}
-    ):
+    if not require_any_scope(context, {"api:user", "exposure:write", "authoring:write"}):
         raise HTTPException(status_code=403, detail="insufficient scope")
     return context.principal.id
 
@@ -37,7 +35,7 @@ def create_exposure(
     payload: ExposureCreateRequest,
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
-):
+) -> ExposureView:
     principal_id = _require_exposure_principal(context)
     is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
@@ -63,7 +61,7 @@ def patch_exposure(
     payload: ExposurePatchRequest,
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
-):
+) -> ExposureView:
     principal_id = _require_exposure_principal(context)
     is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
@@ -88,7 +86,7 @@ def activate_exposure(
     exposure_id: int,
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
-):
+) -> ExposureView:
     principal_id = _require_exposure_principal(context)
     is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
@@ -112,7 +110,7 @@ def revoke_exposure(
     exposure_id: int,
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
-):
+) -> ExposureView:
     principal_id = _require_exposure_principal(context)
     is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:

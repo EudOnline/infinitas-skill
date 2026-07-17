@@ -5,6 +5,8 @@ import json
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+import server.modules.release.service as release_service
+import server.modules.review.service as review_service
 from server.exceptions_base import (
     ConflictError as BaseConflictError,
 )
@@ -14,10 +16,10 @@ from server.exceptions_base import (
 from server.exceptions_base import (
     NotFoundError as BaseNotFoundError,
 )
-from server.models import Exposure, Release, utcnow
+from server.model_base import utcnow
+from server.modules.exposure.models import Exposure
 from server.modules.exposure.schemas import ExposureCreateRequest, ExposurePatchRequest
-from server.modules.release import service as release_service
-from server.modules.review import service as review_service
+from server.modules.release.models import Release
 from server.modules.review.policy import evaluate_exposure_policy
 
 
@@ -141,7 +143,6 @@ def create_exposure(
         .with_for_update()
     )
     if existing is not None:
-        db.rollback()
         raise ConflictError(
             f"active {outcome.audience_type} exposure already exists for this release"
         )
@@ -161,8 +162,7 @@ def create_exposure(
         exposure.state = "review_open"
 
     db.add(exposure)
-    db.commit()
-    db.refresh(exposure)
+    db.flush()
     return exposure
 
 
@@ -199,8 +199,7 @@ def patch_exposure(
             raise ConflictError("requested_review_mode cannot be changed after exposure creation")
 
     db.add(exposure)
-    db.commit()
-    db.refresh(exposure)
+    db.flush()
     return exposure
 
 
@@ -234,8 +233,7 @@ def activate_exposure(
     if exposure.activated_at is None:
         exposure.activated_at = utcnow()
     db.add(exposure)
-    db.commit()
-    db.refresh(exposure)
+    db.flush()
     return exposure
 
 
@@ -263,6 +261,5 @@ def revoke_exposure(
     if open_case is not None:
         review_service.close_review_case(db, open_case, reason="exposure_revoked")
     db.add(exposure)
-    db.commit()
-    db.refresh(exposure)
+    db.flush()
     return exposure

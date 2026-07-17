@@ -1,22 +1,12 @@
 from __future__ import annotations
 
-import json
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
 from server.modules.review.models import ReviewCase, ReviewDecision
 from server.modules.shared.formatting import iso_format as _iso
-
-
-def _load_evidence(raw: str | None) -> dict:
-    if not raw:
-        return {}
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError:
-        return {}
-    return payload if isinstance(payload, dict) else {}
+from server.modules.shared.json import loads_json_object
 
 
 class ReviewCaseCreateRequest(BaseModel):
@@ -46,7 +36,7 @@ class ReviewDecisionView(BaseModel):
             reviewer_principal_id=decision.reviewer_principal_id,
             decision=decision.decision,
             note=decision.note,
-            evidence=_load_evidence(decision.evidence_json),
+            evidence=loads_json_object(decision.evidence_json),
             created_at=_iso(decision.created_at) or "",
         )
 

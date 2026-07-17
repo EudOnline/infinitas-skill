@@ -8,19 +8,19 @@ from pathlib import Path
 from server.repo_ops import RepoOpError, locked_repo
 
 BOOTSTRAP_IGNORE = shutil.ignore_patterns(
-    '.git',
-    '.DS_Store',
-    '__pycache__',
-    '.pytest_cache',
-    '.mypy_cache',
-    '.ruff_cache',
-    '.coverage',
-    '.coverage.*',
-    'htmlcov',
-    '.venv',
-    '.state',
-    '.deploy',
-    'node_modules',
+    ".git",
+    ".DS_Store",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".coverage",
+    ".coverage.*",
+    "htmlcov",
+    ".venv",
+    ".state",
+    ".deploy",
+    "node_modules",
 )
 
 
@@ -37,13 +37,13 @@ class RuntimeRepoBootstrapResult:
 
 
 def _run_git(repo_path: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(['git', *args], cwd=repo_path, text=True, capture_output=True)
+    return subprocess.run(["git", *args], cwd=repo_path, text=True, capture_output=True)
 
 
-def _ensure_success(result: subprocess.CompletedProcess[str], action: str):
+def _ensure_success(result: subprocess.CompletedProcess[str], action: str) -> None:
     if result.returncode == 0:
         return
-    message = result.stderr.strip() or result.stdout.strip() or f'{action} failed'
+    message = result.stderr.strip() or result.stdout.strip() or f"{action} failed"
     raise RuntimeRepoError(message)
 
 
@@ -52,17 +52,17 @@ def is_git_repo(path: Path) -> bool:
     if not path.is_dir():
         return False
     result = subprocess.run(
-        ['git', 'rev-parse', '--is-inside-work-tree'],
+        ["git", "rev-parse", "--is-inside-work-tree"],
         cwd=path,
         text=True,
         capture_output=True,
     )
-    return result.returncode == 0 and result.stdout.strip() == 'true'
+    return result.returncode == 0 and result.stdout.strip() == "true"
 
 
-def _copy_snapshot(source: Path, target: Path):
+def _copy_snapshot(source: Path, target: Path) -> None:
     for child in target.iterdir():
-        if child.name == '.git':
+        if child.name == ".git":
             continue
         if child.is_dir():
             shutil.rmtree(child)
@@ -70,7 +70,7 @@ def _copy_snapshot(source: Path, target: Path):
             child.unlink()
 
     for child in source.iterdir():
-        if child.name == '.git':
+        if child.name == ".git":
             continue
         destination = target / child.name
         if child.is_dir():
@@ -80,24 +80,24 @@ def _copy_snapshot(source: Path, target: Path):
 
 
 def _configure_origin(repo_path: Path, origin_url: str) -> bool:
-    origin_url = str(origin_url or '').strip()
+    origin_url = str(origin_url or "").strip()
     if not origin_url:
         return False
 
-    result = _run_git(repo_path, 'remote', 'get-url', 'origin')
+    result = _run_git(repo_path, "remote", "get-url", "origin")
     if result.returncode == 0:
         current = result.stdout.strip()
         if current == origin_url:
             return False
         _ensure_success(
-            _run_git(repo_path, 'remote', 'set-url', 'origin', origin_url),
-            'git remote set-url origin',
+            _run_git(repo_path, "remote", "set-url", "origin", origin_url),
+            "git remote set-url origin",
         )
         return True
 
     _ensure_success(
-        _run_git(repo_path, 'remote', 'add', 'origin', origin_url),
-        'git remote add origin',
+        _run_git(repo_path, "remote", "add", "origin", origin_url),
+        "git remote add origin",
     )
     return True
 
@@ -107,19 +107,19 @@ def ensure_runtime_repo(
     bundled_repo_path: Path,
     repo_path: Path,
     repo_lock_path: Path,
-    branch: str = 'main',
-    origin_url: str = '',
-    git_user_name: str = 'Infinitas Hosted Registry',
-    git_user_email: str = 'hosted-registry@example.com',
+    branch: str = "main",
+    origin_url: str = "",
+    git_user_name: str = "Infinitas Hosted Registry",
+    git_user_email: str = "hosted-registry@example.com",
     allow_reset: bool = False,
 ) -> RuntimeRepoBootstrapResult:
     bundled_repo_path = Path(bundled_repo_path).expanduser().resolve()
     repo_path = Path(repo_path).expanduser().resolve()
     repo_lock_path = Path(repo_lock_path).expanduser().resolve()
-    branch = str(branch or 'main').strip() or 'main'
+    branch = str(branch or "main").strip() or "main"
 
     if not bundled_repo_path.is_dir():
-        raise RuntimeRepoError(f'bundled repo path does not exist: {bundled_repo_path}')
+        raise RuntimeRepoError(f"bundled repo path does not exist: {bundled_repo_path}")
 
     repo_path.parent.mkdir(parents=True, exist_ok=True)
     repo_lock_path.parent.mkdir(parents=True, exist_ok=True)
@@ -138,34 +138,34 @@ def ensure_runtime_repo(
             existing = list(repo_path.iterdir())
             if existing and not allow_reset:
                 raise RuntimeRepoError(
-                    f'repo path exists but is not a git worktree: {repo_path}. '
-                    'Clear it first or set INFINITAS_SERVER_REPO_BOOTSTRAP_RESET=1.'
+                    f"repo path exists but is not a git worktree: {repo_path}. "
+                    "Clear it first or set INFINITAS_SERVER_REPO_BOOTSTRAP_RESET=1."
                 )
             if not repo_path.is_dir():
-                raise RuntimeRepoError(f'repo path is not a directory: {repo_path}')
+                raise RuntimeRepoError(f"repo path is not a directory: {repo_path}")
         else:
             repo_path.mkdir(parents=True, exist_ok=True)
 
         _copy_snapshot(bundled_repo_path, repo_path)
 
-        _ensure_success(_run_git(repo_path, 'init', '-b', branch), f'git init {branch}')
+        _ensure_success(_run_git(repo_path, "init", "-b", branch), f"git init {branch}")
         _ensure_success(
-            _run_git(repo_path, 'config', 'user.name', git_user_name),
-            'git config user.name',
+            _run_git(repo_path, "config", "user.name", git_user_name),
+            "git config user.name",
         )
         _ensure_success(
-            _run_git(repo_path, 'config', 'user.email', git_user_email),
-            'git config user.email',
+            _run_git(repo_path, "config", "user.email", git_user_email),
+            "git config user.email",
         )
-        _ensure_success(_run_git(repo_path, 'add', '.'), 'git add .')
+        _ensure_success(_run_git(repo_path, "add", "."), "git add .")
         _ensure_success(
             _run_git(
                 repo_path,
-                'commit',
-                '-m',
-                'bootstrap: seed hosted runtime repo from image snapshot',
+                "commit",
+                "-m",
+                "bootstrap: seed hosted runtime repo from image snapshot",
             ),
-            'git commit bootstrap snapshot',
+            "git commit bootstrap snapshot",
         )
         origin_configured = _configure_origin(repo_path, origin_url)
 

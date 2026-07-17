@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import DateTime, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from server.models import Base, utcnow
+from server.model_base import Base, utcnow
 
 
 class AuditEvent(Base):
@@ -21,6 +21,7 @@ class AuditEvent(Base):
     aggregate_id: Mapped[str] = mapped_column(String(128))
     event_type: Mapped[str] = mapped_column(String(128))
     actor_ref: Mapped[str] = mapped_column(String(255), default="")
+    owner_principal_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     payload_json: Mapped[str] = mapped_column(Text, default="{}")
     occurred_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),

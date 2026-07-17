@@ -1,26 +1,24 @@
 from __future__ import annotations
 
+import hmac
 import json
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any, cast
 
-from sqlalchemy import select
+from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session
 
-from server.auth import hash_share_password, verify_password
-from server.models import (
-    AccessGrant,
-    Credential,
-    Exposure,
-    Principal,
-    Skill,
-    SkillVersion,
-    utcnow,
-)
-from server.modules.access import service as access_service
-from server.modules.audit import service as audit_service
-from server.modules.release import service as release_service
+import server.modules.access.service as access_service
+import server.modules.audit.service as audit_service
+import server.modules.identity.service as identity_service
+import server.modules.release.service as release_service
+from server.model_base import utcnow
+from server.modules.access.models import AccessGrant
+from server.modules.authoring.models import Skill, SkillVersion
+from server.modules.exposure.models import Exposure
+from server.modules.identity.models import Credential, Principal
+from server.modules.identity.passwords import hash_share_password, verify_password
 from server.modules.shared.actor import ActorRef
 from server.modules.shared.actor import actor_ref_label as _actor_ref
 from server.modules.shared.formatting import iso_format
@@ -56,7 +54,9 @@ def _as_aware(value: datetime) -> datetime:
     return value
 
 
-def _release_context(db: Session, *, release_id: int, actor: ActorRef | None = None):
+def _release_context(
+    db: Session, *, release_id: int, actor: ActorRef | None = None
+) -> tuple[release_service.Release, Skill, Principal, str]:
     try:
         release = release_service.get_release_or_404(db, release_id)
     except release_service.NotFoundError as exc:
@@ -129,20 +129,19 @@ def _password_credential(credentials: list[Credential]) -> Credential | None:
     return None
 
 
-def _share_state(grant: AccessGrant, constraints: dict[str, Any]) -> str:
+def _capability_credential(credentials: list[Credential]) -> Credential | None:
+    for credential in credentials:
+        if credential.type == "share_capability":
+            return credential
+    return None
+
+
+def _share_state(grant: AccessGrant) -> str:
     if grant.state and grant.state != "active":
         return grant.state
-    expires_at = constraints.get("expires_at")
-    if isinstance(expires_at, str) and expires_at:
-        try:
-            parsed = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
-        except ValueError:
-            parsed = None
-        if parsed is not None and _as_aware(parsed) <= utcnow():
-            return "expired"
-    max_uses = constraints.get("max_uses", constraints.get("usage_limit"))
-    used_count = int(constraints.get("used_count", constraints.get("usage_count") or 0))
-    if max_uses is not None and used_count >= int(max_uses):
+    if grant.expires_at is not None and _as_aware(grant.expires_at) <= utcnow():
+        return "expired"
+    if grant.usage_limit is not None and grant.usage_count >= grant.usage_limit:
         return "exhausted"
     return "active"
 
@@ -152,19 +151,27 @@ def _share_link_payload(
     grant: AccessGrant,
     *,
     install_path: str | None = None,
-    temporary_password: str | None = None,
+    resolve_secret: str | None = None,
+    access_token: str | None = None,
 ) -> dict:
     release_id = _release_id_for_grant(db, grant=grant)
     constraints = _json_object(grant.constraints_json)
     credentials = _share_credentials(db, grant_id=grant.id)
     password_credential = _password_credential(credentials)
-    used_count = int(constraints.get("used_count", constraints.get("usage_count") or 0))
-    max_uses = constraints.get("max_uses", constraints.get("usage_limit"))
-    expires_at = constraints.get("expires_at")
+    capability_credential = _capability_credential(credentials)
+    used_count = int(grant.usage_count or 0)
+    max_uses = grant.usage_limit
+    expires_at = iso_format(grant.expires_at)
     payload = {
         "id": grant.id,
         "grant_id": grant.id,
-        "credential_id": password_credential.id if password_credential is not None else None,
+        "credential_id": (
+            password_credential.id
+            if password_credential is not None
+            else capability_credential.id
+            if capability_credential is not None
+            else None
+        ),
         "release_id": release_id,
         "name": constraints.get("name") or constraints.get("label") or "",
         "slug": grant.subject_ref.removeprefix("share://"),
@@ -172,13 +179,15 @@ def _share_link_payload(
         "expires_at": expires_at.replace("+00:00", "Z") if isinstance(expires_at, str) else None,
         "max_uses": int(max_uses) if max_uses is not None else None,
         "used_count": used_count,
-        "state": _share_state(grant, constraints),
+        "state": _share_state(grant),
         "created_at": iso_format(grant.created_at),
     }
     if install_path is not None:
         payload["install_path"] = install_path
-    if temporary_password is not None:
-        payload["temporary_password"] = temporary_password
+    if resolve_secret is not None:
+        payload["resolve_secret"] = resolve_secret
+    if access_token is not None:
+        payload["access_token"] = access_token
     return payload
 
 
@@ -209,12 +218,7 @@ def create_share_link(
     expires_at = utcnow() + timedelta(days=expires_in_days) if expires_in_days is not None else None
     constraints: dict[str, Any] = {
         "name": str(name or "").strip(),
-        "used_count": 0,
     }
-    if expires_at is not None:
-        constraints["expires_at"] = expires_at.isoformat()
-    if max_uses is not None:
-        constraints["max_uses"] = max_uses
 
     grant = AccessGrant(
         exposure_id=exposure.id,
@@ -222,25 +226,29 @@ def create_share_link(
         subject_ref=f"share://{skill.slug}/{secrets.token_urlsafe(12)}",
         constraints_json=json.dumps(constraints, ensure_ascii=False),
         state="active",
+        expires_at=expires_at,
+        usage_limit=max_uses,
+        usage_count=0,
         created_by_principal_id=actor.principal.id,
     )
     db.add(grant)
     db.flush()
 
     credential_secret = raw_password or secrets.token_urlsafe(24)
-    # Use bcrypt for user-chosen passwords (brute-force resistant), SHA-256 for random tokens
+    # User passwords are verifier-only. Random capabilities are exchanged for short-lived
+    # grant tokens by the anonymous resolve endpoint and are never accepted as Bearer tokens.
     if raw_password:
         hashed_secret = hash_share_password(raw_password)
         credential_type = "share_password"
     else:
-        hashed_secret = access_service.hash_token(credential_secret)
-        credential_type = "share_secret"
+        hashed_secret = identity_service.hash_token(credential_secret)
+        credential_type = "share_capability"
     credential = Credential(
         principal_id=None,
         grant_id=grant.id,
         type=credential_type,
         hashed_secret=hashed_secret,
-        scopes_json=access_service.encode_scopes({"artifact:download"}),
+        scopes_json=identity_service.encode_scopes({"artifact:download"}),
         resource_selector_json=json.dumps({"release_scope": "grant-bound"}, ensure_ascii=False),
         expires_at=expires_at,
         created_at=utcnow(),
@@ -254,6 +262,7 @@ def create_share_link(
         aggregate_id=str(grant.id),
         event_type="share_link.created",
         actor_ref=_actor_ref(actor),
+        owner_principal_id=actor.principal.id,
         payload={
             "release_id": release_id,
             "object_id": skill.id,
@@ -268,7 +277,7 @@ def create_share_link(
             skill=skill,
             version=version_label,
         ),
-        temporary_password=credential_secret,
+        resolve_secret=credential_secret if not raw_password else None,
     )
 
 
@@ -302,12 +311,19 @@ def revoke_share_link(db: Session, *, share_id: int, actor: ActorRef) -> dict:
             aggregate_id=str(grant.id),
             event_type="share_link.revoked",
             actor_ref=_actor_ref(actor),
+            owner_principal_id=actor.principal.id,
             payload={"release_id": release_id},
         )
     return _share_link_payload(db, grant)
 
 
-def resolve_share_link(db: Session, *, share_id: int, password: str | None) -> dict:
+def resolve_share_link(
+    db: Session,
+    *,
+    share_id: int,
+    password: str | None,
+    secret: str | None,
+) -> dict:
     grant = _get_share_grant(db, share_id=share_id)
     payload = _share_link_payload(db, grant)
     if payload["state"] != "active":
@@ -317,32 +333,60 @@ def resolve_share_link(db: Session, *, share_id: int, password: str | None) -> d
     password_credential = _password_credential(credentials)
     if password_credential is not None:
         stored_hash = password_credential.hashed_secret or ""
-        # Support both bcrypt hashes (new) and SHA-256 hashes (legacy)
-        if stored_hash.startswith("$2"):
-            if not verify_password(password or "", stored_hash):
-                raise ShareLinkForbiddenError("share link password is invalid")
-        elif not access_service.token_matches_hash(password or "", stored_hash):
+        if not verify_password(password or "", stored_hash):
             raise ShareLinkForbiddenError("share link password is invalid")
+    else:
+        capability_credential = _capability_credential(credentials)
+        supplied_secret = str(secret or "").strip()
+        if capability_credential is None or not supplied_secret:
+            raise ShareLinkForbiddenError("share link capability is required")
+        expected_hash = capability_credential.hashed_secret or ""
+        if not hmac.compare_digest(
+            expected_hash,
+            identity_service.hash_token(supplied_secret),
+        ):
+            raise ShareLinkForbiddenError("share link capability is invalid")
 
     release_id = _release_id_for_grant(db, grant=grant)
     _release, skill, owner, version_label = _release_context(
         db,
         release_id=release_id,
     )
-    constraints = _json_object(grant.constraints_json)
-    constraints["used_count"] = (
-        int(constraints.get("used_count", constraints.get("usage_count") or 0)) + 1
+    result = db.execute(
+        update(AccessGrant)
+        .where(AccessGrant.id == grant.id)
+        .where(AccessGrant.state == "active")
+        .where(
+            or_(
+                AccessGrant.expires_at.is_(None),
+                AccessGrant.expires_at > utcnow(),
+            )
+        )
+        .where(
+            or_(
+                AccessGrant.usage_limit.is_(None),
+                AccessGrant.usage_count < AccessGrant.usage_limit,
+            )
+        )
+        .values(usage_count=AccessGrant.usage_count + 1)
+        .execution_options(synchronize_session=False)
     )
-    constraints["usage_count"] = constraints["used_count"]
-    grant.constraints_json = json.dumps(constraints, ensure_ascii=False)
-    db.add(grant)
-    db.flush()
+    if cast(Any, result).rowcount != 1:
+        db.refresh(grant)
+        raise ShareLinkConflictError(_share_state(grant))
+    db.refresh(grant)
+    access_token, _credential = access_service.create_grant_token(
+        db,
+        grant=grant,
+        expires_at=grant.expires_at,
+    )
     audit_service.append_audit_event(
         db,
         aggregate_type="share_link",
         aggregate_id=str(grant.id),
         event_type="share_link.resolved",
         actor_ref="anonymous",
+        owner_principal_id=grant.created_by_principal_id,
         payload={"release_id": release_id, "object_id": skill.id},
     )
     return _share_link_payload(
@@ -353,4 +397,5 @@ def resolve_share_link(db: Session, *, share_id: int, password: str | None) -> d
             skill=skill,
             version=version_label,
         ),
+        access_token=access_token,
     )

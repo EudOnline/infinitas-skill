@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -7,9 +8,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
+import server.modules.registry.service as service
 from server.db import get_db
-from server.modules.registry import service
-from server.settings import get_settings
+from server.settings import Settings, get_settings
 
 router = APIRouter(prefix="/api/v1/registry", tags=["registry"])
 
@@ -26,7 +27,11 @@ def _file_response(artifact_root: Path, relative_path: str) -> FileResponse:
     return FileResponse(candidate)
 
 
-def _payload(builder, request: Request, db: Session) -> dict[str, Any]:
+def _payload(
+    builder: Callable[[Settings, Session, Request], dict[str, Any]],
+    request: Request,
+    db: Session,
+) -> dict[str, Any]:
     try:
         result: dict[str, Any] = builder(get_settings(), db, request)
         return result
@@ -38,7 +43,7 @@ def _payload(builder, request: Request, db: Session) -> dict[str, Any]:
 def registry_ai_index(
     request: Request,
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     return _payload(service.build_registry_ai_index_payload, request, db)
 
 
@@ -46,7 +51,7 @@ def registry_ai_index(
 def registry_discovery_index(
     request: Request,
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     return _payload(service.build_registry_discovery_payload, request, db)
 
 
@@ -54,7 +59,7 @@ def registry_discovery_index(
 def registry_distributions(
     request: Request,
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     return _payload(service.build_registry_distributions_payload, request, db)
 
 
@@ -62,7 +67,7 @@ def registry_distributions(
 def registry_compatibility(
     request: Request,
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     return _payload(service.build_registry_compatibility_payload, request, db)
 
 
@@ -71,7 +76,7 @@ def registry_artifact(
     registry_path: str,
     request: Request,
     db: Session = Depends(get_db),
-):
+) -> FileResponse:
     try:
         relative_path = service.resolve_registry_artifact_relative_path(
             get_settings(),

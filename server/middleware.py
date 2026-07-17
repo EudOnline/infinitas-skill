@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from fastapi import Request
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.responses import JSONResponse, Response
+from starlette.types import ASGIApp, Receive, Scope, Send
 
-from server.auth import validate_csrf_token
+from server.modules.identity.auth import validate_csrf_token
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         response = await call_next(request)
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
@@ -34,10 +35,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 class CsrfValidationMiddleware:
     """ASGI middleware that validates CSRF tokens for cookie-authenticated requests."""
 
-    def __init__(self, app):
+    def __init__(self, app: ASGIApp) -> None:
         self.app = app
 
-    async def __call__(self, scope, receive, send):
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return

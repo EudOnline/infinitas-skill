@@ -11,6 +11,7 @@ Configure via environment variable::
 
     INFINITAS_LOG_FORMAT=json
 """
+
 from __future__ import annotations
 
 import json
@@ -44,9 +45,9 @@ class JSONFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         log_entry: dict[str, Any] = {
-            "timestamp": datetime.fromtimestamp(
-                record.created, tz=timezone.utc
-            ).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).strftime(
+                "%Y-%m-%dT%H:%M:%S.%fZ"
+            ),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -60,11 +61,28 @@ class JSONFormatter(logging.Formatter):
         extra_fields = {}
         for key, value in record.__dict__.items():
             if key not in (
-                "name", "msg", "args", "created", "relativeCreated",
-                "exc_info", "exc_text", "stack_info", "lineno", "funcName",
-                "pathname", "filename", "module", "levelno", "levelname",
-                "msecs", "thread", "threadName", "processName", "process",
-                "message", "taskName",
+                "name",
+                "msg",
+                "args",
+                "created",
+                "relativeCreated",
+                "exc_info",
+                "exc_text",
+                "stack_info",
+                "lineno",
+                "funcName",
+                "pathname",
+                "filename",
+                "module",
+                "levelno",
+                "levelname",
+                "msecs",
+                "thread",
+                "threadName",
+                "processName",
+                "process",
+                "message",
+                "taskName",
             ):
                 if not key.startswith("_"):
                     extra_fields[key] = value
@@ -110,16 +128,8 @@ def configure_logging(
     import os
 
     _ensure_root_handler()
-    effective_level = (
-        level
-        or os.environ.get("INFINITAS_LOG_LEVEL")
-        or "INFO"
-    ).upper()
-    effective_format = (
-        log_format
-        or os.environ.get("INFINITAS_LOG_FORMAT")
-        or "text"
-    ).lower()
+    effective_level = (level or os.environ.get("INFINITAS_LOG_LEVEL") or "INFO").upper()
+    effective_format = (log_format or os.environ.get("INFINITAS_LOG_FORMAT") or "text").lower()
 
     root = logging.getLogger("infinitas")
     root.setLevel(getattr(logging, effective_level, logging.INFO))

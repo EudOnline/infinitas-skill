@@ -4,8 +4,8 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
-from server.models import Credential, Principal, User
-from server.modules.access import service
+import server.modules.identity.service as identity_service
+from server.modules.identity.models import Credential, Principal, User
 
 
 @dataclass
@@ -20,19 +20,19 @@ def resolve_access_context(
     db: Session,
     token: str | None,
 ) -> AccessContext | None:
-    normalized = service.normalize_token(token)
+    normalized = identity_service.normalize_token(token)
     if not normalized:
         return None
 
-    credential = service.resolve_credential_by_token(db, normalized)
+    credential = identity_service.resolve_credential_by_token(db, normalized)
     if credential is None:
         return None
 
-    principal = service.get_principal(db, credential.principal_id)
-    user = service.get_user_for_principal(db, principal)
+    principal = identity_service.get_principal(db, credential.principal_id)
+    user = identity_service.get_user_for_principal(db, principal)
     return AccessContext(
         credential=credential,
         principal=principal,
         user=user,
-        scopes=service.parse_scopes(credential.scopes_json),
+        scopes=identity_service.parse_scopes(credential.scopes_json),
     )

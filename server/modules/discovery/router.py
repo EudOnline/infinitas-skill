@@ -1,26 +1,30 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
+import server.modules.discovery.service as service
 from infinitas_skill.install.service import DependencyError
-from server.auth import get_current_access_context
 from server.db import get_db
 from server.modules.access.authn import AccessContext
-from server.modules.discovery import service
 from server.modules.discovery.schemas import (
     CatalogEntryView,
     CatalogListView,
     InstallResolutionView,
     ProjectionArtifactPaths,
 )
+from server.modules.discovery.search_router import router as search_router
+from server.modules.identity.auth import get_current_access_context
 from server.modules.shared.formatting import iso_format
 from server.settings import get_settings
 
 router = APIRouter(prefix="/api/v1", tags=["discovery"])
+routers = (router, search_router)
 
 
 def _artifact_response(artifact_root: Path, relative_path: str) -> FileResponse:
@@ -54,7 +58,7 @@ def _install_links(request: Request) -> ProjectionArtifactPaths:
 
 def _install_payload(
     request: Request,
-    entry,
+    entry: Any,
 ) -> InstallResolutionView:
     links = _install_links(request)
     ready_at = None
@@ -87,7 +91,7 @@ def _install_payload(
     )
 
 
-def _catalog_list(entries) -> CatalogListView:
+def _catalog_list(entries: Sequence[Any]) -> CatalogListView:
     return CatalogListView(
         items=[CatalogEntryView.from_projection(entry) for entry in entries],
         total=len(entries),
@@ -95,7 +99,7 @@ def _catalog_list(entries) -> CatalogListView:
 
 
 @router.get("/catalog/public", response_model=CatalogListView)
-def catalog_public(db: Session = Depends(get_db)):
+def catalog_public(db: Session = Depends(get_db)) -> CatalogListView:
     return _catalog_list(service.list_public_catalog(db))
 
 
@@ -103,7 +107,7 @@ def catalog_public(db: Session = Depends(get_db)):
 def catalog_me(
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
-):
+) -> CatalogListView:
     try:
         return _catalog_list(service.list_me_catalog(db, context=context))
     except service.ForbiddenError as exc:
@@ -114,7 +118,7 @@ def catalog_me(
 def catalog_grant(
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
-):
+) -> CatalogListView:
     try:
         return _catalog_list(service.list_grant_catalog(db, context=context))
     except service.ForbiddenError as exc:
@@ -127,7 +131,7 @@ def install_public(
     skill_ref: str,
     artifact: str | None = Query(default=None),
     db: Session = Depends(get_db),
-):
+) -> InstallResolutionView | FileResponse:
     try:
         entry = service.resolve_public_install(db, skill_ref=skill_ref)
     except service.NotFoundError as exc:
@@ -152,7 +156,7 @@ def install_me(
     artifact: str | None = Query(default=None),
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
-):
+) -> InstallResolutionView | FileResponse:
     try:
         entry = service.resolve_me_install(db, context=context, skill_ref=skill_ref)
     except service.NotFoundError as exc:
@@ -179,7 +183,7 @@ def install_grant(
     artifact: str | None = Query(default=None),
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
-):
+) -> InstallResolutionView | FileResponse:
     try:
         entry = service.resolve_grant_install(db, context=context, skill_ref=skill_ref)
     except service.NotFoundError as exc:

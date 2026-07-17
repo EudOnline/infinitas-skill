@@ -3,13 +3,14 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
-from server.auth import get_current_access_context
+import server.modules.release.service as service
 from server.db import get_db
 from server.jobs import enqueue_job, has_active_job
-from server.models import User
 from server.modules.access.authn import AccessContext
 from server.modules.access.authz import require_any_scope
-from server.modules.release import service
+from server.modules.authoring.models import SkillVersion
+from server.modules.identity.auth import get_current_access_context
+from server.modules.identity.models import User
 from server.modules.release.materializer import release_requires_materialization
 from server.modules.release.schemas import ArtifactListView, ArtifactView, ReleaseView
 from server.settings import get_settings
@@ -31,6 +32,15 @@ def _require_release_context(context: AccessContext) -> tuple[int, User]:
     return context.principal.id, context.user
 
 
+def _require_product_object_scope(context: AccessContext, object_id: int | None) -> None:
+    if context.credential.type != "product_token":
+        return
+    if context.credential.product_token_type != "publisher":  # noqa: S105
+        raise HTTPException(status_code=403, detail="publisher token required")
+    if context.credential.product_object_id != object_id:
+        raise HTTPException(status_code=403, detail="publisher token object scope mismatch")
+
+
 @router.post(
     "/versions/{version_id}/releases",
     response_model=ReleaseView,
@@ -41,8 +51,12 @@ def create_release(
     response: Response,
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
-):
+) -> ReleaseView:
     principal_id, user = _require_release_context(context)
+    skill_version = db.get(SkillVersion, version_id)
+    if skill_version is None:
+        raise HTTPException(status_code=404, detail="skill version not found")
+    _require_product_object_scope(context, skill_version.skill_id)
     is_maintainer = user.role == "maintainer"
     try:
         release, created = service.create_or_get_release(
@@ -59,27 +73,13 @@ def create_release(
         raise HTTPException(status_code=403, detail=str(exc)) from exc
 
     if created:
-        try:
-            enqueue_job(
-                db,
-                kind="materialize_release",
-                payload={"release_id": release.id},
-                requested_by=user,
-                note=f"materialize release {release.id}",
-                commit=False,
-            )
-            db.commit()
-            db.refresh(release)
-        except Exception as exc:
-            db.rollback()
-            existing = db.get(service.Release, release.id)
-            if existing is not None:
-                release = existing
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Failed to enqueue materialization job: {exc}",
-                ) from exc
+        enqueue_job(
+            db,
+            kind="materialize_release",
+            payload={"release_id": release.id},
+            requested_by=user,
+            note=f"materialize release {release.id}",
+        )
     else:
         settings = get_settings()
         if release_requires_materialization(
@@ -99,10 +99,7 @@ def create_release(
                 payload={"release_id": release.id},
                 requested_by=user,
                 note=f"rematerialize release {release.id}",
-                commit=False,
             )
-            db.commit()
-            db.refresh(release)
         response.status_code = status.HTTP_200_OK
     return ReleaseView.from_model(release)
 
@@ -112,11 +109,12 @@ def get_release(
     release_id: int,
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
-):
+) -> ReleaseView:
     principal_id, _ = _require_release_context(context)
     is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
         release = service.get_release_or_404(db, release_id)
+        _require_product_object_scope(context, release.skill_id)
         service.assert_release_owner(
             db,
             release,
@@ -135,11 +133,12 @@ def list_release_artifacts(
     release_id: int,
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
-):
+) -> ArtifactListView:
     principal_id, _ = _require_release_context(context)
     is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
         release = service.get_release_or_404(db, release_id)
+        _require_product_object_scope(context, release.skill_id)
         service.assert_release_owner(
             db,
             release,

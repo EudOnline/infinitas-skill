@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 
 
-def _replace_tree(source: Path, target: Path):
+def _replace_tree(source: Path, target: Path) -> None:
     source = Path(source).resolve()
     target = Path(target).resolve()
     if target.exists():
@@ -16,7 +16,7 @@ def _replace_tree(source: Path, target: Path):
         shutil.copytree(source, target)
 
 
-def _merge_tree(source: Path, target: Path):
+def _merge_tree(source: Path, target: Path) -> None:
     source = Path(source).resolve()
     target = Path(target).resolve()
     if not source.exists():
@@ -32,7 +32,7 @@ def _merge_tree(source: Path, target: Path):
         shutil.copy2(path, destination)
 
 
-def _copy_or_remove(source: Path, target: Path):
+def _copy_or_remove(source: Path, target: Path) -> None:
     source = Path(source).resolve()
     target = Path(target).resolve()
     if source.exists():
@@ -47,24 +47,24 @@ def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def sync_catalog_artifacts(repo_path: Path, artifact_path: Path):
+def sync_catalog_artifacts(repo_path: Path, artifact_path: Path) -> None:
     repo_path = Path(repo_path).resolve()
     artifact_path = Path(artifact_path).resolve()
     artifact_path.mkdir(parents=True, exist_ok=True)
-    source_catalog = repo_path / 'catalog'
-    target_catalog = artifact_path / 'catalog'
+    source_catalog = repo_path / "catalog"
+    target_catalog = artifact_path / "catalog"
     _replace_tree(source_catalog, target_catalog)
 
-    _copy_or_remove(source_catalog / 'ai-index.json', artifact_path / 'ai-index.json')
-    _copy_or_remove(source_catalog / 'distributions.json', artifact_path / 'distributions.json')
-    _copy_or_remove(source_catalog / 'compatibility.json', artifact_path / 'compatibility.json')
-    _copy_or_remove(source_catalog / 'discovery-index.json', artifact_path / 'discovery-index.json')
+    _copy_or_remove(source_catalog / "ai-index.json", artifact_path / "ai-index.json")
+    _copy_or_remove(source_catalog / "distributions.json", artifact_path / "distributions.json")
+    _copy_or_remove(source_catalog / "compatibility.json", artifact_path / "compatibility.json")
+    _copy_or_remove(source_catalog / "discovery-index.json", artifact_path / "discovery-index.json")
 
-    _merge_tree(source_catalog / 'distributions', artifact_path / 'skills')
-    _merge_tree(source_catalog / 'provenance', artifact_path / 'provenance')
+    _merge_tree(source_catalog / "distributions", artifact_path / "skills")
+    _merge_tree(source_catalog / "provenance", artifact_path / "provenance")
 
 
-def ensure_file_bytes(path: Path, data: bytes):
+def ensure_file_bytes(path: Path, data: bytes) -> None:
     """Write bytes to *path* atomically (write-to-temp then rename).
 
     If the file already exists with identical content, the write is skipped.
@@ -75,9 +75,7 @@ def ensure_file_bytes(path: Path, data: bytes):
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists() and path.read_bytes() == data:
         return
-    fd, tmp_path = tempfile.mkstemp(
-        dir=str(path.parent), prefix=".tmp-", suffix=".partial"
-    )
+    fd, tmp_path = tempfile.mkstemp(dir=str(path.parent), prefix=".tmp-", suffix=".partial")
     fd_closed = False
     try:
         os.write(fd, data)
@@ -95,7 +93,7 @@ def ensure_file_bytes(path: Path, data: bytes):
         raise
 
 
-def ensure_file_copy(source: Path, target: Path):
+def ensure_file_copy(source: Path, target: Path) -> None:
     source = Path(source).resolve()
     target = Path(target).resolve()
     if not source.exists():
@@ -104,5 +102,3 @@ def ensure_file_copy(source: Path, target: Path):
     if target.exists() and target.read_bytes() == source.read_bytes():
         return
     shutil.copy2(source, target)
-
-

@@ -1,22 +1,12 @@
 from __future__ import annotations
 
-import json
 from typing import Literal
 
 from pydantic import BaseModel
 
 from server.modules.exposure.models import Exposure
 from server.modules.shared.formatting import iso_format as _iso
-
-
-def _load_policy_snapshot(raw: str | None) -> dict:
-    if not raw:
-        return {}
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError:
-        return {}
-    return payload if isinstance(payload, dict) else {}
+from server.modules.shared.json import loads_json_object
 
 
 class ExposureCreateRequest(BaseModel):
@@ -48,7 +38,7 @@ class ExposureView(BaseModel):
 
     @classmethod
     def from_model(cls, exposure: Exposure) -> "ExposureView":
-        snapshot = _load_policy_snapshot(exposure.policy_snapshot_json)
+        snapshot = loads_json_object(exposure.policy_snapshot_json)
         return cls(
             id=exposure.id,
             release_id=exposure.release_id,

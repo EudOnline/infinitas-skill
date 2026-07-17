@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from server.modules.access.models import Principal
+    from server.modules.identity.models import Principal
 
 
 @dataclass(frozen=True)

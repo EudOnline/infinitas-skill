@@ -11,7 +11,6 @@ from sqlalchemy.orm import Session
 from infinitas_skill.discovery.index import normalize_discovery_skill
 from infinitas_skill.openclaw.runtime_model import build_openclaw_runtime_model
 from infinitas_skill.root import ROOT
-from server.auth import AUTH_COOKIE_NAME, maybe_get_current_access_context
 from server.exceptions_base import NotFoundError as BaseNotFoundError
 from server.modules.access.authn import AccessContext, resolve_access_context
 from server.modules.access.authz import can_access_releases
@@ -20,6 +19,7 @@ from server.modules.discovery.projections import (
     build_release_projections,
     projection_has_materialized_artifacts,
 )
+from server.modules.identity.auth import AUTH_COOKIE_NAME, maybe_get_current_access_context
 from server.modules.shared.formatting import iso_format as _iso
 from server.modules.shared.formatting import utc_now_iso as _utc_now_iso
 from server.modules.shared.version_sort import (
@@ -28,7 +28,7 @@ from server.modules.shared.version_sort import (
 from server.modules.shared.version_sort import (
     version_sort_key as _version_sort_key,
 )
-from server.settings import get_settings
+from server.settings import Settings, get_settings
 
 INSTALL_POLICY = {
     "mode": "immutable-only",
@@ -370,12 +370,14 @@ def _build_ai_index_from_entries(entries: list[dict]) -> dict:
     }
 
 
-def build_registry_ai_index_payload(_settings, db: Session, request: Request) -> dict:
+def build_registry_ai_index_payload(_settings: Settings, db: Session, request: Request) -> dict:
     entries = [_distribution_entry(entry) for entry in _all_accessible_entries(db, request)]
     return _build_ai_index_from_entries(entries)
 
 
-def build_registry_distributions_payload(_settings, db: Session, request: Request) -> dict:
+def build_registry_distributions_payload(
+    _settings: Settings, db: Session, request: Request
+) -> dict:
     entries = [_distribution_entry(entry) for entry in _all_accessible_entries(db, request)]
     return {
         "schema_version": 1,
@@ -384,7 +386,7 @@ def build_registry_distributions_payload(_settings, db: Session, request: Reques
     }
 
 
-def build_registry_discovery_payload(_settings, db: Session, request: Request) -> dict:
+def build_registry_discovery_payload(_settings: Settings, db: Session, request: Request) -> dict:
     entries = [_distribution_entry(entry) for entry in _listed_entries(db, request)]
     ai_payload = _build_ai_index_from_entries(entries)
     skills = []
@@ -424,7 +426,9 @@ def build_registry_discovery_payload(_settings, db: Session, request: Request) -
     }
 
 
-def build_registry_compatibility_payload(_settings, db: Session, request: Request) -> dict:
+def build_registry_compatibility_payload(
+    _settings: Settings, db: Session, request: Request
+) -> dict:
     entries = [_distribution_entry(entry) for entry in _all_accessible_entries(db, request)]
     return {
         "schema_version": 1,
@@ -464,7 +468,7 @@ def _entry_registry_paths(entry: DiscoveryProjection) -> dict[str, str]:
 
 
 def resolve_registry_artifact_relative_path(
-    _settings,
+    _settings: Settings,
     db: Session,
     request: Request,
     registry_path: str,

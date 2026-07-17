@@ -3,13 +3,14 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from server.auth import get_current_access_context
+import server.modules.release.service as release_service
+import server.modules.review.service as service
 from server.db import get_db
 from server.modules.access.authn import AccessContext
 from server.modules.access.authz import require_any_scope
 from server.modules.exposure.service import get_exposure_or_404
-from server.modules.release import service as release_service
-from server.modules.review import service
+from server.modules.identity.auth import get_current_access_context
+from server.modules.review.models import ReviewCase
 from server.modules.review.schemas import (
     ReviewCaseCreateRequest,
     ReviewCaseView,
@@ -23,9 +24,7 @@ router = APIRouter(prefix="/api/v1", tags=["review"])
 def _require_review_principal(context: AccessContext) -> int:
     if context.principal is None:
         raise HTTPException(status_code=403, detail="review principal required")
-    if not require_any_scope(
-        context, {"api:user", "review:write", "release:write", "authoring:write"}
-    ):
+    if not require_any_scope(context, {"api:user", "review:write", "authoring:write"}):
         raise HTTPException(status_code=403, detail="insufficient scope")
     return context.principal.id
 
@@ -36,7 +35,7 @@ def _require_review_case_owner(
     review_case_id: int,
     principal_id: int,
     is_maintainer: bool = False,
-):
+) -> ReviewCase:
     review_case = service.get_review_case_or_404(db, review_case_id)
     exposure = get_exposure_or_404(db, review_case.exposure_id)
     release = release_service.get_release_or_404(db, exposure.release_id)
@@ -55,7 +54,7 @@ def _get_review_case_for_reviewer(
     review_case_id: int,
     reviewer_principal_id: int,
     is_maintainer: bool = False,
-):
+) -> ReviewCase:
     review_case = service.get_review_case_or_404(db, review_case_id)
     exposure = get_exposure_or_404(db, review_case.exposure_id)
     if (
@@ -76,7 +75,7 @@ def _get_review_case_for_reviewer(
     return review_case
 
 
-def _review_case_view(db: Session, review_case) -> ReviewCaseView:
+def _review_case_view(db: Session, review_case: ReviewCase) -> ReviewCaseView:
     decisions = [
         ReviewDecisionView.from_model(item)
         for item in service.get_review_decisions(db, review_case.id)
@@ -94,7 +93,7 @@ def create_review_case(
     payload: ReviewCaseCreateRequest,
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
-):
+) -> ReviewCaseView:
     principal_id = _require_review_principal(context)
     is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
@@ -112,8 +111,7 @@ def create_review_case(
             actor_principal_id=principal_id,
             mode=payload.mode or exposure.review_requirement or "advisory",
         )
-        db.commit()
-        db.refresh(review_case)
+        db.flush()
     except service.NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except release_service.NotFoundError as exc:
@@ -133,7 +131,7 @@ def create_review_decision(
     payload: ReviewDecisionCreateRequest,
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
-):
+) -> ReviewCaseView:
     principal_id = _require_review_principal(context)
     is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
@@ -166,7 +164,7 @@ def get_review_case(
     review_case_id: int,
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
-):
+) -> ReviewCaseView:
     principal_id = _require_review_principal(context)
     is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:

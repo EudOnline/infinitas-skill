@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import time
 
-from server.db import get_session_factory
+from sqlalchemy.orm import Session
+
+from server.db import session_scope
 from server.jobs import (
     MAX_RETRY_ATTEMPTS,
     append_job_log,
@@ -13,13 +15,24 @@ from server.jobs import (
     load_job_payload,
 )
 from server.logging import get_logger
-from server.models import Job
 from server.modules.discovery.projections import refresh_projection_snapshot
+from server.modules.jobs.models import Job
 from server.modules.release.materializer import materialize_release
+from server.modules.release.models import Release
 from server.repo_ops import RepoOpError
-from server.settings import get_settings
+from server.settings import Settings, get_settings
 
 log = get_logger(__name__)
+
+
+def _renew_job_lease(job_id: int) -> None:
+    with session_scope() as heartbeat_session:
+        job = heartbeat_session.get(Job, job_id)
+        if job is None:
+            raise RepoOpError(f"job {job_id} not found during lease renewal")
+        if job.status != "running":
+            raise RepoOpError(f"job {job_id} is no longer running during lease renewal")
+        heartbeat_job(heartbeat_session, job)
 
 
 def _resolve_release_id(job: Job) -> int:
@@ -27,24 +40,25 @@ def _resolve_release_id(job: Job) -> int:
         return int(job.release_id)
     payload = load_job_payload(job)
     try:
-        release_id = int(payload.get('release_id') or 0)
+        release_id = int(payload.get("release_id") or 0)
     except (TypeError, ValueError) as exc:
-        raise RepoOpError('materialize_release job has invalid release_id payload') from exc
+        raise RepoOpError("materialize_release job has invalid release_id payload") from exc
     if release_id <= 0:
-        raise RepoOpError('materialize_release job is missing release_id payload')
+        raise RepoOpError("materialize_release job is missing release_id payload")
     return release_id
 
 
-def _process_materialize_release_job(session, job: Job, settings):
+def _process_materialize_release_job(session: Session, job: Job, settings: Settings) -> Release:
     release_id = _resolve_release_id(job)
     release, artifacts = materialize_release(
         session,
         release_id=release_id,
         artifact_root=settings.artifact_path,
         repo_root=settings.repo_path,
+        heartbeat=lambda: _renew_job_lease(job.id),
     )
     refresh_projection_snapshot(session, settings.artifact_path)
-    append_job_log(job, f'materialized release {release.id} with {len(artifacts)} artifacts')
+    append_job_log(job, f"materialized release {release.id} with {len(artifacts)} artifacts")
     return release
 
 
@@ -53,34 +67,34 @@ def _is_retryable_error(exc: Exception) -> bool:
     message = str(exc).lower()
     # Network/git transient failures
     retryable_patterns = [
-        'timeout',
-        'timed out',
-        'connection refused',
-        'connection reset',
-        'temporary failure',
-        'could not resolve host',
-        'name or service not known',
-        'network is unreachable',
-        'no space left on device',  # may resolve if other jobs free space
+        "timeout",
+        "timed out",
+        "connection refused",
+        "connection reset",
+        "temporary failure",
+        "could not resolve host",
+        "name or service not known",
+        "network is unreachable",
+        "no space left on device",  # may resolve if other jobs free space
     ]
     return any(pattern in message for pattern in retryable_patterns)
 
 
-def process_job(job_id: int):
+def process_job(job_id: int) -> None:
     settings = get_settings()
-    factory = get_session_factory()
-    with factory() as session:
+    processing_error: Exception | None = None
+    with session_scope() as session:
         job = session.get(Job, job_id)
         if job is None:
-            raise RepoOpError(f'job {job_id} not found')
+            raise RepoOpError(f"job {job_id} not found")
         try:
-            heartbeat_job(session, job, commit=False)
-            if job.kind == 'materialize_release':
+            _renew_job_lease(job.id)
+            session.refresh(job)
+            if job.kind == "materialize_release":
                 _process_materialize_release_job(session, job, settings)
             else:
-                raise RepoOpError(f'unsupported job kind: {job.kind}')
-            complete_job(session, job, commit=False)
-            session.commit()
+                raise RepoOpError(f"unsupported job kind: {job.kind}")
+            complete_job(session, job)
             log.info(
                 "job completed id=%d kind=%s",
                 job.id,
@@ -107,11 +121,11 @@ def process_job(job_id: int):
                 session,
                 job,
                 error_message=str(exc),
-                commit=False,
                 retryable=retryable,
             )
-            session.commit()
-            raise
+            processing_error = exc
+    if processing_error is not None:
+        raise processing_error
 
 
 def run_worker_loop(
@@ -133,10 +147,9 @@ def run_worker_loop(
         If False (default), exit when no jobs are available (original batch mode).
     """
     processed = 0
-    factory = get_session_factory()
     consecutive_empty = 0
     while limit is None or processed < limit:
-        with factory() as session:
+        with session_scope() as session:
             job = claim_next_job(session)
             if job is None:
                 if not daemon:

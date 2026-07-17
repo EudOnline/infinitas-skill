@@ -1,18 +1,20 @@
 from __future__ import annotations
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from server.models import Base, utcnow
-from server.modules.access.models import Principal
+from server.model_base import Base, utcnow
 
 
 class Skill(Base):
     __tablename__ = "skills"
-    __table_args__ = (UniqueConstraint("namespace_id", "slug", name="uq_skills_namespace_id_slug"),)
+    __table_args__ = (
+        UniqueConstraint("namespace_id", "slug", name="uq_skills_namespace_id_slug"),
+        Index("ix_skills_namespace_id_slug", "namespace_id", "slug"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    namespace_id: Mapped[int] = mapped_column(ForeignKey("principals.id"), index=True)
+    namespace_id: Mapped[int] = mapped_column(ForeignKey("principals.id"))
     slug: Mapped[str] = mapped_column(String(200))
     display_name: Mapped[str] = mapped_column(String(200))
     summary: Mapped[str] = mapped_column(Text, default="")
@@ -34,10 +36,11 @@ class SkillVersion(Base):
     __tablename__ = "skill_versions"
     __table_args__ = (
         UniqueConstraint("skill_id", "version", name="uq_skill_versions_skill_id_version"),
+        Index("ix_skill_versions_skill_id_version", "skill_id", "version"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"), index=True)
+    skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"))
     version: Mapped[str] = mapped_column(String(64))
     content_digest: Mapped[str] = mapped_column(String(255))
     metadata_digest: Mapped[str] = mapped_column(String(255))
@@ -48,7 +51,3 @@ class SkillVersion(Base):
         index=True,
     )
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)
-
-
-# Transitional alias while some registry code still imports Namespace from this module.
-Namespace = Principal

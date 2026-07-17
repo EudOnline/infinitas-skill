@@ -41,21 +41,22 @@ def create_skill(
     return skill
 
 
-def get_skill_version(db: Session, skill_version_id: int) -> SkillVersion | None:
-    return db.get(SkillVersion, skill_version_id)
-
-
-def get_skill_version_by_skill_and_version(
+def list_skill_versions(
     db: Session,
     *,
     skill_id: int,
-    version: str,
-) -> SkillVersion | None:
-    return db.scalar(
-        select(SkillVersion)
-        .where(SkillVersion.skill_id == skill_id)
-        .where(SkillVersion.version == version)
-    )
+    limit: int | None = None,
+    offset: int | None = None,
+) -> list[SkillVersion]:
+    stmt = select(SkillVersion).where(SkillVersion.skill_id == skill_id)
+    # Prefer created_at for logical ordering; fall back to id for tests that
+    # do not set created_at explicitly.
+    stmt = stmt.order_by(SkillVersion.created_at.desc(), SkillVersion.id.desc())
+    if limit is not None:
+        stmt = stmt.limit(limit)
+    if offset is not None:
+        stmt = stmt.offset(offset)
+    return list(db.scalars(stmt).all())
 
 
 def get_artifact(db: Session, artifact_id: int) -> Artifact | None:

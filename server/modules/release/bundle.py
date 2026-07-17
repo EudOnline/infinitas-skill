@@ -14,7 +14,7 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from infinitas_skill.install.distribution import inspect_distribution_bundle
+from infinitas_skill.install.distribution_core import inspect_distribution_bundle
 from server.modules.release.models import Artifact
 
 

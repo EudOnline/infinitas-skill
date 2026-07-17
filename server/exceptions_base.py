@@ -5,6 +5,7 @@ and the domain service modules.  Keeping them in a separate module avoids the
 circular import chain that would otherwise occur between server/exceptions.py
 (which imports UI modules) and the service layer.
 """
+
 from __future__ import annotations
 
 

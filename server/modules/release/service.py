@@ -16,7 +16,9 @@ from server.exceptions_base import (
 from server.exceptions_base import (
     NotFoundError as BaseNotFoundError,
 )
-from server.models import Principal, Skill, SkillVersion, utcnow
+from server.model_base import utcnow
+from server.modules.authoring.models import Skill, SkillVersion
+from server.modules.identity.models import Principal
 from server.modules.release.models import Artifact, Release
 
 
@@ -115,12 +117,6 @@ def _version_manifest(skill_version: SkillVersion) -> dict:
     return payload if isinstance(payload, dict) else {}
 
 
-def _version_has_source_snapshot(skill_version: SkillVersion) -> bool:
-    manifest = _version_manifest(skill_version)
-    content_mode = str(manifest.get("content_mode") or "").strip()
-    return content_mode in {"external_ref", "uploaded_bundle"}
-
-
 def assert_skill_owner(
     db: Session, skill: Skill, *, principal_id: int, is_maintainer: bool = False
 ) -> None:
@@ -128,7 +124,7 @@ def assert_skill_owner(
         return
     if skill.namespace_id == principal_id:
         return
-    from server.modules.access.models import Team, TeamMembership
+    from server.modules.identity.models import Team, TeamMembership
 
     if (
         db.scalar(
@@ -176,9 +172,9 @@ def create_or_get_release(
     )
     db.add(release)
     try:
-        db.flush()
+        with db.begin_nested():
+            db.flush()
     except IntegrityError:
-        db.rollback()
         existing = db.scalar(
             select(Release)
             .where(Release.skill_version_id == skill_version.id)

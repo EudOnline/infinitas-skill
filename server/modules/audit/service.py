@@ -15,6 +15,7 @@ def append_audit_event(
     aggregate_id: str,
     event_type: str,
     actor_ref: str = "",
+    owner_principal_id: int | None = None,
     payload: Mapping[str, Any] | None = None,
 ) -> AuditEvent:
     event = AuditEvent(
@@ -22,6 +23,7 @@ def append_audit_event(
         aggregate_id=str(aggregate_id or "").strip(),
         event_type=str(event_type or "").strip(),
         actor_ref=str(actor_ref or "").strip(),
+        owner_principal_id=owner_principal_id,
         payload_json=json.dumps(payload or {}, ensure_ascii=False, sort_keys=True),
     )
     db.add(event)

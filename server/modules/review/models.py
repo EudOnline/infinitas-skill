@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from server.models import Base, utcnow
+from server.model_base import Base, utcnow
 
 
 class ReviewPolicy(Base):
@@ -19,9 +19,10 @@ class ReviewPolicy(Base):
 
 class ReviewCase(Base):
     __tablename__ = "review_cases"
+    __table_args__ = (Index("ix_review_cases_exposure_id_state", "exposure_id", "state"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    exposure_id: Mapped[int] = mapped_column(ForeignKey("exposures.id"), index=True)
+    exposure_id: Mapped[int] = mapped_column(ForeignKey("exposures.id"))
     policy_id: Mapped[int | None] = mapped_column(ForeignKey("review_policies.id"), nullable=True)
     mode: Mapped[str] = mapped_column(String(32), default="blocking")
     state: Mapped[str] = mapped_column(String(32), default="open")
@@ -37,7 +38,7 @@ class ReviewDecision(Base):
     __tablename__ = "review_decisions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    review_case_id: Mapped[int] = mapped_column(ForeignKey("review_cases.id"), index=True)
+    review_case_id: Mapped[int] = mapped_column(ForeignKey("review_cases.id"))
     reviewer_principal_id: Mapped[int | None] = mapped_column(
         ForeignKey("principals.id"),
         nullable=True,

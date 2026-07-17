@@ -16,6 +16,11 @@ def loads_json(payload: str, *, default: Any) -> Any:
         return default
 
 
+def loads_json_object(payload: str | None) -> dict[Any, Any]:
+    result = loads_json(payload or "", default={})
+    return result if isinstance(result, dict) else {}
+
+
 def read_json_file(path: Path) -> dict[Any, Any]:
     """Read and parse a JSON file, returning ``{}`` on any error."""
     try:

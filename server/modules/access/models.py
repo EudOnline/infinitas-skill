@@ -1,98 +1,36 @@
 from __future__ import annotations
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from datetime import datetime
+
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from server.models import Base, utcnow
-
-
-class Principal(Base):
-    __tablename__ = "principals"
-    __table_args__ = (UniqueConstraint("kind", "slug", name="uq_principals_kind_slug"),)
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    kind: Mapped[str] = mapped_column(String(32))
-    slug: Mapped[str] = mapped_column(String(200))
-    display_name: Mapped[str] = mapped_column(String(200))
-    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True),
-        default=utcnow,
-        onupdate=utcnow,
-    )
-
-
-class Team(Base):
-    __tablename__ = "teams"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    principal_id: Mapped[int] = mapped_column(ForeignKey("principals.id"), unique=True)
-    slug: Mapped[str] = mapped_column(String(200))
-    display_name: Mapped[str] = mapped_column(String(200))
-    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)
-
-
-class TeamMembership(Base):
-    __tablename__ = "team_memberships"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("principals.id"), index=True)
-    team_id: Mapped[int] = mapped_column(ForeignKey("teams.id"), index=True)
-    role: Mapped[str] = mapped_column(String(64), default="member")
-    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)
-
-
-class ServicePrincipal(Base):
-    __tablename__ = "service_principals"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    principal_id: Mapped[int] = mapped_column(ForeignKey("principals.id"), unique=True)
-    slug: Mapped[str] = mapped_column(String(200))
-    description: Mapped[str] = mapped_column(Text, default="")
-    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)
+from server.model_base import Base, utcnow
 
 
 class AccessGrant(Base):
     __tablename__ = "access_grants"
+    __table_args__ = (
+        Index(
+            "ix_access_grants_exposure_id_grant_type_state",
+            "exposure_id",
+            "grant_type",
+            "state",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    exposure_id: Mapped[int] = mapped_column(ForeignKey("exposures.id"), index=True)
+    exposure_id: Mapped[int] = mapped_column(ForeignKey("exposures.id"))
     grant_type: Mapped[str] = mapped_column(String(32))
     subject_ref: Mapped[str] = mapped_column(String(255))
     constraints_json: Mapped[str] = mapped_column(Text, default="{}")
     state: Mapped[str] = mapped_column(String(32), default="active")
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    usage_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    usage_count: Mapped[int] = mapped_column(Integer, default=0)
     created_by_principal_id: Mapped[int | None] = mapped_column(
         ForeignKey("principals.id"),
         nullable=True,
         index=True,
     )
-    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)
-
-
-class Credential(Base):
-    __tablename__ = "credentials"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    principal_id: Mapped[int | None] = mapped_column(
-        ForeignKey("principals.id"),
-        nullable=True,
-        index=True,
-    )
-    grant_id: Mapped[int | None] = mapped_column(
-        ForeignKey("access_grants.id"),
-        nullable=True,
-        index=True,
-    )
-    type: Mapped[str] = mapped_column(String(64))
-    product_token_name: Mapped[str] = mapped_column(String(200), default="")
-    product_token_type: Mapped[str] = mapped_column(String(32), default="")
-    product_scope_type: Mapped[str] = mapped_column(String(32), default="")
-    product_scope_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
-    issued_for: Mapped[str] = mapped_column(String(200), default="")
-    hashed_secret: Mapped[str] = mapped_column(String(255))
-    scopes_json: Mapped[str] = mapped_column(Text, default="[]")
-    resource_selector_json: Mapped[str] = mapped_column(Text, default="{}")
-    expires_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    revoked_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    last_used_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)

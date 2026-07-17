@@ -1,23 +1,31 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
 
 from alembic.config import Config
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import Engine, create_engine, inspect
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from alembic import command
-from server.models import Base, User
+from server import model_registry as _model_registry  # noqa: F401
+from server.model_base import Base
 from server.settings import get_settings
 
 
 def _engine_kwargs(database_url: str) -> dict:
-    if database_url.startswith("sqlite:///"):
+    if database_url in {"sqlite://", "sqlite:///:memory:"}:
         return {
             "connect_args": {"check_same_thread": False},
             "poolclass": StaticPool,
+        }
+    if database_url.startswith("sqlite:///"):
+        return {
+            "connect_args": {"check_same_thread": False},
+            "pool_pre_ping": True,
         }
     return {
         "pool_pre_ping": True,
@@ -26,7 +34,7 @@ def _engine_kwargs(database_url: str) -> dict:
 
 
 @lru_cache(maxsize=1)
-def get_engine():
+def get_engine() -> Engine:
     settings = get_settings()
     if settings.database_url.startswith("sqlite:///"):
         db_path = Path(settings.database_url.removeprefix("sqlite:///"))
@@ -39,7 +47,7 @@ def get_engine():
 
 
 @lru_cache(maxsize=1)
-def get_session_factory():
+def get_session_factory() -> sessionmaker[Session]:
     return sessionmaker(
         bind=get_engine(),
         autoflush=False,
@@ -57,7 +65,7 @@ def _alembic_config() -> Config:
     return config
 
 
-def init_db():
+def init_db() -> None:
     config = _alembic_config()
     inspector = inspect(get_engine())
     has_version_table = inspector.has_table("alembic_version")
@@ -74,72 +82,26 @@ def init_db():
     command.upgrade(config, "head")
 
 
-def seed_bootstrap_users():
-    import secrets as _secrets
-
-    from server.auth import hash_password
-    from server.logging import get_logger
-    from server.modules.access.service import (
-        ensure_personal_credential_for_user,
-        ensure_user_principal,
-    )
-
-    log = get_logger("server.db")
-    settings = get_settings()
-    factory = get_session_factory()
-    with factory() as session:
-        existing = {user.username: user for user in session.query(User).all()}
-        for item in settings.bootstrap_users:
-            user = existing.get(item["username"])
-            if user is None:
-                user = User(
-                    username=item["username"],
-                    display_name=item["display_name"],
-                    role=item["role"],
-                )
-                session.add(user)
-                existing[user.username] = user
-            if user.display_name != item["display_name"] or user.role != item["role"]:
-                user.display_name = item["display_name"]
-                user.role = item["role"]
-            password = item.get("password", "")
-            if password and not user.password_hash:
-                try:
-                    user.password_hash = hash_password(password)
-                except ValueError as exc:
-                    log.warning("bootstrap user %s password skipped: %s", item["username"], exc)
-            principal = ensure_user_principal(session, user)
-            token = item.get("token")
-            if not token and settings.environment in {"development", "test"}:
-                # Auto-generate a token for dev/test and log it once
-                token = f"dev_{_secrets.token_urlsafe(24)}"
-                log.warning(
-                    "auto-generated token for bootstrap user %s: %s "
-                    "(save this token \u2014 it will not be shown again)",
-                    item["username"],
-                    token,
-                )
-            if token:
-                ensure_personal_credential_for_user(
-                    session,
-                    user=user,
-                    principal=principal,
-                    raw_token=item["token"],
-                )
-        if settings.bootstrap_users:
-            session.commit()
-
-
-def ensure_database_ready():
-    init_db()
-    seed_bootstrap_users()
-
-
-def get_db():
+def get_db() -> Iterator[Session]:
     factory = get_session_factory()
     session = factory()
     try:
         yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+@contextmanager
+def session_scope() -> Iterator[Session]:
+    factory = get_session_factory()
+    session = factory()
+    try:
+        yield session
+        session.commit()
     except Exception:
         session.rollback()
         raise

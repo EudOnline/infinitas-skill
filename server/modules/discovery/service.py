@@ -227,7 +227,6 @@ def _available_release_projections(
     *,
     audience_type: str | None = None,
     limit: int = _CATALOG_MAX_ENTRIES,
-    use_cache: bool = True,
 ) -> list[DiscoveryProjection]:
     """Get available release projections with materialized artifacts.
 
@@ -235,8 +234,6 @@ def _available_release_projections(
         db: Database session
         audience_type: Optional audience type filter
         limit: Maximum number of entries to return
-        use_cache: Whether to use projection cache
-
     Returns:
         List of projections with materialized artifacts
     """
@@ -249,7 +246,6 @@ def _available_release_projections(
         db,
         audience_type=audience_type,
         limit=limit,
-        use_cache=use_cache,
     )
 
     # Filter by materialized artifacts (this is I/O bound, so do it after limiting)

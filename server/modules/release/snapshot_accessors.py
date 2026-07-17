@@ -6,22 +6,26 @@ composite object.  Zero side effects.
 
 from __future__ import annotations
 
+from typing import Any
 
-def snapshot_content_mode(snapshot) -> str:
+from server.modules.release.service import ReleaseSnapshot
+
+
+def snapshot_content_mode(snapshot: ReleaseSnapshot) -> str:
     value = snapshot.manifest.get("content_mode") if isinstance(snapshot.manifest, dict) else None
     if value:
         return str(value)
     return "external_ref"
 
 
-def snapshot_content_ref(snapshot) -> str:
+def snapshot_content_ref(snapshot: ReleaseSnapshot) -> str:
     value = snapshot.manifest.get("content_ref") if isinstance(snapshot.manifest, dict) else None
     if value:
         return str(value)
     return ""
 
 
-def snapshot_content_artifact_id(snapshot) -> int | None:
+def snapshot_content_artifact_id(snapshot: ReleaseSnapshot) -> int | None:
     value = (
         snapshot.manifest.get("content_artifact_id")
         if isinstance(snapshot.manifest, dict)
@@ -32,14 +36,14 @@ def snapshot_content_artifact_id(snapshot) -> int | None:
     return None
 
 
-def snapshot_metadata(snapshot) -> dict:
+def snapshot_metadata(snapshot: ReleaseSnapshot) -> dict[str, Any]:
     value = snapshot.manifest.get("metadata") if isinstance(snapshot.manifest, dict) else None
     if isinstance(value, dict):
         return value
     return {}
 
 
-def snapshot_source_ref(snapshot) -> str:
+def snapshot_source_ref(snapshot: ReleaseSnapshot) -> str:
     content_ref = snapshot_content_ref(snapshot)
     if content_ref:
         return content_ref

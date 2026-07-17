@@ -4,6 +4,7 @@ Supports in-memory (default) and database-backed rate limiting.
 The database backend uses a lightweight table so it works across
 multiple worker processes without adding Redis as a dependency.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -16,7 +17,7 @@ from fastapi import Request
 from sqlalchemy import DateTime, Integer, String, delete, func, select
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
-from server.models import Base, utcnow
+from server.model_base import Base, utcnow
 
 
 def resolve_client_ip(request: Request) -> str:
@@ -49,8 +50,9 @@ def resolve_rate_limit_key(request: Request, user_id: int | None = None) -> str:
     """Generate a rate limit key that combines multiple identifiers.
 
     For authenticated users, uses the user_id to prevent IP spoofing.
-    For unauthenticated requests, combines IP + User-Agent for basic
-    protection against simple IP rotation attacks.
+    For unauthenticated requests, uses the trusted client IP. User-Agent is
+    deliberately excluded because it is attacker-controlled and would let a
+    caller rotate buckets without changing network identity.
 
     Args:
         request: The FastAPI request object
@@ -63,12 +65,9 @@ def resolve_rate_limit_key(request: Request, user_id: int | None = None) -> str:
         # For authenticated users, use user_id as the primary key
         return f"user:{user_id}"
 
-    # For unauthenticated requests, combine IP and User-Agent
+    # Hash the trusted client IP so raw addresses are not stored or logged.
     client_ip = resolve_client_ip(request)
-    user_agent = (request.headers.get("user-agent") or "")[:128]
-    # Hash the combination to avoid leaking user agent in logs
-    combined = f"{client_ip}:{user_agent}"
-    return f"anon:{hashlib.sha256(combined.encode()).hexdigest()[:32]}"
+    return f"anon:{hashlib.sha256(client_ip.encode()).hexdigest()[:32]}"
 
 
 class RateLimitEntry(Base):
@@ -156,14 +155,7 @@ class MemoryRateLimiter(RateLimiter):
 
 
 class DBRateLimiter(RateLimiter):
-    """Database-backed rate limiter for multi-process deployments.
-
-    .. note::
-       ``record`` and ``reset`` call ``db.commit()`` internally because
-       rate-limit state must be visible to other processes immediately.
-       Callers should treat rate-limit bookkeeping as an independent
-       side-effect transaction.
-    """
+    """Database-backed rate limiter participating in its caller's transaction."""
 
     def __init__(self, db: Session) -> None:
         self._db = db
@@ -174,9 +166,7 @@ class DBRateLimiter(RateLimiter):
         cutoff = utcnow() - timedelta(seconds=window_seconds)
 
         # Prune old entries.
-        self._db.execute(
-            delete(RateLimitEntry).where(RateLimitEntry.window_start < cutoff)
-        )
+        self._db.execute(delete(RateLimitEntry).where(RateLimitEntry.window_start < cutoff))
 
         # Count attempts in current window.
         total = (
@@ -206,25 +196,28 @@ class DBRateLimiter(RateLimiter):
                 attempt_count=1,
             )
             self._db.add(entry)
-        self._db.commit()
+        self._db.flush()
 
     def reset(self, key: str) -> None:
         self._db.execute(delete(RateLimitEntry).where(RateLimitEntry.key == key))
-        self._db.commit()
+        self._db.flush()
 
     def reset_all(self) -> None:
         self._db.execute(delete(RateLimitEntry))
-        self._db.commit()
+        self._db.flush()
 
 
 # Global singleton for memory-backed rate limiting.
 _memory_limiter = MemoryRateLimiter()
 
 
-def get_rate_limiter() -> RateLimiter:
-    """Return the default memory rate limiter.
+def get_rate_limiter(db: Session | None = None) -> RateLimiter:
+    """Return a shared database limiter when a request session is available.
 
-    Callers that need distributed rate limiting should instantiate
-    :class:`DBRateLimiter` directly with a SQLAlchemy session.
+    The memory limiter remains for isolated utilities without a database
+    session. HTTP routes pass their request session so limits are shared across
+    worker processes.
     """
+    if db is not None:
+        return DBRateLimiter(db)
     return _memory_limiter

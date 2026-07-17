@@ -134,10 +134,6 @@ def _normalize_environment(raw: str | None) -> str:
     return environment
 
 
-def _env_flag(name: str) -> bool:
-    return str(os.environ.get(name) or "").strip().lower() in {"1", "true", "yes", "on"}
-
-
 def _load_bootstrap_payload(raw: str | None, *, allow_default_fixture: bool) -> object:
     if not raw:
         return list(DEFAULT_BOOTSTRAP_USERS) if allow_default_fixture else None
@@ -194,9 +190,7 @@ def _load_allowed_hosts(environment: str) -> list[str]:
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     environment = _normalize_environment(os.environ.get("INFINITAS_SERVER_ENV"))
-    allow_insecure_defaults = environment in {"development", "test"} or _env_flag(
-        "INFINITAS_SERVER_ALLOW_INSECURE_DEFAULTS"
-    )
+    allow_insecure_defaults = environment in {"development", "test"}
 
     secret_key = str(os.environ.get("INFINITAS_SERVER_SECRET_KEY") or "").strip()
     if not secret_key and allow_insecure_defaults:
