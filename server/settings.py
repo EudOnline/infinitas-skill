@@ -187,6 +187,29 @@ def _load_allowed_hosts(environment: str) -> list[str]:
     return list(DEFAULT_ALLOWED_HOSTS)
 
 
+def _validate_production_bootstrap_login(users: list[dict]) -> None:
+    from server.modules.identity.passwords import validate_password_strength
+
+    maintainers_with_login = []
+    for item in users:
+        password = str(item.get("password") or "")
+        token = str(item.get("token") or "")
+        if password and token and password == token:
+            raise RuntimeError("bootstrap user password and Agent token must be different values")
+        if item.get("role") != "maintainer" or not password:
+            continue
+        try:
+            validate_password_strength(password)
+        except ValueError as exc:
+            raise RuntimeError(f"invalid bootstrap maintainer password: {exc}") from exc
+        maintainers_with_login.append(item)
+    if not maintainers_with_login:
+        raise RuntimeError(
+            "INFINITAS_SERVER_BOOTSTRAP_USERS must include at least one maintainer "
+            "with a valid password for browser administration in production"
+        )
+
+
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     environment = _normalize_environment(os.environ.get("INFINITAS_SERVER_ENV"))
@@ -238,6 +261,8 @@ def get_settings() -> Settings:
         "INFINITAS_SERVER_TRUSTED_PROXIES",
         strict=False,
     )
+    if environment == "production":
+        _validate_production_bootstrap_login(bootstrap_users)
 
     return Settings(
         app_name="infinitas-hosted-registry",
