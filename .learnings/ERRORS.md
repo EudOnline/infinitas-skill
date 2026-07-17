@@ -1,5 +1,37 @@
 # Errors
 
+## [ERR-20260717-002] pip-audit-corrupt-http-cache
+
+**Logged**: 2026-07-17T00:10:00Z
+**Priority**: medium
+**Status**: resolved
+**Area**: supply-chain
+
+### Summary
+
+The post-merge quality gate reached `pip-audit` after all code and browser tests
+passed, then failed while deserializing a stale HTTP cache entry and parsing a
+non-JSON PyPI response.
+
+### Error
+
+```text
+WARNING: cache entry deserialization failed, entry ignored
+requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1
+```
+
+### Suggested Fix
+
+Run release audits with a fresh temporary HTTP cache so host-level cache corruption
+cannot make the repository gate nondeterministic.
+
+### Resolution
+
+- **Resolved**: 2026-07-17T00:10:00Z
+- **Notes**: `check-all.sh` now creates and removes an isolated pip-audit cache.
+
+---
+
 ## [ERR-20260717-001] staged-diff-check-did-not-gate-commit
 
 **Logged**: 2026-07-17T00:00:00Z

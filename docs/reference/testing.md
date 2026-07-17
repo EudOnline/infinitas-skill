@@ -108,7 +108,7 @@ Equivalent explicit matrix:
 .venv/bin/pytest tests/e2e
 .venv/bin/pytest tests/integration/test_alembic_metadata.py -q --override-ini=addopts=
 .venv/bin/python scripts/generate-openapi.py --check
-.venv/bin/pip-audit
+.venv/bin/pip-audit --cache-dir "$(mktemp -d)" --progress-spinner=off
 npm audit --registry=https://registry.npmjs.org --audit-level=high
 npm run build
 git diff --check
