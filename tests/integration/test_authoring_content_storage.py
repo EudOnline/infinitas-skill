@@ -8,7 +8,12 @@ import tarfile
 import tempfile
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
+
+from tests.helpers.hosted_content import build_skill_bundle, upload_skill_content
+
+HEADERS = {"Authorization": "Bearer fixture-maintainer-token"}
 
 
 def configure_env(tmpdir: Path) -> None:
@@ -29,67 +34,20 @@ def configure_env(tmpdir: Path) -> None:
     )
 
 
-def _canonical_metadata_json(metadata: dict) -> str:
-    return json.dumps(metadata, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+def _client(tmpdir: Path) -> TestClient:
+    configure_env(tmpdir)
+    from server.app import create_app
+
+    return TestClient(create_app())
 
 
-def _build_uploaded_bundle() -> bytes:
-    buffer = io.BytesIO()
-    with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
-        entries = {
-            "uploaded-skill/SKILL.md": b"# Uploaded Skill\n",
-            "uploaded-skill/_meta.json": (
-                json.dumps(
-                    {
-                        "name": "uploaded-skill",
-                        "version": "0.1.0",
-                    },
-                    ensure_ascii=False,
-                    indent=2,
-                )
-                + "\n"
-            ).encode("utf-8"),
-        }
-        for path, data in entries.items():
-            info = tarfile.TarInfo(path)
-            info.size = len(data)
-            archive.addfile(info, io.BytesIO(data))
-    return buffer.getvalue()
-
-
-def _stage_uploaded_content_artifact(app_client: TestClient, *, artifact_root: Path) -> int:
-    from server.db import get_session_factory
-    from server.modules.release.models import Artifact
-    from server.modules.release.storage import build_artifact_storage
-
-    storage = build_artifact_storage(artifact_root)
-    stored = storage.put_bytes(
-        _build_uploaded_bundle(),
-        public_path="version-content/uploaded-skill-0.1.0.tar.gz",
-    )
-
-    session_factory = get_session_factory()
-    with session_factory() as session:
-        artifact = Artifact(
-            release_id=None,
-            kind="version_content",
-            storage_uri=stored.storage_uri,
-            sha256=stored.sha256,
-            size_bytes=stored.size_bytes,
-        )
-        session.add(artifact)
-        session.commit()
-        session.refresh(artifact)
-        return int(artifact.id)
-
-
-def _create_skill(client: TestClient) -> int:
+def _create_skill(client: TestClient, slug: str = "uploaded-skill") -> int:
     response = client.post(
         "/api/v1/skills",
-        headers={"Authorization": "Bearer fixture-maintainer-token"},
+        headers=HEADERS,
         json={
-            "slug": "uploaded-skill",
-            "display_name": "Uploaded Skill",
+            "slug": slug,
+            "display_name": slug.replace("-", " ").title(),
             "summary": "content storage fixture",
         },
     )
@@ -97,145 +55,189 @@ def _create_skill(client: TestClient) -> int:
     return int(response.json()["id"])
 
 
-def test_create_version_accepts_uploaded_content_bundle_reference() -> None:
-    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-authoring-uploaded-content-test-"))
+def _archive(entries: list[tuple[tarfile.TarInfo, bytes | None]]) -> bytes:
+    buffer = io.BytesIO()
+    with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
+        for info, raw in entries:
+            archive.addfile(info, io.BytesIO(raw) if raw is not None else None)
+    return buffer.getvalue()
+
+
+def _regular_member(path: str, raw: bytes = b"fixture") -> tuple[tarfile.TarInfo, bytes]:
+    info = tarfile.TarInfo(path)
+    info.size = len(raw)
+    return info, raw
+
+
+def test_upload_and_create_version_freezes_validated_content() -> None:
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-authoring-content-test-"))
     try:
-        configure_env(tmpdir)
-
-        from server.app import create_app
-
-        client = TestClient(create_app())
-        artifact_id = _stage_uploaded_content_artifact(client, artifact_root=tmpdir / "artifacts")
+        client = _client(tmpdir)
         skill_id = _create_skill(client)
+        content = upload_skill_content(client, skill_id, "uploaded-skill", "0.1.0", HEADERS)
 
+        assert content["content_id"].startswith("cnt_")
+        assert content["sha256"].startswith("sha256:")
+        assert content["declared_version"] == "0.1.0"
         response = client.post(
             f"/api/v1/skills/{skill_id}/versions",
-            headers={"Authorization": "Bearer fixture-maintainer-token"},
+            headers=HEADERS,
             json={
                 "version": "0.1.0",
-                "content_mode": "uploaded_bundle",
-                "content_upload_token": str(artifact_id),
-                "metadata": {
-                    "entrypoint": "SKILL.md",
-                    "manifest": {"name": "uploaded-skill", "version": "0.1.0"},
-                },
-            },
-        )
-        assert response.status_code == 201, response.text
-        payload = response.json()
-        assert payload["sealed_manifest"]["content_mode"] == "uploaded_bundle"
-        assert payload["sealed_manifest"]["content_artifact_id"] == artifact_id
-        assert payload["sealed_manifest"]["content_ref"] == ""
-    finally:
-        shutil.rmtree(tmpdir, ignore_errors=True)
-
-
-def test_create_version_accepts_external_immutable_content_ref() -> None:
-    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-authoring-external-content-test-"))
-    try:
-        configure_env(tmpdir)
-
-        from server.app import create_app
-
-        client = TestClient(create_app())
-        skill_id = _create_skill(client)
-
-        response = client.post(
-            f"/api/v1/skills/{skill_id}/versions",
-            headers={"Authorization": "Bearer fixture-maintainer-token"},
-            json={
-                "version": "0.1.0",
-                "content_mode": "external_ref",
-                "content_ref": "git+https://example.com/uploaded-skill.git#0123456789abcdef0123456789abcdef01234567",
+                "content_id": content["content_id"],
                 "metadata": {"entrypoint": "SKILL.md"},
             },
         )
         assert response.status_code == 201, response.text
         payload = response.json()
-        expected_ref = "#0123456789abcdef0123456789abcdef01234567"
-        assert payload["sealed_manifest"]["content_mode"] == "external_ref"
-        assert payload["sealed_manifest"]["content_artifact_id"] is None
-        assert payload["sealed_manifest"]["content_ref"].endswith(expected_ref)
+        assert payload["content_digest"] == content["sha256"]
+        assert payload["sealed_manifest"]["content_id"] == content["content_id"]
+        assert payload["sealed_manifest"]["content_mode"] == "uploaded_bundle"
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
-def test_create_version_freezes_content_and_metadata_digests() -> None:
-    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-authoring-seal-content-test-"))
+@pytest.mark.parametrize(
+    "bundle",
+    [
+        b"not-a-tarball",
+        _archive([_regular_member("../escape.txt")]),
+        _archive([_regular_member("wrong-root/SKILL.md")]),
+    ],
+    ids=["invalid-archive", "path-traversal", "wrong-root"],
+)
+def test_upload_rejects_invalid_bundle(bundle: bytes) -> None:
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-authoring-invalid-test-"))
     try:
-        configure_env(tmpdir)
-
-        from server.app import create_app
-
-        client = TestClient(create_app())
-        artifact_id = _stage_uploaded_content_artifact(client, artifact_root=tmpdir / "artifacts")
+        client = _client(tmpdir)
         skill_id = _create_skill(client)
-        metadata = {
-            "entrypoint": "SKILL.md",
-            "manifest": {"name": "uploaded-skill", "version": "0.1.0"},
-        }
+        response = client.post(
+            f"/api/v1/skills/{skill_id}/content",
+            headers={**HEADERS, "Content-Type": "application/gzip"},
+            content=bundle,
+        )
+        assert response.status_code == 422, response.text
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
 
+
+@pytest.mark.parametrize("link_type", [tarfile.SYMTYPE, tarfile.LNKTYPE])
+def test_upload_rejects_links(link_type: bytes) -> None:
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-authoring-link-test-"))
+    try:
+        client = _client(tmpdir)
+        skill_id = _create_skill(client)
+        info = tarfile.TarInfo("uploaded-skill/link")
+        info.type = link_type
+        info.linkname = "uploaded-skill/SKILL.md"
+        response = client.post(
+            f"/api/v1/skills/{skill_id}/content",
+            headers={**HEADERS, "Content-Type": "application/gzip"},
+            content=_archive([(info, None)]),
+        )
+        assert response.status_code == 422, response.text
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_content_is_skill_scoped_single_use_and_version_bound() -> None:
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-authoring-scope-test-"))
+    try:
+        client = _client(tmpdir)
+        first_skill = _create_skill(client)
+        second_skill = _create_skill(client, "other-skill")
+        content = upload_skill_content(client, first_skill, "uploaded-skill", "0.1.0", HEADERS)
+        wrong_skill = client.post(
+            f"/api/v1/skills/{second_skill}/versions",
+            headers=HEADERS,
+            json={"version": "0.1.0", "content_id": content["content_id"]},
+        )
+        assert wrong_skill.status_code == 404
+        wrong_version = client.post(
+            f"/api/v1/skills/{first_skill}/versions",
+            headers=HEADERS,
+            json={"version": "0.2.0", "content_id": content["content_id"]},
+        )
+        assert wrong_version.status_code == 409
+        accepted = client.post(
+            f"/api/v1/skills/{first_skill}/versions",
+            headers=HEADERS,
+            json={"version": "0.1.0", "content_id": content["content_id"]},
+        )
+        assert accepted.status_code == 201, accepted.text
+        reused = client.post(
+            f"/api/v1/skills/{first_skill}/versions",
+            headers=HEADERS,
+            json={"version": "0.1.1", "content_id": content["content_id"]},
+        )
+        assert reused.status_code == 409
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_legacy_content_fields_are_rejected() -> None:
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-authoring-legacy-test-"))
+    try:
+        client = _client(tmpdir)
+        skill_id = _create_skill(client)
         response = client.post(
             f"/api/v1/skills/{skill_id}/versions",
-            headers={"Authorization": "Bearer fixture-maintainer-token"},
+            headers=HEADERS,
             json={
                 "version": "0.1.0",
-                "content_mode": "uploaded_bundle",
-                "content_upload_token": str(artifact_id),
-                "metadata": metadata,
+                "content_id": "cnt_legacyfixture",
+                "content_mode": "external_ref",
+                "content_ref": "git+https://example.com/repo.git#deadbeef",
+                "content_upload_token": "1",
             },
         )
-        assert response.status_code == 201, response.text
-
-        payload = response.json()
-        assert payload["content_digest"].startswith("sha256:")
-        assert payload["metadata_digest"].startswith("sha256:")
-        assert payload["sealed_manifest"]["content_mode"] == "uploaded_bundle"
-        assert payload["sealed_manifest"]["content_artifact_id"] == artifact_id
-        assert payload["sealed_manifest"]["metadata"] == metadata
-        assert payload["metadata_digest"] != payload["content_digest"]
-        assert _canonical_metadata_json(metadata) in payload["sealed_manifest_json"]
+        assert response.status_code == 422
+        schema = client.get("/openapi.json").json()["components"]["schemas"]
+        properties = schema["SkillVersionCreateRequest"]["properties"]
+        assert set(properties) == {"version", "content_id", "metadata"}
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
-def test_list_skill_versions_requires_owner() -> None:
-    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-authoring-list-versions-test-"))
+def test_list_skill_versions_requires_authentication() -> None:
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-authoring-list-test-"))
     try:
-        configure_env(tmpdir)
-
-        from fastapi.testclient import TestClient
-
-        from server.app import create_app
-
-        client = TestClient(create_app())
-        headers = {"Authorization": "Bearer fixture-maintainer-token"}
+        client = _client(tmpdir)
         skill_id = _create_skill(client)
-
-        content_refs = {
-            "0.1.0": "git+https://example.com/uploaded-skill.git#0123456789abcdef0123456789abcdef01234567",
-            "0.2.0": "git+https://example.com/uploaded-skill.git#fedcba9876543210fedcba9876543210fedcba98",
-        }
-        for version, content_ref in content_refs.items():
+        for version in ("0.1.0", "0.2.0"):
+            content = upload_skill_content(client, skill_id, "uploaded-skill", version, HEADERS)
             response = client.post(
                 f"/api/v1/skills/{skill_id}/versions",
-                headers=headers,
-                json={
-                    "version": version,
-                    "content_mode": "external_ref",
-                    "content_ref": content_ref,
-                    "metadata": {"entrypoint": "SKILL.md"},
-                },
+                headers=HEADERS,
+                json={"version": version, "content_id": content["content_id"]},
             )
             assert response.status_code == 201, response.text
+        listed = client.get(f"/api/v1/skills/{skill_id}/versions", headers=HEADERS)
+        assert [item["version"] for item in listed.json()] == ["0.2.0", "0.1.0"]
+        assert client.get(f"/api/v1/skills/{skill_id}/versions").status_code == 401
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
 
-        list_response = client.get(f"/api/v1/skills/{skill_id}/versions", headers=headers)
-        assert list_response.status_code == 200, list_response.text
-        versions = list_response.json()
-        assert len(versions) == 2
-        assert [v["version"] for v in versions] == ["0.2.0", "0.1.0"]
 
-        anonymous_response = client.get(f"/api/v1/skills/{skill_id}/versions")
-        assert anonymous_response.status_code == 401, anonymous_response.text
+def test_upload_requires_gzip_content_type_and_installable_files() -> None:
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-authoring-media-test-"))
+    try:
+        client = _client(tmpdir)
+        skill_id = _create_skill(client)
+        bundle = build_skill_bundle("uploaded-skill", "0.1.0")
+        unsupported = client.post(
+            f"/api/v1/skills/{skill_id}/content",
+            headers=HEADERS,
+            content=bundle,
+        )
+        assert unsupported.status_code == 415
+        incomplete = _archive([_regular_member("uploaded-skill/SKILL.md")])
+        invalid = client.post(
+            f"/api/v1/skills/{skill_id}/content",
+            headers={**HEADERS, "Content-Type": "application/gzip"},
+            content=incomplete,
+        )
+        assert invalid.status_code == 422
+        assert "_meta.json" in invalid.text
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)

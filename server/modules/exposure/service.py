@@ -39,6 +39,20 @@ class ForbiddenError(ExposureError, BaseForbiddenError):
     pass
 
 
+def _assert_public_compatibility(release: Release, audience_type: str) -> dict:
+    try:
+        compatibility = json.loads(release.platform_compatibility_json or "{}")
+    except json.JSONDecodeError:
+        compatibility = {}
+    canonical = compatibility.get("canonical_runtime")
+    state = canonical.get("state") if isinstance(canonical, dict) else None
+    if audience_type == "public" and state in {"blocked", "broken", "unsupported"}:
+        raise ConflictError(
+            f"public visibility is blocked by canonical runtime compatibility state: {state}"
+        )
+    return compatibility if isinstance(compatibility, dict) else {}
+
+
 def get_exposure_or_404(db: Session, exposure_id: int) -> Exposure:
     exposure = db.get(Exposure, exposure_id)
     if exposure is None:
@@ -107,6 +121,7 @@ def create_exposure(
     )
     if release.state != "ready":
         raise ConflictError("only ready releases can be exposed")
+    compatibility = _assert_public_compatibility(release, payload.audience_type)
 
     try:
         outcome = evaluate_exposure_policy(
@@ -120,6 +135,7 @@ def create_exposure(
         "audience_type": outcome.audience_type,
         "requested_review_mode": outcome.requested_review_mode,
         "review_requirement": outcome.review_requirement,
+        "platform_compatibility": compatibility,
     }
     exposure = Exposure(
         release_id=release_id,
@@ -222,6 +238,7 @@ def activate_exposure(
         return exposure
     if exposure.state in {"revoked", "rejected"}:
         raise ConflictError("closed exposure cannot be re-activated")
+    _assert_public_compatibility(release, exposure.audience_type)
     if exposure.review_requirement == "blocking":
         review_case = review_service.get_open_review_case_for_exposure(db, exposure.id)
         if review_case is not None:

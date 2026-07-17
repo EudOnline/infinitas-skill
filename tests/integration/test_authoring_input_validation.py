@@ -78,7 +78,7 @@ def test_create_version_rejects_invalid_version_string() -> None:
             headers=headers,
             json={
                 "version": "release/1",
-                "content_ref": "git+https://example.com/valid-skill.git#0123456789abcdef0123456789abcdef01234567",
+                "content_id": "cnt_validationfixture",
                 "metadata": {"entrypoint": "SKILL.md"},
             },
         )

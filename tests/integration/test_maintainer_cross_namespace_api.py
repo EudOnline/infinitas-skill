@@ -9,6 +9,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 
+from tests.helpers.hosted_content import upload_skill_content
 from tests.helpers.signing import add_allowed_signer, configure_git_ssh_signing
 
 
@@ -99,13 +100,16 @@ def test_maintainer_can_administer_contributor_owned_lifecycle_resources(
         )
         assert create_skill.status_code == 201, create_skill.text
         skill_id = int(create_skill.json()["id"])
+        content = upload_skill_content(
+            client, skill_id, "cross-namespace-skill", "0.1.0", maintainer_headers
+        )
 
         create_version = client.post(
             f"/api/v1/skills/{skill_id}/versions",
             headers=maintainer_headers,
             json={
                 "version": "0.1.0",
-                "content_ref": "git+https://example.com/cross-namespace-skill.git#0123456789abcdef0123456789abcdef01234567",
+                "content_id": content["content_id"],
                 "metadata": {"entrypoint": "SKILL.md", "maintained_by": "fixture-maintainer"},
             },
         )

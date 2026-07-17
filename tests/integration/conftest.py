@@ -6,6 +6,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from tests.helpers.hosted_content import upload_skill_content
 from tests.integration.test_private_registry_release_materialization import (
     _configure_env,
     _prepare_signing_repo,
@@ -43,13 +44,14 @@ def _prepare_library_client(
 
     headers = {"Authorization": "Bearer fixture-maintainer-token"}
     skill_id = _publish_skill_release(client, headers=headers)
+    content = upload_skill_content(client, skill_id, "test-library-skill", "1.0.0", headers)
 
     version_response = client.post(
         f"/api/v1/skills/{skill_id}/versions",
         headers=headers,
         json={
             "version": "1.0.0",
-            "content_ref": "git+https://example.com/test.git#0123456789abcdef0123456789abcdef01234567",
+            "content_id": content["content_id"],
             "metadata": {"entrypoint": "SKILL.md"},
         },
     )

@@ -592,19 +592,20 @@ options:
 
 ```text
 usage: infinitas registry skills [-h] [--base-url BASE_URL] [--token TOKEN]
-                                 {create,get} ...
+                                 {create,get,upload-content} ...
 
 Manage private-first skill records
 
 positional arguments:
-  {create,get}
-    create             Create a new skill namespace entry
-    get                Fetch one skill by id
+  {create,get,upload-content}
+    create              Create a new skill namespace entry
+    get                 Fetch one skill by id
+    upload-content      Upload a validated tar.gz content bundle
 
 options:
-  -h, --help           show this help message and exit
-  --base-url BASE_URL  Hosted registry API base URL
-  --token TOKEN        Bearer token for hosted registry API
+  -h, --help            show this help message and exit
+  --base-url BASE_URL   Hosted registry API base URL
+  --token TOKEN         Bearer token for hosted registry API
 ```
 
 ## `infinitas registry versions`

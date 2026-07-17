@@ -68,6 +68,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("key", "window_start", name="uq_rate_limit_entries_key_window_start"),
     )
     op.create_index(op.f("ix_rate_limit_entries_key"), "rate_limit_entries", ["key"], unique=False)
     op.create_index(
@@ -138,6 +139,33 @@ def upgrade() -> None:
     )
     op.create_index("ix_skills_namespace_id_slug", "skills", ["namespace_id", "slug"], unique=False)
     op.create_table(
+        "skill_contents",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("public_id", sa.String(length=64), nullable=False),
+        sa.Column("skill_id", sa.Integer(), nullable=False),
+        sa.Column("storage_uri", sa.String(length=1000), nullable=False),
+        sa.Column("sha256", sa.String(length=64), nullable=False),
+        sa.Column("size_bytes", sa.BigInteger(), nullable=False),
+        sa.Column("declared_version", sa.String(length=64), nullable=False),
+        sa.Column("state", sa.String(length=32), nullable=False),
+        sa.Column("created_by_principal_id", sa.Integer(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("consumed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(["created_by_principal_id"], ["principals.id"]),
+        sa.ForeignKeyConstraint(["skill_id"], ["skills.id"]),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("public_id", name="uq_skill_contents_public_id"),
+    )
+    op.create_index(
+        op.f("ix_skill_contents_created_by_principal_id"),
+        "skill_contents",
+        ["created_by_principal_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_skill_contents_skill_id_state", "skill_contents", ["skill_id", "state"], unique=False
+    )
+    op.create_table(
         "teams",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("principal_id", sa.Integer(), nullable=False),
@@ -156,12 +184,17 @@ def upgrade() -> None:
         "skill_versions",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("skill_id", sa.Integer(), nullable=False),
+        sa.Column("content_id", sa.Integer(), nullable=False),
         sa.Column("version", sa.String(length=64), nullable=False),
         sa.Column("content_digest", sa.String(length=255), nullable=False),
         sa.Column("metadata_digest", sa.String(length=255), nullable=False),
         sa.Column("sealed_manifest_json", sa.Text(), nullable=False),
         sa.Column("created_by_principal_id", sa.Integer(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["content_id"],
+            ["skill_contents.id"],
+        ),
         sa.ForeignKeyConstraint(
             ["created_by_principal_id"],
             ["principals.id"],
@@ -171,6 +204,7 @@ def upgrade() -> None:
             ["skills.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("content_id"),
         sa.UniqueConstraint("skill_id", "version", name="uq_skill_versions_skill_id_version"),
     )
     op.create_index(
@@ -519,6 +553,9 @@ def downgrade() -> None:
     op.drop_index("ix_skill_versions_skill_id_version", table_name="skill_versions")
     op.drop_index(op.f("ix_skill_versions_created_by_principal_id"), table_name="skill_versions")
     op.drop_table("skill_versions")
+    op.drop_index("ix_skill_contents_skill_id_state", table_name="skill_contents")
+    op.drop_index(op.f("ix_skill_contents_created_by_principal_id"), table_name="skill_contents")
+    op.drop_table("skill_contents")
     op.drop_index("ix_teams_slug", table_name="teams")
     op.drop_table("teams")
     op.drop_index("ix_skills_namespace_id_slug", table_name="skills")

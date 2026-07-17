@@ -49,10 +49,15 @@ The product is split into two surfaces:
 ### Agent publish
 
 - `POST /api/v1/skills`
+- `POST /api/v1/skills/{skill_id}/content`
+- `POST /api/v1/skills/{skill_id}/versions`
 - `POST /api/v1/versions/{version_id}/releases`
 - `GET /api/v1/releases/{release_id}`
 
-The maintained publish path creates immutable skill versions directly from object content using `infinitas registry versions create`. Draft and seal commands have been removed.
+The maintained Hosted publish path uploads one complete installable `tar.gz` bundle with
+`infinitas registry skills upload-content`, then creates an immutable version from the returned
+one-use `content_id` with `infinitas registry versions create`. Draft, external-ref, and seal
+commands are not part of the Hosted v0.1 contract.
 
 ## Preferred workflow by persona
 
@@ -164,6 +169,21 @@ Example response:
 
 ---
 
+## `infinitas registry skills upload-content`
+
+Upload a complete installable Skill bundle. The archive must have one root directory matching
+the Skill slug and must include valid `SKILL.md`, `_meta.json`, `CHANGELOG.md`, and smoke test
+content. The returned `content_id` is scoped to that Skill and can create exactly one version.
+
+| Argument | Required | Description |
+|---|---|---|
+| `skill_id` (positional) | yes | Skill identifier (int) |
+| `bundle` (positional) | yes | Path to the `tar.gz` content bundle |
+
+API: `POST /api/v1/skills/{skill_id}/content`
+
+---
+
 ## `infinitas registry versions create`
 
 Create an immutable skill version directly from content.
@@ -172,9 +192,7 @@ Create an immutable skill version directly from content.
 |---|---|---|---|
 | `skill_id` (positional) | yes | | Skill identifier (int) |
 | `--version` | yes | | Semantic version to create |
-| `--content-mode` | no | `None` | `external_ref` or `uploaded_bundle` |
-| `--content-ref` | no | `''` | Content locator/ref |
-| `--content-upload-token` | no | `None` | Uploaded artifact token for `uploaded_bundle` |
+| `--content-id` | yes | | Validated content identifier returned by upload |
 | `--metadata-json` | no | `'{}'` | Version metadata JSON object |
 
 API: `POST /api/v1/skills/{skill_id}/versions`

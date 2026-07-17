@@ -245,11 +245,17 @@ Operationally, this means search and install resolve from materialized and audie
 
 ## Current Dual-Track Areas
 
-The repository is already consolidated around the maintained model, but a few areas still show dual-track behavior.
+The repository is consolidated around the maintained model. The remaining distinctions below
+are intentional consumer or projection boundaries rather than compatibility tracks.
 
 ### 1. Publish facade vs internal lifecycle
 
-The agent-facing publish API is object-centric and creates immutable skill versions directly from content.
+The Agent-facing publish API is object-centric. Hosted publication has one content path:
+
+1. upload a complete `tar.gz` bundle with `POST /api/v1/skills/{skill_id}/content`;
+2. receive the opaque, one-use `content_id`;
+3. create an immutable version with that `content_id`;
+4. let the worker revalidate the complete Skill bundle before marking its Release `ready`.
 
 The legacy draft and sealed-version transitions have been removed. The maintained
 `skill` flow creates immutable versions directly from content.
@@ -258,14 +264,12 @@ The legacy draft and sealed-version transitions have been removed. The maintaine
 
 Legacy authoring pages are no longer registered. The global application bootstrap loads only modules needed by the maintained Library, access, sharing, and activity surfaces.
 
-### 3. Share-link implementation split
+### 3. Share links are an access-domain projection
 
-There are currently two share-oriented models in the repository:
-
-- Library release share creation built on `AccessGrant + Credential`
-- standalone share-link routes backed by `ShareLink`
-
-The Library UI summaries currently aggregate the grant-based model. That makes share behavior one of the most important areas to keep aligned before expanding the browser product further.
+Share Links use the single maintained `AccessGrant + Credential` model. The JSON routes,
+Library summaries, password/capability exchange, usage limits, revocation, and audit events all
+project the same access-domain records. There is no standalone `ShareLink` ORM model or legacy
+share storage track.
 
 ### 4. Activity projection vs raw audit API
 

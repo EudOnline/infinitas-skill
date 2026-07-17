@@ -7,18 +7,15 @@ attestation sections.
 
 from __future__ import annotations
 
+import json
 import subprocess
 from pathlib import Path
 from typing import Any
 
 from infinitas_skill.release.policy_state import resolve_releaser_identity
-from server.modules.release.bundle import content_ref_commit
 from server.modules.release.models import Release
 from server.modules.release.service import ReleaseSnapshot
-from server.modules.release.snapshot_accessors import (
-    snapshot_content_mode,
-    snapshot_source_ref,
-)
+from server.modules.release.snapshot_accessors import snapshot_source_ref
 from server.modules.shared.formatting import utc_now_iso as _utc_now_iso
 
 
@@ -53,9 +50,8 @@ def _build_source_snapshot(
     git_ctx: dict[str, Any],
 ) -> dict[str, Any]:
     """Build the source_snapshot sub-document."""
-    mode = snapshot_content_mode(snapshot)
     return {
-        "kind": "uploaded-bundle" if mode == "uploaded_bundle" else "content-ref",
+        "kind": "uploaded-bundle",
         "tag": release_marker,
         "ref": source_ref,
         "commit": source_commit,
@@ -244,7 +240,11 @@ def _review_payload() -> dict:
     }
 
 
-def _release_payload(releaser: str | None, signer: str) -> dict:
+def _release_payload(releaser: str | None, signer: str, release: Release) -> dict:
+    try:
+        compatibility = json.loads(release.platform_compatibility_json or "{}")
+    except json.JSONDecodeError:
+        compatibility = {}
     return {
         "releaser_identity": releaser,
         "release_mode": "local-tag",
@@ -254,6 +254,7 @@ def _release_payload(releaser: str | None, signer: str) -> dict:
         "authorized_releasers": [releaser] if releaser else [],
         "transfer_matches": [],
         "competing_claims": [],
+        "platform_compatibility": compatibility,
     }
 
 
@@ -312,10 +313,7 @@ def build_provenance_payload(
 
     git_ctx = extract_git_context(repo_root)
     source_ref = snapshot_source_ref(snapshot)
-    source_commit = content_ref_commit(
-        source_ref,
-        snapshot.skill_version.content_digest,
-    )
+    source_commit = snapshot.skill_version.content_digest.removeprefix("sha256:")
     source_snapshot = _build_source_snapshot(
         snapshot=snapshot,
         release_marker=release_marker,
@@ -364,7 +362,7 @@ def build_provenance_payload(
             dependency_step=dependency_step,
         ),
         "review": _review_payload(),
-        "release": _release_payload(releaser, signer_identity),
+        "release": _release_payload(releaser, signer_identity, release),
         "attestation": _attestation_payload(attestation_cfg, signature_filename, signer_identity),
         "distribution": _distribution_payload(
             bundle_public_path,

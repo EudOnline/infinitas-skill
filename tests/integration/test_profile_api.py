@@ -302,7 +302,7 @@ class TestProfileMePolicy:
 
         from server.db import get_session_factory
         from server.modules.access.models import AccessGrant
-        from server.modules.authoring.models import Skill, SkillVersion
+        from server.modules.authoring.models import Skill, SkillContent, SkillVersion
         from server.modules.exposure.models import Exposure
         from server.modules.identity.models import Credential, Principal
         from server.modules.release.models import Release
@@ -326,8 +326,21 @@ class TestProfileMePolicy:
             session.add(skill)
             session.flush()
 
+            content = SkillContent(
+                public_id="cnt_profilegrantfixture",
+                skill_id=skill.id,
+                storage_uri="objects/sha256/profile-grant",
+                sha256="a" * 64,
+                size_bytes=1,
+                declared_version="1.0.0",
+                state="consumed",
+                created_by_principal_id=namespace.id,
+            )
+            session.add(content)
+            session.flush()
             sv = SkillVersion(
                 skill_id=skill.id,
+                content_id=content.id,
                 version="1.0.0",
                 content_digest="abc",
                 metadata_digest="def",
@@ -728,7 +741,7 @@ class TestCredentialPolicyUpdateData:
 
         from server.db import get_session_factory
         from server.modules.access.models import AccessGrant
-        from server.modules.authoring.models import Skill, SkillVersion
+        from server.modules.authoring.models import Skill, SkillContent, SkillVersion
         from server.modules.exposure.models import Exposure
         from server.modules.identity.models import Credential, Principal
         from server.modules.identity.service import hash_token
@@ -753,8 +766,21 @@ class TestCredentialPolicyUpdateData:
             session.add(skill)
             session.flush()
 
+            content = SkillContent(
+                public_id="cnt_policygrantfixture",
+                skill_id=skill.id,
+                storage_uri="objects/sha256/policy-grant",
+                sha256="b" * 64,
+                size_bytes=1,
+                declared_version="1.0.0",
+                state="consumed",
+                created_by_principal_id=namespace.id,
+            )
+            session.add(content)
+            session.flush()
             sv = SkillVersion(
                 skill_id=skill.id,
+                content_id=content.id,
                 version="1.0.0",
                 content_digest="abc",
                 metadata_digest="def",

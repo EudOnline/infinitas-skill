@@ -4,7 +4,10 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from infinitas_skill.install.distribution_materialization import safely_extract_bundle
 from infinitas_skill.install.distribution_verification import verify_distribution_manifest
+from infinitas_skill.install.skill_validation import validate_installable_skill_dir
+from tests.helpers.hosted_content import upload_skill_content
 from tests.integration.test_private_registry_release_materialization import (
     _configure_env,
     _prepare_signing_repo,
@@ -52,13 +55,14 @@ def test_publish_facade_creates_release_via_direct_version(
     object_payload = object_response.json()
     object_id = object_payload["id"]
     assert object_payload["slug"] == "demo-published-skill"
+    content = upload_skill_content(client, object_id, "demo-published-skill", "1.2.3", headers)
 
     version_response = client.post(
         f"/api/v1/skills/{object_id}/versions",
         headers=headers,
         json={
             "version": "1.2.3",
-            "content_ref": "git+https://example.com/demo.git#0123456789abcdef0123456789abcdef01234567",
+            "content_id": content["content_id"],
             "metadata": {"entrypoint": "SKILL.md"},
         },
     )
@@ -112,3 +116,12 @@ def test_publish_facade_creates_release_via_direct_version(
         attestation_root=temp_repo_copy,
     )
     assert verified["verified"] is True
+    installed_skill = safely_extract_bundle(
+        verified["bundle_path"],
+        tmp_path / "installed-target",
+        expected_root="demo-published-skill",
+    )
+    validate_installable_skill_dir(installed_skill, repo_root=temp_repo_copy)
+    assert (installed_skill / "SKILL.md").is_file()
+    assert (installed_skill / "_meta.json").is_file()
+    assert (installed_skill / "tests" / "smoke.md").is_file()

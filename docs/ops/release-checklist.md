@@ -60,9 +60,12 @@ Before creating stable release output for an active skill:
 When the hosted control plane performs the release:
 
 - [ ] skill and immutable version creation were authorized for the owning principal
+- [ ] the Agent/CLI uploaded a complete bundle and used the returned one-use `content_id`
+- [ ] the uploaded root slug and `_meta.json.version` match the Skill and requested version
 - [ ] the release creates exactly one `materialize_release` job
 - [ ] the worker writes manifest, bundle, provenance, and signature artifacts into the configured artifact directory
-- [ ] the release reaches `ready` only after artifact metadata and files agree
+- [ ] the worker reruns the formal installable-Skill validator before the release reaches `ready`
+- [ ] API, provenance, and manifest preserve the same platform compatibility result
 - [ ] exposure activation and review decisions are recorded separately from release materialization
 - [ ] if a one-way mirror is required, run `uv run infinitas registry sources mirror` after successful materialization
 - [ ] audit events link version creation, release creation, exposure decisions, and access issuance

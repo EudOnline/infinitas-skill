@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import io
 import json
 import subprocess
 import tarfile
@@ -13,6 +12,7 @@ from infinitas_skill.install.distribution_verification import verify_distributio
 from server.model_base import utcnow
 from server.modules.jobs.models import Job
 from server.modules.release.models import Artifact, Release
+from tests.helpers.hosted_content import build_skill_bundle, upload_skill_content
 from tests.helpers.signing import add_allowed_signer, configure_git_ssh_signing
 
 
@@ -66,57 +66,6 @@ def _configure_env(monkeypatch, *, tmp_path: Path, repo: Path) -> Path:
     return artifact_root
 
 
-def _build_uploaded_bundle_bytes() -> bytes:
-    buffer = io.BytesIO()
-    with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
-        entries = {
-            "materialized-release/SKILL.md": b"# Materialized Release\n",
-            "materialized-release/_meta.json": (
-                json.dumps(
-                    {
-                        "name": "materialized-release",
-                        "version": "0.1.0",
-                    },
-                    ensure_ascii=False,
-                    indent=2,
-                )
-                + "\n"
-            ).encode("utf-8"),
-            "materialized-release/notes.txt": b"uploaded bundle fixture\n",
-        }
-        for path, raw in entries.items():
-            info = tarfile.TarInfo(path)
-            info.size = len(raw)
-            archive.addfile(info, io.BytesIO(raw))
-    return buffer.getvalue()
-
-
-def _stage_uploaded_content_artifact(*, artifact_root: Path) -> int:
-    from server.db import get_session_factory
-    from server.modules.release.models import Artifact
-    from server.modules.release.storage import build_artifact_storage
-
-    storage = build_artifact_storage(artifact_root)
-    stored = storage.put_bytes(
-        _build_uploaded_bundle_bytes(),
-        public_path="version-content/materialized-release-uploaded.tar.gz",
-    )
-
-    session_factory = get_session_factory()
-    with session_factory() as session:
-        artifact = Artifact(
-            release_id=None,
-            kind="version_content",
-            storage_uri=stored.storage_uri,
-            sha256=stored.sha256,
-            size_bytes=stored.size_bytes,
-        )
-        session.add(artifact)
-        session.commit()
-        session.refresh(artifact)
-        return int(artifact.id)
-
-
 def _create_release(client: TestClient) -> int:
     headers = {"Authorization": "Bearer fixture-maintainer-token"}
     create_skill = client.post(
@@ -130,13 +79,14 @@ def _create_release(client: TestClient) -> int:
     )
     assert create_skill.status_code == 201, create_skill.text
     skill_id = int(create_skill.json()["id"])
+    content = upload_skill_content(client, skill_id, "materialized-release", "0.1.0", headers)
 
     create_version = client.post(
         f"/api/v1/skills/{skill_id}/versions",
         headers=headers,
         json={
             "version": "0.1.0",
-            "content_ref": "git+https://example.com/materialized-release.git#0123456789abcdef0123456789abcdef01234567",
+            "content_id": content["content_id"],
             "metadata": {
                 "entrypoint": "SKILL.md",
                 "language": "zh-CN",
@@ -168,13 +118,14 @@ def _create_release_with_version(client: TestClient) -> tuple[int, int]:
     )
     assert create_skill.status_code == 201, create_skill.text
     skill_id = int(create_skill.json()["id"])
+    content = upload_skill_content(client, skill_id, "materialized-release", "0.1.0", headers)
 
     create_version = client.post(
         f"/api/v1/skills/{skill_id}/versions",
         headers=headers,
         json={
             "version": "0.1.0",
-            "content_ref": "git+https://example.com/materialized-release.git#0123456789abcdef0123456789abcdef01234567",
+            "content_id": content["content_id"],
             "metadata": {
                 "entrypoint": "SKILL.md",
                 "language": "zh-CN",
@@ -193,7 +144,7 @@ def _create_release_with_version(client: TestClient) -> tuple[int, int]:
     return int(release.json()["id"]), version_id
 
 
-def _create_uploaded_content_release(client: TestClient, *, artifact_root: Path) -> int:
+def _create_uploaded_content_release(client: TestClient) -> int:
     headers = {"Authorization": "Bearer fixture-maintainer-token"}
     create_skill = client.post(
         "/api/v1/skills",
@@ -207,14 +158,24 @@ def _create_uploaded_content_release(client: TestClient, *, artifact_root: Path)
     assert create_skill.status_code == 201, create_skill.text
     skill_id = int(create_skill.json()["id"])
 
-    artifact_id = _stage_uploaded_content_artifact(artifact_root=artifact_root)
+    content = upload_skill_content(
+        client,
+        skill_id,
+        "materialized-release",
+        "0.1.0",
+        headers,
+        bundle=build_skill_bundle(
+            "materialized-release",
+            "0.1.0",
+            extra_files={"notes.txt": b"uploaded bundle fixture\n"},
+        ),
+    )
     create_version = client.post(
         f"/api/v1/skills/{skill_id}/versions",
         headers=headers,
         json={
             "version": "0.1.0",
-            "content_mode": "uploaded_bundle",
-            "content_upload_token": str(artifact_id),
+            "content_id": content["content_id"],
             "metadata": {
                 "entrypoint": "SKILL.md",
                 "manifest": {"name": "materialized-release", "version": "0.1.0"},
@@ -276,6 +237,17 @@ def test_materialized_release_manifest_is_install_verifiable(
         attestation_root=temp_repo_copy,
     )
     assert verified["verified"] is True
+    release_response = client.get(
+        f"/api/v1/releases/{release_id}",
+        headers={"Authorization": "Bearer fixture-maintainer-token"},
+    )
+    compatibility = release_response.json()["platform_compatibility"]
+    assert compatibility["canonical_runtime_platform"] == "openclaw"
+    provenance_path = (
+        artifact_root / "provenance" / "fixture-maintainer--materialized-release-0.1.0.json"
+    )
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    assert provenance["release"]["platform_compatibility"] == compatibility
 
 
 def test_uploaded_content_release_bundle_contains_uploaded_files(
@@ -290,7 +262,7 @@ def test_uploaded_content_release_bundle_contains_uploaded_files(
     from server.worker import run_worker_loop
 
     client = TestClient(create_app())
-    release_id = _create_uploaded_content_release(client, artifact_root=artifact_root)
+    release_id = _create_uploaded_content_release(client)
 
     processed = run_worker_loop(limit=1)
     assert processed == 1

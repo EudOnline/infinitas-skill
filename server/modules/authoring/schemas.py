@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from typing import Literal
+from pydantic import BaseModel, ConfigDict, Field
 
-from pydantic import BaseModel, Field
-
-from server.modules.authoring.models import Skill, SkillVersion
+from server.modules.authoring.models import Skill, SkillContent, SkillVersion
 from server.modules.shared.formatting import iso_format as _iso
 from server.modules.shared.json import loads_json_object
 
@@ -23,11 +21,33 @@ class SkillCreateRequest(BaseModel):
 
 
 class SkillVersionCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     version: str = Field(min_length=1, max_length=64, pattern=SEMVER_PATTERN)
-    content_mode: Literal["external_ref", "uploaded_bundle"] | None = None
-    content_ref: str | None = Field(default=None, max_length=2000)
-    content_upload_token: str | None = Field(default=None, max_length=500)
+    content_id: str = Field(min_length=8, max_length=64, pattern=r"^cnt_[A-Za-z0-9_-]+$")
     metadata: dict = Field(default_factory=dict)
+
+
+class SkillContentView(BaseModel):
+    content_id: str
+    skill_id: int
+    sha256: str
+    size_bytes: int
+    declared_version: str
+    state: str
+    created_at: str
+
+    @classmethod
+    def from_model(cls, content: SkillContent) -> "SkillContentView":
+        return cls(
+            content_id=content.public_id,
+            skill_id=content.skill_id,
+            sha256=f"sha256:{content.sha256}",
+            size_bytes=content.size_bytes,
+            declared_version=content.declared_version,
+            state=content.state,
+            created_at=_iso(content.created_at) or "",
+        )
 
 
 class SkillView(BaseModel):

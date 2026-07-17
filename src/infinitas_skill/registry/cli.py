@@ -7,6 +7,7 @@ import json
 import os
 import sys
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any, NoReturn
 
 import httpx
@@ -46,6 +47,30 @@ def request_json(
     return {"ok": True}
 
 
+def request_binary(
+    args: argparse.Namespace,
+    path: str,
+    data: bytes,
+) -> dict[str, Any]:
+    headers = {"Content-Type": "application/gzip"}
+    if args.token:
+        headers["Authorization"] = f"Bearer {args.token}"
+    try:
+        response = httpx.request(
+            "POST",
+            args.base_url.rstrip("/") + path,
+            content=data,
+            headers=headers,
+            timeout=60.0,
+        )
+    except httpx.HTTPError as exc:
+        fail(f"API request failed: {exc}")
+    if response.status_code >= 400:
+        fail(response.text)
+    result: dict[str, Any] = response.json()
+    return result
+
+
 def command_access_me(args: argparse.Namespace) -> dict[str, Any]:
     return request_json(args, "GET", "/api/v1/access/me")
 
@@ -82,13 +107,20 @@ def command_authoring_create_skill(args: argparse.Namespace) -> dict[str, Any]:
     )
 
 
+def command_authoring_upload_content(args: argparse.Namespace) -> dict[str, Any]:
+    bundle_path = Path(args.bundle).expanduser()
+    try:
+        data = bundle_path.read_bytes()
+    except OSError as exc:
+        fail(f"could not read content bundle {bundle_path}: {exc}")
+    return request_binary(args, f"/api/v1/skills/{args.skill_id}/content", data)
+
+
 def command_authoring_create_version(args: argparse.Namespace) -> dict[str, Any]:
     metadata = _parse_json_object(args.metadata_json, arg_name="--metadata-json")
     payload = {
         "version": args.version,
-        "content_mode": args.content_mode,
-        "content_ref": args.content_ref,
-        "content_upload_token": args.content_upload_token,
+        "content_id": args.content_id,
         "metadata": metadata,
     }
     return request_json(args, "POST", f"/api/v1/skills/{args.skill_id}/versions", payload)
@@ -194,7 +226,9 @@ def _configure_registry_connection_args(parser: argparse.ArgumentParser) -> None
 
 def _configure_registry_authoring_commands(subparsers: argparse._SubParsersAction) -> None:
     skills = subparsers.add_parser("skills", help="Manage private-first skill records")
-    skills_subparsers = skills.add_subparsers(dest="subcommand", metavar="{create,get}")
+    skills_subparsers = skills.add_subparsers(
+        dest="subcommand", metavar="{create,get,upload-content}"
+    )
     skills_create = skills_subparsers.add_parser(
         "create", help="Create a new skill namespace entry"
     )
@@ -212,6 +246,12 @@ def _configure_registry_authoring_commands(subparsers: argparse._SubParsersActio
     skills_get = skills_subparsers.add_parser("get", help="Fetch one skill by id")
     skills_get.add_argument("skill_id", type=int, help="Skill identifier")
     skills_get.set_defaults(_handler=_wrap_registry_handler(command_authoring_get_skill))
+    skills_upload = skills_subparsers.add_parser(
+        "upload-content", help="Upload a validated tar.gz content bundle"
+    )
+    skills_upload.add_argument("skill_id", type=int, help="Skill identifier")
+    skills_upload.add_argument("bundle", help="Path to the tar.gz content bundle")
+    skills_upload.set_defaults(_handler=_wrap_registry_handler(command_authoring_upload_content))
 
     versions = subparsers.add_parser("versions", help="Create immutable skill versions directly")
     versions_subparsers = versions.add_subparsers(dest="subcommand", metavar="{create}")
@@ -221,18 +261,7 @@ def _configure_registry_authoring_commands(subparsers: argparse._SubParsersActio
     versions_create.add_argument("skill_id", type=int, help="Skill identifier")
     versions_create.add_argument("--version", required=True, help="Semantic version to create")
     versions_create.add_argument(
-        "--content-mode",
-        default=None,
-        choices=["external_ref", "uploaded_bundle"],
-        help="Content mode for the version",
-    )
-    versions_create.add_argument(
-        "--content-ref", default="", help="Content locator/ref used by authoring"
-    )
-    versions_create.add_argument(
-        "--content-upload-token",
-        default=None,
-        help="Uploaded artifact token for uploaded_bundle mode",
+        "--content-id", required=True, help="Validated content identifier returned by upload"
     )
     versions_create.add_argument(
         "--metadata-json",
@@ -378,7 +407,7 @@ def build_registry_skills_parser(*, prog: str | None = None) -> argparse.Argumen
         description="Manage private-first skill records",
     )
     _add_common_args(parser)
-    sub = parser.add_subparsers(dest="subcommand", metavar="{create,get}")
+    sub = parser.add_subparsers(dest="subcommand", metavar="{create,get,upload-content}")
     create = sub.add_parser("create", help="Create a new skill namespace entry")
     create.add_argument("--slug", required=True, help="Skill slug")
     create.add_argument("--display-name", required=True, help="Human readable skill display name")
@@ -388,6 +417,9 @@ def build_registry_skills_parser(*, prog: str | None = None) -> argparse.Argumen
     )
     get = sub.add_parser("get", help="Fetch one skill by id")
     get.add_argument("skill_id", type=int, help="Skill identifier")
+    upload = sub.add_parser("upload-content", help="Upload a validated tar.gz content bundle")
+    upload.add_argument("skill_id", type=int, help="Skill identifier")
+    upload.add_argument("bundle", help="Path to the tar.gz content bundle")
     return parser
 
 
@@ -402,16 +434,7 @@ def build_registry_versions_parser(*, prog: str | None = None) -> argparse.Argum
     create.add_argument("skill_id", type=int, help="Skill identifier")
     create.add_argument("--version", required=True, help="Semantic version to create")
     create.add_argument(
-        "--content-mode",
-        default=None,
-        choices=["external_ref", "uploaded_bundle"],
-        help="Content mode for the version",
-    )
-    create.add_argument("--content-ref", default="", help="Content locator/ref used by authoring")
-    create.add_argument(
-        "--content-upload-token",
-        default=None,
-        help="Uploaded artifact token for uploaded_bundle mode",
+        "--content-id", required=True, help="Validated content identifier returned by upload"
     )
     create.add_argument("--metadata-json", default="{}", help="Version metadata as JSON object")
     return parser

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from tests.helpers.hosted_content import upload_skill_content
 from tests.helpers.signing import add_allowed_signer, configure_git_ssh_signing
 
 
@@ -84,13 +85,14 @@ def create_ready_release(client: TestClient, headers: dict[str, str], *, slug: s
     )
     assert create_skill.status_code == 201, create_skill.text
     skill_id = int(create_skill.json()["id"])
+    content = upload_skill_content(client, skill_id, slug, "0.1.0", headers)
 
     create_version = client.post(
         f"/api/v1/skills/{skill_id}/versions",
         headers=headers,
         json={
             "version": "0.1.0",
-            "content_ref": f"git+https://example.com/{slug}.git#0123456789abcdef0123456789abcdef01234567",
+            "content_id": content["content_id"],
             "metadata": {"entrypoint": "SKILL.md"},
         },
     )
@@ -294,3 +296,58 @@ def test_create_exposure_normalizes_requested_review_mode_by_audience(
     assert authenticated_response.status_code == 201, authenticated_response.text
     assert authenticated_response.json()["requested_review_mode"] == "none"
     assert authenticated_response.json()["review_requirement"] == "none"
+
+
+def test_public_exposure_rejects_explicitly_unsupported_canonical_runtime(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    _prepare_signing_repo(temp_repo_copy, signing_key)
+    configure_env(tmp_path)
+    os.environ["INFINITAS_SERVER_REPO_PATH"] = str(temp_repo_copy)
+
+    from server.app import create_app
+    from server.db import get_session_factory
+    from server.modules.release.models import Release
+
+    client = TestClient(create_app())
+    headers = {"Authorization": "Bearer fixture-maintainer-token"}
+    release_id = create_ready_release(client, headers, slug="unsupported-runtime-skill")
+    with get_session_factory()() as session:
+        release = session.get(Release, release_id)
+        assert release is not None
+        release.platform_compatibility_json = json.dumps(
+            {
+                "canonical_runtime_platform": "openclaw",
+                "canonical_runtime": {"state": "unsupported"},
+                "blocking_platforms": [{"platform": "openclaw", "state": "unsupported"}],
+            }
+        )
+        session.commit()
+
+    public_response = client.post(
+        f"/api/v1/releases/{release_id}/exposures",
+        headers=headers,
+        json={
+            "audience_type": "public",
+            "listing_mode": "listed",
+            "install_mode": "enabled",
+            "requested_review_mode": "blocking",
+        },
+    )
+    assert public_response.status_code == 409
+    assert "unsupported" in public_response.text
+
+    private_response = client.post(
+        f"/api/v1/releases/{release_id}/exposures",
+        headers=headers,
+        json={
+            "audience_type": "private",
+            "listing_mode": "direct_only",
+            "install_mode": "enabled",
+            "requested_review_mode": "none",
+        },
+    )
+    assert private_response.status_code == 201, private_response.text

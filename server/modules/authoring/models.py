@@ -1,6 +1,15 @@
 from __future__ import annotations
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    BigInteger,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from server.model_base import Base, utcnow
@@ -32,6 +41,26 @@ class Skill(Base):
     )
 
 
+class SkillContent(Base):
+    __tablename__ = "skill_contents"
+    __table_args__ = (
+        UniqueConstraint("public_id", name="uq_skill_contents_public_id"),
+        Index("ix_skill_contents_skill_id_state", "skill_id", "state"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    public_id: Mapped[str] = mapped_column(String(64))
+    skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"))
+    storage_uri: Mapped[str] = mapped_column(String(1000))
+    sha256: Mapped[str] = mapped_column(String(64))
+    size_bytes: Mapped[int] = mapped_column(BigInteger)
+    declared_version: Mapped[str] = mapped_column(String(64))
+    state: Mapped[str] = mapped_column(String(32), default="validated")
+    created_by_principal_id: Mapped[int] = mapped_column(ForeignKey("principals.id"), index=True)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    consumed_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class SkillVersion(Base):
     __tablename__ = "skill_versions"
     __table_args__ = (
@@ -41,6 +70,7 @@ class SkillVersion(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"))
+    content_id: Mapped[int] = mapped_column(ForeignKey("skill_contents.id"), unique=True)
     version: Mapped[str] = mapped_column(String(64))
     content_digest: Mapped[str] = mapped_column(String(255))
     metadata_digest: Mapped[str] = mapped_column(String(255))

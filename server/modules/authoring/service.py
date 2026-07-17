@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
+import secrets
+from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -17,9 +18,10 @@ from server.exceptions_base import (
 from server.exceptions_base import (
     NotFoundError as BaseNotFoundError,
 )
-from server.modules.authoring.models import Skill, SkillVersion
+from server.modules.authoring.content import canonicalize_skill_bundle
+from server.modules.authoring.models import Skill, SkillContent, SkillVersion
 from server.modules.authoring.schemas import SkillCreateRequest
-from server.modules.release.models import Artifact
+from server.modules.release.storage import build_artifact_storage
 
 
 class AuthoringError(Exception):
@@ -47,114 +49,75 @@ def sha256_prefixed(raw: str) -> str:
     return f"sha256:{hashlib.sha256(raw.encode('utf-8')).hexdigest()}"
 
 
-_GIT_COMMIT_REF_PATTERN = re.compile(r"^[0-9a-f]{40}$", re.IGNORECASE)
-_CONTENT_MODES = {"external_ref", "uploaded_bundle"}
-
-
-def is_sealable_content_ref(content_ref: str | None) -> bool:
-    normalized = (content_ref or "").strip()
-    if not normalized:
-        return False
-    if not normalized.startswith("git+"):
-        return True
-
-    _, separator, fragment = normalized.partition("#")
-    if not separator:
-        return False
-    candidate = fragment.strip()
-    return bool(_GIT_COMMIT_REF_PATTERN.fullmatch(candidate))
-
-
 def canonical_manifest_json(payload: dict) -> str:
     return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
-def _parse_artifact_token(token: str | None) -> int | None:
-    candidate = str(token or "").strip()
-    if not candidate:
-        return None
-    try:
-        artifact_id = int(candidate)
-    except ValueError as exc:
-        raise ConflictError(
-            "content_upload_token must reference a numeric uploaded artifact"
-        ) from exc
-    if artifact_id <= 0:
-        raise ConflictError("content_upload_token must reference a positive artifact id")
-    return artifact_id
-
-
-def _resolve_uploaded_content_artifact(db: Session, token: str | None) -> Artifact:
-    artifact_id = _parse_artifact_token(token)
-    if artifact_id is None:
-        raise ConflictError("uploaded_bundle versions require content_upload_token")
-    artifact = repository.get_artifact(db, artifact_id)
-    if artifact is None:
-        raise NotFoundError("uploaded content artifact not found")
-    if artifact.release_id is not None:
-        raise ConflictError("uploaded content artifact must be release-independent")
-    return artifact
-
-
-def resolve_version_content(
+def get_skill_content_for_version(
     db: Session,
     *,
-    content_mode: str | None,
-    content_ref: str | None,
-    content_upload_token: str | None,
-) -> tuple[str, str, int | None]:
-    normalized_mode = (content_mode or "").strip() or (
-        "uploaded_bundle" if str(content_upload_token or "").strip() else "external_ref"
-    )
-    if normalized_mode not in _CONTENT_MODES:
-        raise ConflictError(f"unsupported content_mode: {normalized_mode}")
-
-    if normalized_mode == "uploaded_bundle":
-        artifact = _resolve_uploaded_content_artifact(db, content_upload_token)
-        return normalized_mode, "", artifact.id
-
-    normalized_ref = (content_ref or "").strip()
-    if not normalized_ref:
-        raise ConflictError("external_ref versions require content_ref")
-    return normalized_mode, normalized_ref, None
-
-
-def _content_digest_for_snapshot(
-    db: Session,
-    *,
-    content_mode: str,
-    content_ref: str,
-    content_artifact_id: int | None,
-) -> str:
-    if content_mode == "uploaded_bundle":
-        if content_artifact_id is None:
-            raise ConflictError("uploaded_bundle version is missing content_artifact_id")
-        artifact = repository.get_artifact(db, content_artifact_id)
-        if artifact is None:
-            raise NotFoundError("uploaded content artifact not found")
-        return f"sha256:{artifact.sha256}"
-
-    frozen_content_ref = content_ref or ""
-    if not is_sealable_content_ref(frozen_content_ref):
-        raise ConflictError("version content_ref must be an immutable snapshot")
-    return sha256_prefixed(frozen_content_ref)
+    skill_id: int,
+    public_id: str,
+) -> SkillContent:
+    content = repository.get_skill_content_by_public_id(db, public_id)
+    if content is None or content.skill_id != skill_id:
+        raise NotFoundError("validated skill content not found")
+    if content.state != "validated" or content.consumed_at is not None:
+        raise ConflictError("skill content has already been consumed")
+    return content
 
 
 def _version_manifest(
     *,
     kind: str,
-    content_mode: str,
-    content_ref: str,
-    content_artifact_id: int | None,
+    content: SkillContent,
     metadata: dict,
 ) -> dict:
     return {
         "kind": kind,
-        "content_mode": content_mode,
-        "content_ref": content_ref,
-        "content_artifact_id": content_artifact_id,
+        "content_mode": "uploaded_bundle",
+        "content_id": content.public_id,
         "metadata": metadata,
     }
+
+
+def upload_skill_content(
+    db: Session,
+    *,
+    skill_id: int,
+    actor_principal_id: int,
+    is_maintainer: bool,
+    raw_bundle: bytes,
+    artifact_root: Path,
+    repo_root: Path,
+) -> SkillContent:
+    skill = get_skill_or_404(db, skill_id)
+    assert_namespace_owner(
+        db,
+        skill,
+        principal_id=actor_principal_id,
+        is_maintainer=is_maintainer,
+    )
+    canonical_bundle = canonicalize_skill_bundle(
+        raw_bundle,
+        skill_slug=skill.slug,
+        repo_root=repo_root,
+    )
+    public_id = f"cnt_{secrets.token_urlsafe(18)}"
+    stored = build_artifact_storage(artifact_root).put_bytes(
+        canonical_bundle.data,
+        public_path=f"version-content/{public_id}/skill.tar.gz",
+    )
+    return repository.create_skill_content(
+        db,
+        public_id=public_id,
+        skill_id=skill.id,
+        storage_uri=stored.storage_uri,
+        sha256=stored.sha256,
+        size_bytes=stored.size_bytes,
+        declared_version=canonical_bundle.declared_version,
+        created_by_principal_id=actor_principal_id,
+    )
 
 
 def create_skill_version_snapshot(
@@ -164,9 +127,7 @@ def create_skill_version_snapshot(
     actor_principal_id: int,
     is_maintainer: bool = False,
     version: str,
-    content_mode: str | None = None,
-    content_ref: str | None = None,
-    content_upload_token: str | None = None,
+    content_public_id: str,
     metadata: dict | None = None,
 ) -> SkillVersion:
     skill = repository.get_skill(db, skill_id)
@@ -187,38 +148,30 @@ def create_skill_version_snapshot(
     if existing_version is not None:
         raise ConflictError("skill version already exists")
 
-    resolved_mode, resolved_ref, content_artifact_id = resolve_version_content(
-        db,
-        content_mode=content_mode,
-        content_ref=content_ref,
-        content_upload_token=content_upload_token,
-    )
+    content = get_skill_content_for_version(db, skill_id=skill.id, public_id=content_public_id)
+    if content.declared_version != version:
+        raise ConflictError("skill version does not match the version declared by uploaded content")
     frozen_metadata = metadata if isinstance(metadata, dict) else {}
-    content_digest = _content_digest_for_snapshot(
-        db,
-        content_mode=resolved_mode,
-        content_ref=resolved_ref,
-        content_artifact_id=content_artifact_id,
-    )
+    content_digest = f"sha256:{content.sha256}"
     metadata_digest = sha256_prefixed(canonical_metadata_json(frozen_metadata))
     version_manifest = _version_manifest(
         kind="skill_version_manifest",
-        content_mode=resolved_mode,
-        content_ref=resolved_ref,
-        content_artifact_id=content_artifact_id,
+        content=content,
         metadata=frozen_metadata,
     )
 
+    if not repository.consume_skill_content(db, content.id):
+        raise ConflictError("skill content has already been consumed")
     skill_version = repository.create_skill_version(
         db,
         skill_id=skill.id,
+        content_id=content.id,
         version=version,
         content_digest=content_digest,
         metadata_digest=metadata_digest,
         sealed_manifest_json=canonical_manifest_json(version_manifest),
         created_by_principal_id=actor_principal_id,
     )
-    db.flush()
     return skill_version
 
 

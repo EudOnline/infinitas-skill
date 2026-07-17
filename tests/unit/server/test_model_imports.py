@@ -90,6 +90,7 @@ assert {
     "review_decisions",
     "review_policies",
     "service_principals",
+    "skill_contents",
     "skill_versions",
     "skills",
     "team_memberships",

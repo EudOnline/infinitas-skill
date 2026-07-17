@@ -13,6 +13,7 @@ The implementation is split across focused sub-modules:
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Callable
 from pathlib import Path
@@ -31,18 +32,16 @@ from infinitas_skill.release.attestation import (
     resolve_attestation_key,
 )
 from server.artifact_ops import sha256_bytes
+from server.modules.authoring.content import canonicalize_skill_bundle
 
 # Sub-modules — the actual implementations
-from server.modules.release.bundle import bundle_bytes, uploaded_bundle_data
+from server.modules.release.bundle import skill_content_bundle_data
 from server.modules.release.models import Artifact, Release
 from server.modules.release.provenance import build_provenance_payload
 from server.modules.release.service import ReleaseSnapshot
 from server.modules.release.signing import resolve_signer_identity, sign_provenance
 from server.modules.release.snapshot_accessors import (
-    snapshot_content_artifact_id,
-    snapshot_content_mode,
-    snapshot_content_ref,
-    snapshot_metadata,
+    snapshot_content_id,
 )
 from server.modules.release.storage import ArtifactStorage, build_artifact_storage
 
@@ -62,22 +61,10 @@ def _materialize_bundle(
     snapshot: ReleaseSnapshot,
     artifact_root: Path,
 ) -> tuple[bytes, int, str]:
-    metadata = snapshot_metadata(snapshot)
-    content_mode = snapshot_content_mode(snapshot)
-    content_ref = snapshot_content_ref(snapshot)
-    if content_mode == "uploaded_bundle":
-        return uploaded_bundle_data(
-            db,
-            artifact_root=artifact_root,
-            content_artifact_id=snapshot_content_artifact_id(snapshot),
-        )
-    return (
-        *bundle_bytes(
-            skill_slug=snapshot.skill.slug,
-            content_ref=content_ref,
-            metadata=metadata,
-        ),
-        snapshot.skill.slug,
+    return skill_content_bundle_data(
+        db,
+        artifact_root=artifact_root,
+        content_id=snapshot_content_id(snapshot),
     )
 
 
@@ -117,12 +104,22 @@ def _build_and_store_bundle(
     *,
     snapshot: ReleaseSnapshot,
     artifact_root: Path,
+    repo_root: Path,
     storage: ArtifactStorage,
 ) -> dict[str, Any]:
     data, file_count, root_dir = _materialize_bundle(
         db, snapshot=snapshot, artifact_root=artifact_root
     )
     sha256 = sha256_bytes(data)
+    validated = canonicalize_skill_bundle(
+        data,
+        skill_slug=snapshot.skill.slug,
+        repo_root=repo_root,
+    )
+    if validated.data != data:
+        raise RuntimeError("stored skill content is not in canonical bundle form")
+    if validated.declared_version != snapshot.skill_version.version:
+        raise RuntimeError("stored skill content version no longer matches the sealed version")
     public_path = (
         Path("skills")
         / snapshot.namespace.slug
@@ -137,7 +134,33 @@ def _build_and_store_bundle(
         "root_dir": root_dir,
         "sha256": sha256,
         "public_path": public_path,
+        "metadata": validated.metadata,
     }
+
+
+def _persist_platform_compatibility(
+    db: Session,
+    *,
+    repo_root: Path,
+    release: Release,
+    metadata: dict[str, Any],
+) -> dict[str, Any]:
+    from infinitas_skill.policy.skill_identity import normalize_skill_identity
+    from infinitas_skill.release.platform_state import collect_platform_compatibility_state
+
+    compatibility = collect_platform_compatibility_state(
+        repo_root,
+        metadata,
+        normalize_skill_identity(metadata),
+    )
+    release.platform_compatibility_json = json.dumps(
+        compatibility,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    db.add(release)
+    return compatibility
 
 
 def _build_and_store_provenance(
@@ -248,23 +271,6 @@ def _upsert_materialized_artifacts(
     }
 
 
-def _collect_platform_compatibility(repo_root: Path, skill_slug: str, release: Release) -> None:
-    from infinitas_skill.release.release_resolution import resolve_skill
-    from infinitas_skill.release.service import collect_release_state
-
-    try:
-        resolved_skill = resolve_skill(repo_root, skill_slug)
-        collect_release_state(resolved_skill, root=repo_root).get("platform_compatibility")
-    except Exception:
-        logger.warning(
-            "Platform compatibility collection failed for %s (release_id=%s); "
-            "proceeding without compatibility data",
-            skill_slug,
-            release.id,
-            exc_info=True,
-        )
-
-
 def materialize_release(
     db: Session,
     *,
@@ -290,9 +296,19 @@ def materialize_release(
     storage = storage_backend or build_artifact_storage(artifact_root)
     _checkpoint_heartbeat(heartbeat)
     bundle = _build_and_store_bundle(
-        db, snapshot=snapshot, artifact_root=artifact_root, storage=storage
+        db,
+        snapshot=snapshot,
+        artifact_root=artifact_root,
+        repo_root=resolved_repo_root,
+        storage=storage,
     )
     _checkpoint_heartbeat(heartbeat)
+    _persist_platform_compatibility(
+        db,
+        repo_root=resolved_repo_root,
+        release=release,
+        metadata=bundle["metadata"],
+    )
     provenance = _build_and_store_provenance(
         snapshot=snapshot,
         release=release,
@@ -308,8 +324,6 @@ def materialize_release(
         bundle=bundle,
         provenance=provenance,
     )
-    _checkpoint_heartbeat(heartbeat)
-    _collect_platform_compatibility(resolved_repo_root, snapshot.skill.slug, release)
     _checkpoint_heartbeat(heartbeat)
     artifacts = _upsert_materialized_artifacts(
         db, release=release, bundle=bundle, provenance=provenance, manifest=manifest

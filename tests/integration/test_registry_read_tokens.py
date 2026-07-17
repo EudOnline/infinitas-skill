@@ -10,6 +10,7 @@ from sqlalchemy import select
 
 from server.modules.identity.auth import AUTH_COOKIE_NAME
 from server.modules.release.models import Artifact
+from tests.helpers.hosted_content import upload_skill_content
 from tests.helpers.signing import add_allowed_signer, configure_git_ssh_signing
 
 
@@ -114,13 +115,14 @@ def _create_public_release(client: TestClient) -> tuple[int, str]:
     )
     assert create_skill.status_code == 201, create_skill.text
     skill_id = int(create_skill.json()["id"])
+    content = upload_skill_content(client, skill_id, "registry-gated-skill", "0.1.0", headers)
 
     create_version = client.post(
         f"/api/v1/skills/{skill_id}/versions",
         headers=headers,
         json={
             "version": "0.1.0",
-            "content_ref": "git+https://example.com/registry-gated-skill.git#0123456789abcdef0123456789abcdef01234567",
+            "content_id": content["content_id"],
             "metadata": {
                 "entrypoint": "SKILL.md",
                 "language": "zh-CN",

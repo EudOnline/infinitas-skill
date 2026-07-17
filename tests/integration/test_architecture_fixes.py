@@ -12,12 +12,28 @@ from server.db import _engine_kwargs
 from server.modules.access.authn import AccessContext
 from server.modules.access.authz import can_access_releases
 from server.modules.access.models import AccessGrant
-from server.modules.authoring.models import Skill, SkillVersion
+from server.modules.authoring.models import Skill, SkillContent, SkillVersion
 from server.modules.exposure.models import Exposure
 from server.modules.identity.models import Credential, Principal, User
 from server.modules.release.models import Release
 from server.rate_limit import DBRateLimiter, MemoryRateLimiter
 from server.ui.assets import load_asset_hashes, static_url_factory
+
+
+def _content_for_skill(db: Session, skill: Skill, principal: Principal) -> SkillContent:
+    content = SkillContent(
+        public_id=f"cnt_{skill.slug.replace('-', '_')}",
+        skill_id=skill.id,
+        storage_uri=f"objects/sha256/{skill.slug}",
+        sha256="a" * 64,
+        size_bytes=1,
+        declared_version="1.0.0",
+        state="consumed",
+        created_by_principal_id=principal.id,
+    )
+    db.add(content)
+    db.flush()
+    return content
 
 
 @pytest.fixture
@@ -72,8 +88,10 @@ class TestBatchCanAccessReleases:
         skill = Skill(namespace_id=principal.id, slug="test-skill", display_name="Test")
         db.add(skill)
         db.flush()
+        content = _content_for_skill(db, skill, principal)
         sv = SkillVersion(
             skill_id=skill.id,
+            content_id=content.id,
             version="1.0.0",
             content_digest="digest1",
             metadata_digest="digest2",
@@ -126,8 +144,10 @@ class TestBatchCanAccessReleases:
         skill = Skill(namespace_id=principal.id, slug="deny-skill", display_name="Deny")
         db.add(skill)
         db.flush()
+        content = _content_for_skill(db, skill, principal)
         sv = SkillVersion(
             skill_id=skill.id,
+            content_id=content.id,
             version="1.0.0",
             content_digest="digest1",
             metadata_digest="digest2",

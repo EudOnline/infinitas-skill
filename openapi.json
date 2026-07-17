@@ -653,6 +653,97 @@
         ]
       }
     },
+    "/api/v1/skills/{skill_id}/content": {
+      "post": {
+        "tags": [
+          "authoring"
+        ],
+        "summary": "Upload Content",
+        "operationId": "upload_content_api_v1_skills__skill_id__content_post",
+        "parameters": [
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "title": "Skill Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "infinitas_auth_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Infinitas Auth Token"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillContentView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Skill not found"
+          },
+          "413": {
+            "description": "Content bundle exceeds the upload size limit"
+          },
+          "415": {
+            "description": "Unsupported content type"
+          },
+          "422": {
+            "description": "Invalid or non-installable content bundle"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
     "/api/v1/skills/{skill_id}/versions": {
       "post": {
         "tags": [
@@ -5673,6 +5764,49 @@
         ],
         "title": "ShareLinkView"
       },
+      "SkillContentView": {
+        "properties": {
+          "content_id": {
+            "type": "string",
+            "title": "Content Id"
+          },
+          "skill_id": {
+            "type": "integer",
+            "title": "Skill Id"
+          },
+          "sha256": {
+            "type": "string",
+            "title": "Sha256"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "declared_version": {
+            "type": "string",
+            "title": "Declared Version"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content_id",
+          "skill_id",
+          "sha256",
+          "size_bytes",
+          "declared_version",
+          "state",
+          "created_at"
+        ],
+        "title": "SkillContentView"
+      },
       "SkillCreateRequest": {
         "properties": {
           "slug": {
@@ -5722,44 +5856,12 @@
             "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
             "title": "Version"
           },
-          "content_mode": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "external_ref",
-                  "uploaded_bundle"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content Mode"
-          },
-          "content_ref": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 2000
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content Ref"
-          },
-          "content_upload_token": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 500
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content Upload Token"
+          "content_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 8,
+            "pattern": "^cnt_[A-Za-z0-9_-]+$",
+            "title": "Content Id"
           },
           "metadata": {
             "additionalProperties": true,
@@ -5767,9 +5869,11 @@
             "title": "Metadata"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
-          "version"
+          "version",
+          "content_id"
         ],
         "title": "SkillVersionCreateRequest"
       },

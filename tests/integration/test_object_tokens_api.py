@@ -4,6 +4,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from tests.helpers.hosted_content import upload_skill_content
 from tests.integration.conftest import _prepare_library_client
 
 
@@ -148,15 +149,16 @@ def test_object_publisher_token_publishes_only_its_bound_object(
     assert token_response.status_code == 201, token_response.text
     raw_token = token_response.json()["raw_token"]
     publisher_headers = {"Authorization": f"Bearer {raw_token}"}
+    content = upload_skill_content(
+        client, object_id, "test-library-skill", "2.0.0", publisher_headers
+    )
 
     version_response = client.post(
         f"/api/v1/skills/{object_id}/versions",
         headers=publisher_headers,
         json={
             "version": "2.0.0",
-            "content_ref": (
-                "git+https://example.com/publisher.git#1234567890abcdef1234567890abcdef12345678"
-            ),
+            "content_id": content["content_id"],
             "metadata": {"entrypoint": "SKILL.md"},
         },
     )
@@ -187,9 +189,7 @@ def test_object_publisher_token_publishes_only_its_bound_object(
         headers=publisher_headers,
         json={
             "version": "1.0.0",
-            "content_ref": (
-                "git+https://example.com/other.git#1234567890abcdef1234567890abcdef12345678"
-            ),
+            "content_id": "cnt_crossobjectfixture",
         },
     )
     assert cross_object_version.status_code == 403, cross_object_version.text
