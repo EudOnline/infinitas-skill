@@ -8,5 +8,5 @@ Expected guidance:
 
 - use `uv run infinitas discovery search` or `uv run infinitas discovery recommend`
 - inspect with `uv run infinitas discovery inspect`
-- preview with `scripts/pull-skill.sh ... --mode confirm` or `uv run infinitas install by-name ... --mode confirm --json`
+- preview with `uv run infinitas install by-name ... --mode confirm --json`
 - only install or upgrade from immutable release artifacts

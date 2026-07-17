@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-06-15T14:20:19Z",
+  "generated_at": "2026-07-14T06:29:57Z",
   "registry": {
     "default_registry": "self"
   },
@@ -46,7 +46,7 @@
       ],
       "runtime": {
         "platform": "openclaw",
-        "source_mode": "legacy",
+        "source_mode": "metadata-only",
         "workspace_scope": "workspace",
         "workspace_targets": [
           "skills",
@@ -133,10 +133,10 @@
             "checker": "check-claude-compat.py",
             "evidence_path": "catalog/compatibility-evidence/claude/consume-infinitas-skill/0.1.0.json",
             "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py.",
-            "contract_last_verified": "2026-04-13",
+            "contract_last_verified": "2026-06-15",
             "fresh_until": "2026-06-15T21:43:37Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
+            "freshness_state": "stale",
+            "freshness_reason": "age-expired"
           },
           "codex": {
             "state": "adapted",
@@ -144,10 +144,10 @@
             "checker": "check-codex-compat.py",
             "evidence_path": "catalog/compatibility-evidence/codex/consume-infinitas-skill/0.1.0.json",
             "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py.",
-            "contract_last_verified": "2026-04-13",
+            "contract_last_verified": "2026-06-15",
             "fresh_until": "2026-06-15T21:43:37Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
+            "freshness_state": "stale",
+            "freshness_reason": "age-expired"
           },
           "openclaw": {
             "state": "adapted",
@@ -155,10 +155,10 @@
             "checker": "check-openclaw-compat.py",
             "evidence_path": "catalog/compatibility-evidence/openclaw/consume-infinitas-skill/0.1.0.json",
             "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py.",
-            "contract_last_verified": "2026-04-07",
+            "contract_last_verified": "2026-06-15",
             "fresh_until": "2026-06-15T21:43:37Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
+            "freshness_state": "stale",
+            "freshness_reason": "age-expired"
           }
         }
       },
@@ -169,10 +169,10 @@
           "checker": "check-claude-compat.py",
           "evidence_path": "catalog/compatibility-evidence/claude/consume-infinitas-skill/0.1.0.json",
           "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py.",
-          "contract_last_verified": "2026-04-13",
+          "contract_last_verified": "2026-06-15",
           "fresh_until": "2026-06-15T21:43:37Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         },
         "codex": {
           "state": "adapted",
@@ -180,10 +180,10 @@
           "checker": "check-codex-compat.py",
           "evidence_path": "catalog/compatibility-evidence/codex/consume-infinitas-skill/0.1.0.json",
           "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py.",
-          "contract_last_verified": "2026-04-13",
+          "contract_last_verified": "2026-06-15",
           "fresh_until": "2026-06-15T21:43:37Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         },
         "openclaw": {
           "state": "adapted",
@@ -191,10 +191,10 @@
           "checker": "check-openclaw-compat.py",
           "evidence_path": "catalog/compatibility-evidence/openclaw/consume-infinitas-skill/0.1.0.json",
           "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py.",
-          "contract_last_verified": "2026-04-07",
+          "contract_last_verified": "2026-06-15",
           "fresh_until": "2026-06-15T21:43:37Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         }
       },
       "trust_state": "verified",
@@ -290,7 +290,7 @@
       ],
       "runtime": {
         "platform": "openclaw",
-        "source_mode": "legacy",
+        "source_mode": "metadata-only",
         "workspace_scope": "workspace",
         "workspace_targets": [
           "skills",
@@ -376,10 +376,10 @@
             "checker": "check-claude-compat.py",
             "evidence_path": "catalog/compatibility-evidence/claude/federation-registry-ops/0.1.0.json",
             "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py.",
-            "contract_last_verified": "2026-04-13",
+            "contract_last_verified": "2026-06-15",
             "fresh_until": "2026-06-15T21:43:37Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
+            "freshness_state": "stale",
+            "freshness_reason": "age-expired"
           },
           "codex": {
             "state": "adapted",
@@ -387,10 +387,10 @@
             "checker": "check-codex-compat.py",
             "evidence_path": "catalog/compatibility-evidence/codex/federation-registry-ops/0.1.0.json",
             "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py.",
-            "contract_last_verified": "2026-04-13",
+            "contract_last_verified": "2026-06-15",
             "fresh_until": "2026-06-15T21:43:37Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
+            "freshness_state": "stale",
+            "freshness_reason": "age-expired"
           },
           "openclaw": {
             "state": "adapted",
@@ -398,10 +398,10 @@
             "checker": "check-openclaw-compat.py",
             "evidence_path": "catalog/compatibility-evidence/openclaw/federation-registry-ops/0.1.0.json",
             "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py.",
-            "contract_last_verified": "2026-04-07",
+            "contract_last_verified": "2026-06-15",
             "fresh_until": "2026-06-15T21:43:37Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
+            "freshness_state": "stale",
+            "freshness_reason": "age-expired"
           }
         }
       },
@@ -412,10 +412,10 @@
           "checker": "check-claude-compat.py",
           "evidence_path": "catalog/compatibility-evidence/claude/federation-registry-ops/0.1.0.json",
           "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py.",
-          "contract_last_verified": "2026-04-13",
+          "contract_last_verified": "2026-06-15",
           "fresh_until": "2026-06-15T21:43:37Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         },
         "codex": {
           "state": "adapted",
@@ -423,10 +423,10 @@
           "checker": "check-codex-compat.py",
           "evidence_path": "catalog/compatibility-evidence/codex/federation-registry-ops/0.1.0.json",
           "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py.",
-          "contract_last_verified": "2026-04-13",
+          "contract_last_verified": "2026-06-15",
           "fresh_until": "2026-06-15T21:43:37Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         },
         "openclaw": {
           "state": "adapted",
@@ -434,10 +434,10 @@
           "checker": "check-openclaw-compat.py",
           "evidence_path": "catalog/compatibility-evidence/openclaw/federation-registry-ops/0.1.0.json",
           "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py.",
-          "contract_last_verified": "2026-04-07",
+          "contract_last_verified": "2026-06-15",
           "fresh_until": "2026-06-15T21:43:37Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         }
       },
       "trust_state": "verified",
@@ -532,7 +532,7 @@
       ],
       "runtime": {
         "platform": "openclaw",
-        "source_mode": "legacy",
+        "source_mode": "metadata-only",
         "workspace_scope": "workspace",
         "workspace_targets": [
           "skills",
@@ -619,10 +619,10 @@
             "checker": "check-claude-compat.py",
             "evidence_path": "catalog/compatibility-evidence/claude/operate-infinitas-skill/0.1.1.json",
             "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py.",
-            "contract_last_verified": "2026-04-13",
+            "contract_last_verified": "2026-06-15",
             "fresh_until": "2026-06-15T21:43:37Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
+            "freshness_state": "stale",
+            "freshness_reason": "age-expired"
           },
           "codex": {
             "state": "adapted",
@@ -630,10 +630,10 @@
             "checker": "check-codex-compat.py",
             "evidence_path": "catalog/compatibility-evidence/codex/operate-infinitas-skill/0.1.1.json",
             "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py.",
-            "contract_last_verified": "2026-04-13",
+            "contract_last_verified": "2026-06-15",
             "fresh_until": "2026-06-15T21:43:37Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
+            "freshness_state": "stale",
+            "freshness_reason": "age-expired"
           },
           "openclaw": {
             "state": "adapted",
@@ -641,10 +641,10 @@
             "checker": "check-openclaw-compat.py",
             "evidence_path": "catalog/compatibility-evidence/openclaw/operate-infinitas-skill/0.1.1.json",
             "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py.",
-            "contract_last_verified": "2026-04-07",
+            "contract_last_verified": "2026-06-15",
             "fresh_until": "2026-06-15T21:43:37Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
+            "freshness_state": "stale",
+            "freshness_reason": "age-expired"
           }
         }
       },
@@ -655,10 +655,10 @@
           "checker": "check-claude-compat.py",
           "evidence_path": "catalog/compatibility-evidence/claude/operate-infinitas-skill/0.1.1.json",
           "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py.",
-          "contract_last_verified": "2026-04-13",
+          "contract_last_verified": "2026-06-15",
           "fresh_until": "2026-06-15T21:43:37Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         },
         "codex": {
           "state": "adapted",
@@ -666,10 +666,10 @@
           "checker": "check-codex-compat.py",
           "evidence_path": "catalog/compatibility-evidence/codex/operate-infinitas-skill/0.1.1.json",
           "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py.",
-          "contract_last_verified": "2026-04-13",
+          "contract_last_verified": "2026-06-15",
           "fresh_until": "2026-06-15T21:43:37Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         },
         "openclaw": {
           "state": "adapted",
@@ -677,10 +677,10 @@
           "checker": "check-openclaw-compat.py",
           "evidence_path": "catalog/compatibility-evidence/openclaw/operate-infinitas-skill/0.1.1.json",
           "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py.",
-          "contract_last_verified": "2026-04-07",
+          "contract_last_verified": "2026-06-15",
           "fresh_until": "2026-06-15T21:43:37Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         }
       },
       "trust_state": "verified",
@@ -776,7 +776,7 @@
       ],
       "runtime": {
         "platform": "openclaw",
-        "source_mode": "legacy",
+        "source_mode": "metadata-only",
         "workspace_scope": "workspace",
         "workspace_targets": [
           "skills",
@@ -862,10 +862,10 @@
             "checker": "check-claude-compat.py",
             "evidence_path": "catalog/compatibility-evidence/claude/release-infinitas-skill/0.1.0.json",
             "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py.",
-            "contract_last_verified": "2026-04-13",
+            "contract_last_verified": "2026-06-15",
             "fresh_until": "2026-06-15T21:43:37Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
+            "freshness_state": "stale",
+            "freshness_reason": "age-expired"
           },
           "codex": {
             "state": "adapted",
@@ -873,10 +873,10 @@
             "checker": "check-codex-compat.py",
             "evidence_path": "catalog/compatibility-evidence/codex/release-infinitas-skill/0.1.0.json",
             "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py.",
-            "contract_last_verified": "2026-04-13",
+            "contract_last_verified": "2026-06-15",
             "fresh_until": "2026-06-15T21:43:37Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
+            "freshness_state": "stale",
+            "freshness_reason": "age-expired"
           },
           "openclaw": {
             "state": "adapted",
@@ -884,10 +884,10 @@
             "checker": "check-openclaw-compat.py",
             "evidence_path": "catalog/compatibility-evidence/openclaw/release-infinitas-skill/0.1.0.json",
             "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py.",
-            "contract_last_verified": "2026-04-07",
+            "contract_last_verified": "2026-06-15",
             "fresh_until": "2026-06-15T21:43:37Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
+            "freshness_state": "stale",
+            "freshness_reason": "age-expired"
           }
         }
       },
@@ -898,10 +898,10 @@
           "checker": "check-claude-compat.py",
           "evidence_path": "catalog/compatibility-evidence/claude/release-infinitas-skill/0.1.0.json",
           "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py.",
-          "contract_last_verified": "2026-04-13",
+          "contract_last_verified": "2026-06-15",
           "fresh_until": "2026-06-15T21:43:37Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         },
         "codex": {
           "state": "adapted",
@@ -909,10 +909,10 @@
           "checker": "check-codex-compat.py",
           "evidence_path": "catalog/compatibility-evidence/codex/release-infinitas-skill/0.1.0.json",
           "note": "Rendered with export-codex-skill.sh and verified with check-codex-compat.py.",
-          "contract_last_verified": "2026-04-13",
+          "contract_last_verified": "2026-06-15",
           "fresh_until": "2026-06-15T21:43:37Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         },
         "openclaw": {
           "state": "adapted",
@@ -920,10 +920,10 @@
           "checker": "check-openclaw-compat.py",
           "evidence_path": "catalog/compatibility-evidence/openclaw/release-infinitas-skill/0.1.0.json",
           "note": "Rendered from immutable release artifacts with export-openclaw-skill.sh and verified with check-openclaw-compat.py.",
-          "contract_last_verified": "2026-04-07",
+          "contract_last_verified": "2026-06-15",
           "fresh_until": "2026-06-15T21:43:37Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         }
       },
       "trust_state": "verified",

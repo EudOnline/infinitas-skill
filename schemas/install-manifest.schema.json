@@ -24,7 +24,6 @@
         "installed_version",
         "installed_at",
         "install_mode",
-        "action",
         "updated_at"
       ],
       "properties": {
@@ -47,8 +46,7 @@
         "identity_mode": {
           "type": "string",
           "enum": [
-            "qualified",
-            "legacy"
+            "qualified"
           ]
         },
         "author": {
@@ -357,11 +355,7 @@
         },
         "install_mode": {
           "type": "string",
-          "description": "Install mode, typically mirrors the action (e.g. install, update)."
-        },
-        "action": {
-          "type": "string",
-          "description": "Action performed (e.g. install, update)."
+          "description": "Action that produced the current installed state, such as install, update, switch, or rollback."
         },
         "updated_at": {
           "type": "string",

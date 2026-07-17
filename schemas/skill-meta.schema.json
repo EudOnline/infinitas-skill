@@ -3,12 +3,8 @@
   "$id": "https://infinitas-skill.local/schemas/skill-meta.schema.json",
   "title": "infinitas-skill _meta.json",
   "type": "object",
-  "additionalProperties": true,
+  "additionalProperties": false,
   "$defs": {
-    "dependencyRef": {
-      "type": "string",
-      "pattern": "^(?:(?:[a-z0-9]+(?:-[a-z0-9]+)*)/)?[a-z0-9]+(?:-[a-z0-9]+)*(?:@\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9_.-]+)?)?$"
-    },
     "dependencyConstraint": {
       "type": "object",
       "additionalProperties": false,
@@ -36,6 +32,7 @@
     }
   },
   "required": [
+    "schema_version",
     "name",
     "version",
     "status",
@@ -246,27 +243,13 @@
     "depends_on": {
       "type": "array",
       "items": {
-        "oneOf": [
-          {
-            "$ref": "#/$defs/dependencyRef"
-          },
-          {
-            "$ref": "#/$defs/dependencyConstraint"
-          }
-        ]
+        "$ref": "#/$defs/dependencyConstraint"
       }
     },
     "conflicts_with": {
       "type": "array",
       "items": {
-        "oneOf": [
-          {
-            "$ref": "#/$defs/dependencyRef"
-          },
-          {
-            "$ref": "#/$defs/dependencyConstraint"
-          }
-        ]
+        "$ref": "#/$defs/dependencyConstraint"
       }
     }
   }

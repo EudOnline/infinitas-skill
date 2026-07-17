@@ -27,7 +27,7 @@ Start with these stable surfaces:
 1. Search with `uv run infinitas discovery search` when the task is broad or exploratory.
 2. Rank candidates with `uv run infinitas discovery recommend` when the task is phrased as an intent instead of a precise name.
 3. Inspect the winning candidate with `uv run infinitas discovery inspect` before installation.
-4. Use `uv run infinitas install by-name` or `scripts/pull-skill.sh` for immutable installation.
+4. Use `uv run infinitas install by-name` for discovery-first immutable installation, or `uv run infinitas install exact` when the qualified release is already known.
 5. When the user already has an installed version, compare and update with `uv run infinitas install check-update` and `uv run infinitas install upgrade`.
 6. Prefer `--mode confirm` before any install or upgrade that would mutate a runtime directory.
 
@@ -37,7 +37,7 @@ Start with these stable surfaces:
 - `uv run infinitas discovery recommend`: rank the best fit for a task
 - `uv run infinitas discovery inspect`: inspect trust, compatibility, provenance, and decision metadata
 - `uv run infinitas install by-name`: resolve and install by discovery-first name lookup
-- `scripts/pull-skill.sh`: install a known released skill from immutable artifacts
+- `uv run infinitas install exact`: install a known qualified release from immutable artifacts
 - `uv run infinitas install check-update`: inspect whether a newer compatible release exists
 - `uv run infinitas install upgrade`: perform an immutable upgrade using the recorded source registry
 

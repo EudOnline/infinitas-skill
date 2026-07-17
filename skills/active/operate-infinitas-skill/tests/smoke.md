@@ -2,7 +2,7 @@
 
 Scenario:
 
-The user says: "Create a new private skill entry, author it as a draft, turn it into a release, expose it publicly after review, then tell another agent which hosted endpoints to use."
+The user says: "Create a new private skill entry and immutable version, turn it into a release, expose it publicly after review, then tell another agent which hosted endpoints to use."
 
 Expected behavior:
 

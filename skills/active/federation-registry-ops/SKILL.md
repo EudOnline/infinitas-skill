@@ -26,7 +26,7 @@ Use it when the question is about why a registry source is or is not visible, wh
 2. Read the generated export or catalog artifact before inferring behavior from implementation code.
 3. Check the configured registry source and trust policy in `config/registry-sources.json`.
 4. Use search, inspect, and export artifacts to compare the expected source identity with the observed result.
-5. Only drop into lower-level scripts when the generated surfaces leave a real contradiction.
+5. Use the registry source and catalog CLI commands when generated surfaces need refresh.
 
 ## Command and Artifact Map
 
@@ -34,7 +34,10 @@ Use it when the question is about why a registry source is or is not visible, wh
 - `uv run infinitas discovery inspect`: inspect the selected skill's source, trust, and provenance view
 - `catalog/inventory-export.json`: current inventory and registry visibility view
 - `catalog/audit-export.json`: release and provenance-oriented audit view
-- `scripts/build-catalog.sh`: regenerate derived artifacts after registry-source or policy changes
+- `uv run infinitas registry sources check`: validate source configuration
+- `uv run infinitas registry sources status`: inspect source refresh state
+- `uv run infinitas registry sources mirror`: push the configured one-way mirror
+- `uv run infinitas registry catalog build`: regenerate derived catalog artifacts
 
 ## Hard Rules
 

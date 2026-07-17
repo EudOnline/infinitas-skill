@@ -73,7 +73,7 @@
       "$schema": "../schemas/namespace-policy.schema.json",
       "version": 1,
       "compatibility": {
-        "allow_unqualified_names": true
+        "allow_unqualified_names": false
       },
       "publishers": {
         "lvxiaoer": {

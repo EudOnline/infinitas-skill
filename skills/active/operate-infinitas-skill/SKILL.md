@@ -1,6 +1,6 @@
 ---
 name: operate-infinitas-skill
-description: Use when OpenClaw, Codex, or Claude Code needs to operate the private-first infinitas-skill registry through drafts, releases, exposures, review cases, and audience-scoped discovery.
+description: Use when OpenClaw, Codex, or Claude Code needs to operate the private-first infinitas-skill registry through skills, immutable versions, releases, exposures, review cases, and audience-scoped discovery.
 ---
 
 # Operate infinitas-skill
@@ -15,8 +15,8 @@ Core rule: operate the hosted registry lifecycle, not the removed submission/pro
 
 Always distinguish these states before choosing a command:
 
-1. **Draft authoring**: mutable `skill_drafts`
-2. **Immutable release state**: `skill_versions`, `releases`, `artifacts`
+1. **Skill identity**: `skills`
+2. **Immutable content and release state**: `skill_versions`, `releases`, `artifacts`
 3. **Audience policy**: `exposures`, `review_cases`, `access_grants`, `credentials`
 4. **Discovery/install**: `/api/v1/catalog/*`, `/api/v1/install/*`, and `/registry/*`
 
@@ -26,23 +26,22 @@ Read this machine-facing surface first:
 - `docs/reference/cli-reference.md`
 - `docs/reference/openclaw-runtime-contract.md`
 - `docs/ops/release-checklist.md`
-- `docs/guide/private-first-cutover.md`
 
 Use `--mode confirm` first when the request could mutate the repo, write into a runtime directory, or publish a release.
 
 ## Command Map
 
-- `uv run infinitas registry`: the primary operator CLI for skills, drafts, releases, exposures, grants, tokens, and review cases
-- `/api/v1/skills`, `/api/v1/drafts/*`, `/api/v1/releases/*`: authoring and release lifecycle
+- `uv run infinitas registry`: the primary operator CLI for skills, versions, releases, exposures, grants, tokens, and review cases
+- `/api/v1/skills`, `/api/v1/versions/*`, `/api/v1/releases/*`: immutable authoring and release lifecycle
 - `/api/v1/exposures/*`, `/api/v1/review-cases/*`: exposure and review lifecycle
 - `/api/v1/catalog/*`, `/api/v1/install/*`, `/registry/*`: discovery and install surfaces
 
 ## Default Workflow
 
-1. Identify whether the user is asking to author, seal, release, expose, review, grant, discover, or download.
+1. Identify whether the user is asking to create a skill, create an immutable version, release, expose, review, grant, discover, or download.
 2. Read only the machine-facing docs first unless debugging requires deeper script inspection.
-3. Create or patch drafts before talking about releases.
-4. Seal drafts into versions, then create releases.
+3. Create the skill identity, then create an immutable version from validated content.
+4. Create a release from that version and wait for artifact materialization.
 5. Expose releases to the intended audience and review public exposures before calling them installable.
 6. Use registry discovery or install endpoints when the task is about audience-scoped download.
 
@@ -51,12 +50,12 @@ Use `--mode confirm` first when the request could mutate the repo, write into a 
 Use this section when the caller is working from an OpenClaw prototype or wants an OpenClaw runtime install.
 
 - Author content into the hosted private-first registry instead of relying on source-folder promotion
-- Use `uv run infinitas registry` or the hosted UI to create drafts, releases, and exposures
+- Use `uv run infinitas registry` or the hosted UI to create skills, versions, releases, and exposures
 - Treat `/api/v1/install/*` and `/registry/*` as the hosted download contract
 
 Hard rules for OpenClaw:
 
-- do not treat a draft as a release
+- do not mutate an immutable version after creation
 - do not treat a release as discoverable before exposure and review policy allow it
 - do not assume a grant token can read unrelated public or private releases
 
@@ -73,7 +72,7 @@ Use this section when Codex is acting as the repository operator.
 Use this section when Claude Code is acting as the repository operator.
 
 - Treat this repository as the registry source of truth, not as `~/.claude/skills` or `.claude/agents`
-- Follow the same draft -> release -> exposure -> review -> discovery workflow as other operators
+- Follow the same skill -> version -> release -> exposure -> review -> discovery workflow as other operators
 - Read the machine-facing docs first and only inspect internals when the docs leave a real gap
 
 ## Hard Rules
