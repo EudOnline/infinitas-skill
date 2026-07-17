@@ -1,7 +1,7 @@
 # Infinitas Skill Clean Architecture Reset Design
 
-**Date:** 2026-07-13  
-**Status:** Validated  
+**Date:** 2026-07-13
+**Status:** Validated
 **Audience:** Maintainers implementing the pre-release cleanup
 
 ## 1. Context

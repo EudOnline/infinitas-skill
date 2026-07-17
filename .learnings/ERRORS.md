@@ -1,5 +1,37 @@
 # Errors
 
+## [ERR-20260717-001] staged-diff-check-did-not-gate-commit
+
+**Logged**: 2026-07-17T00:00:00Z
+**Priority**: medium
+**Status**: resolved
+**Area**: git
+
+### Summary
+
+A multi-line commit command ran `git commit` after `git diff --cached --check`
+reported Markdown whitespace because the commands were separated by newlines rather
+than chained with `&&`.
+
+### Error
+
+```text
+trailing whitespace
+new blank line at EOF
+```
+
+### Suggested Fix
+
+Chain pre-commit verification and commit with `&&`, or run them as separate tool calls
+and inspect the first result before committing.
+
+### Resolution
+
+- **Resolved**: 2026-07-17T00:00:00Z
+- **Notes**: Removed the whitespace and added a dedicated hygiene follow-up commit.
+
+---
+
 ## [ERR-20260716-004] nullable-release-object-scope
 
 **Logged**: 2026-07-16T00:00:00Z

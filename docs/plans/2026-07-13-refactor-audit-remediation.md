@@ -127,4 +127,3 @@
 1. Mark resolved findings with exact verification evidence.
 2. Leave environment-blocked E2E and vulnerability database checks explicitly unverified.
 3. Record any intentionally deferred visual redesign or bulk formatting debt.
-
