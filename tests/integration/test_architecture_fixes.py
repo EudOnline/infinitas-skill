@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -232,6 +233,11 @@ class TestMemoryRateLimiter:
 
 
 class TestDBRateLimiter:
+    def test_zero_limit_never_consumes(self, db: Session):
+        limiter = DBRateLimiter(db)
+        assert limiter.consume("zero", max_attempts=0, window_seconds=60) is False
+        assert limiter.check("zero", max_attempts=1, window_seconds=60) is True
+
     def test_record_and_check(self, db: Session):
         limiter = DBRateLimiter(db)
         assert limiter.check("k", max_attempts=3, window_seconds=60) is True
@@ -240,6 +246,21 @@ class TestDBRateLimiter:
         assert limiter.check("k", max_attempts=3, window_seconds=60) is True
         limiter.record("k")
         assert limiter.check("k", max_attempts=3, window_seconds=60) is False
+
+    def test_sliding_window_survives_minute_boundary(
+        self,
+        db: Session,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from server import rate_limit
+
+        clock = [datetime(2026, 7, 19, 10, 59, 59, 900000, tzinfo=timezone.utc)]
+        monkeypatch.setattr(rate_limit, "utcnow", lambda: clock[0])
+        limiter = DBRateLimiter(db)
+        limiter.record("boundary")
+
+        clock[0] = datetime(2026, 7, 19, 11, 0, 0, 100000, tzinfo=timezone.utc)
+        assert limiter.check("boundary", max_attempts=1, window_seconds=60) is False
 
     def test_reset(self, db: Session):
         limiter = DBRateLimiter(db)

@@ -67,14 +67,11 @@ def test_create_version_sends_only_hosted_content_contract(monkeypatch, capsys) 
             "1.2.3",
             "--content-id",
             "cnt_fixture",
-            "--metadata-json",
-            '{"entrypoint":"SKILL.md"}',
         ]
     )
     assert args._handler(args) == 0
     assert captured["json"] == {
         "version": "1.2.3",
         "content_id": "cnt_fixture",
-        "metadata": {"entrypoint": "SKILL.md"},
     }
     assert json.loads(capsys.readouterr().out)["id"] == 9

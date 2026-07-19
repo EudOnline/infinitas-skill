@@ -298,7 +298,7 @@
                   }
                 },
                 "additionalProperties": true
-              },
+              }
             },
             "additionalProperties": true
           },
@@ -361,7 +361,10 @@
             "type": "string"
           },
           "verified_support": {
-            "type": ["boolean", "null"]
+            "type": "object",
+            "additionalProperties": {
+              "type": "object"
+            }
           },
           "interop": {
             "type": ["object", "null"],

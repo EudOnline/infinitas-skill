@@ -2,7 +2,7 @@
 audience: agent developers, CLI maintainers, integrators
 owner: repository maintainers
 source_of_truth: FastAPI OpenAPI schema
-last_reviewed: 2026-07-16
+last_reviewed: 2026-07-19
 status: maintained
 ---
 
@@ -84,6 +84,7 @@ The two `/me` routes serve different contexts: access identity for Agent/API aut
 - `GET /api/v1/library/{object_id}/releases`
 - `POST /api/v1/skills`
 - `GET /api/v1/skills/{skill_id}`
+- `POST /api/v1/skills/{skill_id}/content`
 - `GET|POST /api/v1/skills/{skill_id}/versions`
 - `POST /api/v1/versions/{version_id}/releases`
 - `GET /api/v1/releases/{release_id}`

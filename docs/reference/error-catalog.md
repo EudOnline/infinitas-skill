@@ -2,7 +2,7 @@
 audience: operators, automation authors
 owner: repository maintainers
 source_of_truth: error catalog
-last_reviewed: 2026-06-01
+last_reviewed: 2026-07-19
 status: maintained
 ---
 
@@ -59,6 +59,8 @@ These are returned as HTTP status codes in API responses. The CLI surface conver
 | `user session required` | Catalog or install endpoint requires a user session, not a grant credential | Use a personal token instead |
 | `grant credential required` | Grant-specific endpoint received a non-grant credential | Use a grant token |
 | `release access denied` | Principal does not have access to the release via any active exposure | Check exposure audience_type and grant state |
+| `credential is read-only` | Credential policy disables authoring mutations | Clear `readonly` from the Credential policy |
+| `credential policy does not allow object kind 'skill'` | Credential policy excludes Skills | Add `skill` to `allowed_object_kinds` |
 
 ### Not found (404)
 
@@ -88,6 +90,16 @@ These are returned as HTTP status codes in API responses. The CLI surface conver
 | `blocking review must be resolved before activation` | Public exposure requires blocking review to pass | Record a review decision first |
 | `blocking review must be approved before activation` | Blocking review received a rejection | Re-open the review or create a new exposure |
 | `ambiguous short skill ref` | Multiple skills match a partial reference | Use the full qualified name |
+| `validated skill content has expired` | The one-use upload exceeded its pending TTL | Upload the current bundle again |
+| `audience_type is required when the skill has no visibility profile` | Exposure omitted its audience and the Skill has no default | Supply `audience_type` or configure `default_visibility_profile` |
+
+### Rate and storage limits (429)
+
+| Error detail | Cause | Remediation |
+|---|---|---|
+| `credential daily publish limit exceeded` | Credential exhausted `max_daily_publishes` | Wait for the UTC daily window or update the policy |
+| `skill pending content quota exceeded` | Too many unconsumed uploads exist for the Skill | Create versions from or wait for expiry of pending content |
+| `publisher pending content byte quota exceeded` | Publisher pending bytes exceed the configured limit | Consume, expire, or prune pending uploads |
 
 ## Registry CLI specific errors
 
@@ -97,8 +109,6 @@ These originate from `src/infinitas_skill/registry/cli.py` and exit with code 1.
 |---|---|---|
 | `API request failed: <exc>` | Network error connecting to the registry | Check `--base-url`, network connectivity, and server status |
 | `<response.text>` | Server returned HTTP 400+ | Parse the response body for the specific error detail |
-| `invalid --metadata-json: <exc>` | `--metadata-json` value is not valid JSON | Ensure the value is a valid JSON string |
-| `invalid --metadata-json: expected JSON object` | `--metadata-json` parsed as JSON but is not an object | Wrap the value in `{}` |
 | `exposures update requires at least one of --listing-mode, --install-mode, or --requested-review-mode` | Neither flag provided to `exposures update` | Provide at least one of the flags |
 
 ## Local CLI errors

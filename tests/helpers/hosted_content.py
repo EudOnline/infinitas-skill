@@ -12,6 +12,7 @@ def build_skill_bundle(
     version: str,
     *,
     extra_files: dict[str, bytes] | None = None,
+    metadata_overrides: dict | None = None,
 ) -> bytes:
     metadata = {
         "schema_version": 1,
@@ -29,7 +30,17 @@ def build_skill_bundle(
         "risk_level": "low",
         "distribution": {"installable": True, "channel": "hosted"},
         "tests": {"smoke": "tests/smoke.md"},
+        "tags": ["hosted", "fixture"],
+        "maturity": "beta",
+        "quality_score": 73,
+        "capabilities": ["hosted-publish", "verified-install"],
+        "use_when": ["Need a hosted integration fixture"],
+        "avoid_when": ["Need a production skill"],
+        "runtime_assumptions": ["Hosted registry access is available"],
+        "requires": {"tools": ["read"], "bins": ["git"], "env": []},
+        "entrypoints": {"skill_md": "SKILL.md"},
     }
+    metadata.update(metadata_overrides or {})
     entries = {
         f"{slug}/SKILL.md": (
             f"---\nname: {slug}\ndescription: Hosted fixture for {slug}.\n---\n\n"

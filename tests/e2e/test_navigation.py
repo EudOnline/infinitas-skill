@@ -37,17 +37,22 @@ def test_theme_tokens_meet_wcag_text_contrast(authenticated_page, live_server):
     authenticated_page.goto(f"{live_server}/?lang=en")
 
     ratios = authenticated_page.evaluate(
-        """
+        r"""
         () => {
           const channel = (value) => {
             value /= 255;
             return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
           };
-          const luminance = (hex) => {
-            const value = hex.trim().replace('#', '');
-            const rgb = [0, 2, 4].map((offset) =>
-              channel(parseInt(value.slice(offset, offset + 2), 16))
-            );
+          const channels = (color) => {
+            const value = color.trim();
+            if (value.startsWith('#')) {
+              const hex = value.slice(1);
+              return [0, 2, 4].map((offset) => parseInt(hex.slice(offset, offset + 2), 16));
+            }
+            return value.match(/[\d.]+/g).slice(0, 3).map(Number);
+          };
+          const luminance = (color) => {
+            const rgb = channels(color).map(channel);
             return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
           };
           const contrast = (foreground, background) => {
@@ -59,14 +64,35 @@ def test_theme_tokens_meet_wcag_text_contrast(authenticated_page, live_server):
           return ['light', 'dark'].flatMap((scheme) => {
             root.dataset.colorScheme = scheme;
             const style = getComputedStyle(root);
-            const muted = style.getPropertyValue('--kawaii-ink-muted');
-            const paper = style.getPropertyValue('--kawaii-paper');
-            const elevated = style.getPropertyValue('--kawaii-surface-elevated');
-            const primary = style.getPropertyValue('--kawaii-primary');
+            const samples = [
+              ['kawaii-button kawai-button--primary', 'button'],
+              ['kawaii-button kawai-button--secondary', 'button'],
+              ['hero-kicker', 'span'],
+              ['search-result__readiness search-result__readiness--stale', 'span'],
+            ];
+            const host = document.createElement('div');
+            host.style.backgroundColor = 'var(--kawaii-surface)';
+            document.body.appendChild(host);
+            const measured = samples.map(([className, tag]) => {
+              const element = document.createElement(tag);
+              element.className = className;
+              element.textContent = 'Contrast sample';
+              host.appendChild(element);
+              const computed = getComputedStyle(element);
+              const background = computed.backgroundColor === 'rgba(0, 0, 0, 0)'
+                ? getComputedStyle(host).backgroundColor
+                : computed.backgroundColor;
+              const ratio = contrast(computed.color, background);
+              element.remove();
+              return ratio;
+            });
+            host.remove();
             return [
-              contrast(muted, paper),
-              contrast(muted, elevated),
-              contrast(paper, primary),
+              ...measured,
+              contrast(
+                style.getPropertyValue('--kawaii-ink-muted'),
+                style.getPropertyValue('--kawaii-paper')
+              ),
             ];
           });
         }

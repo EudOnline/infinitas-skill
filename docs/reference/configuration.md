@@ -2,7 +2,7 @@
 audience: operators and contributors
 owner: repository maintainers
 source_of_truth: server/settings.py
-last_reviewed: 2026-07-16
+last_reviewed: 2026-07-19
 status: maintained
 ---
 
@@ -33,6 +33,17 @@ unchanged passwords are not rehashed. v0.1 does not provide full user/team CRUD 
 does not claim horizontally scaled API or Worker operation.
 
 `INFINITAS_REGISTRY_READ_TOKENS` is a JSON array. When non-empty, hosted `/registry/*` reads require one of these bearer tokens. `INFINITAS_SERVER_TRUSTED_PROXIES` is an optional JSON array used when resolving client addresses behind a trusted proxy.
+
+Pending Hosted content uses three bounded-storage controls:
+
+- `INFINITAS_SERVER_CONTENT_PENDING_TTL_HOURS` — validated upload lifetime, default `24`
+- `INFINITAS_SERVER_CONTENT_MAX_PENDING_PER_SKILL` — pending count per Skill, default `10`
+- `INFINITAS_SERVER_CONTENT_MAX_PENDING_BYTES_PER_PRINCIPAL` — pending bytes per publisher,
+  default `268435456` (256 MiB)
+
+Expired content is rejected during version creation, pruned opportunistically on later uploads,
+and processed by the production startup cleanup job. Files created by a request are removed if
+the surrounding database transaction rolls back.
 
 Development and test environments may use the documented defaults. Production always
 requires explicit secure values: `INFINITAS_SERVER_ALLOW_INSECURE_DEFAULTS` cannot bypass

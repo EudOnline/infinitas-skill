@@ -117,11 +117,9 @@ def command_authoring_upload_content(args: argparse.Namespace) -> dict[str, Any]
 
 
 def command_authoring_create_version(args: argparse.Namespace) -> dict[str, Any]:
-    metadata = _parse_json_object(args.metadata_json, arg_name="--metadata-json")
     payload = {
         "version": args.version,
         "content_id": args.content_id,
-        "metadata": metadata,
     }
     return request_json(args, "POST", f"/api/v1/skills/{args.skill_id}/versions", payload)
 
@@ -240,6 +238,7 @@ def _configure_registry_authoring_commands(subparsers: argparse._SubParsersActio
     skills_create.add_argument(
         "--default-visibility-profile",
         default=None,
+        choices=("private", "grant", "authenticated", "public"),
         help="Optional default visibility profile identifier",
     )
     skills_create.set_defaults(_handler=_wrap_registry_handler(command_authoring_create_skill))
@@ -262,11 +261,6 @@ def _configure_registry_authoring_commands(subparsers: argparse._SubParsersActio
     versions_create.add_argument("--version", required=True, help="Semantic version to create")
     versions_create.add_argument(
         "--content-id", required=True, help="Validated content identifier returned by upload"
-    )
-    versions_create.add_argument(
-        "--metadata-json",
-        default="{}",
-        help="Version metadata as JSON object",
     )
     versions_create.set_defaults(_handler=_wrap_registry_handler(command_authoring_create_version))
 
@@ -413,7 +407,10 @@ def build_registry_skills_parser(*, prog: str | None = None) -> argparse.Argumen
     create.add_argument("--display-name", required=True, help="Human readable skill display name")
     create.add_argument("--summary", default="", help="Skill summary")
     create.add_argument(
-        "--default-visibility-profile", default=None, help="Default visibility profile"
+        "--default-visibility-profile",
+        default=None,
+        choices=("private", "grant", "authenticated", "public"),
+        help="Default visibility profile",
     )
     get = sub.add_parser("get", help="Fetch one skill by id")
     get.add_argument("skill_id", type=int, help="Skill identifier")
@@ -436,7 +433,6 @@ def build_registry_versions_parser(*, prog: str | None = None) -> argparse.Argum
     create.add_argument(
         "--content-id", required=True, help="Validated content identifier returned by upload"
     )
-    create.add_argument("--metadata-json", default="{}", help="Version metadata as JSON object")
     return parser
 
 

@@ -8,8 +8,11 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+import server.modules.audit.service as audit_service
 import server.modules.identity.service as identity_service
+from server.exceptions import ForbiddenError
 from server.modules.access.authn import AccessContext
+from server.modules.access.credential_policy import load_credential_policy_mapping
 from server.modules.access.models import AccessGrant
 from server.modules.audit.models import AuditEvent
 from server.modules.authoring.models import Skill
@@ -98,7 +101,7 @@ def update_credential_policy(
     db: Session,
     credential_id: int,
     updates: dict[str, Any],
-    actor_ref: str,
+    actor: User,
 ) -> dict[str, Any]:
     """Apply policy updates to a credential's grant or fallback storage.
 
@@ -108,6 +111,12 @@ def update_credential_policy(
     credential = identity_service.resolve_credential_by_id(db, credential_id)
     if credential is None:
         raise LookupError("credential not found")
+
+    actor_principal = identity_service.get_principal_for_user(db, actor)
+    if actor.role != "maintainer" and (
+        actor_principal is None or credential.principal_id != actor_principal.id
+    ):
+        raise ForbiddenError("credential policy access denied")
 
     if not updates:
         current = get_current_policy(db, credential)
@@ -127,6 +136,7 @@ def update_credential_policy(
             db.add(grant)
             db.flush()
             policy = json.loads(grant.constraints_json)
+            _audit_policy_update(db, credential=credential, actor=actor, updates=updates)
             return {"status": "updated", "policy": policy}
 
     # No grant -- store in credential.resource_selector_json under _policy
@@ -145,8 +155,28 @@ def update_credential_policy(
     db.add(credential)
     db.flush()
 
+    _audit_policy_update(db, credential=credential, actor=actor, updates=updates)
+
     updated_rs = json.loads(credential.resource_selector_json)
     return {"status": "updated", "policy": updated_rs.get("_policy")}
+
+
+def _audit_policy_update(
+    db: Session,
+    *,
+    credential: Credential,
+    actor: User,
+    updates: dict[str, Any],
+) -> None:
+    audit_service.append_audit_event(
+        db,
+        aggregate_type="credential",
+        aggregate_id=str(credential.id),
+        event_type="credential.policy.updated",
+        actor_ref=f"user:{actor.id}",
+        owner_principal_id=credential.principal_id,
+        payload={"updates": updates},
+    )
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -154,23 +184,8 @@ def update_credential_policy(
 
 def get_current_policy(db: Session, credential: Credential) -> dict[str, Any] | None:
     """Return the current policy dict for a credential, or None."""
-    if credential.grant_id is not None:
-        grant = db.get(AccessGrant, credential.grant_id)
-        if grant is not None and grant.constraints_json:
-            try:
-                policy = json.loads(grant.constraints_json)
-            except (json.JSONDecodeError, TypeError):
-                return None
-            return policy if isinstance(policy, dict) else None
-    # Check resource_selector_json._policy
-    if credential.resource_selector_json:
-        try:
-            rs = json.loads(credential.resource_selector_json)
-        except (json.JSONDecodeError, TypeError):
-            return None
-        policy = rs.get("_policy") if isinstance(rs, dict) else None
-        return policy if isinstance(policy, dict) else None
-    return None
+    policy = load_credential_policy_mapping(db, credential)
+    return policy or None
 
 
 def _resolve_accessible_skills(db: Session, credential: Credential) -> list[dict]:
@@ -255,12 +270,4 @@ def _resolve_operation_history(db: Session, credential: Credential) -> list[dict
 
 def _resolve_policy(db: Session, credential: Credential) -> dict[str, Any] | None:
     """Resolve the policy from the credential's associated grant."""
-    if credential.grant_id is not None:
-        grant = db.get(AccessGrant, credential.grant_id)
-        if grant is not None and grant.constraints_json:
-            try:
-                policy = json.loads(grant.constraints_json)
-            except (json.JSONDecodeError, TypeError):
-                return None
-            return policy if isinstance(policy, dict) else None
-    return None
+    return get_current_policy(db, credential)

@@ -185,7 +185,9 @@ class DBRateLimiter(RateLimiter):
         return int(total) < max_attempts
 
     def record(self, key: str) -> None:
-        window_start = utcnow().replace(second=0, microsecond=0)
+        # Store one-second buckets so sliding-window checks do not forget
+        # attempts made immediately before a minute boundary.
+        window_start = _window_start(1)
 
         entry = self._db.scalar(
             select(RateLimitEntry)
@@ -213,6 +215,8 @@ class DBRateLimiter(RateLimiter):
 
     def consume(self, key: str, *, max_attempts: int, window_seconds: int) -> bool:
         """Atomically consume one attempt in the current fixed window."""
+        if max_attempts <= 0:
+            return False
         now = utcnow()
         window_start = _window_start(window_seconds)
         self._db.execute(

@@ -42,6 +42,8 @@ class DiscoveryProjection:
     provenance_path: str
     signature_path: str
     bundle_sha256: str | None
+    metadata: dict[str, Any]
+    compatibility: dict[str, Any]
 
 
 def _artifact_paths(*, publisher: str, name: str, version: str) -> dict[str, str]:
@@ -113,6 +115,7 @@ def _projection_query(
             Skill.summary.label("summary"),
             SkillVersion.version.label("version"),
             SkillVersion.sealed_manifest_json.label("sealed_manifest_json"),
+            Release.platform_compatibility_json.label("platform_compatibility_json"),
         )
         .join(Release, Release.id == Exposure.release_id)
         .join(SkillVersion, SkillVersion.id == Release.skill_version_id)
@@ -178,7 +181,23 @@ def _projection_from_row(row: Any, bundle_sha_by_release: dict[int, str]) -> Dis
         provenance_path=paths["provenance_path"],
         signature_path=paths["signature_path"],
         bundle_sha256=bundle_sha_by_release.get(int(row.release_id)),
+        metadata=_sealed_metadata(row.sealed_manifest_json),
+        compatibility=_json_object(row.platform_compatibility_json),
     )
+
+
+def _json_object(raw: str | None) -> dict[str, Any]:
+    try:
+        payload = json.loads(raw or "{}")
+    except (json.JSONDecodeError, TypeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _sealed_metadata(raw: str | None) -> dict[str, Any]:
+    manifest = _json_object(raw)
+    metadata = manifest.get("metadata")
+    return metadata if isinstance(metadata, dict) else {}
 
 
 def build_release_projections(

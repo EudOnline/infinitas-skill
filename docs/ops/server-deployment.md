@@ -2,7 +2,7 @@
 audience: operators and release maintainers
 owner: repository maintainers
 source_of_truth: hosted deployment runbook
-last_reviewed: 2026-06-01
+last_reviewed: 2026-07-19
 status: maintained
 ---
 
@@ -34,6 +34,7 @@ The recommended single-node deployment shape now includes a generated `systemd` 
 - optional `INFINITAS_SERVER_REPO_LOCK_PATH`
 - optional `INFINITAS_SERVER_MIRROR_REMOTE`
 - optional `INFINITAS_SERVER_MIRROR_BRANCH`
+- optional pending-content TTL and quota settings documented in `docs/reference/configuration.md`
 
 Production safety rails:
 
@@ -70,11 +71,18 @@ If it is set to a JSON array of bearer tokens, hosted installers must send one o
 The repository now includes a container image path for the hosted registry:
 
 - `Dockerfile` packages the hosted API, worker entrypoints, ops scripts, and templates
-- `.github/workflows/validate.yml` runs the release gate once, then builds `linux/amd64` and `linux/arm64` images in a dependent job
+- Python runtime dependencies are installed from `uv.lock`; Python and uv source images are
+  pinned by digest
+- `.github/workflows/validate.yml` runs the release gate once, starts a locally built image for
+  a real `/api/v1/system/healthz` smoke check, then builds `linux/amd64` and `linux/arm64`
+  images in the dependent publication job
 - pull requests build the image without pushing
 - pushes to `main`, version tags matching `v*`, and manual workflow runs publish to GHCR as `ghcr.io/<owner>/infinitas-skill`
 
-The workflow emits branch, semver, `sha-*`, and default-branch `latest` tags. Image publication and provenance attestation cannot run until the complete validation job passes. The image contains a full runtime snapshot of the repository contents needed by the hosted control plane, and compose seeds that snapshot into a writable runtime repo on first boot.
+The workflow emits branch, semver, `sha-*`, and default-branch `latest` tags. Image publication
+and provenance attestation cannot run until validation and the container smoke check pass. The
+image contains a full runtime snapshot of the repository contents needed by the hosted control
+plane, and compose seeds that snapshot into a writable runtime repo on first boot.
 
 ## Docker Compose deployment
 

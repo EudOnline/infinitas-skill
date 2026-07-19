@@ -17,10 +17,11 @@ from server.exceptions_base import (
     NotFoundError as BaseNotFoundError,
 )
 from server.model_base import utcnow
+from server.modules.authoring.models import Skill
 from server.modules.exposure.models import Exposure
 from server.modules.exposure.schemas import ExposureCreateRequest, ExposurePatchRequest
 from server.modules.release.models import Release
-from server.modules.review.policy import evaluate_exposure_policy
+from server.modules.review.policy import PolicyOutcome, evaluate_exposure_policy
 
 
 class ExposureError(Exception):
@@ -80,6 +81,65 @@ def _assert_release_owner(
         raise ForbiddenError(str(exc)) from exc
 
 
+def _resolve_audience_type(
+    db: Session,
+    *,
+    release: Release,
+    requested_audience_type: str | None,
+) -> str:
+    if requested_audience_type:
+        return requested_audience_type
+    if release.skill_id is None:
+        raise ConflictError("audience_type is required for a release without a skill")
+    skill = db.get(Skill, release.skill_id)
+    if skill is None:
+        raise NotFoundError("skill not found")
+    profile = str(skill.default_visibility_profile or "").strip()
+    if profile not in {"public", "grant", "authenticated", "private"}:
+        raise ConflictError("audience_type is required when the skill has no visibility profile")
+    return profile
+
+
+def _evaluate_create_policy(
+    *,
+    audience_type: str,
+    requested_review_mode: str,
+) -> PolicyOutcome:
+    try:
+        return evaluate_exposure_policy(
+            audience_type=audience_type,
+            requested_review_mode=requested_review_mode,
+        )
+    except ValueError as exc:
+        raise ConflictError(str(exc)) from exc
+
+
+def _build_exposure(
+    *,
+    release_id: int,
+    actor_principal_id: int,
+    payload: ExposureCreateRequest,
+    outcome: PolicyOutcome,
+    compatibility: dict,
+) -> Exposure:
+    policy_snapshot = {
+        "audience_type": outcome.audience_type,
+        "requested_review_mode": outcome.requested_review_mode,
+        "review_requirement": outcome.review_requirement,
+        "platform_compatibility": compatibility,
+    }
+    return Exposure(
+        release_id=release_id,
+        audience_type=outcome.audience_type,
+        listing_mode=payload.listing_mode,
+        install_mode=payload.install_mode,
+        review_requirement=outcome.review_requirement,
+        state="pending_policy",
+        requested_by_principal_id=actor_principal_id,
+        policy_snapshot_json=json.dumps(policy_snapshot, ensure_ascii=False, sort_keys=True),
+    )
+
+
 def create_exposure(
     db: Session,
     *,
@@ -121,31 +181,23 @@ def create_exposure(
     )
     if release.state != "ready":
         raise ConflictError("only ready releases can be exposed")
-    compatibility = _assert_public_compatibility(release, payload.audience_type)
+    audience_type = _resolve_audience_type(
+        db,
+        release=release,
+        requested_audience_type=payload.audience_type,
+    )
+    compatibility = _assert_public_compatibility(release, audience_type)
 
-    try:
-        outcome = evaluate_exposure_policy(
-            audience_type=payload.audience_type,
-            requested_review_mode=payload.requested_review_mode,
-        )
-    except ValueError as exc:
-        raise ConflictError(str(exc)) from exc
-
-    policy_snapshot = {
-        "audience_type": outcome.audience_type,
-        "requested_review_mode": outcome.requested_review_mode,
-        "review_requirement": outcome.review_requirement,
-        "platform_compatibility": compatibility,
-    }
-    exposure = Exposure(
+    outcome = _evaluate_create_policy(
+        audience_type=audience_type,
+        requested_review_mode=payload.requested_review_mode,
+    )
+    exposure = _build_exposure(
         release_id=release_id,
-        audience_type=outcome.audience_type,
-        listing_mode=payload.listing_mode,
-        install_mode=payload.install_mode,
-        review_requirement=outcome.review_requirement,
-        state="pending_policy",
-        requested_by_principal_id=actor_principal_id,
-        policy_snapshot_json=json.dumps(policy_snapshot, ensure_ascii=False, sort_keys=True),
+        actor_principal_id=actor_principal_id,
+        payload=payload,
+        outcome=outcome,
+        compatibility=compatibility,
     )
     db.add(exposure)
     db.flush()

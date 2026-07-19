@@ -33,6 +33,8 @@ class TestSecurityHeaders:
         assert "font-src 'self'" in csp
         assert "fonts.googleapis.com" not in csp
         assert "fonts.gstatic.com" not in csp
+        assert "object-src 'none'" in csp
+        assert "form-action 'self'" in csp
         assert "frame-ancestors 'none'" in csp
 
     def test_x_frame_options_deny(self, tmp_path: Path):

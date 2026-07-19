@@ -10,6 +10,10 @@ import server.modules.authoring.service as service
 from server.db import get_db
 from server.modules.access.authn import AccessContext
 from server.modules.access.authz import require_any_scope
+from server.modules.access.credential_policy import (
+    CredentialPolicyForbidden,
+    assert_credential_mutation_allowed,
+)
 from server.modules.authoring.content import MAX_BUNDLE_BYTES, ContentValidationError
 from server.modules.authoring.schemas import (
     SkillContentView,
@@ -36,6 +40,7 @@ _CONTENT_ERROR_RESPONSES = {
     413: {"description": "Content bundle exceeds the upload size limit"},
     415: {"description": "Unsupported content type"},
     422: {"description": "Invalid or non-installable content bundle"},
+    429: {"description": "Pending content quota exceeded"},
 }
 
 
@@ -86,6 +91,17 @@ def _require_product_object_scope(context: AccessContext, skill_id: int | None) 
         raise HTTPException(status_code=403, detail="publisher token object scope mismatch")
 
 
+def _require_credential_mutation(context: AccessContext, db: Session) -> None:
+    try:
+        assert_credential_mutation_allowed(
+            db,
+            credential=context.credential,
+            object_kind="skill",
+        )
+    except CredentialPolicyForbidden as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+
 @router.post("/skills", response_model=SkillView, status_code=status.HTTP_201_CREATED)
 def create_skill(
     payload: SkillCreateRequest,
@@ -94,6 +110,7 @@ def create_skill(
 ) -> SkillView:
     principal_id = _require_authoring_principal(context)
     _require_product_object_scope(context, None)
+    _require_credential_mutation(context, db)
     try:
         skill = service.create_skill(
             db,
@@ -120,6 +137,7 @@ async def upload_content(
 ) -> SkillContentView:
     principal_id = _require_authoring_principal(context)
     _require_product_object_scope(context, skill_id)
+    _require_credential_mutation(context, db)
     raw_bundle = await _read_bundle_body(request)
     settings = get_settings()
     is_maintainer = context.user is not None and context.user.role == "maintainer"
@@ -132,6 +150,9 @@ async def upload_content(
             raw_bundle=raw_bundle,
             artifact_root=settings.artifact_path,
             repo_root=settings.repo_path,
+            pending_ttl_hours=settings.content_pending_ttl_hours,
+            max_pending_per_skill=settings.content_max_pending_per_skill,
+            max_pending_bytes_per_principal=(settings.content_max_pending_bytes_per_principal),
         )
     except service.NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -139,6 +160,8 @@ async def upload_content(
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except ContentValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except service.ContentQuotaError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
     return SkillContentView.from_model(content)
 
 
@@ -156,7 +179,9 @@ def create_version(
 ) -> SkillVersionView:
     principal_id = _require_authoring_principal(context)
     _require_product_object_scope(context, skill_id)
+    _require_credential_mutation(context, db)
     is_maintainer = context.user is not None and context.user.role == "maintainer"
+    settings = get_settings()
     try:
         skill_version = service.create_skill_version_snapshot(
             db,
@@ -165,7 +190,7 @@ def create_version(
             is_maintainer=is_maintainer,
             version=payload.version,
             content_public_id=payload.content_id,
-            metadata=payload.metadata,
+            pending_ttl_hours=settings.content_pending_ttl_hours,
         )
     except service.NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

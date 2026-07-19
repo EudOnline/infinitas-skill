@@ -257,6 +257,19 @@ def test_container_publication_depends_on_the_single_release_gate() -> None:
     assert "tests/unit -q --override-ini=addopts=" not in workflow
 
 
+def test_container_build_uses_locked_dependencies_and_runtime_smoke() -> None:
+    workflow = VALIDATE_WORKFLOW_PATH.read_text(encoding="utf-8")
+    dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+
+    assert "uv sync --all-groups --locked" in workflow
+    assert "Smoke test built image" in workflow
+    assert "/api/v1/system/healthz" in workflow
+    assert "COPY pyproject.toml uv.lock README.md ./" in dockerfile
+    assert dockerfile.count("uv sync --locked --no-dev") == 2
+    assert "python:3.11-slim@sha256:" in dockerfile
+    assert "ghcr.io/astral-sh/uv:0.11.28@sha256:" in dockerfile
+
+
 def test_validate_workflow_previews_archive_extraction_on_python_314() -> None:
     workflow = VALIDATE_WORKFLOW_PATH.read_text(encoding="utf-8")
 

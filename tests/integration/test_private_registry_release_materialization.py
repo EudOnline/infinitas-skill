@@ -87,11 +87,6 @@ def _create_release(client: TestClient) -> int:
         json={
             "version": "0.1.0",
             "content_id": content["content_id"],
-            "metadata": {
-                "entrypoint": "SKILL.md",
-                "language": "zh-CN",
-                "manifest": {"name": "materialized-release", "version": "0.1.0"},
-            },
         },
     )
     assert create_version.status_code == 201, create_version.text
@@ -126,11 +121,6 @@ def _create_release_with_version(client: TestClient) -> tuple[int, int]:
         json={
             "version": "0.1.0",
             "content_id": content["content_id"],
-            "metadata": {
-                "entrypoint": "SKILL.md",
-                "language": "zh-CN",
-                "manifest": {"name": "materialized-release", "version": "0.1.0"},
-            },
         },
     )
     assert create_version.status_code == 201, create_version.text
@@ -176,10 +166,6 @@ def _create_uploaded_content_release(client: TestClient) -> int:
         json={
             "version": "0.1.0",
             "content_id": content["content_id"],
-            "metadata": {
-                "entrypoint": "SKILL.md",
-                "manifest": {"name": "materialized-release", "version": "0.1.0"},
-            },
         },
     )
     assert create_version.status_code == 201, create_version.text

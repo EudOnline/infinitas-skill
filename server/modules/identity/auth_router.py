@@ -48,6 +48,7 @@ def _check_login_rate_limit(
         raise HTTPException(
             status_code=429,
             detail="Too many login attempts. Please try again later.",
+            headers={"Retry-After": str(_RATE_LIMIT_WINDOW)},
         )
     limiter.record(rate_limit_key)
 
@@ -62,6 +63,20 @@ class LoginResponse(BaseModel):
     username: str | None = None
     role: str | None = None
     error: str | None = None
+
+
+class LogoutResponse(BaseModel):
+    success: bool
+
+
+class CsrfResponse(BaseModel):
+    csrf_token: str
+
+
+class CurrentUserResponse(BaseModel):
+    authenticated: bool
+    username: str | None = None
+    role: str | None = None
 
 
 def _secure_cookie_requested(request: Request) -> bool:
@@ -149,7 +164,7 @@ def login(
     return LoginResponse(success=True, username=user.username, role=user.role)
 
 
-@router.post("/logout")
+@router.post("/logout", response_model=LogoutResponse)
 def logout(response: Response, request: Request, db: Session = Depends(get_db)) -> dict[str, bool]:
     """Revoke the session credential and clear browser cookies."""
     # Revoke the credential on the server side to prevent cookie reuse
@@ -174,14 +189,14 @@ def logout(response: Response, request: Request, db: Session = Depends(get_db)) 
     return {"success": True}
 
 
-@router.get("/csrf")
+@router.get("/csrf", response_model=CsrfResponse)
 def get_csrf_token(request: Request, response: Response) -> dict[str, str]:
     """Refresh and return a new CSRF token for the current session."""
     token = _set_csrf_cookie(response, request)
     return {"csrf_token": token}
 
 
-@router.get("/me")
+@router.get("/me", response_model=CurrentUserResponse)
 def get_current_user_info(request: Request, db: Session = Depends(get_db)) -> dict[str, object]:
     """Get current authenticated user info for browser session probing."""
     user = maybe_get_current_user(request, db)

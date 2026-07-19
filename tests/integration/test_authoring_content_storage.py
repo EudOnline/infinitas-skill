@@ -85,7 +85,6 @@ def test_upload_and_create_version_freezes_validated_content() -> None:
             json={
                 "version": "0.1.0",
                 "content_id": content["content_id"],
-                "metadata": {"entrypoint": "SKILL.md"},
             },
         )
         assert response.status_code == 201, response.text
@@ -93,6 +92,9 @@ def test_upload_and_create_version_freezes_validated_content() -> None:
         assert payload["content_digest"] == content["sha256"]
         assert payload["sealed_manifest"]["content_id"] == content["content_id"]
         assert payload["sealed_manifest"]["content_mode"] == "uploaded_bundle"
+        assert payload["sealed_manifest"]["metadata"]["name"] == "uploaded-skill"
+        assert payload["sealed_manifest"]["metadata"]["version"] == "0.1.0"
+        assert payload["sealed_manifest"]["metadata"]["quality_score"] == 73
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -194,7 +196,7 @@ def test_legacy_content_fields_are_rejected() -> None:
         assert response.status_code == 422
         schema = client.get("/openapi.json").json()["components"]["schemas"]
         properties = schema["SkillVersionCreateRequest"]["properties"]
-        assert set(properties) == {"version", "content_id", "metadata"}
+        assert set(properties) == {"version", "content_id"}
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 

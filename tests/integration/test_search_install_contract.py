@@ -87,7 +87,6 @@ def create_ready_release(client, headers: dict[str, str], *, slug: str, display_
         json={
             "version": "0.1.0",
             "content_id": content["content_id"],
-            "metadata": {"entrypoint": "SKILL.md"},
         },
     )
     assert create_version_response.status_code == 201, create_version_response.text

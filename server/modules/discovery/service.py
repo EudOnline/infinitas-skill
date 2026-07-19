@@ -217,9 +217,16 @@ def _catalog_snapshot_projections() -> list[DiscoveryProjection]:
                     ],
                 ),
                 bundle_sha256=(str(distribution.get("bundle_sha256") or "").strip() or None),
+                metadata=dict(item),
+                compatibility=_dict_value(item, "compatibility"),
             )
         )
     return projections
+
+
+def _dict_value(payload: dict, key: str) -> dict:
+    value = payload.get(key)
+    return dict(value) if isinstance(value, dict) else {}
 
 
 def _available_release_projections(

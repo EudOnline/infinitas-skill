@@ -19,6 +19,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "img-src 'self' data:; "
             "font-src 'self'; "
             "connect-src 'self'; "
+            "object-src 'none'; "
+            "form-action 'self'; "
             "frame-ancestors 'none'; "
             "base-uri 'self'"
         )

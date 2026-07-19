@@ -52,7 +52,6 @@ def _prepare_library_client(
         json={
             "version": "1.0.0",
             "content_id": content["content_id"],
-            "metadata": {"entrypoint": "SKILL.md"},
         },
     )
     assert version_response.status_code == 201, version_response.text

@@ -32,6 +32,87 @@ cannot make the repository gate nondeterministic.
 
 ---
 
+## [ERR-20260719-004] profile-exclude-none-and-rate-limit-boundary-regressions
+
+**Logged**: 2026-07-19T11:15:00+00:00
+**Priority**: medium
+**Status**: resolved
+**Area**: backend
+
+### Summary
+
+The full test suite exposed an over-broad response exclusion and a minute-boundary gap in
+the database login rate limiter.
+
+### Error
+
+```text
+4 failed, 1231 passed
+```
+
+### Context
+
+- Route-level `response_model_exclude_none=True` removed contractually present null fields
+  from the entire profile response instead of only omitting unset policy members.
+- Database rate-limit records were rounded to minute buckets, so a sliding-window query
+  could forget attempts made immediately before the next minute.
+
+### Suggested Fix
+
+Apply null omission at the nested policy serializer and store login limiter records in
+one-second buckets for accurate sliding-window checks.
+
+### Metadata
+
+- Reproducible: boundary-dependent
+- Related Files: server/modules/identity/profile_schemas.py, server/rate_limit.py
+
+### Resolution
+
+- **Resolved**: 2026-07-19T11:15:00+00:00
+- **Notes**: Preserved top-level nullable API fields, added a focused policy serializer,
+  and added a regression test spanning a minute boundary.
+
+---
+
+## [ERR-20260719-001] unavailable-jsonschema-test-dependency
+
+**Logged**: 2026-07-19T09:41:33+00:00
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+
+A new schema syntax test imported `jsonschema`, which is not a project dependency.
+
+### Error
+
+```text
+ModuleNotFoundError: No module named 'jsonschema'
+```
+
+### Context
+
+- The test only needed to catch invalid JSON syntax and assert two contract shapes.
+- Adding a runtime or test dependency for that narrow check would unnecessarily expand the lockfile.
+
+### Suggested Fix
+
+Use the standard-library JSON parser and explicit contract assertions unless full JSON Schema validation is already part of the dependency set.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: tests/unit/discovery/test_ai_index_schema.py, schemas/ai-index.schema.json
+
+### Resolution
+
+- **Resolved**: 2026-07-19T09:41:33+00:00
+- **Notes**: Replaced the unavailable dependency with `json.loads` plus focused schema-shape assertions.
+
+---
+
 ## [ERR-20260717-007] apply-patch-font-config-context
 
 **Logged**: 2026-07-17T00:00:00Z
@@ -1652,5 +1733,85 @@ Search all existing initializers before adding a controller. For navigation init
 
 - **Resolved**: 2026-07-15T07:38:00Z
 - **Notes**: Removed the duplicate initializer, strengthened the login E2E synchronization, and changed authenticated fixtures to reuse one session state.
+
+---
+
+## [ERR-20260719-002] oversized-response-model-patch-context
+
+**Logged**: 2026-07-19T10:13:39+00:00
+**Priority**: low
+**Status**: resolved
+**Area**: backend
+
+### Summary
+
+A multi-file response-model patch failed because one expected import line was absent.
+
+### Error
+
+```text
+apply_patch verification failed: Failed to find expected lines in server/modules/discovery/schemas.py
+```
+
+### Context
+
+- The patch assumed `from typing import Any` already existed.
+- One context mismatch caused the entire large patch to be rejected.
+
+### Suggested Fix
+
+Inspect exact file headers and split cross-domain edits into smaller patches with local context.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: server/modules/discovery/schemas.py
+- Recurrence-Count: 2
+- See Also: docs/ops/server-deployment.md documentation sync on 2026-07-19
+
+### Resolution
+
+- **Resolved**: 2026-07-19T10:13:39+00:00
+- **Notes**: Rebuilt changes as smaller file-specific patches using current file content; the
+  same method was reused after a documentation paragraph wrapping mismatch.
+
+---
+
+## [ERR-20260719-003] bootstrap-ignore-created-empty-state-directory
+
+**Logged**: 2026-07-19T10:34:26+00:00
+**Priority**: medium
+**Status**: resolved
+**Area**: backend
+
+### Summary
+
+Runtime bootstrap ignore rules removed files inside `.state` but still created the ignored top-level directory.
+
+### Error
+
+```text
+assert not (repo / ".state").exists()
+AssertionError: assert not True
+```
+
+### Context
+
+- `shutil.copytree(..., ignore=...)` applies ignore matching to children of the copied directory.
+- The top-level source child had already been selected for copying, so an empty ignored directory remained.
+
+### Suggested Fix
+
+Filter ignored top-level names before invoking `copytree`, while retaining recursive ignore patterns.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: server/runtime_repo.py, tests/integration/test_runtime_repo.py
+
+### Resolution
+
+- **Resolved**: 2026-07-19T10:34:26+00:00
+- **Notes**: Added explicit top-level ignore filtering for runtime state, caches, virtualenvs, coverage output, and node modules.
 
 ---

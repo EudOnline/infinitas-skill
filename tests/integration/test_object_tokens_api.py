@@ -159,7 +159,6 @@ def test_object_publisher_token_publishes_only_its_bound_object(
         json={
             "version": "2.0.0",
             "content_id": content["content_id"],
-            "metadata": {"entrypoint": "SKILL.md"},
         },
     )
     assert version_response.status_code == 201, version_response.text

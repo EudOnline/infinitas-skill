@@ -1,37 +1,39 @@
 # ── Build stage ────────────────────────────────────────────────────────────────
-FROM python:3.11-slim AS builder
+ARG PYTHON_IMAGE=python:3.11-slim@sha256:db3ff2e1800a8581e2c48a27c3995339d47bdf046da21c7627accd3d51053a93
+FROM ${PYTHON_IMAGE} AS builder
+
+COPY --from=ghcr.io/astral-sh/uv:0.11.28@sha256:0f36cb9361a3346885ca3677e3767016687b5a170c1a6b88465ec14aefec90aa /uv /uvx /bin/
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
-
-RUN apt-get update \
-    && apt-get install --yes --no-install-recommends \
-        build-essential \
-        git \
-    && rm -rf /var/lib/apt/lists/*
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
 
 WORKDIR /build
 
-# Copy dependency metadata first for layer caching
-COPY pyproject.toml README.md ./
-COPY src/ src/
+# Install the exact locked runtime dependency set first for layer caching.
+COPY pyproject.toml uv.lock README.md ./
+RUN uv sync --locked --no-dev --no-install-project
 
-# Install build dependencies and the package
-RUN pip install --upgrade pip \
-    && pip install .
+# Install the project itself from the same lock without an editable source link.
+COPY src/ src/
+COPY server/ server/
+RUN uv sync --locked --no-dev --no-editable
 
 
 # ── Runtime stage ─────────────────────────────────────────────────────────────
-FROM python:3.11-slim AS runtime
+FROM ${PYTHON_IMAGE} AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    INFINITAS_BUNDLED_REPO_PATH=/opt/infinitas/bundle
+    INFINITAS_BUNDLED_REPO_PATH=/opt/infinitas/bundle \
+    VIRTUAL_ENV=/opt/venv \
+    PATH="/opt/venv/bin:$PATH"
 
 # Install runtime dependencies only
-RUN apt-get update \
-    && apt-get install --yes --no-install-recommends \
+RUN apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 update \
+    && apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install \
+        --yes --no-install-recommends \
         bash \
         ca-certificates \
         git \
@@ -39,9 +41,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --shell /bin/bash --uid 1000 infinitas
 
-# Copy installed Python packages from builder
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+# Copy the locked runtime environment from the build stage.
+COPY --from=builder /build/.venv /opt/venv
 
 WORKDIR /opt/infinitas/bundle
 

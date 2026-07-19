@@ -8,22 +8,16 @@
     --kawaii-primary-rgb: 183 66 104;
     --kawaii-primary-soft: #f2cad7;
     --kawaii-primary-deep: #8f2f50;
+    --kawaii-primary-action: #8f2f50;
     --kawaii-secondary: #2f7f88;
     --kawaii-secondary-soft: #b9dfe1;
     --kawaii-secondary-deep: #245f66;
     --kawaii-success: #297a57;
     --kawaii-success-rgb: 41 122 87;
-    --kawaii-warning: #956b16;
+    --kawaii-warning: #76510d;
     --kawaii-danger: #b23a48;
     --kawaii-danger-rgb: 178 58 72;
     --kawaii-info: #2f6f9f;
-    --kawaii-mint: #bfe3d2;
-    --kawaii-lavender: #d9cbe8;
-    --kawaii-lemon: #eadb9d;
-    --kawaii-coral: #e8a092;
-    --kawaii-rose: #c75a7b;
-    --kawaii-peach: #edc5aa;
-    --kawaii-sky: #b9d7ea;
     --kawaii-ink: #292936;
     --kawaii-ink-soft: #555463;
     --kawaii-ink-muted: #716e7b;
@@ -60,10 +54,11 @@
     --kawaii-primary: #df86a4;
     --kawaii-primary-rgb: 223 134 164;
     --kawaii-primary-soft: #efb3c7;
-    --kawaii-primary-deep: #c96588;
+    --kawaii-primary-deep: #df86a4;
+    --kawaii-primary-action: #9f365c;
     --kawaii-secondary: #77c2c8;
     --kawaii-secondary-soft: #9ed6da;
-    --kawaii-secondary-deep: #4e9fa7;
+    --kawaii-secondary-deep: #2e737b;
     --kawaii-success: #78c69e;
     --kawaii-success-rgb: 120 198 158;
     --kawaii-warning: #ddc271;
@@ -544,8 +539,8 @@
   .kawaii-button--primary,
   .quick-pill--primary {
     color: #fff8fa;
-    background: var(--kawaii-primary-deep);
-    border-color: var(--kawaii-primary-deep);
+    background: var(--kawaii-primary-action);
+    border-color: var(--kawaii-primary-action);
   }
   .kawaii-button--secondary {
     color: #f5fcfc;

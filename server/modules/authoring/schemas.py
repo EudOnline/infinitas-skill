@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from server.modules.authoring.models import Skill, SkillContent, SkillVersion
@@ -17,7 +19,7 @@ class SkillCreateRequest(BaseModel):
     slug: str = Field(min_length=1, max_length=200, pattern=SLUG_PATTERN)
     display_name: str = Field(min_length=1, max_length=200)
     summary: str = ""
-    default_visibility_profile: str | None = Field(default=None, max_length=64)
+    default_visibility_profile: Literal["private", "grant", "authenticated", "public"] | None = None
 
 
 class SkillVersionCreateRequest(BaseModel):
@@ -25,7 +27,6 @@ class SkillVersionCreateRequest(BaseModel):
 
     version: str = Field(min_length=1, max_length=64, pattern=SEMVER_PATTERN)
     content_id: str = Field(min_length=8, max_length=64, pattern=r"^cnt_[A-Za-z0-9_-]+$")
-    metadata: dict = Field(default_factory=dict)
 
 
 class SkillContentView(BaseModel):

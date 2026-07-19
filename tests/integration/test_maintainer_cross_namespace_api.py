@@ -110,7 +110,6 @@ def test_maintainer_can_administer_contributor_owned_lifecycle_resources(
             json={
                 "version": "0.1.0",
                 "content_id": content["content_id"],
-                "metadata": {"entrypoint": "SKILL.md", "maintained_by": "fixture-maintainer"},
             },
         )
         assert create_version.status_code == 201, create_version.text

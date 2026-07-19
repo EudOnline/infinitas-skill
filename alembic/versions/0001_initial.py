@@ -147,6 +147,7 @@ def upgrade() -> None:
         sa.Column("sha256", sa.String(length=64), nullable=False),
         sa.Column("size_bytes", sa.BigInteger(), nullable=False),
         sa.Column("declared_version", sa.String(length=64), nullable=False),
+        sa.Column("metadata_json", sa.Text(), nullable=False),
         sa.Column("state", sa.String(length=32), nullable=False),
         sa.Column("created_by_principal_id", sa.Integer(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),

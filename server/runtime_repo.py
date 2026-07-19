@@ -23,6 +23,19 @@ BOOTSTRAP_IGNORE = shutil.ignore_patterns(
     "node_modules",
 )
 
+BOOTSTRAP_IGNORED_TOP_LEVEL = {
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".state",
+    ".deploy",
+    ".venv",
+    "__pycache__",
+    "htmlcov",
+    "node_modules",
+}
+
 
 class RuntimeRepoError(RepoOpError):
     pass
@@ -70,7 +83,7 @@ def _copy_snapshot(source: Path, target: Path) -> None:
             child.unlink()
 
     for child in source.iterdir():
-        if child.name == ".git":
+        if child.name in BOOTSTRAP_IGNORED_TOP_LEVEL or child.name.startswith(".coverage"):
             continue
         destination = target / child.name
         if child.is_dir():

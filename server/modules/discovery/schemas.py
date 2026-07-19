@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from server.modules.discovery.projections import DiscoveryProjection
@@ -86,3 +88,26 @@ class ProjectionArtifactPaths(BaseModel):
     bundle_url: str
     provenance_url: str
     signature_url: str
+
+
+class SearchSkillView(BaseModel):
+    id: str
+    name: str
+    qualified_name: str
+    summary: str = ""
+    version: str
+    icon: str
+    publisher: str
+    audience_type: str
+    listing_mode: str
+    install_scope: str
+    install_ref: str
+    install_api_path: str | None = None
+    runtime: dict[str, Any] | None = None
+    runtime_readiness: str | None = None
+    workspace_targets: list[str] | None = None
+
+
+class SearchResponse(BaseModel):
+    skills: list[SearchSkillView] = Field(default_factory=list)
+    commands: list[dict[str, Any]] = Field(default_factory=list)

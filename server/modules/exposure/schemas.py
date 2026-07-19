@@ -10,7 +10,7 @@ from server.modules.shared.json import loads_json_object
 
 
 class ExposureCreateRequest(BaseModel):
-    audience_type: Literal["public", "grant", "authenticated", "private"]
+    audience_type: Literal["public", "grant", "authenticated", "private"] | None = None
     listing_mode: Literal["listed", "direct_only"] = "listed"
     install_mode: Literal["enabled", "disabled"] = "enabled"
     requested_review_mode: Literal["none", "advisory", "blocking"] = "none"

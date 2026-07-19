@@ -71,7 +71,13 @@ def _prepare_signing_repo(repo: Path, signing_key: Path) -> None:
     )
 
 
-def create_ready_release(client: TestClient, headers: dict[str, str], *, slug: str) -> int:
+def create_ready_release(
+    client: TestClient,
+    headers: dict[str, str],
+    *,
+    slug: str,
+    default_visibility_profile: str | None = None,
+) -> int:
     from server.worker import run_worker_loop
 
     create_skill = client.post(
@@ -81,6 +87,7 @@ def create_ready_release(client: TestClient, headers: dict[str, str], *, slug: s
             "slug": slug,
             "display_name": "Exposure Patch Skill",
             "summary": "Exposure patch fixture",
+            "default_visibility_profile": default_visibility_profile,
         },
     )
     assert create_skill.status_code == 201, create_skill.text
@@ -93,7 +100,6 @@ def create_ready_release(client: TestClient, headers: dict[str, str], *, slug: s
         json={
             "version": "0.1.0",
             "content_id": content["content_id"],
-            "metadata": {"entrypoint": "SKILL.md"},
         },
     )
     assert create_version.status_code == 201, create_version.text
@@ -109,6 +115,37 @@ def create_ready_release(client: TestClient, headers: dict[str, str], *, slug: s
     processed = run_worker_loop(limit=5)
     assert processed >= 1
     return release_id
+
+
+def test_exposure_uses_skill_default_visibility_profile(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    _prepare_signing_repo(temp_repo_copy, signing_key)
+    configure_env(tmp_path)
+    os.environ["INFINITAS_SERVER_REPO_PATH"] = str(temp_repo_copy)
+
+    from server.app import create_app
+
+    client = TestClient(create_app())
+    headers = {"Authorization": "Bearer fixture-maintainer-token"}
+    release_id = create_ready_release(
+        client,
+        headers,
+        slug="default-visibility-skill",
+        default_visibility_profile="grant",
+    )
+
+    response = client.post(
+        f"/api/v1/releases/{release_id}/exposures",
+        headers=headers,
+        json={"listing_mode": "direct_only"},
+    )
+
+    assert response.status_code == 201, response.text
+    assert response.json()["audience_type"] == "grant"
 
 
 def test_patch_exposure_rejects_requested_review_mode_mutation(

@@ -15,6 +15,7 @@ from server.jobs import (
     load_job_payload,
 )
 from server.logging import get_logger
+from server.modules.authoring.service import prune_expired_skill_contents
 from server.modules.discovery.projections import refresh_projection_snapshot
 from server.modules.jobs.models import Job
 from server.modules.release.materializer import materialize_release
@@ -62,6 +63,21 @@ def _process_materialize_release_job(session: Session, job: Job, settings: Setti
     return release
 
 
+def _process_prune_skill_contents_job(session: Session, job: Job, settings: Settings) -> None:
+    payload = load_job_payload(job)
+    try:
+        limit = int(payload.get("limit") or 1000)
+    except (TypeError, ValueError) as exc:
+        raise RepoOpError("prune_skill_contents job has invalid limit payload") from exc
+    summary = prune_expired_skill_contents(
+        session,
+        artifact_root=settings.artifact_path,
+        ttl_hours=settings.content_pending_ttl_hours,
+        limit=max(1, min(limit, 10_000)),
+    )
+    append_job_log(job, f"pruned pending skill contents: {summary}")
+
+
 def _is_retryable_error(exc: Exception) -> bool:
     """Determine if a job failure is transient and worth retrying."""
     message = str(exc).lower()
@@ -92,6 +108,8 @@ def process_job(job_id: int) -> None:
             session.refresh(job)
             if job.kind == "materialize_release":
                 _process_materialize_release_job(session, job, settings)
+            elif job.kind == "prune_skill_contents":
+                _process_prune_skill_contents_job(session, job, settings)
             else:
                 raise RepoOpError(f"unsupported job kind: {job.kind}")
             complete_job(session, job)

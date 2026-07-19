@@ -732,6 +732,9 @@
           },
           "422": {
             "description": "Invalid or non-installable content bundle"
+          },
+          "429": {
+            "description": "Pending content quota exceeded"
           }
         },
         "security": [
@@ -1928,9 +1931,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Registry Ai Index Api V1 Registry Ai Index Json Get"
+                  "$ref": "#/components/schemas/RegistryAIIndexView"
                 }
               }
             }
@@ -1951,9 +1952,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Registry Discovery Index Api V1 Registry Discovery Index Json Get"
+                  "$ref": "#/components/schemas/RegistryDiscoveryView"
                 }
               }
             }
@@ -1974,9 +1973,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Registry Distributions Api V1 Registry Distributions Json Get"
+                  "$ref": "#/components/schemas/RegistryDistributionsView"
                 }
               }
             }
@@ -1997,9 +1994,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Registry Compatibility Api V1 Registry Compatibility Json Get"
+                  "$ref": "#/components/schemas/RegistryCompatibilityView"
                 }
               }
             }
@@ -2103,11 +2098,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "boolean"
-                  },
-                  "type": "object",
-                  "title": "Response Logout Api V1 Auth Logout Post"
+                  "$ref": "#/components/schemas/LogoutResponse"
                 }
               }
             }
@@ -2129,11 +2120,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "type": "object",
-                  "title": "Response Get Csrf Token Api V1 Auth Csrf Get"
+                  "$ref": "#/components/schemas/CsrfResponse"
                 }
               }
             }
@@ -2155,9 +2142,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Get Current User Info Api V1 Auth Me Get"
+                  "$ref": "#/components/schemas/CurrentUserResponse"
                 }
               }
             }
@@ -2213,9 +2198,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Profile Me Api V1 Profile Me Get"
+                  "$ref": "#/components/schemas/CredentialProfileView"
                 }
               }
             }
@@ -2298,9 +2281,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Profile Admin View Api V1 Profile  Credential Id  Get"
+                  "$ref": "#/components/schemas/CredentialProfileView"
                 }
               }
             }
@@ -2393,9 +2374,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Credential Policy Update Api V1 Credentials  Credential Id  Policy Patch"
+                  "$ref": "#/components/schemas/CredentialPolicyUpdateView"
                 }
               }
             }
@@ -3591,9 +3570,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Search Registry Api V1 Search Get"
+                  "$ref": "#/components/schemas/SearchResponse"
                 }
               }
             }
@@ -3870,6 +3847,34 @@
           "credential_type"
         ],
         "title": "AccessIdentityView"
+      },
+      "AccessibleSkillView": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "slug",
+          "display_name",
+          "kind"
+        ],
+        "title": "AccessibleSkillView"
       },
       "ActivityEventView": {
         "properties": {
@@ -4201,15 +4206,134 @@
         "type": "object",
         "title": "CatalogListView"
       },
+      "CredentialPolicyUpdateView": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "updated",
+            "title": "Status"
+          },
+          "policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CredentialPolicyView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "CredentialPolicyUpdateView"
+      },
+      "CredentialPolicyView": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "CredentialProfileView": {
+        "properties": {
+          "identity": {
+            "$ref": "#/components/schemas/ProfileIdentityView"
+          },
+          "accessible_skills": {
+            "items": {
+              "$ref": "#/components/schemas/AccessibleSkillView"
+            },
+            "type": "array",
+            "title": "Accessible Skills"
+          },
+          "operation_history": {
+            "items": {
+              "$ref": "#/components/schemas/OperationHistoryView"
+            },
+            "type": "array",
+            "title": "Operation History"
+          },
+          "policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CredentialPolicyView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "identity"
+        ],
+        "title": "CredentialProfileView"
+      },
+      "CsrfResponse": {
+        "properties": {
+          "csrf_token": {
+            "type": "string",
+            "title": "Csrf Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "csrf_token"
+        ],
+        "title": "CsrfResponse"
+      },
+      "CurrentUserResponse": {
+        "properties": {
+          "authenticated": {
+            "type": "boolean",
+            "title": "Authenticated"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "authenticated"
+        ],
+        "title": "CurrentUserResponse"
+      },
       "ExposureCreateRequest": {
         "properties": {
           "audience_type": {
-            "type": "string",
-            "enum": [
-              "public",
-              "grant",
-              "authenticated",
-              "private"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "private",
+                  "grant",
+                  "authenticated",
+                  "public"
+                ]
+              },
+              {
+                "type": "null"
+              }
             ],
             "title": "Audience Type"
           },
@@ -4243,9 +4367,6 @@
           }
         },
         "type": "object",
-        "required": [
-          "audience_type"
-        ],
         "title": "ExposureCreateRequest"
       },
       "ExposurePatchRequest": {
@@ -4956,6 +5077,19 @@
         ],
         "title": "LoginResponse"
       },
+      "LogoutResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "LogoutResponse"
+      },
       "ObjectTokenCreateRequest": {
         "properties": {
           "name": {
@@ -5019,6 +5153,55 @@
           "scope_id"
         ],
         "title": "ObjectTokenCreateRequest"
+      },
+      "OperationHistoryView": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "aggregate_type": {
+            "type": "string",
+            "title": "Aggregate Type"
+          },
+          "aggregate_id": {
+            "type": "string",
+            "title": "Aggregate Id"
+          },
+          "event_type": {
+            "type": "string",
+            "title": "Event Type"
+          },
+          "actor_ref": {
+            "type": "string",
+            "title": "Actor Ref"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "aggregate_type",
+          "aggregate_id",
+          "event_type",
+          "actor_ref"
+        ],
+        "title": "OperationHistoryView"
       },
       "PolicyUpdateBody": {
         "properties": {
@@ -5187,6 +5370,841 @@
           "state"
         ],
         "title": "ProductTokenView"
+      },
+      "ProfileIdentityView": {
+        "properties": {
+          "credential_id": {
+            "type": "integer",
+            "title": "Credential Id"
+          },
+          "credential_type": {
+            "type": "string",
+            "title": "Credential Type"
+          },
+          "principal_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Principal Id"
+          },
+          "principal_slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Principal Slug"
+          },
+          "principal_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Principal Kind"
+          },
+          "principal_display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Principal Display Name"
+          },
+          "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scopes"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "credential_id",
+          "credential_type"
+        ],
+        "title": "ProfileIdentityView"
+      },
+      "RegistryAIIndexView": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "title": "Schema Version"
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          },
+          "registry": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Registry"
+          },
+          "install_policy": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Install Policy"
+          },
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/RegistrySkillView"
+            },
+            "type": "array",
+            "title": "Skills"
+          }
+        },
+        "type": "object",
+        "required": [
+          "schema_version",
+          "generated_at",
+          "registry",
+          "install_policy"
+        ],
+        "title": "RegistryAIIndexView"
+      },
+      "RegistryCompatibilityEntryView": {
+        "properties": {
+          "qualified_name": {
+            "type": "string",
+            "title": "Qualified Name"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "publisher": {
+            "type": "string",
+            "title": "Publisher"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "bundle_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bundle Sha256"
+          }
+        },
+        "type": "object",
+        "required": [
+          "qualified_name",
+          "name",
+          "publisher",
+          "version"
+        ],
+        "title": "RegistryCompatibilityEntryView"
+      },
+      "RegistryCompatibilityView": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "title": "Schema Version"
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          },
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/RegistryCompatibilityEntryView"
+            },
+            "type": "array",
+            "title": "Skills"
+          }
+        },
+        "type": "object",
+        "required": [
+          "schema_version",
+          "generated_at"
+        ],
+        "title": "RegistryCompatibilityView"
+      },
+      "RegistryDiscoverySkillView": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "qualified_name": {
+            "type": "string",
+            "title": "Qualified Name"
+          },
+          "publisher": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publisher"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "source_registry": {
+            "type": "string",
+            "title": "Source Registry"
+          },
+          "source_priority": {
+            "type": "integer",
+            "title": "Source Priority"
+          },
+          "match_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Match Names"
+          },
+          "default_install_version": {
+            "type": "string",
+            "title": "Default Install Version"
+          },
+          "latest_version": {
+            "type": "string",
+            "title": "Latest Version"
+          },
+          "available_versions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Available Versions"
+          },
+          "runtime": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Runtime"
+          },
+          "runtime_readiness": {
+            "type": "string",
+            "title": "Runtime Readiness"
+          },
+          "workspace_targets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Workspace Targets"
+          },
+          "agent_compatible": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Agent Compatible"
+          },
+          "install_requires_confirmation": {
+            "type": "boolean",
+            "title": "Install Requires Confirmation"
+          },
+          "trust_level": {
+            "type": "string",
+            "title": "Trust Level"
+          },
+          "trust_state": {
+            "type": "string",
+            "title": "Trust State"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "maturity": {
+            "type": "string",
+            "title": "Maturity"
+          },
+          "quality_score": {
+            "type": "integer",
+            "title": "Quality Score"
+          },
+          "last_verified_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Verified At"
+          },
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Capabilities"
+          },
+          "verified_support": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Verified Support"
+          },
+          "attestation_formats": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Attestation Formats"
+          },
+          "use_when": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Use When"
+          },
+          "avoid_when": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Avoid When"
+          },
+          "runtime_assumptions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Runtime Assumptions"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "name",
+          "kind",
+          "qualified_name",
+          "summary",
+          "source_registry",
+          "source_priority",
+          "default_install_version",
+          "latest_version",
+          "runtime",
+          "runtime_readiness",
+          "install_requires_confirmation",
+          "trust_level",
+          "trust_state",
+          "maturity",
+          "quality_score",
+          "verified_support"
+        ],
+        "title": "RegistryDiscoverySkillView"
+      },
+      "RegistryDiscoveryView": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "title": "Schema Version"
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          },
+          "default_registry": {
+            "type": "string",
+            "title": "Default Registry"
+          },
+          "sources": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "resolution_policy": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Resolution Policy"
+          },
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/RegistryDiscoverySkillView"
+            },
+            "type": "array",
+            "title": "Skills"
+          }
+        },
+        "type": "object",
+        "required": [
+          "schema_version",
+          "generated_at",
+          "default_registry",
+          "resolution_policy"
+        ],
+        "title": "RegistryDiscoveryView"
+      },
+      "RegistryDistributionEntryView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "publisher": {
+            "type": "string",
+            "title": "Publisher"
+          },
+          "qualified_name": {
+            "type": "string",
+            "title": "Qualified Name"
+          },
+          "identity_mode": {
+            "type": "string",
+            "title": "Identity Mode"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "manifest_path": {
+            "type": "string",
+            "title": "Manifest Path"
+          },
+          "bundle_path": {
+            "type": "string",
+            "title": "Bundle Path"
+          },
+          "bundle_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bundle Sha256"
+          },
+          "attestation_path": {
+            "type": "string",
+            "title": "Attestation Path"
+          },
+          "attestation_signature_path": {
+            "type": "string",
+            "title": "Attestation Signature Path"
+          },
+          "published_at": {
+            "type": "string",
+            "title": "Published At"
+          },
+          "source_type": {
+            "type": "string",
+            "title": "Source Type"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "audience_type": {
+            "type": "string",
+            "title": "Audience Type"
+          },
+          "listing_mode": {
+            "type": "string",
+            "title": "Listing Mode"
+          },
+          "release_id": {
+            "type": "integer",
+            "title": "Release Id"
+          },
+          "exposure_id": {
+            "type": "integer",
+            "title": "Exposure Id"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          },
+          "compatibility": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Compatibility"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "kind",
+          "name",
+          "publisher",
+          "qualified_name",
+          "identity_mode",
+          "version",
+          "status",
+          "summary",
+          "manifest_path",
+          "bundle_path",
+          "attestation_path",
+          "attestation_signature_path",
+          "published_at",
+          "source_type",
+          "display_name",
+          "audience_type",
+          "listing_mode",
+          "release_id",
+          "exposure_id",
+          "metadata",
+          "compatibility"
+        ],
+        "title": "RegistryDistributionEntryView"
+      },
+      "RegistryDistributionsView": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "title": "Schema Version"
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          },
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/RegistryDistributionEntryView"
+            },
+            "type": "array",
+            "title": "Skills"
+          }
+        },
+        "type": "object",
+        "required": [
+          "schema_version",
+          "generated_at"
+        ],
+        "title": "RegistryDistributionsView"
+      },
+      "RegistrySkillView": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "publisher": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publisher"
+          },
+          "qualified_name": {
+            "type": "string",
+            "title": "Qualified Name"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "maturity": {
+            "type": "string",
+            "title": "Maturity"
+          },
+          "quality_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Score"
+          },
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Capabilities"
+          },
+          "last_verified_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Verified At"
+          },
+          "use_when": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Use When"
+          },
+          "avoid_when": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Avoid When"
+          },
+          "runtime_assumptions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Runtime Assumptions"
+          },
+          "runtime": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Runtime"
+          },
+          "agent_compatible": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Agent Compatible"
+          },
+          "compatibility": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Compatibility"
+          },
+          "verified_support": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Verified Support"
+          },
+          "trust_state": {
+            "type": "string",
+            "title": "Trust State"
+          },
+          "default_install_version": {
+            "type": "string",
+            "title": "Default Install Version"
+          },
+          "latest_version": {
+            "type": "string",
+            "title": "Latest Version"
+          },
+          "available_versions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Available Versions"
+          },
+          "entrypoints": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Entrypoints"
+          },
+          "requires": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Requires"
+          },
+          "interop": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Interop"
+          },
+          "versions": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/RegistryVersionView"
+            },
+            "type": "object",
+            "title": "Versions"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "name",
+          "kind",
+          "display_name",
+          "qualified_name",
+          "summary",
+          "maturity",
+          "runtime",
+          "compatibility",
+          "verified_support",
+          "trust_state",
+          "default_install_version",
+          "latest_version",
+          "entrypoints",
+          "requires",
+          "interop",
+          "versions"
+        ],
+        "title": "RegistrySkillView"
+      },
+      "RegistryVersionView": {
+        "properties": {
+          "manifest_path": {
+            "type": "string",
+            "title": "Manifest Path"
+          },
+          "distribution_manifest_path": {
+            "type": "string",
+            "title": "Distribution Manifest Path"
+          },
+          "bundle_path": {
+            "type": "string",
+            "title": "Bundle Path"
+          },
+          "bundle_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bundle Sha256"
+          },
+          "attestation_path": {
+            "type": "string",
+            "title": "Attestation Path"
+          },
+          "attestation_signature_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attestation Signature Path"
+          },
+          "published_at": {
+            "type": "string",
+            "title": "Published At"
+          },
+          "stability": {
+            "type": "string",
+            "title": "Stability"
+          },
+          "installable": {
+            "type": "boolean",
+            "title": "Installable"
+          },
+          "attestation_formats": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Attestation Formats"
+          },
+          "trust_state": {
+            "type": "string",
+            "title": "Trust State"
+          },
+          "resolution": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Resolution"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "manifest_path",
+          "distribution_manifest_path",
+          "bundle_path",
+          "attestation_path",
+          "published_at",
+          "stability",
+          "installable",
+          "trust_state",
+          "resolution"
+        ],
+        "title": "RegistryVersionView"
       },
       "ReleaseAccessCheckView": {
         "properties": {
@@ -5503,6 +6521,138 @@
           "created_at"
         ],
         "title": "ReviewDecisionView"
+      },
+      "SearchResponse": {
+        "properties": {
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/SearchSkillView"
+            },
+            "type": "array",
+            "title": "Skills"
+          },
+          "commands": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Commands"
+          }
+        },
+        "type": "object",
+        "title": "SearchResponse"
+      },
+      "SearchSkillView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "qualified_name": {
+            "type": "string",
+            "title": "Qualified Name"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "default": ""
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "icon": {
+            "type": "string",
+            "title": "Icon"
+          },
+          "publisher": {
+            "type": "string",
+            "title": "Publisher"
+          },
+          "audience_type": {
+            "type": "string",
+            "title": "Audience Type"
+          },
+          "listing_mode": {
+            "type": "string",
+            "title": "Listing Mode"
+          },
+          "install_scope": {
+            "type": "string",
+            "title": "Install Scope"
+          },
+          "install_ref": {
+            "type": "string",
+            "title": "Install Ref"
+          },
+          "install_api_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Install Api Path"
+          },
+          "runtime": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime"
+          },
+          "runtime_readiness": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime Readiness"
+          },
+          "workspace_targets": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Targets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "qualified_name",
+          "version",
+          "icon",
+          "publisher",
+          "audience_type",
+          "listing_mode",
+          "install_scope",
+          "install_ref"
+        ],
+        "title": "SearchSkillView"
       },
       "ShareLinkCreateRequest": {
         "properties": {
@@ -5831,7 +6981,12 @@
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 64
+                "enum": [
+                  "private",
+                  "grant",
+                  "authenticated",
+                  "public"
+                ]
               },
               {
                 "type": "null"
@@ -5862,11 +7017,6 @@
             "minLength": 8,
             "pattern": "^cnt_[A-Za-z0-9_-]+$",
             "title": "Content Id"
-          },
-          "metadata": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Metadata"
           }
         },
         "additionalProperties": false,

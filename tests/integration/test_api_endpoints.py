@@ -199,6 +199,7 @@ class TestRateLimiting:
             )
         # Should be rate limited after multiple failures
         assert response.status_code == 429
+        assert response.headers["retry-after"] == "60"
 
     def test_rate_limit_resets_after_success(self, tmp_path: Path):
         client = _api_client(tmp_path, bootstrap_users=_BOOTSTRAP_USER)

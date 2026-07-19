@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, cast
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from server.model_base import utcnow
@@ -17,6 +18,56 @@ def get_skill_content_by_public_id(db: Session, public_id: str) -> SkillContent 
     return db.scalar(select(SkillContent).where(SkillContent.public_id == public_id))
 
 
+def pending_content_usage(
+    db: Session,
+    *,
+    skill_id: int,
+    principal_id: int,
+) -> tuple[int, int]:
+    skill_count = db.scalar(
+        select(func.count(SkillContent.id))
+        .where(SkillContent.skill_id == skill_id)
+        .where(SkillContent.state == "validated")
+        .where(SkillContent.consumed_at.is_(None))
+    )
+    principal_bytes = db.scalar(
+        select(func.sum(SkillContent.size_bytes))
+        .where(SkillContent.created_by_principal_id == principal_id)
+        .where(SkillContent.state == "validated")
+        .where(SkillContent.consumed_at.is_(None))
+    )
+    return int(skill_count or 0), int(principal_bytes or 0)
+
+
+def list_expired_skill_contents(
+    db: Session,
+    *,
+    cutoff: datetime,
+    limit: int,
+    principal_id: int | None = None,
+) -> list[SkillContent]:
+    query = (
+        select(SkillContent)
+        .where(SkillContent.state == "validated")
+        .where(SkillContent.consumed_at.is_(None))
+        .where(SkillContent.created_at < cutoff)
+        .order_by(SkillContent.created_at.asc(), SkillContent.id.asc())
+        .limit(limit)
+    )
+    if principal_id is not None:
+        query = query.where(SkillContent.created_by_principal_id == principal_id)
+    return list(db.scalars(query).all())
+
+
+def active_storage_uri_is_referenced(db: Session, storage_uri: str) -> bool:
+    query = (
+        select(SkillContent.id)
+        .where(SkillContent.storage_uri == storage_uri)
+        .where(SkillContent.state != "expired")
+    )
+    return db.scalar(query.limit(1)) is not None
+
+
 def create_skill_content(
     db: Session,
     *,
@@ -26,6 +77,7 @@ def create_skill_content(
     sha256: str,
     size_bytes: int,
     declared_version: str,
+    metadata_json: str,
     created_by_principal_id: int,
 ) -> SkillContent:
     content = SkillContent(
@@ -35,6 +87,7 @@ def create_skill_content(
         sha256=sha256,
         size_bytes=size_bytes,
         declared_version=declared_version,
+        metadata_json=metadata_json,
         state="validated",
         created_by_principal_id=created_by_principal_id,
     )

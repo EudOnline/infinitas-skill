@@ -2,7 +2,7 @@
 audience: contributors, operators, integrators
 owner: repository maintainers
 source_of_truth: business-flow audit of the maintained control plane
-last_reviewed: 2026-05-13
+last_reviewed: 2026-07-19
 status: maintained
 ---
 
@@ -254,8 +254,13 @@ The Agent-facing publish API is object-centric. Hosted publication has one conte
 
 1. upload a complete `tar.gz` bundle with `POST /api/v1/skills/{skill_id}/content`;
 2. receive the opaque, one-use `content_id`;
-3. create an immutable version with that `content_id`;
+3. create an immutable version with that `content_id`; the validated bundle `_meta.json` is
+   sealed as version metadata and cannot be replaced by a second client-supplied document;
 4. let the worker revalidate the complete Skill bundle before marking its Release `ready`.
+
+Pending content is bounded by TTL, per-Skill count, and per-publisher byte quotas. Credential
+write policies are enforced before authoring, and the daily publish quota is atomically consumed
+only when a new Release is created.
 
 The legacy draft and sealed-version transitions have been removed. The maintained
 `skill` flow creates immutable versions directly from content.

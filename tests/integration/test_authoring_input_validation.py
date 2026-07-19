@@ -79,7 +79,6 @@ def test_create_version_rejects_invalid_version_string() -> None:
             json={
                 "version": "release/1",
                 "content_id": "cnt_validationfixture",
-                "metadata": {"entrypoint": "SKILL.md"},
             },
         )
         assert create_version.status_code == 422, create_version.text

@@ -63,7 +63,6 @@ def test_publish_facade_creates_release_via_direct_version(
         json={
             "version": "1.2.3",
             "content_id": content["content_id"],
-            "metadata": {"entrypoint": "SKILL.md"},
         },
     )
     assert version_response.status_code == 201, version_response.text

@@ -2,7 +2,7 @@
 audience: contributors, operators, frontend implementers
 owner: repository maintainers
 source_of_truth: web admin and agent product contract
-last_reviewed: 2026-04-24
+last_reviewed: 2026-07-19
 status: maintained
 ---
 
@@ -114,6 +114,8 @@ Token expectations:
 
 - `reader` tokens can read Library metadata and fetch authorized Releases
 - `publisher` tokens can publish Object changes and create Releases
+- Credential policy enforces `readonly`, `allowed_object_kinds`, and
+  `max_daily_publishes` on Agent writes
 - web admins can inspect token activity, revoke tokens, and rotate tokens
 
 ## Share Link model
@@ -153,6 +155,8 @@ Share Link requirements:
 - `POST /api/v1/share-links/{share_id}/revoke`
 - `GET /api/v1/activity`
 - `POST /api/v1/skills`
+- `POST /api/v1/skills/{skill_id}/content`
+- `GET|POST /api/v1/skills/{skill_id}/versions`
 - `POST /api/v1/versions/{version_id}/releases`
 - `GET /api/v1/releases/{release_id}`
 
@@ -161,6 +165,8 @@ Share Link requirements:
 - Web navigation prioritizes Library, Access, Shares, Activity, and Settings.
 - The web app is not the primary place to create Objects.
 - Skill authoring and release production remain agent-driven workflows.
+- A Skill `default_visibility_profile` may be `private`, `grant`, `authenticated`, or `public`;
+  omitting Exposure `audience_type` applies that profile.
 - `skill` is the default featured Object in the web UI, but the information architecture must support all Object kinds.
 
 ## Frontend implementation requirement

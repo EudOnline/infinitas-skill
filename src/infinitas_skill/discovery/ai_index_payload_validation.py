@@ -208,8 +208,13 @@ def _validate_skill(skill: object, index: int, errors: list[str]) -> None:
     maturity = skill.get("maturity")
     if not isinstance(maturity, str) or not maturity.strip():
         errors.append(f"{prefix}.maturity must be a non-empty string")
-    if not isinstance(skill.get("quality_score"), int):
-        errors.append(f"{prefix}.quality_score must be an integer")
+    quality_score = skill.get("quality_score")
+    if quality_score is not None and (
+        not isinstance(quality_score, int)
+        or isinstance(quality_score, bool)
+        or not 0 <= quality_score <= 100
+    ):
+        errors.append(f"{prefix}.quality_score must be null or an integer from 0 to 100")
     verified_at = skill.get("last_verified_at")
     if verified_at is not None and (not isinstance(verified_at, str) or not verified_at.strip()):
         errors.append(f"{prefix}.last_verified_at must be a non-empty string when present")

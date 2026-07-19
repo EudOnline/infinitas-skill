@@ -42,6 +42,7 @@ from server.modules.release.service import ReleaseSnapshot
 from server.modules.release.signing import resolve_signer_identity, sign_provenance
 from server.modules.release.snapshot_accessors import (
     snapshot_content_id,
+    snapshot_metadata,
 )
 from server.modules.release.storage import ArtifactStorage, build_artifact_storage
 
@@ -120,6 +121,8 @@ def _build_and_store_bundle(
         raise RuntimeError("stored skill content is not in canonical bundle form")
     if validated.declared_version != snapshot.skill_version.version:
         raise RuntimeError("stored skill content version no longer matches the sealed version")
+    if _canonical_json(validated.metadata) != _canonical_json(snapshot_metadata(snapshot)):
+        raise RuntimeError("stored skill content metadata no longer matches the sealed version")
     public_path = (
         Path("skills")
         / snapshot.namespace.slug
@@ -136,6 +139,10 @@ def _build_and_store_bundle(
         "public_path": public_path,
         "metadata": validated.metadata,
     }
+
+
+def _canonical_json(payload: dict[str, Any]) -> str:
+    return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
 def _persist_platform_compatibility(

@@ -55,6 +55,7 @@ class SkillContent(Base):
     sha256: Mapped[str] = mapped_column(String(64))
     size_bytes: Mapped[int] = mapped_column(BigInteger)
     declared_version: Mapped[str] = mapped_column(String(64))
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
     state: Mapped[str] = mapped_column(String(32), default="validated")
     created_by_principal_id: Mapped[int] = mapped_column(ForeignKey("principals.id"), index=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)

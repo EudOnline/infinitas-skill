@@ -13,6 +13,7 @@ from infinitas_skill.openclaw.runtime_model import build_openclaw_runtime_model
 from infinitas_skill.root import ROOT
 from server.db import get_db
 from server.exceptions import ForbiddenError
+from server.modules.discovery.schemas import SearchResponse
 from server.modules.identity.auth import maybe_get_current_access_context
 
 router = APIRouter(prefix="/api/v1/search", tags=["search"])
@@ -169,7 +170,7 @@ def _snapshot_skill_payloads(items: list[dict[str, Any]], *, limit: int) -> list
     return results
 
 
-@router.get("")
+@router.get("", response_model=SearchResponse)
 def search_registry(
     request: Request,
     q: str = Query(default="", max_length=200),

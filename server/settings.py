@@ -11,6 +11,9 @@ DEFAULT_SERVER_ENV = "development"
 DEFAULT_SECRET_KEY = "dev-only-insecure-key"  # noqa: S105
 DEFAULT_ALLOWED_HOSTS = ["testserver", "localhost", "127.0.0.1", "::1"]
 MIN_SECRET_KEY_LENGTH = 32  # Minimum secure key length in bytes
+DEFAULT_CONTENT_PENDING_TTL_HOURS = 24
+DEFAULT_CONTENT_MAX_PENDING_PER_SKILL = 10
+DEFAULT_CONTENT_MAX_PENDING_BYTES_PER_PRINCIPAL = 256 * 1024 * 1024
 
 
 def validate_secret_key_strength(secret_key: str, environment: str) -> None:
@@ -98,6 +101,9 @@ class Settings:
     artifact_path: Path
     registry_read_tokens: list[str]
     trusted_proxies: list[str]
+    content_pending_ttl_hours: int
+    content_max_pending_per_skill: int
+    content_max_pending_bytes_per_principal: int
 
 
 def _normalize_bootstrap_users(payload: object) -> list[dict]:
@@ -187,6 +193,19 @@ def _load_allowed_hosts(environment: str) -> list[str]:
     return list(DEFAULT_ALLOWED_HOSTS)
 
 
+def _load_positive_int_env(name: str, default: int) -> int:
+    raw = str(os.environ.get(name) or "").strip()
+    if not raw:
+        return default
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise RuntimeError(f"{name} must be a positive integer") from exc
+    if value <= 0:
+        raise RuntimeError(f"{name} must be a positive integer")
+    return value
+
+
 def _validate_production_bootstrap_login(users: list[dict]) -> None:
     from server.modules.identity.passwords import validate_password_strength
 
@@ -261,6 +280,18 @@ def get_settings() -> Settings:
         "INFINITAS_SERVER_TRUSTED_PROXIES",
         strict=False,
     )
+    content_pending_ttl_hours = _load_positive_int_env(
+        "INFINITAS_SERVER_CONTENT_PENDING_TTL_HOURS",
+        DEFAULT_CONTENT_PENDING_TTL_HOURS,
+    )
+    content_max_pending_per_skill = _load_positive_int_env(
+        "INFINITAS_SERVER_CONTENT_MAX_PENDING_PER_SKILL",
+        DEFAULT_CONTENT_MAX_PENDING_PER_SKILL,
+    )
+    content_max_pending_bytes_per_principal = _load_positive_int_env(
+        "INFINITAS_SERVER_CONTENT_MAX_PENDING_BYTES_PER_PRINCIPAL",
+        DEFAULT_CONTENT_MAX_PENDING_BYTES_PER_PRINCIPAL,
+    )
     if environment == "production":
         _validate_production_bootstrap_login(bootstrap_users)
 
@@ -277,4 +308,7 @@ def get_settings() -> Settings:
         artifact_path=artifact_path,
         registry_read_tokens=registry_read_tokens,
         trusted_proxies=trusted_proxies,
+        content_pending_ttl_hours=content_pending_ttl_hours,
+        content_max_pending_per_skill=content_max_pending_per_skill,
+        content_max_pending_bytes_per_principal=content_max_pending_bytes_per_principal,
     )

@@ -10,6 +10,12 @@ from sqlalchemy.orm import Session
 
 import server.modules.registry.service as service
 from server.db import get_db
+from server.modules.registry.schemas import (
+    RegistryAIIndexView,
+    RegistryCompatibilityView,
+    RegistryDiscoveryView,
+    RegistryDistributionsView,
+)
 from server.settings import Settings, get_settings
 
 router = APIRouter(prefix="/api/v1/registry", tags=["registry"])
@@ -39,7 +45,7 @@ def _payload(
         raise HTTPException(status_code=401, detail=str(exc)) from exc
 
 
-@router.get("/ai-index.json")
+@router.get("/ai-index.json", response_model=RegistryAIIndexView)
 def registry_ai_index(
     request: Request,
     db: Session = Depends(get_db),
@@ -47,7 +53,7 @@ def registry_ai_index(
     return _payload(service.build_registry_ai_index_payload, request, db)
 
 
-@router.get("/discovery-index.json")
+@router.get("/discovery-index.json", response_model=RegistryDiscoveryView)
 def registry_discovery_index(
     request: Request,
     db: Session = Depends(get_db),
@@ -55,7 +61,7 @@ def registry_discovery_index(
     return _payload(service.build_registry_discovery_payload, request, db)
 
 
-@router.get("/distributions.json")
+@router.get("/distributions.json", response_model=RegistryDistributionsView)
 def registry_distributions(
     request: Request,
     db: Session = Depends(get_db),
@@ -63,7 +69,7 @@ def registry_distributions(
     return _payload(service.build_registry_distributions_payload, request, db)
 
 
-@router.get("/compatibility.json")
+@router.get("/compatibility.json", response_model=RegistryCompatibilityView)
 def registry_compatibility(
     request: Request,
     db: Session = Depends(get_db),

@@ -2,7 +2,7 @@
 audience: operators, automation authors
 owner: repository maintainers
 source_of_truth: hosted registry CLI reference
-last_reviewed: 2026-06-01
+last_reviewed: 2026-07-19
 status: maintained
 ---
 
@@ -117,7 +117,7 @@ Create a new skill in the registry.
 | `--slug` | yes | | Skill slug |
 | `--display-name` | yes | | Human readable skill display name |
 | `--summary` | no | `''` | Skill summary |
-| `--default-visibility-profile` | no | `None` | Default visibility profile |
+| `--default-visibility-profile` | no | `None` | Default audience: `private`, `grant`, `authenticated`, or `public` |
 
 API: `POST /api/v1/skills`
 
@@ -174,6 +174,8 @@ Example response:
 Upload a complete installable Skill bundle. The archive must have one root directory matching
 the Skill slug and must include valid `SKILL.md`, `_meta.json`, `CHANGELOG.md`, and smoke test
 content. The returned `content_id` is scoped to that Skill and can create exactly one version.
+The validated bundle `_meta.json` is the only version metadata source. Pending uploads expire
+after the configured TTL and are bounded by per-Skill count and per-publisher byte quotas.
 
 | Argument | Required | Description |
 |---|---|---|
@@ -193,7 +195,6 @@ Create an immutable skill version directly from content.
 | `skill_id` (positional) | yes | | Skill identifier (int) |
 | `--version` | yes | | Semantic version to create |
 | `--content-id` | yes | | Validated content identifier returned by upload |
-| `--metadata-json` | no | `'{}'` | Version metadata JSON object |
 
 API: `POST /api/v1/skills/{skill_id}/versions`
 
@@ -206,8 +207,8 @@ Example response:
   "version": "1.0.0",
   "content_digest": "sha256:abc123",
   "metadata_digest": "sha256:def456",
-  "sealed_manifest_json": "{}",
-  "sealed_manifest": {},
+  "sealed_manifest_json": "{...}",
+  "sealed_manifest": {"content_id":"cnt_example","metadata":{"name":"my-skill","version":"1.0.0"}},
   "created_by_principal_id": 1,
   "created_at": "2026-04-22T00:02:00Z"
 }

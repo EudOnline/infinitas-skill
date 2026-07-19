@@ -456,6 +456,33 @@ class TestProfileAdminViewAuth:
         )
         assert response.status_code == 200
 
+    def test_contributor_cannot_update_another_principals_credential(self, tmp_path: Path):
+        client = _contributor_client(tmp_path)
+
+        from server.db import get_session_factory
+        from server.modules.identity.models import Credential, Principal
+
+        with get_session_factory()() as session:
+            other = Principal(kind="user", slug="other-policy-user", display_name="Other")
+            session.add(other)
+            session.flush()
+            credential = Credential(
+                principal_id=other.id,
+                type="personal_token",
+                hashed_secret="sha256:other",
+            )
+            session.add(credential)
+            session.commit()
+            credential_id = credential.id
+
+        response = client.patch(
+            f"/api/v1/credentials/{credential_id}/policy",
+            headers={"Authorization": "Bearer contrib-test-token"},
+            json={"readonly": True},
+        )
+
+        assert response.status_code == 403
+
     def test_viewer_role_forbidden(self, tmp_path: Path):
         client = _viewer_client(tmp_path)
         response = client.get(

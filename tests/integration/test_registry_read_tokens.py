@@ -123,11 +123,6 @@ def _create_public_release(client: TestClient) -> tuple[int, str]:
         json={
             "version": "0.1.0",
             "content_id": content["content_id"],
-            "metadata": {
-                "entrypoint": "SKILL.md",
-                "language": "zh-CN",
-                "manifest": {"name": "registry-gated-skill", "version": "0.1.0"},
-            },
         },
     )
     assert create_version.status_code == 201, create_version.text
@@ -213,12 +208,22 @@ def test_registry_read_tokens_gate_registry_routes_without_breaking_user_credent
 
     reader_token = client.get(
         "/api/v1/registry/ai-index.json",
-        headers={"Authorization": "Bearer registry-reader-token"},
+        headers={"Authorization": "bearer registry-reader-token"},
     )
     assert reader_token.status_code == 200, reader_token.text
     skills = reader_token.json().get("skills") or []
     assert any(item.get("name") == "registry-gated-skill" for item in skills)
     ai_skill = next(item for item in skills if item.get("name") == "registry-gated-skill")
+    assert ai_skill["tags"] == ["hosted", "fixture"]
+    assert ai_skill["maturity"] == "beta"
+    assert ai_skill["quality_score"] == 73
+    assert ai_skill["capabilities"] == ["hosted-publish", "verified-install"]
+    assert ai_skill["use_when"] == ["Need a hosted integration fixture"]
+    assert ai_skill["avoid_when"] == ["Need a production skill"]
+    assert ai_skill["runtime_assumptions"] == ["Hosted registry access is available"]
+    assert ai_skill["requires"] == {"tools": ["read"], "bins": ["git"], "env": []}
+    assert ai_skill["entrypoints"] == {"skill_md": "SKILL.md"}
+    assert ai_skill["versions"]["0.1.0"]["stability"] == "beta"
     assert (ai_skill.get("runtime") or {}).get("platform") == "openclaw"
     assert (ai_skill.get("runtime") or {}).get("readiness", {}).get("status") == "ready"
 

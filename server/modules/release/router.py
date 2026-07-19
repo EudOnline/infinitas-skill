@@ -8,6 +8,12 @@ from server.db import get_db
 from server.jobs import enqueue_job, has_active_job
 from server.modules.access.authn import AccessContext
 from server.modules.access.authz import require_any_scope
+from server.modules.access.credential_policy import (
+    CredentialPolicyForbidden,
+    CredentialPublishQuotaExceeded,
+    assert_credential_mutation_allowed,
+    consume_credential_publish_quota,
+)
 from server.modules.authoring.models import SkillVersion
 from server.modules.identity.auth import get_current_access_context
 from server.modules.identity.models import User
@@ -41,6 +47,28 @@ def _require_product_object_scope(context: AccessContext, object_id: int | None)
         raise HTTPException(status_code=403, detail="publisher token object scope mismatch")
 
 
+def _require_credential_mutation(context: AccessContext, db: Session) -> None:
+    try:
+        assert_credential_mutation_allowed(
+            db,
+            credential=context.credential,
+            object_kind="skill",
+        )
+    except CredentialPolicyForbidden as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+
+def _consume_publish_quota(context: AccessContext, db: Session) -> None:
+    try:
+        consume_credential_publish_quota(db, credential=context.credential)
+    except CredentialPublishQuotaExceeded as exc:
+        raise HTTPException(
+            status_code=429,
+            detail=str(exc),
+            headers={"Retry-After": str(exc.retry_after)},
+        ) from exc
+
+
 @router.post(
     "/versions/{version_id}/releases",
     response_model=ReleaseView,
@@ -57,6 +85,7 @@ def create_release(
     if skill_version is None:
         raise HTTPException(status_code=404, detail="skill version not found")
     _require_product_object_scope(context, skill_version.skill_id)
+    _require_credential_mutation(context, db)
     is_maintainer = user.role == "maintainer"
     try:
         release, created = service.create_or_get_release(
@@ -73,6 +102,7 @@ def create_release(
         raise HTTPException(status_code=403, detail=str(exc)) from exc
 
     if created:
+        _consume_publish_quota(context, db)
         enqueue_job(
             db,
             kind="materialize_release",

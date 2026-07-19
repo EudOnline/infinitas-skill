@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 from collections.abc import Iterator
 from contextlib import contextmanager
 from functools import lru_cache
@@ -14,6 +15,41 @@ from alembic import command
 from server import model_registry as _model_registry  # noqa: F401
 from server.model_base import Base
 from server.settings import get_settings
+
+_ROLLBACK_ARTIFACT_PATHS = "rollback_artifact_paths"
+
+
+def register_rollback_artifact_cleanup(session: Session, *, root: Path, path: str) -> None:
+    resolved_root = Path(root).resolve()
+    target = (resolved_root / path).resolve()
+    try:
+        target.relative_to(resolved_root)
+    except ValueError as exc:
+        raise ValueError(f"rollback cleanup path escapes artifact root: {path!r}") from exc
+    cleanups = session.info.setdefault(_ROLLBACK_ARTIFACT_PATHS, set())
+    cleanups.add((str(resolved_root), str(target)))
+
+
+def _clear_rollback_artifact_cleanups(session: Session) -> None:
+    info = getattr(session, "info", None)
+    if isinstance(info, dict):
+        info.pop(_ROLLBACK_ARTIFACT_PATHS, None)
+
+
+def _run_rollback_artifact_cleanups(session: Session) -> None:
+    info = getattr(session, "info", None)
+    if not isinstance(info, dict):
+        return
+    cleanups = info.pop(_ROLLBACK_ARTIFACT_PATHS, set())
+    for root_raw, target_raw in cleanups:
+        root = Path(root_raw).resolve()
+        target = Path(target_raw).resolve()
+        if not target.is_relative_to(root) or not target.exists():
+            continue
+        if target.is_dir():
+            shutil.rmtree(target, ignore_errors=True)
+        else:
+            target.unlink(missing_ok=True)
 
 
 def _engine_kwargs(database_url: str) -> dict:
@@ -88,8 +124,10 @@ def get_db() -> Iterator[Session]:
     try:
         yield session
         session.commit()
+        _clear_rollback_artifact_cleanups(session)
     except Exception:
         session.rollback()
+        _run_rollback_artifact_cleanups(session)
         raise
     finally:
         session.close()
@@ -102,8 +140,10 @@ def session_scope() -> Iterator[Session]:
     try:
         yield session
         session.commit()
+        _clear_rollback_artifact_cleanups(session)
     except Exception:
         session.rollback()
+        _run_rollback_artifact_cleanups(session)
         raise
     finally:
         session.close()

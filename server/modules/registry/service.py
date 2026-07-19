@@ -84,7 +84,7 @@ def _extract_bearer_token(authorization: str | None) -> str | None:
     if not isinstance(authorization, str):
         return None
     prefix = "Bearer "
-    if not authorization.startswith(prefix):
+    if authorization[: len(prefix)].lower() != prefix.lower():
         return None
     token = authorization[len(prefix) :].strip()
     return token or None
@@ -240,32 +240,46 @@ def _distribution_entry(entry: DiscoveryProjection) -> dict:
         "listing_mode": entry.listing_mode,
         "release_id": entry.release_id,
         "exposure_id": entry.exposure_id,
+        "metadata": dict(entry.metadata),
+        "compatibility": dict(entry.compatibility),
     }
     return payload
 
 
 def _skill_defaults(entry: dict) -> dict:
+    metadata = _dict_value(entry, "metadata")
+    requires = _dict_value(metadata, "requires")
+    entrypoints = _dict_value(metadata, "entrypoints")
+    declared_support = _string_list(metadata.get("agent_compatible"))
+    compatibility = _dict_value(entry, "compatibility")
+    quality_score = metadata.get("quality_score")
+    if not isinstance(quality_score, int) or isinstance(quality_score, bool):
+        quality_score = None
     return {
         "kind": "skill",
         "publisher": entry.get("publisher"),
-        "summary": entry.get("summary") or "",
-        "tags": [],
-        "maturity": "stable",
-        "quality_score": 0,
-        "capabilities": [],
+        "summary": metadata.get("summary") or entry.get("summary") or "",
+        "tags": _string_list(metadata.get("tags")),
+        "maturity": metadata.get("maturity") or "unspecified",
+        "quality_score": quality_score,
+        "capabilities": _string_list(metadata.get("capabilities")),
         "last_verified_at": entry.get("published_at"),
-        "use_when": [],
-        "avoid_when": [],
-        "runtime_assumptions": [],
+        "use_when": _string_list(metadata.get("use_when")),
+        "avoid_when": _string_list(metadata.get("avoid_when")),
+        "runtime_assumptions": _string_list(metadata.get("runtime_assumptions")),
         "runtime": _registry_runtime_payload(),
-        "agent_compatible": [],
-        "verified_support": {},
+        "agent_compatible": declared_support,
+        "verified_support": compatibility.get("verified_support") or {},
         "compatibility": {
-            "declared_support": [],
-            "verified_support": {},
+            "declared_support": declared_support,
+            "verified_support": compatibility.get("verified_support") or {},
         },
-        "entrypoints": {"skill_md": "SKILL.md"},
-        "requires": {"tools": [], "env": []},
+        "entrypoints": {"skill_md": entrypoints.get("skill_md") or "SKILL.md"},
+        "requires": {
+            "tools": _string_list(requires.get("tools")),
+            "bins": _string_list(requires.get("bins")),
+            "env": _string_list(requires.get("env")),
+        },
         "interop": {
             "openclaw": {
                 "runtime_targets": list(_openclaw_runtime_targets()),
@@ -280,6 +294,17 @@ def _skill_defaults(entry: dict) -> dict:
             }
         },
     }
+
+
+def _string_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, str) and item]
+
+
+def _dict_value(payload: dict, key: str) -> dict:
+    value = payload.get(key)
+    return dict(value) if isinstance(value, dict) else {}
 
 
 def _build_ai_index_from_entries(entries: list[dict]) -> dict:
@@ -331,6 +356,7 @@ def _build_ai_index_from_entries(entries: list[dict]) -> dict:
                 "entrypoints": dict(defaults["entrypoints"]),
                 "requires": {
                     "tools": list(defaults["requires"]["tools"]),
+                    "bins": list(defaults["requires"]["bins"]),
                     "env": list(defaults["requires"]["env"]),
                 },
                 "interop": {"openclaw": dict(defaults["interop"]["openclaw"])},
@@ -345,8 +371,8 @@ def _build_ai_index_from_entries(entries: list[dict]) -> dict:
                             "attestation_signature_path"
                         ],
                         "published_at": version_map[version]["published_at"],
-                        "stability": "stable",
-                        "installable": True,
+                        "stability": _skill_defaults(version_map[version])["maturity"],
+                        "installable": _version_installable(version_map[version]),
                         "attestation_formats": ["private-first"],
                         "trust_state": "private-first",
                         "resolution": {
@@ -368,6 +394,12 @@ def _build_ai_index_from_entries(entries: list[dict]) -> dict:
         "install_policy": dict(INSTALL_POLICY),
         "skills": skills,
     }
+
+
+def _version_installable(entry: dict) -> bool:
+    metadata = _dict_value(entry, "metadata")
+    distribution = _dict_value(metadata, "distribution")
+    return distribution.get("installable") is not False
 
 
 def build_registry_ai_index_payload(_settings: Settings, db: Session, request: Request) -> dict:
