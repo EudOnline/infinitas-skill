@@ -43,6 +43,30 @@ def _owner_principal_id_for_exposure(db: Session, exposure: Exposure) -> int | N
     return skill.namespace_id if skill is not None else exposure.requested_by_principal_id
 
 
+def _audit_exposure_activation(
+    db: Session,
+    *,
+    exposure: Exposure,
+    actor_principal_id: int,
+) -> None:
+    release = db.get(Release, exposure.release_id)
+    audit_service.append_audit_event(
+        db,
+        aggregate_type="exposure",
+        aggregate_id=str(exposure.id),
+        event_type="exposure.activated",
+        actor_ref=f"principal:{actor_principal_id}",
+        owner_principal_id=_owner_principal_id_for_exposure(db, exposure),
+        payload={
+            "object_id": release.skill_id if release is not None else None,
+            "release_id": exposure.release_id,
+            "exposure_id": exposure.id,
+            "audience_type": exposure.audience_type,
+            "state": exposure.state,
+        },
+    )
+
+
 def ensure_default_policy(db: Session) -> ReviewPolicy:
     policy = db.scalar(
         select(ReviewPolicy)
@@ -218,8 +242,10 @@ def record_decision(
     db.add(decision_row)
     db.flush()
 
+    exposure_activated = False
     if normalized_decision == "approve":
         if review_case.mode == "blocking":
+            exposure_activated = exposure.state != "active"
             exposure.state = "active"
             if exposure.activated_at is None:
                 cast(Any, exposure).activated_at = utcnow()
@@ -246,4 +272,10 @@ def record_decision(
             "state": review_case.state,
         },
     )
+    if exposure_activated:
+        _audit_exposure_activation(
+            db,
+            exposure=exposure,
+            actor_principal_id=reviewer_principal_id,
+        )
     return review_case, exposure

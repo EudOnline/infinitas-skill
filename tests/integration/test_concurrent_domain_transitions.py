@@ -5,6 +5,7 @@ from threading import Barrier
 
 from sqlalchemy import select
 
+from server.modules.audit.models import AuditEvent
 from server.modules.authoring.models import Skill, SkillContent, SkillVersion
 from server.modules.exposure.models import Exposure
 from server.modules.exposure.schemas import ExposureCreateRequest
@@ -155,3 +156,47 @@ def test_concurrent_terminal_review_decisions_allow_one_winner(db) -> None:
     assert len(decisions) == 1
     assert final_case is not None
     assert final_case.state == {"approve": "approved", "reject": "rejected"}[decisions[0].decision]
+
+
+def test_blocking_review_approval_audits_exposure_activation(db) -> None:
+    from server.modules.review import service
+
+    release_id, principal_id = _seed_ready_release(db)
+    exposure = Exposure(
+        release_id=release_id,
+        audience_type="public",
+        review_requirement="blocking",
+        state="review_open",
+        requested_by_principal_id=principal_id,
+    )
+    db.add(exposure)
+    db.flush()
+    review_case = service.open_review_case(
+        db,
+        exposure=exposure,
+        actor_principal_id=principal_id,
+        mode="blocking",
+    )
+    db.commit()
+
+    service.record_decision(
+        db,
+        review_case_id=review_case.id,
+        reviewer_principal_id=principal_id,
+        decision="approve",
+        note="approved",
+        evidence={},
+    )
+    db.commit()
+
+    activation_events = list(
+        db.scalars(
+            select(AuditEvent)
+            .where(AuditEvent.aggregate_type == "exposure")
+            .where(AuditEvent.aggregate_id == str(exposure.id))
+            .where(AuditEvent.event_type == "exposure.activated")
+        )
+    )
+    assert exposure.state == "active"
+    assert len(activation_events) == 1
+    assert activation_events[0].actor_ref == f"principal:{principal_id}"
