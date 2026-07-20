@@ -152,6 +152,11 @@ def emit_inspection_summary(summary: dict[str, Any], as_json: bool) -> None:
     print("OK: no inspection thresholds exceeded")
 
 
+def _emit_worker_iteration(processed: int) -> None:
+    if processed > 0:
+        print(f"processed {processed} job(s)")
+
+
 def run_server_worker(
     *,
     poll_interval: float = 5.0,
@@ -176,7 +181,7 @@ def run_server_worker(
         try:
             while True:
                 processed = run_worker_loop(limit=limit)
-                print(f"processed {processed} job(s)")
+                _emit_worker_iteration(processed)
                 if processed == 0:
                     time.sleep(max(poll_interval, 0.1))
         except KeyboardInterrupt:

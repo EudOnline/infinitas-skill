@@ -153,6 +153,16 @@ def test_server_worker_healthcheck_reports_fresh_heartbeat(tmp_path: Path) -> No
     assert payload["path"] == str(heartbeat.resolve())
 
 
+def test_worker_iteration_output_skips_idle_polls(capsys) -> None:
+    from infinitas_skill.server.ops import _emit_worker_iteration
+
+    _emit_worker_iteration(0)
+    assert capsys.readouterr().out == ""
+
+    _emit_worker_iteration(2)
+    assert capsys.readouterr().out == "processed 2 job(s)\n"
+
+
 def test_server_inspect_state_reports_job_lease_health(tmp_path: Path) -> None:
     db_path = tmp_path / "inspect-state.db"
     database_url = f"sqlite:///{db_path}"
