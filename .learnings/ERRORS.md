@@ -141,6 +141,51 @@ heartbeat, browser login, hosted index fetch, backup, and restore rehearsal.
 
 ---
 
+## [ERR-20260720-003] ci-local-only-registry-origin-drift
+
+**Logged**: 2026-07-20T14:23:00+00:00
+**Priority**: high
+**Status**: resolved
+**Area**: tests
+
+### Summary
+
+The first post-push CI run failed because generated local-only registry exports depended on the
+checkout's Git remote transport.
+
+### Error
+
+```text
+FAILED tests/integration/test_cli_registry_local_ops.py::test_registry_catalog_build_check_is_stable
+changed: ["registries.json", "inventory-export.json"]
+```
+
+### Context
+
+- Developer checkout origin: SSH alias URL.
+- GitHub Actions checkout origin: HTTPS URL.
+- `stable_catalog_identity` removed commit, tag, and branch for `local-only`, but retained the
+  environment-derived origin URL.
+
+### Suggested Fix
+
+Generated artifacts for a local-only self registry must use the URL declared in
+`config/registry-sources.json`, never checkout-specific Git remote state.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: src/infinitas_skill/registry/catalog_entries.py,
+  catalog/registries.json, catalog/inventory-export.json
+
+### Resolution
+
+- **Resolved**: 2026-07-20T14:23:00+00:00
+- **Notes**: Canonicalized `registry_origin_url` from registry configuration, regenerated both
+  exports, and added a transport-independent unit regression test.
+
+---
+
 ## [ERR-20260719-007] full-quality-gate-architecture-budgets
 
 **Logged**: 2026-07-19T12:00:00Z

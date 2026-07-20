@@ -58,6 +58,7 @@ def stable_catalog_identity(
         stable["registry_commit"] = None
         stable["registry_tag"] = None
         stable["registry_branch"] = None
+        stable["registry_origin_url"] = registry.get("url")
         return stable
     return identity
 

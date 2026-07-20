@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/inventory-export.schema.json",
   "schema_version": 1,
-  "generated_at": "2026-06-15T14:20:19Z",
+  "generated_at": "2026-07-20T14:24:51Z",
   "default_registry": "self",
   "counts": {
     "registries": 1,
@@ -25,7 +25,7 @@
       "resolved_ref": "refs/heads/main",
       "resolved_commit": null,
       "resolved_tag": null,
-      "resolved_origin_url": "git@github-second:EudOnline/infinitas-skill.git"
+      "resolved_origin_url": "https://github.com/EudOnline/infinitas-skill.git"
     }
   ],
   "skills": [
