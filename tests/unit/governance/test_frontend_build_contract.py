@@ -27,3 +27,14 @@ def test_package_metadata_matches_python_release_and_root_license() -> None:
     assert lock["version"] == lock["packages"][""]["version"] == "0.1.0"
     assert package["license"] == pyproject["project"]["license"] == "MIT"
     assert license_heading == "MIT License"
+
+
+def test_validate_workflow_installs_playwright_browser_runtime() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "validate.yml").read_text(encoding="utf-8")
+
+    install = ".venv/bin/playwright install --with-deps chromium"
+    verification = "run: scripts/check-all.sh"
+
+    assert install in workflow
+    assert verification in workflow
+    assert workflow.index(install) < workflow.index(verification)

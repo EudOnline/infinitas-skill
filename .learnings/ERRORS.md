@@ -2080,3 +2080,124 @@ Filter ignored top-level names before invoking `copytree`, while retaining recur
 - **Notes**: Added explicit top-level ignore filtering for runtime state, caches, virtualenvs, coverage output, and node modules.
 
 ---
+
+## [ERR-20260720-001] github-actions-playwright-browser-missing
+
+**Logged**: 2026-07-20T14:48:46Z
+**Priority**: high
+**Status**: resolved
+**Area**: infra
+
+### Summary
+
+GitHub Actions installed the Playwright Python package but not its Chromium browser runtime, so every browser E2E test failed before execution.
+
+### Error
+
+```text
+BrowserType.launch: Executable doesn't exist at
+/home/runner/.cache/ms-playwright/chromium_headless_shell-1228/...
+Please run:
+playwright install
+```
+
+### Context
+
+- Workflow run: `29751279434`
+- `uv sync --all-groups --locked` installs the Python package only.
+- `scripts/check-all.sh` executes `tests/e2e`, which launches Chromium even when `INFINITAS_SKIP_BROWSER_RUNTIME_TESTS=1` skips separate browser runtime checks.
+
+### Suggested Fix
+
+Install the locked Playwright version's Chromium runtime and Linux dependencies before running the verification matrix, then protect that ordering with a governance test.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: .github/workflows/validate.yml, tests/unit/governance/test_frontend_build_contract.py
+
+### Resolution
+
+- **Resolved**: 2026-07-20T14:48:46Z
+- **Notes**: Added `.venv/bin/playwright install --with-deps chromium` before the full verification step and added a governance assertion for its presence and ordering.
+
+---
+
+## [ERR-20260720-002] overlapping-full-verification-coverage-data
+
+**Logged**: 2026-07-20T14:55:00Z
+**Priority**: medium
+**Status**: resolved
+**Area**: tests
+
+### Summary
+
+Two overlapping `scripts/check-all.sh` processes wrote incompatible pytest-cov data into the same workspace and failed during coverage combination after all tests had passed.
+
+### Error
+
+```text
+coverage.exceptions.DataError: Can't combine statement coverage data with branch data
+```
+
+### Context
+
+- An outer tool wait returned only an intermediate chunk while the original shell session remained active.
+- A second verification run was started to recover the missing final status.
+- Both runs shared the repository's `.coverage.*` files; one was in the non-E2E suite while the other reached E2E.
+
+### Suggested Fix
+
+Treat a returned shell `session_id` as authoritative, keep polling that exact session until it has an `exit_code`, and never start another coverage-producing verification in the same workspace meanwhile.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: scripts/check-all.sh, .coveragerc
+
+### Resolution
+
+- **Resolved**: 2026-07-20T14:55:00Z
+- **Notes**: Waited for both processes to exit, erased their generated coverage data, and resumed with one verification process whose session is polled through completion.
+
+---
+
+## [ERR-20260720-003] local-tmpfs-pressure-during-repeated-full-suite
+
+**Logged**: 2026-07-20T15:08:00Z
+**Priority**: medium
+**Status**: resolved
+**Area**: tests
+
+### Summary
+
+Repeated full-suite runs retained large pytest temporary repositories on the host's 3.9 GB `/tmp` tmpfs, after which unrelated integration fixtures began failing late in the suite.
+
+### Error
+
+```text
+100 failed, 1111 passed, 49 errors
+```
+
+### Context
+
+- Failures appeared simultaneously across unrelated profile, runtime repository, search, share-link, and performance tests.
+- The first reported failing test passed immediately when run alone.
+- `/tmp` was 80% used with only 794 MB available; `/tmp/pytest-of-tdcasual` retained 1.3 GB across recent full-suite runs.
+- Removing the obsolete pytest temporary trees restored `/tmp` to 48% used and more than doubled available memory.
+
+### Suggested Fix
+
+For repeated local full-suite verification on this host, clear obsolete pytest temporary trees and point `TMPDIR` at disk-backed `/var/tmp`; do not treat tmpfs exhaustion as an application regression without an isolated reproduction.
+
+### Metadata
+
+- Reproducible: environment-dependent
+- Related Files: scripts/check-all.sh, tests/conftest.py
+
+### Resolution
+
+- **Resolved**: 2026-07-20T15:08:00Z
+- **Notes**: Confirmed the first reported failure passes in isolation, cleared retained pytest temp data, and moved the final verification's temporary directory to disk-backed `/var/tmp`.
+
+---

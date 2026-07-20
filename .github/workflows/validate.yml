@@ -34,6 +34,9 @@ jobs:
       - name: Install Python dependencies
         run: uv sync --all-groups --locked
 
+      - name: Install Playwright Chromium
+        run: .venv/bin/playwright install --with-deps chromium
+
       - name: Run maintainability-aware closeout verification matrix
         env:
           INFINITAS_REQUIRE_HOSTED_E2E_TESTS: 1
