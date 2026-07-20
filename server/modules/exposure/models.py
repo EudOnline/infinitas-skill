@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from server.model_base import Base
@@ -17,6 +17,14 @@ class Exposure(Base):
             "release_id",
             "audience_type",
             "state",
+        ),
+        Index(
+            "uq_exposures_open_release_audience",
+            "release_id",
+            "audience_type",
+            unique=True,
+            sqlite_where=text("state NOT IN ('revoked', 'rejected')"),
+            postgresql_where=text("state NOT IN ('revoked', 'rejected')"),
         ),
     )
 

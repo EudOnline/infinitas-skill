@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+import server.modules.audit.service as audit_service
 from server.exceptions_base import (
     ConflictError as BaseConflictError,
 )
@@ -183,6 +184,20 @@ def create_or_get_release(
         if existing is None:
             raise ConflictError("release already exists for skill version")
         return existing, False
+    audit_service.append_audit_event(
+        db,
+        aggregate_type="release",
+        aggregate_id=str(release.id),
+        event_type="release.created",
+        actor_ref=f"principal:{actor_principal_id}",
+        owner_principal_id=skill.namespace_id,
+        payload={
+            "object_id": skill.id,
+            "release_id": release.id,
+            "version_id": skill_version.id,
+            "version": skill_version.version,
+        },
+    )
     return release, True
 
 
@@ -261,6 +276,7 @@ def mark_release_ready(
     signature_artifact_id: int,
     provenance_artifact_id: int,
 ) -> Release:
+    previous_state = release.state
     release.state = "ready"
     release.manifest_artifact_id = manifest_artifact_id
     release.bundle_artifact_id = bundle_artifact_id
@@ -269,4 +285,25 @@ def mark_release_ready(
     cast(Any, release).ready_at = utcnow()
     db.add(release)
     db.flush()
+    snapshot = get_release_snapshot(db, release.id)
+    audit_service.append_audit_event(
+        db,
+        aggregate_type="release",
+        aggregate_id=str(release.id),
+        event_type="release.ready" if previous_state != "ready" else "release.rematerialized",
+        actor_ref="system:worker",
+        owner_principal_id=snapshot.skill.namespace_id,
+        payload={
+            "object_id": snapshot.skill.id,
+            "release_id": release.id,
+            "version_id": snapshot.skill_version.id,
+            "version": snapshot.skill_version.version,
+            "artifact_ids": {
+                "manifest": manifest_artifact_id,
+                "bundle": bundle_artifact_id,
+                "signature": signature_artifact_id,
+                "provenance": provenance_artifact_id,
+            },
+        },
+    )
     return release

@@ -56,16 +56,13 @@ def create_object_token(
     client_ip = resolve_client_ip(request)
     limiter = get_rate_limiter(db)
     rate_limit_key = f"object-token:{client_ip}"
-    if not limiter.check(
-        rate_limit_key,
-        max_attempts=_TOKEN_RATE_MAX,
-        window_seconds=_TOKEN_RATE_WINDOW,
+    if not limiter.consume(
+        rate_limit_key, max_attempts=_TOKEN_RATE_MAX, window_seconds=_TOKEN_RATE_WINDOW
     ):
         raise HTTPException(
             status_code=429,
             detail="Too many token creation requests. Please try again later.",
         )
-    limiter.record(rate_limit_key)
     actor = _require_actor(context)
     try:
         raw_token, token = token_service.create_product_token(

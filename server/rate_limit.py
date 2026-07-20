@@ -15,7 +15,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, cast
 
 from fastapi import Request
-from sqlalchemy import DateTime, Integer, String, UniqueConstraint, delete, func, select
+from sqlalchemy import DateTime, Integer, String, UniqueConstraint, case, delete, func, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
@@ -76,9 +76,7 @@ class RateLimitEntry(Base):
     """Shared rate-limit bucket storage for multi-process deployments."""
 
     __tablename__ = "rate_limit_entries"
-    __table_args__ = (
-        UniqueConstraint("key", "window_start", name="uq_rate_limit_entries_key_window_start"),
-    )
+    __table_args__ = (UniqueConstraint("key", name="uq_rate_limit_entries_key"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     key: Mapped[str] = mapped_column(String(255), index=True)
@@ -100,6 +98,10 @@ class RateLimiter(ABC):
     @abstractmethod
     def record(self, key: str) -> None:
         """Record an attempt for the given key."""
+
+    @abstractmethod
+    def consume(self, key: str, *, max_attempts: int, window_seconds: int) -> bool:
+        """Atomically check and record one attempt when capacity remains."""
 
     @abstractmethod
     def reset(self, key: str) -> None:
@@ -149,6 +151,12 @@ class MemoryRateLimiter(RateLimiter):
         self._total_entries += 1
         self._maybe_prune()
 
+    def consume(self, key: str, *, max_attempts: int, window_seconds: int) -> bool:
+        if not self.check(key, max_attempts=max_attempts, window_seconds=window_seconds):
+            return False
+        self.record(key)
+        return True
+
     def reset(self, key: str) -> None:
         removed = self._attempts.pop(key, None)
         if removed:
@@ -189,11 +197,7 @@ class DBRateLimiter(RateLimiter):
         # attempts made immediately before a minute boundary.
         window_start = _window_start(1)
 
-        entry = self._db.scalar(
-            select(RateLimitEntry)
-            .where(RateLimitEntry.key == key)
-            .where(RateLimitEntry.window_start == window_start)
-        )
+        entry = self._db.scalar(select(RateLimitEntry).where(RateLimitEntry.key == key))
         if entry is not None:
             entry.attempt_count += 1
         else:
@@ -218,7 +222,7 @@ class DBRateLimiter(RateLimiter):
         if max_attempts <= 0:
             return False
         now = utcnow()
-        window_start = _window_start(window_seconds)
+        cutoff = now - timedelta(seconds=window_seconds)
         self._db.execute(
             delete(RateLimitEntry).where(
                 RateLimitEntry.window_start < now - timedelta(seconds=window_seconds * 2)
@@ -226,18 +230,26 @@ class DBRateLimiter(RateLimiter):
         )
         statement = sqlite_insert(RateLimitEntry).values(
             key=key,
-            window_start=window_start,
+            window_start=now,
             attempt_count=1,
             created_at=now,
             updated_at=now,
         )
         statement = statement.on_conflict_do_update(
-            index_elements=[RateLimitEntry.key, RateLimitEntry.window_start],
+            index_elements=[RateLimitEntry.key],
             set_={
-                "attempt_count": RateLimitEntry.attempt_count + 1,
+                "attempt_count": case(
+                    (RateLimitEntry.window_start < cutoff, 1),
+                    else_=RateLimitEntry.attempt_count + 1,
+                ),
+                "window_start": case(
+                    (RateLimitEntry.window_start < cutoff, now),
+                    else_=RateLimitEntry.window_start,
+                ),
                 "updated_at": now,
             },
-            where=RateLimitEntry.attempt_count < max_attempts,
+            where=(RateLimitEntry.window_start < cutoff)
+            | (RateLimitEntry.attempt_count < max_attempts),
         )
         result = self._db.execute(statement)
         return cast(Any, result).rowcount == 1

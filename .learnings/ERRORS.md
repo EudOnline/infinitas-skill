@@ -1,5 +1,125 @@
 # Errors
 
+## [ERR-20260719-006] concurrency-hardening-migration-context
+
+**Logged**: 2026-07-19T14:30:00+00:00
+**Priority**: low
+**Status**: resolved
+**Area**: backend
+
+### Summary
+
+A combined concurrency-hardening patch failed because the initial migration table order did
+not match the assumed context.
+
+### Error
+
+```text
+apply_patch verification failed: Failed to find expected lines in alembic/versions/0001_initial.py
+```
+
+### Context
+
+- The patch combined ORM models, services, and migration edits.
+- The migration defines review policies near the beginning and review cases later.
+- The patch was rejected atomically; no partial concurrency change was applied.
+
+### Suggested Fix
+
+Apply model, service, and migration changes as separate exact-context patches.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: alembic/versions/0001_initial.py
+- See Also: ERR-20260719-002
+
+### Resolution
+
+- **Resolved**: 2026-07-19T14:30:00+00:00
+- **Notes**: Re-read exact migration sections and split the patch by concern.
+
+---
+
+## [ERR-20260719-007] full-quality-gate-architecture-budgets
+
+**Logged**: 2026-07-19T12:00:00Z
+**Priority**: medium
+**Status**: resolved
+**Area**: backend
+
+### Summary
+
+The full quality gate found a domain package facade import and a 109-line production function after the hardening changes.
+
+### Error
+
+```text
+server/worker.py: from server.modules.release import service
+server/modules/exposure/service.py create_exposure: 109 lines
+```
+
+### Context
+
+- Focused Ruff, mypy, and regression tests passed before the repository-wide architecture and maintainability contracts ran.
+- Project hard gates require direct domain submodule imports and production functions no longer than 100 lines.
+
+### Suggested Fix
+
+Run repository governance and maintainability tests before the full suite, and extract focused helpers as soon as lifecycle hardening expands a boundary function.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: server/worker.py, server/modules/exposure/service.py
+
+### Resolution
+
+- **Resolved**: 2026-07-19T12:05:00Z
+- **Notes**: Imported `get_release_snapshot` directly and extracted Exposure policy/persistence helpers; the focused hard gates now pass.
+
+---
+
+## [ERR-20260719-005] lifecycle-audit-import-order
+
+**Logged**: 2026-07-19T14:20:00+00:00
+**Priority**: low
+**Status**: resolved
+**Area**: backend
+
+### Summary
+
+The first lifecycle audit-event patch introduced three Ruff import-order violations.
+
+### Error
+
+```text
+I001 Import block is un-sorted or un-formatted
+```
+
+### Context
+
+- Direct domain-module imports were added beside existing imports.
+- No runtime behavior or repository state was affected.
+
+### Suggested Fix
+
+Keep direct module imports alphabetically ordered and run focused Ruff checks immediately
+after cross-domain instrumentation changes.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: server/modules/authoring/service.py, server/modules/exposure/service.py,
+  server/modules/review/service.py
+
+### Resolution
+
+- **Resolved**: 2026-07-19T14:20:00+00:00
+- **Notes**: Reordered direct module imports before continuing the implementation.
+
+---
+
 ## [ERR-20260717-002] pip-audit-corrupt-http-cache
 
 **Logged**: 2026-07-17T00:10:00Z

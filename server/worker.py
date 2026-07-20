@@ -15,11 +15,13 @@ from server.jobs import (
     load_job_payload,
 )
 from server.logging import get_logger
+from server.modules.audit.service import append_audit_event
 from server.modules.authoring.service import prune_expired_skill_contents
 from server.modules.discovery.projections import refresh_projection_snapshot
 from server.modules.jobs.models import Job
 from server.modules.release.materializer import materialize_release
 from server.modules.release.models import Release
+from server.modules.release.service import get_release_snapshot
 from server.repo_ops import RepoOpError
 from server.settings import Settings, get_settings
 
@@ -96,6 +98,35 @@ def _is_retryable_error(exc: Exception) -> bool:
     return any(pattern in message for pattern in retryable_patterns)
 
 
+def _audit_materialization_failure(session: Session, job: Job, exc: Exception) -> None:
+    if job.kind != "materialize_release":
+        return
+    try:
+        release_id = _resolve_release_id(job)
+    except RepoOpError:
+        return
+    release = session.get(Release, release_id)
+    if release is None:
+        return
+    snapshot = get_release_snapshot(session, release.id)
+    append_audit_event(
+        session,
+        aggregate_type="release",
+        aggregate_id=str(release.id),
+        event_type="release.materialization_failed",
+        actor_ref="system:worker",
+        owner_principal_id=snapshot.skill.namespace_id,
+        payload={
+            "object_id": snapshot.skill.id,
+            "release_id": release.id,
+            "version_id": snapshot.skill_version.id,
+            "version": snapshot.skill_version.version,
+            "job_id": job.id,
+            "error": str(exc)[:1000],
+        },
+    )
+
+
 def process_job(job_id: int) -> None:
     settings = get_settings()
     processing_error: Exception | None = None
@@ -141,6 +172,7 @@ def process_job(job_id: int) -> None:
                 error_message=str(exc),
                 retryable=retryable,
             )
+            _audit_materialization_failure(session, job, exc)
             processing_error = exc
     if processing_error is not None:
         raise processing_error

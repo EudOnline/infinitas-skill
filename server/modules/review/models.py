@@ -1,6 +1,16 @@
 from __future__ import annotations
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from server.model_base import Base, utcnow
@@ -8,6 +18,7 @@ from server.model_base import Base, utcnow
 
 class ReviewPolicy(Base):
     __tablename__ = "review_policies"
+    __table_args__ = (UniqueConstraint("name", "version", name="uq_review_policies_name_version"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(200))
@@ -19,7 +30,16 @@ class ReviewPolicy(Base):
 
 class ReviewCase(Base):
     __tablename__ = "review_cases"
-    __table_args__ = (Index("ix_review_cases_exposure_id_state", "exposure_id", "state"),)
+    __table_args__ = (
+        Index("ix_review_cases_exposure_id_state", "exposure_id", "state"),
+        Index(
+            "uq_review_cases_open_exposure",
+            "exposure_id",
+            unique=True,
+            sqlite_where=text("state = 'open'"),
+            postgresql_where=text("state = 'open'"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     exposure_id: Mapped[int] = mapped_column(ForeignKey("exposures.id"))

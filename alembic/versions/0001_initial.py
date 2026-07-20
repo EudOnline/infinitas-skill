@@ -68,7 +68,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("key", "window_start", name="uq_rate_limit_entries_key_window_start"),
+        sa.UniqueConstraint("key", name="uq_rate_limit_entries_key"),
     )
     op.create_index(op.f("ix_rate_limit_entries_key"), "rate_limit_entries", ["key"], unique=False)
     op.create_index(
@@ -86,6 +86,7 @@ def upgrade() -> None:
         sa.Column("rules_json", sa.Text(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("name", "version", name="uq_review_policies_name_version"),
     )
     op.create_table(
         "users",
@@ -352,6 +353,14 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_index(
+        "uq_exposures_open_release_audience",
+        "exposures",
+        ["release_id", "audience_type"],
+        unique=True,
+        sqlite_where=sa.text("state NOT IN ('revoked', 'rejected')"),
+        postgresql_where=sa.text("state NOT IN ('revoked', 'rejected')"),
+    )
+    op.create_index(
         op.f("ix_exposures_requested_by_principal_id"),
         "exposures",
         ["requested_by_principal_id"],
@@ -453,6 +462,14 @@ def upgrade() -> None:
     op.create_index(
         "ix_review_cases_exposure_id_state", "review_cases", ["exposure_id", "state"], unique=False
     )
+    op.create_index(
+        "uq_review_cases_open_exposure",
+        "review_cases",
+        ["exposure_id"],
+        unique=True,
+        sqlite_where=sa.text("state = 'open'"),
+        postgresql_where=sa.text("state = 'open'"),
+    )
     op.create_table(
         "credentials",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
@@ -528,6 +545,7 @@ def downgrade() -> None:
         "ix_credentials_principal_id_type_revoked_at_expires_at", table_name="credentials"
     )
     op.drop_table("credentials")
+    op.drop_index("uq_review_cases_open_exposure", table_name="review_cases")
     op.drop_index("ix_review_cases_exposure_id_state", table_name="review_cases")
     op.drop_table("review_cases")
     op.drop_index("ix_access_grants_exposure_id_grant_type_state", table_name="access_grants")
@@ -539,6 +557,7 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_jobs_kind"), table_name="jobs")
     op.drop_table("jobs")
     op.drop_index(op.f("ix_exposures_requested_by_principal_id"), table_name="exposures")
+    op.drop_index("uq_exposures_open_release_audience", table_name="exposures")
     op.drop_index("ix_exposures_release_id_audience_type_state", table_name="exposures")
     op.drop_table("exposures")
     op.drop_table("artifacts")

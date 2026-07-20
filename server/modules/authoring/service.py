@@ -10,6 +10,7 @@ from typing import cast
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+import server.modules.audit.service as audit_service
 import server.modules.authoring.repository as repository
 from server.db import register_rollback_artifact_cleanup
 from server.exceptions_base import (
@@ -293,6 +294,19 @@ def create_skill_version_snapshot(
         sealed_manifest_json=canonical_manifest_json(version_manifest),
         created_by_principal_id=actor_principal_id,
     )
+    audit_service.append_audit_event(
+        db,
+        aggregate_type="skill_version",
+        aggregate_id=str(skill_version.id),
+        event_type="skill_version.created",
+        actor_ref=f"principal:{actor_principal_id}",
+        owner_principal_id=skill.namespace_id,
+        payload={
+            "object_id": skill.id,
+            "version_id": skill_version.id,
+            "version": skill_version.version,
+        },
+    )
     return skill_version
 
 
@@ -320,6 +334,19 @@ def create_skill(
         created_by_principal_id=actor_principal_id,
     )
     db.flush()
+    audit_service.append_audit_event(
+        db,
+        aggregate_type="skill",
+        aggregate_id=str(skill.id),
+        event_type="skill.created",
+        actor_ref=f"principal:{actor_principal_id}",
+        owner_principal_id=skill.namespace_id,
+        payload={
+            "object_id": skill.id,
+            "object_name": skill.display_name,
+            "slug": skill.slug,
+        },
+    )
     return skill
 
 

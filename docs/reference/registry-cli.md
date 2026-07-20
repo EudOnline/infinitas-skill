@@ -316,7 +316,7 @@ Create an exposure for a release.
 | Argument | Required | Default | Description |
 |---|---|---|---|
 | `release_id` (positional) | yes | | Release identifier (int) |
-| `--audience-type` | yes | | One of: `private`, `grant`, `public` |
+| `--audience-type` | no | Skill default visibility profile | One of: `private`, `grant`, `authenticated`, `public` |
 | `--listing-mode` | no | `'listed'` | Listing mode |
 | `--install-mode` | no | `'enabled'` | Install mode |
 | `--requested-review-mode` | no | `'none'` | Requested review mode |

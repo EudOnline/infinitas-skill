@@ -75,3 +75,23 @@ def test_create_version_sends_only_hosted_content_contract(monkeypatch, capsys) 
         "content_id": "cnt_fixture",
     }
     assert json.loads(capsys.readouterr().out)["id"] == 9
+
+
+def test_create_exposure_omits_to_skill_default_visibility(monkeypatch, capsys) -> None:
+    captured: dict = {}
+
+    def fake_request(method, url, **kwargs):
+        captured.update({"method": method, "url": url, **kwargs})
+        return _response({"id": 12, "audience_type": "grant"})
+
+    monkeypatch.setattr(httpx, "request", fake_request)
+    parser = build_registry_parser()
+    args = parser.parse_args(["exposures", "create", "8"])
+
+    assert args._handler(args) == 0
+    assert captured["json"] == {
+        "listing_mode": "listed",
+        "install_mode": "enabled",
+        "requested_review_mode": "none",
+    }
+    assert json.loads(capsys.readouterr().out)["audience_type"] == "grant"

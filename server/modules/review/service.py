@@ -3,9 +3,11 @@ from __future__ import annotations
 import json
 from typing import Any, cast
 
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+import server.modules.audit.service as audit_service
 import server.modules.review.default_policy as default_policy
 from server.exceptions_base import (
     ConflictError as BaseConflictError,
@@ -14,8 +16,10 @@ from server.exceptions_base import (
     NotFoundError as BaseNotFoundError,
 )
 from server.model_base import utcnow
+from server.modules.authoring.models import Skill
 from server.modules.exposure.models import Exposure
 from server.modules.identity.models import User
+from server.modules.release.models import Release
 from server.modules.review.models import ReviewCase, ReviewDecision, ReviewPolicy
 
 
@@ -29,6 +33,14 @@ class NotFoundError(ReviewError, BaseNotFoundError):
 
 class ConflictError(ReviewError, BaseConflictError):
     pass
+
+
+def _owner_principal_id_for_exposure(db: Session, exposure: Exposure) -> int | None:
+    release = db.get(Release, exposure.release_id)
+    if release is None or release.skill_id is None:
+        return exposure.requested_by_principal_id
+    skill = db.get(Skill, release.skill_id)
+    return skill.namespace_id if skill is not None else exposure.requested_by_principal_id
 
 
 def ensure_default_policy(db: Session) -> ReviewPolicy:
@@ -51,8 +63,19 @@ def ensure_default_policy(db: Session) -> ReviewPolicy:
             sort_keys=True,
         ),
     )
-    db.add(policy)
-    db.flush()
+    try:
+        with db.begin_nested():
+            db.add(policy)
+            db.flush()
+    except IntegrityError:
+        existing = db.scalar(
+            select(ReviewPolicy)
+            .where(ReviewPolicy.name == default_policy.DEFAULT_POLICY_NAME)
+            .where(ReviewPolicy.version == default_policy.DEFAULT_POLICY_VERSION)
+        )
+        if existing is None:
+            raise
+        return existing
     return policy
 
 
@@ -117,8 +140,29 @@ def open_review_case(
         state="open",
         opened_by_principal_id=actor_principal_id,
     )
-    db.add(review_case)
-    db.flush()
+    try:
+        with db.begin_nested():
+            db.add(review_case)
+            db.flush()
+    except IntegrityError:
+        existing = get_open_review_case_for_exposure(db, exposure.id)
+        if existing is None:
+            raise
+        return existing
+    audit_service.append_audit_event(
+        db,
+        aggregate_type="review_case",
+        aggregate_id=str(review_case.id),
+        event_type="review_case.opened",
+        actor_ref=f"principal:{actor_principal_id}",
+        owner_principal_id=_owner_principal_id_for_exposure(db, exposure),
+        payload={
+            "release_id": exposure.release_id,
+            "exposure_id": exposure.id,
+            "review_case_id": review_case.id,
+            "mode": mode,
+        },
+    )
     return review_case
 
 
@@ -132,16 +176,33 @@ def record_decision(
     note: str,
     evidence: dict | None,
 ) -> tuple[ReviewCase, Exposure]:
-    review_case = get_review_case_or_404(db, review_case_id)
-    if review_case.state != "open":
-        raise ConflictError("review case is already closed")
-
-    # Authorization is the caller's responsibility; router layer verifies
-    # ownership via assert_release_owner before invoking this function.
-
     normalized_decision = str(decision or "").strip().lower()
     if normalized_decision not in {"approve", "reject", "comment"}:
         raise ConflictError("unsupported review decision")
+
+    review_case = get_review_case_or_404(db, review_case_id)
+    next_state = {
+        "approve": "approved",
+        "reject": "rejected",
+        "comment": "open",
+    }[normalized_decision]
+    values: dict[str, Any] = {"state": next_state}
+    if normalized_decision != "comment":
+        values["closed_at"] = utcnow()
+    result = db.execute(
+        update(ReviewCase)
+        .where(ReviewCase.id == review_case_id)
+        .where(ReviewCase.state == "open")
+        .values(**values)
+        .execution_options(synchronize_session=False)
+    )
+    if cast(Any, result).rowcount != 1:
+        db.expire(review_case)
+        raise ConflictError("review case is already closed")
+    db.refresh(review_case)
+
+    # Authorization is the caller's responsibility; router layer verifies
+    # ownership via assert_release_owner before invoking this function.
 
     exposure = db.get(Exposure, review_case.exposure_id)
     if exposure is None:
@@ -158,15 +219,11 @@ def record_decision(
     db.flush()
 
     if normalized_decision == "approve":
-        review_case.state = "approved"
-        cast(Any, review_case).closed_at = utcnow()
         if review_case.mode == "blocking":
             exposure.state = "active"
             if exposure.activated_at is None:
                 cast(Any, exposure).activated_at = utcnow()
     elif normalized_decision == "reject":
-        review_case.state = "rejected"
-        cast(Any, review_case).closed_at = utcnow()
         if review_case.mode == "blocking":
             exposure.state = "rejected"
             cast(Any, exposure).ended_at = utcnow()
@@ -174,4 +231,19 @@ def record_decision(
     db.add(review_case)
     db.add(exposure)
     db.flush()
+    audit_service.append_audit_event(
+        db,
+        aggregate_type="review_case",
+        aggregate_id=str(review_case.id),
+        event_type="review_decision.recorded",
+        actor_ref=f"principal:{reviewer_principal_id}",
+        owner_principal_id=_owner_principal_id_for_exposure(db, exposure),
+        payload={
+            "release_id": exposure.release_id,
+            "exposure_id": exposure.id,
+            "review_case_id": review_case.id,
+            "decision": normalized_decision,
+            "state": review_case.state,
+        },
+    )
     return review_case, exposure

@@ -7,6 +7,7 @@ against abuse and DoS attacks while allowing legitimate traffic.
 from __future__ import annotations
 
 import os
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from time import sleep
 
@@ -64,6 +65,22 @@ class TestRateLimiting:
 
         # At least some requests should be rate limited
         assert rate_limited_count >= 1, "Expected rate limiting to kick in"
+
+    def test_concurrent_login_attempts_consume_exact_shared_capacity(self, tmp_path: Path) -> None:
+        client = _test_client(tmp_path)
+
+        def attempt(index: int) -> int:
+            response = client.post(
+                "/api/v1/auth/login",
+                json={"username": "rate-tester", "password": f"wrong-password-{index}"},
+            )
+            return response.status_code
+
+        with ThreadPoolExecutor(max_workers=20) as executor:
+            statuses = list(executor.map(attempt, range(20)))
+
+        assert statuses.count(401) == 10
+        assert statuses.count(429) == 10
 
     def test_rotating_user_agent_does_not_bypass_login_limit(self, tmp_path: Path) -> None:
         client = _test_client(tmp_path)

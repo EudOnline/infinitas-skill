@@ -147,6 +147,22 @@ def test_exposure_uses_skill_default_visibility_profile(
     assert response.status_code == 201, response.text
     assert response.json()["audience_type"] == "grant"
 
+    from sqlalchemy import select
+
+    from server.db import get_session_factory
+    from server.modules.audit.models import AuditEvent
+
+    with get_session_factory()() as session:
+        event_types = set(session.scalars(select(AuditEvent.event_type)))
+    assert {
+        "skill.created",
+        "skill_version.created",
+        "release.created",
+        "release.ready",
+        "exposure.created",
+        "exposure.activated",
+    }.issubset(event_types)
+
 
 def test_patch_exposure_rejects_requested_review_mode_mutation(
     monkeypatch,

@@ -3,8 +3,10 @@ from __future__ import annotations
 import json
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+import server.modules.audit.service as audit_service
 import server.modules.release.service as release_service
 import server.modules.review.service as review_service
 from server.exceptions_base import (
@@ -140,6 +142,64 @@ def _build_exposure(
     )
 
 
+def _audit_exposure(
+    db: Session,
+    *,
+    exposure: Exposure,
+    event_type: str,
+    actor_principal_id: int,
+) -> None:
+    release = release_service.get_release_or_404(db, exposure.release_id)
+    snapshot = release_service.get_release_snapshot(db, release.id)
+    audit_service.append_audit_event(
+        db,
+        aggregate_type="exposure",
+        aggregate_id=str(exposure.id),
+        event_type=event_type,
+        actor_ref=f"principal:{actor_principal_id}",
+        owner_principal_id=snapshot.skill.namespace_id,
+        payload={
+            "object_id": release.skill_id,
+            "release_id": release.id,
+            "exposure_id": exposure.id,
+            "audience_type": exposure.audience_type,
+            "state": exposure.state,
+        },
+    )
+
+
+def _resolve_create_policy(
+    db: Session,
+    *,
+    release: Release,
+    payload: ExposureCreateRequest,
+) -> tuple[PolicyOutcome, dict]:
+    if release.state != "ready":
+        raise ConflictError("only ready releases can be exposed")
+    audience_type = _resolve_audience_type(
+        db,
+        release=release,
+        requested_audience_type=payload.audience_type,
+    )
+    compatibility = _assert_public_compatibility(release, audience_type)
+    outcome = _evaluate_create_policy(
+        audience_type=audience_type,
+        requested_review_mode=payload.requested_review_mode,
+    )
+    return outcome, compatibility
+
+
+def _persist_new_exposure(db: Session, exposure: Exposure) -> None:
+    try:
+        with db.begin_nested():
+            db.add(exposure)
+            db.flush()
+    except IntegrityError as exc:
+        raise ConflictError(
+            f"active {exposure.audience_type} exposure already exists for this release"
+        ) from exc
+
+
 def create_exposure(
     db: Session,
     *,
@@ -179,19 +239,18 @@ def create_exposure(
         principal_id=actor_principal_id,
         is_maintainer=is_maintainer,
     )
-    if release.state != "ready":
-        raise ConflictError("only ready releases can be exposed")
-    audience_type = _resolve_audience_type(
-        db,
-        release=release,
-        requested_audience_type=payload.audience_type,
+    outcome, compatibility = _resolve_create_policy(db, release=release, payload=payload)
+    existing = db.scalar(
+        select(Exposure)
+        .where(Exposure.release_id == release_id)
+        .where(Exposure.audience_type == outcome.audience_type)
+        .where(Exposure.state.notin_(["revoked", "rejected"]))
+        .with_for_update()
     )
-    compatibility = _assert_public_compatibility(release, audience_type)
-
-    outcome = _evaluate_create_policy(
-        audience_type=audience_type,
-        requested_review_mode=payload.requested_review_mode,
-    )
+    if existing is not None:
+        raise ConflictError(
+            f"active {outcome.audience_type} exposure already exists for this release"
+        )
     exposure = _build_exposure(
         release_id=release_id,
         actor_principal_id=actor_principal_id,
@@ -199,21 +258,7 @@ def create_exposure(
         outcome=outcome,
         compatibility=compatibility,
     )
-    db.add(exposure)
-    db.flush()
-
-    existing = db.scalar(
-        select(Exposure)
-        .where(Exposure.release_id == release_id)
-        .where(Exposure.audience_type == outcome.audience_type)
-        .where(Exposure.state.notin_(["revoked", "rejected"]))
-        .where(Exposure.id != exposure.id)
-        .with_for_update()
-    )
-    if existing is not None:
-        raise ConflictError(
-            f"active {outcome.audience_type} exposure already exists for this release"
-        )
+    _persist_new_exposure(db, exposure)
 
     if outcome.review_requirement in {"advisory", "blocking"}:
         review_service.open_review_case(
@@ -231,6 +276,19 @@ def create_exposure(
 
     db.add(exposure)
     db.flush()
+    _audit_exposure(
+        db,
+        exposure=exposure,
+        event_type="exposure.created",
+        actor_principal_id=actor_principal_id,
+    )
+    if exposure.state == "active":
+        _audit_exposure(
+            db,
+            exposure=exposure,
+            event_type="exposure.activated",
+            actor_principal_id=actor_principal_id,
+        )
     return exposure
 
 
@@ -268,6 +326,12 @@ def patch_exposure(
 
     db.add(exposure)
     db.flush()
+    _audit_exposure(
+        db,
+        exposure=exposure,
+        event_type="exposure.updated",
+        actor_principal_id=actor_principal_id,
+    )
     return exposure
 
 
@@ -303,6 +367,12 @@ def activate_exposure(
         exposure.activated_at = utcnow()
     db.add(exposure)
     db.flush()
+    _audit_exposure(
+        db,
+        exposure=exposure,
+        event_type="exposure.activated",
+        actor_principal_id=actor_principal_id,
+    )
     return exposure
 
 
@@ -331,4 +401,10 @@ def revoke_exposure(
         review_service.close_review_case(db, open_case, reason="exposure_revoked")
     db.add(exposure)
     db.flush()
+    _audit_exposure(
+        db,
+        exposure=exposure,
+        event_type="exposure.revoked",
+        actor_principal_id=actor_principal_id,
+    )
     return exposure

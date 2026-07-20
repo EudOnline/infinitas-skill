@@ -137,16 +137,18 @@ def command_release_artifacts(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def command_exposure_create(args: argparse.Namespace) -> dict[str, Any]:
+    payload = {
+        "listing_mode": args.listing_mode,
+        "install_mode": args.install_mode,
+        "requested_review_mode": args.requested_review_mode,
+    }
+    if args.audience_type is not None:
+        payload["audience_type"] = args.audience_type
     return request_json(
         args,
         "POST",
         f"/api/v1/releases/{args.release_id}/exposures",
-        {
-            "audience_type": args.audience_type,
-            "listing_mode": args.listing_mode,
-            "install_mode": args.install_mode,
-            "requested_review_mode": args.requested_review_mode,
-        },
+        payload,
     )
 
 
@@ -293,7 +295,10 @@ def _configure_registry_access_commands(subparsers: argparse._SubParsersAction) 
     )
     exposures_create.add_argument("release_id", type=int, help="Release identifier")
     exposures_create.add_argument(
-        "--audience-type", required=True, help="Audience type: private, grant, or public"
+        "--audience-type",
+        default=None,
+        choices=("private", "grant", "authenticated", "public"),
+        help="Audience type; omit to use the Skill default visibility profile",
     )
     exposures_create.add_argument("--listing-mode", default="listed", help="Listing mode")
     exposures_create.add_argument("--install-mode", default="enabled", help="Install mode")
@@ -462,7 +467,10 @@ def build_registry_exposures_parser(*, prog: str | None = None) -> argparse.Argu
     create = sub.add_parser("create", help="Create a new audience exposure for one release")
     create.add_argument("release_id", type=int, help="Release identifier")
     create.add_argument(
-        "--audience-type", required=True, help="Audience type: private, grant, or public"
+        "--audience-type",
+        default=None,
+        choices=("private", "grant", "authenticated", "public"),
+        help="Audience type; omit to use the Skill default visibility profile",
     )
     create.add_argument("--listing-mode", default="listed", help="Listing mode")
     create.add_argument("--install-mode", default="enabled", help="Install mode")

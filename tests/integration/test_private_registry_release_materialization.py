@@ -485,6 +485,41 @@ def test_release_artifacts_endpoint_returns_current_rows_only(
     assert all(item["sha256"] != "deadbeef" for item in payload["items"])
 
 
+def test_materialization_failure_emits_release_audit_event(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    _prepare_signing_repo(temp_repo_copy, signing_key)
+    _configure_env(monkeypatch, tmp_path=tmp_path, repo=temp_repo_copy)
+    from sqlalchemy import select
+
+    from server.app import create_app
+    from server.db import get_session_factory
+    from server.modules.audit.models import AuditEvent
+    from server.worker import run_worker_loop
+
+    client = TestClient(create_app())
+    release_id, _version_id = _create_release_with_version(client)
+
+    def fail_materialization(*args, **kwargs):
+        raise RuntimeError("fixture materialization failure")
+
+    monkeypatch.setattr("server.worker.materialize_release", fail_materialization)
+    assert run_worker_loop(limit=1) == 1
+
+    with get_session_factory()() as session:
+        event = session.scalar(
+            select(AuditEvent)
+            .where(AuditEvent.aggregate_type == "release")
+            .where(AuditEvent.aggregate_id == str(release_id))
+            .where(AuditEvent.event_type == "release.materialization_failed")
+        )
+    assert event is not None
+    assert "fixture materialization failure" in event.payload_json
+
+
 def test_repeat_release_request_requeues_when_release_artifact_pointers_drift(
     monkeypatch,
     tmp_path: Path,

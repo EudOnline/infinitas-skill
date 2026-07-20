@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 import server.modules.identity.service as identity_service
-from server.db import get_db
+from server.db import get_db, session_scope
 from server.i18n import pick_lang, resolve_language
 from server.logging import get_logger
 from server.model_base import utcnow
@@ -24,7 +24,7 @@ from server.modules.identity.auth import (
     maybe_get_current_user,
 )
 from server.modules.identity.models import Credential
-from server.rate_limit import get_rate_limiter, resolve_rate_limit_key
+from server.rate_limit import DBRateLimiter, resolve_rate_limit_key
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -36,21 +36,22 @@ _RATE_LIMIT_MAX = 10  # attempts per window
 
 def _check_login_rate_limit(
     request: Request,
-    db: Session,
     user_id: int | None = None,
 ) -> None:
     rate_limit_key = resolve_rate_limit_key(request, user_id)
-    limiter = get_rate_limiter(db)
-    if not limiter.check(
-        rate_limit_key, max_attempts=_RATE_LIMIT_MAX, window_seconds=_RATE_LIMIT_WINDOW
-    ):
+    with session_scope() as rate_limit_db:
+        allowed = DBRateLimiter(rate_limit_db).consume(
+            rate_limit_key,
+            max_attempts=_RATE_LIMIT_MAX,
+            window_seconds=_RATE_LIMIT_WINDOW,
+        )
+    if not allowed:
         log.warning("login rate limit exceeded for key=%s", rate_limit_key)
         raise HTTPException(
             status_code=429,
             detail="Too many login attempts. Please try again later.",
             headers={"Retry-After": str(_RATE_LIMIT_WINDOW)},
         )
-    limiter.record(rate_limit_key)
 
 
 class LoginRequest(BaseModel):
@@ -127,7 +128,7 @@ def login(
 ) -> LoginResponse:
     """Validate username/password and return user info."""
     # Check rate limit before attempting login (unauthenticated)
-    _check_login_rate_limit(request, db, user_id=None)
+    _check_login_rate_limit(request, user_id=None)
     lang = resolve_language(request)
     client_ip = request.client.host if request.client else "unknown"
 
