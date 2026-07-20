@@ -8,6 +8,8 @@ set -euo pipefail
 : "${INFINITAS_SERVER_DATABASE_URL:=sqlite:////srv/infinitas/data/server.db}"
 : "${HOME:=/srv/infinitas/home}"
 
+export PYTHONPATH="$INFINITAS_SERVER_REPO_PATH/src:$INFINITAS_BUNDLED_REPO_PATH/src:$INFINITAS_BUNDLED_REPO_PATH${PYTHONPATH:+:$PYTHONPATH}"
+
 mkdir -p "$HOME"
 python3 "$INFINITAS_BUNDLED_REPO_PATH/docker/bootstrap-runtime-repo.py" >/tmp/infinitas-bootstrap-runtime-repo.json
 cat /tmp/infinitas-bootstrap-runtime-repo.json

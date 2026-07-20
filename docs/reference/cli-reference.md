@@ -2,7 +2,7 @@
 audience: contributors, integrators, operators
 owner: repository maintainers
 source_of_truth: generated from argparse definitions in src/infinitas_skill
-last_reviewed: 2026-07-19
+last_reviewed: 2026-07-20
 status: maintained
 ---
 
@@ -567,12 +567,12 @@ options:
 
 ```text
 usage: infinitas registry [-h] [--base-url BASE_URL] [--token TOKEN]
-                          {skills,versions,releases,exposures,tokens,reviews} ...
+                          {skills,versions,releases,exposures,tokens,reviews,sources,catalog} ...
 
 Hosted registry private-first control plane CLI
 
 positional arguments:
-  {skills,versions,releases,exposures,tokens,reviews}
+  {skills,versions,releases,exposures,tokens,reviews,sources,catalog}
     skills              Manage private-first skill records
     versions            Create immutable skill versions directly
     releases            Create and inspect immutable releases
@@ -816,12 +816,12 @@ options:
 
 ```text
 usage: infinitas server [-h]
-                        {healthcheck,backup,render-systemd,prune-backups,worker,worker-healthcheck,inspect-state} ...
+                        {healthcheck,backup,render-systemd,prune-backups,worker,worker-healthcheck,inspect-state,restore-rehearsal} ...
 
 Hosted server operations CLI
 
 positional arguments:
-  {healthcheck,backup,render-systemd,prune-backups,worker,worker-healthcheck,inspect-state}
+  {healthcheck,backup,render-systemd,prune-backups,worker,worker-healthcheck,inspect-state,restore-rehearsal}
     healthcheck         Run hosted server health checks
     backup              Create a hosted registry backup set
     render-systemd      Render a hosted registry systemd deployment bundle

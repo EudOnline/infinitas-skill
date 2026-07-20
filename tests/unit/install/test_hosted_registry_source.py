@@ -30,7 +30,7 @@ def _base_config() -> dict:
             {
                 "name": "hosted",
                 "kind": "http",
-                "base_url": "https://skills.example.com/registry",
+                "base_url": "https://skills.example.com/api/v1/registry",
                 "enabled": True,
                 "priority": 100,
                 "trust": "private",
@@ -59,7 +59,7 @@ def test_http_registry_requires_base_url() -> None:
 def test_http_registry_rejects_insecure_base_url_for_trusted_tiers(trust: str) -> None:
     cfg = _base_config()
     cfg["registries"][0]["trust"] = trust
-    cfg["registries"][0]["base_url"] = "http://skills.example.com/registry"
+    cfg["registries"][0]["base_url"] = "http://skills.example.com/api/v1/registry"
     errors = _errors(cfg)
     assert errors and any(
         f"registry 'hosted' with trust '{trust}' must use an https base_url" in e for e in errors
@@ -84,7 +84,7 @@ def test_http_registry_identity_resolves_without_local_clone() -> None:
 
     identity = registry_identity(ROOT, reg)
     assert identity["registry_kind"] == "http"
-    assert identity["registry_base_url"] == "https://skills.example.com/registry"
+    assert identity["registry_base_url"] == "https://skills.example.com/api/v1/registry"
     assert identity["registry_host"] == "skills.example.com"
     assert identity["registry_root"] is None
     assert identity.get("registry_commit") is None
@@ -92,20 +92,20 @@ def test_http_registry_identity_resolves_without_local_clone() -> None:
 
 
 def test_registry_url_keeps_relative_paths_under_base_path() -> None:
-    assert build_registry_url("https://skills.example.com/registry", "catalog/index.json") == (
-        "https://skills.example.com/registry/catalog/index.json"
-    )
+    assert build_registry_url(
+        "https://skills.example.com/api/v1/registry", "catalog/index.json"
+    ) == ("https://skills.example.com/api/v1/registry/catalog/index.json")
 
 
 @pytest.mark.parametrize("path", ["../internal", "catalog/../../internal", "https://evil.test/x"])
 def test_registry_url_rejects_base_escape(path: str) -> None:
     with pytest.raises(HostedRegistryError):
-        build_registry_url("https://skills.example.com/registry", path)
+        build_registry_url("https://skills.example.com/api/v1/registry", path)
 
 
 def test_registry_redirect_rejects_cross_origin_and_preserves_same_origin_auth() -> None:
     request = Request(
-        "https://skills.example.com/registry/index.json",
+        "https://skills.example.com/api/v1/registry/index.json",
         headers={"Authorization": "Bearer secret"},
     )
     handler = _RedirectLimiter(("https", "skills.example.com", None))
@@ -115,7 +115,7 @@ def test_registry_redirect_rejects_cross_origin_and_preserves_same_origin_auth()
         302,
         "Found",
         HTTPMessage(),
-        "https://skills.example.com/registry/current.json",
+        "https://skills.example.com/api/v1/registry/current.json",
     )
     assert redirected is not None
     assert redirected.get_header("Authorization") == "Bearer secret"

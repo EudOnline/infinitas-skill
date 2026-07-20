@@ -344,7 +344,7 @@ def configure_server_parser(parser: argparse.ArgumentParser) -> argparse.Argumen
         dest="server_command",
         metavar=(
             "{healthcheck,backup,render-systemd,prune-backups,worker,"
-            "worker-healthcheck,inspect-state}"
+            "worker-healthcheck,inspect-state,restore-rehearsal}"
         ),
     )
     _configure_server_core_commands(subparsers)

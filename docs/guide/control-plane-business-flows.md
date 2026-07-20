@@ -2,7 +2,7 @@
 audience: contributors, operators, integrators
 owner: repository maintainers
 source_of_truth: business-flow audit of the maintained control plane
-last_reviewed: 2026-07-19
+last_reviewed: 2026-07-20
 status: maintained
 ---
 
@@ -234,8 +234,8 @@ The registry and discovery surfaces are not separate sources of truth. They are 
 
 That includes:
 
-- `/registry/ai-index.json`
-- `/registry/discovery-index.json`
+- `/api/v1/registry/ai-index.json`
+- `/api/v1/registry/discovery-index.json`
 - `/api/v1/catalog/*`
 - `/api/v1/search/*`
 - `/api/v1/install/*`

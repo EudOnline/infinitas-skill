@@ -2,7 +2,7 @@
 audience: contributors, integrators, automation authors
 owner: repository maintainers
 source_of_truth: maintained discovery and install workflow reference
-last_reviewed: 2026-04-21
+last_reviewed: 2026-07-20
 status: maintained
 ---
 
@@ -34,6 +34,39 @@ uv run infinitas discovery inspect lvxiaoer/operate-infinitas-skill --json
 
 These commands read the maintained generated surfaces under `catalog/` rather than scraping `skills/active/` or `skills/incubating/`.
 
+## Configure a hosted registry
+
+For a server deployed at `https://skills.example.com`, add an HTTP source to the client
+repository's `config/registry-sources.json` or effective registry-source policy:
+
+```json
+{
+  "registries": [
+    {
+      "name": "hosted",
+      "kind": "http",
+      "base_url": "https://skills.example.com/api/v1/registry",
+      "trust": "private",
+      "auth": {
+        "mode": "token",
+        "env": "INFINITAS_REGISTRY_READ_TOKEN"
+      }
+    }
+  ]
+}
+```
+
+Then validate the effective source configuration:
+
+```bash
+export INFINITAS_REGISTRY_READ_TOKEN=<registry-read-token>
+uv run infinitas registry sources --repo-root . check
+uv run infinitas registry sources --repo-root . status hosted --json
+```
+
+The `base_url` must point to `/api/v1/registry`, not the application root. The environment
+variable name is a local indirection: the token itself does not belong in the JSON file.
+
 ## What Each Step Is For
 
 - `search` gives a broad candidate list from the generated discovery index.
@@ -51,6 +84,16 @@ uv run infinitas install by-name operate-infinitas-skill ~/.openclaw/skills --mo
 ```
 
 Treat the preview as the last check before materializing local changes.
+
+To install immediately after reviewing the plan, use `--mode auto`:
+
+```bash
+uv run infinitas install by-name \
+  <publisher>/<skill> \
+  ~/.openclaw/skills \
+  --mode auto \
+  --json
+```
 
 ## Installed Integrity Follow-up
 
@@ -77,3 +120,6 @@ Keep these layers separate:
 - installed integrity answers "what is the trust state of this target-local copy right now"
 
 That split keeps recommendation convenience from silently replacing provenance, distribution verification, or installed-runtime trust.
+
+For server-side installation, domain, token, backup, and upgrade steps, see the
+[Coolify deployment runbook](../ops/coolify-deployment.md).

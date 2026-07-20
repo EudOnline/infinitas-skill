@@ -2,7 +2,7 @@
 audience: contributors, integrators, operators
 owner: repository maintainers
 source_of_truth: multi-registry source policy reference
-last_reviewed: 2026-03-30
+last_reviewed: 2026-07-20
 status: maintained
 ---
 
@@ -189,7 +189,7 @@ The registry source model now also supports a hosted distribution source:
 {
   "name": "hosted",
   "kind": "http",
-  "base_url": "https://skills.example.com/registry",
+  "base_url": "https://skills.example.com/api/v1/registry",
   "enabled": true,
   "priority": 100,
   "trust": "private",

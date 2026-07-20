@@ -374,7 +374,7 @@ def configure_registry_parser(parser: argparse.ArgumentParser) -> argparse.Argum
     _configure_registry_connection_args(parser)
     subparsers = parser.add_subparsers(
         dest="registry_command",
-        metavar="{skills,versions,releases,exposures,tokens,reviews}",
+        metavar="{skills,versions,releases,exposures,tokens,reviews,sources,catalog}",
     )
     _configure_registry_authoring_commands(subparsers)
     _configure_registry_access_commands(subparsers)

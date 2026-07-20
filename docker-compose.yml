@@ -6,6 +6,7 @@ x-infinitas-common: &infinitas-common
     - .env.compose
   environment:
     HOME: ${INFINITAS_RUNTIME_HOME}
+    PYTHONPATH: /srv/infinitas/repo/src:/opt/infinitas/bundle/src:/opt/infinitas/bundle
   init: true
   user: "${INFINITAS_UID}:${INFINITAS_GID}"
   working_dir: ${INFINITAS_SERVER_REPO_PATH}
@@ -47,7 +48,7 @@ services:
       test:
         - CMD-SHELL
         - >-
-          python3 -c "import json,urllib.request; response=urllib.request.urlopen('http://127.0.0.1:8000/api/v1/system/readyz', timeout=5); payload=json.load(response); raise SystemExit(0 if response.status == 200 and payload.get('ok') else 1)"
+          python3 -c "import json,os,urllib.request; host=json.loads(os.environ['INFINITAS_SERVER_ALLOWED_HOSTS'])[0]; request=urllib.request.Request('http://127.0.0.1:8000/api/v1/system/readyz', headers={'Host':host,'X-Forwarded-Proto':'https'}); response=urllib.request.urlopen(request, timeout=5); payload=json.load(response); raise SystemExit(0 if response.status == 200 and payload.get('ok') else 1)"
       interval: 30s
       timeout: 10s
       retries: 5

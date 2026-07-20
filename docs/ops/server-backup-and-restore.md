@@ -2,13 +2,16 @@
 audience: operators and release maintainers
 owner: repository maintainers
 source_of_truth: hosted backup and restore runbook
-last_reviewed: 2026-03-30
+last_reviewed: 2026-07-20
 status: maintained
 ---
 
 # Hosted Registry Backup and Restore
 
 This runbook covers the minimum backup set for a hosted `infinitas-skill` server.
+
+For volume names, terminals, deployment upgrades, and rollback on Coolify, also read the
+[Coolify deployment runbook](coolify-deployment.md).
 
 ## What to back up
 
@@ -45,6 +48,28 @@ Each backup directory contains:
 - `manifest.json` — backup metadata including timestamp, label, git HEAD, and source paths
 
 The backup helper refuses dirty repo snapshots so operators do not accidentally capture an in-flight publish worktree.
+
+### Run a backup on Coolify
+
+Open the terminal for the `app` service and run:
+
+```bash
+export PYTHONPATH=/srv/infinitas/repo/src
+python3 -m infinitas_skill.cli.main server backup \
+  --repo-path /srv/infinitas/repo \
+  --database-url sqlite:////srv/infinitas/data/server.db \
+  --artifact-path /srv/infinitas/artifacts \
+  --output-dir /srv/infinitas/backups \
+  --label nightly \
+  --json
+```
+
+Schedule the same command with a Coolify scheduled task or an external scheduler. The command
+must run in a service that mounts the repo, data, artifact, and backup volumes.
+
+The `infinitas-backups` volume protects against a bad application redeploy, but not against loss
+of the Coolify server. Copy completed backup directories to independent object storage or a
+different host and test that those exported copies can be retrieved.
 
 If you install the generated `systemd` bundle from `uv run infinitas server render-systemd ...`, enable the matching backup timer so this command runs on a predictable schedule:
 
@@ -101,17 +126,25 @@ Treat this as the safest first step before pointing any restored files at produc
 
 ## Restore sequence
 
-1. Restore the repo snapshot to the server-owned checkout path
-2. Restore the SQLite DB to the target database path
-3. Restore the artifact directory in full
-4. Reapply service environment and secret references
-5. Run a hosted health check and inspect job queues
-6. Verify the latest provenance with `uv run infinitas release doctor-signing <skill> --provenance <path>`
-7. Re-run `uv run infinitas registry sources mirror --remote <mirror-remote> --dry-run` before re-enabling outward mirroring
+1. Stop the API app and worker so no writes occur during restore.
+2. Restore the repo snapshot to the server-owned checkout path.
+3. Restore the SQLite DB to the target database path.
+4. Restore the artifact directory in full.
+5. Reapply service environment and secret references.
+6. Start one app and one worker.
+7. Run readiness, worker-heartbeat, and hosted state checks.
+8. Verify the latest provenance with `uv run infinitas release doctor-signing <skill> --provenance <path>`.
+9. Re-run `uv run infinitas registry sources mirror --remote <mirror-remote> --dry-run` before re-enabling outward mirroring.
+
+Coolify does not provide an application-level restore endpoint for this project. Restore is an
+operator procedure: stop the services, restore the named-volume contents, verify ownership is
+`1000:1000`, then redeploy and validate. When deleting or recreating a resource, preserve the
+persistent volumes.
 
 ## Recovery priorities
 
 - Recover repo + db + artifacts together for a point-in-time consistent restore
+- Back up immediately before every image upgrade and retain the previous immutable image tag
 - Do not restore GitHub back into the hosted source-of-truth repo
 - If artifacts are missing but the repo is intact, rerun worker publish for the affected release after verifying tags and provenance
 - PostgreSQL dumps and object-storage snapshots remain future automation work; v0.1 backup tooling supports only the single-node SQLite deployment shape

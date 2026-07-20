@@ -1,0 +1,135 @@
+name: infinitas-hosted-registry
+
+x-infinitas-environment: &infinitas-environment
+  HOME: /srv/infinitas/home
+  PYTHONPATH: /srv/infinitas/repo/src:/opt/infinitas/bundle/src:/opt/infinitas/bundle
+  INFINITAS_SERVER_ENV: production
+  INFINITAS_SERVER_ALLOWED_HOSTS: "${INFINITAS_SERVER_ALLOWED_HOSTS}"
+  INFINITAS_SERVER_DATABASE_URL: sqlite:////srv/infinitas/data/server.db
+  INFINITAS_SERVER_SECRET_KEY: "${INFINITAS_SERVER_SECRET_KEY}"
+  INFINITAS_SERVER_BOOTSTRAP_USERS: "${INFINITAS_SERVER_BOOTSTRAP_USERS}"
+  INFINITAS_SERVER_REPO_PATH: /srv/infinitas/repo
+  INFINITAS_SERVER_ARTIFACT_PATH: /srv/infinitas/artifacts
+  INFINITAS_SERVER_REPO_LOCK_PATH: /srv/infinitas/data/repo.lock
+  INFINITAS_SERVER_CONTENT_PENDING_TTL_HOURS: "${INFINITAS_SERVER_CONTENT_PENDING_TTL_HOURS:-24}"
+  INFINITAS_SERVER_CONTENT_MAX_PENDING_PER_SKILL: "${INFINITAS_SERVER_CONTENT_MAX_PENDING_PER_SKILL:-10}"
+  INFINITAS_SERVER_CONTENT_MAX_PENDING_BYTES_PER_PRINCIPAL: "${INFINITAS_SERVER_CONTENT_MAX_PENDING_BYTES_PER_PRINCIPAL:-268435456}"
+  INFINITAS_REGISTRY_READ_TOKENS: "${INFINITAS_REGISTRY_READ_TOKENS:-[]}"
+  INFINITAS_SERVER_TRUSTED_PROXIES: "${INFINITAS_SERVER_TRUSTED_PROXIES:-[]}"
+  INFINITAS_SERVER_GIT_BRANCH: "${INFINITAS_SERVER_GIT_BRANCH:-main}"
+  INFINITAS_SERVER_GIT_ORIGIN_URL: "${INFINITAS_SERVER_GIT_ORIGIN_URL:-}"
+  INFINITAS_SERVER_GIT_USER_NAME: "${INFINITAS_SERVER_GIT_USER_NAME:-Infinitas Hosted Registry}"
+  INFINITAS_SERVER_GIT_USER_EMAIL: "${INFINITAS_SERVER_GIT_USER_EMAIL:-hosted-registry@example.com}"
+  INFINITAS_SERVER_REPO_BOOTSTRAP_RESET: "${INFINITAS_SERVER_REPO_BOOTSTRAP_RESET:-0}"
+  INFINITAS_WORKER_POLL_INTERVAL: "${INFINITAS_WORKER_POLL_INTERVAL:-5}"
+  INFINITAS_WORKER_HEALTH_PATH: /srv/infinitas/data/worker.heartbeat
+  INFINITAS_WORKER_HEALTH_MAX_AGE_SECONDS: "${INFINITAS_WORKER_HEALTH_MAX_AGE_SECONDS:-30}"
+  INFINITAS_BACKUP_OUTPUT_DIR: /srv/infinitas/backups
+  INFINITAS_LOG_LEVEL: "${INFINITAS_LOG_LEVEL:-INFO}"
+  INFINITAS_LOG_FORMAT: "${INFINITAS_LOG_FORMAT:-json}"
+
+x-infinitas-volumes: &infinitas-volumes
+  - infinitas-repo:/srv/infinitas/repo
+  - infinitas-data:/srv/infinitas/data
+  - infinitas-artifacts:/srv/infinitas/artifacts
+  - infinitas-backups:/srv/infinitas/backups
+  - infinitas-home:/srv/infinitas/home
+
+services:
+  init-permissions:
+    image: "${INFINITAS_IMAGE:-ghcr.io/eudonline/infinitas-skill:latest}"
+    user: "0:0"
+    entrypoint: ["/bin/bash", "-lc"]
+    command:
+      - >-
+        mkdir -p /srv/infinitas/repo /srv/infinitas/data /srv/infinitas/artifacts
+        /srv/infinitas/backups /srv/infinitas/home &&
+        chown -R 1000:1000 /srv/infinitas/repo /srv/infinitas/data
+        /srv/infinitas/artifacts /srv/infinitas/backups /srv/infinitas/home
+    restart: "no"
+    volumes: *infinitas-volumes
+
+  init-repo:
+    image: "${INFINITAS_IMAGE:-ghcr.io/eudonline/infinitas-skill:latest}"
+    init: true
+    environment: *infinitas-environment
+    command:
+      - python3
+      - /opt/infinitas/bundle/docker/bootstrap-runtime-repo.py
+    depends_on:
+      init-permissions:
+        condition: service_completed_successfully
+    restart: "no"
+    working_dir: /srv/infinitas/repo
+    volumes: *infinitas-volumes
+
+  app:
+    image: "${INFINITAS_IMAGE:-ghcr.io/eudonline/infinitas-skill:latest}"
+    init: true
+    environment: *infinitas-environment
+    depends_on:
+      init-repo:
+        condition: service_completed_successfully
+    command:
+      - python3
+      - -m
+      - uvicorn
+      - server.app:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+    expose:
+      - "8000"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          python3 -c "import json,os,urllib.request; host=json.loads(os.environ['INFINITAS_SERVER_ALLOWED_HOSTS'])[0]; request=urllib.request.Request('http://127.0.0.1:8000/api/v1/system/readyz', headers={'Host':host,'X-Forwarded-Proto':'https'}); response=urllib.request.urlopen(request, timeout=5); payload=json.load(response); raise SystemExit(0 if response.status == 200 and payload.get('ok') else 1)"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    working_dir: /srv/infinitas/repo
+    volumes: *infinitas-volumes
+
+  worker:
+    image: "${INFINITAS_IMAGE:-ghcr.io/eudonline/infinitas-skill:latest}"
+    init: true
+    environment: *infinitas-environment
+    depends_on:
+      init-repo:
+        condition: service_completed_successfully
+      app:
+        condition: service_healthy
+    command:
+      - /bin/bash
+      - -lc
+      - >-
+        exec env PYTHONPATH="$$INFINITAS_SERVER_REPO_PATH/src$${PYTHONPATH:+:$$PYTHONPATH}"
+        python3 -m infinitas_skill.cli.main server worker
+        --poll-interval "$$INFINITAS_WORKER_POLL_INTERVAL"
+        --health-path "$$INFINITAS_WORKER_HEALTH_PATH"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          env PYTHONPATH="$$INFINITAS_SERVER_REPO_PATH/src$${PYTHONPATH:+:$$PYTHONPATH}"
+          python3 -m infinitas_skill.cli.main server worker-healthcheck
+          --health-path "$$INFINITAS_WORKER_HEALTH_PATH"
+          --max-age-seconds "$$INFINITAS_WORKER_HEALTH_MAX_AGE_SECONDS"
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    working_dir: /srv/infinitas/repo
+    volumes: *infinitas-volumes
+
+volumes:
+  infinitas-repo:
+  infinitas-data:
+  infinitas-artifacts:
+  infinitas-backups:
+  infinitas-home:

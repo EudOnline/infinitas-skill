@@ -20,7 +20,7 @@ def _federated_http_registry() -> dict:
     return {
         "name": "upstream-fed",
         "kind": "http",
-        "base_url": "https://skills.example.com/registry",
+        "base_url": "https://skills.example.com/api/v1/registry",
         "enabled": True,
         "priority": 50,
         "trust": "trusted",

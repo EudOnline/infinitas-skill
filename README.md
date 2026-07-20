@@ -2,7 +2,7 @@
 audience: contributors, operators, integrators
 owner: repository maintainers
 source_of_truth: repository entry page
-last_reviewed: 2026-07-14
+last_reviewed: 2026-07-20
 status: maintained
 ---
 
@@ -67,7 +67,7 @@ Browser authentication uses a session cookie and CSRF token. Agent requests use 
 ```bash
 uv run infinitas discovery search registry --json
 uv run infinitas discovery inspect lvxiaoer/operate-infinitas-skill --json
-uv run infinitas install by-name lvxiaoer/operate-infinitas-skill --target-dir .agents/skills
+uv run infinitas install by-name lvxiaoer/operate-infinitas-skill .agents/skills
 uv run infinitas registry --help
 uv run infinitas policy check-promotion skills/active/operate-infinitas-skill --json
 uv run infinitas release check-state operate-infinitas-skill --mode local-preflight --json
@@ -96,6 +96,11 @@ make bootstrap
 ```
 
 Start the application with the project’s configured ASGI command, then open `/manage`. Runtime configuration is documented in [docs/reference/configuration.md](docs/reference/configuration.md).
+
+For a hosted installation on Coolify, use the maintained
+[`docker-compose.coolify.yml`](docker-compose.coolify.yml) and follow the
+[Coolify deployment runbook](docs/ops/coolify-deployment.md). Do not deploy the generic local
+Compose file unchanged: it intentionally uses host bind mounts and explicit host UID/GID values.
 
 ## Verification
 
@@ -141,6 +146,7 @@ environment notes.
 - [Install manifest format](docs/reference/install-manifest-format.md)
 - [Testing](docs/reference/testing.md)
 - [Operator runbooks](docs/ops/README.md)
+- [Coolify deployment](docs/ops/coolify-deployment.md)
 - [ADR 0001: maintainability reset](docs/adr/0001-maintainability-reset.md)
 - [ADR 0002: maintained surface cutover](docs/adr/0002-maintained-surface-cutover.md)
 - [ADR 0003: OpenClaw runtime canonical](docs/adr/0003-openclaw-runtime-canonical.md)

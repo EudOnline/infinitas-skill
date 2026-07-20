@@ -2,7 +2,7 @@
 audience: contributors, operators, reviewers
 owner: repository maintainers
 source_of_truth: docs landing page
-last_reviewed: 2026-07-14
+last_reviewed: 2026-07-20
 status: maintained
 ---
 
@@ -35,5 +35,6 @@ The docs tree is being rebuilt around audience and task instead of historical fi
 - If you are changing repository structure or contributor workflows, start in [guide/README.md](guide/README.md).
 - If you need exact command, schema, or policy behavior, start in [reference/README.md](reference/README.md).
 - If you are operating the hosted server or preparing a release, start in [ops/README.md](ops/README.md).
+- If you are installing on Coolify, follow [ops/coolify-deployment.md](ops/coolify-deployment.md).
 - If you are investigating why the reset exists, start in [adr/0001-maintainability-reset.md](adr/0001-maintainability-reset.md).
 - If you need the maintained agent runtime contract, start in [docs/reference/openclaw-runtime-contract.md](reference/openclaw-runtime-contract.md) and [adr/0003-openclaw-runtime-canonical.md](adr/0003-openclaw-runtime-canonical.md).

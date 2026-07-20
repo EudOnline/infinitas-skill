@@ -2,13 +2,17 @@
 audience: operators and release maintainers
 owner: repository maintainers
 source_of_truth: hosted deployment runbook
-last_reviewed: 2026-07-19
+last_reviewed: 2026-07-20
 status: maintained
 ---
 
 # Hosted Registry Server Deployment
 
 This runbook describes the smallest hosted deployment for the server-owned `infinitas-skill` registry.
+
+For Coolify, use the dedicated [Coolify deployment runbook](coolify-deployment.md) and
+[`docker-compose.coolify.yml`](../../docker-compose.coolify.yml). The generic Compose procedure
+below is for an operator-controlled Docker host with bind mounts; it is not the Coolify template.
 
 The recommended single-node deployment shape now includes a generated `systemd` bundle so operators do not have to hand-write service units for the API, worker, and scheduled backups.
 
@@ -53,18 +57,21 @@ Production safety rails:
 6. Start a worker loop process that drains queued release materialization jobs, for example `uv run infinitas server worker --poll-interval 5`
 7. Configure the reverse proxy so hosted registry clients reach the API and immutable artifacts over HTTPS
 
-The built-in hosted app now serves immutable distribution artifacts directly from the synchronized artifact root under `/registry/*`. That means operators can expose both the control-plane API and hosted install surface through the same app process, for example:
+The built-in hosted app serves immutable distribution artifacts from the synchronized artifact
+root under `/api/v1/registry/*`. That means operators can expose both the control-plane API and
+hosted install surface through the same app process, for example:
 
 - `https://skills.example.com/api/v1/system/healthz`
 - `https://skills.example.com/api/v1/...`
-- `https://skills.example.com/registry/ai-index.json`
-- `https://skills.example.com/registry/skills/<publisher>/<skill>/<version>/manifest.json`
+- `https://skills.example.com/api/v1/registry/ai-index.json`
+- `https://skills.example.com/api/v1/registry/skills/<publisher>/<skill>/<version>/manifest.json`
 - `https://skills.example.com/manage`
 - `https://skills.example.com/library/{object_id}`
 - `https://skills.example.com/library/{object_id}/releases/{release_id}`
 
-If `INFINITAS_REGISTRY_READ_TOKENS` is unset or empty, `/registry/*` stays public for local/dev compatibility.
-If it is set to a JSON array of bearer tokens, hosted installers must send one of those tokens when reading `/registry/*`.
+If `INFINITAS_REGISTRY_READ_TOKENS` is unset or empty, `/api/v1/registry/*` stays public for
+local/dev compatibility. If it is set to a JSON array of bearer tokens, hosted installers must
+send one of those tokens when reading `/api/v1/registry/*`.
 
 ## Container image
 
@@ -77,7 +84,8 @@ The repository now includes a container image path for the hosted registry:
   a real `/api/v1/system/healthz` smoke check, then builds `linux/amd64` and `linux/arm64`
   images in the dependent publication job
 - pull requests build the image without pushing
-- pushes to `main`, version tags matching `v*`, and manual workflow runs publish to GHCR as `ghcr.io/<owner>/infinitas-skill`
+- pushes to `main`, version tags matching `v*`, and manual workflow runs publish to GHCR as
+  `ghcr.io/eudonline/infinitas-skill`
 
 The workflow emits branch, semver, `sha-*`, and default-branch `latest` tags. Image publication
 and provenance attestation cannot run until validation and the container smoke check pass. The
@@ -87,6 +95,10 @@ plane, and compose seeds that snapshot into a writable runtime repo on first boo
 ## Docker Compose deployment
 
 For a single-node container deployment, use the checked-in `docker-compose.yml` plus `.env.compose.example`.
+
+Do not import this file unchanged into Coolify. It publishes a host port, requires a local
+`.env.compose`, uses relative bind mounts, and relies on a manually selected host UID/GID. Those
+are intentional properties of the generic Docker-host workflow.
 
 The compose stack assumes:
 
@@ -129,7 +141,7 @@ The default compose environment uses these host mounts:
 
 - `INFINITAS_HOST_REPO_PATH` → mounted writable runtime repo initialized from the image snapshot
 - `INFINITAS_HOST_DATA_PATH` → SQLite DB and repo lock
-- `INFINITAS_HOST_ARTIFACT_PATH` → hosted `/registry/*` artifact root
+- `INFINITAS_HOST_ARTIFACT_PATH` → hosted `/api/v1/registry/*` artifact root
 - `INFINITAS_HOST_BACKUP_PATH` → backup snapshots and optional inspect fallback files
 - `INFINITAS_HOST_HOME_PATH` → `.ssh`, `.gitconfig`, and related git client state for push/mirror operations
 
@@ -205,7 +217,8 @@ detection target.
 
 Phase 1 automation validates SQLite deployments only. PostgreSQL health probes can be added later without changing the hosted artifact contract.
 
-For hosted installs on other machines, point the registry source `base_url` at the `/registry` prefix, not the app root.
+For hosted installs on other machines, point the registry source `base_url` at the
+`/api/v1/registry` prefix, not the app root.
 If the hosted registry requires bearer auth, set the registry source `auth.mode` to `token` and point `auth.env` at the local environment variable that holds one of the configured read tokens.
 
 For operators inspecting queue state manually, the hosted app exposes the human-admin
@@ -215,7 +228,10 @@ CLI surface is available through:
 ```bash
 uv run infinitas registry --base-url https://skills.example.com --token <maintainer-token> skills get <skill-id>
 uv run infinitas registry --base-url https://skills.example.com --token <maintainer-token> reviews get-case <review-case-id>
-uv run infinitas registry --base-url https://skills.example.com --token <maintainer-token> jobs list
+uv run infinitas server inspect-state \
+  --database-url sqlite:////srv/infinitas/data/server.db \
+  --limit 10 \
+  --json
 ```
 
 ## State inspection
@@ -338,7 +354,8 @@ If mirror automation is enabled in the rendered bundle, also run:
 
 The API service starts `uvicorn`, and the worker, backup, prune, and inspect units all run `python -m infinitas_skill.cli.main server ...` with `PYTHONPATH` pointed at `<repo>/src`. The backup timer runs `server backup`, the prune timer runs `server prune-backups` against the backup root, and the inspect timer runs `server inspect-state` with the configured alert thresholds.
 When configured, the mirror timer runs `infinitas registry sources mirror` for one-way outward mirroring only.
-Published artifacts remain filesystem-backed under `INFINITAS_SERVER_ARTIFACT_PATH`, and the hosted app serves that synchronized artifact root read-only from `/registry/*`.
+Published artifacts remain filesystem-backed under `INFINITAS_SERVER_ARTIFACT_PATH`, and the
+hosted app serves that synchronized artifact root read-only from `/api/v1/registry/*`.
 
 For a small single-node deployment, a reasonable starting point is:
 

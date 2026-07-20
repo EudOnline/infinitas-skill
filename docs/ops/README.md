@@ -2,7 +2,7 @@
 audience: operators and release maintainers
 owner: repository maintainers
 source_of_truth: operations landing page
-last_reviewed: 2026-07-14
+last_reviewed: 2026-07-20
 status: maintained
 ---
 
@@ -13,6 +13,7 @@ Use the ops section for procedures that keep the hosted control plane, release f
 ## Core runbooks
 
 - [Hosted registry server deployment](server-deployment.md)
+- [Coolify deployment](coolify-deployment.md) — recommended container installation on a Coolify server
 - [Hosted registry backup and restore](server-backup-and-restore.md)
 - [Signing bootstrap](signing-bootstrap.md)
 - [Signing operations](signing-operations.md)

@@ -29,6 +29,7 @@ def test_web_admin_and_agent_docs_freeze_the_new_product_contract() -> None:
         "/activity",
         "GET /api/v1/library",
         "POST /api/v1/skills",
+        "POST /api/v1/skills/{skill_id}/content",
         "POST /api/v1/versions/{version_id}/releases",
         "GET /api/v1/releases/{release_id}",
         "Object",

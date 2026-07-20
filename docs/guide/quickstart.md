@@ -1,8 +1,8 @@
 ---
-audience: contributors, automation authors
+audience: contributors, operators, automation authors
 owner: repository maintainers
 source_of_truth: quickstart walkthrough
-last_reviewed: 2026-07-16
+last_reviewed: 2026-07-20
 status: maintained
 ---
 
@@ -22,6 +22,9 @@ This quickstart reflects the current product split:
 | `INFINITAS_REGISTRY_API_TOKEN` | — | Admin token for the hosted control plane |
 
 `INFINITAS_REGISTRY_API_TOKEN` is the admin token. Agent tokens are issued from the web admin flow and should be scoped separately.
+
+For a hosted server, complete the [Coolify deployment runbook](../ops/coolify-deployment.md)
+or the [generic hosted deployment runbook](../ops/server-deployment.md) first.
 
 ## Step 1: Open the web admin console
 
@@ -82,6 +85,7 @@ Object creation and release production are agent-driven. The canonical publish c
 
 ```text
 POST /api/v1/skills
+POST /api/v1/skills/{skill_id}/content
 POST /api/v1/versions/{version_id}/releases
 GET /api/v1/releases/{release_id}
 ```
@@ -89,9 +93,33 @@ GET /api/v1/releases/{release_id}
 Recommended flow:
 
 1. Create the Object with `POST /api/v1/skills`.
-2. Create an immutable version with `POST /api/v1/skills/{skill_id}/versions`.
-3. Create a Release with `POST /api/v1/versions/{version_id}/releases`.
-4. Poll `GET /api/v1/releases/{release_id}` until the Release is ready.
+2. Upload a `.tar.gz` content bundle with `POST /api/v1/skills/{skill_id}/content` and retain
+   the returned content identifier.
+3. Create an immutable version with `POST /api/v1/skills/{skill_id}/versions`, referencing that
+   content identifier.
+4. Create a Release with `POST /api/v1/versions/{version_id}/releases`.
+5. Poll `GET /api/v1/releases/{release_id}` until the Release is ready.
+
+The equivalent CLI sequence is:
+
+```bash
+export INFINITAS_REGISTRY_API_BASE_URL=https://skills.example.com
+export INFINITAS_REGISTRY_API_TOKEN=<publisher-token>
+
+uv run infinitas registry skills create \
+  --slug example-skill \
+  --display-name "Example Skill" \
+  --summary "Example hosted skill"
+uv run infinitas registry skills upload-content <skill_id> ./example-skill.tar.gz
+uv run infinitas registry versions create <skill_id> \
+  --version 1.0.0 \
+  --content-id <content_id>
+uv run infinitas registry releases create <version_id>
+uv run infinitas registry releases get <release_id>
+```
+
+IDs in angle brackets come from the preceding JSON response. A version cannot be created from a
+local path alone; the validated hosted content upload is required.
 
 ## Step 5: Read from the unified library surface
 
@@ -132,3 +160,4 @@ Hand edits should be limited to:
 - [Registry CLI reference](../reference/registry-cli.md)
 - [Error catalog](../reference/error-catalog.md)
 - [CLI reference](../reference/cli-reference.md)
+- [Coolify deployment](../ops/coolify-deployment.md)

@@ -2,7 +2,7 @@
 audience: contributors, operators, integrators
 owner: repository maintainers
 source_of_truth: guide landing page
-last_reviewed: 2026-04-22
+last_reviewed: 2026-07-20
 status: maintained
 ---
 
@@ -13,6 +13,7 @@ Use the guide section when you need orientation, decision framing, or contributo
 ## Start here
 
 - [Quickstart](quickstart.md)
+- [Coolify deployment](../ops/coolify-deployment.md)
 - [Control-plane business flows](control-plane-business-flows.md)
 - [Retired multi-object branch notes](multi-object-agent-distribution-branch-notes.md)
 - [Trust model](trust-model.md)

@@ -69,7 +69,7 @@ from infinitas_skill.server.ops import (
     build_server_worker_parser,
 )
 
-GENERATED_CLI_REFERENCE_LAST_REVIEWED = "2026-07-19"
+GENERATED_CLI_REFERENCE_LAST_REVIEWED = "2026-07-20"
 ParserFactory = Callable[..., ArgumentParser]
 Section = tuple[str, ParserFactory, str]
 

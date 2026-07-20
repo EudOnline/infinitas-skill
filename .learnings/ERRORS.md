@@ -41,6 +41,106 @@ Apply model, service, and migration changes as separate exact-context patches.
 
 ---
 
+## [ERR-20260720-001] coolify-runtime-smoke-image-build
+
+**Logged**: 2026-07-20T10:58:00+00:00
+**Priority**: low
+**Status**: resolved
+**Area**: infra
+
+### Summary
+
+The optional local Coolify topology smoke test could not reach container startup because the
+runtime image build stalled while downloading Debian package indexes.
+
+### Error
+
+```text
+[runtime 2/6] RUN apt-get ...
+Get:4 http://deb.debian.org/debian trixie/main amd64 Packages [9673 kB]
+ERROR: failed to build: failed to solve: Canceled: context canceled
+```
+
+### Context
+
+- Command: `docker build -t infinitas-coolify-audit:local .`
+- The build was manually canceled after the Debian package-index download made no progress for
+  more than four minutes.
+- The Compose file had already passed `docker compose config`, all deployment/documentation
+  governance tests, and the complete repository quality gate.
+- No test containers or named volumes were created.
+
+### Suggested Fix
+
+Retry the image smoke test when the Debian mirror is responsive, or rely on the existing CI
+multi-architecture image build and container health smoke for publication. Consider a controlled
+APT mirror only if this becomes recurrent in CI.
+
+### Metadata
+
+- Reproducible: unknown
+- Related Files: Dockerfile, docker-compose.coolify.yml
+
+### Resolution
+
+- **Resolved**: 2026-07-20T14:07:00+00:00
+- **Notes**: Built a current-code audit image on the published dependency-complete runtime
+  base, then completed app, worker, registry, login, backup, and restore-rehearsal smoke tests.
+  The normal Dockerfile build remains covered by the required CI image publication job.
+
+---
+
+## [ERR-20260720-002] hosted-compose-runtime-boundaries
+
+**Logged**: 2026-07-20T14:07:00+00:00
+**Priority**: high
+**Status**: resolved
+**Area**: infra
+
+### Summary
+
+The first Coolify topology smoke exposed bootstrap import, production health-probe, and hosted
+registry path drift that static Compose validation did not detect.
+
+### Error
+
+```text
+ModuleNotFoundError: No module named 'server'
+ssl.SSLError: [SSL: WRONG_VERSION_NUMBER] wrong version number
+HTTP Error 400: Bad Request
+GET /registry/ai-index.json -> 404
+```
+
+### Context
+
+- Compose changes the working directory from the image bundle to the writable runtime repo.
+- Production enables HTTPS redirect and trusted-host validation, while the original internal
+  readiness probe sent plain HTTP with `Host: 127.0.0.1`.
+- Maintained docs described `/registry/*`, but the current router is
+  `/api/v1/registry/*`.
+- App and worker did not share one explicit runtime-repo-first Python module path.
+
+### Suggested Fix
+
+Keep runtime smoke coverage for new deployment templates. The smoke must use production mode,
+a real allowed hostname, a registry read token, fresh named volumes, app readiness, worker
+heartbeat, browser login, hosted index fetch, backup, and restore rehearsal.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: docker/entrypoint-hosted.sh, docker-compose.yml,
+  docker-compose.coolify.yml, docs/ops/coolify-deployment.md
+
+### Resolution
+
+- **Resolved**: 2026-07-20T14:07:00+00:00
+- **Notes**: Unified PYTHONPATH across bootstrap/app/worker, made readiness proxy- and
+  trusted-host-aware, corrected hosted registry URLs to `/api/v1/registry`, added regression
+  assertions, and completed the full fresh-volume runtime smoke successfully.
+
+---
+
 ## [ERR-20260719-007] full-quality-gate-architecture-budgets
 
 **Logged**: 2026-07-19T12:00:00Z

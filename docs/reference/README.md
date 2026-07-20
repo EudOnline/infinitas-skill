@@ -2,7 +2,7 @@
 audience: contributors, integrators, reviewers
 owner: repository maintainers
 source_of_truth: reference landing page
-last_reviewed: 2026-04-22
+last_reviewed: 2026-07-20
 status: maintained
 ---
 
@@ -14,6 +14,7 @@ Reference docs describe exact behavior, contracts, schemas, and maintained comma
 
 - [API reference](api-reference.md) — HTTP endpoints, authentication, and OpenAPI schema
 - [Runtime configuration](configuration.md) — hosted service environment variables and production requirements
+- [Coolify deployment](../ops/coolify-deployment.md) — production container installation, upgrades, and rollback
 - [Testing](testing.md) — pytest groups, static gates, coverage, and closeout matrix
 
 ## CLI and command surfaces
