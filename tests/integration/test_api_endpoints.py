@@ -74,6 +74,46 @@ class TestHealthEndpoints:
         assert "microphone=()" in pp
         assert "geolocation=()" in pp
 
+    def test_readyz_returns_dependency_checks(self, tmp_path: Path):
+        artifacts = tmp_path / "artifacts"
+        artifacts.mkdir()
+        client = _api_client(tmp_path)
+
+        response = client.get("/api/v1/system/readyz")
+
+        assert response.status_code == 200
+        assert response.json()["checks"] == {
+            "database": True,
+            "repo": True,
+            "artifacts": True,
+        }
+
+    def test_readyz_returns_503_when_artifacts_are_unavailable(self, tmp_path: Path):
+        client = _api_client(tmp_path)
+
+        response = client.get("/api/v1/system/readyz")
+
+        assert response.status_code == 503
+        assert response.json() == {
+            "ok": False,
+            "service": "infinitas-hosted-registry",
+            "checks": {"database": True, "repo": True, "artifacts": False},
+        }
+
+    def test_readyz_returns_503_when_database_probe_fails(self, tmp_path: Path, monkeypatch):
+        (tmp_path / "artifacts").mkdir()
+        client = _api_client(tmp_path)
+        monkeypatch.setattr("server.modules.system.router._database_is_ready", lambda: False)
+
+        response = client.get("/api/v1/system/readyz")
+
+        assert response.status_code == 503
+        assert response.json()["checks"] == {
+            "database": False,
+            "repo": True,
+            "artifacts": True,
+        }
+
 
 # ---------------------------------------------------------------------------
 # Auth flow

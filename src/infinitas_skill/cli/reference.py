@@ -65,6 +65,7 @@ from infinitas_skill.server.ops import (
     build_server_parser,
     build_server_prune_backups_parser,
     build_server_render_systemd_parser,
+    build_server_worker_healthcheck_parser,
     build_server_worker_parser,
 )
 
@@ -267,6 +268,11 @@ def _release_and_server_sections() -> list[Section]:
             "infinitas server prune-backups",
         ),
         ("infinitas server worker", build_server_worker_parser, "infinitas server worker"),
+        (
+            "infinitas server worker-healthcheck",
+            build_server_worker_healthcheck_parser,
+            "infinitas server worker-healthcheck",
+        ),
     ]
 
 

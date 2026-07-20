@@ -208,6 +208,25 @@ def configure_server_worker_parser(parser: argparse.ArgumentParser) -> argparse.
     parser.add_argument(
         "--limit", type=int, default=None, help="Maximum jobs to process per loop iteration"
     )
+    parser.add_argument(
+        "--health-path",
+        default="",
+        help="Optional heartbeat file updated while the worker loop is healthy",
+    )
+    return parser
+
+
+def configure_server_worker_healthcheck_parser(
+    parser: argparse.ArgumentParser,
+) -> argparse.ArgumentParser:
+    parser.add_argument("--health-path", required=True, help="Worker heartbeat file path")
+    parser.add_argument(
+        "--max-age-seconds",
+        type=int,
+        default=30,
+        help="Maximum acceptable heartbeat age",
+    )
+    parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
     return parser
 
 
@@ -285,6 +304,11 @@ def build_server_worker_parser(*, prog: str | None = None) -> argparse.ArgumentP
     return configure_server_worker_parser(parser)
 
 
+def build_server_worker_healthcheck_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Check the hosted worker heartbeat", prog=prog)
+    return configure_server_worker_healthcheck_parser(parser)
+
+
 def build_server_inspect_state_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Inspect hosted registry queue and release state", prog=prog
@@ -299,10 +323,12 @@ __all__ = [
     "build_server_prune_backups_parser",
     "build_server_render_systemd_parser",
     "build_server_worker_parser",
+    "build_server_worker_healthcheck_parser",
     "configure_server_backup_parser",
     "configure_server_healthcheck_parser",
     "configure_server_inspect_state_parser",
     "configure_server_prune_backups_parser",
     "configure_server_render_systemd_parser",
     "configure_server_worker_parser",
+    "configure_server_worker_healthcheck_parser",
 ]

@@ -67,6 +67,7 @@ limits are checked atomically, and usage is consumed only by a successful exchan
 ### System and identity
 
 - `GET /api/v1/system/healthz`
+- `GET /api/v1/system/readyz`
 - `GET /api/v1/access/me`
 - `GET /api/v1/auth/me`
 - `GET /api/v1/profile/me`
@@ -76,6 +77,10 @@ limits are checked atomically, and usage is consumed only by a successful exchan
 - `GET /api/v1/auth/csrf`
 
 The two `/me` routes serve different contexts: access identity for Agent/API authorization and browser session identity for the Web UI.
+
+`healthz` is a process liveness probe. `readyz` additionally verifies the database,
+server-owned git checkout, and artifact directory; it returns `503` with per-dependency
+checks when the instance should not receive traffic.
 
 ### Library and publishing
 
@@ -157,5 +162,6 @@ Common statuses:
 - `409` state conflict;
 - `422` FastAPI/Pydantic validation failure;
 - `429` rate limit exceeded.
+- `503` runtime dependency unavailable; retry against a ready instance.
 
 The generated OpenAPI schema is authoritative for request bodies, response models, and endpoint-specific status codes.

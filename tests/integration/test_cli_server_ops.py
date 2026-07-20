@@ -73,6 +73,7 @@ def assert_server_cli_help_lists_maintained_subcommands() -> None:
         "render-systemd",
         "prune-backups",
         "worker",
+        "worker-healthcheck",
         "inspect-state",
     ]:
         assert command in help_text, f"expected {command!r} in infinitas server help"
@@ -129,6 +130,27 @@ def test_server_ops_split_into_smaller_modules() -> None:
 
 def test_server_healthcheck_reports_expected_summary() -> None:
     assert_server_healthcheck_reports_expected_summary()
+
+
+def test_server_worker_healthcheck_reports_fresh_heartbeat(tmp_path: Path) -> None:
+    heartbeat = tmp_path / "worker.heartbeat"
+    heartbeat.write_text("healthy", encoding="utf-8")
+
+    result = _run_cli(
+        [
+            "server",
+            "worker-healthcheck",
+            "--health-path",
+            str(heartbeat),
+            "--max-age-seconds",
+            "30",
+            "--json",
+        ]
+    )
+
+    payload = _load_json_output(result, label="infinitas server worker-healthcheck")
+    assert payload["ok"] is True
+    assert payload["path"] == str(heartbeat.resolve())
 
 
 def test_server_inspect_state_reports_job_lease_health(tmp_path: Path) -> None:

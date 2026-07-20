@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import time
+from contextlib import nullcontext
 from typing import Any
 
 from infinitas_skill.server.backup import run_server_backup, run_server_prune_backups
@@ -25,17 +26,23 @@ from infinitas_skill.server.ops_parsers import (
     build_server_inspect_state_parser,
     build_server_prune_backups_parser,
     build_server_render_systemd_parser,
+    build_server_worker_healthcheck_parser,
     build_server_worker_parser,
     configure_server_backup_parser,
     configure_server_healthcheck_parser,
     configure_server_inspect_state_parser,
     configure_server_prune_backups_parser,
     configure_server_render_systemd_parser,
+    configure_server_worker_healthcheck_parser,
     configure_server_worker_parser,
 )
 from infinitas_skill.server.repo_checks import require_sqlite_db, sqlite_path_from_url
 from infinitas_skill.server.restore import run_server_restore_rehearsal
 from infinitas_skill.server.systemd import run_server_render_systemd
+from infinitas_skill.server.worker_health import (
+    maintain_worker_heartbeat,
+    run_worker_healthcheck,
+)
 
 SERVER_TOP_LEVEL_HELP = "Hosted server operations tools"
 SERVER_PARSER_DESCRIPTION = "Hosted server operations CLI"
@@ -146,26 +153,35 @@ def emit_inspection_summary(summary: dict[str, Any], as_json: bool) -> None:
 
 
 def run_server_worker(
-    *, poll_interval: float = 5.0, once: bool = False, limit: int | None = None
+    *,
+    poll_interval: float = 5.0,
+    once: bool = False,
+    limit: int | None = None,
+    health_path: str = "",
 ) -> int:
     from server.lifecycle import ensure_database_ready
     from server.worker import run_worker_loop
 
     ensure_database_ready()
-    if once:
-        processed = run_worker_loop(limit=limit)
-        print(f"processed {processed} job(s) in once mode")
-        return 0
-
-    try:
-        while True:
+    heartbeat = maintain_worker_heartbeat(
+        health_path,
+        interval_seconds=min(max(poll_interval, 0.1), 10.0),
+    )
+    with heartbeat if health_path else nullcontext():
+        if once:
             processed = run_worker_loop(limit=limit)
-            print(f"processed {processed} job(s)")
-            if processed == 0:
-                time.sleep(max(poll_interval, 0.1))
-    except KeyboardInterrupt:
-        print("worker loop interrupted; exiting cleanly")
-        return 0
+            print(f"processed {processed} job(s) in once mode")
+            return 0
+
+        try:
+            while True:
+                processed = run_worker_loop(limit=limit)
+                print(f"processed {processed} job(s)")
+                if processed == 0:
+                    time.sleep(max(poll_interval, 0.1))
+        except KeyboardInterrupt:
+            print("worker loop interrupted; exiting cleanly")
+            return 0
 
 
 def run_server_inspect_state(
@@ -264,6 +280,21 @@ def _configure_server_runtime_commands(subparsers: argparse._SubParsersAction) -
             poll_interval=args.poll_interval,
             once=args.once,
             limit=args.limit,
+            health_path=args.health_path,
+        )
+    )
+
+    worker_healthcheck = subparsers.add_parser(
+        "worker-healthcheck",
+        help="Check the hosted worker heartbeat",
+        description="Check the hosted worker heartbeat",
+    )
+    configure_server_worker_healthcheck_parser(worker_healthcheck)
+    worker_healthcheck.set_defaults(
+        _handler=lambda args: run_worker_healthcheck(
+            health_path=args.health_path,
+            max_age_seconds=args.max_age_seconds,
+            as_json=args.json,
         )
     )
 
@@ -306,7 +337,10 @@ def _configure_server_runtime_commands(subparsers: argparse._SubParsersAction) -
 def configure_server_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(
         dest="server_command",
-        metavar="{healthcheck,backup,render-systemd,prune-backups,worker,inspect-state}",
+        metavar=(
+            "{healthcheck,backup,render-systemd,prune-backups,worker,"
+            "worker-healthcheck,inspect-state}"
+        ),
     )
     _configure_server_core_commands(subparsers)
     _configure_server_runtime_commands(subparsers)
@@ -337,6 +371,7 @@ __all__ = [
     "build_server_parser",
     "build_server_prune_backups_parser",
     "build_server_render_systemd_parser",
+    "build_server_worker_healthcheck_parser",
     "build_server_worker_parser",
     "configure_server_backup_parser",
     "configure_server_healthcheck_parser",
@@ -344,6 +379,7 @@ __all__ = [
     "configure_server_parser",
     "configure_server_prune_backups_parser",
     "configure_server_render_systemd_parser",
+    "configure_server_worker_healthcheck_parser",
     "configure_server_worker_parser",
     "run_server_backup",
     "run_server_healthcheck",

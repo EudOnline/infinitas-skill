@@ -47,11 +47,7 @@ services:
       test:
         - CMD-SHELL
         - >-
-          env PYTHONPATH="$$INFINITAS_SERVER_REPO_PATH/src$${PYTHONPATH:+:$$PYTHONPATH}" python3 -m infinitas_skill.cli.main server healthcheck
-          --api-url http://127.0.0.1:8000
-          --repo-path "$$INFINITAS_SERVER_REPO_PATH"
-          --artifact-path "$$INFINITAS_SERVER_ARTIFACT_PATH"
-          --database-url "$$INFINITAS_SERVER_DATABASE_URL"
+          python3 -c "import json,urllib.request; response=urllib.request.urlopen('http://127.0.0.1:8000/api/v1/system/readyz', timeout=5); payload=json.load(response); raise SystemExit(0 if response.status == 200 and payload.get('ok') else 1)"
       interval: 30s
       timeout: 10s
       retries: 5
@@ -67,12 +63,24 @@ services:
       - >-
           exec env PYTHONPATH="$$INFINITAS_SERVER_REPO_PATH/src$${PYTHONPATH:+:$$PYTHONPATH}" python3 -m infinitas_skill.cli.main server worker
           --poll-interval "$$INFINITAS_WORKER_POLL_INTERVAL"
+          --health-path "$$INFINITAS_WORKER_HEALTH_PATH"
     depends_on:
       init-repo:
         condition: service_completed_successfully
       app:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          env PYTHONPATH="$$INFINITAS_SERVER_REPO_PATH/src$${PYTHONPATH:+:$$PYTHONPATH}" python3 -m infinitas_skill.cli.main server worker-healthcheck
+          --health-path "$$INFINITAS_WORKER_HEALTH_PATH"
+          --max-age-seconds "$$INFINITAS_WORKER_HEALTH_MAX_AGE_SECONDS"
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   backup:
     <<: *infinitas-common

@@ -184,6 +184,25 @@ This checks:
 - the artifact directory contains `ai-index.json` and `catalog/`
 - the configured SQLite database file exists and answers a simple query
 
+The API also exposes `GET /api/v1/system/readyz`. Compose uses this readiness probe for
+the app container, so traffic and the worker wait for the database, git checkout, and
+artifact directory instead of relying on process liveness alone. Keep
+`/api/v1/system/healthz` for liveness monitoring.
+
+The Compose worker writes `INFINITAS_WORKER_HEALTH_PATH` continuously, including while
+a long job is running. Compose checks it with:
+
+```bash
+uv run infinitas server worker-healthcheck \
+  --health-path /srv/infinitas/data/worker.heartbeat \
+  --max-age-seconds 30 \
+  --json
+```
+
+Tune the allowed age with `INFINITAS_WORKER_HEALTH_MAX_AGE_SECONDS`; it should remain
+comfortably above the heartbeat refresh interval and below the operator's failure
+detection target.
+
 Phase 1 automation validates SQLite deployments only. PostgreSQL health probes can be added later without changing the hosted artifact contract.
 
 For hosted installs on other machines, point the registry source `base_url` at the `/registry` prefix, not the app root.

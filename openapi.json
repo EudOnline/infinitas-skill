@@ -27,6 +27,38 @@
         }
       }
     },
+    "/api/v1/system/readyz": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Readyz",
+        "description": "Report whether the API can serve its single-node production contract.",
+        "operationId": "readyz_api_v1_system_readyz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessView"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A required runtime dependency is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/activity/": {
       "get": {
         "tags": [
@@ -5450,6 +5482,32 @@
           "credential_type"
         ],
         "title": "ProfileIdentityView"
+      },
+      "ReadinessView": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "checks": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object",
+            "title": "Checks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "service",
+          "checks"
+        ],
+        "title": "ReadinessView"
       },
       "RegistryAIIndexView": {
         "properties": {

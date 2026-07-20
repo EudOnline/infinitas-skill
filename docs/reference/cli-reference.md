@@ -816,17 +816,18 @@ options:
 
 ```text
 usage: infinitas server [-h]
-                        {healthcheck,backup,render-systemd,prune-backups,worker,inspect-state} ...
+                        {healthcheck,backup,render-systemd,prune-backups,worker,worker-healthcheck,inspect-state} ...
 
 Hosted server operations CLI
 
 positional arguments:
-  {healthcheck,backup,render-systemd,prune-backups,worker,inspect-state}
+  {healthcheck,backup,render-systemd,prune-backups,worker,worker-healthcheck,inspect-state}
     healthcheck         Run hosted server health checks
     backup              Create a hosted registry backup set
     render-systemd      Render a hosted registry systemd deployment bundle
     prune-backups       Prune older hosted registry backup snapshots
     worker              Run the hosted registry worker loop
+    worker-healthcheck  Check the hosted worker heartbeat
     inspect-state       Inspect hosted registry queue and release state
     restore-rehearsal   Rehearse restoring a hosted registry backup
 
@@ -1047,7 +1048,7 @@ options:
 
 ```text
 usage: infinitas server worker [-h] [--poll-interval POLL_INTERVAL] [--once]
-                               [--limit LIMIT]
+                               [--limit LIMIT] [--health-path HEALTH_PATH]
 
 Run the hosted registry worker loop
 
@@ -1057,4 +1058,25 @@ options:
                         Seconds to wait between empty queue polls
   --once                Drain the queue once and exit
   --limit LIMIT         Maximum jobs to process per loop iteration
+  --health-path HEALTH_PATH
+                        Optional heartbeat file updated while the worker loop
+                        is healthy
+```
+
+## `infinitas server worker-healthcheck`
+
+```text
+usage: infinitas server worker-healthcheck [-h] --health-path HEALTH_PATH
+                                           [--max-age-seconds MAX_AGE_SECONDS]
+                                           [--json]
+
+Check the hosted worker heartbeat
+
+options:
+  -h, --help            show this help message and exit
+  --health-path HEALTH_PATH
+                        Worker heartbeat file path
+  --max-age-seconds MAX_AGE_SECONDS
+                        Maximum acceptable heartbeat age
+  --json                Emit machine-readable JSON output
 ```
