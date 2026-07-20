@@ -101,7 +101,7 @@ jobs:
           docker run --detach --name infinitas-smoke --publish 18000:8000 \
             --env HOME=/tmp/infinitas/home \
             --env INFINITAS_SERVER_ENV=production \
-            --env INFINITAS_SERVER_SECRET_KEY=ci-smoke-secret-key-32-characters \
+            --env INFINITAS_SERVER_SECRET_KEY=Xn9pL2vQ4sT7wZ1aB3cD5eF7gH9jK1mN \
             --env 'INFINITAS_SERVER_ALLOWED_HOSTS=["127.0.0.1","localhost"]' \
             --env 'INFINITAS_SERVER_BOOTSTRAP_USERS=[{"username":"smoke","display_name":"Smoke","role":"maintainer","password":"SmokePassword123!","token":"smoke-agent-token"}]' \
             --env 'INFINITAS_REGISTRY_READ_TOKENS=[]' \
@@ -112,7 +112,8 @@ jobs:
             "$IMAGE"
           trap 'docker rm --force infinitas-smoke >/dev/null 2>&1 || true' EXIT
           for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:18000/api/v1/system/healthz >/dev/null; then
+            if docker exec infinitas-smoke python3 -c \
+              "import urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8000/api/v1/system/healthz', headers={'Host':'127.0.0.1','X-Forwarded-Proto':'https'}), timeout=5)"; then
               exit 0
             fi
             sleep 2

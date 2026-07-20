@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+import re
 import tomllib
 from pathlib import Path
+
+from server.settings import validate_secret_key_strength
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -38,3 +41,13 @@ def test_validate_workflow_installs_playwright_browser_runtime() -> None:
     assert install in workflow
     assert verification in workflow
     assert workflow.index(install) < workflow.index(verification)
+
+
+def test_container_smoke_uses_production_valid_secret_and_https_probe() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "validate.yml").read_text(encoding="utf-8")
+    match = re.search(r"INFINITAS_SERVER_SECRET_KEY=([^ \\\n]+)", workflow)
+
+    assert match is not None
+    validate_secret_key_strength(match.group(1), "production")
+    assert "docker exec infinitas-smoke python3" in workflow
+    assert "'X-Forwarded-Proto':'https'" in workflow

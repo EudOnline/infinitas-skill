@@ -2201,3 +2201,42 @@ For repeated local full-suite verification on this host, clear obsolete pytest t
 - **Notes**: Confirmed the first reported failure passes in isolation, cleared retained pytest temp data, and moved the final verification's temporary directory to disk-backed `/var/tmp`.
 
 ---
+
+## [ERR-20260720-004] container-smoke-secret-rejected-in-production
+
+**Logged**: 2026-07-20T15:25:00Z
+**Priority**: high
+**Status**: resolved
+**Area**: infra
+
+### Summary
+
+The CI image built successfully, but its runtime smoke used a fixed key containing the weak pattern `secret`, so production startup correctly rejected the configuration.
+
+### Error
+
+```text
+RuntimeError: INFINITAS_SERVER_SECRET_KEY contains weak pattern "secret".
+```
+
+### Context
+
+- Workflow run: `29754277046`
+- The failure occurred after `Build local image for runtime smoke` succeeded and before GHCR publication.
+- The host-side HTTP probe also did not provide the HTTPS forwarding context required by production's redirect middleware.
+
+### Suggested Fix
+
+Use a deterministic high-entropy CI-only key that passes the same production validator, validate that key in a governance test, and run the probe inside the container with an explicit trusted loopback HTTPS forwarding header.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: .github/workflows/validate.yml, server/settings.py, tests/unit/governance/test_frontend_build_contract.py
+
+### Resolution
+
+- **Resolved**: 2026-07-20T15:25:00Z
+- **Notes**: Replaced the weak smoke key, added a test that calls `validate_secret_key_strength(..., "production")`, and changed the health probe to execute through container loopback with `X-Forwarded-Proto: https`.
+
+---
