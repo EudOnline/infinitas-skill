@@ -5,11 +5,12 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
+from src.infinitas_skill.skills import openclaw
 from src.infinitas_skill.skills.openclaw import (
     OpenClawBridgeError,
-    _is_probably_text_file,
     _strip_quotes,
     derive_registry_meta,
+    export_release_to_directory,
     parse_skill_frontmatter,
     resolve_skill_dir,
     scaffold_imported_skill,
@@ -215,34 +216,13 @@ class TestSelectAiSkill:
         assert "ambiguous" in str(exc.value)
 
 
-class TestIsProbablyTextFile:
-    def test_known_text_extension(self):
-        with TemporaryDirectory() as td:
-            path = Path(td) / "test.md"
-            path.write_text("hello", encoding="utf-8")
-            assert _is_probably_text_file(path) is True
-
-    def test_binary_content(self):
-        with TemporaryDirectory() as td:
-            path = Path(td) / "test.bin"
-            path.write_bytes(b"\x00\x01\x02\x03")
-            assert _is_probably_text_file(path) is False
-
-    def test_text_content_no_known_extension(self):
-        with TemporaryDirectory() as td:
-            path = Path(td) / "test.unknown"
-            path.write_text("hello world", encoding="utf-8")
-            assert _is_probably_text_file(path) is True
-
-
 class TestValidateExportedOpenclawDir:
     def test_valid_dir(self):
         with TemporaryDirectory() as td:
             skill_dir = Path(td) / "skill"
             skill_dir.mkdir()
             (skill_dir / "SKILL.md").write_text(
-                '---\nname: "Test"\ndescription: "A test"\n'
-                'metadata.openclaw.requires: "shell"\n---\n# Body',
+                '---\nname: "Test"\ndescription: "A test"\n---\n# Body',
                 encoding="utf-8",
             )
             result = validate_exported_openclaw_dir(skill_dir)
@@ -254,7 +234,7 @@ class TestValidateExportedOpenclawDir:
             assert result["ok"] is False
             assert any("missing SKILL.md" in e for e in result["errors"])
 
-    def test_missing_requires(self):
+    def test_runtime_metadata_is_optional(self):
         with TemporaryDirectory() as td:
             skill_dir = Path(td) / "skill"
             skill_dir.mkdir()
@@ -263,33 +243,75 @@ class TestValidateExportedOpenclawDir:
                 encoding="utf-8",
             )
             result = validate_exported_openclaw_dir(skill_dir)
-            assert result["ok"] is False
-            assert any("metadata.openclaw.requires" in e for e in result["errors"])
+            assert result["ok"] is True
 
-    def test_public_ready_license_check(self):
+    def test_public_ready_does_not_require_license_metadata(self):
         with TemporaryDirectory() as td:
             skill_dir = Path(td) / "skill"
             skill_dir.mkdir()
             (skill_dir / "SKILL.md").write_text(
-                '---\nname: "Test"\ndescription: "A test"\n'
-                'metadata.openclaw.requires: "shell"\n'
-                'metadata.openclaw.license: "MIT"\n---\n# Body',
+                '---\nname: "Test"\ndescription: "A test"\n---\n# Body',
                 encoding="utf-8",
             )
             result = validate_exported_openclaw_dir(skill_dir, public_ready=True)
-            assert result["ok"] is False
-            assert any("MIT-0" in e for e in result["errors"])
+            assert result["ok"] is True
+            assert result["public_ready"] is True
 
     def test_public_ready_size_check(self):
         with TemporaryDirectory() as td:
             skill_dir = Path(td) / "skill"
             skill_dir.mkdir()
             (skill_dir / "SKILL.md").write_text(
-                '---\nname: "Test"\ndescription: "A test"\n'
-                'metadata.openclaw.requires: "shell"\n'
-                'metadata.openclaw.license: "MIT-0"\n---\n# Body',
+                '---\nname: "Test"\ndescription: "A test"\n---\n# Body',
                 encoding="utf-8",
             )
             result = validate_exported_openclaw_dir(skill_dir, public_ready=True)
             assert result["ok"] is True
             assert result["public_ready"] is True
+
+    def test_public_ready_allows_binary_assets(self):
+        with TemporaryDirectory() as td:
+            skill_dir = Path(td) / "skill"
+            skill_dir.mkdir()
+            (skill_dir / "SKILL.md").write_text(
+                '---\nname: "Test"\ndescription: "A test"\n---\n# Body',
+                encoding="utf-8",
+            )
+            (skill_dir / "asset.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+
+            result = validate_exported_openclaw_dir(skill_dir, public_ready=True)
+
+            assert result["ok"] is True
+            assert result["public_ready"] is True
+
+
+class TestExportReleaseToDirectory:
+    def test_copies_rendered_release_bundle_and_validates_it(self, tmp_path, monkeypatch):
+        source_dir = tmp_path / "rendered-release"
+        source_dir.mkdir()
+        (source_dir / "SKILL.md").write_text(
+            "---\nname: rendered-release\ndescription: Rendered fixture.\n---\n# Body",
+            encoding="utf-8",
+        )
+        (source_dir / "asset.bin").write_bytes(b"\x00binary")
+
+        monkeypatch.setattr(
+            openclaw,
+            "materialize_distribution_source",
+            lambda *_args, **_kwargs: {
+                "materialized_path": str(source_dir),
+                "cleanup_dir": None,
+            },
+        )
+
+        result = export_release_to_directory(
+            tmp_path,
+            tmp_path / "manifest.json",
+            tmp_path / "export",
+            public_ready=True,
+        )
+
+        assert result["migration_contract_source_mode"] == "rendered-release"
+        assert result["public_ready"] is True
+        assert (tmp_path / "export" / "SKILL.md").is_file()
+        assert (tmp_path / "export" / "asset.bin").read_bytes() == b"\x00binary"

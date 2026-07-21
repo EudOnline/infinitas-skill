@@ -68,11 +68,15 @@ def test_openclaw_contract_builds_runtime_from_canonical_source(tmp_path: Path) 
     }
 
 
-def test_render_skill_markdown_prefers_explicit_openclaw_requires(tmp_path: Path) -> None:
+def test_render_skill_markdown_does_not_emit_internal_requires_as_runtime_gating(
+    tmp_path: Path,
+) -> None:
     source = load_skill_source(
         _canonical_skill(tmp_path, runtime={"requires": ["gateway-shell", "workspace-state"]})
     )
 
     rendered = render_skill_markdown(source, "openclaw", {"platform": "openclaw"})
 
-    assert "metadata.openclaw.requires: gateway-shell, workspace-state" in rendered
+    assert "metadata.openclaw" not in rendered
+    assert "gateway-shell" not in rendered
+    assert "workspace-state" not in rendered

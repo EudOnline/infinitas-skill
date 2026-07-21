@@ -171,6 +171,27 @@ def get_principal_for_user(db: Session, user: User | None) -> Principal | None:
     )
 
 
+def revoke_principal_credentials(
+    db: Session,
+    *,
+    principal_id: int,
+    credential_types: set[str] | None = None,
+) -> int:
+    query = (
+        select(Credential)
+        .where(Credential.principal_id == principal_id)
+        .where(Credential.revoked_at.is_(None))
+    )
+    if credential_types:
+        query = query.where(Credential.type.in_(credential_types))
+    credentials = db.scalars(query).all()
+    revoked_at = utcnow()
+    for credential in credentials:
+        cast(Any, credential).revoked_at = revoked_at
+        db.add(credential)
+    return len(credentials)
+
+
 def resolve_user_by_password(
     db: Session,
     username: str,

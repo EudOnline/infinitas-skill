@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2 - 2026-07-21
+
+- Regenerated signed distribution manifest with per-file integrity metadata.
+
 ## 0.1.1 - 2026-03-12
 - Hardened the stable release path with trusted signer bootstrap and resumable tag reuse.
 - Added a real verified-support recording flow for Claude, Codex, and OpenClaw.

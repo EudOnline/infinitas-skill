@@ -13,7 +13,11 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from server.exceptions import register_exception_handlers
 from server.lifecycle import lifespan
 from server.logging import configure_logging
-from server.middleware import CsrfValidationMiddleware, SecurityHeadersMiddleware
+from server.middleware import (
+    CsrfValidationMiddleware,
+    RequestContextMiddleware,
+    SecurityHeadersMiddleware,
+)
 from server.modules.access.router import routers as access_routers
 from server.modules.audit.router import router as audit_router
 from server.modules.authoring.router import router as authoring_router
@@ -83,7 +87,7 @@ def _install_openapi(application: FastAPI) -> None:
         for route in _iter_api_routes(list(application.routes)):
             if not _dependency_requires_auth(route.dependant):
                 continue
-            path_item = schema.get("paths", {}).get(route.path)
+            path_item = schema.get("paths", {}).get(route.path_format)
             if not path_item:
                 continue
             for method in route.methods or set():
@@ -121,6 +125,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         templates.env.bytecode_cache = FileSystemBytecodeCache(str(cache_dir))
         application.add_middleware(HTTPSRedirectMiddleware)
     application.add_middleware(CsrfValidationMiddleware)
+    application.add_middleware(RequestContextMiddleware)
     static_root = str(settings.template_dir.parent / "static")
     application.mount("/static", CachedStaticFiles(directory=static_root), name="static")
     register_exception_handlers(application, templates)

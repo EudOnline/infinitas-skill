@@ -154,6 +154,93 @@ class TestBootstrapCredentials:
             assert not verify_password("FirstPass123!", user.password_hash)
             assert verify_password("SecondPass456!", user.password_hash)
 
+    def test_password_rotation_revokes_existing_browser_sessions(
+        self, monkeypatch, tmp_path: Path
+    ) -> None:
+        _configure_bootstrap_env(monkeypatch, tmp_path)
+        payload = [
+            {
+                "username": "generated-token-user",
+                "display_name": "Generated Token User",
+                "role": "maintainer",
+                "password": "FirstPass123!",
+            }
+        ]
+        monkeypatch.setenv("INFINITAS_SERVER_BOOTSTRAP_USERS", json.dumps(payload))
+
+        from server.db import get_session_factory
+        from server.lifecycle import ensure_database_ready
+        from server.modules.identity.models import Credential
+
+        ensure_database_ready()
+        with get_session_factory()() as session:
+            principal_id = session.query(Credential).first().principal_id
+            from server.modules.identity.service import create_fresh_session_credential
+
+            session_credential = create_fresh_session_credential(session, principal_id=principal_id)
+            session.commit()
+            session_id = session_credential.id
+
+        payload[0]["password"] = "SecondPass456!"
+        monkeypatch.setenv("INFINITAS_SERVER_BOOTSTRAP_USERS", json.dumps(payload))
+        from server.settings import get_settings
+
+        get_settings.cache_clear()
+        ensure_database_ready()
+
+        with get_session_factory()() as session:
+            assert session.get(Credential, session_id).revoked_at is not None
+
+    def test_removed_bootstrap_user_is_disabled_and_credentials_revoked(
+        self, monkeypatch, tmp_path: Path
+    ) -> None:
+        _configure_bootstrap_env(monkeypatch, tmp_path)
+        payload = [
+            {
+                "username": "generated-token-user",
+                "display_name": "Generated Token User",
+                "role": "maintainer",
+                "password": "FirstPass123!",
+                "token": "configured-agent-token",
+            },
+            {
+                "username": "temporary-user",
+                "display_name": "Temporary User",
+                "role": "contributor",
+                "password": "TemporaryPass123!",
+                "token": "temporary-agent-token",
+            },
+        ]
+        monkeypatch.setenv("INFINITAS_SERVER_BOOTSTRAP_USERS", json.dumps(payload))
+
+        from server.db import get_session_factory
+        from server.lifecycle import ensure_database_ready
+        from server.modules.identity.models import Credential, User
+        from server.modules.identity.service import resolve_credential_by_token
+        from server.settings import get_settings
+
+        get_settings.cache_clear()
+        ensure_database_ready()
+        with get_session_factory()() as session:
+            temporary = session.query(User).filter(User.username == "temporary-user").one()
+            credential = resolve_credential_by_token(session, "temporary-agent-token")
+            assert credential is not None
+            credential_id = credential.id
+            assert temporary.password_hash is not None
+
+        monkeypatch.setenv(
+            "INFINITAS_SERVER_BOOTSTRAP_USERS",
+            json.dumps([payload[0]]),
+        )
+        get_settings.cache_clear()
+        ensure_database_ready()
+
+        with get_session_factory()() as session:
+            temporary = session.query(User).filter(User.username == "temporary-user").one()
+            assert temporary.password_hash is None
+            assert session.get(Credential, credential_id).revoked_at is not None
+            assert resolve_credential_by_token(session, "temporary-agent-token") is None
+
     def test_unchanged_bootstrap_password_keeps_existing_hash(
         self, monkeypatch, tmp_path: Path
     ) -> None:

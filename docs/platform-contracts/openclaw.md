@@ -2,7 +2,7 @@
 audience: contributors, reviewers, compatibility maintainers
 owner: repository maintainers
 source_of_truth: legacy platform contract annex
-last_reviewed: 2026-06-15
+last_reviewed: 2026-07-21
 status: legacy
 ---
 
@@ -13,6 +13,7 @@ status: legacy
 - OpenClaw supports native sub-agent delegation, plugin capabilities, background tasks, and cron jobs in maintained runtime flows.
 - OpenClaw runtime state and session semantics can be workspace-scoped in addition to user-level directories.
 - ClawHub is the public registry for OpenClaw skills and distributes versioned skill bundles.
+- ClawHub skill bundles can contain ordinary binary or text files and must stay under 50 MB. ClawHub publishes all skills under MIT-0 and does not support per-skill license overrides.
 
 ## Volatile assumptions
 - ClawHub moderation, publishing policy, and public-safety requirements may tighten over time.
@@ -23,19 +24,23 @@ status: legacy
 ## Official sources
 - https://docs.openclaw.ai/tools/skills
 - https://docs.openclaw.ai/tools/subagents
-- https://docs.openclaw.ai/tools/plugins
-- https://docs.openclaw.ai/tools/background-tasks
-- https://docs.openclaw.ai/tools/cron-jobs
-- https://docs.openclaw.ai/tools/clawhub
+- https://docs.openclaw.ai/plugins/building-plugins
+- https://docs.openclaw.ai/automation/tasks
+- https://docs.openclaw.ai/automation/cron-jobs
+- https://docs.openclaw.ai/clawhub
+- https://docs.openclaw.ai/clawhub/publishing
+- https://docs.openclaw.ai/clawhub/skill-format
+- https://docs.openclaw.ai/clawhub/security
+- https://docs.openclaw.ai/tools/creating-skills
 
 ## Last verified
-2026-06-15
+2026-07-21
 
 ## Verification steps
 - Confirm the Skills page still documents `SKILL.md`-based runtime semantics and workspace-oriented skill directory behavior.
 - Confirm the Sub-Agents and Plugins pages still document maintained delegation and capability model assumptions.
-- Confirm the Background Tasks and Cron Jobs pages still describe maintained scheduled execution semantics.
-- Confirm the ClawHub page still describes public versioned bundles and install flow.
+- Confirm the Tasks and Cron Jobs pages still describe maintained background and scheduled execution semantics.
+- Confirm the ClawHub pages still describe public versioned bundles, the 50 MB size ceiling, ordinary-file support, MIT-0 licensing, and the install flow.
 
 ## Known gaps
 - OpenClaw public publishing rules are product-policy surfaces as well as file-format surfaces, so public readiness must continue to be checked separately.

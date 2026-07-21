@@ -94,8 +94,10 @@ class TestRenderSkillMarkdown:
                 "distribution": {"license": "MIT"},
             }
             result = render_skill_markdown(source, "openclaw", {"platform": "openclaw"})
-            assert "metadata.openclaw.requires" in result
-            assert "MIT" in result
+            assert "name: test-skill" in result
+            assert "description: A test skill" in result
+            assert "metadata.openclaw" not in result
+            assert "MIT" not in result
 
     def test_tool_mapping_section(self):
         with TemporaryDirectory() as td:

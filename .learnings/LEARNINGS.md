@@ -62,3 +62,35 @@ Pair ownership moves with an exact-symbol `rg` scan and a direct module-import s
 - **Notes**: Updated the remaining import and added exact-symbol scanning to the refactor workflow.
 
 ---
+
+## [LRN-20260721-001] knowledge_gap
+
+**Logged**: 2026-07-21T11:50:00Z
+**Priority**: medium
+**Status**: resolved
+**Area**: docs
+
+### Summary
+
+OpenClaw and Claude Code platform contracts drifted from current official Skill semantics.
+
+### Details
+
+ClawHub now accepts ordinary files and applies MIT-0 at publish time, while Claude Code now documents native Agent Skills rather than only a subagent adapter model. The repository had retained an obsolete text-only ClawHub gate, invented per-skill license metadata, and understated Claude's native skill surface.
+
+### Suggested Action
+
+Verify compatibility contracts against primary documentation before refreshing evidence, and keep platform-specific extensions separate from the portable `SKILL.md` contract.
+
+### Metadata
+
+- Source: error
+- Related Files: profiles/openclaw.json, docs/platform-contracts/openclaw.md, docs/platform-contracts/claude.md
+- Tags: platform-contract, openclaw, claude-code, compatibility
+
+### Resolution
+
+- **Resolved**: 2026-07-21T11:50:00Z
+- **Notes**: Updated all three platform contract review dates, corrected the OpenClaw validator and renderer, and refreshed the four Active Skill OpenClaw export checks.
+
+---

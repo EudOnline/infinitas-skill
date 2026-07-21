@@ -172,6 +172,18 @@ def run_openclaw_skill_export(
         )
         payload["public_ready"] = result["public_ready"]
         payload["validation_errors"] = result["validation_errors"]
+        payload["migration_contract_source_mode"] = result["migration_contract_source_mode"]
+        if result["validation_errors"]:
+            payload.update(
+                {
+                    "ok": False,
+                    "state": "failed",
+                    "error_code": "export-openclaw-validation-failed",
+                    "message": "export did not satisfy OpenClaw public-ready requirements",
+                }
+            )
+            _print_payload(payload, as_json=as_json)
+            return 1
         if mode == "confirm":
             shutil.rmtree(target.parent, ignore_errors=True)
             payload["next_step"] = "run-export"

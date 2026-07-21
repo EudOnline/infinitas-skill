@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 
 from src.infinitas_skill.server.backup import (
     archive_artifacts,
+    build_backup_checksums,
     build_prune_summary,
     classify_backup_entries,
     copy_sqlite_db,
@@ -67,6 +68,19 @@ class TestArchiveArtifacts:
             result = archive_artifacts(artifact_path, backup_dir)
             assert result == "artifacts.tar.gz"
             assert (backup_dir / "artifacts.tar.gz").exists()
+
+
+class TestBuildBackupChecksums:
+    def test_hashes_each_named_backup_file(self):
+        with TemporaryDirectory() as td:
+            backup_dir = Path(td)
+            (backup_dir / "repo.bundle").write_bytes(b"repo")
+            (backup_dir / "server.db").write_bytes(b"database")
+
+            checksums = build_backup_checksums(backup_dir, ["repo.bundle", "server.db"])
+
+            assert set(checksums) == {"repo.bundle", "server.db"}
+            assert all(len(checksum) == 64 for checksum in checksums.values())
 
 
 class TestClassifyBackupEntries:

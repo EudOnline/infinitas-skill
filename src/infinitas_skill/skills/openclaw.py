@@ -7,39 +7,19 @@ Canonical OpenClaw runtime semantics live under ``infinitas_skill.openclaw``.
 from __future__ import annotations
 
 import json
-import logging
 import re
 import shutil
 from pathlib import Path
 from typing import Dict, Optional, Tuple, cast
 
 from infinitas_skill.discovery.ai_index import validate_ai_index_payload
+from infinitas_skill.install.distribution_core import DistributionError
 from infinitas_skill.install.distribution_materialization import materialize_distribution_source
-from infinitas_skill.openclaw import load_openclaw_skill_contract
+from infinitas_skill.openclaw import OpenClawSkillContractError, load_openclaw_skill_contract
 
-from .canonical import load_skill_source
-from .render import load_platform_profile, render_skill
+from .canonical import CanonicalSkillError, is_canonical_skill_dir, load_skill_source
+from .render import RenderSkillError, load_platform_profile, render_skill
 
-logger = logging.getLogger(__name__)
-
-_TEXT_EXTENSIONS = {
-    ".md",
-    ".json",
-    ".txt",
-    ".yaml",
-    ".yml",
-    ".toml",
-    ".cfg",
-    ".ini",
-    ".sh",
-    ".py",
-    ".js",
-    ".ts",
-    ".tsx",
-    ".jsx",
-    ".css",
-    ".html",
-}
 _FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n?", re.DOTALL)
 
 
@@ -225,19 +205,6 @@ def select_ai_skill(ai_index: Dict[str, object], requested: str) -> Dict[str, ob
     raise OpenClawBridgeError(f"ambiguous skill name {requested}: {choices}")
 
 
-def _is_probably_text_file(path: Path) -> bool:
-    if path.suffix.lower() in _TEXT_EXTENSIONS:
-        return True
-    try:
-        data = path.read_bytes()
-    except Exception:
-        logger.debug("failed to read file for text detection: %s", path)
-        return False
-    if b"\x00" in data[:8192]:
-        return False
-    return True
-
-
 def validate_exported_openclaw_dir(
     skill_dir: Path, public_ready: bool = False
 ) -> Dict[str, object]:
@@ -248,29 +215,13 @@ def validate_exported_openclaw_dir(
         errors.append(f"missing SKILL.md: {skill_md}")
         return {"ok": False, "skill_dir": str(skill_dir), "public_ready": False, "errors": errors}
     try:
-        frontmatter = parse_skill_frontmatter(skill_md)
+        parse_skill_frontmatter(skill_md)
     except OpenClawBridgeError as exc:
         errors.append(str(exc))
         return {"ok": False, "skill_dir": str(skill_dir), "public_ready": False, "errors": errors}
 
-    requires = frontmatter.get("metadata.openclaw.requires")
-    if not isinstance(requires, str) or not requires.strip():
-        errors.append("missing metadata.openclaw.requires in SKILL.md frontmatter")
-
     if public_ready:
-        license_value = frontmatter.get("metadata.openclaw.license")
-        if license_value != "MIT-0":
-            errors.append("public-ready exports require metadata.openclaw.license: MIT-0")
-
-        total_size = 0
-        for path in sorted(skill_dir.rglob("*")):
-            if not path.is_file():
-                continue
-            total_size += path.stat().st_size
-            if not _is_probably_text_file(path):
-                errors.append(
-                    f"public-ready exports must be text-only: {path.relative_to(skill_dir)}"
-                )
+        total_size = sum(path.stat().st_size for path in skill_dir.rglob("*") if path.is_file())
         if total_size > 50 * 1024 * 1024:
             errors.append("public-ready exports must stay under 50MB")
 
@@ -348,26 +299,50 @@ def export_release_to_directory(
         shutil.rmtree(export_dir)
     export_dir.parent.mkdir(parents=True, exist_ok=True)
 
-    materialized = materialize_distribution_source(
-        {
-            "source_type": "distribution-manifest",
-            "distribution_manifest": str(manifest_path),
-        },
-        root=root,
-    )
+    try:
+        materialized = materialize_distribution_source(
+            {
+                "source_type": "distribution-manifest",
+                "distribution_manifest": str(manifest_path),
+            },
+            root=root,
+        )
+    except DistributionError as exc:
+        raise OpenClawBridgeError(str(exc)) from exc
+
     source_dir = Path(materialized["materialized_path"]).resolve()
     cleanup_dir = materialized.get("cleanup_dir")
     try:
-        profile = load_platform_profile(Path(root).resolve(), "openclaw")
-        source = load_skill_source(source_dir)
-        openclaw_contract = load_openclaw_skill_contract(source_dir)
-        rendered = render_skill(
-            source=source,
-            platform="openclaw",
-            out_dir=export_dir,
-            profile=profile,
-        )
+        if is_canonical_skill_dir(source_dir):
+            profile = load_platform_profile(Path(root).resolve(), "openclaw")
+            source = load_skill_source(source_dir)
+            openclaw_contract = load_openclaw_skill_contract(source_dir)
+            rendered = render_skill(
+                source=source,
+                platform="openclaw",
+                out_dir=export_dir,
+                profile=profile,
+            )
+            source_mode = openclaw_contract["source_mode"]
+        else:
+            resolve_skill_dir(str(source_dir))
+            shutil.copytree(source_dir, export_dir)
+            rendered = {
+                "files": [
+                    str(path.relative_to(export_dir))
+                    for path in sorted(export_dir.rglob("*"))
+                    if path.is_file()
+                ]
+            }
+            source_mode = "rendered-release"
         validation = validate_exported_openclaw_dir(export_dir, public_ready=public_ready)
+    except (
+        CanonicalSkillError,
+        DistributionError,
+        OpenClawSkillContractError,
+        RenderSkillError,
+    ) as exc:
+        raise OpenClawBridgeError(str(exc)) from exc
     finally:
         if cleanup_dir:
             shutil.rmtree(cleanup_dir, ignore_errors=True)
@@ -375,7 +350,7 @@ def export_release_to_directory(
     return {
         "export_dir": str(export_dir),
         "files": rendered["files"],
-        "migration_contract_source_mode": openclaw_contract["source_mode"],
+        "migration_contract_source_mode": source_mode,
         "public_ready": validation["public_ready"],
         "validation_errors": validation["errors"],
     }

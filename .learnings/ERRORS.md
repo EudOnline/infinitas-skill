@@ -2240,3 +2240,149 @@ Use a deterministic high-entropy CI-only key that passes the same production val
 - **Notes**: Replaced the weak smoke key, added a test that calls `validate_secret_key_strength(..., "production")`, and changed the health probe to execute through container loopback with `X-Forwarded-Proto: https`.
 
 ---
+
+## [ERR-20260721-001] tavily-api-key-unavailable
+
+**Logged**: 2026-07-21T07:10:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: infra
+
+### Summary
+
+The Tavily web-search skill could not verify current OpenClaw sources because no API key was configured in the environment.
+
+### Error
+
+```text
+Error: Tavily API key not found in ../.secrets/tavily.key
+```
+
+### Context
+
+- The platform drift playbook requires current upstream-source verification before compatibility evidence is refreshed.
+- Three official-domain search queries failed before any search results were returned.
+
+### Suggested Fix
+
+Configure `TAVILY_API_KEY` for the Tavily skill, or use direct read-only requests to the official OpenClaw documentation and GitHub repository while preserving the reviewed source URLs.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: docs/ops/platform-drift-playbook.md, docs/platform-contracts/openclaw.md
+
+### Resolution
+
+- **Resolved**: 2026-07-21T07:10:00Z
+- **Notes**: Continued with direct official-source verification only; no compatibility timestamps were refreshed from unverified secondary sources.
+
+---
+
+## [ERR-20260721-002] openclaw-rendered-release-export-crash
+
+**Logged**: 2026-07-21T07:20:00Z
+**Priority**: high
+**Status**: resolved
+**Area**: backend
+
+### Summary
+
+The OpenClaw release exporter treated an immutable rendered `SKILL.md` bundle as a canonical source and raised an uncaught exception.
+
+### Error
+
+```text
+CanonicalSkillError: unsupported skill source layout: /tmp/infinitas-distribution-.../<skill>
+```
+
+### Context
+
+- Reproduced for all four Active Skill release artifacts with `infinitas openclaw skill export <skill> --mode confirm --json`.
+- Immutable bundles contain a rendered OpenClaw skill directory rather than a `skill.json` canonical source.
+
+### Suggested Fix
+
+Recognize rendered immutable bundles, copy them for export, validate the output, and map all bridge failures to the CLI's structured error payload.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: src/infinitas_skill/skills/openclaw.py, src/infinitas_skill/openclaw/cli.py
+
+### Resolution
+
+- **Resolved**: 2026-07-21T11:44:52Z
+- **Notes**: Added rendered-release export support, aligned public validation with current ClawHub rules, and verified all four Active Skill releases without tracebacks or validation errors.
+
+---
+
+## [ERR-20260721-003] registry-catalog-validate-command-removed
+
+**Logged**: 2026-07-21T11:52:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: docs
+
+### Summary
+
+The assumed `infinitas registry catalog validate` command no longer exists.
+
+### Error
+
+```text
+invalid choice: 'validate' (choose from build)
+```
+
+### Context
+
+- Catalog validation is now performed by `infinitas registry catalog build --check --json`.
+
+### Suggested Fix
+
+Use the documented `build --check` validation contract in operational guidance and verification runs.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: docs/ops/federation-operations.md, src/infinitas_skill/registry/cli.py
+
+### Resolution
+
+- **Resolved**: 2026-07-21T11:52:00Z
+- **Notes**: Replaced the invalid invocation with `infinitas registry catalog build --check --json`.
+
+---
+
+## [ERR-20260721-004] legacy-release-missing-file-manifest
+
+**Logged**: 2026-07-21T12:01:26Z
+**Priority**: high
+**Status**: pending
+**Area**: infra
+
+### Summary
+
+All current immutable Active Skill releases install successfully but cannot complete post-install integrity verification.
+
+### Error
+
+```text
+distribution manifest is missing signed file_manifest entries
+```
+
+### Context
+
+- Reproduced after isolated Claude and Codex installs for all four Active Skills.
+- Existing release artifacts are immutable, so the missing signed file manifests cannot be repaired in place.
+
+### Suggested Fix
+
+Create new immutable releases with signed file manifests, update the catalog defaults, and run install verification against the new versions before stable promotion.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: catalog/distributions/, src/infinitas_skill/install/installed_integrity.py, src/infinitas_skill/release/
+
+---

@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from infinitas_skill.hashing import sha256_file
 from infinitas_skill.server.repo_checks import (
     fail,
     git_output,
@@ -66,6 +67,10 @@ def archive_artifacts(artifact_path: Path, backup_dir: Path) -> str:
     with tarfile.open(archive_path, "w:gz") as archive:
         archive.add(artifact_path, arcname="artifacts")
     return archive_name
+
+
+def build_backup_checksums(backup_dir: Path, filenames: list[str]) -> dict[str, str]:
+    return {filename: sha256_file(backup_dir / filename) for filename in filenames}
 
 
 def classify_backup_entries(root: Path) -> tuple[list[Path], list[Path]]:
@@ -144,6 +149,7 @@ def run_server_backup(
     artifacts_name = archive_artifacts(artifacts, backup_dir)
 
     manifest = {
+        "schema_version": 1,
         "created_at": timestamp,
         "label": label,
         "repo": {
@@ -162,6 +168,10 @@ def run_server_backup(
             "path": str(artifacts),
             "archive": artifacts_name,
         },
+        "checksums": build_backup_checksums(
+            backup_dir,
+            [repo_bundle_name, db_copy_name, artifacts_name],
+        ),
     }
     manifest_name = "manifest.json"
     (backup_dir / manifest_name).write_text(
@@ -194,6 +204,7 @@ def run_server_prune_backups(*, backup_root: str, keep_last: int, as_json: bool 
 __all__ = [
     "BACKUP_DIR_RE",
     "archive_artifacts",
+    "build_backup_checksums",
     "build_prune_summary",
     "classify_backup_entries",
     "copy_sqlite_db",

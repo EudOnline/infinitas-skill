@@ -3,7 +3,7 @@
   "name": "consume-infinitas-skill",
   "publisher": "lvxiaoer",
   "qualified_name": "lvxiaoer/consume-infinitas-skill",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "status": "active",
   "summary": "Guide agents through search, recommendation, inspection, pull, install, and upgrade flows for released infinitas-skill artifacts.",
   "owner": "lvxiaoer",

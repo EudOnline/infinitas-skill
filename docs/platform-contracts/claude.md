@@ -2,35 +2,38 @@
 audience: contributors, reviewers, compatibility maintainers
 owner: repository maintainers
 source_of_truth: legacy platform contract annex
-last_reviewed: 2026-06-15
+last_reviewed: 2026-07-21
 status: legacy
 ---
 
 # Claude Platform Contract
 
 ## Stable assumptions
-- Claude Code supports custom subagents defined as Markdown files with YAML frontmatter.
-- Project-level subagents live under `.claude/agents/`; user-level subagents live under `~/.claude/agents/`.
-- Subagent configuration can include tool restrictions, model choice, permission mode, hooks, memory, and a `skills` field.
+- Claude Code natively supports Agent Skills as directories containing `SKILL.md` plus optional supporting files.
+- Project skills live under `.claude/skills/`; personal skills live under `~/.claude/skills/`; enterprise and plugin scopes are also supported.
+- Claude Code loads skill metadata first and loads the body only when relevant or explicitly invoked.
+- Custom commands remain compatible but are merged into the Skills model; Skills add supporting files, invocation controls, and automatic discovery.
+- Skills can run inline or in a forked subagent context, with Claude-specific frontmatter controlling tools, model, hooks, paths, and invocation.
 
 ## Volatile assumptions
 - Anthropic may evolve subagent frontmatter keys, supported models, and plugin/distribution mechanisms.
 - Built-in helper agents, default permission behavior, and CLI flags may change without matching third-party runtimes.
-- The relationship between Claude subagents and reusable skill packs is still less stable than Codex/OpenClaw's explicit skill directory contracts.
+- Claude-specific skill frontmatter and precedence behavior may evolve independently from the portable Agent Skills core.
 
 ## Official sources
+- https://code.claude.com/docs/en/skills
 - https://code.claude.com/docs/en/sub-agents
 - https://code.claude.com/docs/en/security
 - https://code.claude.com/docs/en/getting-started
 
 ## Last verified
-2026-06-15
+2026-07-21
 
 ## Verification steps
-- Confirm the subagents guide still documents Markdown + YAML frontmatter and the storage scopes for `.claude/agents/` and `~/.claude/agents/`.
-- Confirm the documented config surface still includes tool controls, model selection, and `skills` support.
+- Confirm the Skills guide still documents `SKILL.md`, supporting files, progressive loading, and project/personal/plugin scopes.
+- Confirm the Skills and Subagents guides still document invocation controls, forked execution, tool controls, model selection, and skill preloading.
 - Re-check the security page for the current permission model and approval semantics.
 
 ## Known gaps
-- Anthropic documents subagents directly; it does not currently publish a first-class “skill bundle” contract matching Codex/OpenClaw one-to-one.
-- This repository therefore treats Claude compatibility as an adapter target over the subagent/runtime model, not as proof of native artifact parity.
+- Claude Code extends the portable Agent Skills format with runtime-specific frontmatter, so exact behavior beyond `name`, `description`, `SKILL.md`, and supporting files remains adapter-sensitive.
+- Enterprise and cloud skill distribution have additional policy and synchronization semantics that local directory validation does not prove.

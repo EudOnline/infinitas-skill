@@ -17,6 +17,9 @@ def test_openclaw_profile_exposes_native_runtime_capabilities() -> None:
     assert profile["capabilities"]["supports_plugins"] is True
     assert profile["capabilities"]["supports_background_tasks"] is True
     assert profile["capabilities"]["supports_cron_jobs"] is True
+    assert profile["constraints"]["text_only_public_bundle"] is False
+    assert profile["constraints"]["public_license"] == "MIT-0"
+    assert profile["constraints"]["size_budget_mb"] == 50
 
 
 def test_build_openclaw_runtime_model_keeps_contract_metadata() -> None:

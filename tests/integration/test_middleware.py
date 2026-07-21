@@ -13,7 +13,10 @@ def _middleware_client(tmp_path: Path) -> TestClient:
     os.environ["INFINITAS_SERVER_DATABASE_URL"] = f"sqlite:///{tmp_path / 'mw.db'}"
     os.environ["INFINITAS_SERVER_SECRET_KEY"] = "mw-test-secret-32chars-long-minimum"
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(tmp_path / "artifacts")
-    os.environ["INFINITAS_SERVER_BOOTSTRAP_USERS"] = "[]"
+    os.environ["INFINITAS_SERVER_BOOTSTRAP_USERS"] = (
+        '[{"username":"middleware-tester","display_name":"Middleware Tester",'
+        '"role":"maintainer","token":"middleware-token","password":"MiddlewarePass123!"}]'
+    )
     os.environ["INFINITAS_SERVER_ALLOWED_HOSTS"] = '["localhost","127.0.0.1","testserver"]'
     return TestClient(create_app())
 
@@ -68,3 +71,32 @@ class TestCsrfValidationMiddleware:
         client = _middleware_client(tmp_path)
         response = client.get("/api/v1/system/healthz")
         assert response.status_code == 200
+
+
+class TestRequestContextMiddleware:
+    def test_generates_unique_request_id_for_each_response(self, tmp_path: Path):
+        client = _middleware_client(tmp_path)
+
+        first = client.get("/api/v1/system/healthz", headers={"X-Request-ID": "client-chosen"})
+        second = client.get("/api/v1/system/healthz")
+
+        assert len(first.headers["x-request-id"]) == 32
+        assert first.headers["x-request-id"].isalnum()
+        assert first.headers["x-request-id"] != "client-chosen"
+        assert second.headers["x-request-id"] != first.headers["x-request-id"]
+
+    def test_adds_request_id_to_not_found_and_csrf_rejection(self, tmp_path: Path):
+        client = _middleware_client(tmp_path)
+
+        missing = client.get("/api/v1/missing")
+        login = client.post(
+            "/api/v1/auth/login",
+            json={"username": "middleware-tester", "password": "MiddlewarePass123!"},
+        )
+        csrf_rejected = client.post("/api/v1/auth/logout")
+
+        assert missing.status_code == 404
+        assert login.status_code == 200
+        assert csrf_rejected.status_code == 403
+        assert "x-request-id" in missing.headers
+        assert "x-request-id" in csrf_rejected.headers

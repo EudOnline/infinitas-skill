@@ -43,8 +43,12 @@ Example bootstrap configuration:
 ```
 
 Bootstrap users are configuration-managed identities. Changing a configured password or token
-rotates the stored credential during the next application lifespan startup; unchanged passwords
-are not rehashed. The product does not currently provide complete user/team CRUD.
+rotates the stored credential during the next application lifespan startup; password rotation
+revokes all active browser sessions, and token rotation invalidates the previous Agent token.
+Removing a user from the production bootstrap list clears its password, revokes all credentials,
+and records a `user.disabled` audit event. Unchanged passwords are not rehashed. The product does
+not currently provide complete user/team CRUD; keep the bootstrap list as the identity source of
+truth and review its changes like any other production secret rotation.
 
 ## Persistent state
 
@@ -132,6 +136,11 @@ prune, and inspect commands from a service terminal or scheduled Coolify job.
 |---|---|---|
 | `INFINITAS_LOG_LEVEL` | `INFO` | Python log level; invalid names fall back to `INFO`. |
 | `INFINITAS_LOG_FORMAT` | `text` | `text` or `json`. The Coolify Compose file defaults to `json`. |
+
+Every HTTP response includes a server-generated `X-Request-ID`. The same ID is included in the
+structured request-completion log entry with method, path, status, and duration. Operators should
+include this header when correlating a user report with Coolify logs; clients cannot choose or
+override the value.
 
 ## Client-side variables
 

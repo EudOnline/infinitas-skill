@@ -60,6 +60,20 @@ def test_extract_artifacts_accepts_regular_backup(tmp_path: Path) -> None:
     assert (artifacts_dir / "ai-index.json").read_text(encoding="utf-8") == "{}"
 
 
+def test_verify_backup_checksums_rejects_missing_or_changed_files(tmp_path: Path) -> None:
+    backup_dir = tmp_path / "backup"
+    backup_dir.mkdir()
+    bundle = backup_dir / "repo.bundle"
+    bundle.write_bytes(b"original")
+
+    with pytest.raises(SystemExit, match="1"):
+        RESTORE.verify_backup_checksums(backup_dir, {}, [bundle])
+
+    manifest = {"schema_version": 1, "checksums": {"repo.bundle": "0" * 64}}
+    with pytest.raises(SystemExit, match="1"):
+        RESTORE.verify_backup_checksums(backup_dir, manifest, [bundle])
+
+
 def _link_member(name: str, linkname: str, member_type: bytes) -> tarfile.TarInfo:
     member = tarfile.TarInfo(name)
     member.type = member_type

@@ -177,3 +177,30 @@ def test_infinitas_openclaw_import_can_plan_without_repository_scripts(tmp_path:
     payload = json.loads(result.stdout)
     assert payload["state"] == "planned"
     assert payload["qualified_name"] == "lvxiaoer/imported-skill"
+
+
+def test_infinitas_openclaw_export_validates_rendered_immutable_release(
+    tmp_path: Path,
+) -> None:
+    result = _run_cli(
+        [
+            "openclaw",
+            "skill",
+            "export",
+            "consume-infinitas-skill",
+            "--out",
+            str(tmp_path),
+            "--mode",
+            "confirm",
+            "--json",
+        ]
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["state"] == "planned"
+    assert payload["public_ready"] is True
+    assert payload["migration_contract_source_mode"] == "rendered-release"
+    assert payload["validation_errors"] == []
+    assert "traceback" not in result.stderr.lower()

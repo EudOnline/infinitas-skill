@@ -3,7 +3,7 @@
   "name": "federation-registry-ops",
   "publisher": "lvxiaoer",
   "qualified_name": "lvxiaoer/federation-registry-ops",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "status": "active",
   "summary": "Help agents inspect registry sources, federation rules, mirror behavior, and audit or inventory exports inside infinitas-skill.",
   "owner": "lvxiaoer",

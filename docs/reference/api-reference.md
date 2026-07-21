@@ -82,6 +82,9 @@ The two `/me` routes serve different contexts: access identity for Agent/API aut
 server-owned git checkout, and artifact directory; it returns `503` with per-dependency
 checks when the instance should not receive traffic.
 
+All HTTP responses include an `X-Request-ID` response header. It is a server-generated correlation
+identifier for support and log investigation and is not an authentication credential.
+
 ### Library and publishing
 
 - `GET /api/v1/library/`

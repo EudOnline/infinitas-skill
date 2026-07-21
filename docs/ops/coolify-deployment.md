@@ -2,7 +2,7 @@
 audience: Coolify operators and release maintainers
 owner: repository maintainers
 source_of_truth: docker-compose.coolify.yml and hosted runtime contract
-last_reviewed: 2026-07-20
+last_reviewed: 2026-07-21
 status: maintained
 ---
 
@@ -22,6 +22,10 @@ The supported v0.1 topology is deliberately single-node:
 
 Do not horizontally scale either service. Multi-node operation and PostgreSQL are not current
 production claims.
+
+The app emits a server-generated `X-Request-ID` on every HTTP response and includes it in JSON
+logs. Keep that header when escalating a failed request so Coolify log searches can isolate the
+request without exposing credentials.
 
 ## 1. Prepare the domain and secrets
 

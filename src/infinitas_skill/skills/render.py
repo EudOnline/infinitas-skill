@@ -74,31 +74,6 @@ def render_skill_markdown(source: dict, platform: str, profile: dict) -> str:
         f"name: {source.get('name')}",
         f"description: {source.get('description')}",
     ]
-    platform_overrides = (
-        source.get("platform_overrides", {}).get(platform, {})
-        if isinstance(source.get("platform_overrides"), dict)
-        else {}
-    )
-    if platform == "openclaw":
-        # OpenClaw rendering here is migration/export support, not runtime truth.
-        runtime_raw = source.get("openclaw_runtime")
-        runtime = runtime_raw if isinstance(runtime_raw, dict) else {}
-        requires_raw = runtime.get("requires")
-        requires = requires_raw if isinstance(requires_raw, list) else []
-        if not requires:
-            requires = platform_overrides.get("requires") or []
-        if not requires:
-            requires = [
-                intent.replace("_", "-")
-                for intent in source.get("tool_intents", {}).get("required", [])
-            ]
-        rendered_requires = ", ".join(requires) if requires else "none"
-        frontmatter.append(f"metadata.openclaw.requires: {rendered_requires}")
-        license_value = platform_overrides.get("license") or (source.get("distribution") or {}).get(
-            "license"
-        )
-        if license_value:
-            frontmatter.append(f"metadata.openclaw.license: {license_value}")
     frontmatter.append("---")
     body = Path(source["instructions_body_path"]).read_text(encoding="utf-8").rstrip()
     mappings = apply_tool_intent_mapping(source, platform, profile)

@@ -9,9 +9,12 @@ import subprocess
 import sys
 import tarfile
 from pathlib import Path
+from typing import NoReturn
+
+from infinitas_skill.hashing import sha256_file
 
 
-def fail(message: str) -> None:
+def fail(message: str) -> NoReturn:
     print(message, file=sys.stderr)
     raise SystemExit(1)
 
@@ -36,6 +39,22 @@ def require_child(backup_dir: Path, relative_name: str, label: str) -> Path:
     if not path.exists():
         fail(f"backup directory is missing {label}: {path}")
     return path
+
+
+def verify_backup_checksums(backup_dir: Path, manifest: dict, files: list[Path]) -> None:
+    if manifest.get("schema_version") != 1:
+        fail("backup manifest has an unsupported schema_version")
+    checksums_raw = manifest.get("checksums")
+    if not isinstance(checksums_raw, dict):
+        fail("backup manifest is missing checksums")
+    checksums: dict[str, object] = {str(key): value for key, value in checksums_raw.items()}
+
+    for path in files:
+        expected = checksums.get(path.name)
+        if not isinstance(expected, str) or len(expected) != 64:
+            fail(f"backup manifest is missing SHA-256 for {path.name}")
+        if sha256_file(path) != expected:
+            fail(f"backup checksum mismatch for {path.name}")
 
 
 def verify_bundle(bundle_path: Path) -> None:
@@ -110,6 +129,7 @@ def run_server_restore_rehearsal(*, backup_dir: str, output_dir: str, as_json: b
     bundle_path = require_child(backup, repo_bundle_name, "repo bundle")
     db_path = require_child(backup, db_backup_name, "database backup")
     archive_path = require_child(backup, archive_name, "artifact archive")
+    verify_backup_checksums(backup, manifest, [bundle_path, db_path, archive_path])
     verify_bundle(bundle_path)
 
     repo_output = output / "repo"
@@ -142,4 +162,4 @@ def run_server_restore_rehearsal(*, backup_dir: str, output_dir: str, as_json: b
     return 0
 
 
-__all__ = ["extract_artifacts", "run_server_restore_rehearsal"]
+__all__ = ["extract_artifacts", "run_server_restore_rehearsal", "verify_backup_checksums"]

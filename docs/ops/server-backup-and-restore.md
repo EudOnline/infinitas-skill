@@ -2,7 +2,7 @@
 audience: operators and release maintainers
 owner: repository maintainers
 source_of_truth: hosted backup and restore runbook
-last_reviewed: 2026-07-20
+last_reviewed: 2026-07-21
 status: maintained
 ---
 
@@ -45,9 +45,11 @@ Each backup directory contains:
 - `repo.bundle` — a git bundle created from the clean server-owned checkout
 - `server.db` — a copied SQLite database file
 - `artifacts.tar.gz` — a tarball of the hosted artifact directory
-- `manifest.json` — backup metadata including timestamp, label, git HEAD, and source paths
+- `manifest.json` — schema version, timestamp, label, git HEAD, source paths, and SHA-256 values for every restore input
 
 The backup helper refuses dirty repo snapshots so operators do not accidentally capture an in-flight publish worktree.
+The restore rehearsal refuses backup sets without valid SHA-256 values, so a backup is not considered
+recoverable merely because its files still exist.
 
 ### Run a backup on Coolify
 
@@ -70,6 +72,18 @@ must run in a service that mounts the repo, data, artifact, and backup volumes.
 The `infinitas-backups` volume protects against a bad application redeploy, but not against loss
 of the Coolify server. Copy completed backup directories to independent object storage or a
 different host and test that those exported copies can be retrieved.
+
+## Recovery objectives
+
+For the supported single-node SQLite deployment, use a one-hour database backup cadence and run
+an additional backup immediately before each publish or image upgrade. This sets a target RPO of
+one hour for ordinary writes and zero unplanned release-window loss after the pre-change backup.
+The manual restore target is four hours (RTO), including volume recovery, ownership repair,
+redeploy, readiness, worker heartbeat, and catalog checks.
+
+These are operating targets, not guarantees. Test one restore rehearsal from an off-host copy at
+least quarterly and after any deployment-layout change. PostgreSQL, multi-node, and managed
+object-storage deployments require their own backup and recovery contract before production use.
 
 If you install the generated `systemd` bundle from `uv run infinitas server render-systemd ...`, enable the matching backup timer so this command runs on a predictable schedule:
 
@@ -117,6 +131,7 @@ uv run infinitas server restore-rehearsal \
 This drill:
 
 - validates `manifest.json`
+- verifies SHA-256 values before reading the git bundle, database, or artifact archive
 - verifies the git bundle
 - clones the repo bundle into a staging checkout
 - copies and opens the SQLite DB backup

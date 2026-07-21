@@ -4,7 +4,7 @@
   "qualified_name": "lvxiaoer/operate-infinitas-skill",
   "version": "0.1.1",
   "state": "adapted",
-  "checked_at": "2026-05-16T21:43:37Z",
-  "checker": "check-claude-compat.py",
-  "note": "Rendered with export-claude-skill.sh and verified with check-claude-compat.py."
+  "checked_at": "2026-07-21T12:01:26Z",
+  "checker": "infinitas install by-name --target-agent claude --mode auto",
+  "note": "Installed the immutable release into an isolated Claude target and validated its installable Skill layout."
 }

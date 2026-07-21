@@ -21,7 +21,7 @@
     "supports_public_publish": true
   },
   "constraints": {
-    "text_only_public_bundle": true,
+    "text_only_public_bundle": false,
     "public_license": "MIT-0",
     "size_budget_mb": 50,
     "runtime_model": "openclaw-native"
@@ -30,11 +30,15 @@
     "sources": [
       "https://docs.openclaw.ai/tools/skills",
       "https://docs.openclaw.ai/tools/subagents",
-      "https://docs.openclaw.ai/tools/plugins",
-      "https://docs.openclaw.ai/tools/background-tasks",
-      "https://docs.openclaw.ai/tools/cron-jobs",
-      "https://docs.openclaw.ai/tools/clawhub"
+      "https://docs.openclaw.ai/plugins/building-plugins",
+      "https://docs.openclaw.ai/automation/tasks",
+      "https://docs.openclaw.ai/automation/cron-jobs",
+      "https://docs.openclaw.ai/clawhub",
+      "https://docs.openclaw.ai/clawhub/publishing",
+      "https://docs.openclaw.ai/clawhub/skill-format",
+      "https://docs.openclaw.ai/clawhub/security",
+      "https://docs.openclaw.ai/tools/creating-skills"
     ],
-    "last_verified": "2026-06-15"
+    "last_verified": "2026-07-21"
   }
 }
