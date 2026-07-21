@@ -50,7 +50,11 @@ uv run infinitas install repair my-skill ~/.openclaw/skills
 - `repaired`: not a persisted steady-state value; it describes the action where `infinitas install repair` restores the install and the follow-up verification returns `verified`
 - `unknown`: the install manifest does not yet carry enough immutable source metadata to compare local files against a signed released-file inventory
 
-Because this repository is unreleased, manifests without a signed file inventory are invalid development artifacts. Regenerate the release with `uv run infinitas release publish <name> --create-tag --write-attestation` or reinstall from a current immutable source; do not backfill old manifest shapes.
+Current maintained releases include a signed file inventory. Manifests without one are legacy
+artifacts and cannot provide installed-file integrity guarantees. Reinstall from a current
+immutable source (or publish a new patch release with
+`uv run infinitas release publish <name> --create-tag --write-attestation`); do not mutate an
+existing immutable release to backfill an old manifest shape.
 
 `infinitas install verify` stays read-only. `infinitas install report --refresh` is the command that re-runs verification and writes refreshed summary fields back into `.infinitas-skill-install-manifest.json`.
 
