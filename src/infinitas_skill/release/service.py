@@ -157,10 +157,10 @@ def _apply_release_findings(
     namespace_report: JsonDict,
     transparency_log: JsonDict | None,
     platform_compatibility: JsonDict,
-    reproducibility: JsonDict,
     platform_error: Exception | None,
     releaser_identity: str | None,
 ) -> tuple[bool, bool, bool]:
+    reproducibility = git_state.get("_reproducibility") or {}
     require_clean_worktree = mode != "local-tag"
     require_upstream_sync = mode in {"preflight", "stable-release"}
     require_fresh_platform_support = mode in {"preflight", "stable-release"}
@@ -389,7 +389,7 @@ def _release_state_payload(context: ReleaseStateContext) -> JsonDict:
         "git": {
             key: value
             for key, value in git_state.items()
-            if key not in {"remote_name", "allowed_signer_entries"}
+            if key not in {"remote_name", "allowed_signer_entries", "_reproducibility"}
         },
     }
 
@@ -408,6 +408,7 @@ def collect_release_state(
     transparency_log = collect_transparency_log_state(root, meta)
     signing = load_signing_config(root)
     git_state = _collect_git_state(root, signing, expected_tag)
+    git_state["_reproducibility"] = reproducibility
 
     policy_state = collect_policy_state(skill_dir, root)
     namespace_report = policy_state["namespace_report"]
@@ -435,7 +436,6 @@ def collect_release_state(
         namespace_report=namespace_report,
         transparency_log=transparency_log,
         platform_compatibility=platform_compatibility,
-        reproducibility=reproducibility,
         platform_error=platform_error,
         releaser_identity=releaser_identity,
     )
