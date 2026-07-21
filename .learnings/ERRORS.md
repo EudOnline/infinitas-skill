@@ -2431,3 +2431,41 @@ Use a neutral loop variable such as `file` or `evidence_file` in zsh scripts.
 - **Notes**: Re-ran the update with a non-special loop variable.
 
 ---
+
+## [ERR-20260721-006] unbounded-github-run-polling
+
+**Logged**: 2026-07-21T14:30:00Z
+**Priority**: medium
+**Status**: resolved
+**Area**: infra
+
+### Summary
+
+A local GitHub Actions polling loop remained alive after the remote workflow completed and made the operation appear stuck.
+
+### Error
+
+```text
+Background `while true` monitor remained running after the workflow reported completed/success.
+```
+
+### Context
+
+- The actual workflow completed successfully in about 12 minutes.
+- Multiple earlier pushes also triggered redundant full validation runs, amplifying total elapsed time.
+
+### Suggested Fix
+
+Use bounded, one-shot `gh run view` checks or product-provided wait mechanisms. Never use an unbounded shell polling loop for CI monitoring.
+
+### Metadata
+
+- Reproducible: unknown
+- Related Files: .github/workflows/validate.yml
+
+### Resolution
+
+- **Resolved**: 2026-07-21T14:30:00Z
+- **Notes**: Confirmed the remote run was complete, removed the stale monitor, and adopted one-shot status checks.
+
+---
