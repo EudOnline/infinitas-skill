@@ -1,0 +1,575 @@
+{
+  "$schema": "schemas/provenance.schema.json",
+  "schema_version": 1,
+  "kind": "skill-release-attestation",
+  "generated_at": "2026-07-21T13:21:05Z",
+  "skill": {
+    "name": "federation-registry-ops",
+    "publisher": "lvxiaoer",
+    "qualified_name": "lvxiaoer/federation-registry-ops",
+    "identity_mode": "qualified",
+    "version": "0.1.1",
+    "status": "active",
+    "summary": "Help agents inspect registry sources, federation rules, mirror behavior, and audit or inventory exports inside infinitas-skill.",
+    "path": "skills/active/federation-registry-ops",
+    "author": "lvxiaoer",
+    "owners": [
+      "lvxiaoer"
+    ],
+    "maintainers": [
+      "lvxiaoer"
+    ],
+    "derived_from": null,
+    "snapshot_of": null,
+    "depends_on": [],
+    "conflicts_with": []
+  },
+  "git": {
+    "repo_url": "git@github-second:EudOnline/infinitas-skill.git",
+    "branch": "main",
+    "upstream": "origin/main",
+    "commit": "e98fb0f1386dee3f9f3e8ab0cf56a38b9612475b",
+    "head_commit": "e98fb0f1386dee3f9f3e8ab0cf56a38b9612475b",
+    "expected_tag": "skill/federation-registry-ops/v0.1.1",
+    "release_ref": "refs/tags/skill/federation-registry-ops/v0.1.1",
+    "remote": null,
+    "remote_tag_object": null,
+    "remote_tag_commit": null,
+    "signed_tag_verified": true,
+    "tag_signer": "lvxiaoer"
+  },
+  "source_snapshot": {
+    "kind": "git-tag",
+    "tag": "skill/federation-registry-ops/v0.1.1",
+    "ref": "refs/tags/skill/federation-registry-ops/v0.1.1",
+    "commit": "e98fb0f1386dee3f9f3e8ab0cf56a38b9612475b",
+    "remote": null,
+    "upstream": "origin/main",
+    "immutable": true,
+    "pushed": false
+  },
+  "registry": {
+    "default_registry": "self",
+    "registries_consulted": [
+      "self"
+    ],
+    "resolved": [
+      {
+        "registry_name": "self",
+        "registry_kind": "git",
+        "registry_url": "https://github.com/EudOnline/infinitas-skill.git",
+        "registry_base_url": null,
+        "registry_host": "github.com",
+        "registry_priority": 100,
+        "registry_trust": "private",
+        "registry_root": "/home/tdcasual/codework/infinitas-skill",
+        "registry_pin_mode": "branch",
+        "registry_pin_value": "main",
+        "registry_ref": "refs/heads/main",
+        "registry_allowed_refs": [
+          "refs/heads/main"
+        ],
+        "registry_allowed_hosts": [
+          "github.com"
+        ],
+        "registry_update_mode": "local-only",
+        "registry_auth_mode": "none",
+        "registry_auth_env": null,
+        "registry_federation_mode": null,
+        "registry_allowed_publishers": [],
+        "registry_publisher_map": {},
+        "registry_require_immutable_artifacts": false,
+        "registry_refresh_interval_hours": null,
+        "registry_max_cache_age_hours": null,
+        "registry_stale_policy": null,
+        "registry_commit": "e98fb0f1386dee3f9f3e8ab0cf56a38b9612475b",
+        "registry_tag": "skill/consume-infinitas-skill/v0.1.1",
+        "registry_branch": "main",
+        "registry_origin_url": "git@github-second:EudOnline/infinitas-skill.git",
+        "registry_origin_host": "github-second"
+      }
+    ]
+  },
+  "dependencies": {
+    "mode": "install",
+    "root": {
+      "name": "federation-registry-ops",
+      "publisher": "lvxiaoer",
+      "qualified_name": "lvxiaoer/federation-registry-ops",
+      "version": "0.1.1",
+      "registry": "self",
+      "stage": "active",
+      "path": "/home/tdcasual/codework/infinitas-skill/skills/active/federation-registry-ops",
+      "source_type": "working-tree",
+      "distribution_manifest": null,
+      "source_snapshot_tag": null,
+      "source_snapshot_commit": null,
+      "runtime": {
+        "platform": "openclaw",
+        "workspace_scope": "workspace",
+        "install_target": {
+          "scope": "workspace",
+          "path": "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+          "selected_from": "runtime-default",
+          "workspace_targets": [
+            "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+            "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+          ],
+          "shared_targets": [
+            "/home/tdcasual/.agents/skills",
+            "/home/tdcasual/.openclaw/skills"
+          ],
+          "candidates": [
+            "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+            "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills",
+            "/home/tdcasual/.agents/skills",
+            "/home/tdcasual/.openclaw/skills"
+          ]
+        },
+        "workspace_fit": {
+          "status": "workspace-target",
+          "workspace_targets": [
+            "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+            "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+          ],
+          "shared_targets": [
+            "/home/tdcasual/.agents/skills",
+            "/home/tdcasual/.openclaw/skills"
+          ]
+        },
+        "requires": {
+          "tools": [
+            "read",
+            "exec"
+          ],
+          "bins": [
+            "git"
+          ],
+          "env": [],
+          "config": []
+        },
+        "plugin_needs": {
+          "required": {}
+        },
+        "background_tasks": {
+          "required": false
+        },
+        "subagents": {
+          "required": false
+        },
+        "readiness": {
+          "ready": true,
+          "status": "ready"
+        }
+      }
+    },
+    "steps": [
+      {
+        "order": 1,
+        "name": "federation-registry-ops",
+        "publisher": "lvxiaoer",
+        "qualified_name": "lvxiaoer/federation-registry-ops",
+        "identity_mode": "qualified",
+        "version": "0.1.1",
+        "registry": "self",
+        "stage": "active",
+        "path": "/home/tdcasual/codework/infinitas-skill/skills/active/federation-registry-ops",
+        "skill_path": "/home/tdcasual/codework/infinitas-skill/skills/active/federation-registry-ops",
+        "relative_path": null,
+        "source_type": "working-tree",
+        "distribution_manifest": null,
+        "distribution_bundle": null,
+        "distribution_bundle_sha256": null,
+        "distribution_attestation": null,
+        "distribution_attestation_signature": null,
+        "action": "install",
+        "needs_apply": true,
+        "requested_by": [],
+        "depends_on": [],
+        "conflicts_with": [],
+        "root": true,
+        "source_commit": "e98fb0f1386dee3f9f3e8ab0cf56a38b9612475b",
+        "source_ref": "refs/heads/main",
+        "source_tag": "skill/consume-infinitas-skill/v0.1.1",
+        "source_snapshot_kind": null,
+        "source_snapshot_tag": null,
+        "source_snapshot_ref": null,
+        "source_snapshot_commit": null,
+        "runtime": {
+          "platform": "openclaw",
+          "install_target": {
+            "scope": "workspace",
+            "path": "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+            "selected_from": "runtime-default",
+            "workspace_targets": [
+              "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+              "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+            ],
+            "shared_targets": [
+              "/home/tdcasual/.agents/skills",
+              "/home/tdcasual/.openclaw/skills"
+            ],
+            "candidates": [
+              "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+              "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills",
+              "/home/tdcasual/.agents/skills",
+              "/home/tdcasual/.openclaw/skills"
+            ]
+          },
+          "workspace_fit": {
+            "status": "workspace-target",
+            "workspace_targets": [
+              "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+              "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+            ],
+            "shared_targets": [
+              "/home/tdcasual/.agents/skills",
+              "/home/tdcasual/.openclaw/skills"
+            ]
+          },
+          "readiness": {
+            "ready": true,
+            "status": "ready"
+          }
+        }
+      }
+    ],
+    "registries_consulted": [
+      "self"
+    ],
+    "runtime": {
+      "platform": "openclaw",
+      "workspace_scope": "workspace",
+      "install_target": {
+        "scope": "workspace",
+        "path": "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+        "selected_from": "runtime-default",
+        "workspace_targets": [
+          "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+          "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+        ],
+        "shared_targets": [
+          "/home/tdcasual/.agents/skills",
+          "/home/tdcasual/.openclaw/skills"
+        ],
+        "candidates": [
+          "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+          "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills",
+          "/home/tdcasual/.agents/skills",
+          "/home/tdcasual/.openclaw/skills"
+        ]
+      },
+      "workspace_fit": {
+        "status": "workspace-target",
+        "workspace_targets": [
+          "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+          "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+        ],
+        "shared_targets": [
+          "/home/tdcasual/.agents/skills",
+          "/home/tdcasual/.openclaw/skills"
+        ]
+      },
+      "requires": {
+        "tools": [
+          "read",
+          "exec"
+        ],
+        "bins": [
+          "git"
+        ],
+        "env": [],
+        "config": []
+      },
+      "plugin_needs": {
+        "required": {}
+      },
+      "background_tasks": {
+        "required": false
+      },
+      "subagents": {
+        "required": false
+      },
+      "readiness": {
+        "ready": true,
+        "status": "ready"
+      }
+    },
+    "install_target": {
+      "scope": "workspace",
+      "path": "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+      "selected_from": "runtime-default",
+      "workspace_targets": [
+        "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+        "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+      ],
+      "shared_targets": [
+        "/home/tdcasual/.agents/skills",
+        "/home/tdcasual/.openclaw/skills"
+      ],
+      "candidates": [
+        "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+        "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills",
+        "/home/tdcasual/.agents/skills",
+        "/home/tdcasual/.openclaw/skills"
+      ]
+    }
+  },
+  "review": {
+    "reviewers": [
+      {
+        "reviewer": "lvxiaoer",
+        "decision": "approved",
+        "at": "2026-03-16T03:15:44Z",
+        "note": "Approve 12-04 registry skill",
+        "source": "reviews.json",
+        "source_kind": "repo-review",
+        "source_ref": "reviews.json",
+        "url": null
+      }
+    ],
+    "effective_review_state": "approved",
+    "required_approvals": 1,
+    "required_groups": [
+      "maintainers"
+    ],
+    "covered_groups": [
+      "maintainers",
+      "security"
+    ],
+    "missing_groups": [],
+    "approval_count": 1,
+    "blocking_rejection_count": 0,
+    "quorum_met": true,
+    "review_gate_pass": true,
+    "latest_decisions": [
+      {
+        "reviewer": "lvxiaoer",
+        "decision": "approved",
+        "at": "2026-03-16T03:15:44Z",
+        "note": "Approve 12-04 registry skill",
+        "groups": [
+          "maintainers",
+          "security"
+        ],
+        "source": "reviews.json",
+        "source_kind": "repo-review",
+        "source_ref": "reviews.json",
+        "url": null,
+        "counted": true,
+        "reasons": []
+      }
+    ],
+    "ignored_decisions": [],
+    "configured_groups": {
+      "maintainers": {
+        "members": [
+          "lvxiaoer"
+        ],
+        "teams": [],
+        "resolved_members": [
+          "lvxiaoer"
+        ],
+        "description": "Repository maintainers who can approve routine promotions."
+      },
+      "security": {
+        "members": [
+          "lvxiaoer"
+        ],
+        "teams": [],
+        "resolved_members": [
+          "lvxiaoer"
+        ],
+        "description": "Security-focused reviewers required for higher-risk promotions."
+      }
+    }
+  },
+  "release": {
+    "releaser_identity": "lvxiaoer",
+    "namespace_policy_path": "policy/namespace-policy.json",
+    "namespace_policy_version": 1,
+    "transfer_required": false,
+    "transfer_authorized": true,
+    "transfer_matches": [],
+    "competing_claims": [],
+    "delegated_teams": {
+      "owner_teams": [],
+      "maintainer_teams": [],
+      "authorized_signer_teams": [],
+      "authorized_releaser_teams": []
+    },
+    "authorized_signers": [
+      "lvxiaoer"
+    ],
+    "authorized_releasers": [
+      "lvxiaoer"
+    ],
+    "exception_usage": [],
+    "reproducibility": {
+      "available": false,
+      "consistent": true,
+      "issues": [],
+      "provenance_path": null,
+      "manifest_path": null,
+      "bundle_path": null,
+      "bundle_file_count": null,
+      "file_manifest_count": 0,
+      "archive_format": null
+    },
+    "transparency_log": null,
+    "platform_compatibility": {
+      "canonical_runtime_platform": "openclaw",
+      "canonical_runtime": {
+        "state": "adapted",
+        "checked_at": "2026-07-21T11:44:52Z",
+        "checker": "infinitas openclaw skill export --mode confirm",
+        "evidence_path": "catalog/compatibility-evidence/openclaw/federation-registry-ops/0.1.1.json",
+        "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation.",
+        "contract_last_verified": "2026-07-21",
+        "fresh_until": "2026-08-20T11:44:52Z",
+        "freshness_state": "fresh",
+        "freshness_reason": "not-applicable",
+        "platform": "openclaw",
+        "declared": false
+      },
+      "declared_support": [
+        "claude",
+        "codex"
+      ],
+      "historical_platforms": [
+        "claude",
+        "codex"
+      ],
+      "verified_support": {
+        "openclaw": {
+          "state": "adapted",
+          "checked_at": "2026-07-21T11:44:52Z",
+          "checker": "infinitas openclaw skill export --mode confirm",
+          "evidence_path": "catalog/compatibility-evidence/openclaw/federation-registry-ops/0.1.1.json",
+          "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation.",
+          "contract_last_verified": "2026-07-21",
+          "fresh_until": "2026-08-20T11:44:52Z",
+          "freshness_state": "fresh",
+          "freshness_reason": "not-applicable",
+          "platform": "openclaw",
+          "declared": false
+        },
+        "claude": {
+          "state": "adapted",
+          "checked_at": "2026-07-21T12:01:26Z",
+          "checker": "infinitas install by-name --target-agent claude --mode auto",
+          "evidence_path": "catalog/compatibility-evidence/claude/federation-registry-ops/0.1.1.json",
+          "note": "Installed the immutable release into an isolated Claude target and validated its installable Skill layout.",
+          "contract_last_verified": "2026-07-21",
+          "fresh_until": "2026-08-20T12:01:26Z",
+          "freshness_state": "fresh",
+          "freshness_reason": "not-applicable"
+        },
+        "codex": {
+          "state": "adapted",
+          "checked_at": "2026-07-21T12:01:26Z",
+          "checker": "infinitas install by-name --target-agent codex --mode auto",
+          "evidence_path": "catalog/compatibility-evidence/codex/federation-registry-ops/0.1.1.json",
+          "note": "Installed the immutable release into an isolated Codex target and validated its installable Skill layout.",
+          "contract_last_verified": "2026-07-21",
+          "fresh_until": "2026-08-20T12:01:26Z",
+          "freshness_state": "fresh",
+          "freshness_reason": "not-applicable"
+        }
+      },
+      "blocking_platforms": [],
+      "policy": {
+        "stale_after_days": 30,
+        "contract_newer_than_evidence_policy": "stale",
+        "missing_policy": "unknown"
+      },
+      "evaluation_error": null
+    },
+    "release_mode": "local-tag"
+  },
+  "attestation": {
+    "format": "ssh",
+    "namespace": "infinitas-skill",
+    "allowed_signers": "config/allowed_signers",
+    "signature_file": "federation-registry-ops-0.1.1.json.ssig",
+    "signature_ext": ".ssig",
+    "signer_identity": "lvxiaoer",
+    "policy_mode": "enforce",
+    "require_verified_attestation_for_release_output": true,
+    "require_verified_attestation_for_distribution": true
+  },
+  "distribution": {
+    "manifest_path": "catalog/distributions/lvxiaoer/federation-registry-ops/0.1.1/manifest.json",
+    "bundle": {
+      "path": "catalog/distributions/lvxiaoer/federation-registry-ops/0.1.1/skill.tar.gz",
+      "format": "tar.gz",
+      "sha256": "088a171cf35d8711ce013a96258607fca7dbd587677bc0c476425a8a73fcab3e",
+      "size": 2285,
+      "root_dir": "federation-registry-ops",
+      "file_count": 8
+    },
+    "file_manifest": [
+      {
+        "path": "CHANGELOG.md",
+        "sha256": "4fbb871343785aaed5be6f73de10f265f73e90fee6805536fee177a800b56e46",
+        "size": 196,
+        "mode": "0664"
+      },
+      {
+        "path": "SKILL.md",
+        "sha256": "8f4279b95bc529b8ae9933903670271e4fdcf3ecb628bf77c75a6aef9f2e718b",
+        "size": 2559,
+        "mode": "0664"
+      },
+      {
+        "path": "_meta.json",
+        "sha256": "baa42888d21f0a6caeb3f28cbfba357f0f0ff6863ed1267e563f141e2e33e9ab",
+        "size": 1738,
+        "mode": "0664"
+      },
+      {
+        "path": "assets/.gitkeep",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size": 0,
+        "mode": "0664"
+      },
+      {
+        "path": "references/.gitkeep",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size": 0,
+        "mode": "0664"
+      },
+      {
+        "path": "reviews.json",
+        "sha256": "21fb5ac85002a12c1534d93d972c5c88c215b040edc26651b6617e31e4a261d7",
+        "size": 314,
+        "mode": "0664"
+      },
+      {
+        "path": "scripts/.gitkeep",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size": 0,
+        "mode": "0664"
+      },
+      {
+        "path": "tests/smoke.md",
+        "sha256": "68fabe48ce3b6b12f0c2a0da2bddddbfcea41069ffc2a19ca0154bee13480410",
+        "size": 558,
+        "mode": "0664"
+      }
+    ],
+    "build": {
+      "archive_format": "tar.gz",
+      "gzip_mtime": 0,
+      "tar_mtime": 0,
+      "tar_uid": 0,
+      "tar_gid": 0,
+      "tar_uname": "",
+      "tar_gname": "",
+      "builder": {
+        "python": "3.13.13",
+        "implementation": "CPython"
+      }
+    }
+  }
+}

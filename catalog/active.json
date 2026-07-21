@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-21T13:18:52Z",
+  "generated_at": "2026-07-21T13:21:13Z",
   "count": 4,
   "skills": [
     {
@@ -75,6 +75,21 @@
       "source_pin_mode": "branch",
       "source_pin_value": "main",
       "expected_tag": "skill/consume-infinitas-skill/v0.1.1",
+      "verified_distribution": {
+        "manifest_path": "catalog/distributions/lvxiaoer/consume-infinitas-skill/0.1.1/manifest.json",
+        "bundle_path": "catalog/distributions/lvxiaoer/consume-infinitas-skill/0.1.1/skill.tar.gz",
+        "bundle_sha256": "de61b36944f11503b8c0491eb620e63f116c027e2b1c22bc6b70853e56b63a52",
+        "file_manifest_count": 8,
+        "build_archive_format": "tar.gz",
+        "installed_integrity_capability": "supported",
+        "installed_integrity_reason": null,
+        "attestation_path": "catalog/provenance/consume-infinitas-skill-0.1.1.json",
+        "attestation_signature_path": "catalog/provenance/consume-infinitas-skill-0.1.1.json.ssig",
+        "source_snapshot_tag": "skill/consume-infinitas-skill/v0.1.1",
+        "source_snapshot_commit": "e98fb0f1386dee3f9f3e8ab0cf56a38b9612475b",
+        "generated_at": "2026-07-21T13:21:02Z",
+        "transparency_log": null
+      },
       "declared_support": [
         "openclaw",
         "claude",
@@ -188,6 +203,21 @@
       "source_pin_mode": "branch",
       "source_pin_value": "main",
       "expected_tag": "skill/federation-registry-ops/v0.1.1",
+      "verified_distribution": {
+        "manifest_path": "catalog/distributions/lvxiaoer/federation-registry-ops/0.1.1/manifest.json",
+        "bundle_path": "catalog/distributions/lvxiaoer/federation-registry-ops/0.1.1/skill.tar.gz",
+        "bundle_sha256": "088a171cf35d8711ce013a96258607fca7dbd587677bc0c476425a8a73fcab3e",
+        "file_manifest_count": 8,
+        "build_archive_format": "tar.gz",
+        "installed_integrity_capability": "supported",
+        "installed_integrity_reason": null,
+        "attestation_path": "catalog/provenance/federation-registry-ops-0.1.1.json",
+        "attestation_signature_path": "catalog/provenance/federation-registry-ops-0.1.1.json.ssig",
+        "source_snapshot_tag": "skill/federation-registry-ops/v0.1.1",
+        "source_snapshot_commit": "e98fb0f1386dee3f9f3e8ab0cf56a38b9612475b",
+        "generated_at": "2026-07-21T13:21:05Z",
+        "transparency_log": null
+      },
       "declared_support": [
         "claude",
         "codex"
@@ -302,6 +332,21 @@
       "source_pin_mode": "branch",
       "source_pin_value": "main",
       "expected_tag": "skill/operate-infinitas-skill/v0.1.2",
+      "verified_distribution": {
+        "manifest_path": "catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.2/manifest.json",
+        "bundle_path": "catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.2/skill.tar.gz",
+        "bundle_sha256": "8588932ab0c7f0bbee91daa1d71bd569973209f9de940e62eb602bb7046683ed",
+        "file_manifest_count": 8,
+        "build_archive_format": "tar.gz",
+        "installed_integrity_capability": "supported",
+        "installed_integrity_reason": null,
+        "attestation_path": "catalog/provenance/operate-infinitas-skill-0.1.2.json",
+        "attestation_signature_path": "catalog/provenance/operate-infinitas-skill-0.1.2.json.ssig",
+        "source_snapshot_tag": "skill/operate-infinitas-skill/v0.1.2",
+        "source_snapshot_commit": "e98fb0f1386dee3f9f3e8ab0cf56a38b9612475b",
+        "generated_at": "2026-07-21T13:21:10Z",
+        "transparency_log": null
+      },
       "declared_support": [
         "openclaw",
         "claude",
@@ -415,6 +460,21 @@
       "source_pin_mode": "branch",
       "source_pin_value": "main",
       "expected_tag": "skill/release-infinitas-skill/v0.1.1",
+      "verified_distribution": {
+        "manifest_path": "catalog/distributions/lvxiaoer/release-infinitas-skill/0.1.1/manifest.json",
+        "bundle_path": "catalog/distributions/lvxiaoer/release-infinitas-skill/0.1.1/skill.tar.gz",
+        "bundle_sha256": "0a9b18e5d19bc7fd54551dfb3a38adf1c35e6585b1c3080f3ccd467110b64e16",
+        "file_manifest_count": 8,
+        "build_archive_format": "tar.gz",
+        "installed_integrity_capability": "supported",
+        "installed_integrity_reason": null,
+        "attestation_path": "catalog/provenance/release-infinitas-skill-0.1.1.json",
+        "attestation_signature_path": "catalog/provenance/release-infinitas-skill-0.1.1.json.ssig",
+        "source_snapshot_tag": "skill/release-infinitas-skill/v0.1.1",
+        "source_snapshot_commit": "e98fb0f1386dee3f9f3e8ab0cf56a38b9612475b",
+        "generated_at": "2026-07-21T13:21:13Z",
+        "transparency_log": null
+      },
       "declared_support": [
         "claude",
         "codex"

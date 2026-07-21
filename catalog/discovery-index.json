@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-21T13:18:52Z",
+  "generated_at": "2026-07-21T13:21:13Z",
   "default_registry": "self",
   "sources": [
     {
@@ -30,9 +30,10 @@
         "consume-infinitas-skill",
         "lvxiaoer/consume-infinitas-skill"
       ],
-      "default_install_version": "0.1.0",
-      "latest_version": "0.1.0",
+      "default_install_version": "0.1.1",
+      "latest_version": "0.1.1",
       "available_versions": [
+        "0.1.1",
         "0.1.0"
       ],
       "runtime": {
@@ -198,9 +199,10 @@
         "federation-registry-ops",
         "lvxiaoer/federation-registry-ops"
       ],
-      "default_install_version": "0.1.0",
-      "latest_version": "0.1.0",
+      "default_install_version": "0.1.1",
+      "latest_version": "0.1.1",
       "available_versions": [
+        "0.1.1",
         "0.1.0"
       ],
       "runtime": {
@@ -365,9 +367,10 @@
         "lvxiaoer/operate-infinitas-skill",
         "operate-infinitas-skill"
       ],
-      "default_install_version": "0.1.1",
-      "latest_version": "0.1.1",
+      "default_install_version": "0.1.2",
+      "latest_version": "0.1.2",
       "available_versions": [
+        "0.1.2",
         "0.1.1"
       ],
       "runtime": {
@@ -531,9 +534,10 @@
         "lvxiaoer/release-infinitas-skill",
         "release-infinitas-skill"
       ],
-      "default_install_version": "0.1.0",
-      "latest_version": "0.1.0",
+      "default_install_version": "0.1.1",
+      "latest_version": "0.1.1",
       "available_versions": [
+        "0.1.1",
         "0.1.0"
       ],
       "runtime": {

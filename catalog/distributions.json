@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-03-19T03:58:07Z",
-  "count": 4,
+  "generated_at": "2026-07-21T13:21:13Z",
+  "count": 8,
   "skills": [
     {
       "name": "consume-infinitas-skill",
@@ -126,6 +126,307 @@
       "depends_on": [],
       "conflicts_with": [],
       "generated_at": "2026-03-16T03:51:11Z",
+      "source_type": "distribution-manifest"
+    },
+    {
+      "name": "consume-infinitas-skill",
+      "publisher": "lvxiaoer",
+      "qualified_name": "lvxiaoer/consume-infinitas-skill",
+      "identity_mode": "qualified",
+      "version": "0.1.1",
+      "status": "active",
+      "summary": "Guide agents through search, recommendation, inspection, pull, install, and upgrade flows for released infinitas-skill artifacts.",
+      "manifest_path": "catalog/distributions/lvxiaoer/consume-infinitas-skill/0.1.1/manifest.json",
+      "bundle_path": "catalog/distributions/lvxiaoer/consume-infinitas-skill/0.1.1/skill.tar.gz",
+      "bundle_sha256": "de61b36944f11503b8c0491eb620e63f116c027e2b1c22bc6b70853e56b63a52",
+      "bundle_size": 2377,
+      "bundle_file_count": 8,
+      "bundle_root_dir": "consume-infinitas-skill",
+      "attestation_path": "catalog/provenance/consume-infinitas-skill-0.1.1.json",
+      "attestation_signature_path": "catalog/provenance/consume-infinitas-skill-0.1.1.json.ssig",
+      "attestation_sha256": "63a4de9293bf7434e38e3f88ea9e625b2f22c2ad364d5dd9ff480a6f4e82ede7",
+      "attestation_signature_sha256": "dc7f63ac63cfb591f973abe5f24d0e94553d4c46430f41b140394aa0660fb010",
+      "signer_identity": "lvxiaoer",
+      "namespace": "infinitas-skill",
+      "allowed_signers": "config/allowed_signers",
+      "file_manifest_count": 8,
+      "build_archive_format": "tar.gz",
+      "installed_integrity_capability": "supported",
+      "installed_integrity_reason": null,
+      "source_snapshot_kind": "git-tag",
+      "source_snapshot_tag": "skill/consume-infinitas-skill/v0.1.1",
+      "source_snapshot_ref": "refs/tags/skill/consume-infinitas-skill/v0.1.1",
+      "source_snapshot_commit": "e98fb0f1386dee3f9f3e8ab0cf56a38b9612475b",
+      "registry": {
+        "default_registry": "self",
+        "registries_consulted": [
+          "self"
+        ],
+        "resolved": [
+          {
+            "registry_name": "self",
+            "registry_kind": "git",
+            "registry_url": "https://github.com/EudOnline/infinitas-skill.git",
+            "registry_base_url": null,
+            "registry_host": "github.com",
+            "registry_priority": 100,
+            "registry_trust": "private",
+            "registry_root": "/home/tdcasual/codework/infinitas-skill",
+            "registry_pin_mode": "branch",
+            "registry_pin_value": "main",
+            "registry_ref": "refs/heads/main",
+            "registry_allowed_refs": [
+              "refs/heads/main"
+            ],
+            "registry_allowed_hosts": [
+              "github.com"
+            ],
+            "registry_update_mode": "local-only",
+            "registry_auth_mode": "none",
+            "registry_auth_env": null,
+            "registry_federation_mode": null,
+            "registry_allowed_publishers": [],
+            "registry_publisher_map": {},
+            "registry_require_immutable_artifacts": false,
+            "registry_refresh_interval_hours": null,
+            "registry_max_cache_age_hours": null,
+            "registry_stale_policy": null,
+            "registry_commit": "e98fb0f1386dee3f9f3e8ab0cf56a38b9612475b",
+            "registry_tag": "skill/consume-infinitas-skill/v0.1.1",
+            "registry_branch": "main",
+            "registry_origin_url": "git@github-second:EudOnline/infinitas-skill.git",
+            "registry_origin_host": "github-second"
+          }
+        ]
+      },
+      "dependencies": {
+        "mode": "install",
+        "root": {
+          "name": "consume-infinitas-skill",
+          "publisher": "lvxiaoer",
+          "qualified_name": "lvxiaoer/consume-infinitas-skill",
+          "version": "0.1.1",
+          "registry": "self",
+          "stage": "active",
+          "path": "/home/tdcasual/codework/infinitas-skill/skills/active/consume-infinitas-skill",
+          "source_type": "working-tree",
+          "distribution_manifest": null,
+          "source_snapshot_tag": null,
+          "source_snapshot_commit": null,
+          "runtime": {
+            "platform": "openclaw",
+            "workspace_scope": "workspace",
+            "install_target": {
+              "scope": "workspace",
+              "path": "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+              "selected_from": "runtime-default",
+              "workspace_targets": [
+                "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+              ],
+              "shared_targets": [
+                "/home/tdcasual/.agents/skills",
+                "/home/tdcasual/.openclaw/skills"
+              ],
+              "candidates": [
+                "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills",
+                "/home/tdcasual/.agents/skills",
+                "/home/tdcasual/.openclaw/skills"
+              ]
+            },
+            "workspace_fit": {
+              "status": "workspace-target",
+              "workspace_targets": [
+                "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+              ],
+              "shared_targets": [
+                "/home/tdcasual/.agents/skills",
+                "/home/tdcasual/.openclaw/skills"
+              ]
+            },
+            "requires": {
+              "tools": [
+                "read",
+                "exec"
+              ],
+              "bins": [
+                "git"
+              ],
+              "env": [],
+              "config": []
+            },
+            "plugin_needs": {
+              "required": {}
+            },
+            "background_tasks": {
+              "required": false
+            },
+            "subagents": {
+              "required": false
+            },
+            "readiness": {
+              "ready": true,
+              "status": "ready"
+            }
+          }
+        },
+        "steps": [
+          {
+            "order": 1,
+            "name": "consume-infinitas-skill",
+            "publisher": "lvxiaoer",
+            "qualified_name": "lvxiaoer/consume-infinitas-skill",
+            "identity_mode": "qualified",
+            "version": "0.1.1",
+            "registry": "self",
+            "stage": "active",
+            "path": "/home/tdcasual/codework/infinitas-skill/skills/active/consume-infinitas-skill",
+            "skill_path": "/home/tdcasual/codework/infinitas-skill/skills/active/consume-infinitas-skill",
+            "relative_path": null,
+            "source_type": "working-tree",
+            "distribution_manifest": null,
+            "distribution_bundle": null,
+            "distribution_bundle_sha256": null,
+            "distribution_attestation": null,
+            "distribution_attestation_signature": null,
+            "action": "install",
+            "needs_apply": true,
+            "requested_by": [],
+            "depends_on": [],
+            "conflicts_with": [],
+            "root": true,
+            "source_commit": "e98fb0f1386dee3f9f3e8ab0cf56a38b9612475b",
+            "source_ref": "refs/heads/main",
+            "source_tag": "skill/consume-infinitas-skill/v0.1.1",
+            "source_snapshot_kind": null,
+            "source_snapshot_tag": null,
+            "source_snapshot_ref": null,
+            "source_snapshot_commit": null,
+            "runtime": {
+              "platform": "openclaw",
+              "install_target": {
+                "scope": "workspace",
+                "path": "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                "selected_from": "runtime-default",
+                "workspace_targets": [
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+                ],
+                "shared_targets": [
+                  "/home/tdcasual/.agents/skills",
+                  "/home/tdcasual/.openclaw/skills"
+                ],
+                "candidates": [
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills",
+                  "/home/tdcasual/.agents/skills",
+                  "/home/tdcasual/.openclaw/skills"
+                ]
+              },
+              "workspace_fit": {
+                "status": "workspace-target",
+                "workspace_targets": [
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+                ],
+                "shared_targets": [
+                  "/home/tdcasual/.agents/skills",
+                  "/home/tdcasual/.openclaw/skills"
+                ]
+              },
+              "readiness": {
+                "ready": true,
+                "status": "ready"
+              }
+            }
+          }
+        ],
+        "registries_consulted": [
+          "self"
+        ],
+        "runtime": {
+          "platform": "openclaw",
+          "workspace_scope": "workspace",
+          "install_target": {
+            "scope": "workspace",
+            "path": "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+            "selected_from": "runtime-default",
+            "workspace_targets": [
+              "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+              "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+            ],
+            "shared_targets": [
+              "/home/tdcasual/.agents/skills",
+              "/home/tdcasual/.openclaw/skills"
+            ],
+            "candidates": [
+              "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+              "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills",
+              "/home/tdcasual/.agents/skills",
+              "/home/tdcasual/.openclaw/skills"
+            ]
+          },
+          "workspace_fit": {
+            "status": "workspace-target",
+            "workspace_targets": [
+              "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+              "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+            ],
+            "shared_targets": [
+              "/home/tdcasual/.agents/skills",
+              "/home/tdcasual/.openclaw/skills"
+            ]
+          },
+          "requires": {
+            "tools": [
+              "read",
+              "exec"
+            ],
+            "bins": [
+              "git"
+            ],
+            "env": [],
+            "config": []
+          },
+          "plugin_needs": {
+            "required": {}
+          },
+          "background_tasks": {
+            "required": false
+          },
+          "subagents": {
+            "required": false
+          },
+          "readiness": {
+            "ready": true,
+            "status": "ready"
+          }
+        },
+        "install_target": {
+          "scope": "workspace",
+          "path": "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+          "selected_from": "runtime-default",
+          "workspace_targets": [
+            "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+            "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+          ],
+          "shared_targets": [
+            "/home/tdcasual/.agents/skills",
+            "/home/tdcasual/.openclaw/skills"
+          ],
+          "candidates": [
+            "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+            "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills",
+            "/home/tdcasual/.agents/skills",
+            "/home/tdcasual/.openclaw/skills"
+          ]
+        }
+      },
+      "depends_on": [],
+      "conflicts_with": [],
+      "generated_at": "2026-07-21T13:21:02Z",
       "source_type": "distribution-manifest"
     },
     {
@@ -255,6 +556,307 @@
       "source_type": "distribution-manifest"
     },
     {
+      "name": "federation-registry-ops",
+      "publisher": "lvxiaoer",
+      "qualified_name": "lvxiaoer/federation-registry-ops",
+      "identity_mode": "qualified",
+      "version": "0.1.1",
+      "status": "active",
+      "summary": "Help agents inspect registry sources, federation rules, mirror behavior, and audit or inventory exports inside infinitas-skill.",
+      "manifest_path": "catalog/distributions/lvxiaoer/federation-registry-ops/0.1.1/manifest.json",
+      "bundle_path": "catalog/distributions/lvxiaoer/federation-registry-ops/0.1.1/skill.tar.gz",
+      "bundle_sha256": "088a171cf35d8711ce013a96258607fca7dbd587677bc0c476425a8a73fcab3e",
+      "bundle_size": 2285,
+      "bundle_file_count": 8,
+      "bundle_root_dir": "federation-registry-ops",
+      "attestation_path": "catalog/provenance/federation-registry-ops-0.1.1.json",
+      "attestation_signature_path": "catalog/provenance/federation-registry-ops-0.1.1.json.ssig",
+      "attestation_sha256": "22254638b7a42443fd65db93ecc134ea46902e1d9001e86ee5a3cb35c004b80f",
+      "attestation_signature_sha256": "fcbaf8cc539da3c402dc5213211144ef0e35debda4dc051b95925cb0b4e705c5",
+      "signer_identity": "lvxiaoer",
+      "namespace": "infinitas-skill",
+      "allowed_signers": "config/allowed_signers",
+      "file_manifest_count": 8,
+      "build_archive_format": "tar.gz",
+      "installed_integrity_capability": "supported",
+      "installed_integrity_reason": null,
+      "source_snapshot_kind": "git-tag",
+      "source_snapshot_tag": "skill/federation-registry-ops/v0.1.1",
+      "source_snapshot_ref": "refs/tags/skill/federation-registry-ops/v0.1.1",
+      "source_snapshot_commit": "e98fb0f1386dee3f9f3e8ab0cf56a38b9612475b",
+      "registry": {
+        "default_registry": "self",
+        "registries_consulted": [
+          "self"
+        ],
+        "resolved": [
+          {
+            "registry_name": "self",
+            "registry_kind": "git",
+            "registry_url": "https://github.com/EudOnline/infinitas-skill.git",
+            "registry_base_url": null,
+            "registry_host": "github.com",
+            "registry_priority": 100,
+            "registry_trust": "private",
+            "registry_root": "/home/tdcasual/codework/infinitas-skill",
+            "registry_pin_mode": "branch",
+            "registry_pin_value": "main",
+            "registry_ref": "refs/heads/main",
+            "registry_allowed_refs": [
+              "refs/heads/main"
+            ],
+            "registry_allowed_hosts": [
+              "github.com"
+            ],
+            "registry_update_mode": "local-only",
+            "registry_auth_mode": "none",
+            "registry_auth_env": null,
+            "registry_federation_mode": null,
+            "registry_allowed_publishers": [],
+            "registry_publisher_map": {},
+            "registry_require_immutable_artifacts": false,
+            "registry_refresh_interval_hours": null,
+            "registry_max_cache_age_hours": null,
+            "registry_stale_policy": null,
+            "registry_commit": "e98fb0f1386dee3f9f3e8ab0cf56a38b9612475b",
+            "registry_tag": "skill/consume-infinitas-skill/v0.1.1",
+            "registry_branch": "main",
+            "registry_origin_url": "git@github-second:EudOnline/infinitas-skill.git",
+            "registry_origin_host": "github-second"
+          }
+        ]
+      },
+      "dependencies": {
+        "mode": "install",
+        "root": {
+          "name": "federation-registry-ops",
+          "publisher": "lvxiaoer",
+          "qualified_name": "lvxiaoer/federation-registry-ops",
+          "version": "0.1.1",
+          "registry": "self",
+          "stage": "active",
+          "path": "/home/tdcasual/codework/infinitas-skill/skills/active/federation-registry-ops",
+          "source_type": "working-tree",
+          "distribution_manifest": null,
+          "source_snapshot_tag": null,
+          "source_snapshot_commit": null,
+          "runtime": {
+            "platform": "openclaw",
+            "workspace_scope": "workspace",
+            "install_target": {
+              "scope": "workspace",
+              "path": "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+              "selected_from": "runtime-default",
+              "workspace_targets": [
+                "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+              ],
+              "shared_targets": [
+                "/home/tdcasual/.agents/skills",
+                "/home/tdcasual/.openclaw/skills"
+              ],
+              "candidates": [
+                "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills",
+                "/home/tdcasual/.agents/skills",
+                "/home/tdcasual/.openclaw/skills"
+              ]
+            },
+            "workspace_fit": {
+              "status": "workspace-target",
+              "workspace_targets": [
+                "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+              ],
+              "shared_targets": [
+                "/home/tdcasual/.agents/skills",
+                "/home/tdcasual/.openclaw/skills"
+              ]
+            },
+            "requires": {
+              "tools": [
+                "read",
+                "exec"
+              ],
+              "bins": [
+                "git"
+              ],
+              "env": [],
+              "config": []
+            },
+            "plugin_needs": {
+              "required": {}
+            },
+            "background_tasks": {
+              "required": false
+            },
+            "subagents": {
+              "required": false
+            },
+            "readiness": {
+              "ready": true,
+              "status": "ready"
+            }
+          }
+        },
+        "steps": [
+          {
+            "order": 1,
+            "name": "federation-registry-ops",
+            "publisher": "lvxiaoer",
+            "qualified_name": "lvxiaoer/federation-registry-ops",
+            "identity_mode": "qualified",
+            "version": "0.1.1",
+            "registry": "self",
+            "stage": "active",
+            "path": "/home/tdcasual/codework/infinitas-skill/skills/active/federation-registry-ops",
+            "skill_path": "/home/tdcasual/codework/infinitas-skill/skills/active/federation-registry-ops",
+            "relative_path": null,
+            "source_type": "working-tree",
+            "distribution_manifest": null,
+            "distribution_bundle": null,
+            "distribution_bundle_sha256": null,
+            "distribution_attestation": null,
+            "distribution_attestation_signature": null,
+            "action": "install",
+            "needs_apply": true,
+            "requested_by": [],
+            "depends_on": [],
+            "conflicts_with": [],
+            "root": true,
+            "source_commit": "e98fb0f1386dee3f9f3e8ab0cf56a38b9612475b",
+            "source_ref": "refs/heads/main",
+            "source_tag": "skill/consume-infinitas-skill/v0.1.1",
+            "source_snapshot_kind": null,
+            "source_snapshot_tag": null,
+            "source_snapshot_ref": null,
+            "source_snapshot_commit": null,
+            "runtime": {
+              "platform": "openclaw",
+              "install_target": {
+                "scope": "workspace",
+                "path": "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                "selected_from": "runtime-default",
+                "workspace_targets": [
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+                ],
+                "shared_targets": [
+                  "/home/tdcasual/.agents/skills",
+                  "/home/tdcasual/.openclaw/skills"
+                ],
+                "candidates": [
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills",
+                  "/home/tdcasual/.agents/skills",
+                  "/home/tdcasual/.openclaw/skills"
+                ]
+              },
+              "workspace_fit": {
+                "status": "workspace-target",
+                "workspace_targets": [
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+                ],
+                "shared_targets": [
+                  "/home/tdcasual/.agents/skills",
+                  "/home/tdcasual/.openclaw/skills"
+                ]
+              },
+              "readiness": {
+                "ready": true,
+                "status": "ready"
+              }
+            }
+          }
+        ],
+        "registries_consulted": [
+          "self"
+        ],
+        "runtime": {
+          "platform": "openclaw",
+          "workspace_scope": "workspace",
+          "install_target": {
+            "scope": "workspace",
+            "path": "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+            "selected_from": "runtime-default",
+            "workspace_targets": [
+              "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+              "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+            ],
+            "shared_targets": [
+              "/home/tdcasual/.agents/skills",
+              "/home/tdcasual/.openclaw/skills"
+            ],
+            "candidates": [
+              "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+              "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills",
+              "/home/tdcasual/.agents/skills",
+              "/home/tdcasual/.openclaw/skills"
+            ]
+          },
+          "workspace_fit": {
+            "status": "workspace-target",
+            "workspace_targets": [
+              "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+              "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+            ],
+            "shared_targets": [
+              "/home/tdcasual/.agents/skills",
+              "/home/tdcasual/.openclaw/skills"
+            ]
+          },
+          "requires": {
+            "tools": [
+              "read",
+              "exec"
+            ],
+            "bins": [
+              "git"
+            ],
+            "env": [],
+            "config": []
+          },
+          "plugin_needs": {
+            "required": {}
+          },
+          "background_tasks": {
+            "required": false
+          },
+          "subagents": {
+            "required": false
+          },
+          "readiness": {
+            "ready": true,
+            "status": "ready"
+          }
+        },
+        "install_target": {
+          "scope": "workspace",
+          "path": "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+          "selected_from": "runtime-default",
+          "workspace_targets": [
+            "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+            "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+          ],
+          "shared_targets": [
+            "/home/tdcasual/.agents/skills",
+            "/home/tdcasual/.openclaw/skills"
+          ],
+          "candidates": [
+            "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+            "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills",
+            "/home/tdcasual/.agents/skills",
+            "/home/tdcasual/.openclaw/skills"
+          ]
+        }
+      },
+      "depends_on": [],
+      "conflicts_with": [],
+      "generated_at": "2026-07-21T13:21:05Z",
+      "source_type": "distribution-manifest"
+    },
+    {
       "name": "operate-infinitas-skill",
       "publisher": "lvxiaoer",
       "qualified_name": "lvxiaoer/operate-infinitas-skill",
@@ -371,6 +973,307 @@
       "depends_on": [],
       "conflicts_with": [],
       "generated_at": "2026-03-12T12:56:45Z",
+      "source_type": "distribution-manifest"
+    },
+    {
+      "name": "operate-infinitas-skill",
+      "publisher": "lvxiaoer",
+      "qualified_name": "lvxiaoer/operate-infinitas-skill",
+      "identity_mode": "qualified",
+      "version": "0.1.2",
+      "status": "active",
+      "summary": "Teach OpenClaw, Codex, and Claude Code how to operate inside the infinitas-skill repository.",
+      "manifest_path": "catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.2/manifest.json",
+      "bundle_path": "catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.2/skill.tar.gz",
+      "bundle_sha256": "8588932ab0c7f0bbee91daa1d71bd569973209f9de940e62eb602bb7046683ed",
+      "bundle_size": 2964,
+      "bundle_file_count": 8,
+      "bundle_root_dir": "operate-infinitas-skill",
+      "attestation_path": "catalog/provenance/operate-infinitas-skill-0.1.2.json",
+      "attestation_signature_path": "catalog/provenance/operate-infinitas-skill-0.1.2.json.ssig",
+      "attestation_sha256": "235fa91b39427ca608a98dd72eae642b5367886d9ddf38720381b421ba7175be",
+      "attestation_signature_sha256": "3292ad1c45ccaae9ca3f43fe3c7d18dce9cc9e57af29bdd1d0c705e48f668291",
+      "signer_identity": "lvxiaoer",
+      "namespace": "infinitas-skill",
+      "allowed_signers": "config/allowed_signers",
+      "file_manifest_count": 8,
+      "build_archive_format": "tar.gz",
+      "installed_integrity_capability": "supported",
+      "installed_integrity_reason": null,
+      "source_snapshot_kind": "git-tag",
+      "source_snapshot_tag": "skill/operate-infinitas-skill/v0.1.2",
+      "source_snapshot_ref": "refs/tags/skill/operate-infinitas-skill/v0.1.2",
+      "source_snapshot_commit": "e98fb0f1386dee3f9f3e8ab0cf56a38b9612475b",
+      "registry": {
+        "default_registry": "self",
+        "registries_consulted": [
+          "self"
+        ],
+        "resolved": [
+          {
+            "registry_name": "self",
+            "registry_kind": "git",
+            "registry_url": "https://github.com/EudOnline/infinitas-skill.git",
+            "registry_base_url": null,
+            "registry_host": "github.com",
+            "registry_priority": 100,
+            "registry_trust": "private",
+            "registry_root": "/home/tdcasual/codework/infinitas-skill",
+            "registry_pin_mode": "branch",
+            "registry_pin_value": "main",
+            "registry_ref": "refs/heads/main",
+            "registry_allowed_refs": [
+              "refs/heads/main"
+            ],
+            "registry_allowed_hosts": [
+              "github.com"
+            ],
+            "registry_update_mode": "local-only",
+            "registry_auth_mode": "none",
+            "registry_auth_env": null,
+            "registry_federation_mode": null,
+            "registry_allowed_publishers": [],
+            "registry_publisher_map": {},
+            "registry_require_immutable_artifacts": false,
+            "registry_refresh_interval_hours": null,
+            "registry_max_cache_age_hours": null,
+            "registry_stale_policy": null,
+            "registry_commit": "e98fb0f1386dee3f9f3e8ab0cf56a38b9612475b",
+            "registry_tag": "skill/consume-infinitas-skill/v0.1.1",
+            "registry_branch": "main",
+            "registry_origin_url": "git@github-second:EudOnline/infinitas-skill.git",
+            "registry_origin_host": "github-second"
+          }
+        ]
+      },
+      "dependencies": {
+        "mode": "install",
+        "root": {
+          "name": "operate-infinitas-skill",
+          "publisher": "lvxiaoer",
+          "qualified_name": "lvxiaoer/operate-infinitas-skill",
+          "version": "0.1.2",
+          "registry": "self",
+          "stage": "active",
+          "path": "/home/tdcasual/codework/infinitas-skill/skills/active/operate-infinitas-skill",
+          "source_type": "working-tree",
+          "distribution_manifest": null,
+          "source_snapshot_tag": null,
+          "source_snapshot_commit": null,
+          "runtime": {
+            "platform": "openclaw",
+            "workspace_scope": "workspace",
+            "install_target": {
+              "scope": "workspace",
+              "path": "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+              "selected_from": "runtime-default",
+              "workspace_targets": [
+                "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+              ],
+              "shared_targets": [
+                "/home/tdcasual/.agents/skills",
+                "/home/tdcasual/.openclaw/skills"
+              ],
+              "candidates": [
+                "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills",
+                "/home/tdcasual/.agents/skills",
+                "/home/tdcasual/.openclaw/skills"
+              ]
+            },
+            "workspace_fit": {
+              "status": "workspace-target",
+              "workspace_targets": [
+                "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+              ],
+              "shared_targets": [
+                "/home/tdcasual/.agents/skills",
+                "/home/tdcasual/.openclaw/skills"
+              ]
+            },
+            "requires": {
+              "tools": [
+                "read",
+                "exec"
+              ],
+              "bins": [
+                "git"
+              ],
+              "env": [],
+              "config": []
+            },
+            "plugin_needs": {
+              "required": {}
+            },
+            "background_tasks": {
+              "required": false
+            },
+            "subagents": {
+              "required": false
+            },
+            "readiness": {
+              "ready": true,
+              "status": "ready"
+            }
+          }
+        },
+        "steps": [
+          {
+            "order": 1,
+            "name": "operate-infinitas-skill",
+            "publisher": "lvxiaoer",
+            "qualified_name": "lvxiaoer/operate-infinitas-skill",
+            "identity_mode": "qualified",
+            "version": "0.1.2",
+            "registry": "self",
+            "stage": "active",
+            "path": "/home/tdcasual/codework/infinitas-skill/skills/active/operate-infinitas-skill",
+            "skill_path": "/home/tdcasual/codework/infinitas-skill/skills/active/operate-infinitas-skill",
+            "relative_path": null,
+            "source_type": "working-tree",
+            "distribution_manifest": null,
+            "distribution_bundle": null,
+            "distribution_bundle_sha256": null,
+            "distribution_attestation": null,
+            "distribution_attestation_signature": null,
+            "action": "install",
+            "needs_apply": true,
+            "requested_by": [],
+            "depends_on": [],
+            "conflicts_with": [],
+            "root": true,
+            "source_commit": "e98fb0f1386dee3f9f3e8ab0cf56a38b9612475b",
+            "source_ref": "refs/heads/main",
+            "source_tag": "skill/consume-infinitas-skill/v0.1.1",
+            "source_snapshot_kind": null,
+            "source_snapshot_tag": null,
+            "source_snapshot_ref": null,
+            "source_snapshot_commit": null,
+            "runtime": {
+              "platform": "openclaw",
+              "install_target": {
+                "scope": "workspace",
+                "path": "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                "selected_from": "runtime-default",
+                "workspace_targets": [
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+                ],
+                "shared_targets": [
+                  "/home/tdcasual/.agents/skills",
+                  "/home/tdcasual/.openclaw/skills"
+                ],
+                "candidates": [
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills",
+                  "/home/tdcasual/.agents/skills",
+                  "/home/tdcasual/.openclaw/skills"
+                ]
+              },
+              "workspace_fit": {
+                "status": "workspace-target",
+                "workspace_targets": [
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+                ],
+                "shared_targets": [
+                  "/home/tdcasual/.agents/skills",
+                  "/home/tdcasual/.openclaw/skills"
+                ]
+              },
+              "readiness": {
+                "ready": true,
+                "status": "ready"
+              }
+            }
+          }
+        ],
+        "registries_consulted": [
+          "self"
+        ],
+        "runtime": {
+          "platform": "openclaw",
+          "workspace_scope": "workspace",
+          "install_target": {
+            "scope": "workspace",
+            "path": "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+            "selected_from": "runtime-default",
+            "workspace_targets": [
+              "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+              "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+            ],
+            "shared_targets": [
+              "/home/tdcasual/.agents/skills",
+              "/home/tdcasual/.openclaw/skills"
+            ],
+            "candidates": [
+              "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+              "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills",
+              "/home/tdcasual/.agents/skills",
+              "/home/tdcasual/.openclaw/skills"
+            ]
+          },
+          "workspace_fit": {
+            "status": "workspace-target",
+            "workspace_targets": [
+              "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+              "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+            ],
+            "shared_targets": [
+              "/home/tdcasual/.agents/skills",
+              "/home/tdcasual/.openclaw/skills"
+            ]
+          },
+          "requires": {
+            "tools": [
+              "read",
+              "exec"
+            ],
+            "bins": [
+              "git"
+            ],
+            "env": [],
+            "config": []
+          },
+          "plugin_needs": {
+            "required": {}
+          },
+          "background_tasks": {
+            "required": false
+          },
+          "subagents": {
+            "required": false
+          },
+          "readiness": {
+            "ready": true,
+            "status": "ready"
+          }
+        },
+        "install_target": {
+          "scope": "workspace",
+          "path": "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+          "selected_from": "runtime-default",
+          "workspace_targets": [
+            "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+            "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+          ],
+          "shared_targets": [
+            "/home/tdcasual/.agents/skills",
+            "/home/tdcasual/.openclaw/skills"
+          ],
+          "candidates": [
+            "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+            "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills",
+            "/home/tdcasual/.agents/skills",
+            "/home/tdcasual/.openclaw/skills"
+          ]
+        }
+      },
+      "depends_on": [],
+      "conflicts_with": [],
+      "generated_at": "2026-07-21T13:21:10Z",
       "source_type": "distribution-manifest"
     },
     {
@@ -497,6 +1400,307 @@
       "depends_on": [],
       "conflicts_with": [],
       "generated_at": "2026-03-16T03:49:16Z",
+      "source_type": "distribution-manifest"
+    },
+    {
+      "name": "release-infinitas-skill",
+      "publisher": "lvxiaoer",
+      "qualified_name": "lvxiaoer/release-infinitas-skill",
+      "identity_mode": "qualified",
+      "version": "0.1.1",
+      "status": "active",
+      "summary": "Guide agents through validation, review, promotion, and immutable release of infinitas-skill registry skills.",
+      "manifest_path": "catalog/distributions/lvxiaoer/release-infinitas-skill/0.1.1/manifest.json",
+      "bundle_path": "catalog/distributions/lvxiaoer/release-infinitas-skill/0.1.1/skill.tar.gz",
+      "bundle_sha256": "0a9b18e5d19bc7fd54551dfb3a38adf1c35e6585b1c3080f3ccd467110b64e16",
+      "bundle_size": 2190,
+      "bundle_file_count": 8,
+      "bundle_root_dir": "release-infinitas-skill",
+      "attestation_path": "catalog/provenance/release-infinitas-skill-0.1.1.json",
+      "attestation_signature_path": "catalog/provenance/release-infinitas-skill-0.1.1.json.ssig",
+      "attestation_sha256": "2e43c70b789e01035e0285cd3cfcb2880d6c4fc1018f672369c3117eac878455",
+      "attestation_signature_sha256": "0402f32c79164fd9a98774654cd2d6763fbf866a901d6df0dbb4673f1d5d1332",
+      "signer_identity": "lvxiaoer",
+      "namespace": "infinitas-skill",
+      "allowed_signers": "config/allowed_signers",
+      "file_manifest_count": 8,
+      "build_archive_format": "tar.gz",
+      "installed_integrity_capability": "supported",
+      "installed_integrity_reason": null,
+      "source_snapshot_kind": "git-tag",
+      "source_snapshot_tag": "skill/release-infinitas-skill/v0.1.1",
+      "source_snapshot_ref": "refs/tags/skill/release-infinitas-skill/v0.1.1",
+      "source_snapshot_commit": "e98fb0f1386dee3f9f3e8ab0cf56a38b9612475b",
+      "registry": {
+        "default_registry": "self",
+        "registries_consulted": [
+          "self"
+        ],
+        "resolved": [
+          {
+            "registry_name": "self",
+            "registry_kind": "git",
+            "registry_url": "https://github.com/EudOnline/infinitas-skill.git",
+            "registry_base_url": null,
+            "registry_host": "github.com",
+            "registry_priority": 100,
+            "registry_trust": "private",
+            "registry_root": "/home/tdcasual/codework/infinitas-skill",
+            "registry_pin_mode": "branch",
+            "registry_pin_value": "main",
+            "registry_ref": "refs/heads/main",
+            "registry_allowed_refs": [
+              "refs/heads/main"
+            ],
+            "registry_allowed_hosts": [
+              "github.com"
+            ],
+            "registry_update_mode": "local-only",
+            "registry_auth_mode": "none",
+            "registry_auth_env": null,
+            "registry_federation_mode": null,
+            "registry_allowed_publishers": [],
+            "registry_publisher_map": {},
+            "registry_require_immutable_artifacts": false,
+            "registry_refresh_interval_hours": null,
+            "registry_max_cache_age_hours": null,
+            "registry_stale_policy": null,
+            "registry_commit": "e98fb0f1386dee3f9f3e8ab0cf56a38b9612475b",
+            "registry_tag": "skill/consume-infinitas-skill/v0.1.1",
+            "registry_branch": "main",
+            "registry_origin_url": "git@github-second:EudOnline/infinitas-skill.git",
+            "registry_origin_host": "github-second"
+          }
+        ]
+      },
+      "dependencies": {
+        "mode": "install",
+        "root": {
+          "name": "release-infinitas-skill",
+          "publisher": "lvxiaoer",
+          "qualified_name": "lvxiaoer/release-infinitas-skill",
+          "version": "0.1.1",
+          "registry": "self",
+          "stage": "active",
+          "path": "/home/tdcasual/codework/infinitas-skill/skills/active/release-infinitas-skill",
+          "source_type": "working-tree",
+          "distribution_manifest": null,
+          "source_snapshot_tag": null,
+          "source_snapshot_commit": null,
+          "runtime": {
+            "platform": "openclaw",
+            "workspace_scope": "workspace",
+            "install_target": {
+              "scope": "workspace",
+              "path": "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+              "selected_from": "runtime-default",
+              "workspace_targets": [
+                "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+              ],
+              "shared_targets": [
+                "/home/tdcasual/.agents/skills",
+                "/home/tdcasual/.openclaw/skills"
+              ],
+              "candidates": [
+                "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills",
+                "/home/tdcasual/.agents/skills",
+                "/home/tdcasual/.openclaw/skills"
+              ]
+            },
+            "workspace_fit": {
+              "status": "workspace-target",
+              "workspace_targets": [
+                "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+              ],
+              "shared_targets": [
+                "/home/tdcasual/.agents/skills",
+                "/home/tdcasual/.openclaw/skills"
+              ]
+            },
+            "requires": {
+              "tools": [
+                "read",
+                "exec"
+              ],
+              "bins": [
+                "git"
+              ],
+              "env": [],
+              "config": []
+            },
+            "plugin_needs": {
+              "required": {}
+            },
+            "background_tasks": {
+              "required": false
+            },
+            "subagents": {
+              "required": false
+            },
+            "readiness": {
+              "ready": true,
+              "status": "ready"
+            }
+          }
+        },
+        "steps": [
+          {
+            "order": 1,
+            "name": "release-infinitas-skill",
+            "publisher": "lvxiaoer",
+            "qualified_name": "lvxiaoer/release-infinitas-skill",
+            "identity_mode": "qualified",
+            "version": "0.1.1",
+            "registry": "self",
+            "stage": "active",
+            "path": "/home/tdcasual/codework/infinitas-skill/skills/active/release-infinitas-skill",
+            "skill_path": "/home/tdcasual/codework/infinitas-skill/skills/active/release-infinitas-skill",
+            "relative_path": null,
+            "source_type": "working-tree",
+            "distribution_manifest": null,
+            "distribution_bundle": null,
+            "distribution_bundle_sha256": null,
+            "distribution_attestation": null,
+            "distribution_attestation_signature": null,
+            "action": "install",
+            "needs_apply": true,
+            "requested_by": [],
+            "depends_on": [],
+            "conflicts_with": [],
+            "root": true,
+            "source_commit": "e98fb0f1386dee3f9f3e8ab0cf56a38b9612475b",
+            "source_ref": "refs/heads/main",
+            "source_tag": "skill/consume-infinitas-skill/v0.1.1",
+            "source_snapshot_kind": null,
+            "source_snapshot_tag": null,
+            "source_snapshot_ref": null,
+            "source_snapshot_commit": null,
+            "runtime": {
+              "platform": "openclaw",
+              "install_target": {
+                "scope": "workspace",
+                "path": "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                "selected_from": "runtime-default",
+                "workspace_targets": [
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+                ],
+                "shared_targets": [
+                  "/home/tdcasual/.agents/skills",
+                  "/home/tdcasual/.openclaw/skills"
+                ],
+                "candidates": [
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills",
+                  "/home/tdcasual/.agents/skills",
+                  "/home/tdcasual/.openclaw/skills"
+                ]
+              },
+              "workspace_fit": {
+                "status": "workspace-target",
+                "workspace_targets": [
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+                  "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+                ],
+                "shared_targets": [
+                  "/home/tdcasual/.agents/skills",
+                  "/home/tdcasual/.openclaw/skills"
+                ]
+              },
+              "readiness": {
+                "ready": true,
+                "status": "ready"
+              }
+            }
+          }
+        ],
+        "registries_consulted": [
+          "self"
+        ],
+        "runtime": {
+          "platform": "openclaw",
+          "workspace_scope": "workspace",
+          "install_target": {
+            "scope": "workspace",
+            "path": "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+            "selected_from": "runtime-default",
+            "workspace_targets": [
+              "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+              "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+            ],
+            "shared_targets": [
+              "/home/tdcasual/.agents/skills",
+              "/home/tdcasual/.openclaw/skills"
+            ],
+            "candidates": [
+              "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+              "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills",
+              "/home/tdcasual/.agents/skills",
+              "/home/tdcasual/.openclaw/skills"
+            ]
+          },
+          "workspace_fit": {
+            "status": "workspace-target",
+            "workspace_targets": [
+              "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+              "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+            ],
+            "shared_targets": [
+              "/home/tdcasual/.agents/skills",
+              "/home/tdcasual/.openclaw/skills"
+            ]
+          },
+          "requires": {
+            "tools": [
+              "read",
+              "exec"
+            ],
+            "bins": [
+              "git"
+            ],
+            "env": [],
+            "config": []
+          },
+          "plugin_needs": {
+            "required": {}
+          },
+          "background_tasks": {
+            "required": false
+          },
+          "subagents": {
+            "required": false
+          },
+          "readiness": {
+            "ready": true,
+            "status": "ready"
+          }
+        },
+        "install_target": {
+          "scope": "workspace",
+          "path": "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+          "selected_from": "runtime-default",
+          "workspace_targets": [
+            "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+            "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills"
+          ],
+          "shared_targets": [
+            "/home/tdcasual/.agents/skills",
+            "/home/tdcasual/.openclaw/skills"
+          ],
+          "candidates": [
+            "/home/tdcasual/codework/infinitas-skill/skills/active/skills",
+            "/home/tdcasual/codework/infinitas-skill/skills/active/.agents/skills",
+            "/home/tdcasual/.agents/skills",
+            "/home/tdcasual/.openclaw/skills"
+          ]
+        }
+      },
+      "depends_on": [],
+      "conflicts_with": [],
+      "generated_at": "2026-07-21T13:21:13Z",
       "source_type": "distribution-manifest"
     }
   ]
