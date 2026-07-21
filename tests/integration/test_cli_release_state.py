@@ -88,7 +88,11 @@ def assert_release_state_returns_expected_json() -> None:
     assert cli_payload.get("mode") == MODE
     assert isinstance(cli_payload.get("release_ready"), bool)
     assert (cli_payload.get("skill") or {}).get("name") == SKILL_NAME
-    assert ((cli_payload.get("git") or {}).get("expected_tag")) == f"skill/{SKILL_NAME}/v0.1.1"
+    metadata = json.loads(
+        (ROOT / "skills" / "active" / SKILL_NAME / "_meta.json").read_text(encoding="utf-8")
+    )
+    expected_tag = f"skill/{SKILL_NAME}/v{metadata['version']}"
+    assert ((cli_payload.get("git") or {}).get("expected_tag")) == expected_tag
 
 
 def assert_release_cli_help_lists_maintained_subcommands() -> None:

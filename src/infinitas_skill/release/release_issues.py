@@ -216,6 +216,7 @@ def apply_local_tag_findings(
     local_tag: dict[str, Any],
     expected_tag: str,
     meta_name: str,
+    reproducibility: dict[str, Any] | None = None,
 ) -> None:
     if mode not in {"local-tag", "stable-release"}:
         return
@@ -265,13 +266,21 @@ def apply_local_tag_findings(
                 rule="stable releases require a signed verified local tag",
             )
         )
-    if not local_tag["points_to_head"]:
+    release_commit = (reproducibility or {}).get("source_snapshot_commit")
+    tag_is_release_ancestor = bool(
+        local_tag.get("is_ancestor_of_head")
+        and local_tag.get("target_commit")
+        and local_tag.get("target_commit") == release_commit
+        and (reproducibility or {}).get("available") is True
+        and (reproducibility or {}).get("consistent") is True
+    )
+    if not local_tag["points_to_head"] and not tag_is_release_ancestor:
         issues.append(
             issue(
                 "local-tag-not-head",
                 (
-                    f"{expected_tag} does not point at HEAD; retag the current "
-                    "release commit before publishing"
+                    f"{expected_tag} does not point at HEAD or the signed release "
+                    "source commit; retag the current release commit before publishing"
                 ),
                 rule="stable releases require a signed verified local tag",
             )
@@ -286,6 +295,7 @@ def apply_remote_tag_findings(
     remote_name: str,
     expected_tag: str,
     head_commit: str,
+    reproducibility: dict[str, Any] | None = None,
 ) -> None:
     if mode != "stable-release":
         return
@@ -308,14 +318,22 @@ def apply_remote_tag_findings(
                 rule="stable releases require remote tag verification in stable-release mode",
             )
         )
-    elif remote_tag["target_commit"] != head_commit:
+    else:
+        release_commit = (reproducibility or {}).get("source_snapshot_commit")
+        tag_is_release_ancestor = bool(
+            remote_tag.get("target_commit") == release_commit
+            and (reproducibility or {}).get("available") is True
+            and (reproducibility or {}).get("consistent") is True
+        )
+        if remote_tag["target_commit"] == head_commit or tag_is_release_ancestor:
+            return
         issues.append(
             issue(
                 "remote-tag-mismatch",
                 (
                     f"{expected_tag} on {remote_name} points to "
                     f"{remote_tag['target_commit'] or 'an unexpected object'}, "
-                    f"not HEAD {head_commit}"
+                    f"not HEAD {head_commit} or the signed release source commit"
                 ),
                 rule="stable releases require remote tag verification in stable-release mode",
             )

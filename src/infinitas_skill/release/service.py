@@ -96,6 +96,18 @@ def _collect_git_state(root: Path, signing: JsonDict, expected_tag: str) -> Json
     local_tag["points_to_head"] = bool(
         local_tag["target_commit"] and local_tag["target_commit"] == head_commit
     )
+    local_tag["is_ancestor_of_head"] = bool(
+        local_tag["target_commit"]
+        and git(
+            root,
+            "merge-base",
+            "--is-ancestor",
+            str(local_tag["target_commit"]),
+            head_commit,
+            check=False,
+        ).returncode
+        == 0
+    )
     remote_tag = remote_tag_state(root, remote_name, expected_tag)
     return {
         "repo_url": repo_url(root),
@@ -145,6 +157,7 @@ def _apply_release_findings(
     namespace_report: JsonDict,
     transparency_log: JsonDict | None,
     platform_compatibility: JsonDict,
+    reproducibility: JsonDict,
     platform_error: Exception | None,
     releaser_identity: str | None,
 ) -> tuple[bool, bool, bool]:
@@ -185,6 +198,7 @@ def _apply_release_findings(
         local_tag=git_state["local_tag"],
         expected_tag=expected_tag,
         meta_name=meta["name"],
+        reproducibility=reproducibility,
     )
     apply_remote_tag_findings(
         issues=issues,
@@ -193,6 +207,7 @@ def _apply_release_findings(
         remote_name=git_state["remote_name"],
         expected_tag=expected_tag,
         head_commit=git_state["head_commit"],
+        reproducibility=reproducibility,
     )
     apply_preflight_signer_warning(
         warnings=warnings,
@@ -420,6 +435,7 @@ def collect_release_state(
         namespace_report=namespace_report,
         transparency_log=transparency_log,
         platform_compatibility=platform_compatibility,
+        reproducibility=reproducibility,
         platform_error=platform_error,
         releaser_identity=releaser_identity,
     )

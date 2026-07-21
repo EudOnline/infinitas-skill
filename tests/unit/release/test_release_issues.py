@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from src.infinitas_skill.release.release_issues import (
     apply_identity_findings,
+    apply_local_tag_findings,
     apply_platform_support_findings,
     apply_preflight_signer_warning,
+    apply_remote_tag_findings,
     apply_worktree_and_upstream_findings,
     issue,
 )
@@ -19,6 +21,49 @@ class TestIssue:
     def test_with_rule(self):
         result = issue("rule-1", "message text", rule="custom rule")
         assert result["rule"] == "custom rule"
+
+
+class TestArtifactCommitTagging:
+    def test_allows_signed_source_tag_with_generated_artifact_descendant(self):
+        issues = []
+        apply_local_tag_findings(
+            issues=issues,
+            mode="stable-release",
+            local_tag={
+                "exists": True,
+                "ref_type": "tag",
+                "signed": True,
+                "verified": True,
+                "points_to_head": False,
+                "is_ancestor_of_head": True,
+                "target_commit": "source-commit",
+            },
+            expected_tag="skill/demo/v1.0.0",
+            meta_name="demo",
+            reproducibility={
+                "available": True,
+                "consistent": True,
+                "source_snapshot_commit": "source-commit",
+            },
+        )
+        assert issues == []
+
+    def test_allows_remote_source_tag_with_generated_artifact_descendant(self):
+        issues = []
+        apply_remote_tag_findings(
+            issues=issues,
+            mode="stable-release",
+            remote_tag={"query_ok": True, "tag_exists": True, "target_commit": "source-commit"},
+            remote_name="origin",
+            expected_tag="skill/demo/v1.0.0",
+            head_commit="artifact-commit",
+            reproducibility={
+                "available": True,
+                "consistent": True,
+                "source_snapshot_commit": "source-commit",
+            },
+        )
+        assert issues == []
 
 
 class TestApplyPlatformSupportFindings:

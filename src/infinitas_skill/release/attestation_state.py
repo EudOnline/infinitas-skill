@@ -76,6 +76,14 @@ def _normalize_build(build: object) -> JsonDict | None:
     }
 
 
+def _source_snapshot_commit(payload: JsonDict) -> str | None:
+    source_snapshot = payload.get("source_snapshot")
+    if not isinstance(source_snapshot, dict):
+        return None
+    commit = source_snapshot.get("commit")
+    return commit if isinstance(commit, str) and commit else None
+
+
 def collect_reproducibility_state(root: str | Path, meta: JsonDict) -> JsonDict:
     paths = _release_artifact_paths(root, meta)
     root_path = Path(root)
@@ -93,11 +101,13 @@ def collect_reproducibility_state(root: str | Path, meta: JsonDict) -> JsonDict:
         "bundle_file_count": None,
         "file_manifest_count": 0,
         "archive_format": None,
+        "source_snapshot_commit": None,
     }
 
     provenance_distribution = None
     if paths["provenance"].exists():
         provenance_payload = load_json(paths["provenance"])
+        summary["source_snapshot_commit"] = _source_snapshot_commit(provenance_payload)
         provenance_distribution = provenance_payload.get("distribution") or {}
         bundle = provenance_distribution.get("bundle") or {}
         if isinstance(bundle, dict):

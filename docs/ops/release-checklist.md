@@ -39,6 +39,8 @@ Before creating stable release output for an active skill:
 - [ ] `git status --short` is empty for the repository worktree
 - [ ] current branch tracks its upstream and is neither ahead nor behind it
 - [ ] expected tag `skill/<name>/v<version>` does not already point at the wrong commit
+- [ ] when generated manifests are committed after tagging, the signed tag commit remains the
+      provenance `source_snapshot.commit` and is an ancestor of the clean upstream HEAD
 - [ ] default stable tag is created with `uv run infinitas release tag <name> --create --push`
 - [ ] `uv run infinitas release check-state <name> --mode preflight --json` passes before writing notes, provenance, or GitHub releases
 - [ ] `uv run infinitas release check-state <name> --mode preflight --json` shows `release.platform_compatibility.canonical_runtime_platform = "openclaw"`
