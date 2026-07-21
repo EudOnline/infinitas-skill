@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-21T13:21:13Z",
+  "generated_at": "2026-07-21T14:13:18Z",
   "registry": {
     "default_registry": "self"
   },
@@ -31,7 +31,7 @@
         "immutable-install",
         "upgrade-planning"
       ],
-      "last_verified_at": "2026-07-21T12:01:26Z",
+      "last_verified_at": "2026-07-21T14:10:22Z",
       "use_when": [
         "Need to find the best released skill for a task",
         "Need to inspect, pull, install, or upgrade a stable released skill"
@@ -127,72 +127,72 @@
           "codex"
         ],
         "verified_support": {
-          "openclaw": {
-            "state": "adapted",
-            "checked_at": "2026-07-21T11:44:52Z",
-            "checker": "infinitas openclaw skill export --mode confirm",
-            "evidence_path": "catalog/compatibility-evidence/openclaw/consume-infinitas-skill/0.1.1.json",
-            "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation.",
-            "contract_last_verified": "2026-07-21",
-            "fresh_until": "2026-08-20T11:44:52Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
-          },
           "claude": {
             "state": "adapted",
-            "checked_at": "2026-07-21T12:01:26Z",
+            "checked_at": "2026-07-21T14:10:22Z",
             "checker": "infinitas install by-name --target-agent claude --mode auto",
             "evidence_path": "catalog/compatibility-evidence/claude/consume-infinitas-skill/0.1.1.json",
             "note": "Installed the immutable release into an isolated Claude target and validated its installable Skill layout.",
             "contract_last_verified": "2026-07-21",
-            "fresh_until": "2026-08-20T12:01:26Z",
+            "fresh_until": "2026-08-20T14:10:22Z",
             "freshness_state": "fresh",
             "freshness_reason": "not-applicable"
           },
           "codex": {
             "state": "adapted",
-            "checked_at": "2026-07-21T12:01:26Z",
+            "checked_at": "2026-07-21T14:10:22Z",
             "checker": "infinitas install by-name --target-agent codex --mode auto",
             "evidence_path": "catalog/compatibility-evidence/codex/consume-infinitas-skill/0.1.1.json",
             "note": "Installed the immutable release into an isolated Codex target and validated its installable Skill layout.",
             "contract_last_verified": "2026-07-21",
-            "fresh_until": "2026-08-20T12:01:26Z",
+            "fresh_until": "2026-08-20T14:10:22Z",
+            "freshness_state": "fresh",
+            "freshness_reason": "not-applicable"
+          },
+          "openclaw": {
+            "state": "adapted",
+            "checked_at": "2026-07-21T14:10:22Z",
+            "checker": "infinitas openclaw skill export --mode confirm",
+            "evidence_path": "catalog/compatibility-evidence/openclaw/consume-infinitas-skill/0.1.1.json",
+            "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation.",
+            "contract_last_verified": "2026-07-21",
+            "fresh_until": "2026-08-20T14:10:22Z",
             "freshness_state": "fresh",
             "freshness_reason": "not-applicable"
           }
         }
       },
       "verified_support": {
-        "openclaw": {
-          "state": "adapted",
-          "checked_at": "2026-07-21T11:44:52Z",
-          "checker": "infinitas openclaw skill export --mode confirm",
-          "evidence_path": "catalog/compatibility-evidence/openclaw/consume-infinitas-skill/0.1.1.json",
-          "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation.",
-          "contract_last_verified": "2026-07-21",
-          "fresh_until": "2026-08-20T11:44:52Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
-        },
         "claude": {
           "state": "adapted",
-          "checked_at": "2026-07-21T12:01:26Z",
+          "checked_at": "2026-07-21T14:10:22Z",
           "checker": "infinitas install by-name --target-agent claude --mode auto",
           "evidence_path": "catalog/compatibility-evidence/claude/consume-infinitas-skill/0.1.1.json",
           "note": "Installed the immutable release into an isolated Claude target and validated its installable Skill layout.",
           "contract_last_verified": "2026-07-21",
-          "fresh_until": "2026-08-20T12:01:26Z",
+          "fresh_until": "2026-08-20T14:10:22Z",
           "freshness_state": "fresh",
           "freshness_reason": "not-applicable"
         },
         "codex": {
           "state": "adapted",
-          "checked_at": "2026-07-21T12:01:26Z",
+          "checked_at": "2026-07-21T14:10:22Z",
           "checker": "infinitas install by-name --target-agent codex --mode auto",
           "evidence_path": "catalog/compatibility-evidence/codex/consume-infinitas-skill/0.1.1.json",
           "note": "Installed the immutable release into an isolated Codex target and validated its installable Skill layout.",
           "contract_last_verified": "2026-07-21",
-          "fresh_until": "2026-08-20T12:01:26Z",
+          "fresh_until": "2026-08-20T14:10:22Z",
+          "freshness_state": "fresh",
+          "freshness_reason": "not-applicable"
+        },
+        "openclaw": {
+          "state": "adapted",
+          "checked_at": "2026-07-21T14:10:22Z",
+          "checker": "infinitas openclaw skill export --mode confirm",
+          "evidence_path": "catalog/compatibility-evidence/openclaw/consume-infinitas-skill/0.1.1.json",
+          "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation.",
+          "contract_last_verified": "2026-07-21",
+          "fresh_until": "2026-08-20T14:10:22Z",
           "freshness_state": "fresh",
           "freshness_reason": "not-applicable"
         }
@@ -295,7 +295,7 @@
         "inventory-export",
         "audit-export"
       ],
-      "last_verified_at": "2026-07-21T12:01:26Z",
+      "last_verified_at": "2026-07-21T14:10:22Z",
       "use_when": [
         "Need to debug federated registry source, mirror, or namespace behavior",
         "Need to inspect inventory export or audit export artifacts"
@@ -390,72 +390,72 @@
           "codex"
         ],
         "verified_support": {
-          "openclaw": {
-            "state": "adapted",
-            "checked_at": "2026-07-21T11:44:52Z",
-            "checker": "infinitas openclaw skill export --mode confirm",
-            "evidence_path": "catalog/compatibility-evidence/openclaw/federation-registry-ops/0.1.1.json",
-            "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation.",
-            "contract_last_verified": "2026-07-21",
-            "fresh_until": "2026-08-20T11:44:52Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
-          },
           "claude": {
             "state": "adapted",
-            "checked_at": "2026-07-21T12:01:26Z",
+            "checked_at": "2026-07-21T14:10:22Z",
             "checker": "infinitas install by-name --target-agent claude --mode auto",
             "evidence_path": "catalog/compatibility-evidence/claude/federation-registry-ops/0.1.1.json",
             "note": "Installed the immutable release into an isolated Claude target and validated its installable Skill layout.",
             "contract_last_verified": "2026-07-21",
-            "fresh_until": "2026-08-20T12:01:26Z",
+            "fresh_until": "2026-08-20T14:10:22Z",
             "freshness_state": "fresh",
             "freshness_reason": "not-applicable"
           },
           "codex": {
             "state": "adapted",
-            "checked_at": "2026-07-21T12:01:26Z",
+            "checked_at": "2026-07-21T14:10:22Z",
             "checker": "infinitas install by-name --target-agent codex --mode auto",
             "evidence_path": "catalog/compatibility-evidence/codex/federation-registry-ops/0.1.1.json",
             "note": "Installed the immutable release into an isolated Codex target and validated its installable Skill layout.",
             "contract_last_verified": "2026-07-21",
-            "fresh_until": "2026-08-20T12:01:26Z",
+            "fresh_until": "2026-08-20T14:10:22Z",
+            "freshness_state": "fresh",
+            "freshness_reason": "not-applicable"
+          },
+          "openclaw": {
+            "state": "adapted",
+            "checked_at": "2026-07-21T14:10:22Z",
+            "checker": "infinitas openclaw skill export --mode confirm",
+            "evidence_path": "catalog/compatibility-evidence/openclaw/federation-registry-ops/0.1.1.json",
+            "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation.",
+            "contract_last_verified": "2026-07-21",
+            "fresh_until": "2026-08-20T14:10:22Z",
             "freshness_state": "fresh",
             "freshness_reason": "not-applicable"
           }
         }
       },
       "verified_support": {
-        "openclaw": {
-          "state": "adapted",
-          "checked_at": "2026-07-21T11:44:52Z",
-          "checker": "infinitas openclaw skill export --mode confirm",
-          "evidence_path": "catalog/compatibility-evidence/openclaw/federation-registry-ops/0.1.1.json",
-          "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation.",
-          "contract_last_verified": "2026-07-21",
-          "fresh_until": "2026-08-20T11:44:52Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
-        },
         "claude": {
           "state": "adapted",
-          "checked_at": "2026-07-21T12:01:26Z",
+          "checked_at": "2026-07-21T14:10:22Z",
           "checker": "infinitas install by-name --target-agent claude --mode auto",
           "evidence_path": "catalog/compatibility-evidence/claude/federation-registry-ops/0.1.1.json",
           "note": "Installed the immutable release into an isolated Claude target and validated its installable Skill layout.",
           "contract_last_verified": "2026-07-21",
-          "fresh_until": "2026-08-20T12:01:26Z",
+          "fresh_until": "2026-08-20T14:10:22Z",
           "freshness_state": "fresh",
           "freshness_reason": "not-applicable"
         },
         "codex": {
           "state": "adapted",
-          "checked_at": "2026-07-21T12:01:26Z",
+          "checked_at": "2026-07-21T14:10:22Z",
           "checker": "infinitas install by-name --target-agent codex --mode auto",
           "evidence_path": "catalog/compatibility-evidence/codex/federation-registry-ops/0.1.1.json",
           "note": "Installed the immutable release into an isolated Codex target and validated its installable Skill layout.",
           "contract_last_verified": "2026-07-21",
-          "fresh_until": "2026-08-20T12:01:26Z",
+          "fresh_until": "2026-08-20T14:10:22Z",
+          "freshness_state": "fresh",
+          "freshness_reason": "not-applicable"
+        },
+        "openclaw": {
+          "state": "adapted",
+          "checked_at": "2026-07-21T14:10:22Z",
+          "checker": "infinitas openclaw skill export --mode confirm",
+          "evidence_path": "catalog/compatibility-evidence/openclaw/federation-registry-ops/0.1.1.json",
+          "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation.",
+          "contract_last_verified": "2026-07-21",
+          "fresh_until": "2026-08-20T14:10:22Z",
           "freshness_state": "fresh",
           "freshness_reason": "not-applicable"
         }
@@ -558,7 +558,7 @@
         "release-guidance",
         "registry-debugging"
       ],
-      "last_verified_at": "2026-07-21T12:01:26Z",
+      "last_verified_at": "2026-07-21T14:10:22Z",
       "use_when": [
         "Need to operate inside the infinitas-skill repository",
         "Need guidance on registry workflows, planning files, or release discipline"
@@ -653,72 +653,72 @@
           "codex"
         ],
         "verified_support": {
-          "openclaw": {
-            "state": "adapted",
-            "checked_at": "2026-07-21T11:44:52Z",
-            "checker": "infinitas openclaw skill export --mode confirm",
-            "evidence_path": "catalog/compatibility-evidence/openclaw/operate-infinitas-skill/0.1.2.json",
-            "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation.",
-            "contract_last_verified": "2026-07-21",
-            "fresh_until": "2026-08-20T11:44:52Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
-          },
           "claude": {
             "state": "adapted",
-            "checked_at": "2026-07-21T12:01:26Z",
+            "checked_at": "2026-07-21T14:10:22Z",
             "checker": "infinitas install by-name --target-agent claude --mode auto",
             "evidence_path": "catalog/compatibility-evidence/claude/operate-infinitas-skill/0.1.2.json",
             "note": "Installed the immutable release into an isolated Claude target and validated its installable Skill layout.",
             "contract_last_verified": "2026-07-21",
-            "fresh_until": "2026-08-20T12:01:26Z",
+            "fresh_until": "2026-08-20T14:10:22Z",
             "freshness_state": "fresh",
             "freshness_reason": "not-applicable"
           },
           "codex": {
             "state": "adapted",
-            "checked_at": "2026-07-21T12:01:26Z",
+            "checked_at": "2026-07-21T14:10:22Z",
             "checker": "infinitas install by-name --target-agent codex --mode auto",
             "evidence_path": "catalog/compatibility-evidence/codex/operate-infinitas-skill/0.1.2.json",
             "note": "Installed the immutable release into an isolated Codex target and validated its installable Skill layout.",
             "contract_last_verified": "2026-07-21",
-            "fresh_until": "2026-08-20T12:01:26Z",
+            "fresh_until": "2026-08-20T14:10:22Z",
+            "freshness_state": "fresh",
+            "freshness_reason": "not-applicable"
+          },
+          "openclaw": {
+            "state": "adapted",
+            "checked_at": "2026-07-21T14:10:22Z",
+            "checker": "infinitas openclaw skill export --mode confirm",
+            "evidence_path": "catalog/compatibility-evidence/openclaw/operate-infinitas-skill/0.1.2.json",
+            "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation.",
+            "contract_last_verified": "2026-07-21",
+            "fresh_until": "2026-08-20T14:10:22Z",
             "freshness_state": "fresh",
             "freshness_reason": "not-applicable"
           }
         }
       },
       "verified_support": {
-        "openclaw": {
-          "state": "adapted",
-          "checked_at": "2026-07-21T11:44:52Z",
-          "checker": "infinitas openclaw skill export --mode confirm",
-          "evidence_path": "catalog/compatibility-evidence/openclaw/operate-infinitas-skill/0.1.2.json",
-          "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation.",
-          "contract_last_verified": "2026-07-21",
-          "fresh_until": "2026-08-20T11:44:52Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
-        },
         "claude": {
           "state": "adapted",
-          "checked_at": "2026-07-21T12:01:26Z",
+          "checked_at": "2026-07-21T14:10:22Z",
           "checker": "infinitas install by-name --target-agent claude --mode auto",
           "evidence_path": "catalog/compatibility-evidence/claude/operate-infinitas-skill/0.1.2.json",
           "note": "Installed the immutable release into an isolated Claude target and validated its installable Skill layout.",
           "contract_last_verified": "2026-07-21",
-          "fresh_until": "2026-08-20T12:01:26Z",
+          "fresh_until": "2026-08-20T14:10:22Z",
           "freshness_state": "fresh",
           "freshness_reason": "not-applicable"
         },
         "codex": {
           "state": "adapted",
-          "checked_at": "2026-07-21T12:01:26Z",
+          "checked_at": "2026-07-21T14:10:22Z",
           "checker": "infinitas install by-name --target-agent codex --mode auto",
           "evidence_path": "catalog/compatibility-evidence/codex/operate-infinitas-skill/0.1.2.json",
           "note": "Installed the immutable release into an isolated Codex target and validated its installable Skill layout.",
           "contract_last_verified": "2026-07-21",
-          "fresh_until": "2026-08-20T12:01:26Z",
+          "fresh_until": "2026-08-20T14:10:22Z",
+          "freshness_state": "fresh",
+          "freshness_reason": "not-applicable"
+        },
+        "openclaw": {
+          "state": "adapted",
+          "checked_at": "2026-07-21T14:10:22Z",
+          "checker": "infinitas openclaw skill export --mode confirm",
+          "evidence_path": "catalog/compatibility-evidence/openclaw/operate-infinitas-skill/0.1.2.json",
+          "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation.",
+          "contract_last_verified": "2026-07-21",
+          "fresh_until": "2026-08-20T14:10:22Z",
           "freshness_state": "fresh",
           "freshness_reason": "not-applicable"
         }
@@ -821,7 +821,7 @@
         "immutable-release",
         "verified-support-recording"
       ],
-      "last_verified_at": "2026-07-21T12:01:26Z",
+      "last_verified_at": "2026-07-21T14:10:22Z",
       "use_when": [
         "Need to validate or publish an immutable release for a registry-managed skill",
         "Need to refresh stable release artifacts before other agents can install a skill"
@@ -916,72 +916,72 @@
           "codex"
         ],
         "verified_support": {
-          "openclaw": {
-            "state": "adapted",
-            "checked_at": "2026-07-21T11:44:52Z",
-            "checker": "infinitas openclaw skill export --mode confirm",
-            "evidence_path": "catalog/compatibility-evidence/openclaw/release-infinitas-skill/0.1.1.json",
-            "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation.",
-            "contract_last_verified": "2026-07-21",
-            "fresh_until": "2026-08-20T11:44:52Z",
-            "freshness_state": "fresh",
-            "freshness_reason": "not-applicable"
-          },
           "claude": {
             "state": "adapted",
-            "checked_at": "2026-07-21T12:01:26Z",
+            "checked_at": "2026-07-21T14:10:22Z",
             "checker": "infinitas install by-name --target-agent claude --mode auto",
             "evidence_path": "catalog/compatibility-evidence/claude/release-infinitas-skill/0.1.1.json",
             "note": "Installed the immutable release into an isolated Claude target and validated its installable Skill layout.",
             "contract_last_verified": "2026-07-21",
-            "fresh_until": "2026-08-20T12:01:26Z",
+            "fresh_until": "2026-08-20T14:10:22Z",
             "freshness_state": "fresh",
             "freshness_reason": "not-applicable"
           },
           "codex": {
             "state": "adapted",
-            "checked_at": "2026-07-21T12:01:26Z",
+            "checked_at": "2026-07-21T14:10:22Z",
             "checker": "infinitas install by-name --target-agent codex --mode auto",
             "evidence_path": "catalog/compatibility-evidence/codex/release-infinitas-skill/0.1.1.json",
             "note": "Installed the immutable release into an isolated Codex target and validated its installable Skill layout.",
             "contract_last_verified": "2026-07-21",
-            "fresh_until": "2026-08-20T12:01:26Z",
+            "fresh_until": "2026-08-20T14:10:22Z",
+            "freshness_state": "fresh",
+            "freshness_reason": "not-applicable"
+          },
+          "openclaw": {
+            "state": "adapted",
+            "checked_at": "2026-07-21T14:10:22Z",
+            "checker": "infinitas openclaw skill export --mode confirm",
+            "evidence_path": "catalog/compatibility-evidence/openclaw/release-infinitas-skill/0.1.1.json",
+            "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation.",
+            "contract_last_verified": "2026-07-21",
+            "fresh_until": "2026-08-20T14:10:22Z",
             "freshness_state": "fresh",
             "freshness_reason": "not-applicable"
           }
         }
       },
       "verified_support": {
-        "openclaw": {
-          "state": "adapted",
-          "checked_at": "2026-07-21T11:44:52Z",
-          "checker": "infinitas openclaw skill export --mode confirm",
-          "evidence_path": "catalog/compatibility-evidence/openclaw/release-infinitas-skill/0.1.1.json",
-          "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation.",
-          "contract_last_verified": "2026-07-21",
-          "fresh_until": "2026-08-20T11:44:52Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
-        },
         "claude": {
           "state": "adapted",
-          "checked_at": "2026-07-21T12:01:26Z",
+          "checked_at": "2026-07-21T14:10:22Z",
           "checker": "infinitas install by-name --target-agent claude --mode auto",
           "evidence_path": "catalog/compatibility-evidence/claude/release-infinitas-skill/0.1.1.json",
           "note": "Installed the immutable release into an isolated Claude target and validated its installable Skill layout.",
           "contract_last_verified": "2026-07-21",
-          "fresh_until": "2026-08-20T12:01:26Z",
+          "fresh_until": "2026-08-20T14:10:22Z",
           "freshness_state": "fresh",
           "freshness_reason": "not-applicable"
         },
         "codex": {
           "state": "adapted",
-          "checked_at": "2026-07-21T12:01:26Z",
+          "checked_at": "2026-07-21T14:10:22Z",
           "checker": "infinitas install by-name --target-agent codex --mode auto",
           "evidence_path": "catalog/compatibility-evidence/codex/release-infinitas-skill/0.1.1.json",
           "note": "Installed the immutable release into an isolated Codex target and validated its installable Skill layout.",
           "contract_last_verified": "2026-07-21",
-          "fresh_until": "2026-08-20T12:01:26Z",
+          "fresh_until": "2026-08-20T14:10:22Z",
+          "freshness_state": "fresh",
+          "freshness_reason": "not-applicable"
+        },
+        "openclaw": {
+          "state": "adapted",
+          "checked_at": "2026-07-21T14:10:22Z",
+          "checker": "infinitas openclaw skill export --mode confirm",
+          "evidence_path": "catalog/compatibility-evidence/openclaw/release-infinitas-skill/0.1.1.json",
+          "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation.",
+          "contract_last_verified": "2026-07-21",
+          "fresh_until": "2026-08-20T14:10:22Z",
           "freshness_state": "fresh",
           "freshness_reason": "not-applicable"
         }

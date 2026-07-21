@@ -4,7 +4,7 @@
   "qualified_name": "lvxiaoer/consume-infinitas-skill",
   "version": "0.1.1",
   "state": "adapted",
-  "checked_at": "2026-07-21T12:01:26Z",
+  "checked_at": "2026-07-21T14:10:22Z",
   "checker": "infinitas install by-name --target-agent claude --mode auto",
   "note": "Installed the immutable release into an isolated Claude target and validated its installable Skill layout."
 }

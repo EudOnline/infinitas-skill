@@ -2358,7 +2358,7 @@ Use the documented `build --check` validation contract in operational guidance a
 
 **Logged**: 2026-07-21T12:01:26Z
 **Priority**: high
-**Status**: pending
+**Status**: resolved
 **Area**: infra
 
 ### Summary
@@ -2384,5 +2384,50 @@ Create new immutable releases with signed file manifests, update the catalog def
 
 - Reproducible: yes
 - Related Files: catalog/distributions/, src/infinitas_skill/install/installed_integrity.py, src/infinitas_skill/release/
+
+### Resolution
+
+- **Resolved**: 2026-07-21T14:10:22Z
+- **Commit/PR**: d95cee1
+- **Notes**: Published four new signed immutable versions with eight-entry file manifests and verified clean Claude, Codex, and OpenClaw installs.
+
+---
+
+## [ERR-20260721-005] zsh-path-loop-variable
+
+**Logged**: 2026-07-21T14:10:22Z
+**Priority**: low
+**Status**: resolved
+**Area**: config
+
+### Summary
+
+Using `path` as a zsh loop variable overwrote the shell's special `path` array and made commands unavailable.
+
+### Error
+
+```text
+zsh: command not found: sed
+zsh: command not found: git
+```
+
+### Context
+
+- A bulk evidence timestamp update used `for path in ...` under zsh.
+- zsh ties the lowercase `path` array to the uppercase `PATH` environment variable.
+
+### Suggested Fix
+
+Use a neutral loop variable such as `file` or `evidence_file` in zsh scripts.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: catalog/compatibility-evidence/
+
+### Resolution
+
+- **Resolved**: 2026-07-21T14:10:22Z
+- **Notes**: Re-ran the update with a non-special loop variable.
 
 ---

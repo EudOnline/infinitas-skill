@@ -4,7 +4,7 @@
   "qualified_name": "lvxiaoer/operate-infinitas-skill",
   "version": "0.1.2",
   "state": "adapted",
-  "checked_at": "2026-07-21T11:44:52Z",
+  "checked_at": "2026-07-21T14:10:22Z",
   "checker": "infinitas openclaw skill export --mode confirm",
   "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation."
 }
