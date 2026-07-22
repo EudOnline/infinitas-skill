@@ -39,7 +39,8 @@ def create_backup_dir(output_dir: str, label: str) -> tuple[Path, str]:
     suffix = sanitize_label(label)
     dirname = f"{timestamp}-{suffix}" if suffix else timestamp
     backup_dir = root / dirname
-    backup_dir.mkdir()
+    backup_dir.mkdir(mode=0o700)
+    backup_dir.chmod(0o700)
     return backup_dir, timestamp
 
 
@@ -53,6 +54,7 @@ def write_repo_bundle(repo: Path, backup_dir: Path) -> str:
     )
     if result.returncode != 0:
         fail(f"failed to create repo bundle: {result.stderr}")
+    bundle_path.chmod(0o600)
     return bundle_name
 
 
@@ -70,6 +72,7 @@ def copy_sqlite_db(db_path: Path, backup_dir: Path) -> str:
     if integrity_rows != [("ok",)]:
         destination.unlink(missing_ok=True)
         fail(f"sqlite backup integrity check failed for {db_path}: {integrity_rows!r}")
+    destination.chmod(0o600)
     return db_name
 
 
@@ -78,6 +81,7 @@ def archive_artifacts(artifact_path: Path, backup_dir: Path) -> str:
     archive_path = backup_dir / archive_name
     with tarfile.open(archive_path, "w:gz") as archive:
         archive.add(artifact_path, arcname="artifacts")
+    archive_path.chmod(0o600)
     return archive_name
 
 
@@ -186,14 +190,16 @@ def run_server_backup(
         ),
     }
     manifest_name = "manifest.json"
-    (backup_dir / manifest_name).write_text(
+    manifest_path = backup_dir / manifest_name
+    manifest_path.write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
+    manifest_path.chmod(0o600)
 
     summary = {
         "ok": True,
         "backup_dir": str(backup_dir),
-        "manifest": str(backup_dir / manifest_name),
+        "manifest": str(manifest_path),
         "files": {
             "repo_bundle": repo_bundle_name,
             "database": db_copy_name,

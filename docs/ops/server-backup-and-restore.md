@@ -47,6 +47,9 @@ Each backup directory contains:
 - `artifacts.tar.gz` — a tarball of the hosted artifact directory
 - `manifest.json` — schema version, timestamp, label, git HEAD, source paths, and SHA-256 values for every restore input
 
+Snapshot directories are created with mode `0700` and their files with mode `0600` because the
+SQLite snapshot and manifest may contain sensitive operational state.
+
 The backup helper refuses dirty repo snapshots so operators do not accidentally capture an in-flight publish worktree.
 It runs `PRAGMA integrity_check` against the completed SQLite snapshot before accepting the backup.
 The restore rehearsal refuses backup sets without valid SHA-256 values, so a backup is not considered

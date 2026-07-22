@@ -125,3 +125,34 @@ Keep database-specific snapshot logic inside the backup implementation and requi
 - Last-Seen: 2026-07-22
 
 ---
+
+## [LRN-20260722-002] best_practice
+
+**Logged**: 2026-07-22T19:12:00Z
+**Priority**: high
+**Status**: resolved
+**Area**: infra
+
+### Summary
+
+Backup snapshots containing SQLite state must enforce restrictive modes when they are created, not rely on the surrounding volume path.
+
+### Details
+
+Default process umask produced `0755` snapshot directories and `0644` files. The Docker volume was root-managed, but copied or remounted backups could expose credential hashes, tokens, or operational metadata to unintended local users.
+
+### Suggested Action
+
+Create snapshot directories as `0700`, chmod every backup input and manifest to `0600`, assert modes in tests, and preserve those modes on off-host copies.
+
+### Metadata
+
+- Source: audit
+- Related Files: src/infinitas_skill/server/backup.py, tests/unit/server/test_backup.py
+- Tags: backup, permissions, secrets, hardening
+- Pattern-Key: infra.backup_minimum_permissions
+- Recurrence-Count: 1
+- First-Seen: 2026-07-22
+- Last-Seen: 2026-07-22
+
+---

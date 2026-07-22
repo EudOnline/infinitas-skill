@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sqlite3
+import stat
+import subprocess
 from contextlib import closing
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -12,6 +14,7 @@ from src.infinitas_skill.server.backup import (
     classify_backup_entries,
     copy_sqlite_db,
     create_backup_dir,
+    run_server_backup,
     sanitize_label,
 )
 
@@ -39,6 +42,7 @@ class TestCreateBackupDir:
             backup_dir, timestamp = create_backup_dir(td, "test")
             assert backup_dir.exists()
             assert backup_dir.is_dir()
+            assert stat.S_IMODE(backup_dir.stat().st_mode) == 0o700
             assert len(timestamp) == 16  # YYYYMMDDTHHMMSSZ
 
     def test_no_label(self):
@@ -71,6 +75,7 @@ class TestCopySqliteDb:
             assert result == "test.db"
             assert rows == [("committed",)]
             assert integrity == [("ok",)]
+            assert stat.S_IMODE(backup_path.stat().st_mode) == 0o600
 
 
 class TestArchiveArtifacts:
@@ -83,7 +88,50 @@ class TestArchiveArtifacts:
             backup_dir.mkdir()
             result = archive_artifacts(artifact_path, backup_dir)
             assert result == "artifacts.tar.gz"
-            assert (backup_dir / "artifacts.tar.gz").exists()
+            archive_path = backup_dir / "artifacts.tar.gz"
+            assert archive_path.exists()
+            assert stat.S_IMODE(archive_path.stat().st_mode) == 0o600
+
+
+def test_run_server_backup_secures_every_snapshot_file(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", str(repo)], check=True, capture_output=True)
+    subprocess.run(["git", "-C", str(repo), "config", "user.name", "Test User"], check=True)
+    subprocess.run(["git", "-C", str(repo), "config", "user.email", "test@example.com"], check=True)
+    (repo / "README.md").write_text("backup fixture\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(repo), "add", "README.md"], check=True)
+    subprocess.run(["git", "-C", str(repo), "commit", "-m", "fixture"], check=True)
+    database = tmp_path / "server.db"
+    with closing(sqlite3.connect(database)) as connection:
+        connection.execute("CREATE TABLE entries (value TEXT NOT NULL)")
+        connection.commit()
+    artifacts = tmp_path / "artifacts"
+    (artifacts / "catalog").mkdir(parents=True)
+    (artifacts / "ai-index.json").write_text("{}\n", encoding="utf-8")
+    output = tmp_path / "backups"
+
+    assert (
+        run_server_backup(
+            repo_path=str(repo),
+            database_url=f"sqlite:///{database}",
+            artifact_path=str(artifacts),
+            output_dir=str(output),
+            label="permissions",
+            as_json=True,
+        )
+        == 0
+    )
+
+    snapshot = next(output.iterdir())
+    assert stat.S_IMODE(snapshot.stat().st_mode) == 0o700
+    assert {path.name for path in snapshot.iterdir()} == {
+        "repo.bundle",
+        "server.db",
+        "artifacts.tar.gz",
+        "manifest.json",
+    }
+    assert all(stat.S_IMODE(path.stat().st_mode) == 0o600 for path in snapshot.iterdir())
 
 
 class TestBuildBackupChecksums:
