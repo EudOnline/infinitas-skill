@@ -2560,3 +2560,42 @@ Use bounded, one-shot `gh run view` checks or product-provided wait mechanisms. 
 - **Notes**: Confirmed the remote run was complete, removed the stale monitor, and adopted one-shot status checks.
 
 ---
+
+## [ERR-20260722-003] e2e-touch-target-subpixel-measurement
+
+**Logged**: 2026-07-22T18:22:00Z
+**Priority**: medium
+**Status**: resolved
+**Area**: tests
+
+### Summary
+
+The CI browser reported a touch target below 44 CSS pixels after a separate readiness check had already observed every target at or above 44 pixels.
+
+### Error
+
+```text
+FAILED tests/e2e/test_navigation.py::test_navigation_and_toggle_targets_are_at_least_44px[chromium]
+assert all(box is not None and box["height"] >= 44 for box in visible_boxes)
+```
+
+### Context
+
+- The CSS used `2.75rem`, which assumes a 16px root font size instead of expressing the accessibility floor directly.
+- The test measured readiness and final boxes through separate browser operations, allowing inconsistent snapshots.
+
+### Suggested Fix
+
+Use an explicit 44px minimum for interactive targets and collect all final measurements in one browser evaluation that reports undersized elements.
+
+### Metadata
+
+- Reproducible: CI-only
+- Related Files: server/static/css/input.css, tests/e2e/test_navigation.py
+
+### Resolution
+
+- **Resolved**: 2026-07-22T18:22:00Z
+- **Notes**: Interactive navigation and toggle targets now have an explicit 44px floor, and the E2E assertion uses one diagnostic measurement snapshot.
+
+---

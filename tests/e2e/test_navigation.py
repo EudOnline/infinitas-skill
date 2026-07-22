@@ -23,19 +23,19 @@ def test_admin_nav_has_page_links(authenticated_page, live_server):
 
 def test_navigation_and_toggle_targets_are_at_least_44px(authenticated_page, live_server):
     authenticated_page.goto(f"{live_server}/manage?lang=en", wait_until="domcontentloaded")
-    authenticated_page.wait_for_function(
-        """() => {
-          const targets = [...document.querySelectorAll('.nav a, .toggle-chip')]
-            .filter((target) => target.getClientRects().length > 0);
-          return targets.length > 0
-            && targets.every((target) => target.getBoundingClientRect().height >= 44);
-        }"""
+    measurements = authenticated_page.locator(".nav a, .toggle-chip").evaluate_all(
+        """(targets) => targets
+          .filter((target) => target.getClientRects().length > 0)
+          .map((target) => ({
+            label: target.textContent.trim() || target.getAttribute('aria-label') || target.id,
+            width: target.getBoundingClientRect().width,
+            height: target.getBoundingClientRect().height,
+          }))"""
     )
 
-    targets = authenticated_page.query_selector_all(".nav a, .toggle-chip")
-    visible_boxes = [target.bounding_box() for target in targets if target.is_visible()]
-    assert visible_boxes
-    assert all(box is not None and box["height"] >= 44 for box in visible_boxes)
+    assert measurements
+    undersized = [target for target in measurements if target["height"] < 44]
+    assert not undersized, undersized
 
 
 def test_theme_tokens_meet_wcag_text_contrast(authenticated_page, live_server):
