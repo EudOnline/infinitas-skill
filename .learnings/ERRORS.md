@@ -1,5 +1,51 @@
 # Errors
 
+## [ERR-20260722-001] e2e-server-fixed-startup-delay
+
+**Logged**: 2026-07-22T17:40:00Z
+**Priority**: high
+**Status**: resolved
+**Area**: tests
+
+### Summary
+
+The E2E fixture yielded after a fixed one-second delay instead of waiting for the FastAPI
+lifespan, migrations, and bootstrap to finish.
+
+### Error
+
+```text
+APIRequestContext.post: connect ECONNREFUSED 127.0.0.1:<port>
+subsequent login attempts returned HTTP 401
+```
+
+### Context
+
+- Local runs passed because startup normally completed within one second.
+- GitHub Actions occasionally reached the first authenticated request before Uvicorn was ready.
+- The failed test teardown then cleared process environment and caches while the daemon server
+  thread was still starting, causing cascading authentication failures.
+
+### Suggested Fix
+
+Poll the real health endpoint until lifespan startup completes, fail early if the server thread
+exits, and explicitly request shutdown and join the thread during fixture teardown.
+
+### Metadata
+
+- Reproducible: environment-dependent
+- Related Files: tests/e2e/conftest.py
+- Tags: e2e, uvicorn, lifespan, ci, startup-race
+
+### Resolution
+
+- **Resolved**: 2026-07-22T17:40:00Z
+- **Commit/PR**: 7f964f7
+- **Notes**: Replaced the fixed delay with health polling and explicit Uvicorn shutdown; the
+  complete local E2E suite passes in about 19 seconds.
+
+---
+
 ## [ERR-20260719-006] concurrency-hardening-migration-context
 
 **Logged**: 2026-07-19T14:30:00+00:00
