@@ -516,8 +516,43 @@ def test_materialization_failure_emits_release_audit_event(
             .where(AuditEvent.aggregate_id == str(release_id))
             .where(AuditEvent.event_type == "release.materialization_failed")
         )
+        release = session.get(Release, release_id)
     assert event is not None
     assert "fixture materialization failure" in event.payload_json
+    assert release is not None
+    assert release.state == "failed"
+
+
+def test_retryable_materialization_failure_keeps_release_preparing(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    _prepare_signing_repo(temp_repo_copy, signing_key)
+    _configure_env(monkeypatch, tmp_path=tmp_path, repo=temp_repo_copy)
+    from sqlalchemy import select
+
+    from server.app import create_app
+    from server.db import get_session_factory
+    from server.worker import run_worker_loop
+
+    client = TestClient(create_app())
+    release_id, _version_id = _create_release_with_version(client)
+
+    def fail_materialization(*args, **kwargs):
+        raise RuntimeError("fixture timeout while materializing")
+
+    monkeypatch.setattr("server.worker.materialize_release", fail_materialization)
+    assert run_worker_loop(limit=1) == 1
+
+    with get_session_factory()() as session:
+        release = session.get(Release, release_id)
+        job = session.scalar(select(Job).where(Job.release_id == release_id))
+    assert release is not None
+    assert release.state == "preparing"
+    assert job is not None
+    assert job.status == "queued"
 
 
 def test_repeat_release_request_requeues_when_release_artifact_pointers_drift(

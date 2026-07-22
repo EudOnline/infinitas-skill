@@ -307,3 +307,11 @@ def mark_release_ready(
         },
     )
     return release
+
+
+def mark_release_materialization_failed(db: Session, *, release: Release) -> Release:
+    release.state = "failed"
+    release.ready_at = None
+    db.add(release)
+    db.flush()
+    return release

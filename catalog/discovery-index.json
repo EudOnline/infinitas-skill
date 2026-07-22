@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-21T14:13:18Z",
+  "generated_at": "2026-07-22T13:28:07Z",
   "default_registry": "self",
   "sources": [
     {
@@ -36,6 +36,46 @@
         "0.1.1",
         "0.1.0"
       ],
+      "versions": {
+        "0.1.1": {
+          "manifest_path": "catalog/distributions/lvxiaoer/consume-infinitas-skill/0.1.1/manifest.json",
+          "distribution_manifest_path": "catalog/distributions/lvxiaoer/consume-infinitas-skill/0.1.1/manifest.json",
+          "bundle_path": "catalog/distributions/lvxiaoer/consume-infinitas-skill/0.1.1/skill.tar.gz",
+          "bundle_sha256": "de61b36944f11503b8c0491eb620e63f116c027e2b1c22bc6b70853e56b63a52",
+          "attestation_path": "catalog/provenance/consume-infinitas-skill-0.1.1.json",
+          "attestation_signature_path": "catalog/provenance/consume-infinitas-skill-0.1.1.json.ssig",
+          "published_at": "2026-07-21T13:21:02Z",
+          "stability": "stable",
+          "installable": true,
+          "attestation_formats": [
+            "ssh"
+          ],
+          "trust_state": "verified",
+          "resolution": {
+            "preferred_source": "distribution-manifest",
+            "fallback_allowed": false
+          }
+        },
+        "0.1.0": {
+          "manifest_path": "catalog/distributions/lvxiaoer/consume-infinitas-skill/0.1.0/manifest.json",
+          "distribution_manifest_path": "catalog/distributions/lvxiaoer/consume-infinitas-skill/0.1.0/manifest.json",
+          "bundle_path": "catalog/distributions/lvxiaoer/consume-infinitas-skill/0.1.0/skill.tar.gz",
+          "bundle_sha256": "70bf1b3f3eac804e010687267d6429edb9b9e1cf78c52353aec7533680e933ee",
+          "attestation_path": "catalog/provenance/consume-infinitas-skill-0.1.0.json",
+          "attestation_signature_path": "catalog/provenance/consume-infinitas-skill-0.1.0.json.ssig",
+          "published_at": "2026-03-16T03:51:11Z",
+          "stability": "stable",
+          "installable": true,
+          "attestation_formats": [
+            "ssh"
+          ],
+          "trust_state": "verified",
+          "resolution": {
+            "preferred_source": "distribution-manifest",
+            "fallback_allowed": false
+          }
+        }
+      },
       "runtime": {
         "platform": "openclaw",
         "source_mode": "metadata-only",
@@ -205,6 +245,46 @@
         "0.1.1",
         "0.1.0"
       ],
+      "versions": {
+        "0.1.1": {
+          "manifest_path": "catalog/distributions/lvxiaoer/federation-registry-ops/0.1.1/manifest.json",
+          "distribution_manifest_path": "catalog/distributions/lvxiaoer/federation-registry-ops/0.1.1/manifest.json",
+          "bundle_path": "catalog/distributions/lvxiaoer/federation-registry-ops/0.1.1/skill.tar.gz",
+          "bundle_sha256": "088a171cf35d8711ce013a96258607fca7dbd587677bc0c476425a8a73fcab3e",
+          "attestation_path": "catalog/provenance/federation-registry-ops-0.1.1.json",
+          "attestation_signature_path": "catalog/provenance/federation-registry-ops-0.1.1.json.ssig",
+          "published_at": "2026-07-21T13:21:05Z",
+          "stability": "stable",
+          "installable": true,
+          "attestation_formats": [
+            "ssh"
+          ],
+          "trust_state": "verified",
+          "resolution": {
+            "preferred_source": "distribution-manifest",
+            "fallback_allowed": false
+          }
+        },
+        "0.1.0": {
+          "manifest_path": "catalog/distributions/lvxiaoer/federation-registry-ops/0.1.0/manifest.json",
+          "distribution_manifest_path": "catalog/distributions/lvxiaoer/federation-registry-ops/0.1.0/manifest.json",
+          "bundle_path": "catalog/distributions/lvxiaoer/federation-registry-ops/0.1.0/skill.tar.gz",
+          "bundle_sha256": "2784d72ed2354558859f98fb695d62d33b6574d8a92aff73327c4fa52c7ab29d",
+          "attestation_path": "catalog/provenance/federation-registry-ops-0.1.0.json",
+          "attestation_signature_path": "catalog/provenance/federation-registry-ops-0.1.0.json.ssig",
+          "published_at": "2026-03-16T03:52:23Z",
+          "stability": "stable",
+          "installable": true,
+          "attestation_formats": [
+            "ssh"
+          ],
+          "trust_state": "verified",
+          "resolution": {
+            "preferred_source": "distribution-manifest",
+            "fallback_allowed": false
+          }
+        }
+      },
       "runtime": {
         "platform": "openclaw",
         "source_mode": "metadata-only",
@@ -373,6 +453,46 @@
         "0.1.2",
         "0.1.1"
       ],
+      "versions": {
+        "0.1.2": {
+          "manifest_path": "catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.2/manifest.json",
+          "distribution_manifest_path": "catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.2/manifest.json",
+          "bundle_path": "catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.2/skill.tar.gz",
+          "bundle_sha256": "8588932ab0c7f0bbee91daa1d71bd569973209f9de940e62eb602bb7046683ed",
+          "attestation_path": "catalog/provenance/operate-infinitas-skill-0.1.2.json",
+          "attestation_signature_path": "catalog/provenance/operate-infinitas-skill-0.1.2.json.ssig",
+          "published_at": "2026-07-21T13:21:10Z",
+          "stability": "stable",
+          "installable": true,
+          "attestation_formats": [
+            "ssh"
+          ],
+          "trust_state": "verified",
+          "resolution": {
+            "preferred_source": "distribution-manifest",
+            "fallback_allowed": false
+          }
+        },
+        "0.1.1": {
+          "manifest_path": "catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.1/manifest.json",
+          "distribution_manifest_path": "catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.1/manifest.json",
+          "bundle_path": "catalog/distributions/lvxiaoer/operate-infinitas-skill/0.1.1/skill.tar.gz",
+          "bundle_sha256": "ee193440e2376d498f88a2b0ed9ea99dce3a0183eec7125fefefa8abaf07f500",
+          "attestation_path": "catalog/provenance/operate-infinitas-skill-0.1.1.json",
+          "attestation_signature_path": "catalog/provenance/operate-infinitas-skill-0.1.1.json.ssig",
+          "published_at": "2026-03-12T12:56:45Z",
+          "stability": "stable",
+          "installable": true,
+          "attestation_formats": [
+            "ssh"
+          ],
+          "trust_state": "verified",
+          "resolution": {
+            "preferred_source": "distribution-manifest",
+            "fallback_allowed": false
+          }
+        }
+      },
       "runtime": {
         "platform": "openclaw",
         "source_mode": "metadata-only",
@@ -540,6 +660,46 @@
         "0.1.1",
         "0.1.0"
       ],
+      "versions": {
+        "0.1.1": {
+          "manifest_path": "catalog/distributions/lvxiaoer/release-infinitas-skill/0.1.1/manifest.json",
+          "distribution_manifest_path": "catalog/distributions/lvxiaoer/release-infinitas-skill/0.1.1/manifest.json",
+          "bundle_path": "catalog/distributions/lvxiaoer/release-infinitas-skill/0.1.1/skill.tar.gz",
+          "bundle_sha256": "0a9b18e5d19bc7fd54551dfb3a38adf1c35e6585b1c3080f3ccd467110b64e16",
+          "attestation_path": "catalog/provenance/release-infinitas-skill-0.1.1.json",
+          "attestation_signature_path": "catalog/provenance/release-infinitas-skill-0.1.1.json.ssig",
+          "published_at": "2026-07-21T13:21:13Z",
+          "stability": "stable",
+          "installable": true,
+          "attestation_formats": [
+            "ssh"
+          ],
+          "trust_state": "verified",
+          "resolution": {
+            "preferred_source": "distribution-manifest",
+            "fallback_allowed": false
+          }
+        },
+        "0.1.0": {
+          "manifest_path": "catalog/distributions/lvxiaoer/release-infinitas-skill/0.1.0/manifest.json",
+          "distribution_manifest_path": "catalog/distributions/lvxiaoer/release-infinitas-skill/0.1.0/manifest.json",
+          "bundle_path": "catalog/distributions/lvxiaoer/release-infinitas-skill/0.1.0/skill.tar.gz",
+          "bundle_sha256": "dc3a597e705fbee744968eaad9583d0efc758fa0d0297cdc544980241ae67bd0",
+          "attestation_path": "catalog/provenance/release-infinitas-skill-0.1.0.json",
+          "attestation_signature_path": "catalog/provenance/release-infinitas-skill-0.1.0.json.ssig",
+          "published_at": "2026-03-16T03:49:16Z",
+          "stability": "stable",
+          "installable": true,
+          "attestation_formats": [
+            "ssh"
+          ],
+          "trust_state": "verified",
+          "resolution": {
+            "preferred_source": "distribution-manifest",
+            "fallback_allowed": false
+          }
+        }
+      },
       "runtime": {
         "platform": "openclaw",
         "source_mode": "metadata-only",

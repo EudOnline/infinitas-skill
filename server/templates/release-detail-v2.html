@@ -6,7 +6,7 @@
   <div class="flex flex-wrap items-center gap-3 justify-between">
     <div class="flex flex-wrap items-center gap-3 min-w-0">
       <h1 class="font-display text-xl font-extrabold text-kawaii-ink truncate">{{ object.display_name or object.slug or 'Untitled' }} {{ release.version }}</h1>
-      <span class="kawaii-badge {% if release.readiness_state == 'ready' %}kawaii-badge--success{% elif release.readiness_state == 'preparing' %}kawaii-badge--pending{% else %}kawaii-badge--running{% endif %}">{{ release.readiness_state or 'unknown' }}</span>
+      <span class="kawaii-badge {% if release.readiness_state == 'ready' %}kawaii-badge--success{% elif release.readiness_state == 'preparing' %}kawaii-badge--pending{% elif release.readiness_state == 'failed' %}kawaii-badge--error{% else %}kawaii-badge--running{% endif %}">{{ release.readiness_state or 'unknown' }}</span>
       <span class="kawaii-badge kawaii-badge--soft">{{ release.visibility or 'private' }}</span>
       {% if release.blocking_count %}<span class="kawaii-badge kawaii-badge--pending">{{ release.blocking_count }} {{ ui['option_blocking'] }}</span>{% endif %}
     </div>

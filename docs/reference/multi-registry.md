@@ -181,6 +181,11 @@ For tracked or pinned remote registries, sync now:
 5. checks out that commit in detached state, and
 6. records refresh metadata for later freshness checks.
 
+For hosted HTTP registries, sync fetches the AI index, distributions index, and compatibility
+catalog before replacing `.cache/registries/<name>` atomically. Refresh state records a SHA-256
+digest of those catalogs instead of a Git commit. If a live HTTP catalog is temporarily
+unavailable, discovery can use the synchronized cache subject to the configured freshness policy.
+
 ## Hosted HTTP registries
 
 The registry source model now also supports a hosted distribution source:
@@ -207,6 +212,19 @@ Hosted registries differ from Git registries in three important ways:
 1. they resolve through HTTPS endpoints instead of a local repository root
 2. they do not expose Git commit / tag identity at install time
 3. they are intended to serve generated catalog views and immutable release artifacts
+
+The maintained client sequence is:
+
+```bash
+uv run infinitas registry sources sync hosted --json
+uv run infinitas registry catalog build
+uv run infinitas discovery search <query> --json
+uv run infinitas discovery inspect <publisher>/<skill> --json
+```
+
+The aggregate discovery index retains each hosted version's immutable manifest, bundle,
+provenance, and signature references. Inspection resolves those references through the selected
+HTTP registry with its configured authentication, so no manual staging directory is required.
 
 For `private`, `trusted`, and `public` hosted registries, `base_url` must use HTTPS.
 

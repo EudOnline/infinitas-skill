@@ -32,7 +32,10 @@ from infinitas_skill.release.attestation import (
     resolve_attestation_key,
 )
 from server.artifact_ops import sha256_bytes
-from server.modules.authoring.content import canonicalize_skill_bundle
+from server.modules.authoring.content import (
+    canonicalize_skill_bundle,
+    validate_hosted_skill_identity,
+)
 
 # Sub-modules — the actual implementations
 from server.modules.release.bundle import skill_content_bundle_data
@@ -123,6 +126,11 @@ def _build_and_store_bundle(
         raise RuntimeError("stored skill content version no longer matches the sealed version")
     if _canonical_json(validated.metadata) != _canonical_json(snapshot_metadata(snapshot)):
         raise RuntimeError("stored skill content metadata no longer matches the sealed version")
+    validate_hosted_skill_identity(
+        validated.metadata,
+        publisher=snapshot.namespace.slug,
+        skill_slug=snapshot.skill.slug,
+    )
     public_path = (
         Path("skills")
         / snapshot.namespace.slug

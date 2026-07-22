@@ -2,16 +2,26 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+import os
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any
 
+from infinitas_skill.install.http_registry import (
+    HostedRegistryError,
+    fetch_json,
+    registry_catalog_path,
+)
 from infinitas_skill.install.registry_source_primitives import (
     canonical_pin_ref,
     extract_git_host,
     normalized_allowed_hosts,
     normalized_allowed_refs,
+    normalized_auth,
     normalized_pin,
     normalized_update_policy,
     resolve_registry_root,
@@ -28,6 +38,103 @@ from infinitas_skill.registry.snapshot import resolve_snapshot_selector
 
 class RegistrySyncError(Exception):
     pass
+
+
+def _http_cache_root(root: Path, name: str) -> Path:
+    return (root / ".cache" / "registries" / name).resolve()
+
+
+def _replace_http_cache(cache_root: Path, staging_root: Path, *, force: bool) -> Path | None:
+    backup_root: Path | None = None
+    if cache_root.exists():
+        if not cache_root.is_dir() and not force:
+            raise RegistrySyncError(f"http registry cache path is not a directory: {cache_root}")
+        backup_root = Path(
+            tempfile.mkdtemp(prefix=f".{cache_root.name}.previous-", dir=cache_root.parent)
+        )
+        backup_root.rmdir()
+        os.replace(cache_root, backup_root)
+    try:
+        os.replace(staging_root, cache_root)
+    except Exception:
+        if backup_root is not None:
+            os.replace(backup_root, cache_root)
+        raise
+    return backup_root
+
+
+def _sync_http_registry(root: Path, registry: dict[str, Any], *, force: bool) -> dict[str, Any]:
+    name = str(registry.get("name") or "")
+    base_url = registry.get("base_url")
+    if not isinstance(base_url, str) or not base_url.strip():
+        raise RegistrySyncError(f"http registry {name} missing base_url")
+    auth = normalized_auth(registry)
+    token_env = auth.get("env") if auth.get("mode") == "token" else None
+    catalog_keys = ("ai_index", "distributions", "compatibility")
+    payloads: dict[str, dict[Any, Any]] = {}
+    try:
+        for key in catalog_keys:
+            payload = fetch_json(
+                base_url,
+                registry_catalog_path(registry, key),
+                token_env=token_env,
+            )
+            if not isinstance(payload, dict):
+                raise RegistrySyncError(f"http registry {name} returned non-object {key} catalog")
+            payloads[key] = payload
+    except HostedRegistryError as exc:
+        raise RegistrySyncError(str(exc)) from exc
+
+    cache_root = _http_cache_root(root, name)
+    cache_root.parent.mkdir(parents=True, exist_ok=True)
+    staging_root = Path(tempfile.mkdtemp(prefix=f".{cache_root.name}.sync-", dir=cache_root.parent))
+    try:
+        catalog_root = staging_root / "catalog"
+        catalog_root.mkdir()
+        digest = hashlib.sha256()
+        written: list[str] = []
+        for key in catalog_keys:
+            relative_path = registry_catalog_path(registry, key)
+            filename = Path(relative_path).name
+            encoded = json.dumps(
+                payloads[key], ensure_ascii=False, sort_keys=True, separators=(",", ":")
+            ).encode("utf-8")
+            digest.update(key.encode("utf-8") + b"\0" + encoded)
+            (catalog_root / filename).write_text(
+                json.dumps(payloads[key], ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            written.append(f"catalog/{filename}")
+        source_digest = digest.hexdigest()
+        backup_root = _replace_http_cache(cache_root, staging_root, force=force)
+    except Exception:
+        shutil.rmtree(staging_root, ignore_errors=True)
+        raise
+    try:
+        write_refresh_state(
+            root,
+            registry_name=name,
+            kind="http",
+            cache_path=cache_root,
+            source_commit=source_digest,
+        )
+    except Exception:
+        shutil.rmtree(cache_root, ignore_errors=True)
+        if backup_root is not None:
+            os.replace(backup_root, cache_root)
+        raise
+    if backup_root is not None:
+        if backup_root.is_dir():
+            shutil.rmtree(backup_root)
+        else:
+            backup_root.unlink()
+    return {
+        "registry": name,
+        "mode": "remote-only",
+        "path": str(cache_root),
+        "digest": source_digest,
+        "catalogs": written,
+    }
 
 
 def _git(*args: str, cwd: Path | None = None) -> str:
@@ -161,6 +268,8 @@ def sync_registry_source(
         }
 
     kind = registry.get("kind")
+    if kind == "http":
+        return _sync_http_registry(repo_root, registry, force=force)
     path = resolve_registry_root(repo_root, registry)
     update_policy = normalized_update_policy(registry)
     configured_host = extract_git_host(registry.get("url"))

@@ -13,6 +13,7 @@ from infinitas_skill.install.skill_validation import (
     SkillValidationError,
     validate_installable_skill_dir,
 )
+from infinitas_skill.policy.skill_identity import validate_identity_metadata
 
 MAX_BUNDLE_BYTES = 20 * 1024 * 1024
 MAX_EXPANDED_BYTES = 100 * 1024 * 1024
@@ -107,6 +108,30 @@ def _declared_version(metadata: dict[str, Any]) -> str:
     return version
 
 
+def validate_hosted_skill_identity(
+    metadata: dict[str, Any], *, publisher: str, skill_slug: str
+) -> None:
+    identity, identity_errors = validate_identity_metadata(metadata)
+    errors = list(identity_errors)
+    expected_qualified_name = f"{publisher}/{skill_slug}"
+    if identity.get("name") != skill_slug:
+        errors.append(
+            f"skill metadata name {identity.get('name')!r} must equal hosted slug {skill_slug!r}"
+        )
+    if identity.get("publisher") != publisher:
+        errors.append(
+            "skill metadata publisher "
+            f"{identity.get('publisher')!r} must equal hosted namespace {publisher!r}"
+        )
+    if identity.get("qualified_name") != expected_qualified_name:
+        errors.append(
+            "skill metadata qualified_name "
+            f"{identity.get('qualified_name')!r} must equal {expected_qualified_name!r}"
+        )
+    if errors:
+        raise ContentValidationError("; ".join(dict.fromkeys(errors)))
+
+
 def canonicalize_skill_bundle(
     raw: bytes, *, skill_slug: str, repo_root: Path
 ) -> CanonicalSkillBundle:
@@ -136,4 +161,5 @@ __all__ = [
     "CanonicalSkillBundle",
     "MAX_BUNDLE_BYTES",
     "canonicalize_skill_bundle",
+    "validate_hosted_skill_identity",
 ]

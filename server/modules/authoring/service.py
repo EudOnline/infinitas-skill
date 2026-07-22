@@ -22,9 +22,13 @@ from server.exceptions_base import (
 from server.exceptions_base import (
     NotFoundError as BaseNotFoundError,
 )
-from server.modules.authoring.content import canonicalize_skill_bundle
+from server.modules.authoring.content import (
+    canonicalize_skill_bundle,
+    validate_hosted_skill_identity,
+)
 from server.modules.authoring.models import Skill, SkillContent, SkillVersion
 from server.modules.authoring.schemas import SkillCreateRequest
+from server.modules.identity.models import Principal
 from server.modules.release.storage import build_artifact_storage
 
 
@@ -127,6 +131,14 @@ def upload_skill_content(
         raw_bundle,
         skill_slug=skill.slug,
         repo_root=repo_root,
+    )
+    namespace = db.get(Principal, skill.namespace_id)
+    if namespace is None:
+        raise NotFoundError("skill namespace principal not found")
+    validate_hosted_skill_identity(
+        canonical_bundle.metadata,
+        publisher=namespace.slug,
+        skill_slug=skill.slug,
     )
     _assert_pending_content_quota(
         db,

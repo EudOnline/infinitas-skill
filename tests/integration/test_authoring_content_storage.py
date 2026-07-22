@@ -99,6 +99,33 @@ def test_upload_and_create_version_freezes_validated_content() -> None:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
+def test_upload_rejects_metadata_identity_outside_hosted_namespace() -> None:
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-authoring-identity-test-"))
+    try:
+        client = _client(tmpdir)
+        skill_id = _create_skill(client)
+        bundle = build_skill_bundle(
+            "uploaded-skill",
+            "0.1.0",
+            metadata_overrides={
+                "publisher": "other-publisher",
+                "qualified_name": "other-publisher/uploaded-skill",
+            },
+        )
+
+        response = client.post(
+            f"/api/v1/skills/{skill_id}/content",
+            headers={**HEADERS, "Content-Type": "application/gzip"},
+            content=bundle,
+        )
+
+        assert response.status_code == 422, response.text
+        assert "must equal hosted namespace 'fixture-maintainer'" in response.text
+        assert not any((tmpdir / "artifacts").rglob("*.tar.gz"))
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 @pytest.mark.parametrize(
     "bundle",
     [

@@ -130,6 +130,7 @@ def normalize_discovery_skill(
         "default_install_version": skill.get("default_install_version") or latest_version,
         "latest_version": latest_version,
         "available_versions": list(skill.get("available_versions") or []),
+        "versions": dict(skill.get("versions") or {}),
         "runtime": runtime,
         "runtime_readiness": runtime_readiness,
         "workspace_targets": workspace_targets,

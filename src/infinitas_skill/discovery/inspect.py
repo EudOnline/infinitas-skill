@@ -7,6 +7,17 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from infinitas_skill.install.http_registry import (
+    HostedRegistryError,
+    fetch_json,
+    registry_catalog_path,
+)
+from infinitas_skill.install.registry_source_primitives import (
+    normalized_auth,
+    resolve_registry_root,
+)
+from infinitas_skill.install.registry_sources import find_registry, load_registry_config
+
 from .inspect_view import build_inspect_payload, dependency_summary, derive_trust_state
 
 logger = logging.getLogger(__name__)
@@ -17,15 +28,67 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 
 def _load_ai_index(root: Path) -> dict[str, Any]:
-    return _load_json(root / "catalog" / "ai-index.json")
+    discovery_index = root / "catalog" / "discovery-index.json"
+    selected = discovery_index if discovery_index.exists() else root / "catalog" / "ai-index.json"
+    return _load_json(selected)
 
 
-def _load_distributions(root: Path) -> dict[str, Any]:
+def _registry_for_skill(root: Path, skill_entry: dict[str, Any]) -> dict[str, Any] | None:
+    source_registry = skill_entry.get("source_registry")
+    if not isinstance(source_registry, str) or not source_registry.strip():
+        return None
+    try:
+        return find_registry(load_registry_config(root), source_registry)
+    except Exception:
+        logger.debug("failed to resolve source registry %s", source_registry)
+        return None
+
+
+def _http_token_env(registry: dict[str, Any]) -> str | None:
+    auth = normalized_auth(registry)
+    return auth.get("env") if auth.get("mode") == "token" else None
+
+
+def _http_base_url(registry: dict[str, Any]) -> str:
+    value = registry.get("base_url")
+    if not isinstance(value, str) or not value.strip():
+        raise HostedRegistryError("hosted registry is missing base_url")
+    return value
+
+
+def _load_distributions(root: Path, registry: dict[str, Any] | None = None) -> dict[str, Any]:
+    if registry and registry.get("kind") == "http":
+        try:
+            return fetch_json(
+                _http_base_url(registry),
+                registry_catalog_path(registry, "distributions"),
+                token_env=_http_token_env(registry),
+            )
+        except HostedRegistryError:
+            cached = (
+                root
+                / ".cache"
+                / "registries"
+                / str(registry.get("name"))
+                / "catalog"
+                / Path(registry_catalog_path(registry, "distributions")).name
+            )
+            if cached.exists():
+                return _load_json(cached)
+            raise
+    if registry:
+        registry_root = resolve_registry_root(root, registry)
+        if registry_root and registry_root != root:
+            candidate = registry_root / "catalog" / "distributions.json"
+            if candidate.exists():
+                return _load_json(candidate)
     return _load_json(root / "catalog" / "distributions.json")
 
 
-def _distribution_lookup(root: Path) -> dict[tuple[str, str], dict[str, Any]]:
-    payload = _load_distributions(root)
+def _distribution_lookup(
+    root: Path, registry: dict[str, Any] | None = None
+) -> dict[tuple[str, str], dict[str, Any]]:
+    payload = _load_distributions(root, registry)
     lookup: dict[tuple[str, str], dict[str, Any]] = {}
     for item in payload.get("skills") or []:
         if not isinstance(item, dict):
@@ -37,12 +100,30 @@ def _distribution_lookup(root: Path) -> dict[tuple[str, str], dict[str, Any]]:
     return lookup
 
 
-def _load_optional_json(root: Path, relative_path: str | None) -> dict[str, Any]:
+def _load_optional_json(
+    root: Path,
+    relative_path: str | None,
+    registry: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     if not isinstance(relative_path, str) or not relative_path.strip():
         return {}
     path = root / relative_path
     if not path.exists():
-        return {}
+        if registry and registry.get("kind") == "http":
+            try:
+                return fetch_json(
+                    _http_base_url(registry),
+                    relative_path,
+                    token_env=_http_token_env(registry),
+                )
+            except HostedRegistryError:
+                logger.debug("failed to fetch hosted JSON: %s", relative_path)
+        elif registry:
+            registry_root = resolve_registry_root(root, registry)
+            if registry_root:
+                path = registry_root / relative_path
+        if not path.exists():
+            return {}
     try:
         return _load_json(path)
     except Exception:
@@ -181,8 +262,9 @@ def inspect_skill(
 ) -> dict[str, Any]:
     root = Path(root).resolve()
     ai_index = _load_ai_index(root)
-    distributions = _distribution_lookup(root)
     skill_entry = _find_skill_entry(ai_index, name)
+    registry = _registry_for_skill(root, skill_entry)
+    distributions = _distribution_lookup(root, registry)
 
     resolved_version = str(
         version
@@ -203,8 +285,8 @@ def inspect_skill(
         or distribution.get("manifest_path")
     )
     provenance_path = version_entry.get("attestation_path") or distribution.get("attestation_path")
-    manifest_payload = _load_optional_json(root, manifest_path)
-    provenance_payload = _load_optional_json(root, provenance_path)
+    manifest_payload = _load_optional_json(root, manifest_path, registry)
+    provenance_payload = _load_optional_json(root, provenance_path, registry)
     dependency_view = _dependency_view(manifest_payload, distribution)
     required_formats = version_entry.get("attestation_formats") or [
         ((provenance_payload.get("attestation") or {}).get("format") or "ssh")

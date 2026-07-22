@@ -21,7 +21,7 @@ from server.modules.discovery.projections import refresh_projection_snapshot
 from server.modules.jobs.models import Job
 from server.modules.release.materializer import materialize_release
 from server.modules.release.models import Release
-from server.modules.release.service import get_release_snapshot
+from server.modules.release.service import get_release_snapshot, mark_release_materialization_failed
 from server.repo_ops import RepoOpError
 from server.settings import Settings, get_settings
 
@@ -98,7 +98,9 @@ def _is_retryable_error(exc: Exception) -> bool:
     return any(pattern in message for pattern in retryable_patterns)
 
 
-def _audit_materialization_failure(session: Session, job: Job, exc: Exception) -> None:
+def _audit_materialization_failure(
+    session: Session, job: Job, exc: Exception, *, permanent: bool
+) -> None:
     if job.kind != "materialize_release":
         return
     try:
@@ -108,6 +110,8 @@ def _audit_materialization_failure(session: Session, job: Job, exc: Exception) -
     release = session.get(Release, release_id)
     if release is None:
         return
+    if permanent:
+        mark_release_materialization_failed(session, release=release)
     snapshot = get_release_snapshot(session, release.id)
     append_audit_event(
         session,
@@ -172,7 +176,12 @@ def process_job(job_id: int) -> None:
                 error_message=str(exc),
                 retryable=retryable,
             )
-            _audit_materialization_failure(session, job, exc)
+            _audit_materialization_failure(
+                session,
+                job,
+                exc,
+                permanent=job.status == "failed",
+            )
             processing_error = exc
     if processing_error is not None:
         raise processing_error

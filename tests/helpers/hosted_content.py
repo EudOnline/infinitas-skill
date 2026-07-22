@@ -11,6 +11,7 @@ def build_skill_bundle(
     slug: str,
     version: str,
     *,
+    publisher: str = "fixture-maintainer",
     extra_files: dict[str, bytes] | None = None,
     metadata_overrides: dict | None = None,
 ) -> bytes:
@@ -20,7 +21,8 @@ def build_skill_bundle(
         "version": version,
         "status": "active",
         "summary": f"Hosted integration fixture for {slug}",
-        "publisher": "fixture-publisher",
+        "publisher": publisher,
+        "qualified_name": f"{publisher}/{slug}",
         "owner": "fixture-maintainer",
         "owners": ["fixture-maintainer"],
         "author": "fixture-maintainer",
@@ -70,12 +72,15 @@ def upload_skill_content(
     headers: dict[str, str],
     *,
     bundle: bytes | None = None,
+    publisher: str = "fixture-maintainer",
 ) -> dict:
     request_headers = {**headers, "Content-Type": "application/gzip"}
     response = client.post(
         f"/api/v1/skills/{skill_id}/content",
         headers=request_headers,
-        content=bundle if bundle is not None else build_skill_bundle(slug, version),
+        content=(
+            bundle if bundle is not None else build_skill_bundle(slug, version, publisher=publisher)
+        ),
     )
     assert response.status_code == 201, response.text
     return response.json()

@@ -193,6 +193,8 @@ Validate and use it:
 ```bash
 export INFINITAS_REGISTRY_READ_TOKEN=<registry-read-token>
 uv run infinitas registry sources --repo-root . check
+uv run infinitas registry sources --repo-root . sync hosted --json
+uv run infinitas registry catalog build --repo-root .
 uv run infinitas discovery search registry --json
 uv run infinitas discovery inspect <publisher>/<skill> --json
 uv run infinitas install by-name <publisher>/<skill> ~/.openclaw/skills --mode confirm --json
@@ -203,6 +205,36 @@ The source `base_url` must end in `/api/v1/registry`; it is not the application 
 read tokens protect artifact reads. Publisher/maintainer Agent tokens authenticate JSON
 authoring APIs and are configured separately through `INFINITAS_REGISTRY_API_TOKEN` on the
 client.
+
+`registry sources sync hosted` atomically caches the hosted AI index, distribution index, and
+compatibility catalog under `.cache/registries/hosted`. `registry catalog build` then refreshes
+the aggregate discovery index. `discovery inspect` follows the winning entry's HTTP source and
+loads its distribution manifest and provenance directly; operators no longer need to mirror
+hosted artifacts into the client repository before inspection.
+
+## Configure a persistent release signer
+
+The worker cannot materialize releases without a trusted SSH signing key. Generate a dedicated
+key inside a persistent mounted path such as `/srv/infinitas/data`, not inside the image layer:
+
+```bash
+ssh-keygen -t ed25519 \
+  -f /srv/infinitas/data/infinitas-release-signing-key \
+  -C infinitas-production-release \
+  -N ''
+chmod 600 /srv/infinitas/data/infinitas-release-signing-key
+```
+
+Add the public key to `config/allowed_signers` with a stable production identity and commit that
+public entry to the source repository. Never commit or print the private key. In Coolify, set:
+
+```text
+INFINITAS_SKILL_GIT_SIGNING_KEY=/srv/infinitas/data/infinitas-release-signing-key
+```
+
+Redeploy the complete Compose service so both `app` and `worker` receive the same path. Verify the
+key exists in the worker container, matches the committed allowed-signer entry, and can complete a
+fresh release materialization before declaring the deployment ready for publishing.
 
 ## Back up before every upgrade
 

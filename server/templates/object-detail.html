@@ -67,7 +67,7 @@
         <td data-label="{{ ui['table_col_version'] }}"><a class="text-kawaii-primary-deep font-bold no-underline" href="{{ item.detail_href }}">{{ item.version }}</a></td>
         <td data-label="{{ ui['table_col_visibility'] }}">{{ item.visibility or 'private' }}</td>
         <td data-label="{{ ui['table_col_readiness'] }}">
-          <span class="kawaii-badge {% if item.readiness_state == 'ready' %}kawaii-badge--success{% elif item.readiness_state == 'preparing' %}kawaii-badge--pending{% else %}kawaii-badge--running{% endif %}">{{ item.readiness_state or 'unknown' }}</span>
+          <span class="kawaii-badge {% if item.readiness_state == 'ready' %}kawaii-badge--success{% elif item.readiness_state == 'preparing' %}kawaii-badge--pending{% elif item.readiness_state == 'failed' %}kawaii-badge--error{% else %}kawaii-badge--running{% endif %}">{{ item.readiness_state or 'unknown' }}</span>
         </td>
         <td data-label="{{ ui['table_col_created'] }}">{{ item.created_at }}</td>
         <td data-label="{{ ui['table_col_actions'] }}">

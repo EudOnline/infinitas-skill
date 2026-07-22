@@ -101,7 +101,12 @@ def test_maintainer_can_administer_contributor_owned_lifecycle_resources(
         assert create_skill.status_code == 201, create_skill.text
         skill_id = int(create_skill.json()["id"])
         content = upload_skill_content(
-            client, skill_id, "cross-namespace-skill", "0.1.0", maintainer_headers
+            client,
+            skill_id,
+            "cross-namespace-skill",
+            "0.1.0",
+            maintainer_headers,
+            publisher="skill-owner",
         )
 
         create_version = client.post(
