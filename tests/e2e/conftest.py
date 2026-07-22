@@ -5,6 +5,10 @@ import os
 import shutil
 import socket
 import tempfile
+import threading
+import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 import pytest
@@ -39,6 +43,22 @@ def _find_free_port() -> int:
     return port
 
 
+def _wait_for_server(url: str, thread: threading.Thread, *, timeout: float = 30.0) -> None:
+    deadline = time.monotonic() + timeout
+    last_error: Exception | None = None
+    while time.monotonic() < deadline:
+        if not thread.is_alive():
+            raise RuntimeError("E2E server stopped before becoming ready")
+        try:
+            with urllib.request.urlopen(f"{url}/api/v1/system/healthz", timeout=1) as response:
+                if response.status == 200:
+                    return
+        except (OSError, urllib.error.URLError) as error:
+            last_error = error
+        time.sleep(0.1)
+    raise RuntimeError(f"E2E server did not become ready within {timeout:g}s") from last_error
+
+
 @pytest.fixture(scope="session")
 def live_server(tmpdir_session):
     os.environ["INFINITAS_SERVER_ENV"] = "test"
@@ -58,24 +78,27 @@ def live_server(tmpdir_session):
         ]
     )
 
-    import threading
-    import time
-
     import uvicorn
 
     from server.app import create_app
 
     app = create_app()
     port = _find_free_port()
+    address = f"http://127.0.0.1:{port}"
+    uvicorn_server = uvicorn.Server(
+        uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
+    )
     server = threading.Thread(
-        target=uvicorn.run,
-        args=(app,),
-        kwargs={"host": "127.0.0.1", "port": port, "log_level": "error"},
+        target=uvicorn_server.run,
         daemon=True,
     )
     server.start()
-    time.sleep(1.0)
-    yield f"http://127.0.0.1:{port}"
+    _wait_for_server(address, server)
+    yield address
+    uvicorn_server.should_exit = True
+    server.join(timeout=10)
+    if server.is_alive():
+        pytest.fail("E2E server did not stop within 10s")
 
 
 @pytest.fixture
