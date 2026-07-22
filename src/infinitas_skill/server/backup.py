@@ -5,8 +5,10 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import sqlite3
 import subprocess
 import tarfile
+from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -57,7 +59,17 @@ def write_repo_bundle(repo: Path, backup_dir: Path) -> str:
 def copy_sqlite_db(db_path: Path, backup_dir: Path) -> str:
     db_name = db_path.name or "server.db"
     destination = backup_dir / db_name
-    shutil.copy2(db_path, destination)
+    try:
+        with closing(sqlite3.connect(db_path, timeout=30)) as source:
+            with closing(sqlite3.connect(destination)) as target:
+                source.backup(target)
+                integrity_rows = target.execute("PRAGMA integrity_check").fetchall()
+    except sqlite3.Error as exc:
+        destination.unlink(missing_ok=True)
+        fail(f"failed to create sqlite backup for {db_path}: {exc}")
+    if integrity_rows != [("ok",)]:
+        destination.unlink(missing_ok=True)
+        fail(f"sqlite backup integrity check failed for {db_path}: {integrity_rows!r}")
     return db_name
 
 

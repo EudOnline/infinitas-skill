@@ -94,3 +94,34 @@ Verify compatibility contracts against primary documentation before refreshing e
 - **Notes**: Updated all three platform contract review dates, corrected the OpenClaw validator and renderer, and refreshed the four Active Skill OpenClaw export checks.
 
 ---
+
+## [LRN-20260722-001] best_practice
+
+**Logged**: 2026-07-22T18:22:00Z
+**Priority**: high
+**Status**: resolved
+**Area**: infra
+
+### Summary
+
+Live SQLite backups must use SQLite's online backup API and validate the resulting snapshot, rather than copying the database file directly.
+
+### Details
+
+A plain filesystem copy can race active transactions or omit WAL state. The online backup API produces a transactionally consistent snapshot while the service remains available, and `PRAGMA integrity_check` verifies both the completed backup and the restored copy.
+
+### Suggested Action
+
+Keep database-specific snapshot logic inside the backup implementation and require full integrity checks during backup creation and restore rehearsal.
+
+### Metadata
+
+- Source: audit
+- Related Files: src/infinitas_skill/server/backup.py, src/infinitas_skill/server/restore.py
+- Tags: sqlite, backup, restore, consistency
+- Pattern-Key: infra.sqlite_online_backup
+- Recurrence-Count: 1
+- First-Seen: 2026-07-22
+- Last-Seen: 2026-07-22
+
+---

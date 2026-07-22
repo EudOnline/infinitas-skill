@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import io
+import sqlite3
 import tarfile
+from contextlib import closing
 from pathlib import Path
 
 import pytest
@@ -72,6 +74,29 @@ def test_verify_backup_checksums_rejects_missing_or_changed_files(tmp_path: Path
     manifest = {"schema_version": 1, "checksums": {"repo.bundle": "0" * 64}}
     with pytest.raises(SystemExit, match="1"):
         RESTORE.verify_backup_checksums(backup_dir, manifest, [bundle])
+
+
+def test_copy_and_verify_sqlite_runs_full_integrity_check(tmp_path: Path) -> None:
+    source = tmp_path / "source.db"
+    target = tmp_path / "target.db"
+    with closing(sqlite3.connect(source)) as connection:
+        connection.execute("CREATE TABLE entries (value TEXT NOT NULL)")
+        connection.execute("INSERT INTO entries VALUES ('restored')")
+        connection.commit()
+
+    RESTORE.copy_and_verify_sqlite(source, target)
+
+    with closing(sqlite3.connect(target)) as connection:
+        assert connection.execute("SELECT value FROM entries").fetchall() == [("restored",)]
+        assert connection.execute("PRAGMA integrity_check").fetchall() == [("ok",)]
+
+
+def test_copy_and_verify_sqlite_rejects_corrupt_database(tmp_path: Path) -> None:
+    source = tmp_path / "corrupt.db"
+    source.write_bytes(b"not a sqlite database")
+
+    with pytest.raises(SystemExit, match="1"):
+        RESTORE.copy_and_verify_sqlite(source, tmp_path / "restored.db")
 
 
 def _link_member(name: str, linkname: str, member_type: bytes) -> tarfile.TarInfo:

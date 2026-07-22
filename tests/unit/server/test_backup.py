@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import sqlite3
+from contextlib import closing
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -46,15 +48,29 @@ class TestCreateBackupDir:
 
 
 class TestCopySqliteDb:
-    def test_copies_file(self):
+    def test_creates_consistent_online_backup(self):
         with TemporaryDirectory() as td:
             db_path = Path(td) / "test.db"
-            db_path.write_text("sqlite data", encoding="utf-8")
+            source = sqlite3.connect(db_path)
+            source.execute("PRAGMA journal_mode=WAL")
+            source.execute("CREATE TABLE entries (value TEXT NOT NULL)")
+            source.execute("INSERT INTO entries VALUES ('committed')")
+            source.commit()
             backup_dir = Path(td) / "backup"
             backup_dir.mkdir()
-            result = copy_sqlite_db(db_path, backup_dir)
+            try:
+                result = copy_sqlite_db(db_path, backup_dir)
+            finally:
+                source.close()
+
+            backup_path = backup_dir / "test.db"
+            with closing(sqlite3.connect(backup_path)) as backup:
+                rows = backup.execute("SELECT value FROM entries").fetchall()
+                integrity = backup.execute("PRAGMA integrity_check").fetchall()
+
             assert result == "test.db"
-            assert (backup_dir / "test.db").exists()
+            assert rows == [("committed",)]
+            assert integrity == [("ok",)]
 
 
 class TestArchiveArtifacts:

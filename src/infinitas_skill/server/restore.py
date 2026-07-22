@@ -8,6 +8,7 @@ import sqlite3
 import subprocess
 import sys
 import tarfile
+from contextlib import closing
 from pathlib import Path
 from typing import NoReturn
 
@@ -76,10 +77,12 @@ def clone_bundle(bundle_path: Path, output_repo: Path) -> None:
 def copy_and_verify_sqlite(source_db: Path, target_db: Path) -> None:
     shutil.copy2(source_db, target_db)
     try:
-        with sqlite3.connect(target_db) as connection:
-            connection.execute("select 1").fetchone()
+        with closing(sqlite3.connect(target_db)) as connection:
+            integrity_rows = connection.execute("PRAGMA integrity_check").fetchall()
     except sqlite3.Error as exc:
         fail(f"sqlite verification failed for restored db {target_db}: {exc}")
+    if integrity_rows != [("ok",)]:
+        fail(f"sqlite integrity check failed for restored db {target_db}: {integrity_rows!r}")
 
 
 def _validated_archive_members(archive: tarfile.TarFile, output_dir: Path) -> list[tarfile.TarInfo]:

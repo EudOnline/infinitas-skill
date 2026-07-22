@@ -43,11 +43,12 @@ uv run infinitas server backup \
 Each backup directory contains:
 
 - `repo.bundle` — a git bundle created from the clean server-owned checkout
-- `server.db` — a copied SQLite database file
+- `server.db` — a transactionally consistent SQLite snapshot created with SQLite's online backup API
 - `artifacts.tar.gz` — a tarball of the hosted artifact directory
 - `manifest.json` — schema version, timestamp, label, git HEAD, source paths, and SHA-256 values for every restore input
 
 The backup helper refuses dirty repo snapshots so operators do not accidentally capture an in-flight publish worktree.
+It runs `PRAGMA integrity_check` against the completed SQLite snapshot before accepting the backup.
 The restore rehearsal refuses backup sets without valid SHA-256 values, so a backup is not considered
 recoverable merely because its files still exist.
 
@@ -134,7 +135,7 @@ This drill:
 - verifies SHA-256 values before reading the git bundle, database, or artifact archive
 - verifies the git bundle
 - clones the repo bundle into a staging checkout
-- copies and opens the SQLite DB backup
+- copies the SQLite DB backup and requires `PRAGMA integrity_check` to return `ok`
 - extracts artifacts and confirms `ai-index.json` plus `catalog/`
 
 Treat this as the safest first step before pointing any restored files at production service paths.
