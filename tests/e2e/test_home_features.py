@@ -2,8 +2,7 @@ from __future__ import annotations
 
 
 def test_hero_section_renders_copy_cta(authenticated_page, live_server):
-    authenticated_page.goto(f"{live_server}/?lang=en")
-    authenticated_page.wait_for_load_state("networkidle")
+    authenticated_page.goto(f"{live_server}/?lang=en", wait_until="domcontentloaded")
 
     hero_title = authenticated_page.query_selector(".hero-title")
     assert hero_title is not None
@@ -16,8 +15,7 @@ def test_hero_section_renders_copy_cta(authenticated_page, live_server):
 
 
 def test_console_grid_has_six_cards(authenticated_page, live_server):
-    authenticated_page.goto(f"{live_server}/?lang=en")
-    authenticated_page.wait_for_load_state("networkidle")
+    authenticated_page.goto(f"{live_server}/?lang=en", wait_until="domcontentloaded")
 
     cards = authenticated_page.query_selector_all(".console-card")
     assert len(cards) >= 6
@@ -33,8 +31,7 @@ def test_console_grid_has_six_cards(authenticated_page, live_server):
 
 def test_mobile_nav_scrolls_horizontally(authenticated_page, live_server):
     authenticated_page.set_viewport_size({"width": 390, "height": 844})
-    authenticated_page.goto(f"{live_server}/manage?lang=en")
-    authenticated_page.wait_for_load_state("networkidle")
+    authenticated_page.goto(f"{live_server}/manage?lang=en", wait_until="domcontentloaded")
 
     nav = authenticated_page.query_selector(".nav")
     assert nav is not None
@@ -47,8 +44,7 @@ def test_mobile_nav_scrolls_horizontally(authenticated_page, live_server):
 
 
 def test_focus_mode_button_toggles_class(authenticated_page, live_server):
-    authenticated_page.goto(f"{live_server}/?lang=en")
-    authenticated_page.wait_for_load_state("networkidle")
+    authenticated_page.goto(f"{live_server}/?lang=en", wait_until="domcontentloaded")
 
     btn = authenticated_page.query_selector("#focus-mode-toggle")
     assert btn is not None

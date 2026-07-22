@@ -2,8 +2,7 @@ from __future__ import annotations
 
 
 def test_home_nav_has_anchor_links(authenticated_page, live_server):
-    authenticated_page.goto(f"{live_server}/?lang=en")
-    authenticated_page.wait_for_load_state("networkidle")
+    authenticated_page.goto(f"{live_server}/?lang=en", wait_until="domcontentloaded")
 
     for label in ("Home base", "Handoff", "Console"):
         link = authenticated_page.query_selector(f".nav a:has-text('{label}')")
@@ -13,8 +12,7 @@ def test_home_nav_has_anchor_links(authenticated_page, live_server):
 
 
 def test_admin_nav_has_page_links(authenticated_page, live_server):
-    authenticated_page.goto(f"{live_server}/manage?lang=en")
-    authenticated_page.wait_for_load_state("networkidle")
+    authenticated_page.goto(f"{live_server}/manage?lang=en", wait_until="domcontentloaded")
 
     for label in ("Home", "Profile", "Management"):
         link = authenticated_page.query_selector(f".nav a:has-text('{label}')")
@@ -24,8 +22,15 @@ def test_admin_nav_has_page_links(authenticated_page, live_server):
 
 
 def test_navigation_and_toggle_targets_are_at_least_44px(authenticated_page, live_server):
-    authenticated_page.goto(f"{live_server}/manage?lang=en")
-    authenticated_page.wait_for_load_state("networkidle")
+    authenticated_page.goto(f"{live_server}/manage?lang=en", wait_until="domcontentloaded")
+    authenticated_page.wait_for_function(
+        """() => {
+          const targets = [...document.querySelectorAll('.nav a, .toggle-chip')]
+            .filter((target) => target.getClientRects().length > 0);
+          return targets.length > 0
+            && targets.every((target) => target.getBoundingClientRect().height >= 44);
+        }"""
+    )
 
     targets = authenticated_page.query_selector_all(".nav a, .toggle-chip")
     visible_boxes = [target.bounding_box() for target in targets if target.is_visible()]
@@ -34,7 +39,7 @@ def test_navigation_and_toggle_targets_are_at_least_44px(authenticated_page, liv
 
 
 def test_theme_tokens_meet_wcag_text_contrast(authenticated_page, live_server):
-    authenticated_page.goto(f"{live_server}/?lang=en")
+    authenticated_page.goto(f"{live_server}/?lang=en", wait_until="domcontentloaded")
 
     ratios = authenticated_page.evaluate(
         r"""
@@ -102,8 +107,7 @@ def test_theme_tokens_meet_wcag_text_contrast(authenticated_page, live_server):
 
 
 def test_global_search_input_exists(authenticated_page, live_server):
-    authenticated_page.goto(f"{live_server}/?lang=en")
-    authenticated_page.wait_for_load_state("networkidle")
+    authenticated_page.goto(f"{live_server}/?lang=en", wait_until="domcontentloaded")
 
     search_input = authenticated_page.query_selector("#global-search")
     assert search_input is not None
@@ -112,21 +116,19 @@ def test_global_search_input_exists(authenticated_page, live_server):
 
 
 def test_language_toggle_changes_url(authenticated_page, live_server):
-    authenticated_page.goto(f"{live_server}/?lang=en")
-    authenticated_page.wait_for_load_state("networkidle")
+    authenticated_page.goto(f"{live_server}/?lang=en", wait_until="domcontentloaded")
 
     assert "lang=en" in authenticated_page.url or authenticated_page.url.endswith("/")
 
     zh_toggle = authenticated_page.query_selector("[data-lang-choice='zh']")
     if zh_toggle:
-        zh_toggle.click()
-        authenticated_page.wait_for_load_state("networkidle")
+        with authenticated_page.expect_navigation(wait_until="domcontentloaded"):
+            zh_toggle.click()
         assert "lang=zh" in authenticated_page.url
 
 
 def test_user_panel_opens_and_shows_username(authenticated_page, live_server):
-    authenticated_page.goto(f"{live_server}/?lang=en")
-    authenticated_page.wait_for_load_state("networkidle")
+    authenticated_page.goto(f"{live_server}/?lang=en", wait_until="domcontentloaded")
 
     trigger = authenticated_page.query_selector("#user-trigger")
     assert trigger is not None
@@ -151,8 +153,7 @@ def test_user_panel_opens_and_shows_username(authenticated_page, live_server):
 def test_console_pages_have_one_h1_and_compact_mobile_chrome(authenticated_page, live_server):
     authenticated_page.set_viewport_size({"width": 320, "height": 720})
     for path in ("/manage", "/settings", "/profile"):
-        authenticated_page.goto(f"{live_server}{path}?lang=en")
-        authenticated_page.wait_for_load_state("networkidle")
+        authenticated_page.goto(f"{live_server}{path}?lang=en", wait_until="domcontentloaded")
         assert authenticated_page.locator("main h1").count() == 1
         assert authenticated_page.locator("nav.fixed.bottom-0").count() == 0
 

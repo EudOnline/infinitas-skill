@@ -11,6 +11,20 @@ import pytest
 
 
 @pytest.fixture(scope="session")
+def browser_type_launch_args(browser_type_launch_args, browser_name):
+    """Keep headless Chromium stable on memory-constrained CI runners."""
+    if browser_name != "chromium":
+        return browser_type_launch_args
+    launch_args = list(browser_type_launch_args.get("args") or [])
+    options = {
+        **browser_type_launch_args,
+        "args": [*launch_args, "--disable-gpu", "--renderer-process-limit=1"],
+    }
+    options.setdefault("channel", "chromium-headless-shell")
+    return options
+
+
+@pytest.fixture(scope="session")
 def tmpdir_session():
     d = Path(tempfile.mkdtemp(prefix="infinitas-e2e-"))
     yield d
@@ -68,7 +82,7 @@ def live_server(tmpdir_session):
 def page(live_server, browser):
     context = browser.new_context()
     pg = context.new_page()
-    pg.goto(live_server)
+    pg.goto(live_server, wait_until="domcontentloaded")
     yield pg
     context.close()
 
@@ -84,15 +98,14 @@ def authenticated_page(live_server, browser):
         get_rate_limiter(db).reset_all()
         db.commit()
     context = browser.new_context()
+    response = context.request.post(
+        f"{live_server}/api/v1/auth/login?lang=en",
+        data={"username": "e2e-maintainer", "password": "e2e-maintainer-password"},
+    )
+    assert response.status == 200
+    assert response.json()["success"] is True
     pg = context.new_page()
-    pg.goto(f"{live_server}/login?lang=en")
-    pg.wait_for_selector("#login-username-input")
-    pg.fill("#login-username-input", "e2e-maintainer")
-    pg.fill("#login-password-input", "e2e-maintainer-password")
-    with pg.expect_response("**/api/v1/auth/login*") as response_info:
-        pg.click("#login-login-btn")
-    assert response_info.value.status == 200
-    pg.wait_for_url(f"{live_server}/?lang=en")
-    pg.wait_for_load_state("networkidle")
+    pg.goto(f"{live_server}/?lang=en", wait_until="domcontentloaded")
+    pg.wait_for_selector("#global-search")
     yield pg
     context.close()

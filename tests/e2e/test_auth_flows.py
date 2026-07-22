@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 
 def test_home_page_loads(page):
     assert page.title()
@@ -8,7 +10,7 @@ def test_home_page_loads(page):
 
 
 def test_login_page_exists(page, live_server):
-    page.goto(f"{live_server}/login?lang=en")
+    page.goto(f"{live_server}/login?lang=en", wait_until="domcontentloaded")
     username_input = page.query_selector("#login-username-input")
     assert username_input is not None
     password_input = page.query_selector("#login-password-input")
@@ -25,22 +27,24 @@ def test_login_page_exists(page, live_server):
 def test_login_with_valid_token(live_server, browser):
     context = browser.new_context()
     pg = context.new_page()
-    pg.goto(f"{live_server}/login?lang=en")
+    pg.goto(f"{live_server}/login?lang=en", wait_until="domcontentloaded")
     pg.wait_for_selector("#login-username-input")
     pg.fill("#login-username-input", "e2e-maintainer")
     pg.fill("#login-password-input", "e2e-maintainer-password")
-    with pg.expect_response("**/api/v1/auth/login*") as response_info:
-        pg.click("#login-login-btn")
+    home_url = re.compile(rf"{re.escape(live_server)}/\?lang=en$")
+    with pg.expect_navigation(url=home_url, wait_until="commit"):
+        with pg.expect_response("**/api/v1/auth/login*") as response_info:
+            pg.click("#login-login-btn")
     response = response_info.value
     assert response.status == 200
-    pg.wait_for_url(f"{live_server}/?lang=en")
+    pg.wait_for_selector("#global-search")
     context.close()
 
 
 def test_login_with_invalid_token(live_server, browser):
     context = browser.new_context()
     pg = context.new_page()
-    pg.goto(f"{live_server}/login?lang=en")
+    pg.goto(f"{live_server}/login?lang=en", wait_until="domcontentloaded")
     pg.wait_for_selector("#login-username-input")
     pg.fill("#login-username-input", "e2e-maintainer")
     pg.fill("#login-password-input", "wrong-password-x")
