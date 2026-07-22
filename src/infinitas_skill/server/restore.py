@@ -8,6 +8,7 @@ import sqlite3
 import subprocess
 import sys
 import tarfile
+import tempfile
 from contextlib import closing
 from pathlib import Path
 from typing import NoReturn
@@ -59,11 +60,22 @@ def verify_backup_checksums(backup_dir: Path, manifest: dict, files: list[Path])
 
 
 def verify_bundle(bundle_path: Path) -> None:
-    result = subprocess.run(
-        ["git", "bundle", "verify", str(bundle_path)], text=True, capture_output=True
-    )
-    if result.returncode != 0:
-        fail(f"git bundle verify failed for {bundle_path}\n{result.stderr}")
+    with tempfile.TemporaryDirectory(prefix="infinitas-bundle-verify-") as temp_dir:
+        verification_repo = Path(temp_dir) / "repo.git"
+        init_result = subprocess.run(
+            ["git", "init", "--bare", str(verification_repo)],
+            text=True,
+            capture_output=True,
+        )
+        if init_result.returncode != 0:
+            fail(f"failed to initialize bundle verification repository\n{init_result.stderr}")
+        result = subprocess.run(
+            ["git", "-C", str(verification_repo), "bundle", "verify", str(bundle_path)],
+            text=True,
+            capture_output=True,
+        )
+        if result.returncode != 0:
+            fail(f"git bundle verify failed for {bundle_path}\n{result.stderr}")
 
 
 def clone_bundle(bundle_path: Path, output_repo: Path) -> None:

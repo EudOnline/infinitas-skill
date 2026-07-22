@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import sqlite3
+import subprocess
 import tarfile
 from contextlib import closing
 from pathlib import Path
@@ -74,6 +75,28 @@ def test_verify_backup_checksums_rejects_missing_or_changed_files(tmp_path: Path
     manifest = {"schema_version": 1, "checksums": {"repo.bundle": "0" * 64}}
     with pytest.raises(SystemExit, match="1"):
         RESTORE.verify_backup_checksums(backup_dir, manifest, [bundle])
+
+
+def test_verify_bundle_works_outside_a_git_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    subprocess.run(["git", "init", str(source)], check=True, capture_output=True)
+    subprocess.run(["git", "-C", str(source), "config", "user.name", "Test User"], check=True)
+    subprocess.run(
+        ["git", "-C", str(source), "config", "user.email", "test@example.com"], check=True
+    )
+    (source / "README.md").write_text("bundle test\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(source), "add", "README.md"], check=True)
+    subprocess.run(["git", "-C", str(source), "commit", "-m", "test"], check=True)
+    bundle = tmp_path / "repo.bundle"
+    subprocess.run(["git", "-C", str(source), "bundle", "create", str(bundle), "--all"], check=True)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    monkeypatch.chdir(outside)
+
+    RESTORE.verify_bundle(bundle)
 
 
 def test_copy_and_verify_sqlite_runs_full_integrity_check(tmp_path: Path) -> None:

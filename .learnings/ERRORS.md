@@ -2604,3 +2604,42 @@ Use an explicit 44px minimum for interactive targets and collect all final measu
 - **Notes**: Interactive navigation and toggle targets now have an explicit 44px floor, and the E2E assertion uses one diagnostic measurement snapshot.
 
 ---
+
+## [ERR-20260722-004] bundle-verification-requires-repository-context
+
+**Logged**: 2026-07-22T18:54:00Z
+**Priority**: high
+**Status**: resolved
+**Area**: infra
+
+### Summary
+
+Production restore rehearsal could not verify a Git bundle because `git bundle verify` was invoked outside a Git repository.
+
+### Error
+
+```text
+error: need a repository to verify a bundle
+```
+
+### Context
+
+- The container's default working directory contains the bundled application source but no `.git` directory.
+- `git bundle verify` requires repository context even for a self-contained `--all` bundle.
+- Unit tests covered checksum and archive safety but not a real bundle verification outside a worktree.
+
+### Suggested Fix
+
+Create an isolated temporary bare repository for verification and run `git -C <temp-repo> bundle verify`. An empty verification repository also proves the backup bundle has no undeclared prerequisites.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: src/infinitas_skill/server/restore.py, tests/unit/server_ops/test_restore_safety.py
+
+### Resolution
+
+- **Resolved**: 2026-07-22T18:54:00Z
+- **Notes**: Bundle verification now runs in a temporary bare repository and has a real Git bundle regression test from a non-repository working directory.
+
+---
