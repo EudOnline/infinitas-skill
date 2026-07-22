@@ -105,7 +105,7 @@ services:
         condition: service_healthy
     command:
       - /bin/bash
-      - -lc
+      - -c
       - >-
         exec env PYTHONPATH="$$INFINITAS_SERVER_REPO_PATH/src$${PYTHONPATH:+:$$PYTHONPATH}"
         python3 -m infinitas_skill.cli.main server worker

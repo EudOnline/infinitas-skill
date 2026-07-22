@@ -49,6 +49,9 @@ def test_coolify_compose_freezes_single_node_proxy_and_volume_contract() -> None
     assert "chown -R 1000:1000" in compose_text
     assert "app:" in compose_text
     assert "worker:" in compose_text
+    worker_text = compose_text.split("\n  worker:\n", 1)[1]
+    assert "      - -c\n" in worker_text
+    assert "      - -lc\n" not in worker_text
     assert 'expose:\n      - "8000"' in compose_text
     assert "ports:" not in compose_text
     assert "env_file:" not in compose_text
