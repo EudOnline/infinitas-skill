@@ -69,12 +69,12 @@ def decorate_registry_freshness(payload: JsonDict, status: JsonDict) -> JsonDict
     return decorated
 
 
-def _resolved_output_path(value: object) -> Path | None:
+def _resolved_output_path(value: object, *, root: Path = ROOT) -> Path | None:
     if not isinstance(value, str) or not value.strip():
         return None
     path = Path(value.strip())
     if not path.is_absolute():
-        path = (ROOT / path).resolve()
+        path = (root / path).resolve()
     else:
         path = path.resolve()
     return path
@@ -196,19 +196,21 @@ def _distribution_registry_item(
 def scan_registry(
     reg: JsonDict,
     *,
+    root: str | Path = ROOT,
     reg_root: str | Path | None = None,
     reg_info: JsonDict | None = None,
     default_source_type: str = "working-tree",
     snapshot_fields: JsonDict | None = None,
 ) -> list[JsonDict]:
+    root = Path(root).resolve()
     if reg.get("kind") == "http":
-        return scan_http_registry(reg)
+        return scan_http_registry(reg, root=root)
     reg_root = (
-        Path(reg_root).resolve() if reg_root is not None else resolve_registry_root(ROOT, reg)
+        Path(reg_root).resolve() if reg_root is not None else resolve_registry_root(root, reg)
     )
     if reg_root is None or not reg_root.exists():
         return []
-    reg_info = dict(reg_info or registry_identity(ROOT, reg))
+    reg_info = dict(reg_info or registry_identity(root, reg))
     snapshot_fields = dict(snapshot_fields or {})
     distribution_index = load_distribution_index(reg_root)
     distribution_by_identity = {
@@ -268,8 +270,8 @@ def scan_registry(
     return items
 
 
-def scan_http_registry(reg: JsonDict) -> list[JsonDict]:
-    reg_info = registry_identity(ROOT, reg)
+def scan_http_registry(reg: JsonDict, *, root: str | Path = ROOT) -> list[JsonDict]:
+    reg_info = registry_identity(Path(root).resolve(), reg)
     auth = normalized_auth(reg)
     base_url = reg.get("base_url")
     if not isinstance(base_url, str) or not base_url:
@@ -338,9 +340,13 @@ def scan_http_registry(reg: JsonDict) -> list[JsonDict]:
 
 
 def load_candidates(
-    registry: str | None = None, snapshot: str | None = None
+    registry: str | None = None,
+    snapshot: str | None = None,
+    *,
+    root: str | Path = ROOT,
 ) -> tuple[JsonDict, list[JsonDict], list[JsonDict]]:
-    cfg = load_registry_config(ROOT)
+    root = Path(root).resolve()
+    cfg = load_registry_config(root)
     items: list[dict[str, Any]] = []
     blocked: list[dict[str, Any]] = []
     explicit_registry = bool(registry)
@@ -351,7 +357,7 @@ def load_candidates(
         reg = find_registry(cfg, registry)
         if reg is None:
             raise SystemExit(f"unknown registry: {registry}")
-        snapshot_record = resolve_snapshot_selector(ROOT, registry, snapshot)
+        snapshot_record = resolve_snapshot_selector(root, registry, snapshot)
         if snapshot_record is None:
             raise SystemExit(f"snapshot '{snapshot}' not found for registry '{registry}'")
 
@@ -359,16 +365,16 @@ def load_candidates(
         metadata = snapshot_record.get("metadata") or {}
         raw_source_registry = metadata.get("source_registry")
         source_registry = raw_source_registry if isinstance(raw_source_registry, dict) else {}
-        snapshot_root = _resolved_output_path(summary.get("snapshot_root")) or snapshot_record.get(
-            "snapshot_root"
-        )
+        snapshot_root = _resolved_output_path(
+            summary.get("snapshot_root"), root=root
+        ) or snapshot_record.get("snapshot_root")
         if snapshot_root is None or not Path(snapshot_root).exists():
             snapshot_id = summary.get("snapshot_id") or snapshot
             raise SystemExit(
                 f"snapshot {snapshot_id!r} for registry {registry!r} is missing its registry tree"
             )
 
-        reg_info = registry_identity(ROOT, reg)
+        reg_info = registry_identity(root, reg)
         reg_info.update(
             {
                 "registry_root": summary.get("snapshot_root") or reg_info.get("registry_root"),
@@ -391,6 +397,7 @@ def load_candidates(
         }
         reg_items = scan_registry(
             reg,
+            root=root,
             reg_root=snapshot_root,
             reg_info=reg_info,
             default_source_type="registry-snapshot",
@@ -405,7 +412,7 @@ def load_candidates(
             continue
         if not registry_is_resolution_candidate(reg, explicit_registry=explicit_registry):
             continue
-        freshness = evaluate_refresh_status(ROOT, reg) if registry_uses_refresh_cache(reg) else None
+        freshness = evaluate_refresh_status(root, reg) if registry_uses_refresh_cache(reg) else None
         if freshness and refresh_status_blocks_resolution(freshness):
             blocked.append(
                 {
@@ -415,7 +422,7 @@ def load_candidates(
                 }
             )
             continue
-        reg_items = scan_registry(reg)
+        reg_items = scan_registry(reg, root=root)
         if freshness:
             reg_items = [decorate_registry_freshness(item, freshness) for item in reg_items]
         items.extend(reg_items)
@@ -429,6 +436,7 @@ def _resolution_failure_message(
     registry: str | None,
     name: str,
     version: str | None,
+    root: Path,
 ) -> str:
     if registry:
         blocked_registry = next(
@@ -438,7 +446,7 @@ def _resolution_failure_message(
             return str(blocked_registry["message"])
         reg = find_registry(cfg, registry)
         if reg and registry_uses_refresh_cache(reg):
-            freshness = evaluate_refresh_status(ROOT, reg)
+            freshness = evaluate_refresh_status(root, reg)
             message = refresh_resolution_message(freshness)
             if message and refresh_status_blocks_resolution(freshness):
                 return message
@@ -467,6 +475,7 @@ def _decorate_resolution(
 def resolve_source_candidate(
     name: str,
     *,
+    root: str | Path = ROOT,
     version: str | None = None,
     allow_incubating: bool = False,
     registry: str | None = None,
@@ -478,7 +487,10 @@ def resolve_source_candidate(
     requested_publisher, requested_name = parse_requested_skill(name)
     if not requested_name:
         raise SourceResolutionError("skill name must be non-empty")
-    cfg, loaded_candidates, blocked = load_candidates(registry, snapshot=snapshot)
+    resolved_root = Path(root).resolve()
+    cfg, loaded_candidates, blocked = load_candidates(
+        registry, snapshot=snapshot, root=resolved_root
+    )
     candidates = matching_candidates(
         loaded_candidates,
         requested_name=requested_name,
@@ -502,6 +514,7 @@ def resolve_source_candidate(
                 registry=registry,
                 name=name,
                 version=version,
+                root=resolved_root,
             )
         )
     return _decorate_resolution(resolved, reason=reason, snapshot=snapshot)
@@ -515,11 +528,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--registry")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--snapshot")
+    ap.add_argument("--repo-root", default=".")
     args = ap.parse_args(argv)
 
     try:
         resolved = resolve_source_candidate(
             args.name,
+            root=args.repo_root,
             version=args.version,
             allow_incubating=args.allow_incubating,
             registry=args.registry,

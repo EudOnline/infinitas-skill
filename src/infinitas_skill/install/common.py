@@ -71,10 +71,10 @@ def _resolve_source(
     snapshot: str | None = None,
     allow_incubating: bool = False,
 ) -> tuple[int, dict]:
-    del repo_root
     try:
         return 0, resolve_source_candidate(
             name,
+            root=repo_root,
             version=version,
             registry=registry,
             snapshot=snapshot,
@@ -134,6 +134,7 @@ def _check_skill_dir(*, repo_root: Path, skill_dir: str) -> tuple[int, dict | No
 
 def _load_resolution_plan(
     *,
+    repo_root: Path,
     skill_dir: str,
     target_dir: str,
     source_registry: str,
@@ -143,6 +144,7 @@ def _load_resolution_plan(
     try:
         plan = plan_from_skill_dir(
             skill_dir,
+            root=repo_root,
             target_dir=target_dir,
             source_registry=source_registry,
             source_info=source_payload,

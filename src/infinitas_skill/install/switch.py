@@ -91,6 +91,7 @@ def _prepare_switch_source(
             "message": "skill source validation failed",
         }
     plan_code, plan = _load_resolution_plan(
+        repo_root=repo_root,
         skill_dir=source_dir,
         target_dir=target_dir,
         source_registry=resolve_registry or "self",

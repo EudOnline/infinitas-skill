@@ -105,7 +105,6 @@ def run_install_exact(
         if resolve_code != 0:
             _emit_payload(resolved_payload, as_json=as_json)
             return resolve_code
-
         materialize_code, materialized_payload = _materialize_source(
             repo_root=repo_root,
             source_payload=resolved_payload,
@@ -122,6 +121,7 @@ def run_install_exact(
             return check_code
 
         plan_code, plan_payload = _load_resolution_plan(
+            repo_root=repo_root,
             skill_dir=source_dir,
             target_dir=target_dir,
             source_registry=resolved_payload.get("registry_name") or "self",

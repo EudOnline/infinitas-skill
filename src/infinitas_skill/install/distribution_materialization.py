@@ -100,7 +100,7 @@ def materialize_distribution_source(
     if not manifest_path:
         raise DistributionError("distribution-manifest source is missing manifest path")
     if info.get("registry_kind") == "http":
-        return _materialize_remote_distribution_source(info)
+        return _materialize_remote_distribution_source(info, attestation_root=resolved_root)
     verified = verify_distribution_manifest(manifest_path, root=resolved_root)
     payload = verified["manifest"]
     bundle = payload.get("bundle") or {}
@@ -140,7 +140,9 @@ def _download_remote_ref(
     return output
 
 
-def _materialize_remote_distribution_source(info: dict[str, Any]) -> dict[str, Any]:
+def _materialize_remote_distribution_source(
+    info: dict[str, Any], *, attestation_root: Path
+) -> dict[str, Any]:
     base_url = info.get("registry_base_url") or info.get("registry_url")
     if not isinstance(base_url, str) or not base_url.strip():
         raise DistributionError("hosted distribution source is missing registry_base_url")
@@ -163,7 +165,11 @@ def _materialize_remote_distribution_source(info: dict[str, Any]) -> dict[str, A
         raise DistributionError("hosted manifest is missing bundle or attestation references")
     for ref in (str(bundle_ref), str(provenance_ref), str(signature_ref)):
         _download_remote_ref(base_url, ref, temp_root, token_env=token_env)
-    verified = verify_distribution_manifest(manifest_path, root=temp_root, attestation_root=ROOT)
+    verified = verify_distribution_manifest(
+        manifest_path,
+        root=temp_root,
+        attestation_root=attestation_root,
+    )
     manifest_payload = verified["manifest"]
     bundle = manifest_payload.get("bundle") or {}
     bundle_sha = bundle.get("sha256")

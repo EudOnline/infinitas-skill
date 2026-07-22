@@ -230,6 +230,8 @@ def _distribution_candidate(
     index: int,
     distribution: JsonDict,
 ) -> JsonDict:
+    metadata = distribution.get("metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
     return {
         **registry_state,
         "name": distribution.get("name"),
@@ -247,9 +249,15 @@ def _distribution_candidate(
         "installable": True,
         "snapshot_of": None,
         "snapshot_created_at": distribution.get("generated_at"),
-        "depends_on": distribution.get("depends_on", []),
-        "conflicts_with": distribution.get("conflicts_with", []),
-        "meta": {"name": distribution.get("name"), "version": distribution.get("version")},
+        "depends_on": distribution.get("depends_on") or metadata.get("depends_on") or [],
+        "conflicts_with": distribution.get("conflicts_with")
+        or metadata.get("conflicts_with")
+        or [],
+        "meta": {
+            **metadata,
+            "name": distribution.get("name"),
+            "version": distribution.get("version"),
+        },
         "source_type": "distribution-manifest",
         "distribution_manifest": distribution.get("manifest_path"),
         "distribution_bundle": distribution.get("bundle_path"),
@@ -306,6 +314,8 @@ def scan_enabled_registry_skills(root: Path) -> JsonDict:
         if not isinstance(reg_name, str) or not reg_name:
             raise DependencyError("enabled registry is missing a name")
         reg_root = resolve_registry_root(root, reg)
+        if reg.get("kind") == "http":
+            reg_root = (root / ".cache" / "registries" / reg_name).resolve()
         registry_roots[reg_name] = reg_root
         if reg_root is None or not reg_root.exists():
             missing_roots[reg_name] = str(reg_root) if reg_root else None
@@ -313,6 +323,12 @@ def scan_enabled_registry_skills(root: Path) -> JsonDict:
         registry_state = registry_identity(root, reg)
         registry_identities[reg_name] = registry_state
         distribution_index = load_distribution_index(reg_root)
+        if reg.get("kind") == "http":
+            candidates.extend(
+                _distribution_candidate(reg_root, registry_state, reg, index, distribution)
+                for distribution in distribution_index
+            )
+            continue
         distribution_by_identity = {
             (entry.get("qualified_name") or entry.get("name"), entry.get("version")): entry
             for entry in distribution_index

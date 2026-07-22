@@ -336,12 +336,13 @@ class DependencyPlanner:
 
 def plan_from_skill_dir(
     skill_dir: str | Path,
+    root: str | Path = ROOT,
     target_dir: str | Path | None = None,
     source_registry: str | None = None,
     source_info: JsonDict | None = None,
     mode: str = "install",
 ) -> JsonDict:
-    planner = DependencyPlanner(ROOT)
+    planner = DependencyPlanner(root)
     root_candidate = candidate_from_skill_dir(
         skill_dir,
         source_registry=source_registry,

@@ -24,7 +24,7 @@ def run_pull_skill(
     mode: str = "auto",
 ) -> tuple[int, dict[str, Any]]:
     if mode == "confirm":
-        _config, candidates, _blocked = load_candidates(source_registry)
+        _config, candidates, _blocked = load_candidates(source_registry, root=repo_root)
         matching_versions = [
             str(candidate.get("version"))
             for candidate in candidates
