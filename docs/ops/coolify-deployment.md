@@ -56,6 +56,11 @@ The checked-in Coolify Compose file uses named volumes. `init-permissions` runs 
 make fresh volumes writable by the image's UID/GID `1000:1000`; `init-repo` then creates the
 writable runtime repository before `app` and `worker` start.
 
+Application and worker code always executes from the immutable image snapshot at
+`/opt/infinitas/bundle`. The persistent `/srv/infinitas/repo` checkout is registry data, not an
+application-code deployment source. This keeps hosted content history intact while allowing image
+upgrades to take effect immediately.
+
 ## 3. Configure environment variables
 
 Add these variables to the Coolify resource before deploying:
@@ -149,7 +154,7 @@ confirm that `/manage` loads.
 From the Coolify terminal for `app`, inspect persisted state:
 
 ```bash
-export PYTHONPATH=/srv/infinitas/repo/src
+export PYTHONPATH=/opt/infinitas/bundle/src:/opt/infinitas/bundle
 python3 -m infinitas_skill.cli.main server inspect-state \
   --database-url sqlite:////srv/infinitas/data/server.db \
   --limit 10 \
@@ -159,7 +164,7 @@ python3 -m infinitas_skill.cli.main server inspect-state \
 From the `worker` terminal, verify its heartbeat:
 
 ```bash
-export PYTHONPATH=/srv/infinitas/repo/src
+export PYTHONPATH=/opt/infinitas/bundle/src:/opt/infinitas/bundle
 python3 -m infinitas_skill.cli.main server worker-healthcheck \
   --health-path /srv/infinitas/data/worker.heartbeat \
   --max-age-seconds 30 \
@@ -241,7 +246,7 @@ fresh release materialization before declaring the deployment ready for publishi
 In the Coolify terminal for `app`, create a consistent repository, SQLite, and artifact backup:
 
 ```bash
-export PYTHONPATH=/srv/infinitas/repo/src
+export PYTHONPATH=/opt/infinitas/bundle/src:/opt/infinitas/bundle
 python3 -m infinitas_skill.cli.main server backup \
   --repo-path /srv/infinitas/repo \
   --database-url sqlite:////srv/infinitas/data/server.db \

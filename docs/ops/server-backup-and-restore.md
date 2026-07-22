@@ -56,7 +56,7 @@ recoverable merely because its files still exist.
 Open the terminal for the `app` service and run:
 
 ```bash
-export PYTHONPATH=/srv/infinitas/repo/src
+export PYTHONPATH=/opt/infinitas/bundle/src:/opt/infinitas/bundle
 python3 -m infinitas_skill.cli.main server backup \
   --repo-path /srv/infinitas/repo \
   --database-url sqlite:////srv/infinitas/data/server.db \

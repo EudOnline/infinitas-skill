@@ -134,6 +134,7 @@ Important runtime detail:
 
 - the bundled repository snapshot lives at `/opt/infinitas/bundle`
 - the writable source-of-truth checkout is still `INFINITAS_SERVER_REPO_PATH` such as `/srv/infinitas/repo`
+- app, worker, and one-shot operations import code only from `/opt/infinitas/bundle`; the writable checkout is never placed on the Python import path
 - `init-repo` and the shared container entrypoint bootstrap that runtime repo from the bundled snapshot when the host directory is empty, create a local git history, optionally configure `origin`, and sync `catalog/` into `INFINITAS_SERVER_ARTIFACT_PATH`
 - if `.deploy/repo` already contains a valid git worktree, compose reuses it as-is
 

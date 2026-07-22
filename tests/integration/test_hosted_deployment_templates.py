@@ -62,10 +62,9 @@ def test_coolify_compose_freezes_single_node_proxy_and_volume_contract() -> None
     assert "'Host':host" in compose_text
     assert "X-Forwarded-Proto':'https" in compose_text
     assert "worker-healthcheck" in compose_text
-    assert (
-        "PYTHONPATH: /srv/infinitas/repo/src:/opt/infinitas/bundle/src:"
-        "/opt/infinitas/bundle" in compose_text
-    )
+    assert "PYTHONPATH: /opt/infinitas/bundle/src:/opt/infinitas/bundle" in compose_text
+    assert "working_dir: /opt/infinitas/bundle" in compose_text
+    assert "/srv/infinitas/repo/src" not in compose_text
     for volume in (
         "infinitas-repo",
         "infinitas-data",
@@ -76,16 +75,15 @@ def test_coolify_compose_freezes_single_node_proxy_and_volume_contract() -> None
         assert volume in compose_text
 
 
-def test_hosted_bootstrap_keeps_bundled_server_importable_from_runtime_repo() -> None:
+def test_hosted_runtime_executes_immutable_image_code() -> None:
     entrypoint_text = HOSTED_ENTRYPOINT.read_text(encoding="utf-8")
     compose_text = COMPOSE_TEMPLATE.read_text(encoding="utf-8")
 
-    assert 'export PYTHONPATH="$INFINITAS_SERVER_REPO_PATH/src:' in entrypoint_text
-    assert "$INFINITAS_BUNDLED_REPO_PATH/src:$INFINITAS_BUNDLED_REPO_PATH" in entrypoint_text
-    assert (
-        "PYTHONPATH: /srv/infinitas/repo/src:/opt/infinitas/bundle/src:"
-        "/opt/infinitas/bundle" in compose_text
-    )
+    assert 'export PYTHONPATH="$INFINITAS_BUNDLED_REPO_PATH/src:' in entrypoint_text
+    assert "$INFINITAS_SERVER_REPO_PATH/src" not in entrypoint_text
+    assert "PYTHONPATH: /opt/infinitas/bundle/src:/opt/infinitas/bundle" in compose_text
+    assert "working_dir: /opt/infinitas/bundle" in compose_text
+    assert "/srv/infinitas/repo/src" not in compose_text
     assert "json.loads(os.environ['INFINITAS_SERVER_ALLOWED_HOSTS'])[0]" in compose_text
     assert "'Host':host" in compose_text
     assert "X-Forwarded-Proto':'https" in compose_text

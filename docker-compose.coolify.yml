@@ -2,7 +2,7 @@ name: infinitas-hosted-registry
 
 x-infinitas-environment: &infinitas-environment
   HOME: /srv/infinitas/home
-  PYTHONPATH: /srv/infinitas/repo/src:/opt/infinitas/bundle/src:/opt/infinitas/bundle
+  PYTHONPATH: /opt/infinitas/bundle/src:/opt/infinitas/bundle
   INFINITAS_SERVER_ENV: production
   INFINITAS_SERVER_ALLOWED_HOSTS: "${INFINITAS_SERVER_ALLOWED_HOSTS}"
   INFINITAS_SERVER_DATABASE_URL: sqlite:////srv/infinitas/data/server.db
@@ -61,7 +61,7 @@ services:
       init-permissions:
         condition: service_completed_successfully
     restart: "no"
-    working_dir: /srv/infinitas/repo
+    working_dir: /opt/infinitas/bundle
     volumes: *infinitas-volumes
 
   app:
@@ -92,7 +92,7 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
-    working_dir: /srv/infinitas/repo
+    working_dir: /opt/infinitas/bundle
     volumes: *infinitas-volumes
 
   worker:
@@ -108,8 +108,7 @@ services:
       - /bin/bash
       - -c
       - >-
-        exec env PYTHONPATH="$$INFINITAS_SERVER_REPO_PATH/src$${PYTHONPATH:+:$$PYTHONPATH}"
-        python3 -m infinitas_skill.cli.main server worker
+        exec python3 -m infinitas_skill.cli.main server worker
         --poll-interval "$$INFINITAS_WORKER_POLL_INTERVAL"
         --health-path "$$INFINITAS_WORKER_HEALTH_PATH"
     restart: unless-stopped
@@ -117,7 +116,6 @@ services:
       test:
         - CMD-SHELL
         - >-
-          env PYTHONPATH="$$INFINITAS_SERVER_REPO_PATH/src$${PYTHONPATH:+:$$PYTHONPATH}"
           python3 -m infinitas_skill.cli.main server worker-healthcheck
           --health-path "$$INFINITAS_WORKER_HEALTH_PATH"
           --max-age-seconds "$$INFINITAS_WORKER_HEALTH_MAX_AGE_SECONDS"
@@ -125,7 +123,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
-    working_dir: /srv/infinitas/repo
+    working_dir: /opt/infinitas/bundle
     volumes: *infinitas-volumes
 
 volumes:
