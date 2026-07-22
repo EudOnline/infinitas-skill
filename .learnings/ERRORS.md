@@ -1,5 +1,50 @@
 # Errors
 
+## [ERR-20260722-002] copied-venv-console-script-shebang
+
+**Logged**: 2026-07-22T18:02:00Z
+**Priority**: high
+**Status**: resolved
+**Area**: infra
+
+### Summary
+
+The production image copied a virtual environment from `/build/.venv` to `/opt/venv`, but the
+installed `infinitas` console script retained its builder-stage interpreter path.
+
+### Error
+
+```text
+exec /opt/venv/bin/infinitas: no such file or directory
+#!/build/.venv/bin/python3
+```
+
+### Context
+
+- Python module execution worked because the runtime interpreter and site-packages were usable.
+- Direct console-script execution failed because Linux could not resolve the stale shebang.
+- The existing container smoke only checked HTTP health, so it did not exercise the CLI entrypoint.
+
+### Suggested Fix
+
+Relocate the application console-script shebang after copying the venv and execute the CLI in both
+the Docker build and the published-image runtime smoke.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: Dockerfile, .github/workflows/validate.yml,
+  tests/integration/test_hosted_deployment_templates.py
+- Tags: docker, venv, shebang, cli, release-smoke
+
+### Resolution
+
+- **Resolved**: 2026-07-22T18:02:00Z
+- **Notes**: Rewrote the `infinitas` shebang to `/opt/venv/bin/python3`, added a build-time CLI
+  smoke, and required the GitHub container smoke to execute `infinitas --help`.
+
+---
+
 ## [ERR-20260722-001] e2e-server-fixed-startup-delay
 
 **Logged**: 2026-07-22T17:40:00Z

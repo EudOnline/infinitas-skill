@@ -114,6 +114,7 @@ jobs:
           for attempt in $(seq 1 30); do
             if docker exec infinitas-smoke python3 -c \
               "import urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8000/api/v1/system/healthz', headers={'Host':'127.0.0.1','X-Forwarded-Proto':'https'}), timeout=5)"; then
+              docker exec infinitas-smoke infinitas --help >/dev/null
               exit 0
             fi
             sleep 2

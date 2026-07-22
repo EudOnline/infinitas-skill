@@ -43,6 +43,8 @@ RUN apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 update \
 
 # Copy the locked runtime environment from the build stage.
 COPY --from=builder /build/.venv /opt/venv
+RUN sed -i '1c #!/opt/venv/bin/python3' /opt/venv/bin/infinitas \
+    && /opt/venv/bin/infinitas --help >/dev/null
 
 WORKDIR /opt/infinitas/bundle
 

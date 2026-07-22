@@ -7,12 +7,14 @@ import pytest
 from fastapi.testclient import TestClient
 
 ROOT = Path(__file__).resolve().parents[2]
+DOCKERFILE = ROOT / "Dockerfile"
 COMPOSE_ENV_EXAMPLE = ROOT / ".env.compose.example"
 COMPOSE_TEMPLATE = ROOT / "docker-compose.yml"
 DEPLOYMENT_DOC = ROOT / "docs" / "ops" / "server-deployment.md"
 COOLIFY_COMPOSE = ROOT / "docker-compose.coolify.yml"
 COOLIFY_DOC = ROOT / "docs" / "ops" / "coolify-deployment.md"
 HOSTED_ENTRYPOINT = ROOT / "docker" / "entrypoint-hosted.sh"
+VALIDATE_WORKFLOW = ROOT / ".github" / "workflows" / "validate.yml"
 
 
 def test_compose_env_example_includes_required_production_fields() -> None:
@@ -87,6 +89,15 @@ def test_hosted_runtime_executes_immutable_image_code() -> None:
     assert "json.loads(os.environ['INFINITAS_SERVER_ALLOWED_HOSTS'])[0]" in compose_text
     assert "'Host':host" in compose_text
     assert "X-Forwarded-Proto':'https" in compose_text
+
+
+def test_container_cli_entrypoint_is_relocated_and_smoked() -> None:
+    dockerfile_text = DOCKERFILE.read_text(encoding="utf-8")
+    workflow_text = VALIDATE_WORKFLOW.read_text(encoding="utf-8")
+
+    assert "sed -i '1c #!/opt/venv/bin/python3' /opt/venv/bin/infinitas" in dockerfile_text
+    assert "/opt/venv/bin/infinitas --help" in dockerfile_text
+    assert "docker exec infinitas-smoke infinitas --help" in workflow_text
 
 
 def test_coolify_install_runbook_covers_release_operations() -> None:
