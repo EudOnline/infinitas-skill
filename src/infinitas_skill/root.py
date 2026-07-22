@@ -16,8 +16,10 @@ def resolve_repo_root(explicit_root: str | Path | None = None) -> Path:
         if looks_like_repo_root(candidate):
             return candidate
 
-    env_root = os.environ.get("INFINITAS_ROOT") or os.environ.get("INFINITAS_REPO_ROOT")
-    if env_root:
+    for env_name in ("INFINITAS_ROOT", "INFINITAS_REPO_ROOT", "INFINITAS_BUNDLED_REPO_PATH"):
+        env_root = os.environ.get(env_name)
+        if not env_root:
+            continue
         candidate = Path(env_root).expanduser().resolve()
         if looks_like_repo_root(candidate):
             return candidate

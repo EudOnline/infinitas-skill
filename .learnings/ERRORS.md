@@ -24,11 +24,15 @@ exec /opt/venv/bin/infinitas: no such file or directory
 - Python module execution worked because the runtime interpreter and site-packages were usable.
 - Direct console-script execution failed because Linux could not resolve the stale shebang.
 - The existing container smoke only checked HTTP health, so it did not exercise the CLI entrypoint.
+- After the shebang fix, the build-time smoke ran before the bundled repository was copied and
+  root discovery ignored `INFINITAS_BUNDLED_REPO_PATH`, so parser defaults looked for
+  `config/signing.json` inside site-packages.
 
 ### Suggested Fix
 
 Relocate the application console-script shebang after copying the venv and execute the CLI in both
-the Docker build and the published-image runtime smoke.
+the Docker build and the published-image runtime smoke. Run the build smoke only after copying the
+bundled repository, and make root discovery honor its dedicated environment variable.
 
 ### Metadata
 
@@ -39,9 +43,10 @@ the Docker build and the published-image runtime smoke.
 
 ### Resolution
 
-- **Resolved**: 2026-07-22T18:02:00Z
-- **Notes**: Rewrote the `infinitas` shebang to `/opt/venv/bin/python3`, added a build-time CLI
-  smoke, and required the GitHub container smoke to execute `infinitas --help`.
+- **Resolved**: 2026-07-22T18:36:00Z
+- **Notes**: Rewrote the `infinitas` shebang to `/opt/venv/bin/python3`, moved the build-time CLI
+  smoke after the bundled repository copy, taught root discovery about
+  `INFINITAS_BUNDLED_REPO_PATH`, and kept the published-image runtime smoke.
 
 ---
 

@@ -43,13 +43,14 @@ RUN apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 update \
 
 # Copy the locked runtime environment from the build stage.
 COPY --from=builder /build/.venv /opt/venv
-RUN sed -i '1c #!/opt/venv/bin/python3' /opt/venv/bin/infinitas \
-    && /opt/venv/bin/infinitas --help >/dev/null
+RUN sed -i '1c #!/opt/venv/bin/python3' /opt/venv/bin/infinitas
 
 WORKDIR /opt/infinitas/bundle
 
 # Copy application code (this layer rebuilds on code changes)
 COPY . /opt/infinitas/bundle
+RUN cd / \
+    && /opt/venv/bin/infinitas --help >/dev/null
 
 # Set ownership and switch to non-root user
 RUN chown -R infinitas:infinitas /opt/infinitas
