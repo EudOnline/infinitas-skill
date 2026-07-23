@@ -1,5 +1,3 @@
-"""Private-first hosted registry CLI wired into the unified infinitas command."""
-
 from __future__ import annotations
 
 import argparse
@@ -12,7 +10,9 @@ from typing import TYPE_CHECKING, Any, NoReturn
 
 import httpx
 
+from infinitas_skill.registry.bootstrap_cli import configure_registry_bootstrap_command
 from infinitas_skill.registry.catalog import configure_registry_catalog_parser
+from infinitas_skill.registry.connection_cli import configure_registry_connection_args
 from infinitas_skill.registry.local_ops import configure_registry_sources_parser
 
 if TYPE_CHECKING:
@@ -310,19 +310,6 @@ def _wrap_registry_handler(
     return lambda args: _emit_json_result(func(args))
 
 
-def _configure_registry_connection_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
-        "--base-url",
-        default=os.environ.get("INFINITAS_REGISTRY_API_BASE_URL", "http://127.0.0.1:8000"),
-        help="Hosted registry API base URL",
-    )
-    parser.add_argument(
-        "--token",
-        default=os.environ.get("INFINITAS_REGISTRY_API_TOKEN", ""),
-        help="Bearer token for hosted registry API",
-    )
-
-
 def _configure_registry_publish_command(subparsers: argparse._SubParsersAction) -> None:
     publish = subparsers.add_parser(
         "publish",
@@ -452,6 +439,7 @@ def _configure_registry_release_commands(subparsers: argparse._SubParsersAction)
 
 
 def _configure_registry_authoring_commands(subparsers: argparse._SubParsersAction) -> None:
+    configure_registry_bootstrap_command(subparsers)
     _configure_registry_publish_command(subparsers)
     _configure_registry_skill_commands(subparsers)
     _configure_registry_version_commands(subparsers)
@@ -564,10 +552,10 @@ def _configure_registry_review_commands(subparsers: argparse._SubParsersAction) 
 
 
 def configure_registry_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
-    _configure_registry_connection_args(parser)
+    configure_registry_connection_args(parser)
     subparsers = parser.add_subparsers(
         dest="registry_command",
-        metavar="{skills,versions,releases,exposures,shares,tokens,reviews,sources,catalog}",
+        metavar="{bootstrap,publish,skills,versions,releases,exposures,shares,tokens,reviews,sources,catalog}",
     )
     _configure_registry_authoring_commands(subparsers)
     _configure_registry_access_commands(subparsers)

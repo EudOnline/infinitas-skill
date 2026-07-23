@@ -36,15 +36,15 @@ These commands read the maintained generated surfaces under `catalog/` rather th
 
 ## Configure a hosted registry
 
-For the production server at `https://skills.infinitas.fun`, add an HTTP source with the
-maintained CLI. It writes `config/registry-sources.json` atomically and stores only the token
-environment variable name:
+For the production server at `https://skills.infinitas.fun`, bootstrap an HTTP source with the
+maintained CLI. It writes the source, public signing trust root, and install integrity policy
+while storing only the Token environment variable name:
 
 ```bash
-export INFINITAS_REGISTRY_READ_TOKEN=<registry-read-token>
-uv run infinitas registry sources --repo-root . add-http hosted \
+export INFINITAS_REGISTRY_READ_TOKEN=<namespace-reader-token>
+uv run infinitas registry bootstrap hosted \
   https://skills.infinitas.fun/api/v1/registry \
-  --token-env INFINITAS_REGISTRY_READ_TOKEN --set-default
+  --repo-root . --token-env INFINITAS_REGISTRY_READ_TOKEN --set-default --json
 ```
 
 The equivalent JSON shape is:
@@ -69,7 +69,7 @@ The equivalent JSON shape is:
 Then validate the effective source configuration:
 
 ```bash
-export INFINITAS_REGISTRY_READ_TOKEN=<registry-read-token>
+export INFINITAS_REGISTRY_READ_TOKEN=<namespace-reader-token>
 uv run infinitas registry sources --repo-root . check
 uv run infinitas registry sources --repo-root . sync hosted --json
 uv run infinitas registry sources --repo-root . status hosted --json

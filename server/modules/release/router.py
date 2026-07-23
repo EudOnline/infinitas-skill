@@ -14,6 +14,10 @@ from server.modules.access.credential_policy import (
     assert_credential_mutation_allowed,
     consume_credential_publish_quota,
 )
+from server.modules.access.product_scope import (
+    ProductScopeForbidden,
+    assert_product_token_skill_scope,
+)
 from server.modules.authoring.models import SkillVersion
 from server.modules.identity.auth import get_current_access_context
 from server.modules.identity.models import User
@@ -38,13 +42,11 @@ def _require_release_context(context: AccessContext) -> tuple[int, User]:
     return context.principal.id, context.user
 
 
-def _require_product_object_scope(context: AccessContext, object_id: int | None) -> None:
-    if context.credential.type != "product_token":
-        return
-    if context.credential.product_token_type != "publisher":  # noqa: S105
-        raise HTTPException(status_code=403, detail="publisher token required")
-    if context.credential.product_object_id != object_id:
-        raise HTTPException(status_code=403, detail="publisher token object scope mismatch")
+def _require_product_scope(context: AccessContext, db: Session, object_id: int | None) -> None:
+    try:
+        assert_product_token_skill_scope(db, context=context, skill_id=object_id)
+    except ProductScopeForbidden as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
 
 
 def _require_credential_mutation(context: AccessContext, db: Session) -> None:
@@ -84,7 +86,7 @@ def create_release(
     skill_version = db.get(SkillVersion, version_id)
     if skill_version is None:
         raise HTTPException(status_code=404, detail="skill version not found")
-    _require_product_object_scope(context, skill_version.skill_id)
+    _require_product_scope(context, db, skill_version.skill_id)
     _require_credential_mutation(context, db)
     is_maintainer = user.role == "maintainer"
     try:
@@ -144,7 +146,7 @@ def get_release(
     is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
         release = service.get_release_or_404(db, release_id)
-        _require_product_object_scope(context, release.skill_id)
+        _require_product_scope(context, db, release.skill_id)
         service.assert_release_owner(
             db,
             release,
@@ -168,7 +170,7 @@ def list_release_artifacts(
     is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
         release = service.get_release_or_404(db, release_id)
-        _require_product_object_scope(context, release.skill_id)
+        _require_product_scope(context, db, release.skill_id)
         service.assert_release_owner(
             db,
             release,

@@ -69,6 +69,8 @@ uv run infinitas discovery search registry --json
 uv run infinitas discovery inspect lvxiaoer/operate-infinitas-skill --json
 uv run infinitas install by-name lvxiaoer/operate-infinitas-skill .agents/skills
 uv run infinitas registry publish ./my-skill --version 1.0.0 --visibility private
+uv run infinitas registry bootstrap hosted https://skills.infinitas.fun/api/v1/registry \
+  --repo-root . --token-env INFINITAS_REGISTRY_READ_TOKEN --set-default --json
 uv run infinitas registry versions compare <skill_id> 1.0.0 1.1.0
 uv run infinitas install from-share '<resolve-url>' ~/.openclaw/skills
 uv run infinitas registry --help

@@ -33,5 +33,37 @@
       <a class="kawaii-button kawaii-button--ghost text-sm" href="{{ activity_href or '/manage#activity' }}">{{ ui['action_open_activity'] }}</a>
     </div>
   </section>
+
+  <section class="kawaii-card animate-in md:col-span-2">
+    <h2 class="font-display text-sm font-bold text-kawaii-ink mb-3">{{ ui.get('heading_agent_credentials', 'Agent credentials') }}</h2>
+    <form id="namespace-token-form" class="grid grid-cols-1 md:grid-cols-2 gap-3" action="" method="POST">
+      <label class="text-sm text-kawaii-ink">
+        <span class="block mb-1">{{ ui.get('label_token_name', 'Name') }}</span>
+        <input class="kawaii-input" name="name" maxlength="200" required />
+      </label>
+      <label class="text-sm text-kawaii-ink">
+        <span class="block mb-1">{{ ui.get('label_token_type', 'Type') }}</span>
+        <select class="kawaii-input" name="token_type">
+          <option value="publisher">{{ ui.get('token_type_publisher', 'Publisher') }}</option>
+          <option value="reader">{{ ui.get('token_type_reader', 'Reader') }}</option>
+        </select>
+      </label>
+      <label class="text-sm text-kawaii-ink">
+        <span class="block mb-1">{{ ui.get('label_expiry_days', 'Expiry days') }}</span>
+        <input class="kawaii-input" name="expires_in_days" type="number" min="1" max="3650" value="90" required />
+      </label>
+      <label class="text-sm text-kawaii-ink" data-publisher-field>
+        <span class="block mb-1">{{ ui.get('label_daily_publish_limit', 'Daily publish limit') }}</span>
+        <input class="kawaii-input" name="max_daily_publishes" type="number" min="1" max="100000" value="100" />
+      </label>
+      <div class="md:col-span-2 flex justify-end">
+        <button class="kawaii-button kawaii-button--primary" type="submit">{{ ui.get('action_issue_token', 'Issue') }}</button>
+      </div>
+    </form>
+    <div id="namespace-token-result" class="mt-4 p-3 bg-kawaii-panel-soft rounded-kawaii-sm border border-kawaii-line" aria-live="polite" hidden></div>
+    <div id="namespace-token-list" class="mt-4 overflow-x-auto table-scroll" aria-live="polite"></div>
+  </section>
 </div>
+
+<script type="module" src="{{ static_url('/static/js/modules/settings.js') }}"></script>
 {% endblock %}

@@ -12,7 +12,8 @@ import server.modules.identity.profile_service as profile_service
 from server.db import get_db
 from server.exceptions import ForbiddenError, NotFoundError
 from server.modules.access.authn import AccessContext
-from server.modules.identity.auth import get_current_access_context, require_role
+from server.modules.identity.auth import get_current_access_context
+from server.modules.identity.guards import require_admin_actor_ref
 from server.modules.identity.models import User
 from server.modules.identity.profile_schemas import (
     CredentialPolicyUpdateView,
@@ -21,6 +22,15 @@ from server.modules.identity.profile_schemas import (
 
 router = APIRouter(prefix="/api/v1/profile", tags=["profile"])
 credentials_router = APIRouter(prefix="/api/v1/credentials", tags=["credentials"])
+
+
+def _admin_user(
+    context: AccessContext = Depends(get_current_access_context),
+) -> User:
+    require_admin_actor_ref(context)
+    if context.user is None:
+        raise HTTPException(status_code=403, detail="admin credential required")
+    return context.user
 
 
 # ── Profile endpoints ─────────────────────────────────────────────────────────
@@ -44,7 +54,7 @@ def profile_me(
 )
 def profile_admin_view(
     credential_id: int,
-    user: User = Depends(require_role("maintainer", "contributor")),
+    user: User = Depends(_admin_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Return the profile for a specified credential (admin view)."""
@@ -72,7 +82,7 @@ class PolicyUpdateBody(BaseModel):
 def credential_policy_update(
     credential_id: int,
     body: PolicyUpdateBody,
-    user: User = Depends(require_role("maintainer", "contributor")),
+    user: User = Depends(_admin_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Update policy constraints on a credential's associated AccessGrant."""

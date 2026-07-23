@@ -106,14 +106,17 @@ Rules:
 
 Tokens are distinct from admin environment credentials.
 
-- `INFINITAS_REGISTRY_API_TOKEN` is the admin token used to operate the hosted control plane
-- agent tokens are issued per Object or per admin workflow
+- `INFINITAS_REGISTRY_API_TOKEN` is the Agent's namespace or object publisher Token
+- namespace Tokens are issued from `/settings` for Agent create/read workflows
+- object and release Tokens remain available for narrower delegation after an Object exists
 - minimum agent token types are `reader` and `publisher`
 
 Token expectations:
 
 - `reader` tokens can read Library metadata and fetch authorized Releases
 - `publisher` tokens can publish Object changes and create Releases
+- namespace `publisher` tokens can create Objects only inside their issuing principal's namespace
+- namespace `reader` tokens can synchronize the issuing principal's visible Registry catalog
 - Credential policy enforces `readonly`, `allowed_object_kinds`, and
   `max_daily_publishes` on Agent writes
 - web admins can inspect token activity, revoke tokens, and rotate tokens
@@ -149,6 +152,8 @@ Share Link requirements:
 - `POST /api/v1/object-tokens/objects/{object_id}/tokens`
 - `GET /api/v1/object-tokens/objects/{object_id}/tokens`
 - `POST /api/v1/object-tokens/tokens/{token_id}/revoke`
+- `GET|POST /api/v1/namespace-tokens`
+- `POST /api/v1/namespace-tokens/{token_id}/revoke`
 - `POST /api/v1/share-links/releases/{release_id}/share-links`
 - `GET /api/v1/share-links/releases/{release_id}/share-links`
 - `POST /api/v1/share-links/{share_id}/resolve`

@@ -596,12 +596,14 @@ options:
 
 ```text
 usage: infinitas registry [-h] [--base-url BASE_URL] [--token TOKEN]
-                          {skills,versions,releases,exposures,shares,tokens,reviews,sources,catalog} ...
+                          {bootstrap,publish,skills,versions,releases,exposures,shares,tokens,reviews,sources,catalog} ...
 
 Hosted registry private-first control plane CLI
 
 positional arguments:
-  {skills,versions,releases,exposures,shares,tokens,reviews,sources,catalog}
+  {bootstrap,publish,skills,versions,releases,exposures,shares,tokens,reviews,sources,catalog}
+    bootstrap           Configure a Hosted Registry and install its public
+                        trust policy
     publish             Normalize, publish, and expose one local skill
                         idempotently
     skills              Manage private-first skill records
@@ -620,10 +622,35 @@ options:
   --token TOKEN         Bearer token for hosted registry API
 ```
 
+## `infinitas registry bootstrap`
+
+```text
+usage: infinitas registry bootstrap [-h] [--repo-root REPO_ROOT]
+                                    [--token-env TOKEN_ENV] [--set-default]
+                                    [--force-trust] [--json]
+                                    name base_url
+
+Configure a Hosted Registry and install its public trust policy
+
+positional arguments:
+  name                  Registry source name in lowercase kebab-case
+  base_url              Hosted catalog base URL
+
+options:
+  -h, --help            show this help message and exit
+  --repo-root REPO_ROOT
+  --token-env TOKEN_ENV
+                        Environment variable containing the Registry reader
+                        token
+  --set-default
+  --force-trust
+  --json
+```
+
 ## `infinitas registry skills`
 
 ```text
-usage: infinitas registry skills [-h] [--base-url BASE_URL] [--token TOKEN]
+usage: infinitas registry skills [-h] [--base-url BASE_URL]
                                  {create,list,get,upload-content,archive} ...
 
 Manage private-first skill records
@@ -639,13 +666,12 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --base-url BASE_URL   Hosted registry API base URL
-  --token TOKEN         Bearer token for hosted registry API
 ```
 
 ## `infinitas registry versions`
 
 ```text
-usage: infinitas registry versions [-h] [--base-url BASE_URL] [--token TOKEN]
+usage: infinitas registry versions [-h] [--base-url BASE_URL]
                                    {create,list,get,compare} ...
 
 Create immutable skill versions directly
@@ -660,13 +686,12 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --base-url BASE_URL   Hosted registry API base URL
-  --token TOKEN         Bearer token for hosted registry API
 ```
 
 ## `infinitas registry releases`
 
 ```text
-usage: infinitas registry releases [-h] [--base-url BASE_URL] [--token TOKEN]
+usage: infinitas registry releases [-h] [--base-url BASE_URL]
                                    {create,list,get,artifacts} ...
 
 Create and inspect immutable releases
@@ -681,13 +706,12 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --base-url BASE_URL   Hosted registry API base URL
-  --token TOKEN         Bearer token for hosted registry API
 ```
 
 ## `infinitas registry exposures`
 
 ```text
-usage: infinitas registry exposures [-h] [--base-url BASE_URL] [--token TOKEN]
+usage: infinitas registry exposures [-h] [--base-url BASE_URL]
                                     {create,update,activate,revoke} ...
 
 Manage audience exposure and share policy
@@ -702,13 +726,12 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --base-url BASE_URL   Hosted registry API base URL
-  --token TOKEN         Bearer token for hosted registry API
 ```
 
 ## `infinitas registry shares`
 
 ```text
-usage: infinitas registry shares [-h] [--base-url BASE_URL] [--token TOKEN]
+usage: infinitas registry shares [-h] [--base-url BASE_URL]
                                  {create,list,revoke} ...
 
 Create, inspect, and revoke Agent share links
@@ -722,13 +745,12 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --base-url BASE_URL   Hosted registry API base URL
-  --token TOKEN         Bearer token for hosted registry API
 ```
 
 ## `infinitas registry tokens`
 
 ```text
-usage: infinitas registry tokens [-h] [--base-url BASE_URL] [--token TOKEN]
+usage: infinitas registry tokens [-h] [--base-url BASE_URL]
                                  {me,check-release} ...
 
 Inspect token identity and release authorization
@@ -741,13 +763,12 @@ positional arguments:
 options:
   -h, --help           show this help message and exit
   --base-url BASE_URL  Hosted registry API base URL
-  --token TOKEN        Bearer token for hosted registry API
 ```
 
 ## `infinitas registry reviews`
 
 ```text
-usage: infinitas registry reviews [-h] [--base-url BASE_URL] [--token TOKEN]
+usage: infinitas registry reviews [-h] [--base-url BASE_URL]
                                   {open-case,get-case,decide} ...
 
 Manage review cases for public-facing exposures
@@ -761,7 +782,6 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --base-url BASE_URL   Hosted registry API base URL
-  --token TOKEN         Bearer token for hosted registry API
 ```
 
 ## `infinitas release`

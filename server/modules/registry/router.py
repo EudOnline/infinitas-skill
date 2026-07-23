@@ -15,6 +15,7 @@ from server.modules.registry.schemas import (
     RegistryCompatibilityView,
     RegistryDiscoveryView,
     RegistryDistributionsView,
+    RegistryTrustBootstrapView,
 )
 from server.settings import Settings, get_settings
 
@@ -43,6 +44,8 @@ def _payload(
         return result
     except service.UnauthorizedError as exc:
         raise HTTPException(status_code=401, detail=str(exc)) from exc
+    except service.NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/ai-index.json", response_model=RegistryAIIndexView)
@@ -75,6 +78,14 @@ def registry_compatibility(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     return _payload(service.build_registry_compatibility_payload, request, db)
+
+
+@router.get("/trust-bootstrap.json", response_model=RegistryTrustBootstrapView)
+def registry_trust_bootstrap(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    return _payload(service.build_registry_trust_bootstrap_payload, request, db)
 
 
 @router.get("/{registry_path:path}")

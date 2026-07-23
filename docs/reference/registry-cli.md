@@ -19,7 +19,9 @@ The product is split into two surfaces:
 - Agent workflows for automation: normalization, publish, immutable versioning, install, switch,
   rollback, read, Visibility, Token, Share Link, and Activity APIs
 
-`INFINITAS_REGISTRY_API_TOKEN` is the admin token used to operate the hosted control plane. Agent-facing tokens are minted from the access surface and should be scoped separately, with at least `reader` and `publisher` capabilities.
+`INFINITAS_REGISTRY_API_TOKEN` should contain a namespace publisher Token for Agent creation and
+publish workflows. Namespace publisher/reader Tokens are minted from `/settings`; object and
+release Tokens remain available for narrower delegation.
 
 ## Canonical route map
 
@@ -40,6 +42,8 @@ The product is split into two surfaces:
 - `POST /api/v1/object-tokens/objects/{object_id}/tokens`
 - `GET /api/v1/object-tokens/objects/{object_id}/tokens`
 - `POST /api/v1/object-tokens/tokens/{token_id}/revoke`
+- `GET|POST /api/v1/namespace-tokens`
+- `POST /api/v1/namespace-tokens/{token_id}/revoke`
 - `POST /api/v1/share-links/releases/{release_id}/share-links`
 - `GET /api/v1/share-links/releases/{release_id}/share-links`
 - `POST /api/v1/share-links/{share_id}/resolve`
@@ -111,14 +115,29 @@ Share Link from the Release page.
 For long-lived install and rollback, configure a read-token-backed source once:
 
 ```bash
-uv run infinitas registry sources --repo-root . add-http hosted \
+uv run infinitas registry bootstrap hosted \
   https://skills.infinitas.fun/api/v1/registry \
-  --token-env INFINITAS_REGISTRY_READ_TOKEN --set-default
+  --repo-root . --token-env INFINITAS_REGISTRY_READ_TOKEN --set-default --json
 uv run infinitas registry sources --repo-root . sync hosted --json
 ```
 
-The file contains no token value. `install switch` and `install rollback` use the configured
-Registry source; a short-lived Share credential must not be persisted for those operations.
+Bootstrap writes the source configuration, public signing trust root, and install integrity
+policy atomically per file. No file contains a Token value. `install switch` and
+`install rollback` use this configured Registry source; a short-lived Share credential must not
+be persisted for those operations.
+
+## `infinitas registry bootstrap`
+
+Configure one Hosted Registry and install the exact public trust policy used to verify its
+artifacts. Existing trust files with different content are rejected unless `--force-trust` is
+explicitly supplied.
+
+```bash
+export INFINITAS_REGISTRY_READ_TOKEN=<namespace-reader-token>
+uv run infinitas registry bootstrap hosted \
+  https://skills.infinitas.fun/api/v1/registry \
+  --repo-root . --set-default --json
+```
 
 ## Object model
 

@@ -15,7 +15,7 @@ from server.modules.access.schemas import (
     ProductTokenView,
 )
 from server.modules.identity.auth import get_current_access_context
-from server.modules.identity.guards import require_actor_ref as _require_actor
+from server.modules.identity.guards import require_admin_actor_ref as _require_actor
 from server.rate_limit import get_rate_limiter, resolve_client_ip
 
 router = APIRouter(prefix="/api/v1/object-tokens", tags=["object-tokens"])

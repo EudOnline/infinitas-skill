@@ -57,3 +57,23 @@ def require_actor_ref(
         principal=context.principal,
         is_maintainer=context.user.role == "maintainer",
     )
+
+
+def require_session_actor_ref(
+    context: AccessContext,
+    *,
+    roles: frozenset[str] | set[str] | None = None,
+) -> ActorRef:
+    if context.credential.type != "session":
+        raise HTTPException(status_code=403, detail="browser session required")
+    return require_actor_ref(context, roles=roles)
+
+
+def require_admin_actor_ref(
+    context: AccessContext,
+    *,
+    roles: frozenset[str] | set[str] | None = None,
+) -> ActorRef:
+    if context.credential.type not in {"session", "personal_token"}:
+        raise HTTPException(status_code=403, detail="admin credential required")
+    return require_actor_ref(context, roles=roles)

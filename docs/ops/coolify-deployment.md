@@ -173,13 +173,13 @@ python3 -m infinitas_skill.cli.main server worker-healthcheck \
 
 ## 6. Configure clients for hosted discovery and install
 
-On each client repository, add the hosted source with the atomic CLI command (or place the same
-shape in the effective policy):
+On each client repository, issue a namespace reader Token from `/settings`, then bootstrap the
+hosted source and its public trust policy:
 
 ```bash
-uv run infinitas registry sources --repo-root . add-http hosted \
+uv run infinitas registry bootstrap hosted \
   https://skills.infinitas.fun/api/v1/registry \
-  --token-env INFINITAS_REGISTRY_READ_TOKEN --set-default
+  --repo-root . --token-env INFINITAS_REGISTRY_READ_TOKEN --set-default --json
 ```
 
 ```json
@@ -202,7 +202,7 @@ uv run infinitas registry sources --repo-root . add-http hosted \
 Validate and use it:
 
 ```bash
-export INFINITAS_REGISTRY_READ_TOKEN=<registry-read-token>
+export INFINITAS_REGISTRY_READ_TOKEN=<namespace-reader-token>
 uv run infinitas registry sources --repo-root . check
 uv run infinitas registry sources --repo-root . sync hosted --json
 uv run infinitas registry catalog build --repo-root .
@@ -213,9 +213,9 @@ uv run infinitas install report ~/.openclaw/skills --refresh --json
 ```
 
 The source `base_url` must end in `/api/v1/registry`; it is not the application root. Registry
-read tokens protect artifact reads. Publisher/maintainer Agent tokens authenticate JSON
-authoring APIs and are configured separately through `INFINITAS_REGISTRY_API_TOKEN` on the
-client.
+reader Tokens protect catalog and artifact reads. Namespace publisher Tokens authenticate skill
+creation and publish APIs through `INFINITAS_REGISTRY_API_TOKEN`; object publisher Tokens should
+be used when an Agent only needs one existing skill.
 
 For reusable non-production templates, substitute the hostname while keeping the same path
 (for example, `"base_url": "https://skills.example.com/api/v1/registry"`). Production uses

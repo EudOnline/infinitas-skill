@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 import subprocess
 from pathlib import Path
@@ -30,6 +31,17 @@ from infinitas_skill.install.registry_source_primitives import (
 from infinitas_skill.policy.policy_pack import load_effective_policy_domain
 
 logger = logging.getLogger(__name__)
+
+
+def _is_loopback_host(hostname: str | None) -> bool:
+    if not hostname:
+        return False
+    if hostname.lower() == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(hostname).is_loopback
+    except ValueError:
+        return False
 
 
 def load_registry_config(root: Path) -> dict[str, Any]:
@@ -311,6 +323,7 @@ def _validate_http_registry(reg: dict, name: str, trust: str) -> list[str]:
         parsed_base
         and trust in {"private", "trusted", "public"}
         and parsed_base.scheme.lower() != "https"
+        and not _is_loopback_host(parsed_base.hostname)
     ):
         errors.append(f"registry {name!r} with trust {trust!r} must use an https base_url")
 

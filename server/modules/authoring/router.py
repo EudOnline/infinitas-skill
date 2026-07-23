@@ -14,6 +14,10 @@ from server.modules.access.credential_policy import (
     CredentialPolicyForbidden,
     assert_credential_mutation_allowed,
 )
+from server.modules.access.product_scope import (
+    ProductScopeForbidden,
+    assert_product_token_skill_scope,
+)
 from server.modules.authoring.content import MAX_BUNDLE_BYTES, ContentValidationError
 from server.modules.authoring.schemas import (
     SkillContentView,
@@ -77,18 +81,22 @@ def _require_authoring_principal(context: AccessContext) -> int:
     return context.principal.id
 
 
-def _require_product_object_scope(context: AccessContext, skill_id: int | None) -> None:
-    if context.credential.type != "product_token":
-        return
-    if context.credential.product_token_type != "publisher":  # noqa: S105
-        raise HTTPException(status_code=403, detail="publisher token required")
-    if skill_id is None:
-        raise HTTPException(
-            status_code=403,
-            detail="object-scoped publisher tokens cannot create new objects",
+def _require_product_scope(
+    context: AccessContext,
+    db: Session,
+    skill_id: int | None,
+    *,
+    allow_create: bool = False,
+) -> None:
+    try:
+        assert_product_token_skill_scope(
+            db,
+            context=context,
+            skill_id=skill_id,
+            allow_create=allow_create,
         )
-    if context.credential.product_object_id != skill_id:
-        raise HTTPException(status_code=403, detail="publisher token object scope mismatch")
+    except ProductScopeForbidden as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
 
 
 def _require_credential_mutation(context: AccessContext, db: Session) -> None:
@@ -109,7 +117,7 @@ def create_skill(
     db: Session = Depends(get_db),
 ) -> SkillView:
     principal_id = _require_authoring_principal(context)
-    _require_product_object_scope(context, None)
+    _require_product_scope(context, db, None, allow_create=True)
     _require_credential_mutation(context, db)
     try:
         skill = service.create_skill(
@@ -132,16 +140,19 @@ def list_skills(
     db: Session = Depends(get_db),
 ) -> list[SkillView]:
     principal_id = _require_authoring_principal(context)
-    if context.credential.type == "product_token":
+    if (
+        context.credential.type == "product_token"
+        and context.credential.product_scope_type != "namespace"
+    ):
         scoped_skill_id = context.credential.product_object_id
-        _require_product_object_scope(context, scoped_skill_id)
+        _require_product_scope(context, db, scoped_skill_id)
         if scoped_skill_id is None or offset:
             return []
         scoped_skill = service.get_skill_or_404(db, scoped_skill_id)
         if slug is not None and scoped_skill.slug != slug:
             return []
         return [SkillView.from_model(scoped_skill)]
-    _require_product_object_scope(context, None)
+    _require_product_scope(context, db, None, allow_create=True)
     return [
         SkillView.from_model(skill)
         for skill in service.list_skills(
@@ -167,7 +178,7 @@ async def upload_content(
     db: Session = Depends(get_db),
 ) -> SkillContentView:
     principal_id = _require_authoring_principal(context)
-    _require_product_object_scope(context, skill_id)
+    _require_product_scope(context, db, skill_id)
     _require_credential_mutation(context, db)
     raw_bundle = await _read_bundle_body(request)
     settings = get_settings()
@@ -209,7 +220,7 @@ def create_version(
     db: Session = Depends(get_db),
 ) -> SkillVersionView:
     principal_id = _require_authoring_principal(context)
-    _require_product_object_scope(context, skill_id)
+    _require_product_scope(context, db, skill_id)
     _require_credential_mutation(context, db)
     is_maintainer = context.user is not None and context.user.role == "maintainer"
     settings = get_settings()
@@ -245,7 +256,7 @@ def list_versions(
     db: Session = Depends(get_db),
 ) -> list[SkillVersionView]:
     principal_id = _require_authoring_principal(context)
-    _require_product_object_scope(context, skill_id)
+    _require_product_scope(context, db, skill_id)
     is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
         versions = service.list_skill_versions(
@@ -275,7 +286,7 @@ def get_version(
     db: Session = Depends(get_db),
 ) -> SkillVersionView:
     principal_id = _require_authoring_principal(context)
-    _require_product_object_scope(context, skill_id)
+    _require_product_scope(context, db, skill_id)
     is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
         found = service.get_skill_version(
@@ -303,7 +314,7 @@ def archive_skill(
     db: Session = Depends(get_db),
 ) -> SkillView:
     principal_id = _require_authoring_principal(context)
-    _require_product_object_scope(context, skill_id)
+    _require_product_scope(context, db, skill_id)
     is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
         skill = service.archive_skill(
@@ -330,7 +341,7 @@ def get_skill(
     db: Session = Depends(get_db),
 ) -> SkillView:
     principal_id = _require_authoring_principal(context)
-    _require_product_object_scope(context, skill_id)
+    _require_product_scope(context, db, skill_id)
     is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
         skill = service.get_skill_or_404(db, skill_id)

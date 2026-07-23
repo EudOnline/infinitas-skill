@@ -41,6 +41,10 @@ Authorization: Bearer <token>
 
 Credential scopes and release access are enforced by the access domain. Registry artifact reads may additionally require the configured registry read token.
 
+Namespace publisher and reader Tokens are created only from an authenticated browser Session.
+Publisher Tokens can create skills inside their issuing namespace; reader Tokens cannot mutate
+authoring, release, visibility, or share state.
+
 ### Browser requests
 
 The Web UI uses a signed session cookie. State-changing browser requests require the CSRF token issued by `GET /api/v1/auth/csrf`.
@@ -121,6 +125,8 @@ Link distribution.
 
 - `GET|POST /api/v1/object-tokens/objects/{object_id}/tokens`
 - `POST /api/v1/object-tokens/tokens/{token_id}/revoke`
+- `GET|POST /api/v1/namespace-tokens`
+- `POST /api/v1/namespace-tokens/{token_id}/revoke`
 - `GET|POST /api/v1/share-links/releases/{release_id}/share-links`
 - `POST /api/v1/share-links/{share_id}/resolve`
 - `POST /api/v1/share-links/{share_id}/revoke`
@@ -140,8 +146,11 @@ Link distribution.
 - `GET /api/v1/registry/discovery-index.json`
 - `GET /api/v1/registry/distributions.json`
 - `GET /api/v1/registry/compatibility.json`
+- `GET /api/v1/registry/trust-bootstrap.json`
 
-The compatibility document describes current runtime/platform support; it is not an adapter for superseded repository data.
+The trust bootstrap document contains only public signing configuration, allowed signers, and
+install integrity policy. The compatibility document describes current runtime/platform support;
+neither endpoint is an adapter for superseded repository data.
 
 ### Activity
 

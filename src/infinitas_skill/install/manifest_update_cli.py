@@ -17,7 +17,6 @@ from infinitas_skill.install.installed_integrity import (
 from infinitas_skill.install.installed_integrity_core import normalize_integrity_events
 from infinitas_skill.install.integrity_policy import load_install_integrity_policy
 from infinitas_skill.policy.skill_identity import normalize_skill_identity
-from infinitas_skill.root import ROOT
 
 
 def _persist_distribution_cache(target_dir: Path, source_info: dict[str, Any] | None) -> str | None:
@@ -72,21 +71,22 @@ def _persist_distribution_cache(target_dir: Path, source_info: dict[str, Any] | 
     return str(cache_root)
 
 
-if len(sys.argv) not in {7, 8}:
+if len(sys.argv) not in {8, 9}:
     print(
-        "usage: update-install-manifest <target-dir> <source-dir> <dest-dir> "
+        "usage: update-install-manifest <repo-root> <target-dir> <source-dir> <dest-dir> "
         "<action> <locked-version> <resolved-source-json> [resolution-plan-json]",
         file=sys.stderr,
     )
     raise SystemExit(1)
 
-target_dir = Path(sys.argv[1]).resolve()
-source_dir = Path(sys.argv[2]).resolve()
-dest_dir = Path(sys.argv[3]).resolve()
-action = sys.argv[4]
-locked_version = sys.argv[5]
-source_info = json.loads(sys.argv[6]) if sys.argv[6] else {}
-resolution_plan = json.loads(sys.argv[7]) if len(sys.argv) == 8 and sys.argv[7] else None
+repo_root = Path(sys.argv[1]).resolve()
+target_dir = Path(sys.argv[2]).resolve()
+source_dir = Path(sys.argv[3]).resolve()
+dest_dir = Path(sys.argv[4]).resolve()
+action = sys.argv[5]
+locked_version = sys.argv[6]
+source_info = json.loads(sys.argv[7]) if sys.argv[7] else {}
+resolution_plan = json.loads(sys.argv[8]) if len(sys.argv) == 9 and sys.argv[8] else None
 manifest_path = target_dir / ".infinitas-skill-install-manifest.json"
 meta_path = dest_dir / "_meta.json"
 source_meta_path = source_dir / "_meta.json"
@@ -99,7 +99,6 @@ with open(source_meta_path, "r", encoding="utf-8") as f:
 identity = normalize_skill_identity(meta)
 source_identity = normalize_skill_identity(source_meta)
 
-repo_root = ROOT
 repo_url: str | None
 try:
     repo_url = subprocess.check_output(

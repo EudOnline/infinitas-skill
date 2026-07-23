@@ -149,3 +149,10 @@ class RegistryCompatibilityView(BaseModel):
     schema_version: int
     generated_at: str
     skills: list[RegistryCompatibilityEntryView] = Field(default_factory=list)
+
+
+class RegistryTrustBootstrapView(BaseModel):
+    schema_version: int
+    signing: dict[str, Any]
+    allowed_signers: str
+    install_integrity_policy: dict[str, Any]

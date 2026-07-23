@@ -12,6 +12,25 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         default=os.environ.get("INFINITAS_REGISTRY_API_BASE_URL", "http://127.0.0.1:8000"),
         help="Hosted registry API base URL",
     )
+
+
+def build_registry_bootstrap_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog=prog or "infinitas registry bootstrap",
+        description="Configure a Hosted Registry and install its public trust policy",
+    )
+    parser.add_argument("name", help="Registry source name in lowercase kebab-case")
+    parser.add_argument("base_url", help="Hosted catalog base URL")
+    parser.add_argument("--repo-root", default=".")
+    parser.add_argument(
+        "--token-env",
+        default="INFINITAS_REGISTRY_READ_TOKEN",
+        help="Environment variable containing the Registry reader token",
+    )
+    parser.add_argument("--set-default", action="store_true")
+    parser.add_argument("--force-trust", action="store_true")
+    parser.add_argument("--json", action="store_true")
+    return parser
     parser.add_argument(
         "--token",
         default=os.environ.get("INFINITAS_REGISTRY_API_TOKEN", ""),

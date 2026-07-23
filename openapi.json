@@ -2438,6 +2438,27 @@
         }
       }
     },
+    "/api/v1/registry/trust-bootstrap.json": {
+      "get": {
+        "tags": [
+          "registry"
+        ],
+        "summary": "Registry Trust Bootstrap",
+        "operationId": "registry_trust_bootstrap_api_v1_registry_trust_bootstrap_json_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistryTrustBootstrapView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/registry/{registry_path}": {
       "get": {
         "tags": [
@@ -3170,6 +3191,242 @@
         ],
         "summary": "Revoke Object Token",
         "operationId": "revoke_object_token_api_v1_object_tokens_tokens__token_id__revoke_post",
+        "parameters": [
+          {
+            "name": "token_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Token Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "infinitas_auth_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Infinitas Auth Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductTokenView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/namespace-tokens": {
+      "post": {
+        "tags": [
+          "namespace-tokens"
+        ],
+        "summary": "Create Namespace Token",
+        "operationId": "create_namespace_token_api_v1_namespace_tokens_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "infinitas_auth_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Infinitas Auth Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NamespaceTokenCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductTokenCreateView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      },
+      "get": {
+        "tags": [
+          "namespace-tokens"
+        ],
+        "summary": "List Namespace Tokens",
+        "operationId": "list_namespace_tokens_api_v1_namespace_tokens_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "infinitas_auth_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Infinitas Auth Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductTokenListView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/namespace-tokens/{token_id}/revoke": {
+      "post": {
+        "tags": [
+          "namespace-tokens"
+        ],
+        "summary": "Revoke Namespace Token",
+        "operationId": "revoke_namespace_token_api_v1_namespace_tokens__token_id__revoke_post",
         "parameters": [
           {
             "name": "token_id",
@@ -5613,6 +5870,62 @@
         ],
         "title": "LogoutResponse"
       },
+      "NamespaceTokenCreateRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "reader",
+              "publisher"
+            ],
+            "title": "Type"
+          },
+          "issued_for": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issued For"
+          },
+          "expires_in_days": {
+            "type": "integer",
+            "maximum": 3650.0,
+            "minimum": 1.0,
+            "title": "Expires In Days",
+            "default": 90
+          },
+          "max_daily_publishes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Daily Publishes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "NamespaceTokenCreateRequest"
+      },
       "ObjectTokenCreateRequest": {
         "properties": {
           "name": {
@@ -6670,6 +6983,36 @@
           "versions"
         ],
         "title": "RegistrySkillView"
+      },
+      "RegistryTrustBootstrapView": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "title": "Schema Version"
+          },
+          "signing": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Signing"
+          },
+          "allowed_signers": {
+            "type": "string",
+            "title": "Allowed Signers"
+          },
+          "install_integrity_policy": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Install Integrity Policy"
+          }
+        },
+        "type": "object",
+        "required": [
+          "schema_version",
+          "signing",
+          "allowed_signers",
+          "install_integrity_policy"
+        ],
+        "title": "RegistryTrustBootstrapView"
       },
       "RegistryVersionView": {
         "properties": {

@@ -6,13 +6,14 @@ from sqlalchemy.orm import Session
 from server.db import get_db
 from server.modules.access.authn import AccessContext
 from server.modules.access.authz import can_access_release, require_any_scope
+from server.modules.access.namespace_tokens import router as namespace_tokens_router
 from server.modules.access.object_tokens import router as object_tokens_router
 from server.modules.access.schemas import AccessIdentityView, ReleaseAccessCheckView
 from server.modules.access.share_links_router import router as share_links_router
 from server.modules.identity.auth import get_current_access_context
 
 router = APIRouter(prefix="/api/v1/access", tags=["access"])
-routers = (router, object_tokens_router, share_links_router)
+routers = (router, object_tokens_router, namespace_tokens_router, share_links_router)
 
 
 def _identity_view(context: AccessContext) -> AccessIdentityView:

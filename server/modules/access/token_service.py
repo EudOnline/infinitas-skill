@@ -103,6 +103,13 @@ def _token_scopes(token_type: TokenType) -> set[str]:
     return scopes
 
 
+def _namespace_token_scopes(token_type: TokenType) -> set[str]:
+    scopes = {"artifact:download", "registry:read"}
+    if token_type == "publisher":  # noqa: S105
+        scopes.update({"exposure:write", "registry:publish", "release:write", "skill:create"})
+    return scopes
+
+
 def _token_metadata(credential: Credential) -> dict:
     state = "revoked" if credential.revoked_at is not None else "active"
     return {
@@ -325,5 +332,98 @@ def revoke_product_token(db: Session, *, token_id: int, actor: ActorRef) -> dict
             actor_ref=_actor_ref(actor),
             owner_principal_id=actor.principal.id,
             payload={"object_id": object_id},
+        )
+    return _token_metadata(credential)
+
+
+def create_namespace_token(
+    db: Session,
+    *,
+    name: str,
+    token_type: TokenType,
+    issued_for: str | None,
+    expires_in_days: int | None,
+    max_daily_publishes: int | None,
+    actor: ActorRef,
+) -> tuple[str, dict]:
+    normalized_name = str(name or "").strip()
+    if not normalized_name:
+        raise TokenConflictError("token name is required")
+    raw_token = f"tok_{secrets.token_urlsafe(24)}"
+    expires_at = utcnow() + timedelta(days=expires_in_days) if expires_in_days else None
+    effective_publish_limit = max_daily_publishes
+    if token_type == "publisher" and effective_publish_limit is None:  # noqa: S105
+        effective_publish_limit = 100
+    policy = {
+        "readonly": token_type == "reader",  # noqa: S105
+        "allowed_object_kinds": ["skill"],
+        **(
+            {"max_daily_publishes": effective_publish_limit}
+            if effective_publish_limit is not None
+            else {}
+        ),
+    }
+    credential = Credential(
+        principal_id=actor.principal.id,
+        grant_id=None,
+        type="product_token",
+        product_token_name=normalized_name,
+        product_token_type=token_type,
+        product_object_id=None,
+        product_scope_type="namespace",
+        product_scope_id=actor.principal.id,
+        issued_for=str(issued_for or "").strip(),
+        hashed_secret=identity_service.hash_token(raw_token),
+        scopes_json=identity_service.encode_scopes(_namespace_token_scopes(token_type)),
+        resource_selector_json=json.dumps(
+            {"namespace_id": actor.principal.id, "_policy": policy},
+            ensure_ascii=False,
+            sort_keys=True,
+        ),
+        expires_at=expires_at,
+        created_at=utcnow(),
+    )
+    db.add(credential)
+    db.flush()
+    audit_service.append_audit_event(
+        db,
+        aggregate_type="token",
+        aggregate_id=str(credential.id),
+        event_type="namespace_token.created",
+        actor_ref=_actor_ref(actor),
+        owner_principal_id=actor.principal.id,
+        payload={"token_type": token_type, "name": normalized_name},
+    )
+    return raw_token, _token_metadata(credential)
+
+
+def list_namespace_tokens(db: Session, *, actor: ActorRef) -> list[dict]:
+    credentials = db.scalars(
+        select(Credential)
+        .where(Credential.type == "product_token")
+        .where(Credential.product_scope_type == "namespace")
+        .where(Credential.product_scope_id == actor.principal.id)
+        .order_by(Credential.id.desc())
+    ).all()
+    return [_token_metadata(credential) for credential in credentials]
+
+
+def revoke_namespace_token(db: Session, *, token_id: int, actor: ActorRef) -> dict:
+    credential = db.get(Credential, token_id)
+    if credential is None or credential.product_scope_type != "namespace":
+        raise TokenNotFoundError("namespace token not found")
+    if credential.product_scope_id != actor.principal.id:
+        raise TokenForbiddenError("namespace token access denied")
+    if credential.revoked_at is None:
+        cast(Any, credential).revoked_at = utcnow()
+        db.add(credential)
+        audit_service.append_audit_event(
+            db,
+            aggregate_type="token",
+            aggregate_id=str(credential.id),
+            event_type="namespace_token.revoked",
+            actor_ref=_actor_ref(actor),
+            owner_principal_id=actor.principal.id,
+            payload={"token_type": credential.product_token_type},
         )
     return _token_metadata(credential)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hmac
+import json
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -131,6 +132,35 @@ def _resolve_registry_audience(db: Session, request: Request) -> RegistryAudienc
     if context.credential.grant_id is not None:
         return RegistryAudience(mode="grant", context=context)
     return RegistryAudience(mode="me", context=context)
+
+
+def _load_trust_json(path: Path) -> dict:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise NotFoundError(f"registry trust file unavailable: {path.name}") from exc
+    if not isinstance(payload, dict):
+        raise NotFoundError(f"registry trust file is invalid: {path.name}")
+    return payload
+
+
+def build_registry_trust_bootstrap_payload(
+    settings: Settings, db: Session, request: Request
+) -> dict:
+    _resolve_registry_audience(db, request)
+    config_root = settings.repo_path / "config"
+    try:
+        allowed_signers = (config_root / "allowed_signers").read_text(encoding="utf-8")
+    except OSError as exc:
+        raise NotFoundError("registry allowed signers are unavailable") from exc
+    if not allowed_signers.strip():
+        raise NotFoundError("registry allowed signers are empty")
+    return {
+        "schema_version": 1,
+        "signing": _load_trust_json(config_root / "signing.json"),
+        "allowed_signers": allowed_signers,
+        "install_integrity_policy": _load_trust_json(config_root / "install-integrity-policy.json"),
+    }
 
 
 def _partition_runtime_targets(targets: list[str]) -> dict[str, list[str]]:

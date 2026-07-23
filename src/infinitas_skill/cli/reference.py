@@ -47,6 +47,7 @@ from infinitas_skill.policy.review_commands import (
 )
 from infinitas_skill.registry.cli import build_registry_parser
 from infinitas_skill.registry.parser_reference import (
+    build_registry_bootstrap_parser,
     build_registry_exposures_parser,
     build_registry_releases_parser,
     build_registry_reviews_parser,
@@ -208,6 +209,11 @@ def _openclaw_and_policy_sections() -> list[Section]:
 def _registry_sections() -> list[Section]:
     return [
         ("infinitas registry", build_registry_parser, "infinitas registry"),
+        (
+            "infinitas registry bootstrap",
+            build_registry_bootstrap_parser,
+            "infinitas registry bootstrap",
+        ),
         ("infinitas registry skills", build_registry_skills_parser, "infinitas registry skills"),
         (
             "infinitas registry versions",

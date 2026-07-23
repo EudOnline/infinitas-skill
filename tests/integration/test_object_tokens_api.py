@@ -214,6 +214,59 @@ def test_object_publisher_token_publishes_only_its_bound_object(
     assert cross_object_version.status_code == 403, cross_object_version.text
     assert "object scope mismatch" in cross_object_version.json()["detail"]
 
+    other_content = upload_skill_content(
+        client,
+        other_object.json()["id"],
+        "other-object",
+        "1.0.0",
+        admin_headers,
+    )
+    other_version = client.post(
+        f"/api/v1/skills/{other_object.json()['id']}/versions",
+        headers=admin_headers,
+        json={"version": "1.0.0", "content_id": other_content["content_id"]},
+    )
+    assert other_version.status_code == 201, other_version.text
+    other_release = client.post(
+        f"/api/v1/versions/{other_version.json()['id']}/releases",
+        headers=admin_headers,
+    )
+    assert other_release.status_code == 201, other_release.text
+    from server.worker import run_worker_loop
+
+    assert run_worker_loop(limit=2) == 2
+    cross_exposure = client.post(
+        f"/api/v1/releases/{other_release.json()['id']}/exposures",
+        headers=publisher_headers,
+        json={
+            "audience_type": "grant",
+            "listing_mode": "direct_only",
+            "install_mode": "enabled",
+            "requested_review_mode": "none",
+        },
+    )
+    assert cross_exposure.status_code == 403, cross_exposure.text
+    assert "object scope mismatch" in cross_exposure.json()["detail"]
+
+    other_grant = client.post(
+        f"/api/v1/releases/{other_release.json()['id']}/exposures",
+        headers=admin_headers,
+        json={
+            "audience_type": "grant",
+            "listing_mode": "direct_only",
+            "install_mode": "enabled",
+            "requested_review_mode": "none",
+        },
+    )
+    assert other_grant.status_code == 201, other_grant.text
+    cross_share = client.post(
+        f"/api/v1/share-links/releases/{other_release.json()['id']}/share-links",
+        headers=publisher_headers,
+        json={"name": "cross-object-share"},
+    )
+    assert cross_share.status_code == 403, cross_share.text
+    assert "object scope mismatch" in cross_share.json()["detail"]
+
     exposure_response = client.post(
         f"/api/v1/releases/{current_release_id}/exposures",
         headers=publisher_headers,

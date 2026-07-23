@@ -176,6 +176,7 @@ def _update_install_manifest_entry(
     resolution_plan: dict | None = None,
 ) -> tuple[int, dict | None]:
     args = [
+        str(repo_root),
         target_dir,
         source_dir,
         dest_dir,

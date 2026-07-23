@@ -69,6 +69,13 @@ def test_http_registry_rejects_insecure_base_url_for_trusted_tiers(trust: str) -
     )
 
 
+@pytest.mark.parametrize("host", ["localhost", "127.0.0.1", "[::1]"])
+def test_http_registry_allows_insecure_loopback_for_local_development(host: str) -> None:
+    cfg = _base_config()
+    cfg["registries"][0]["base_url"] = f"http://{host}:8000/api/v1/registry"
+    assert _errors(cfg) == []
+
+
 def test_http_registry_rejects_invalid_auth_modes() -> None:
     cfg = _base_config()
     cfg["registries"][0]["auth"] = {"mode": "cookie"}

@@ -19,9 +19,10 @@ This quickstart reflects the current product split:
 | Variable | Default | Description |
 |---|---|---|
 | `INFINITAS_REGISTRY_API_BASE_URL` | `http://127.0.0.1:8000` | Hosted registry base URL |
-| `INFINITAS_REGISTRY_API_TOKEN` | — | Admin token for the hosted control plane |
+| `INFINITAS_REGISTRY_API_TOKEN` | — | Namespace publisher Token for Agent authoring |
 
-`INFINITAS_REGISTRY_API_TOKEN` is the admin token. Agent tokens are issued from the web admin flow and should be scoped separately.
+Issue this Token from the authenticated `/settings` page. Browser administration continues to
+use Session Cookie plus CSRF and does not expose the bootstrap personal credential.
 
 For a hosted server, complete the [Coolify deployment runbook](../ops/coolify-deployment.md)
 or the [generic hosted deployment runbook](../ops/server-deployment.md) first.
@@ -69,6 +70,11 @@ Recommended usage:
 - use `reader` for search, metadata reads, and install/fetch access
 - use `publisher` for publishing and release creation
 
+Issue namespace Tokens from `/settings`. A namespace publisher can create new skills and publish
+only inside the issuing principal's namespace. A namespace reader is read-only and is the
+recommended credential for Registry sync and long-lived install operations. Object and release
+Tokens remain the narrower choice after a skill already exists.
+
 Agents without a Token can be granted temporary Release access through a Share Link with
 an expiry and optional password. Share credentials use an explicit exchange flow:
 
@@ -107,7 +113,7 @@ version, waits for the Release, and creates the requested Exposure:
 
 ```bash
 export INFINITAS_REGISTRY_API_BASE_URL=https://skills.infinitas.fun
-export INFINITAS_REGISTRY_API_TOKEN=<publisher-token>
+export INFINITAS_REGISTRY_API_TOKEN=<namespace-publisher-token>
 
 uv run infinitas registry publish ./example-skill \
   --version 1.0.0 \
@@ -176,17 +182,18 @@ Share Links are for temporary distribution. Configure a read-token-backed HTTP s
 install, switch, and rollback operations:
 
 ```bash
-export INFINITAS_REGISTRY_READ_TOKEN='<registry-read-token>'
-uv run infinitas registry sources --repo-root . add-http hosted \
+export INFINITAS_REGISTRY_READ_TOKEN='<namespace-reader-token>'
+uv run infinitas registry bootstrap hosted \
   https://skills.infinitas.fun/api/v1/registry \
-  --token-env INFINITAS_REGISTRY_READ_TOKEN --set-default
+  --repo-root . --token-env INFINITAS_REGISTRY_READ_TOKEN --set-default --json
 uv run infinitas registry sources --repo-root . sync hosted --json
 uv run infinitas install exact <publisher>/<skill> ~/.openclaw/skills --version 1.0.0 --registry hosted --json
 uv run infinitas install switch <publisher>/<skill> ~/.openclaw/skills --to-version 1.1.0 --registry hosted --json
 uv run infinitas install rollback <publisher>/<skill> ~/.openclaw/skills --json
 ```
 
-The config stores only the environment variable name. Never persist a Share token for rollback.
+Bootstrap also installs the Registry's public signing trust root and integrity policy. The config
+stores only the environment variable name. Never persist a Share token for rollback.
 
 ## Step 8: Build the new frontend with `kimi cli`
 

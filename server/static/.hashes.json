@@ -1,5 +1,5 @@
 {
-  "css/output.css": "be0c674b523f",
+  "css/output.css": "53a3cab275fb",
   "app.js": "c6667eeb4e41",
   "auth-session.js": "7501f00f95cf",
   "modules/api.js": "81c9b423467b",
@@ -21,6 +21,7 @@
   "modules/search-install-panel.js": "bd4a18f6d013",
   "modules/search-results.js": "7160211b7c82",
   "modules/search.js": "2def1f0d3b61",
+  "modules/settings.js": "f0cd62775fe7",
   "modules/table-interactions.js": "56ad7bc555ac",
   "modules/theme.js": "98677430642a",
   "modules/toast.js": "ea270f4ccbcc"

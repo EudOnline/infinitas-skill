@@ -9,9 +9,16 @@ from sqlalchemy.orm import Session
 import server.modules.access.share_links as share_service
 from server.db import get_db, session_scope
 from server.modules.access.authn import AccessContext
+from server.modules.access.models import AccessGrant
+from server.modules.access.product_scope import (
+    ProductScopeForbidden,
+    assert_product_token_skill_scope,
+)
 from server.modules.access.schemas import ShareLinkListView, ShareLinkView
+from server.modules.exposure.models import Exposure
 from server.modules.identity.auth import get_current_access_context
 from server.modules.identity.guards import require_actor_ref as _require_actor
+from server.modules.release.models import Release
 from server.rate_limit import DBRateLimiter, resolve_rate_limit_key
 
 router = APIRouter(prefix="/api/v1/share-links", tags=["share-links"])
@@ -62,6 +69,23 @@ def _enforce_share_rate_limit(request: Request, *, operation: str, share_id: int
     )
 
 
+def _require_release_scope(db: Session, *, context: AccessContext, release_id: int) -> None:
+    release = db.get(Release, release_id)
+    if release is None:
+        return
+    try:
+        assert_product_token_skill_scope(db, context=context, skill_id=release.skill_id)
+    except ProductScopeForbidden as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+
+def _require_share_scope(db: Session, *, context: AccessContext, share_id: int) -> None:
+    grant = db.get(AccessGrant, share_id)
+    exposure = db.get(Exposure, grant.exposure_id) if grant is not None else None
+    if exposure is not None:
+        _require_release_scope(db, context=context, release_id=exposure.release_id)
+
+
 @router.post(
     "/releases/{release_id}/share-links",
     response_model=ShareLinkView,
@@ -76,6 +100,7 @@ def create_share_link(
 ) -> dict[str, Any]:
     _enforce_share_rate_limit(request, operation="create", share_id=None)
     actor = _require_actor(context)
+    _require_release_scope(db, context=context, release_id=release_id)
     try:
         share = share_service.create_share_link(
             db,
@@ -102,6 +127,7 @@ def list_share_links(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     actor = _require_actor(context)
+    _require_release_scope(db, context=context, release_id=release_id)
     try:
         items = share_service.list_share_links(db, release_id=release_id, actor=actor)
     except share_service.ShareLinkError as exc:
@@ -116,6 +142,7 @@ def revoke_share_link(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     actor = _require_actor(context)
+    _require_share_scope(db, context=context, share_id=share_id)
     try:
         share = share_service.revoke_share_link(db, share_id=share_id, actor=actor)
     except share_service.ShareLinkError as exc:

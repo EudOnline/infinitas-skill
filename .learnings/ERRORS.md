@@ -2834,3 +2834,103 @@ Use `infinitas registry sources --repo-root <path> add-http ...` and the same or
 - **Notes**: Re-ran the configuration and validation commands with the documented parser ordering.
 
 ---
+
+## [ERR-20260723-007] cross-process-acceptance-assumptions
+
+**Logged**: 2026-07-23T18:35:00Z
+**Priority**: medium
+**Status**: resolved
+**Area**: tests
+
+### Summary
+The first cross-process lifecycle test assumed a ready artifact directory, HTTPS transport, queue ordering, and a reusable receipt path.
+
+### Error
+```
+readiness remained 503; only ready releases can be exposed;
+trusted HTTP registry requires HTTPS; publish receipt source digest mismatch
+```
+
+### Context
+- Readiness correctly requires the artifact directory to exist.
+- The worker processed an earlier queued Release before the target Release.
+- Trusted Registry URLs rejected loopback HTTP along with remote HTTP.
+- A changed source was stopped by its existing receipt before reaching the server conflict check.
+
+### Suggested Fix
+Create explicit runtime directories, process the intended queue depth, permit only loopback HTTP for local tests, and use a separate receipt when testing server-side immutability.
+
+### Metadata
+- Reproducible: yes
+- Related Files: tests/integration/test_agent_lifecycle_acceptance.py, tests/integration/test_object_tokens_api.py, src/infinitas_skill/install/registry_sources.py
+
+### Resolution
+- **Resolved**: 2026-07-23T18:35:00Z
+- **Notes**: The acceptance harness now models each boundary explicitly and passes end to end.
+
+---
+
+## [ERR-20260723-008] manifest-update-ignored-repo-root
+
+**Logged**: 2026-07-23T18:35:00Z
+**Priority**: high
+**Status**: resolved
+**Area**: backend
+
+### Summary
+The install manifest subprocess ignored the caller's `--repo-root` and could verify against the source repository's trust root instead.
+
+### Error
+```
+InstalledIntegrityError: Could not verify signature.
+```
+
+### Context
+- Initial remote materialization used the requested Agent workspace trust root.
+- `manifest_update_cli` later imported the global package `ROOT` for its second verification.
+- Earlier production tests could pass accidentally when the package repository trusted the same signer.
+
+### Suggested Fix
+Pass the resolved repository root as an explicit subprocess argument and use it for integrity policy and attestation verification.
+
+### Metadata
+- Reproducible: yes
+- Related Files: src/infinitas_skill/install/common.py, src/infinitas_skill/install/manifest_update_cli.py
+
+### Resolution
+- **Resolved**: 2026-07-23T18:35:00Z
+- **Notes**: The subprocess contract now carries repo root explicitly; cross-process bootstrap, exact install, switch, and rollback pass with an isolated trust root.
+
+---
+
+## [ERR-20260723-009] registry-cli-module-budget
+
+**Logged**: 2026-07-23T18:45:00Z
+**Priority**: medium
+**Status**: resolved
+**Area**: backend
+
+### Summary
+Adding Registry bootstrap pushed the main Registry CLI module above the 600-line production ceiling.
+
+### Error
+```
+src/infinitas_skill/registry/cli.py: 630
+```
+
+### Context
+- The full behavior suite passed, but the maintainability gate correctly rejected the oversized parser module.
+- A first extraction left the file exactly at 600 lines with no useful growth margin.
+
+### Suggested Fix
+Move cohesive parser concerns into focused modules instead of compressing code to the threshold.
+
+### Metadata
+- Reproducible: yes
+- Related Files: src/infinitas_skill/registry/cli.py, src/infinitas_skill/registry/bootstrap_cli.py, src/infinitas_skill/registry/connection_cli.py
+
+### Resolution
+- **Resolved**: 2026-07-23T18:45:00Z
+- **Notes**: Bootstrap and connection parser configuration now live in focused modules; the main CLI is 588 lines.
+
+---
