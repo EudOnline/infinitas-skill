@@ -165,6 +165,8 @@ def list_library_releases_from_scope(
                 "created_at": humanize_timestamp(iso_stamp(release.created_at)),
                 "ready_at": humanize_timestamp(iso_stamp(release.ready_at)),
                 "visibility": visibility_payload(exposure),
+                "content_digest": version.content_digest if version is not None else "-",
+                "metadata_digest": version.metadata_digest if version is not None else "-",
             }
         )
     return rows
@@ -223,6 +225,8 @@ def get_library_release_detail(
             "created_at": humanize_timestamp(iso_stamp(release.created_at)),
             "ready_at": humanize_timestamp(iso_stamp(release.ready_at)),
             "readiness_state": release.state or "unknown",
+            "content_digest": version.content_digest if version is not None else "-",
+            "metadata_digest": version.metadata_digest if version is not None else "-",
             "exposure_policy": build_exposure_policy(),
             **distribution_summary,
         },

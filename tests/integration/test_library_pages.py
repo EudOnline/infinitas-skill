@@ -6,6 +6,7 @@ from pathlib import Path
 
 from sqlalchemy import event as sqlalchemy_event
 
+from tests.helpers.hosted_content import upload_skill_content
 from tests.integration.conftest import _prepare_library_client
 from tests.integration.test_search_install_contract import create_exposure
 
@@ -231,6 +232,66 @@ def test_library_object_and_release_pages_render(
     assert release_detail.status_code == 200, release_detail.text
     assert "Release" in release_detail.text
     assert "private" in release_detail.text
+
+
+def test_library_compares_two_immutable_versions(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    client = _prepare_library_client(
+        monkeypatch,
+        tmp_path=tmp_path,
+        temp_repo_copy=temp_repo_copy,
+        signing_key=signing_key,
+    )
+    headers = {"Authorization": "Bearer fixture-maintainer-token"}
+    listing = client.get("/api/v1/library", headers=headers).json()
+    skill = next(item for item in listing["items"] if item["kind"] == "skill")
+    object_id = int(skill["id"])
+    content = upload_skill_content(
+        client,
+        object_id,
+        "test-library-skill",
+        "2.0.0",
+        headers,
+    )
+    version = client.post(
+        f"/api/v1/skills/{object_id}/versions",
+        headers=headers,
+        json={"version": "2.0.0", "content_id": content["content_id"]},
+    )
+    assert version.status_code == 201, version.text
+    release = client.post(
+        f"/api/v1/versions/{version.json()['id']}/releases",
+        headers=headers,
+    )
+    assert release.status_code == 201, release.text
+
+    from server.worker import run_worker_loop
+
+    run_worker_loop(limit=1)
+    object_page = client.get(f"/library/{object_id}?lang=en", headers=headers)
+    assert object_page.status_code == 200
+    assert "Baseline" in object_page.text
+    assert "Candidate" in object_page.text
+
+    comparison = client.get(
+        f"/library/{object_id}/versions/compare",
+        headers=headers,
+        params={"left": "1.0.0", "right": "2.0.0", "lang": "en"},
+    )
+    assert comparison.status_code == 200, comparison.text
+    assert "1.0.0" in comparison.text
+    assert "2.0.0" in comparison.text
+    assert "Content digest" in comparison.text
+    assert "sha256:" in comparison.text
+    assert "changed" in comparison.text
+
+    releases = client.get(f"/api/v1/library/{object_id}/releases", headers=headers)
+    assert releases.status_code == 200
+    assert all(item["content_digest"].startswith("sha256:") for item in releases.json()["items"])
 
 
 def test_library_release_page_shows_real_artifacts_and_distribution_summary(

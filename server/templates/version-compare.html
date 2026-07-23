@@ -1,0 +1,52 @@
+{% extends "layout-kawaii.html" %}
+{% from "macros.html" import console_table_shell %}
+
+{% block body %}
+<section class="kawaii-card animate-in mb-4">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="font-display text-xl font-extrabold text-kawaii-ink">{{ object.display_name }}</h1>
+      <p class="text-sm text-kawaii-ink-soft"><code>{{ left.version }}</code> → <code>{{ right.version }}</code></p>
+    </div>
+    <a class="kawaii-button kawaii-button--ghost text-sm" href="{{ object_href }}">{{ ui.get('action_back_to_object', 'Back') }}</a>
+  </div>
+</section>
+
+<section class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+  {% for item in [left, right] %}
+  <article class="kawaii-card animate-in">
+    <h2 class="font-display text-base font-bold text-kawaii-ink mb-3">{{ item.version }}</h2>
+    <dl class="detail-meta">
+      <div><dt>{{ ui.get('label_content_digest', 'Content digest') }}</dt><dd><code class="table-code">{{ item.content_digest }}</code></dd></div>
+      <div><dt>{{ ui.get('label_metadata_digest', 'Metadata digest') }}</dt><dd><code class="table-code">{{ item.metadata_digest }}</code></dd></div>
+      <div><dt>{{ ui.get('label_created', 'Created') }}</dt><dd>{{ item.created_at }}</dd></div>
+    </dl>
+  </article>
+  {% endfor %}
+</section>
+
+<section class="kawaii-card animate-in mb-4">
+  <div class="flex flex-wrap gap-2 mb-3">
+    <span class="kawaii-badge {{ 'kawaii-badge--pending' if content_changed else 'kawaii-badge--success' }}">{{ ui.get('label_content', 'Content') }}: {{ 'changed' if content_changed else 'same' }}</span>
+    <span class="kawaii-badge {{ 'kawaii-badge--pending' if metadata_changed else 'kawaii-badge--success' }}">{{ ui.get('label_metadata', 'Metadata') }}: {{ 'changed' if metadata_changed else 'same' }}</span>
+  </div>
+  {% call console_table_shell(
+    ui.get('section_changed_fields', 'Changed metadata fields'),
+    ui.get('empty_changed_fields', 'No metadata changes'),
+    changed_fields
+  ) %}
+  <table>
+    <thead><tr><th>{{ ui.get('table_col_field', 'Field') }}</th><th>{{ left.version }}</th><th>{{ right.version }}</th></tr></thead>
+    <tbody>
+      {% for item in changed_fields %}
+      <tr>
+        <td><code>{{ item.name }}</code></td>
+        <td><code class="table-code">{{ item.left | tojson }}</code></td>
+        <td><code class="table-code">{{ item.right | tojson }}</code></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endcall %}
+</section>
+{% endblock %}

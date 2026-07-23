@@ -141,11 +141,17 @@ function initCreateShareForm() {
         `/api/v1/share-links/releases/${encodeURIComponent(releaseId)}/share-links`,
         payload,
       );
+      const installCommand = `infinitas install from-share '${data.resolve_url}' '<target-dir>'`;
       renderResult(result, uiText('share_created', 'Share link created'), [
         {
           label: uiText('share_resolve_url', 'Resolve URL'),
           value: data.resolve_url,
           copyValue: data.resolve_url,
+        },
+        {
+          label: uiText('share_agent_install_command', 'Agent install command'),
+          value: installCommand,
+          copyValue: installCommand,
         },
         {
           label: suppliedPassword

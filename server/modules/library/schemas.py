@@ -45,6 +45,8 @@ class LibraryReleaseView(BaseModel):
     created_at: str
     ready_at: str | None = None
     visibility: LibraryVisibilityView
+    content_digest: str
+    metadata_digest: str
 
 
 class LibraryObjectDetailView(BaseModel):

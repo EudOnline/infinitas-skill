@@ -20,6 +20,10 @@
     <span>{{ release.created_at }}</span>
     {% if release.ready_at %}<span>{{ release.ready_at }}</span>{% endif %}
   </div>
+  <dl class="detail-meta mt-3">
+    <div><dt>{{ ui.get('label_content_digest', 'Content digest') }}</dt><dd><code class="table-code">{{ release.content_digest }}</code></dd></div>
+    <div><dt>{{ ui.get('label_metadata_digest', 'Metadata digest') }}</dt><dd><code class="table-code">{{ release.metadata_digest }}</code></dd></div>
+  </dl>
 </section>
 
 <section class="kawaii-card animate-in mb-4">

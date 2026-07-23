@@ -45,6 +45,8 @@ class LibraryReleaseReadModel(TypedDict):
     created_at: str
     ready_at: str
     visibility: VisibilityReadModel
+    content_digest: str
+    metadata_digest: str
 
 
 class ArtifactReadModel(TypedDict):

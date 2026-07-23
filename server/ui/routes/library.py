@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import cast
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
@@ -14,6 +14,7 @@ from server.modules.library.objects import get_library_object_detail, list_libra
 from server.modules.library.queries import load_library_scope
 from server.modules.library.releases import get_library_release_detail
 from server.modules.library.shares import list_library_share_rows
+from server.modules.library.versions import compare_library_versions
 from server.ui.activity import list_activity_rows
 from server.ui.auth_state import require_lifecycle_actor
 from server.ui.context import blocked_actor_response, build_admin_context, templates_for
@@ -65,6 +66,8 @@ def library_object_page(
             "created_at": item["created_at"] or item["ready_at"] or "-",
             "detail_href": with_lang(f"/library/{object_id}/releases/{item['release_id']}", lang),
             "shares_href": with_lang("/manage#shares", lang),
+            "content_digest": item["content_digest"],
+            "metadata_digest": item["metadata_digest"],
         }
         for item in detail["releases"]
     ]
@@ -74,7 +77,44 @@ def library_object_page(
     context["share_items"] = list_library_share_rows(
         db, actor=actor, lang=lang, object_id=object_id, scope=scope
     )
+    context["compare_href"] = with_lang(f"/library/{object_id}/versions/compare", lang)
     return templates_for(request).TemplateResponse(request, "object-detail.html", context)
+
+
+@router.get("/library/{object_id}/versions/compare", response_class=HTMLResponse)
+def library_version_compare_page(
+    object_id: int,
+    request: Request,
+    left: str = Query(min_length=1, max_length=64),
+    right: str = Query(min_length=1, max_length=64),
+    db: Session = Depends(get_db),
+) -> Response:
+    actor = _actor(request, db)
+    if not isinstance(actor, AccessContext):
+        return actor
+    lang = resolve_language(request)
+    comparison = compare_library_versions(
+        db,
+        actor=actor,
+        object_id=object_id,
+        left=left,
+        right=right,
+    )
+    if comparison is None:
+        return RedirectResponse(url=with_lang(f"/library/{object_id}", lang), status_code=303)
+    context = build_admin_context(
+        request,
+        actor,
+        title=pick_lang(lang, "版本对比", "Version comparison"),
+        content=pick_lang(lang, "比较不可变版本摘要。", "Compare immutable version digests."),
+        page_kicker=pick_lang(lang, "版本", "Versions"),
+        page_eyebrow=pick_lang(lang, "对比", "Compare"),
+    )
+    context.update(comparison)
+    context["object_href"] = with_lang(f"/library/{object_id}", lang)
+    context["compare_href"] = with_lang(f"/library/{object_id}/versions/compare", lang)
+    context["suppress_console_header"] = True
+    return templates_for(request).TemplateResponse(request, "version-compare.html", context)
 
 
 @router.get("/library/{object_id}/releases/{release_id}", response_class=HTMLResponse)
