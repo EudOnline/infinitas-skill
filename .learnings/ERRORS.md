@@ -28,6 +28,41 @@ Match both HTTP method and path in registry client test doubles.
 - **Notes**: Restricted both version-list and exposure-list fake branches to GET requests.
 
 ---
+## [ERR-20260723-004] shell-json-regex-extraction
+
+**Logged**: 2026-07-23T16:40:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: infra
+
+### Summary
+Nested shell and Perl escaping failed while extracting credential candidates from JSONL history.
+
+### Error
+```text
+Unmatched ( in regex
+```
+
+### Context
+- The command attempted to combine JSONL, shell quoting, and a Perl regular expression.
+- No credential value was printed or changed.
+
+### Suggested Fix
+Use `jq` to select structured string fields first, then apply a minimal parser; avoid nested
+regexes over raw JSON when the data is already structured.
+
+### Metadata
+
+- Reproducible: yes
+- Related Files: .learnings/ERRORS.md
+
+### Resolution
+
+- **Resolved**: 2026-07-23T16:40:00Z
+- **Notes**: Credential values remained unreadable in output; the next extraction attempt will use
+  `jq`-selected fields only.
+
+---
 
 ## [ERR-20260722-002] copied-venv-console-script-shebang
 

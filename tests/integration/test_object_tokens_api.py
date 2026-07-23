@@ -149,6 +149,20 @@ def test_object_publisher_token_publishes_only_its_bound_object(
     assert token_response.status_code == 201, token_response.text
     raw_token = token_response.json()["raw_token"]
     publisher_headers = {"Authorization": f"Bearer {raw_token}"}
+    scoped_listing = client.get(
+        "/api/v1/skills",
+        headers=publisher_headers,
+        params={"slug": "test-library-skill"},
+    )
+    assert scoped_listing.status_code == 200, scoped_listing.text
+    assert [item["id"] for item in scoped_listing.json()] == [object_id]
+    other_listing = client.get(
+        "/api/v1/skills",
+        headers=publisher_headers,
+        params={"slug": "missing-or-other-skill"},
+    )
+    assert other_listing.status_code == 200, other_listing.text
+    assert other_listing.json() == []
     content = upload_skill_content(
         client, object_id, "test-library-skill", "2.0.0", publisher_headers
     )

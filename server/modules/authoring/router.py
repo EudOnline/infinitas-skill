@@ -132,6 +132,15 @@ def list_skills(
     db: Session = Depends(get_db),
 ) -> list[SkillView]:
     principal_id = _require_authoring_principal(context)
+    if context.credential.type == "product_token":
+        scoped_skill_id = context.credential.product_object_id
+        _require_product_object_scope(context, scoped_skill_id)
+        if scoped_skill_id is None or offset:
+            return []
+        scoped_skill = service.get_skill_or_404(db, scoped_skill_id)
+        if slug is not None and scoped_skill.slug != slug:
+            return []
+        return [SkillView.from_model(scoped_skill)]
     _require_product_object_scope(context, None)
     return [
         SkillView.from_model(skill)
