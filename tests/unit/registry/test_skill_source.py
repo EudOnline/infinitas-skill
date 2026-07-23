@@ -120,6 +120,36 @@ def test_builds_deterministic_validated_bundle(tmp_path: Path) -> None:
     assert "adapt/tests/smoke.md" in names
 
 
+def test_bundle_permissions_are_stable_across_umask(tmp_path: Path) -> None:
+    source = _write_plain_skill(tmp_path / "source")
+    result = stage_skill_source(
+        source,
+        tmp_path / "staged",
+        publisher="tdcasual",
+        version="1.0.0",
+    )
+    generated = result.skill_dir / "generated.sh"
+    generated.write_text("#!/bin/sh\n", encoding="utf-8")
+    generated.chmod(0o775)
+
+    first = tmp_path / "first.tar.gz"
+    second = tmp_path / "second.tar.gz"
+    build_skill_source_bundle(result, first, repo_root=Path.cwd())
+
+    for path in result.skill_dir.rglob("*"):
+        if path.is_file() and path != generated:
+            path.chmod(0o644)
+    generated.chmod(0o755)
+    build_skill_source_bundle(result, second, repo_root=Path.cwd())
+
+    assert first.read_bytes() == second.read_bytes()
+    with tarfile.open(first, "r:gz") as archive:
+        modes = {member.name: member.mode for member in archive.getmembers()}
+    assert modes["adapt/SKILL.md"] == 0o644
+    assert modes["adapt/_meta.json"] == 0o644
+    assert modes["adapt/generated.sh"] == 0o755
+
+
 def test_rejects_symlinks_before_staging(tmp_path: Path) -> None:
     source = _write_plain_skill(tmp_path / "source")
     (source / "linked.txt").symlink_to(source / "SKILL.md")

@@ -55,6 +55,10 @@ def deterministic_bundle(
                     rel = path.relative_to(skill_dir)
                     arcname = str(Path(root_dir) / rel)
                     info = archive.gettarinfo(str(path), arcname=arcname)
+                    # Normalize permissions so umask differences cannot change
+                    # the canonical bundle digest. The server applies the same
+                    # executable/non-executable policy while canonicalizing uploads.
+                    info.mode = 0o755 if info.mode & 0o111 else 0o644
                     info.uid = 0
                     info.gid = 0
                     info.uname = ""
