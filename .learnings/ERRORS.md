@@ -2770,3 +2770,67 @@ Import annotation-only symbols inside a `TYPE_CHECKING` block.
 - **Notes**: Added the annotation-only import.
 
 ---
+
+## [ERR-20260723-005] zsh-readonly-status-variable
+
+**Logged**: 2026-07-23T17:49:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+A production E2E shell wrapper used zsh's read-only `status` parameter for an exit code.
+
+### Error
+```
+zsh: read-only variable: status
+```
+
+### Context
+- The tested CLI command had already run, but assigning its exit code to `status` aborted the wrapper.
+- The repository shell is zsh, where `status` is a special read-only parameter.
+
+### Suggested Fix
+Use a neutral variable such as `exit_code` for captured process results in zsh scripts.
+
+### Metadata
+- Reproducible: yes
+- Related Files: .learnings/ERRORS.md
+
+### Resolution
+- **Resolved**: 2026-07-23T17:49:00Z
+- **Notes**: Re-ran the E2E wrapper with `exit_code`.
+
+---
+
+## [ERR-20260723-006] registry-sources-global-option-order
+
+**Logged**: 2026-07-23T17:53:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+The production E2E command placed the registry sources `--repo-root` option after the subcommand.
+
+### Error
+```
+infinitas: error: unrecognized arguments: --repo-root <temporary-repo>
+```
+
+### Context
+- `--repo-root` belongs to `infinitas registry sources`, not to `add-http` or `check`.
+- Argparse requires the option before the selected sources subcommand.
+
+### Suggested Fix
+Use `infinitas registry sources --repo-root <path> add-http ...` and the same ordering for other sources commands.
+
+### Metadata
+- Reproducible: yes
+- Related Files: src/infinitas_skill/registry/cli.py, docs/reference/registry-cli.md
+
+### Resolution
+- **Resolved**: 2026-07-23T17:53:00Z
+- **Notes**: Re-ran the configuration and validation commands with the documented parser ordering.
+
+---
