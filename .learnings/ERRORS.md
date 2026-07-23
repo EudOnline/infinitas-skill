@@ -28,6 +28,174 @@ Match both HTTP method and path in registry client test doubles.
 - **Notes**: Restricted both version-list and exposure-list fake branches to GET requests.
 
 ---
+
+## [ERR-20260723-010] zsh-empty-template-glob
+
+**Logged**: 2026-07-23T19:27:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+A read-only template search failed because zsh rejected an unmatched filename glob before `rg` ran.
+
+### Error
+```
+zsh:1: no matches found: server/templates/library*
+```
+
+### Context
+- The command passed possible template paths as shell globs.
+- zsh `nomatch` treats an empty expansion as an error.
+- No product, deployment, or test state was changed.
+
+### Suggested Fix
+Search a stable directory and express filename selection with `rg --glob`, so an empty match remains a successful search result.
+
+### Metadata
+- Reproducible: yes
+- Related Files: server/templates/
+
+### Resolution
+- **Resolved**: 2026-07-23T19:27:00Z
+- **Notes**: Replaced shell-expanded optional paths with directory-scoped `rg --glob` searches.
+
+---
+
+## [ERR-20260723-011] production-health-response-assumption
+
+**Logged**: 2026-07-23T19:30:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+The first production lifecycle harness expected a generic `status` field from health endpoints whose documented contract uses `ok` and readiness `checks`.
+
+### Error
+```text
+KeyError: 'status'
+```
+
+### Context
+- Both production endpoints returned HTTP 200.
+- The failure occurred before login, Token issuance, or product mutation.
+- `/healthz` returns `ok` and `service`; `/readyz` additionally returns component `checks`.
+
+### Suggested Fix
+Assert the endpoint's actual OpenAPI response fields and component readiness instead of assuming a common health payload shape.
+
+### Metadata
+- Reproducible: yes
+- Related Files: server/modules/system/router.py, openapi.json
+
+### Resolution
+- **Resolved**: 2026-07-23T19:30:00Z
+- **Notes**: The production harness now validates `ok` and all readiness checks.
+
+---
+
+## [ERR-20260723-012] anonymous-share-check-used-session-client
+
+**Logged**: 2026-07-23T19:34:00Z
+**Priority**: medium
+**Status**: resolved
+**Area**: tests
+
+### Summary
+The production harness reused an authenticated browser client for an anonymous Share resolve check, so CSRF middleware returned 403 before the route could return the expected revoked-state 410.
+
+### Error
+```text
+RuntimeError: revoked Share expected HTTP 410, got 403
+```
+
+### Context
+- Share installation and revocation both completed successfully.
+- The reused client still carried the admin Session Cookie.
+- An unsafe request with that Cookie correctly requires CSRF, even when the target route also supports anonymous callers.
+- The Share service checks revoked state before capability verification and correctly maps it to HTTP 410.
+
+### Suggested Fix
+Use a fresh cookie-free HTTP client for anonymous contract checks; keep browser Session requests and anonymous capability requests in separate clients.
+
+### Metadata
+- Reproducible: yes
+- Related Files: server/middleware.py, server/modules/access/share_links_router.py, /tmp/infinitas_prod_acceptance.py
+
+### Resolution
+- **Resolved**: 2026-07-23T19:34:00Z
+- **Notes**: The production harness now performs the revoked Share check from a clean anonymous client.
+
+---
+
+## [ERR-20260723-013] live-browser-login-redirect-assumption
+
+**Logged**: 2026-07-23T19:39:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+The live Chromium check assumed every successful standalone login redirects to `/manage`, while the current entry context correctly returned to `/?lang=en`.
+
+### Error
+```text
+Timeout 30000ms exceeded waiting for navigation to **/manage**
+navigated to https://skills.infinitas.fun/?lang=en
+```
+
+### Context
+- The login API response was HTTP 200.
+- The redirect target depends on the entry flow and pending navigation state.
+- No production mutation was performed.
+
+### Suggested Fix
+Assert the login response and authenticated access to the intended protected page; do not couple authentication success to one landing path.
+
+### Metadata
+- Reproducible: yes
+- Related Files: server/static/js/modules/auth-session.js, tests/e2e/test_auth_flows.py
+
+### Resolution
+- **Resolved**: 2026-07-23T19:39:00Z
+- **Notes**: The live browser check now navigates directly to the target object after confirming login success.
+
+---
+
+## [ERR-20260723-014] dns-wrapper-did-not-load-skill-env
+
+**Logged**: 2026-07-23T19:43:00Z
+**Priority**: medium
+**Status**: resolved
+**Area**: infra
+
+### Summary
+Coolify domain inspection and the unified DNS wrapper reported missing provider credentials even though the DNS skill had a protected `.env` containing the supported variable names.
+
+### Error
+```text
+No DNS provider credentials found.
+```
+
+### Context
+- `/home/tdcasual/.agents/skills/dnspod/.env` exists with mode 0600.
+- `dns.sh` detects process environment and `TOOLS.md` but does not load its sibling `.env`.
+- Loading the protected file in a child process and explicitly selecting DNSPod returned the authoritative record without exposing credentials.
+
+### Suggested Fix
+The external DNS skill should load its protected sibling `.env` consistently with other skill wrappers, or its documentation should require callers to source it explicitly.
+
+### Metadata
+- Reproducible: yes
+- Related Files: /home/tdcasual/.agents/skills/dnspod/scripts/dns.sh, /home/tdcasual/.agents/skills/dnspod/.env
+
+### Resolution
+- **Resolved**: 2026-07-23T19:43:00Z
+- **Notes**: Production verification explicitly loaded the protected environment and confirmed the DNSPod A record targets Green JP at 45.153.245.25.
+
+---
+
 ## [ERR-20260723-004] shell-json-regex-extraction
 
 **Logged**: 2026-07-23T16:40:00Z
