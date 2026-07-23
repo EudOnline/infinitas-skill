@@ -1,5 +1,34 @@
 # Errors
 
+## [ERR-20260723-001] hosted-publish-test-route-shadowing
+
+**Logged**: 2026-07-23T14:10:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+A broad fake HTTP path match returned the GET version list response for POST version creation.
+
+### Error
+```text
+HostedPublishError: registry version create response is invalid
+```
+
+### Context
+- The fake matched only the URL and ignored the HTTP method.
+- Production request routing and implementation were not involved.
+- The same pattern recurred once for the exposure list/create pair.
+
+### Suggested Fix
+Match both HTTP method and path in registry client test doubles.
+
+### Resolution
+- **Resolved**: 2026-07-23T14:11:00Z
+- **Notes**: Restricted both version-list and exposure-list fake branches to GET requests.
+
+---
+
 ## [ERR-20260722-002] copied-venv-console-script-shebang
 
 **Logged**: 2026-07-22T18:02:00Z
@@ -2641,5 +2670,68 @@ Create an isolated temporary bare repository for verification and run `git -C <t
 
 - **Resolved**: 2026-07-22T18:54:00Z
 - **Notes**: Bundle verification now runs in a temporary bare repository and has a real Git bundle regression test from a non-repository working directory.
+
+---
+## [ERR-20260723-002] project-python-command
+
+**Logged**: 2026-07-23T00:00:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+The repository environment does not provide a bare `python` command.
+
+### Error
+```
+zsh:1: command not found: python
+```
+
+### Context
+- Attempted a syntax check with `python -m py_compile`.
+- The documented project toolchain uses `.venv/bin/python`.
+
+### Suggested Fix
+Run Python commands through `.venv/bin/python` in this repository.
+
+### Metadata
+- Reproducible: yes
+- Related Files: AGENTS.md
+
+### Resolution
+- **Resolved**: 2026-07-23T00:00:00Z
+- **Notes**: Switched the validation command to `.venv/bin/python`.
+
+---
+
+## [ERR-20260723-003] registry-cli-forward-type
+
+**Logged**: 2026-07-23T00:00:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: backend
+
+### Summary
+A quoted return annotation was not imported for static analysis.
+
+### Error
+```
+F821 Undefined name `HostedRegistryClient`
+```
+
+### Context
+- Added a lazy runtime import to avoid loading publication code at CLI startup.
+- Ruff still requires the annotation symbol under `TYPE_CHECKING`.
+
+### Suggested Fix
+Import annotation-only symbols inside a `TYPE_CHECKING` block.
+
+### Metadata
+- Reproducible: yes
+- Related Files: src/infinitas_skill/registry/cli.py
+
+### Resolution
+- **Resolved**: 2026-07-23T00:00:00Z
+- **Notes**: Added the annotation-only import.
 
 ---

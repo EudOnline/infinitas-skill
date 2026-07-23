@@ -80,31 +80,19 @@ def _success_payload(context: dict, target_dir: str, applied: int) -> dict:
     }
 
 
-def run_install_exact(
+def _run_install_resolved(
     *,
-    root: str | Path,
+    repo_root: Path,
     name: str,
     target_dir: str,
-    requested_version: str | None = None,
-    source_registry: str | None = None,
-    snapshot: str | None = None,
-    force: bool = False,
-    no_deps: bool = False,
-    as_json: bool = False,
+    resolved_payload: dict,
+    requested_version: str | None,
+    force: bool,
+    no_deps: bool,
+    as_json: bool,
 ) -> int:
-    repo_root = _repo_root(str(root))
     cleanup_dirs: list[str] = []
     try:
-        resolve_code, resolved_payload = _resolve_source(
-            repo_root=repo_root,
-            name=name,
-            version=requested_version,
-            registry=source_registry,
-            snapshot=snapshot,
-        )
-        if resolve_code != 0:
-            _emit_payload(resolved_payload, as_json=as_json)
-            return resolve_code
         materialize_code, materialized_payload = _materialize_source(
             repo_root=repo_root,
             source_payload=resolved_payload,
@@ -113,13 +101,11 @@ def run_install_exact(
             _emit_payload(materialized_payload, as_json=as_json)
             return materialize_code
         _remember_cleanup_dir(cleanup_dirs, materialized_payload)
-
         source_dir = materialized_payload.get("materialized_path") or ""
         check_code, check_payload = _check_skill_dir(repo_root=repo_root, skill_dir=source_dir)
         if check_code != 0:
             _emit_payload(check_payload or {}, as_json=as_json)
             return check_code
-
         plan_code, plan_payload = _load_resolution_plan(
             repo_root=repo_root,
             skill_dir=source_dir,
@@ -131,7 +117,6 @@ def run_install_exact(
         if plan_code != 0:
             _emit_payload(plan_payload, as_json=as_json)
             return plan_code
-
         root_step = _root_step(plan_payload)
         root_name = root_step.get("name") or resolved_payload.get("name") or name
         root_dest = Path(target_dir) / root_name
@@ -163,7 +148,6 @@ def run_install_exact(
             }
             _emit_payload(payload, as_json=as_json)
             return 1
-
         apply_code, applied, apply_payload = _apply_plan(
             repo_root=repo_root,
             target_dir=target_dir,
@@ -176,7 +160,41 @@ def run_install_exact(
         if apply_code != 0:
             _emit_payload(apply_payload or {}, as_json=as_json)
             return apply_code
-
         return _emit_payload(_success_payload(context, target_dir, applied), as_json=as_json)
     finally:
         _cleanup_materialized_dirs(cleanup_dirs)
+
+
+def run_install_exact(
+    *,
+    root: str | Path,
+    name: str,
+    target_dir: str,
+    requested_version: str | None = None,
+    source_registry: str | None = None,
+    snapshot: str | None = None,
+    force: bool = False,
+    no_deps: bool = False,
+    as_json: bool = False,
+) -> int:
+    repo_root = _repo_root(str(root))
+    resolve_code, resolved_payload = _resolve_source(
+        repo_root=repo_root,
+        name=name,
+        version=requested_version,
+        registry=source_registry,
+        snapshot=snapshot,
+    )
+    if resolve_code != 0:
+        _emit_payload(resolved_payload, as_json=as_json)
+        return resolve_code
+    return _run_install_resolved(
+        repo_root=repo_root,
+        name=name,
+        target_dir=target_dir,
+        resolved_payload=resolved_payload,
+        requested_version=requested_version,
+        force=force,
+        no_deps=no_deps,
+        as_json=as_json,
+    )

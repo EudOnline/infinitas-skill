@@ -114,6 +114,8 @@ def upload_skill_content(
     max_pending_bytes_per_principal: int,
 ) -> SkillContent:
     skill = get_skill_or_404(db, skill_id)
+    if skill.status == "archived":
+        raise ForbiddenError("archived skills cannot receive new content")
     assert_namespace_owner(
         db,
         skill,
@@ -257,6 +259,8 @@ def create_skill_version_snapshot(
     skill = repository.get_skill(db, skill_id)
     if skill is None:
         raise NotFoundError("skill not found")
+    if skill.status == "archived":
+        raise ForbiddenError("archived skills cannot receive new versions")
     assert_namespace_owner(
         db,
         skill,
@@ -362,11 +366,57 @@ def create_skill(
     return skill
 
 
+def archive_skill(
+    db: Session,
+    *,
+    skill_id: int,
+    actor_principal_id: int,
+    is_maintainer: bool = False,
+) -> Skill:
+    skill = get_skill_or_404(db, skill_id)
+    assert_namespace_owner(
+        db,
+        skill,
+        principal_id=actor_principal_id,
+        is_maintainer=is_maintainer,
+    )
+    if skill.status != "archived":
+        skill.status = "archived"
+        audit_service.append_audit_event(
+            db,
+            aggregate_type="skill",
+            aggregate_id=str(skill.id),
+            event_type="skill.archived",
+            actor_ref=f"principal:{actor_principal_id}",
+            owner_principal_id=skill.namespace_id,
+            payload={"object_id": skill.id, "slug": skill.slug},
+        )
+        db.flush()
+    return skill
+
+
 def get_skill_or_404(db: Session, skill_id: int) -> Skill:
     skill = repository.get_skill(db, skill_id)
     if skill is None:
         raise NotFoundError("skill not found")
     return skill
+
+
+def list_skills(
+    db: Session,
+    *,
+    namespace_id: int,
+    slug: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[Skill]:
+    return repository.list_skills(
+        db,
+        namespace_id=namespace_id,
+        slug=slug,
+        limit=limit,
+        offset=offset,
+    )
 
 
 def list_skill_versions(
@@ -386,6 +436,27 @@ def list_skill_versions(
         is_maintainer=is_maintainer,
     )
     return repository.list_skill_versions(db, skill_id=skill.id, limit=limit, offset=offset)
+
+
+def get_skill_version(
+    db: Session,
+    *,
+    skill_id: int,
+    version: str,
+    actor_principal_id: int,
+    is_maintainer: bool = False,
+) -> SkillVersion:
+    skill = get_skill_or_404(db, skill_id)
+    assert_namespace_owner(
+        db,
+        skill,
+        principal_id=actor_principal_id,
+        is_maintainer=is_maintainer,
+    )
+    found = repository.get_skill_version_by_version(db, skill_id=skill_id, version=version)
+    if found is None:
+        raise NotFoundError("skill version not found")
+    return found
 
 
 def _check_team_access(db: Session, namespace_id: int, principal_id: int) -> bool:

@@ -25,6 +25,28 @@ def _require_exposure_principal(context: AccessContext) -> int:
     return context.principal.id
 
 
+@router.get("/releases/{release_id}/exposures", response_model=list[ExposureView])
+def list_exposures(
+    release_id: int,
+    context: AccessContext = Depends(get_current_access_context),
+    db: Session = Depends(get_db),
+) -> list[ExposureView]:
+    principal_id = _require_exposure_principal(context)
+    is_maintainer = context.user is not None and context.user.role == "maintainer"
+    try:
+        exposures = service.list_release_exposures(
+            db,
+            release_id=release_id,
+            actor_principal_id=principal_id,
+            is_maintainer=is_maintainer,
+        )
+    except service.NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except service.ForbiddenError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    return [ExposureView.from_model(exposure) for exposure in exposures]
+
+
 @router.post(
     "/releases/{release_id}/exposures",
     response_model=ExposureView,

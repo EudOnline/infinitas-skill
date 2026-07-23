@@ -248,6 +248,37 @@ def test_list_skill_versions_requires_authentication() -> None:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
+def test_skill_resolution_and_version_detail_are_exact_and_owner_scoped() -> None:
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-authoring-resolution-test-"))
+    try:
+        client = _client(tmpdir)
+        skill_id = _create_skill(client, slug="resolution-skill")
+        content = upload_skill_content(client, skill_id, "resolution-skill", "1.0.0", HEADERS)
+        created = client.post(
+            f"/api/v1/skills/{skill_id}/versions",
+            headers=HEADERS,
+            json={"version": "1.0.0", "content_id": content["content_id"]},
+        )
+        assert created.status_code == 201, created.text
+
+        resolved = client.get(
+            "/api/v1/skills",
+            headers=HEADERS,
+            params={"slug": "resolution-skill"},
+        )
+        assert resolved.status_code == 200
+        assert [item["id"] for item in resolved.json()] == [skill_id]
+
+        detail = client.get(
+            f"/api/v1/skills/{skill_id}/versions/1.0.0",
+            headers=HEADERS,
+        )
+        assert detail.status_code == 200
+        assert detail.json()["content_digest"] == content["sha256"]
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 def test_upload_requires_gzip_content_type_and_installable_files() -> None:
     tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-authoring-media-test-"))
     try:
@@ -268,5 +299,50 @@ def test_upload_requires_gzip_content_type_and_installable_files() -> None:
         )
         assert invalid.status_code == 422
         assert "_meta.json" in invalid.text
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_archive_is_idempotent_and_blocks_content_and_versions() -> None:
+    tmpdir = Path(tempfile.mkdtemp(prefix="infinitas-authoring-archive-test-"))
+    try:
+        client = _client(tmpdir)
+        skill_id = _create_skill(client, slug="archive-skill")
+        pending = upload_skill_content(client, skill_id, "archive-skill", "1.0.0", HEADERS)
+
+        first = client.post(f"/api/v1/skills/{skill_id}/archive", headers=HEADERS)
+        second = client.post(f"/api/v1/skills/{skill_id}/archive", headers=HEADERS)
+        assert first.status_code == 200, first.text
+        assert second.status_code == 200, second.text
+        assert first.json()["status"] == second.json()["status"] == "archived"
+
+        upload = client.post(
+            f"/api/v1/skills/{skill_id}/content",
+            headers={**HEADERS, "Content-Type": "application/gzip"},
+            content=build_skill_bundle("archive-skill", "1.1.0"),
+        )
+        assert upload.status_code == 403
+        assert "archived" in upload.text
+
+        version = client.post(
+            f"/api/v1/skills/{skill_id}/versions",
+            headers=HEADERS,
+            json={"version": "1.0.0", "content_id": pending["content_id"]},
+        )
+        assert version.status_code == 403
+        assert "archived" in version.text
+
+        from server.db import get_session_factory
+        from server.modules.audit.models import AuditEvent
+
+        with get_session_factory()() as session:
+            events = (
+                session.query(AuditEvent)
+                .filter(AuditEvent.aggregate_type == "skill")
+                .filter(AuditEvent.aggregate_id == str(skill_id))
+                .filter(AuditEvent.event_type == "skill.archived")
+                .all()
+            )
+            assert len(events) == 1
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)

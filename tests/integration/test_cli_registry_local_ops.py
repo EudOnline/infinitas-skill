@@ -47,6 +47,61 @@ def test_registry_sources_sync_handles_local_only_source() -> None:
     assert Path(payload["path"]) == ROOT
 
 
+def test_registry_sources_add_http_writes_valid_idempotent_config(tmp_path: Path) -> None:
+    result = _run_cli(
+        [
+            "registry",
+            "sources",
+            "--repo-root",
+            str(tmp_path),
+            "add-http",
+            "hosted",
+            "https://skills.example.com/api/v1/registry/",
+            "--token-env",
+            "HOSTED_READ_TOKEN",
+            "--set-default",
+            "--json",
+        ]
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["changed"] is True
+    config_path = tmp_path / "config" / "registry-sources.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    assert config["default_registry"] == "hosted"
+    assert config["registries"] == [
+        {
+            "name": "hosted",
+            "kind": "http",
+            "base_url": "https://skills.example.com/api/v1/registry",
+            "enabled": True,
+            "priority": 100,
+            "trust": "private",
+            "auth": {"mode": "token", "env": "HOSTED_READ_TOKEN"},
+        }
+    ]
+    assert "token-value" not in config_path.read_text(encoding="utf-8")
+
+    repeated = _run_cli(
+        [
+            "registry",
+            "sources",
+            "--repo-root",
+            str(tmp_path),
+            "add-http",
+            "hosted",
+            "https://skills.example.com/api/v1/registry",
+            "--token-env",
+            "HOSTED_READ_TOKEN",
+            "--set-default",
+            "--json",
+        ]
+    )
+    assert repeated.returncode == 0, repeated.stderr
+    assert json.loads(repeated.stdout)["changed"] is False
+
+
 def test_registry_catalog_build_check_is_stable() -> None:
     result = _run_cli(["registry", "catalog", "build", "--check", "--json"])
 

@@ -15,6 +15,7 @@ from infinitas_skill.discovery.cli import (
     build_discovery_search_parser,
 )
 from infinitas_skill.install.exact import build_install_exact_parser
+from infinitas_skill.install.hosted_share import build_install_from_share_parser
 from infinitas_skill.install.planning import (
     build_check_install_target_parser,
     build_resolve_install_plan_parser,
@@ -44,11 +45,12 @@ from infinitas_skill.policy.review_commands import (
     build_recommend_reviewers_parser,
     build_review_status_parser,
 )
-from infinitas_skill.registry.cli import (
+from infinitas_skill.registry.cli import build_registry_parser
+from infinitas_skill.registry.parser_reference import (
     build_registry_exposures_parser,
-    build_registry_parser,
     build_registry_releases_parser,
     build_registry_reviews_parser,
+    build_registry_shares_parser,
     build_registry_skills_parser,
     build_registry_tokens_parser,
     build_registry_versions_parser,
@@ -69,7 +71,7 @@ from infinitas_skill.server.ops import (
     build_server_worker_parser,
 )
 
-GENERATED_CLI_REFERENCE_LAST_REVIEWED = "2026-07-20"
+GENERATED_CLI_REFERENCE_LAST_REVIEWED = "2026-07-23"
 ParserFactory = Callable[..., ArgumentParser]
 Section = tuple[str, ParserFactory, str]
 
@@ -142,6 +144,11 @@ def _discovery_and_install_sections() -> list[Section]:
             "infinitas install resolve-skill",
         ),
         ("infinitas install exact", build_install_exact_parser, "infinitas install exact"),
+        (
+            "infinitas install from-share",
+            build_install_from_share_parser,
+            "infinitas install from-share",
+        ),
         ("infinitas install by-name", build_install_by_name_parser, "infinitas install by-name"),
         ("infinitas install sync", build_install_sync_parser, "infinitas install sync"),
         (
@@ -217,6 +224,7 @@ def _registry_sections() -> list[Section]:
             build_registry_exposures_parser,
             "infinitas registry exposures",
         ),
+        ("infinitas registry shares", build_registry_shares_parser, "infinitas registry shares"),
         ("infinitas registry tokens", build_registry_tokens_parser, "infinitas registry tokens"),
         ("infinitas registry reviews", build_registry_reviews_parser, "infinitas registry reviews"),
     ]

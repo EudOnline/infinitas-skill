@@ -3,6 +3,10 @@ from __future__ import annotations
 import argparse
 
 from infinitas_skill.install.exact import configure_install_exact_parser, run_install_exact
+from infinitas_skill.install.hosted_share import (
+    configure_install_from_share_parser,
+    run_install_from_share_command,
+)
 from infinitas_skill.install.integrity import (
     configure_install_list_parser,
     configure_install_repair_parser,
@@ -38,6 +42,27 @@ from infinitas_skill.install.upgrade import (
     configure_install_upgrade_parser,
     run_install_upgrade,
 )
+
+
+def _configure_from_share_command(subparsers: argparse._SubParsersAction) -> None:
+    from_share = subparsers.add_parser(
+        "from-share",
+        help="Resolve and install an immutable hosted share",
+        description="Resolve and install an immutable hosted share",
+    )
+    configure_install_from_share_parser(from_share)
+    from_share.set_defaults(
+        _handler=lambda args: run_install_from_share_command(
+            root=args.repo_root,
+            resolve_url=args.resolve_url,
+            target_dir=args.target_dir,
+            password_env=args.password_env,
+            secret_env=args.secret_env,
+            force=args.force,
+            no_deps=args.no_deps,
+            as_json=args.json,
+        )
+    )
 
 
 def _configure_planning_and_resolution(subparsers: argparse._SubParsersAction) -> None:
@@ -110,6 +135,8 @@ def _configure_planning_and_resolution(subparsers: argparse._SubParsersAction) -
             as_json=args.json,
         )
     )
+
+    _configure_from_share_command(subparsers)
 
     by_name = subparsers.add_parser(
         "by-name",

@@ -164,6 +164,32 @@ def test_exposure_uses_skill_default_visibility_profile(
     }.issubset(event_types)
 
 
+def test_release_exposures_can_be_listed_for_idempotent_publish(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    _prepare_signing_repo(temp_repo_copy, signing_key)
+    configure_env(tmp_path)
+    os.environ["INFINITAS_SERVER_REPO_PATH"] = str(temp_repo_copy)
+    from server.app import create_app
+
+    client = TestClient(create_app())
+    headers = {"Authorization": "Bearer fixture-maintainer-token"}
+    release_id = create_ready_release(client, headers, slug="list-exposure-skill")
+    created = client.post(
+        f"/api/v1/releases/{release_id}/exposures",
+        headers=headers,
+        json={"audience_type": "private"},
+    )
+    assert created.status_code == 201, created.text
+
+    listed = client.get(f"/api/v1/releases/{release_id}/exposures", headers=headers)
+    assert listed.status_code == 200
+    assert [item["id"] for item in listed.json()] == [created.json()["id"]]
+
+
 def test_patch_exposure_rejects_requested_review_mode_mutation(
     monkeypatch,
     tmp_path: Path,

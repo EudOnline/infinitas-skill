@@ -14,6 +14,26 @@ def get_skill(db: Session, skill_id: int) -> Skill | None:
     return db.get(Skill, skill_id)
 
 
+def list_skills(
+    db: Session,
+    *,
+    namespace_id: int,
+    slug: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[Skill]:
+    query = (
+        select(Skill)
+        .where(Skill.namespace_id == namespace_id)
+        .order_by(Skill.updated_at.desc(), Skill.id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    if slug:
+        query = query.where(Skill.slug == slug)
+    return list(db.scalars(query).all())
+
+
 def get_skill_content_by_public_id(db: Session, public_id: str) -> SkillContent | None:
     return db.scalar(select(SkillContent).where(SkillContent.public_id == public_id))
 
@@ -142,6 +162,19 @@ def list_skill_versions(
     if offset is not None:
         stmt = stmt.offset(offset)
     return list(db.scalars(stmt).all())
+
+
+def get_skill_version_by_version(
+    db: Session,
+    *,
+    skill_id: int,
+    version: str,
+) -> SkillVersion | None:
+    return db.scalar(
+        select(SkillVersion)
+        .where(SkillVersion.skill_id == skill_id)
+        .where(SkillVersion.version == version)
+    )
 
 
 def consume_skill_content(db: Session, content_id: int) -> bool:

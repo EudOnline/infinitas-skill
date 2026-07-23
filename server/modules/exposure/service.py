@@ -63,6 +63,27 @@ def get_exposure_or_404(db: Session, exposure_id: int) -> Exposure:
     return exposure
 
 
+def list_release_exposures(
+    db: Session,
+    *,
+    release_id: int,
+    actor_principal_id: int,
+    is_maintainer: bool = False,
+) -> list[Exposure]:
+    release = release_service.get_release_or_404(db, release_id)
+    _assert_release_owner(
+        db,
+        release,
+        principal_id=actor_principal_id,
+        is_maintainer=is_maintainer,
+    )
+    return list(
+        db.scalars(
+            select(Exposure).where(Exposure.release_id == release_id).order_by(Exposure.id.desc())
+        ).all()
+    )
+
+
 def _assert_release_owner(
     db: Session,
     release: Release,

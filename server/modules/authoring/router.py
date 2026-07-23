@@ -123,6 +123,28 @@ def create_skill(
     return SkillView.from_model(skill)
 
 
+@router.get("/skills", response_model=list[SkillView], responses=_AUTHORING_ERROR_RESPONSES)
+def list_skills(
+    slug: str | None = Query(default=None, min_length=1, max_length=200),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    context: AccessContext = Depends(get_current_access_context),
+    db: Session = Depends(get_db),
+) -> list[SkillView]:
+    principal_id = _require_authoring_principal(context)
+    _require_product_object_scope(context, None)
+    return [
+        SkillView.from_model(skill)
+        for skill in service.list_skills(
+            db,
+            namespace_id=principal_id,
+            slug=slug,
+            limit=limit,
+            offset=offset,
+        )
+    ]
+
+
 @router.post(
     "/skills/{skill_id}/content",
     response_model=SkillContentView,
@@ -230,6 +252,62 @@ def list_versions(
     except service.ForbiddenError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     return [SkillVersionView.from_model(version) for version in versions]
+
+
+@router.get(
+    "/skills/{skill_id}/versions/{version}",
+    response_model=SkillVersionView,
+    responses=_AUTHORING_ERROR_RESPONSES,
+)
+def get_version(
+    skill_id: int = PathParam(gt=0),
+    version: str = PathParam(min_length=5, max_length=64),
+    context: AccessContext = Depends(get_current_access_context),
+    db: Session = Depends(get_db),
+) -> SkillVersionView:
+    principal_id = _require_authoring_principal(context)
+    _require_product_object_scope(context, skill_id)
+    is_maintainer = context.user is not None and context.user.role == "maintainer"
+    try:
+        found = service.get_skill_version(
+            db,
+            skill_id=skill_id,
+            version=version,
+            actor_principal_id=principal_id,
+            is_maintainer=is_maintainer,
+        )
+    except service.NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except service.ForbiddenError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    return SkillVersionView.from_model(found)
+
+
+@router.post(
+    "/skills/{skill_id}/archive",
+    response_model=SkillView,
+    responses=_AUTHORING_ERROR_RESPONSES,
+)
+def archive_skill(
+    skill_id: int = PathParam(gt=0),
+    context: AccessContext = Depends(get_current_access_context),
+    db: Session = Depends(get_db),
+) -> SkillView:
+    principal_id = _require_authoring_principal(context)
+    _require_product_object_scope(context, skill_id)
+    is_maintainer = context.user is not None and context.user.role == "maintainer"
+    try:
+        skill = service.archive_skill(
+            db,
+            skill_id=skill_id,
+            actor_principal_id=principal_id,
+            is_maintainer=is_maintainer,
+        )
+    except service.NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except service.ForbiddenError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    return SkillView.from_model(skill)
 
 
 @router.get(
