@@ -2,7 +2,7 @@
 audience: operators, automation authors
 owner: repository maintainers
 source_of_truth: hosted registry CLI reference
-last_reviewed: 2026-07-19
+last_reviewed: 2026-07-23
 status: maintained
 ---
 
@@ -14,8 +14,10 @@ Complete reference for `infinitas registry` subcommands that interact with the h
 
 The product is split into two surfaces:
 
-- Web admin for human operators: `/manage` (consolidated console), `/settings`
-- Agent workflows for automation: publish, read, Visibility, Token, Share Link, and Activity APIs
+- Web admin for human operators: `/manage` and `/settings`; read-only skill/version inspection,
+  digest comparison, and Share Link distribution
+- Agent workflows for automation: normalization, publish, immutable versioning, install, switch,
+  rollback, read, Visibility, Token, Share Link, and Activity APIs
 
 `INFINITAS_REGISTRY_API_TOKEN` is the admin token used to operate the hosted control plane. Agent-facing tokens are minted from the access surface and should be scoped separately, with at least `reader` and `publisher` capabilities.
 
@@ -88,6 +90,35 @@ Use the API or CLI to:
 |---|---|---|---|
 | `--base-url` | `INFINITAS_REGISTRY_API_BASE_URL` | `http://127.0.0.1:8000` | Registry API base URL |
 | `--token` | `INFINITAS_REGISTRY_API_TOKEN` | *(empty)* | Authentication token |
+
+## Agent-first lifecycle
+
+The preferred path for a local Codex/OpenClaw directory is:
+
+```bash
+uv run infinitas registry publish ./skill --version 1.0.0 --visibility private
+uv run infinitas registry versions list <skill_id>
+uv run infinitas registry versions compare <skill_id> 1.0.0 1.1.0
+uv run infinitas registry shares create <release_id> --name agent-demo
+uv run infinitas install from-share '<resolve-url>' ~/.openclaw/skills
+```
+
+`registry publish` creates an immutable version and Release, reuses identical content, rejects a
+same-version digest conflict, and records a resumable 0600 receipt without secrets. The Web UI
+does not create or edit skill content. It reads the same immutable records and can distribute a
+Share Link from the Release page.
+
+For long-lived install and rollback, configure a read-token-backed source once:
+
+```bash
+uv run infinitas registry sources --repo-root . add-http hosted \
+  https://skills.infinitas.fun/api/v1/registry \
+  --token-env INFINITAS_REGISTRY_READ_TOKEN --set-default
+uv run infinitas registry sources --repo-root . sync hosted --json
+```
+
+The file contains no token value. `install switch` and `install rollback` use the configured
+Registry source; a short-lived Share credential must not be persisted for those operations.
 
 ## Object model
 

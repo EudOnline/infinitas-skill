@@ -2,7 +2,7 @@
 audience: Coolify operators and release maintainers
 owner: repository maintainers
 source_of_truth: docker-compose.coolify.yml and hosted runtime contract
-last_reviewed: 2026-07-21
+last_reviewed: 2026-07-23
 status: maintained
 ---
 
@@ -29,8 +29,8 @@ request without exposing credentials.
 
 ## 1. Prepare the domain and secrets
 
-Create a DNS record such as `skills.example.com` pointing to the Coolify server. Coolify will
-provision HTTPS after the domain is attached to the `app` service.
+Create the production DNS record `skills.infinitas.fun` pointing to the Coolify server. Coolify
+will provision HTTPS after the domain is attached to the `app` service.
 
 Generate independent values locally:
 
@@ -67,7 +67,7 @@ Add these variables to the Coolify resource before deploying:
 
 ```dotenv
 INFINITAS_IMAGE=ghcr.io/eudonline/infinitas-skill:sha-<verified-commit>
-INFINITAS_SERVER_ALLOWED_HOSTS=["skills.example.com"]
+INFINITAS_SERVER_ALLOWED_HOSTS=["skills.infinitas.fun"]
 INFINITAS_SERVER_SECRET_KEY=<strong-random-session-secret>
 INFINITAS_SERVER_BOOTSTRAP_USERS=[{"username":"maintainer","display_name":"Maintainer","role":"maintainer","password":"<strong-browser-password>","token":"<distinct-agent-token>"}]
 INFINITAS_REGISTRY_READ_TOKENS=["<distinct-registry-read-token>"]
@@ -113,7 +113,7 @@ seeded from the image snapshot.
 
 ## 4. Attach the public domain
 
-Attach `https://skills.example.com` to the child service named `app` and its container port
+Attach `https://skills.infinitas.fun` to the child service named `app` and its container port
 `8000`.
 
 Do not attach a domain to:
@@ -141,14 +141,14 @@ services should finish successfully and remain stopped.
 Verify from outside the server:
 
 ```bash
-curl --fail --silent --show-error https://skills.example.com/api/v1/system/healthz
-curl --fail --silent --show-error https://skills.example.com/api/v1/system/readyz
+curl --fail --silent --show-error https://skills.infinitas.fun/api/v1/system/healthz
+curl --fail --silent --show-error https://skills.infinitas.fun/api/v1/system/readyz
 curl --fail --silent --show-error \
   -H "Authorization: Bearer $INFINITAS_REGISTRY_READ_TOKEN" \
-  https://skills.example.com/api/v1/registry/ai-index.json
+  https://skills.infinitas.fun/api/v1/registry/ai-index.json
 ```
 
-Then open `https://skills.example.com/login`, sign in with the configured browser password, and
+Then open `https://skills.infinitas.fun/login`, sign in with the configured browser password, and
 confirm that `/manage` loads.
 
 From the Coolify terminal for `app`, inspect persisted state:
@@ -173,8 +173,14 @@ python3 -m infinitas_skill.cli.main server worker-healthcheck \
 
 ## 6. Configure clients for hosted discovery and install
 
-On each client repository, add the hosted source to `config/registry-sources.json` or the
-effective registry-source policy:
+On each client repository, add the hosted source with the atomic CLI command (or place the same
+shape in the effective policy):
+
+```bash
+uv run infinitas registry sources --repo-root . add-http hosted \
+  https://skills.infinitas.fun/api/v1/registry \
+  --token-env INFINITAS_REGISTRY_READ_TOKEN --set-default
+```
 
 ```json
 {
@@ -182,7 +188,7 @@ effective registry-source policy:
     {
       "name": "hosted",
       "kind": "http",
-      "base_url": "https://skills.example.com/api/v1/registry",
+      "base_url": "https://skills.infinitas.fun/api/v1/registry",
       "trust": "private",
       "auth": {
         "mode": "token",
@@ -210,6 +216,10 @@ The source `base_url` must end in `/api/v1/registry`; it is not the application 
 read tokens protect artifact reads. Publisher/maintainer Agent tokens authenticate JSON
 authoring APIs and are configured separately through `INFINITAS_REGISTRY_API_TOKEN` on the
 client.
+
+For reusable non-production templates, substitute the hostname while keeping the same path
+(for example, `"base_url": "https://skills.example.com/api/v1/registry"`). Production uses
+`https://skills.infinitas.fun/api/v1/registry` as shown above.
 
 `registry sources sync hosted` atomically caches the hosted AI index, distribution index, and
 compatibility catalog under `.cache/registries/hosted`. `registry catalog build` then refreshes
@@ -260,8 +270,10 @@ The `infinitas-backups` volume is still on the same server. Copy completed backu
 independent object storage or another host. A backup that disappears with the Coolify server is
 not disaster recovery.
 
-When deleting or recreating the Coolify resource, preserve all five named volumes. Ordinary
-redeploys should not delete them.
+The durable volumes are `infinitas-data` (SQLite), `infinitas-artifacts` (immutable Release
+material), `infinitas-repo` (registry Git history), `infinitas-backups` (local recovery copies),
+and `infinitas-home` (signer and runtime home). When deleting or recreating the Coolify resource,
+preserve all five named volumes. Ordinary redeploys should not delete them.
 
 ## Upgrade and rollback
 
@@ -307,7 +319,7 @@ stalled one.
 
 ### Login loops or CSRF failures
 
-Use the HTTPS Coolify domain, confirm it is present in `INFINITAS_SERVER_ALLOWED_HOSTS`, and do
+Use the HTTPS production domain, confirm it is present in `INFINITAS_SERVER_ALLOWED_HOSTS`, and do
 not put another proxy in front of Coolify without preserving the original scheme and host.
 
 ### Hosted installs return 401

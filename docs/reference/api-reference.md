@@ -2,7 +2,7 @@
 audience: agent developers, CLI maintainers, integrators
 owner: repository maintainers
 source_of_truth: FastAPI OpenAPI schema
-last_reviewed: 2026-07-19
+last_reviewed: 2026-07-23
 status: maintained
 ---
 
@@ -91,12 +91,21 @@ identifier for support and log investigation and is not an authentication creden
 - `GET /api/v1/library/{object_id}`
 - `GET /api/v1/library/{object_id}/releases`
 - `POST /api/v1/skills`
+- `GET /api/v1/skills`
 - `GET /api/v1/skills/{skill_id}`
+- `POST /api/v1/skills/{skill_id}/archive`
 - `POST /api/v1/skills/{skill_id}/content`
 - `GET|POST /api/v1/skills/{skill_id}/versions`
+- `GET /api/v1/skills/{skill_id}/versions/{version}`
 - `POST /api/v1/versions/{version_id}/releases`
 - `GET /api/v1/releases/{release_id}`
+- `GET /api/v1/releases/{release_id}/exposures`
 - `GET /api/v1/releases/{release_id}/artifacts`
+
+Skill content and versions are Agent-owned mutations. Versions are immutable: the same semantic
+version may only point to the same content digest. Archive is idempotent and permanently blocks
+new content/version writes. Browser routes only expose read views, digest comparison, and Share
+Link distribution.
 
 ### Visibility and review
 

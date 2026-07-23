@@ -2,7 +2,7 @@
 audience: contributors, integrators, operators
 owner: repository maintainers
 source_of_truth: generated from argparse definitions in src/infinitas_skill
-last_reviewed: 2026-07-20
+last_reviewed: 2026-07-23
 status: maintained
 ---
 
@@ -245,6 +245,35 @@ options:
                         upgrades
   --repo-root REPO_ROOT
                         Repository root containing generated catalog artifacts
+  --json                Emit pretty JSON output
+```
+
+## `infinitas install from-share`
+
+```text
+usage: infinitas install from-share [-h] [--password-env PASSWORD_ENV]
+                                    [--secret-env SECRET_ENV] [--force]
+                                    [--no-deps] [--repo-root REPO_ROOT]
+                                    [--json]
+                                    resolve_url target_dir
+
+Resolve and install one immutable release from a hosted share
+
+positional arguments:
+  resolve_url           Hosted share resolve URL
+  target_dir            Target directory for the installed skill
+
+options:
+  -h, --help            show this help message and exit
+  --password-env PASSWORD_ENV
+                        Environment variable containing a share password
+  --secret-env SECRET_ENV
+                        Environment variable containing a passwordless share
+                        secret
+  --force               Overwrite an existing target
+  --no-deps             Reject dependency changes
+  --repo-root REPO_ROOT
+                        Repository root for verification
   --json                Emit pretty JSON output
 ```
 
@@ -567,17 +596,20 @@ options:
 
 ```text
 usage: infinitas registry [-h] [--base-url BASE_URL] [--token TOKEN]
-                          {skills,versions,releases,exposures,tokens,reviews,sources,catalog} ...
+                          {skills,versions,releases,exposures,shares,tokens,reviews,sources,catalog} ...
 
 Hosted registry private-first control plane CLI
 
 positional arguments:
-  {skills,versions,releases,exposures,tokens,reviews,sources,catalog}
+  {skills,versions,releases,exposures,shares,tokens,reviews,sources,catalog}
+    publish             Normalize, publish, and expose one local skill
+                        idempotently
     skills              Manage private-first skill records
     versions            Create immutable skill versions directly
     releases            Create and inspect immutable releases
     exposures           Manage audience exposure and share policy
     tokens              Inspect token identity and release authorization
+    shares              Manage Agent share links
     reviews             Manage review cases for public-facing exposures
     sources             Manage repository registry sources
     catalog             Build generated registry catalog views
@@ -592,15 +624,17 @@ options:
 
 ```text
 usage: infinitas registry skills [-h] [--base-url BASE_URL] [--token TOKEN]
-                                 {create,get,upload-content} ...
+                                 {create,list,get,upload-content,archive} ...
 
 Manage private-first skill records
 
 positional arguments:
-  {create,get,upload-content}
+  {create,list,get,upload-content,archive}
     create              Create a new skill namespace entry
+    list                List owned skills
     get                 Fetch one skill by id
     upload-content      Upload a validated tar.gz content bundle
+    archive             Archive a skill permanently
 
 options:
   -h, --help            show this help message and exit
@@ -612,31 +646,35 @@ options:
 
 ```text
 usage: infinitas registry versions [-h] [--base-url BASE_URL] [--token TOKEN]
-                                   {create} ...
+                                   {create,list,get,compare} ...
 
 Create immutable skill versions directly
 
 positional arguments:
-  {create}
-    create             Create an immutable version for a skill
+  {create,list,get,compare}
+    create              Create an immutable version for a skill
+    list                List immutable versions
+    get                 Fetch one immutable version
+    compare             Compare sealed metadata and content digests
 
 options:
-  -h, --help           show this help message and exit
-  --base-url BASE_URL  Hosted registry API base URL
-  --token TOKEN        Bearer token for hosted registry API
+  -h, --help            show this help message and exit
+  --base-url BASE_URL   Hosted registry API base URL
+  --token TOKEN         Bearer token for hosted registry API
 ```
 
 ## `infinitas registry releases`
 
 ```text
 usage: infinitas registry releases [-h] [--base-url BASE_URL] [--token TOKEN]
-                                   {create,get,artifacts} ...
+                                   {create,list,get,artifacts} ...
 
 Create and inspect immutable releases
 
 positional arguments:
-  {create,get,artifacts}
+  {create,list,get,artifacts}
     create              Create or fetch a release for one skill version
+    list                List releases for one skill
     get                 Fetch one release by id
     artifacts           List artifacts for one release
 
@@ -660,6 +698,26 @@ positional arguments:
     update              Patch share policy on an existing exposure
     activate            Activate an exposure
     revoke              Revoke an exposure
+
+options:
+  -h, --help            show this help message and exit
+  --base-url BASE_URL   Hosted registry API base URL
+  --token TOKEN         Bearer token for hosted registry API
+```
+
+## `infinitas registry shares`
+
+```text
+usage: infinitas registry shares [-h] [--base-url BASE_URL] [--token TOKEN]
+                                 {create,list,revoke} ...
+
+Create, inspect, and revoke Agent share links
+
+positional arguments:
+  {create,list,revoke}
+    create              Create a share link for one release
+    list                List shares for one release
+    revoke              Revoke one share
 
 options:
   -h, --help            show this help message and exit

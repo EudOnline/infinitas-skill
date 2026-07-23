@@ -2,7 +2,7 @@
 audience: contributors, operators, integrators
 owner: repository maintainers
 source_of_truth: repository entry page
-last_reviewed: 2026-07-20
+last_reviewed: 2026-07-23
 status: maintained
 ---
 
@@ -20,7 +20,7 @@ OpenClaw is now the canonical agent runtime. The registry/release/install backen
 
 ## Product split
 
-- Human administrators use the server-rendered Web UI to browse the Library, inspect Releases, manage Visibility, issue Tokens, create Share Links, and review Activity.
+- Human administrators use the server-rendered Web UI to browse the Library, inspect immutable Releases and version digests, create Share Links, and review Activity. The Web UI deliberately does not create or edit skills.
 - Agents and automation use JSON APIs or the `infinitas` CLI to publish, discover, inspect, install, and operate skills.
 
 These consumers share domain services and read models. UI routes never replace Agent APIs, and JSON APIs are not dead code merely because browser templates do not call them.
@@ -68,6 +68,9 @@ Browser authentication uses a session cookie and CSRF token. Agent requests use 
 uv run infinitas discovery search registry --json
 uv run infinitas discovery inspect lvxiaoer/operate-infinitas-skill --json
 uv run infinitas install by-name lvxiaoer/operate-infinitas-skill .agents/skills
+uv run infinitas registry publish ./my-skill --version 1.0.0 --visibility private
+uv run infinitas registry versions compare <skill_id> 1.0.0 1.1.0
+uv run infinitas install from-share '<resolve-url>' ~/.openclaw/skills
 uv run infinitas registry --help
 uv run infinitas policy check-promotion skills/active/operate-infinitas-skill --json
 uv run infinitas release check-state operate-infinitas-skill --mode local-preflight --json
