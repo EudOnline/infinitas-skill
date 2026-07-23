@@ -97,6 +97,7 @@ def _assert_object_owner(
 def _token_scopes(token_type: TokenType) -> set[str]:
     scopes = {"artifact:download"}
     if token_type == "publisher":  # noqa: S105
+        scopes.add("exposure:write")
         scopes.add("release:write")
         scopes.add("registry:publish")
     return scopes

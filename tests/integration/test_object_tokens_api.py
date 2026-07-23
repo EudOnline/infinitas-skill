@@ -108,6 +108,12 @@ def test_create_publisher_token_for_object_and_revoke(
     assert token["scope_type"] == "object"
     assert token["scope_id"] == object_id
     assert token["expires_at"] is not None
+    assert token["scopes"] == [
+        "artifact:download",
+        "exposure:write",
+        "registry:publish",
+        "release:write",
+    ]
 
     revoke = client.post(f"/api/v1/object-tokens/tokens/{token['id']}/revoke", headers=headers)
     assert revoke.status_code == 200, revoke.text
@@ -218,8 +224,9 @@ def test_object_publisher_token_publishes_only_its_bound_object(
             "requested_review_mode": "none",
         },
     )
-    assert exposure_response.status_code == 403, exposure_response.text
-    assert exposure_response.json()["detail"] == "insufficient scope"
+    assert exposure_response.status_code == 201, exposure_response.text
+    assert exposure_response.json()["release_id"] == current_release_id
+    assert exposure_response.json()["audience_type"] == "grant"
 
     from server.db import get_session_factory
     from server.modules.identity.models import Credential
