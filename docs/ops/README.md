@@ -15,6 +15,7 @@ Use the ops section for procedures that keep the hosted control plane, release f
 - [Hosted registry server deployment](server-deployment.md)
 - [Coolify deployment](coolify-deployment.md) — recommended container installation on a Coolify server
 - [Hosted registry backup and restore](server-backup-and-restore.md)
+- [OpenClaw skill and workspace-data backup](openclaw-skill-backup.md)
 - [Signing bootstrap](signing-bootstrap.md)
 - [Signing operations](signing-operations.md)
 - [Release checklist](release-checklist.md)

@@ -48,6 +48,14 @@ OpenClaw runtime state does not replace those records. It defines how maintained
 
 Hosted content ownership also remains a backend concern. The backend may store complete uploaded content bundles and freeze immutable external imports so downstream installs always resolve through hosted artifacts.
 
+## Workspace Data Boundary
+
+OpenClaw skill code and OpenClaw workspace data are separate durability domains. A Registry
+Release versions the skill directory; it does not discover or include sibling paths such as
+`~/.agents/data/<skill>`. Use the maintained encrypted snapshot commands in
+[`docs/ops/openclaw-skill-backup.md`](../ops/openclaw-skill-backup.md) for data snapshots and
+restore rehearsals.
+
 ## Legacy migration boundary
 
 The repository still contains compatibility-era structures such as:

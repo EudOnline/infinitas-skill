@@ -141,6 +141,7 @@ def command_registry_publish(args: argparse.Namespace) -> dict[str, Any]:
             wait=not args.no_wait,
             timeout_seconds=args.timeout,
             dry_run=args.dry_run,
+            publisher=args.publisher,
             receipt_path=args.receipt,
             resume=args.resume,
         )
@@ -332,6 +333,10 @@ def _configure_registry_publish_command(subparsers: argparse._SubParsersAction) 
     publish.add_argument("--no-wait", action="store_true", help="Return after Release creation")
     publish.add_argument(
         "--dry-run", action="store_true", help="Validate and package without writes"
+    )
+    publish.add_argument(
+        "--publisher",
+        help="Publisher slug for a fully offline --dry-run",
     )
     publish.add_argument(
         "--receipt",

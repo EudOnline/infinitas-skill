@@ -109,6 +109,46 @@ def test_publish_dry_run_does_not_mutate_registry(monkeypatch, tmp_path: Path) -
     assert not (tmp_path / "state").exists()
 
 
+def test_publish_dry_run_with_publisher_is_fully_offline(monkeypatch, tmp_path: Path) -> None:
+    source = _source(tmp_path)
+    (source / ".pytest_cache").mkdir()
+    (source / ".pytest_cache" / "CACHEDIR.TAG").write_text("cache", encoding="utf-8")
+    (source / ".env").write_text("TOKEN=secret\n", encoding="utf-8")
+    (source / ".env.example").write_text("TOKEN=\n", encoding="utf-8")
+    (source / "data.json").write_text('{"critical": true}\n', encoding="utf-8")
+
+    def unexpected_request(*_args, **_kwargs):
+        raise AssertionError("offline dry-run must not contact a Registry")
+
+    monkeypatch.setattr(httpx, "request", unexpected_request)
+    result = publish_skill(
+        source,
+        base_url="https://registry.invalid",
+        token="",
+        version="1.0.0",
+        repo_root=Path.cwd(),
+        dry_run=True,
+        publisher="tdcasual",
+    ).payload
+
+    assert result["state"] == "dry-run"
+    assert result["prepared"]["qualified_name"] == "tdcasual/adapt"
+    assert result["prepared"]["included_file_count"] == 6
+    assert result["prepared"]["included_expanded_bytes"] > 0
+
+
+def test_publish_rejects_publisher_override_for_live_write(tmp_path: Path) -> None:
+    with pytest.raises(RuntimeError, match="only supported with dry_run"):
+        publish_skill(
+            _source(tmp_path),
+            base_url="https://registry.invalid",
+            token="publisher-token",
+            version="1.0.0",
+            repo_root=Path.cwd(),
+            publisher="tdcasual",
+        )
+
+
 def test_publish_no_wait_stops_before_exposure_for_preparing_release(
     monkeypatch, tmp_path: Path
 ) -> None:

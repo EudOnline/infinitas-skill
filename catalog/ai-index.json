@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-21T14:13:18Z",
+  "generated_at": "2026-07-24T15:58:37Z",
   "registry": {
     "default_registry": "self"
   },
@@ -46,7 +46,7 @@
       ],
       "runtime": {
         "platform": "openclaw",
-        "source_mode": "metadata-only",
+        "source_mode": "openclaw-native",
         "workspace_scope": "workspace",
         "workspace_targets": [
           "skills",
@@ -310,7 +310,7 @@
       ],
       "runtime": {
         "platform": "openclaw",
-        "source_mode": "metadata-only",
+        "source_mode": "openclaw-native",
         "workspace_scope": "workspace",
         "workspace_targets": [
           "skills",
@@ -572,7 +572,7 @@
       ],
       "runtime": {
         "platform": "openclaw",
-        "source_mode": "metadata-only",
+        "source_mode": "openclaw-native",
         "workspace_scope": "workspace",
         "workspace_targets": [
           "skills",
@@ -836,7 +836,7 @@
       ],
       "runtime": {
         "platform": "openclaw",
-        "source_mode": "metadata-only",
+        "source_mode": "openclaw-native",
         "workspace_scope": "workspace",
         "workspace_targets": [
           "skills",

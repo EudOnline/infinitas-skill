@@ -235,9 +235,16 @@ def _requires_detail(meta: Any, requires: Any, runtime_contract: Any) -> dict[st
         runtime_payload.get("requires") if isinstance(runtime_payload, dict) else None
     )
     for token in _string_list(runtime_requires):
-        normalized = token.replace("_", "-")
-        if normalized not in tools:
-            tools.append(normalized)
+        destinations = {"tool": tools, "bin": bins, "env": env, "config": config}
+        prefix, separator, value = token.partition(":")
+        if separator and value and prefix in destinations:
+            destination = destinations[prefix]
+            normalized = value.replace("_", "-") if prefix == "tool" else value
+        else:
+            destination = tools
+            normalized = token.replace("_", "-")
+        if normalized not in destination:
+            destination.append(normalized)
 
     return {
         "tools": _string_list(tools),

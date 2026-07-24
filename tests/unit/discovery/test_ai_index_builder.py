@@ -75,3 +75,61 @@ def test_build_ai_index_chooses_latest_version_and_preserves_trust_metadata(tmp_
     assert skill["trust_state"] == "verified"
     assert skill["versions"]["1.2.0"]["trust_state"] == "verified"
     assert skill["versions"]["1.2.0"]["distribution_manifest_path"].endswith("1.2.0/manifest.json")
+
+
+def test_build_ai_index_preserves_native_openclaw_requirement_kinds(tmp_path: Path) -> None:
+    root = tmp_path
+    skill_dir = root / "skills" / "native-skill"
+    _write_json(
+        skill_dir / "_meta.json",
+        {
+            "requires": {
+                "tools": ["read", "exec"],
+                "bins": ["git"],
+                "env": ["NATIVE_SKILL_TOKEN"],
+            }
+        },
+    )
+    (skill_dir / "SKILL.md").write_text(
+        "---\nname: native-skill\ndescription: Native OpenClaw skill.\n---\n",
+        encoding="utf-8",
+    )
+
+    payload = build_ai_index(
+        root=root,
+        catalog_entries=[
+            {
+                "name": "native-skill",
+                "qualified_name": "team/native-skill",
+                "summary": "native skill",
+                "path": "skills/native-skill",
+                "source_registry": "self",
+            }
+        ],
+        distribution_entries=[
+            {
+                "qualified_name": "team/native-skill",
+                "name": "native-skill",
+                "version": "1.0.0",
+                "manifest_path": "catalog/distributions/native-skill/1.0.0/manifest.json",
+                "bundle_path": "catalog/distributions/native-skill/1.0.0/skill.tar.gz",
+                "bundle_sha256": "native-skill-sha",
+                "generated_at": "2026-07-24T00:00:00Z",
+            }
+        ],
+    )
+
+    runtime = payload["skills"][0]["runtime"]
+    assert runtime["source_mode"] == "openclaw-native"
+    assert runtime["requires_detail"] == {
+        "tools": ["read", "exec"],
+        "bins": ["git"],
+        "env": ["NATIVE_SKILL_TOKEN"],
+        "config": [],
+    }
+    assert runtime["requires_tokens"] == [
+        "tools:read",
+        "tools:exec",
+        "bins:git",
+        "env:NATIVE_SKILL_TOKEN",
+    ]

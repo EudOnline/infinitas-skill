@@ -13,7 +13,18 @@ from infinitas_skill.install.distribution import deterministic_bundle
 from infinitas_skill.install.skill_validation import validate_installable_skill_dir
 
 _SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
-_IGNORED_NAMES = {".DS_Store", ".git", "__pycache__"}
+_IGNORED_NAMES = {
+    ".DS_Store",
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".tox",
+    ".venv",
+    "__pycache__",
+    "node_modules",
+}
+_ENV_TEMPLATE_SUFFIXES = (".example", ".sample", ".template")
 
 
 class SkillSourceError(ValueError):
@@ -70,7 +81,12 @@ def _assert_safe_source(source_dir: Path) -> None:
 
 def _copy_source(source_dir: Path, destination: Path) -> None:
     def ignore(_directory: str, names: list[str]) -> set[str]:
-        return {name for name in names if name in _IGNORED_NAMES}
+        return {
+            name
+            for name in names
+            if name in _IGNORED_NAMES
+            or (name.startswith(".env") and not name.endswith(_ENV_TEMPLATE_SUFFIXES))
+        }
 
     try:
         shutil.copytree(source_dir, destination, ignore=ignore)

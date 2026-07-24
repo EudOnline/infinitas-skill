@@ -2,7 +2,7 @@
 audience: contributors, integrators, operators
 owner: repository maintainers
 source_of_truth: generated from argparse definitions in src/infinitas_skill
-last_reviewed: 2026-07-23
+last_reviewed: 2026-07-24
 status: maintained
 ---
 
@@ -440,7 +440,7 @@ positional arguments:
   {profile,workspace,skill,plugin}
     profile             Inspect the canonical OpenClaw runtime profile
     workspace           OpenClaw workspace resolution tools
-    skill               OpenClaw skill validation tools
+    skill               OpenClaw skill lifecycle tools
     plugin              OpenClaw plugin capability tools
 
 options:
@@ -489,6 +489,60 @@ positional arguments:
 options:
   -h, --help  show this help message and exit
   --json      Print machine-readable output
+```
+
+## `infinitas openclaw skill backup`
+
+```text
+usage: infinitas openclaw skill backup [-h] --out OUT [--data-dir DATA_DIR]
+                                       [--age-recipient AGE_RECIPIENT]
+                                       [--allow-plaintext-data] [--force]
+                                       [--json]
+                                       skill_dir
+
+Create a checksummed OpenClaw skill and workspace-data snapshot
+
+positional arguments:
+  skill_dir             OpenClaw skill directory to snapshot
+
+options:
+  -h, --help            show this help message and exit
+  --out OUT             Snapshot output path
+  --data-dir DATA_DIR   Optional workspace data directory to include
+  --age-recipient AGE_RECIPIENT
+                        age recipient for encrypted output; repeat for
+                        multiple recipients
+  --allow-plaintext-data
+                        Explicitly allow an unencrypted snapshot containing
+                        workspace data
+  --force               Replace an existing output file
+  --json
+```
+
+## `infinitas openclaw skill restore`
+
+```text
+usage: infinitas openclaw skill restore [-h] [--skill-dir SKILL_DIR]
+                                        [--data-dir DATA_DIR]
+                                        [--age-identity AGE_IDENTITY]
+                                        [--verify-only] [--force] [--json]
+                                        snapshot_path
+
+Verify or restore an OpenClaw skill and workspace-data snapshot
+
+positional arguments:
+  snapshot_path         Snapshot archive or .age file
+
+options:
+  -h, --help            show this help message and exit
+  --skill-dir SKILL_DIR
+                        Skill restore target
+  --data-dir DATA_DIR   Workspace data restore target
+  --age-identity AGE_IDENTITY
+                        age identity file; repeat for multiple identities
+  --verify-only
+  --force               Atomically replace existing targets
+  --json
 ```
 
 ## `infinitas openclaw plugin inspect`

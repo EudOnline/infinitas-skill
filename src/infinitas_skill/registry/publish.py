@@ -489,20 +489,26 @@ def publish_skill(
     wait: bool = True,
     timeout_seconds: int = 120,
     dry_run: bool = False,
+    publisher: str | None = None,
     receipt_path: str | Path | None = None,
     resume: bool = False,
 ) -> PublishResult:
     """Normalize, publish, and expose one local skill idempotently."""
-    client = HostedRegistryClient(base_url, token)
-    identity = client.access_me()
-    publisher = str(identity.get("principal_slug") or "")
-    if not publisher:
+    if publisher is not None and not dry_run:
+        raise HostedPublishError("publisher override is only supported with dry_run")
+    client: HostedRegistryClient | None = None
+    resolved_publisher = str(publisher or "").strip()
+    if not resolved_publisher:
+        client = HostedRegistryClient(base_url, token)
+        identity = client.access_me()
+        resolved_publisher = str(identity.get("principal_slug") or "")
+    if not resolved_publisher:
         raise HostedPublishError("publisher identity is missing from access/me")
     with tempfile.TemporaryDirectory(prefix="infinitas-publish-") as temp_dir:
         staged = stage_skill_source(
             source_dir,
             Path(temp_dir),
-            publisher=publisher,
+            publisher=resolved_publisher,
             version=version,
         )
         bundle_path = build_skill_source_bundle(
@@ -518,6 +524,10 @@ def publish_skill(
             "version": version,
             "bundle_sha256": f"sha256:{digest}",
             "bundle_size_bytes": len(bundle),
+            "included_file_count": sum(1 for path in staged.skill_dir.rglob("*") if path.is_file()),
+            "included_expanded_bytes": sum(
+                path.stat().st_size for path in staged.skill_dir.rglob("*") if path.is_file()
+            ),
             "generated_files": list(staged.generated_files),
         }
         if dry_run:
@@ -541,6 +551,8 @@ def publish_skill(
         )
         _save_receipt(resolved_receipt_path, receipt)
 
+        if client is None:  # pragma: no cover - dry-run returns above
+            raise HostedPublishError("registry client is unavailable for publish")
         return _publish_prepared(
             client,
             staged=staged,

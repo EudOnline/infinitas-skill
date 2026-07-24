@@ -33,6 +33,8 @@ from infinitas_skill.openclaw.cli import (
     build_openclaw_parser,
     build_openclaw_plugin_inspect_parser,
     build_openclaw_profile_parser,
+    build_openclaw_skill_backup_parser,
+    build_openclaw_skill_restore_parser,
     build_openclaw_skill_validate_parser,
     build_openclaw_workspace_resolve_parser,
 )
@@ -72,7 +74,7 @@ from infinitas_skill.server.ops import (
     build_server_worker_parser,
 )
 
-GENERATED_CLI_REFERENCE_LAST_REVIEWED = "2026-07-23"
+GENERATED_CLI_REFERENCE_LAST_REVIEWED = "2026-07-24"
 ParserFactory = Callable[..., ArgumentParser]
 Section = tuple[str, ParserFactory, str]
 
@@ -176,6 +178,16 @@ def _openclaw_and_policy_sections() -> list[Section]:
             "infinitas openclaw skill validate",
             build_openclaw_skill_validate_parser,
             "infinitas openclaw skill validate",
+        ),
+        (
+            "infinitas openclaw skill backup",
+            build_openclaw_skill_backup_parser,
+            "infinitas openclaw skill backup",
+        ),
+        (
+            "infinitas openclaw skill restore",
+            build_openclaw_skill_restore_parser,
+            "infinitas openclaw skill restore",
         ),
         (
             "infinitas openclaw plugin inspect",

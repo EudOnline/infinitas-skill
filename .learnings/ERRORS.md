@@ -1,5 +1,234 @@
 # Errors
 
+## [ERR-20260724-001] zsh-secret-scan-quoting
+
+**Logged**: 2026-07-24T00:00:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+A read-only sensitive-value scan mixed shell quoting with a complex regular expression and zsh rejected the command before execution.
+
+### Error
+```text
+zsh:1: unmatched '
+```
+
+### Context
+- The attempted command searched one local OpenClaw skill directory.
+- The shell failed before reading or printing any matching value.
+- Only file paths were intended as output.
+
+### Suggested Fix
+Search fixed credential variable names with separate `rg -l` expressions, exclude caches explicitly, and never embed mixed quote classes in a shell command.
+
+### Metadata
+- Reproducible: yes
+- Related Files: /home/tdcasual/.agents/skills/teacher-work-datahub/
+
+### Resolution
+- **Resolved**: 2026-07-24T00:00:00Z
+- **Notes**: Replaced the fragile expression with fixed-name, path-only scans.
+
+---
+
+## [ERR-20260724-005] openclaw-snapshot-complexity-gate
+
+**Logged**: 2026-07-24T00:00:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: cli
+
+### Summary
+Snapshot hardening initially exceeded the Ruff cyclomatic-complexity threshold.
+
+### Error
+```
+C901 _verified_payload is too complex (16 > 15)
+C901 _replace_targets is too complex (18 > 15)
+```
+
+### Context
+Manifest validation and atomic multi-target replacement gained several security checks in one pass.
+
+### Suggested Fix
+Separate file-entry validation, payload metadata validation, staging, and target swapping.
+
+### Metadata
+- Reproducible: yes
+- Related Files: src/infinitas_skill/openclaw/snapshot.py
+
+### Resolution
+- **Resolved**: 2026-07-24T00:00:00Z
+- **Notes**: Security checks now live in focused helpers and the behavior tests pass.
+
+---
+
+## [ERR-20260724-006] ai-index-test-missing-release
+
+**Logged**: 2026-07-24T00:00:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: testing
+
+### Summary
+A new native OpenClaw requirement test omitted the distribution fixture.
+
+### Error
+```
+IndexError: payload["skills"][0]
+```
+
+### Context
+The AI index intentionally excludes entries without an immutable released version.
+
+### Suggested Fix
+Include the minimal distribution record in AI index behavior fixtures.
+
+### Metadata
+- Reproducible: yes
+- Related Files: tests/unit/discovery/test_ai_index_builder.py
+
+### Resolution
+- **Resolved**: 2026-07-24T00:00:00Z
+- **Notes**: The fixture now includes version 1.0.0 and exercises native metadata normalization.
+
+---
+
+## [ERR-20260724-007] runtime-env-token-normalization
+
+**Logged**: 2026-07-24T00:00:00Z
+**Priority**: high
+**Status**: resolved
+**Area**: discovery
+
+### Summary
+Generic runtime token normalization changed underscores inside native environment variable names.
+
+### Error
+```
+NATIVE_SKILL_TOKEN -> NATIVE-SKILL-TOKEN
+```
+
+### Context
+Canonical tool intents use hyphenated names, but environment variables, binaries, and config keys
+must retain their declared spelling.
+
+### Suggested Fix
+Parse the requirement kind first and apply underscore normalization only to tool intents.
+
+### Metadata
+- Reproducible: yes
+- Related Files: src/infinitas_skill/discovery/ai_index_builder.py
+
+### Resolution
+- **Resolved**: 2026-07-24T00:00:00Z
+- **Notes**: Native env/bin/config values are now preserved and category-specific tests cover them.
+
+---
+
+## [ERR-20260724-002] nonexistent-top-level-skills-command
+
+**Logged**: 2026-07-24T00:05:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+A CLI discovery probe used a nonexistent top-level `infinitas skills` command.
+
+### Error
+```text
+invalid choice: 'skills'
+```
+
+### Context
+- The maintained CLI groups runtime bridge operations under `infinitas openclaw`.
+- Hosted lifecycle operations live under `infinitas registry` and `infinitas install`.
+- The failed command was read-only and changed no state.
+
+### Suggested Fix
+Read top-level help first and route OpenClaw inspection through `infinitas openclaw --help`.
+
+### Metadata
+- Reproducible: yes
+- Related Files: src/infinitas_skill/cli/main.py
+
+### Resolution
+- **Resolved**: 2026-07-24T00:05:00Z
+- **Notes**: Continued with the maintained `openclaw`, `registry`, and `install` command groups.
+
+---
+
+## [ERR-20260724-003] openclaw-snapshot-initial-ruff
+
+**Logged**: 2026-07-24T00:12:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+The first focused quality pass rejected the new snapshot module for import ordering and three lines over the 100-character limit.
+
+### Error
+```text
+I001 Import block is un-sorted or un-formatted
+E501 Line too long
+```
+
+### Context
+- Ruff stopped before pytest ran.
+- Findings were mechanical formatting issues in one new module.
+- No runtime or external state was changed.
+
+### Suggested Fix
+Apply Ruff-compatible import ordering and wrap exception messages and replacement expressions.
+
+### Metadata
+- Reproducible: yes
+- Related Files: src/infinitas_skill/openclaw/snapshot.py
+
+### Resolution
+- **Resolved**: 2026-07-24T00:12:00Z
+- **Notes**: Applied a focused formatting patch before rerunning tests.
+
+---
+
+## [ERR-20260724-004] datahub-output-hash-after-healthcheck
+
+**Logged**: 2026-07-24T00:18:00Z
+**Priority**: medium
+**Status**: resolved
+**Area**: tests
+
+### Summary
+The first real DataHub restore drill compared the entire data directory after healthcheck rewrote generated output reports, so the final aggregate hash differed despite a correct restore.
+
+### Error
+```text
+full data-tree SHA-256 mismatch after restored healthcheck
+```
+
+### Context
+- Encrypted backup, verify-only, restore, bootstrap, and core healthcheck all succeeded.
+- `outputs/healthchecks` and `outputs/selfchecks` contain generated timestamps and reports.
+- The DataHub contract explicitly states that `outputs/` is not source-of-truth data.
+- `raw/`, `catalog/`, and `curated/` hashes matched exactly after the drill.
+
+### Suggested Fix
+Verify source-of-truth layers byte-for-byte and validate regenerated outputs semantically through healthcheck status.
+
+### Metadata
+- Reproducible: yes
+- Related Files: /home/tdcasual/.agents/skills/teacher-work-datahub/references/architecture.md
+
+### Resolution
+- **Resolved**: 2026-07-24T00:18:00Z
+- **Notes**: The drill now treats raw/catalog/curated as exact data and outputs as regenerable evidence.
+
+---
+
 ## [ERR-20260723-001] hosted-publish-test-route-shadowing
 
 **Logged**: 2026-07-23T14:10:00Z
