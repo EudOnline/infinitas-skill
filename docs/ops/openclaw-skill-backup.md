@@ -20,6 +20,20 @@ automatically include data stored outside the skill directory. A workspace skill
 Use a private Registry Release for the first tree and an encrypted OpenClaw snapshot for the
 second tree. Do not publish workspace data as a public skill version.
 
+If a legacy skill still contains runtime data inside its own directory, add a root-level
+`.infinitasignore` before publishing. The file accepts one relative file or directory prefix per
+line (blank lines and `#` comments are ignored):
+
+```text
+# Legacy runtime data now backed up from ~/.agents/data/<skill>
+data/
+```
+
+`registry publish --dry-run` reports `excluded_paths`; inspect that field and the included file
+count before a live write. Exclusions never apply to encrypted snapshots, so the skill tree is
+still captured for disaster recovery. Move durable runtime truth to `~/.agents/data/<skill>`
+rather than relying on this exclusion as the long-term data architecture.
+
 ## Create A Snapshot
 
 An age recipient is public encryption input. Keep the matching age identity outside the workspace

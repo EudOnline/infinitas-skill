@@ -143,6 +143,7 @@ def test_publish_dry_run_with_publisher_is_fully_offline(monkeypatch, tmp_path: 
     assert result["prepared"]["qualified_name"] == "tdcasual/adapt"
     assert result["prepared"]["included_file_count"] == 6
     assert result["prepared"]["included_expanded_bytes"] > 0
+    assert result["prepared"]["excluded_paths"] == []
 
 
 def test_publish_rejects_publisher_override_for_live_write(tmp_path: Path) -> None:

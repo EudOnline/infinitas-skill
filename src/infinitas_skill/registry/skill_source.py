@@ -25,6 +25,7 @@ _IGNORED_NAMES = {
     "node_modules",
 }
 _ENV_TEMPLATE_SUFFIXES = (".example", ".sample", ".template")
+_IGNORE_FILE = ".infinitasignore"
 
 
 class SkillSourceError(ValueError):
@@ -40,6 +41,7 @@ class StagedSkillSource:
     qualified_name: str
     version: str
     generated_files: tuple[str, ...]
+    excluded_paths: tuple[str, ...]
     metadata: dict[str, Any]
 
 
@@ -79,13 +81,52 @@ def _assert_safe_source(source_dir: Path) -> None:
         raise SkillSourceError(f"skill sources with symbolic links are not supported: {relative}")
 
 
-def _copy_source(source_dir: Path, destination: Path) -> None:
-    def ignore(_directory: str, names: list[str]) -> set[str]:
+def _load_excluded_paths(source_dir: Path) -> tuple[str, ...]:
+    ignore_file = source_dir / _IGNORE_FILE
+    if not ignore_file.exists():
+        return ()
+    try:
+        lines = ignore_file.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        raise SkillSourceError(f"could not read {_IGNORE_FILE}: {exc}") from exc
+    excluded: list[str] = []
+    for line_number, raw_line in enumerate(lines, start=1):
+        value = raw_line.strip()
+        if not value or value.startswith("#"):
+            continue
+        normalized = value.removeprefix("./").rstrip("/")
+        path = Path(normalized)
+        if (
+            not normalized
+            or path.is_absolute()
+            or "\\" in normalized
+            or any(part in {"", ".", ".."} for part in path.parts)
+        ):
+            raise SkillSourceError(f"invalid {_IGNORE_FILE} path on line {line_number}: {value!r}")
+        if path.as_posix() == "SKILL.md":
+            raise SkillSourceError(f"{_IGNORE_FILE} cannot exclude SKILL.md")
+        excluded.append(path.as_posix())
+    return tuple(dict.fromkeys(excluded))
+
+
+def _is_excluded(relative: str, excluded_paths: tuple[str, ...]) -> bool:
+    return any(relative == item or relative.startswith(f"{item}/") for item in excluded_paths)
+
+
+def _copy_source(
+    source_dir: Path,
+    destination: Path,
+    *,
+    excluded_paths: tuple[str, ...],
+) -> None:
+    def ignore(directory: str, names: list[str]) -> set[str]:
+        relative_dir = Path(directory).relative_to(source_dir)
         return {
             name
             for name in names
             if name in _IGNORED_NAMES
             or (name.startswith(".env") and not name.endswith(_ENV_TEMPLATE_SUFFIXES))
+            or _is_excluded((relative_dir / name).as_posix(), excluded_paths)
         }
 
     try:
@@ -194,7 +235,8 @@ def stage_skill_source(
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.exists():
         raise SkillSourceError(f"staging destination already exists: {destination}")
-    _copy_source(source, destination)
+    excluded_paths = _load_excluded_paths(source)
+    _copy_source(source, destination, excluded_paths=excluded_paths)
     staged_skill_md = destination / "SKILL.md"
     original_name = _frontmatter_value(staged_skill_md, "name")
     if original_name != resolved_slug:
@@ -224,6 +266,7 @@ def stage_skill_source(
         qualified_name=f"{publisher}/{resolved_slug}",
         version=version,
         generated_files=generated,
+        excluded_paths=excluded_paths,
         metadata=metadata,
     )
 

@@ -532,6 +532,7 @@ def publish_skill(
                 path.stat().st_size for path in staged.skill_dir.rglob("*") if path.is_file()
             ),
             "generated_files": list(staged.generated_files),
+            "excluded_paths": list(staged.excluded_paths),
         }
         if dry_run:
             return PublishResult({"state": "dry-run", "prepared": prepared})

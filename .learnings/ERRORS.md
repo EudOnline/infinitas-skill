@@ -33,6 +33,39 @@ own field.
 
 ---
 
+## [ERR-20260724-009] preflight-format-before-full-matrix
+
+**Logged**: 2026-07-24T16:56:10Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+The full verification matrix stopped immediately because one edited Python file was not Ruff-formatted.
+
+### Error
+```
+Would reformat: src/infinitas_skill/registry/skill_source.py
+1 file would be reformatted
+```
+
+### Context
+- Focused lint and type checks passed before `scripts/check-all.sh`.
+- The focused preflight omitted `ruff format --check`, so the full matrix caught formatting first.
+
+### Suggested Fix
+Run focused formatting together with lint before starting the expensive full verification matrix.
+
+### Metadata
+- Reproducible: yes
+- Related Files: src/infinitas_skill/registry/skill_source.py, scripts/check-all.sh
+
+### Resolution
+- **Resolved**: 2026-07-24T16:56:10Z
+- **Notes**: Formatted the edited source and restarted the full verification matrix.
+
+---
+
 ## [ERR-20260724-001] zsh-secret-scan-quoting
 
 **Logged**: 2026-07-24T00:00:00Z

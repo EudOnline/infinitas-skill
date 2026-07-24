@@ -112,6 +112,11 @@ same-version digest conflict, and records a resumable 0600 receipt without secre
 does not create or edit skill content. It reads the same immutable records and can distribute a
 Share Link from the Release page.
 
+Skill sources may include a root `.infinitasignore` with one relative file or directory prefix per
+line. Publishing omits those paths and reports them as `prepared.excluded_paths`; absolute paths,
+parent traversal, backslashes, and excluding `SKILL.md` are rejected. Use this for legacy runtime
+data that has been moved to an independently encrypted workspace-data snapshot.
+
 For long-lived install and rollback, configure a read-token-backed source once:
 
 ```bash

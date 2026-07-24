@@ -161,3 +161,50 @@ def test_rejects_symlinks_before_staging(tmp_path: Path) -> None:
             publisher="tdcasual",
             version="1.0.0",
         )
+
+
+def test_infinitasignore_excludes_workspace_data_prefixes(tmp_path: Path) -> None:
+    source = _write_plain_skill(tmp_path / "source")
+    (source / ".infinitasignore").write_text("# Runtime data\ndata/\n", encoding="utf-8")
+    (source / "data").mkdir()
+    (source / "data" / "teachers.json").write_text("{}\n", encoding="utf-8")
+    (source / "data.json").write_text("{}\n", encoding="utf-8")
+
+    result = stage_skill_source(
+        source,
+        tmp_path / "staged",
+        publisher="tdcasual",
+        version="1.0.0",
+    )
+
+    assert result.excluded_paths == ("data",)
+    assert not (result.skill_dir / "data").exists()
+    assert (result.skill_dir / "data.json").is_file()
+    assert (result.skill_dir / ".infinitasignore").is_file()
+
+
+@pytest.mark.parametrize("rule", ["../secrets", "/etc", "nested\\secret"])
+def test_rejects_unsafe_infinitasignore_paths(tmp_path: Path, rule: str) -> None:
+    source = _write_plain_skill(tmp_path / "source")
+    (source / ".infinitasignore").write_text(f"{rule}\n", encoding="utf-8")
+
+    with pytest.raises(SkillSourceError, match="invalid .infinitasignore path"):
+        stage_skill_source(
+            source,
+            tmp_path / "staged",
+            publisher="tdcasual",
+            version="1.0.0",
+        )
+
+
+def test_infinitasignore_cannot_exclude_skill_entrypoint(tmp_path: Path) -> None:
+    source = _write_plain_skill(tmp_path / "source")
+    (source / ".infinitasignore").write_text("SKILL.md\n", encoding="utf-8")
+
+    with pytest.raises(SkillSourceError, match="cannot exclude SKILL.md"):
+        stage_skill_source(
+            source,
+            tmp_path / "staged",
+            publisher="tdcasual",
+            version="1.0.0",
+        )
