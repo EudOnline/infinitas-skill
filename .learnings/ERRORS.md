@@ -1,5 +1,38 @@
 # Errors
 
+## [ERR-20260724-008] hosted-publish-summary-used-as-display-name
+
+**Logged**: 2026-07-24T16:40:00Z
+**Priority**: high
+**Status**: resolved
+**Area**: registry
+
+### Summary
+The hosted publish orchestrator used the full skill summary as the display name.
+
+### Error
+```text
+HTTP 422: display_name String should have at most 200 characters
+```
+
+### Context
+A production `teacher-work-datahub` publish used valid native metadata with a descriptive summary
+longer than the display-name limit. No skill, content, version, or release was created.
+
+### Suggested Fix
+Map display name from an explicit display name or the skill name, while preserving summary in its
+own field.
+
+### Metadata
+- Reproducible: yes
+- Related Files: src/infinitas_skill/registry/publish.py, tests/unit/registry/test_publish.py
+
+### Resolution
+- **Resolved**: 2026-07-24T16:40:00Z
+- **Notes**: Display names now use the declared name/slug and long summaries have regression coverage.
+
+---
+
 ## [ERR-20260724-001] zsh-secret-scan-quoting
 
 **Logged**: 2026-07-24T00:00:00Z

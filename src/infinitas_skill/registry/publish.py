@@ -415,10 +415,13 @@ def _publish_prepared(
     receipt: dict[str, Any],
     receipt_path: Path,
 ) -> PublishResult:
+    display_name = str(
+        staged.metadata.get("display_name") or staged.metadata.get("name") or staged.slug
+    ).strip()[:200]
     skill = _resolve_or_create_skill(
         client,
         slug=staged.slug,
-        display_name=staged.metadata["summary"],
+        display_name=display_name or staged.slug,
         summary=staged.metadata["summary"],
     )
     skill_id = int(skill["id"])

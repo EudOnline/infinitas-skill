@@ -31,6 +31,12 @@ def _response(status: int, payload: object) -> httpx.Response:
 def test_publish_orchestrates_idempotent_hosted_flow(monkeypatch, tmp_path: Path) -> None:
     calls: list[tuple[str, str]] = []
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    source = _source(tmp_path)
+    long_summary = "Traceable workspace data and immutable source records. " * 6
+    (source / "_meta.json").write_text(
+        json.dumps({"summary": long_summary}),
+        encoding="utf-8",
+    )
 
     def fake_request(method: str, url: str, **kwargs) -> httpx.Response:
         path = url.removeprefix("https://registry.example.test")
@@ -40,6 +46,8 @@ def test_publish_orchestrates_idempotent_hosted_flow(monkeypatch, tmp_path: Path
         if path == "/api/v1/skills?slug=adapt":
             return _response(200, [])
         if method == "POST" and path == "/api/v1/skills":
+            assert kwargs["json"]["display_name"] == "adapt"
+            assert kwargs["json"]["summary"] == long_summary
             return _response(201, {"id": 8, "slug": "adapt", "status": "active"})
         if method == "GET" and path == "/api/v1/skills/8/versions":
             return _response(200, [])
@@ -62,7 +70,7 @@ def test_publish_orchestrates_idempotent_hosted_flow(monkeypatch, tmp_path: Path
 
     monkeypatch.setattr(httpx, "request", fake_request)
     result = publish_skill(
-        _source(tmp_path),
+        source,
         base_url="https://registry.example.test",
         token="publisher-token",
         version="1.0.0",
