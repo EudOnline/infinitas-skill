@@ -2,7 +2,7 @@
 audience: Coolify operators and release maintainers
 owner: repository maintainers
 source_of_truth: docker-compose.coolify.yml and hosted runtime contract
-last_reviewed: 2026-07-23
+last_reviewed: 2026-07-27
 status: maintained
 ---
 
@@ -66,7 +66,7 @@ upgrades to take effect immediately.
 Add these variables to the Coolify resource before deploying:
 
 ```dotenv
-INFINITAS_IMAGE=ghcr.io/eudonline/infinitas-skill:sha-<verified-commit>
+INFINITAS_IMAGE=ghcr.io/eudonline/infinitas-skill:sha-<full-40-character-commit>
 INFINITAS_SERVER_ALLOWED_HOSTS=["skills.infinitas.fun"]
 INFINITAS_SERVER_SECRET_KEY=<strong-random-session-secret>
 INFINITAS_SERVER_BOOTSTRAP_USERS=[{"username":"maintainer","display_name":"Maintainer","role":"maintainer","password":"<strong-browser-password>","token":"<distinct-agent-token>"}]
@@ -75,8 +75,8 @@ INFINITAS_REGISTRY_READ_TOKENS=["<distinct-registry-read-token>"]
 
 Important details:
 
-- Use a released version or `sha-*` image tag in production. `latest` is convenient for initial
-  evaluation but is not a stable rollback target.
+- Use a released version or the full 40-character `sha-<commit>` image tag emitted by CI in
+  production. `latest` is convenient for initial evaluation but is not a stable rollback target.
 - `INFINITAS_SERVER_ALLOWED_HOSTS` and token settings are JSON arrays, not comma-separated text.
 - `INFINITAS_SERVER_BOOTSTRAP_USERS` is a JSON array on one line. Production startup requires at
   least one maintainer with a valid browser password.

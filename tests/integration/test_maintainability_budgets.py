@@ -252,6 +252,7 @@ def test_container_publication_depends_on_the_single_release_gate() -> None:
     assert workflow.count("scripts/check-all.sh") == 1
     assert "build-container:" in workflow
     assert "needs: [validate, python-314-archive-preview]" in workflow
+    assert "DOCKER_METADATA_SHORT_SHA_LENGTH: 40" in workflow
     assert workflow.index("scripts/check-all.sh") < workflow.index("docker/build-push-action")
     assert "make ci-fast" not in workflow
     assert "tests/unit -q --override-ini=addopts=" not in workflow

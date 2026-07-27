@@ -2,7 +2,7 @@
 audience: operators and release maintainers
 owner: repository maintainers
 source_of_truth: hosted deployment runbook
-last_reviewed: 2026-07-20
+last_reviewed: 2026-07-27
 status: maintained
 ---
 
@@ -87,10 +87,11 @@ The repository now includes a container image path for the hosted registry:
 - pushes to `main`, version tags matching `v*`, and manual workflow runs publish to GHCR as
   `ghcr.io/eudonline/infinitas-skill`
 
-The workflow emits branch, semver, `sha-*`, and default-branch `latest` tags. Image publication
-and provenance attestation cannot run until validation and the container smoke check pass. The
-image contains a full runtime snapshot of the repository contents needed by the hosted control
-plane, and compose seeds that snapshot into a writable runtime repo on first boot.
+The workflow emits branch, semver, full 40-character `sha-<commit>`, and default-branch `latest`
+tags. Image publication and provenance attestation cannot run until validation and the container
+smoke check pass. The image contains a full runtime snapshot of the repository contents needed by
+the hosted control plane, and compose seeds that snapshot into a writable runtime repo on first
+boot.
 
 ## Docker Compose deployment
 

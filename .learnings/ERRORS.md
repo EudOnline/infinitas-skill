@@ -198,6 +198,41 @@ Store coverage file paths relative to each repository root so equivalent modules
 
 ---
 
+## [ERR-20260727-006] container-sha-tag-ambiguity
+
+**Logged**: 2026-07-27T11:20:00Z
+**Priority**: high
+**Status**: resolved
+**Area**: infra
+
+### Summary
+Production was configured with a full commit SHA tag while Docker metadata had emitted only its default short SHA tag.
+
+### Error
+```text
+Release compatibility remained on the previous image after a nominally completed deployment.
+canonical_runtime.checker was missing from the production proof.
+```
+
+### Context
+- The runbook used `sha-<verified-commit>` without stating the tag length.
+- `docker/metadata-action` defaults `type=sha` tags to a short commit.
+- Coolify's Compose service-health fallback saw the previous containers remain healthy and could not prove the intended image was running.
+- A package-version API check also lacked `read:packages`; production behavior was used as the definitive proof instead.
+
+### Suggested Fix
+Emit full 40-character SHA tags explicitly and require a behavior-level production acceptance after deployment.
+
+### Metadata
+- Reproducible: yes
+- Related Files: .github/workflows/validate.yml, docs/ops/coolify-deployment.md, docs/ops/server-deployment.md
+
+### Resolution
+- **Resolved**: 2026-07-27T11:24:00Z
+- **Notes**: CI now fixes the SHA tag length at 40, docs state the exact format, and production proof checks bundle-bound OpenClaw evidence rather than trusting container health alone.
+
+---
+
 ## [ERR-20260724-009] preflight-format-before-full-matrix
 
 **Logged**: 2026-07-24T16:56:10Z

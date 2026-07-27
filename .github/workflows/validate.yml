@@ -67,6 +67,8 @@ jobs:
   build-container:
     needs: [validate, python-314-archive-preview]
     runs-on: ubuntu-latest
+    env:
+      DOCKER_METADATA_SHORT_SHA_LENGTH: 40
     permissions:
       contents: read
       packages: write
