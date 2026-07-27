@@ -112,6 +112,11 @@ same-version digest conflict, and records a resumable 0600 receipt without secre
 does not create or edit skill content. It reads the same immutable records and can distribute a
 Share Link from the Release page.
 
+Hosted upload validates the extracted skill against the OpenClaw runtime contract before storing
+content. The worker repeats that validation against the sealed bundle and records fresh evidence
+bound to its SHA-256 digest in the Release and signed provenance. Registry HTTP errors exit with
+status 1 and a concise message; expected authorization failures do not emit a Python traceback.
+
 Skill sources may include a root `.infinitasignore` with one relative file or directory prefix per
 line. Publishing omits those paths and reports them as `prepared.excluded_paths`; absolute paths,
 parent traversal, backslashes, and excluding `SKILL.md` are rejected. Use this for legacy runtime
@@ -327,7 +332,20 @@ Example response:
   "created_by_principal_id": 1,
   "created_at": "2026-04-22T00:03:00Z",
   "ready_at": "2026-04-22T00:03:30Z",
-  "platform_compatibility": {}
+  "platform_compatibility": {
+    "canonical_runtime_platform": "openclaw",
+    "canonical_runtime": {
+      "platform": "openclaw",
+      "state": "native",
+      "freshness_state": "fresh",
+      "freshness_reason": "not-applicable",
+      "checker": "infinitas-hosted-materializer/openclaw-contract",
+      "content_sha256": "<bundle-sha256>",
+      "source_mode": "openclaw-native",
+      "declared": true
+    },
+    "blocking_platforms": []
+  }
 }
 ```
 

@@ -175,7 +175,7 @@
   .nav a {
     display: inline-flex;
     align-items: center;
-    min-height: 44px;
+    min-height: 45px;
     padding: 0.45rem 0.8rem;
     color: var(--kawaii-ink-soft);
     font-size: 0.86rem;
@@ -414,7 +414,7 @@
     align-items: center;
     justify-content: center;
     min-width: 44px;
-    min-height: 44px;
+    min-height: 45px;
     padding: 0.4rem 0.7rem;
     color: var(--kawaii-ink-soft);
     font-size: 0.78rem;

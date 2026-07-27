@@ -33,6 +33,171 @@ own field.
 
 ---
 
+## [ERR-20260727-001] hosted-release-openclaw-evidence
+
+**Logged**: 2026-07-27T00:00:00Z
+**Priority**: high
+**Status**: resolved
+**Area**: backend
+
+### Summary
+Hosted Releases reported the canonical OpenClaw runtime as unknown because materialization only loaded repository evidence.
+
+### Error
+```text
+canonical_runtime.state=unknown
+canonical_runtime.freshness_reason=missing-evidence
+```
+
+### Context
+- Uploaded skill content has no repository-local compatibility evidence path.
+- The worker already had the safely extracted immutable bundle but did not turn its contract validation into release evidence.
+
+### Suggested Fix
+Validate the OpenClaw contract from the extracted bundle and bind worker-generated evidence to the bundle digest.
+
+### Metadata
+- Reproducible: yes
+- Related Files: server/modules/authoring/content.py, server/modules/release/materializer.py, src/infinitas_skill/release/platform_state.py
+
+### Resolution
+- **Resolved**: 2026-07-27T00:00:00Z
+- **Notes**: Upload and materialization now validate the contract; fresh SHA-bound evidence is persisted and covered by integration tests.
+
+---
+
+## [ERR-20260727-002] hosted-registry-cli-traceback
+
+**Logged**: 2026-07-27T00:00:00Z
+**Priority**: medium
+**Status**: resolved
+**Area**: backend
+
+### Summary
+Registry inspection commands exposed a Python traceback for expected Hosted API errors such as HTTP 403.
+
+### Error
+```text
+HostedPublishError: registry returned HTTP 403: insufficient scope
+```
+
+### Context
+- `registry publish` translated `HostedPublishError` into a CLI failure.
+- Other Hosted Registry commands used a wrapper without the same exception boundary.
+
+### Suggested Fix
+Translate Hosted client errors in the shared Registry handler wrapper.
+
+### Metadata
+- Reproducible: yes
+- Related Files: src/infinitas_skill/registry/cli.py, src/infinitas_skill/registry/handler.py
+
+### Resolution
+- **Resolved**: 2026-07-27T00:00:00Z
+- **Notes**: All wrapped Hosted commands now exit 1 with a concise stderr message and no traceback.
+
+---
+
+## [ERR-20260727-003] openclaw-contract-negative-fixture
+
+**Logged**: 2026-07-27T00:00:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+The first negative fixture failed generic install validation before reaching the new OpenClaw contract boundary.
+
+### Error
+```text
+expected: missing YAML frontmatter
+actual: missing name field in SKILL.md; missing description field in SKILL.md
+```
+
+### Context
+- The layered upload validator intentionally runs generic installability before the canonical runtime contract.
+- A fixture with no field lines cannot distinguish those layers.
+
+### Suggested Fix
+Provide generic name and description field lines without an OpenClaw YAML frontmatter block.
+
+### Metadata
+- Reproducible: yes
+- Related Files: tests/integration/test_authoring_content_storage.py
+
+### Resolution
+- **Resolved**: 2026-07-27T00:00:00Z
+- **Notes**: The fixture now passes generic field extraction and fails specifically at OpenClaw contract validation.
+
+---
+
+## [ERR-20260727-004] chromium-touch-target-rounding
+
+**Logged**: 2026-07-27T00:00:00Z
+**Priority**: medium
+**Status**: resolved
+**Area**: frontend
+
+### Summary
+Chromium rendered nominal 44px navigation and toggle targets at 43.999996px, failing the accessibility E2E gate.
+
+### Error
+```text
+test_navigation_and_toggle_targets_are_at_least_44px
+height: 43.999996185302734
+```
+
+### Context
+- Source CSS used an exact `min-height: 44px` boundary.
+- Browser layout scaling can round that boundary slightly below the required physical measurement.
+
+### Suggested Fix
+Give critical touch targets a one-pixel rendering margin while retaining the strict E2E assertion.
+
+### Metadata
+- Reproducible: yes
+- Related Files: server/static/css/input.css, tests/e2e/test_navigation.py
+
+### Resolution
+- **Resolved**: 2026-07-27T00:00:00Z
+- **Notes**: Navigation and toggle targets now use a 45px minimum height; the E2E gate remains strictly at 44px.
+
+---
+
+## [ERR-20260727-005] coverage-temp-repo-duplication
+
+**Logged**: 2026-07-27T00:00:00Z
+**Priority**: high
+**Status**: resolved
+**Area**: tests
+
+### Summary
+Cross-process tests recorded copied repository files under absolute temporary paths, doubling the coverage denominator.
+
+### Error
+```text
+TOTAL 42504 statements, 36% coverage
+check-all.sh requires --cov-fail-under=64
+```
+
+### Context
+- The suite intentionally runs API, worker, and CLI processes against temporary repository copies.
+- Coverage stored root and copied modules as unrelated absolute paths.
+- A Linux-specific omit pattern would hide useful subprocess coverage and remain fragile on CI runners.
+
+### Suggested Fix
+Store coverage file paths relative to each repository root so equivalent modules merge across processes.
+
+### Metadata
+- Reproducible: yes
+- Related Files: pyproject.toml, scripts/check-all.sh, tests/helpers/repo_copy.py
+
+### Resolution
+- **Resolved**: 2026-07-27T00:00:00Z
+- **Notes**: Enabled `relative_files`; the full thresholded suite verifies a single canonical source tree.
+
+---
+
 ## [ERR-20260724-009] preflight-format-before-full-matrix
 
 **Logged**: 2026-07-24T16:56:10Z

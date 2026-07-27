@@ -13,6 +13,7 @@ import httpx
 from infinitas_skill.registry.bootstrap_cli import configure_registry_bootstrap_command
 from infinitas_skill.registry.catalog import configure_registry_catalog_parser
 from infinitas_skill.registry.connection_cli import configure_registry_connection_args
+from infinitas_skill.registry.handler import wrap_hosted_handler
 from infinitas_skill.registry.local_ops import configure_registry_sources_parser
 
 if TYPE_CHECKING:
@@ -300,15 +301,10 @@ def command_review_decide(args: argparse.Namespace) -> dict[str, Any]:
     )
 
 
-def _emit_json_result(result: object) -> int:
-    print(json.dumps(result, ensure_ascii=False, indent=2))
-    return 0
-
-
 def _wrap_registry_handler(
     func: Callable[[argparse.Namespace], object],
 ) -> Callable[[argparse.Namespace], int]:
-    return lambda args: _emit_json_result(func(args))
+    return wrap_hosted_handler(func, fail)
 
 
 def _configure_registry_publish_command(subparsers: argparse._SubParsersAction) -> None:

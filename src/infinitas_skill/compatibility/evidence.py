@@ -36,6 +36,7 @@ KNOWN_STATES = {
 CANONICAL_RUNTIME_PLATFORM = "openclaw"
 
 JsonDict = dict[str, Any]
+_OPTIONAL_BINDING_FIELDS = ("content_sha256", "source_mode")
 
 
 def compatibility_evidence_root(root: Path) -> Path:
@@ -289,6 +290,22 @@ def _freshness_payload(
     return result
 
 
+def _verified_evidence_payload(item: JsonDict) -> JsonDict:
+    verified = {
+        "state": item.get("state"),
+        "checked_at": item.get("checked_at"),
+        "checker": item.get("checker"),
+        "evidence_path": item.get("evidence_path"),
+    }
+    for field in _OPTIONAL_BINDING_FIELDS:
+        if item.get(field) is not None:
+            verified[field] = item[field]
+    note = item.get("note")
+    if isinstance(note, str) and note:
+        verified["note"] = note
+    return verified
+
+
 def merge_declared_and_verified_support(
     skill_entry: dict,
     evidence: list[dict],
@@ -317,15 +334,7 @@ def merge_declared_and_verified_support(
         platform = normalize_platform_name(item.get("platform"))
         if not platform:
             continue
-        verified[platform] = {
-            "state": item.get("state"),
-            "checked_at": item.get("checked_at"),
-            "checker": item.get("checker"),
-            "evidence_path": item.get("evidence_path"),
-        }
-        note = item.get("note")
-        if isinstance(note, str) and note:
-            verified[platform]["note"] = note
+        verified[platform] = _verified_evidence_payload(item)
 
     platforms = []
     for platform in declared + sorted(verified):
@@ -376,15 +385,7 @@ def collect_canonical_runtime_support(
     verified_item = None
     if matched:
         latest = sorted(matched, key=_evidence_sort_key)[-1]
-        verified_item = {
-            "state": latest.get("state"),
-            "checked_at": latest.get("checked_at"),
-            "checker": latest.get("checker"),
-            "evidence_path": latest.get("evidence_path"),
-        }
-        note = latest.get("note")
-        if isinstance(note, str) and note:
-            verified_item["note"] = note
+        verified_item = _verified_evidence_payload(latest)
 
     result = _freshness_payload(
         platform=platform,

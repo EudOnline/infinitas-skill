@@ -2,7 +2,7 @@
 audience: contributors, integrators, reviewers
 owner: repository maintainers
 source_of_truth: current runtime compatibility contract
-last_reviewed: 2026-07-14
+last_reviewed: 2026-07-27
 status: maintained
 ---
 
@@ -23,6 +23,12 @@ Other platforms remain valid declared or verified targets, but they do not weake
 - freshness metadata distinguishes `fresh`, `stale`, and `unknown` evidence.
 
 Release decisions use verified support and policy. A declaration by itself is not evidence that the current release works.
+
+For Hosted Releases, the materializer validates the sealed bundle against the OpenClaw contract
+and produces runtime evidence at materialization time. That evidence records the immutable bundle
+SHA-256 and source mode, is persisted on the Release, and is embedded in signed provenance. Repo
+evidence under `catalog/compatibility-evidence/` remains the source for local and historical
+platform checks; it is merged with, not substituted for, Hosted runtime evidence.
 
 ## Current format rule
 

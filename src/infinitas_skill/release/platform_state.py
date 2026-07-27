@@ -19,11 +19,18 @@ JsonDict = dict[str, Any]
 
 
 def collect_platform_compatibility_state(
-    root: Path, meta: JsonDict, identity: JsonDict
+    root: Path,
+    meta: JsonDict,
+    identity: JsonDict,
+    *,
+    runtime_evidence: list[JsonDict] | None = None,
 ) -> JsonDict:
     compatibility_policy = load_compatibility_policy(root)
     platform_contracts = load_platform_contracts(root)
-    compatibility_evidence = load_compatibility_evidence(root)
+    compatibility_evidence = [
+        *load_compatibility_evidence(root),
+        *(runtime_evidence or []),
+    ]
     merged = merge_declared_and_verified_support(
         {
             "name": meta.get("name"),

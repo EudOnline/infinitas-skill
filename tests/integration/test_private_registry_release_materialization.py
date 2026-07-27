@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import tarfile
@@ -229,6 +230,24 @@ def test_materialized_release_manifest_is_install_verifiable(
     )
     compatibility = release_response.json()["platform_compatibility"]
     assert compatibility["canonical_runtime_platform"] == "openclaw"
+    canonical_runtime = compatibility["canonical_runtime"]
+    bundle_path = (
+        artifact_root
+        / "skills"
+        / "fixture-maintainer"
+        / "materialized-release"
+        / "0.1.0"
+        / "skill.tar.gz"
+    )
+    assert canonical_runtime["state"] == "native"
+    assert canonical_runtime["freshness_state"] == "fresh"
+    assert canonical_runtime["freshness_reason"] == "not-applicable"
+    assert canonical_runtime["checker"] == "infinitas-hosted-materializer/openclaw-contract"
+    assert (
+        canonical_runtime["content_sha256"] == hashlib.sha256(bundle_path.read_bytes()).hexdigest()
+    )
+    assert canonical_runtime["source_mode"] == "openclaw-native"
+    assert compatibility["blocking_platforms"] == []
     provenance_path = (
         artifact_root / "provenance" / "fixture-maintainer--materialized-release-0.1.0.json"
     )

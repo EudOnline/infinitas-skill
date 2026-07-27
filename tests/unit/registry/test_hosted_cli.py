@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 import httpx
+import pytest
 
 from infinitas_skill.registry.cli import build_registry_parser
 
@@ -140,3 +141,25 @@ def test_create_share_reads_password_from_env_and_returns_agent_command(
     assert output["credential_env"] == "INFINITAS_SHARE_PASSWORD"
     assert "infinitas install from-share" in output["agent_install_command"]
     assert "temporary-password" not in output["agent_install_command"]
+
+
+def test_hosted_registry_error_exits_without_traceback(monkeypatch, capsys) -> None:
+    def fake_request(method, url, **kwargs):
+        return httpx.Response(
+            403,
+            json={"detail": "insufficient scope"},
+            request=httpx.Request(method, url),
+        )
+
+    monkeypatch.setattr(httpx, "request", fake_request)
+    parser = build_registry_parser()
+    args = parser.parse_args(["versions", "get", "7", "1.2.3"])
+
+    with pytest.raises(SystemExit) as exc_info:
+        args._handler(args)
+
+    captured = capsys.readouterr()
+    assert exc_info.value.code == 1
+    assert captured.out == ""
+    assert captured.err == "registry returned HTTP 403: insufficient scope\n"
+    assert "Traceback" not in captured.err

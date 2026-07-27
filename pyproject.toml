@@ -52,6 +52,7 @@ ignore = [ "S101", "S603", "S607", "S112",]
 source = [ "src", "server",]
 omit = [ "*/tests/*", "*/test_*", "*/conftest.py", "*/templates/*", "/tmp/infinitas-*/repo/*",]
 branch = true
+relative_files = true
 
 [tool.coverage.report]
 exclude_lines = [ "pragma: no cover", "if TYPE_CHECKING:", "raise NotImplementedError", "pass",]

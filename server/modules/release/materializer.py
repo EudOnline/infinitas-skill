@@ -32,6 +32,7 @@ from infinitas_skill.release.attestation import (
     resolve_attestation_key,
 )
 from server.artifact_ops import sha256_bytes
+from server.model_base import utcnow
 from server.modules.authoring.content import (
     canonicalize_skill_bundle,
     validate_hosted_skill_identity,
@@ -146,6 +147,7 @@ def _build_and_store_bundle(
         "sha256": sha256,
         "public_path": public_path,
         "metadata": validated.metadata,
+        "openclaw_contract": validated.openclaw_contract,
     }
 
 
@@ -159,6 +161,7 @@ def _persist_platform_compatibility(
     repo_root: Path,
     release: Release,
     metadata: dict[str, Any],
+    runtime_evidence: list[dict[str, Any]],
 ) -> dict[str, Any]:
     from infinitas_skill.policy.skill_identity import normalize_skill_identity
     from infinitas_skill.release.platform_state import collect_platform_compatibility_state
@@ -167,6 +170,7 @@ def _persist_platform_compatibility(
         repo_root,
         metadata,
         normalize_skill_identity(metadata),
+        runtime_evidence=runtime_evidence,
     )
     release.platform_compatibility_json = json.dumps(
         compatibility,
@@ -176,6 +180,24 @@ def _persist_platform_compatibility(
     )
     db.add(release)
     return compatibility
+
+
+def _openclaw_runtime_evidence(
+    *, snapshot: ReleaseSnapshot, bundle: dict[str, Any]
+) -> dict[str, Any]:
+    checked_at = utcnow().replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return {
+        "platform": "openclaw",
+        "skill": snapshot.skill.slug,
+        "qualified_name": f"{snapshot.namespace.slug}/{snapshot.skill.slug}",
+        "version": snapshot.skill_version.version,
+        "state": "native",
+        "checked_at": checked_at,
+        "checker": "infinitas-hosted-materializer/openclaw-contract",
+        "content_sha256": bundle["sha256"],
+        "source_mode": bundle["openclaw_contract"]["source_mode"],
+        "note": "Validated immutable hosted bundle against the OpenClaw runtime contract.",
+    }
 
 
 def _build_and_store_provenance(
@@ -323,6 +345,7 @@ def materialize_release(
         repo_root=resolved_repo_root,
         release=release,
         metadata=bundle["metadata"],
+        runtime_evidence=[_openclaw_runtime_evidence(snapshot=snapshot, bundle=bundle)],
     )
     provenance = _build_and_store_provenance(
         snapshot=snapshot,

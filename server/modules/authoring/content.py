@@ -13,6 +13,10 @@ from infinitas_skill.install.skill_validation import (
     SkillValidationError,
     validate_installable_skill_dir,
 )
+from infinitas_skill.openclaw.skill_contract import (
+    OpenClawSkillContractError,
+    load_openclaw_skill_contract,
+)
 from infinitas_skill.policy.skill_identity import validate_identity_metadata
 
 MAX_BUNDLE_BYTES = 20 * 1024 * 1024
@@ -30,6 +34,7 @@ class CanonicalSkillBundle:
     data: bytes
     declared_version: str
     metadata: dict[str, Any]
+    openclaw_contract: dict[str, Any]
 
 
 def _safe_member_path(member_name: str, *, skill_slug: str) -> PurePosixPath:
@@ -144,7 +149,8 @@ def canonicalize_skill_bundle(
         skill_dir = _extract_validated_bundle(raw, temp_root / "extracted", skill_slug=skill_slug)
         try:
             validate_installable_skill_dir(skill_dir, repo_root=repo_root)
-        except SkillValidationError as exc:
+            openclaw_contract = load_openclaw_skill_contract(skill_dir)
+        except (OpenClawSkillContractError, SkillValidationError) as exc:
             raise ContentValidationError(str(exc)) from exc
         output_path = temp_root / "canonical.tar.gz"
         deterministic_bundle(skill_dir, output_path, root_dir=skill_slug)
@@ -153,6 +159,7 @@ def canonicalize_skill_bundle(
             data=output_path.read_bytes(),
             declared_version=_declared_version(metadata),
             metadata=metadata,
+            openclaw_contract=openclaw_contract,
         )
 
 
