@@ -2,7 +2,7 @@
 audience: operators and release maintainers
 owner: repository maintainers
 source_of_truth: hosted backup and restore runbook
-last_reviewed: 2026-07-21
+last_reviewed: 2026-07-28
 status: maintained
 ---
 
@@ -36,6 +36,7 @@ uv run infinitas server backup \
   --database-url sqlite:////srv/infinitas/data/server.db \
   --artifact-path /srv/infinitas/artifacts \
   --output-dir /srv/infinitas/backups \
+  --lock-path /srv/infinitas/data/repo.lock \
   --label nightly \
   --json
 ```
@@ -51,6 +52,9 @@ Snapshot directories are created with mode `0700` and their files with mode `060
 SQLite snapshot and manifest may contain sensitive operational state.
 
 The backup helper refuses dirty repo snapshots so operators do not accidentally capture an in-flight publish worktree.
+It publishes a snapshot directory only after every file and the manifest are complete. The shared
+`repo.lock` serializes the snapshot with worker materialization and cleanup, while a separate
+backup lock rejects overlapping backup commands.
 It runs `PRAGMA integrity_check` against the completed SQLite snapshot before accepting the backup.
 The restore rehearsal refuses backup sets without valid SHA-256 values, so a backup is not considered
 recoverable merely because its files still exist.
@@ -66,6 +70,7 @@ python3 -m infinitas_skill.cli.main server backup \
   --database-url sqlite:////srv/infinitas/data/server.db \
   --artifact-path /srv/infinitas/artifacts \
   --output-dir /srv/infinitas/backups \
+  --lock-path /srv/infinitas/data/repo.lock \
   --label nightly \
   --json
 ```
@@ -74,8 +79,55 @@ Schedule the same command with a Coolify scheduled task or an external scheduler
 must run in a service that mounts the repo, data, artifact, and backup volumes.
 
 The `infinitas-backups` volume protects against a bad application redeploy, but not against loss
-of the Coolify server. Copy completed backup directories to independent object storage or a
-different host and test that those exported copies can be retrieved.
+of the Coolify server. Use the encrypted export below for server-loss recovery.
+
+## Encrypted offsite export through OpenList
+
+Use OpenList only as a replaceable WebDAV gateway. The durable offsite medium is the Google Drive
+mounted below `/infinitas`. In OpenList, create a dedicated non-admin user with:
+
+- base path `/infinitas/infinitas-skill-backups`
+- only WebDAV read and WebDAV write permissions
+- a unique random password used with Basic Auth
+
+Do not use an administrator API Token as a Basic password. Generate an age identity on an offline
+recovery host, store the identity outside Coolify and Google Drive, and put only its public
+recipient in Coolify.
+
+Run the exporter in the `backup-exporter` container:
+
+```bash
+infinitas server export-backups \
+  --backup-root /srv/infinitas/backups \
+  --staging-dir /srv/infinitas/backup-staging \
+  --receipt-root /srv/infinitas/backup-receipts \
+  --webdav-url "$INFINITAS_BACKUP_WEBDAV_URL" \
+  --remote-prefix "$INFINITAS_BACKUP_REMOTE_PREFIX" \
+  --age-recipient "$INFINITAS_BACKUP_AGE_RECIPIENT" \
+  --auth-mode basic \
+  --json
+```
+
+The password is read only from `INFINITAS_BACKUP_WEBDAV_PASSWORD`; there is no plaintext secret
+argument. Before upload, the command verifies all manifest hashes, the Git bundle, and SQLite
+integrity. It uploads only a `.tar.gz.age` archive, downloads it again to verify the encrypted
+SHA-256, then writes the remote and local receipt. Production receipts use a separate volume so
+the exporter keeps the snapshot volume read-only. An upload without a matching receipt is never
+overwritten automatically. A matching remote receipt can reconstruct local state after an
+interrupted run.
+
+Monitor backup freshness independently from application readiness:
+
+```bash
+infinitas server inspect-backup-state \
+  --backup-root /srv/infinitas/backups \
+  --receipt-root /srv/infinitas/backup-receipts \
+  --max-local-age-hours 2 \
+  --max-offsite-age-hours 3 \
+  --json
+```
+
+OpenList or Google Drive downtime must alert, but must not make the registry API unready.
 
 ## Recovery objectives
 
@@ -98,12 +150,14 @@ sudo systemctl list-timers infinitas-hosted-backup.timer
 
 ## Retention pruning
 
-For a small single-node deployment, a reasonable starting retention policy is to keep the newest 7 hosted backup snapshots:
+For a small single-node deployment, keep the newest 48 hourly hosted backup snapshots:
 
 ```bash
 uv run infinitas server prune-backups \
   --backup-root /srv/infinitas/backups \
-  --keep-last 7 \
+  --keep-last 48 \
+  --require-offsite-receipt \
+  --receipt-root /srv/infinitas/backup-receipts \
   --json
 ```
 
@@ -112,7 +166,10 @@ The prune helper only deletes directories that:
 - match the hosted backup timestamp naming convention
 - contain `manifest.json`
 
-Anything else under the backup root is left untouched and reported as `ignored`.
+Anything else under the backup root is left untouched and reported as `ignored`. With
+`--require-offsite-receipt`, snapshots without a completed offsite receipt are protected even if
+they are older than the local retention window. Do not automate remote deletion during the first
+30 production days; define and test a separate GFS policy after the first successful drill.
 
 If you install the generated `systemd` bundle, enable the prune timer so retention cleanup stays aligned with scheduled backups:
 
@@ -142,6 +199,27 @@ This drill:
 - extracts artifacts and confirms `ai-index.json` plus `catalog/`
 
 Treat this as the safest first step before pointing any restored files at production service paths.
+
+For the required offsite drill, run this on the secured recovery host that holds the age identity.
+Copy the snapshot's `manifest.json` into a same-named local directory and its receipt into a
+separate local receipt directory, provide the dedicated WebDAV credentials through environment
+variables, and run:
+
+```bash
+infinitas server verify-offsite-backup \
+  --backup-dir ./20260728T010000Z-scheduled \
+  --receipt-root ./receipts \
+  --output-dir ./restore-rehearsal \
+  --webdav-url https://openlist.infinitas.fun/dav \
+  --auth-mode basic \
+  --age-identity /secure/offline/infinitas-backup.agekey \
+  --json
+```
+
+The command downloads the encrypted archive, verifies its receipt, decrypts into a private
+temporary directory, rejects unsafe archive members, validates the inner backup again, and runs
+the same isolated repo/SQLite/artifact restore rehearsal. Run this quarterly and after any change
+to the image, volume layout, OpenList storage, WebDAV account, or age tooling.
 
 ## Restore sequence
 

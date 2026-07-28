@@ -2,20 +2,22 @@
 audience: Coolify operators and release maintainers
 owner: repository maintainers
 source_of_truth: docker-compose.coolify.yml and hosted runtime contract
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 status: maintained
 ---
 
 # Deploy the Hosted Registry on Coolify
 
 This is the production installation path for a single Coolify server. It deploys one API
-container and one worker against the same SQLite database, writable Git repository, artifact
-store, backup directory, and runtime home.
+container, one worker, and one isolated backup exporter. App and worker share the SQLite database,
+writable Git repository, artifact store, backup directory, and runtime home. Only the exporter
+receives offsite-storage credentials.
 
 The supported v0.1 topology is deliberately single-node:
 
 - `app` replicas: exactly `1`
 - `worker` replicas: exactly `1`
+- `backup-exporter` replicas: exactly `1`
 - database: SQLite on the `infinitas-data` volume
 - artifacts: filesystem storage on the `infinitas-artifacts` volume
 - HTTPS and public routing: Coolify proxy
@@ -71,6 +73,11 @@ INFINITAS_SERVER_ALLOWED_HOSTS=["skills.infinitas.fun"]
 INFINITAS_SERVER_SECRET_KEY=<strong-random-session-secret>
 INFINITAS_SERVER_BOOTSTRAP_USERS=[{"username":"maintainer","display_name":"Maintainer","role":"maintainer","password":"<strong-browser-password>","token":"<distinct-agent-token>"}]
 INFINITAS_REGISTRY_READ_TOKENS=["<distinct-registry-read-token>"]
+INFINITAS_BACKUP_WEBDAV_URL=https://openlist.infinitas.fun/dav
+INFINITAS_BACKUP_WEBDAV_USER=infinitas-backup
+INFINITAS_BACKUP_WEBDAV_PASSWORD=<dedicated-openlist-user-password>
+INFINITAS_BACKUP_AGE_RECIPIENT=<age-public-recipient>
+INFINITAS_BACKUP_REMOTE_PREFIX=skills.infinitas.fun
 ```
 
 Important details:
@@ -81,6 +88,8 @@ Important details:
 - `INFINITAS_SERVER_BOOTSTRAP_USERS` is a JSON array on one line. Production startup requires at
   least one maintainer with a valid browser password.
 - Mark secrets, passwords, and tokens as secret values in Coolify. Do not commit them to Git.
+- The OpenList password is injected only into `backup-exporter`; never add it to the shared
+  environment anchor. Keep the matching age identity offline and out of Coolify.
 - Leave `INFINITAS_SERVER_REPO_BOOTSTRAP_RESET=0`. Enabling it can replace an invalid runtime
   repository and is only appropriate during deliberate recovery.
 
@@ -119,6 +128,7 @@ Attach `https://skills.infinitas.fun` to the child service named `app` and its c
 Do not attach a domain to:
 
 - `worker`
+- `backup-exporter`
 - `init-repo`
 - `init-permissions`
 
@@ -135,7 +145,7 @@ Use `/api/v1/system/readyz` for Coolify health/readiness routing. Keep
 
 ## 5. Deploy and verify
 
-Deploy the resource and wait for both long-running services to become healthy. The two init
+Deploy the resource and wait for all three long-running services to become healthy. The two init
 services should finish successfully and remain stopped.
 
 Verify from outside the server:
@@ -262,23 +272,42 @@ python3 -m infinitas_skill.cli.main server backup \
   --database-url sqlite:////srv/infinitas/data/server.db \
   --artifact-path /srv/infinitas/artifacts \
   --output-dir /srv/infinitas/backups \
+  --lock-path /srv/infinitas/data/repo.lock \
   --label pre-upgrade \
   --json
 ```
 
-The `infinitas-backups` volume is still on the same server. Copy completed backup directories to
-independent object storage or another host. A backup that disappears with the Coolify server is
-not disaster recovery.
+Then run `server export-backups` in `backup-exporter` and require a completed receipt before the
+upgrade. A local backup that disappears with the Coolify server is not disaster recovery.
 
 The durable volumes are `infinitas-data` (SQLite), `infinitas-artifacts` (immutable Release
 material), `infinitas-repo` (registry Git history), `infinitas-backups` (local recovery copies),
-and `infinitas-home` (signer and runtime home). When deleting or recreating the Coolify resource,
-preserve all five named volumes. Ordinary redeploys should not delete them.
+`infinitas-home` (signer and runtime home), `infinitas-backup-staging` (encrypted-transfer scratch
+space), and `infinitas-backup-receipts` (verified offsite state). When deleting or recreating the
+Coolify resource, preserve all seven named volumes.
+Ordinary redeploys should not delete them. Staging is reconstructable, but preserving it avoids
+interrupting an active export.
+
+## Scheduled backup tasks
+
+Create these Coolify scheduled tasks only after a manual backup, encrypted export, download, and
+restore rehearsal have all succeeded:
+
+| Schedule (UTC) | Container | Command |
+|---|---|---|
+| `7 * * * *` | `app` | `infinitas server backup --repo-path /srv/infinitas/repo --database-url sqlite:////srv/infinitas/data/server.db --artifact-path /srv/infinitas/artifacts --output-dir /srv/infinitas/backups --lock-path /srv/infinitas/data/repo.lock --label scheduled --json` |
+| `22 * * * *` | `backup-exporter` | `infinitas server export-backups --backup-root /srv/infinitas/backups --staging-dir /srv/infinitas/backup-staging --receipt-root /srv/infinitas/backup-receipts --webdav-url "$INFINITAS_BACKUP_WEBDAV_URL" --remote-prefix "$INFINITAS_BACKUP_REMOTE_PREFIX" --age-recipient "$INFINITAS_BACKUP_AGE_RECIPIENT" --auth-mode basic --json` |
+| `42 3 * * *` | `app` | `infinitas server prune-backups --backup-root /srv/infinitas/backups --keep-last 48 --require-offsite-receipt --receipt-root /srv/infinitas/backup-receipts --json` |
+| `15 4 * * *` | `backup-exporter` | `infinitas server inspect-backup-state --backup-root /srv/infinitas/backups --receipt-root /srv/infinitas/backup-receipts --max-local-age-hours 2 --max-offsite-age-hours 3 --json` |
+
+Inspect the first execution of every task. The task is successful only when the JSON result has
+`ok: true`; a queued task or a container exit without a receipt is not completion. Keep offsite
+freshness monitoring separate from `/readyz` so a storage-provider outage does not stop installs.
 
 ## Upgrade and rollback
 
 1. Record the currently deployed `INFINITAS_IMAGE` value.
-2. Create and export a pre-upgrade backup.
+2. Create and export a pre-upgrade backup; verify its offsite receipt.
 3. Change `INFINITAS_IMAGE` to a verified version or `sha-*` tag.
 4. Redeploy in Coolify without deleting persistent volumes.
 5. Verify readiness, worker heartbeat, browser login, hosted artifact access, and
@@ -297,7 +326,7 @@ rebuild instead of expecting old database formats to be adapted.
 
 ### `init-permissions` fails
 
-Confirm the service runs as `0:0`, the five named volumes exist, and the server allows the
+Confirm the service runs as `0:0`, the seven named volumes exist, and the server allows the
 container to change volume ownership. Do not work around this by running `app` as root.
 
 ### `app` fails during startup
@@ -316,6 +345,13 @@ readiness result and the `init-repo` logs. No host `ports:` mapping is required.
 Check the worker logs and `/srv/infinitas/data/worker.heartbeat`. Both app and worker must mount
 the same `infinitas-data` and `infinitas-repo` volumes. Do not add a second worker to mask a
 stalled one.
+
+### The backup exporter is unhealthy or stale
+
+Run `age --version` and `infinitas server export-backups --help` in `backup-exporter`, then inspect
+`server inspect-backup-state`. A WebDAV 401 usually means the dedicated user's real password was
+not supplied; an OpenList API Token is not a Basic password. Verify the user's restricted base
+path and Google Drive mount independently. Do not put WebDAV checks into app readiness.
 
 ### Login loops or CSRF failures
 

@@ -1,5 +1,41 @@
 # Errors
 
+## [ERR-20260728-004] docker-build-debian-index-stall
+
+**Logged**: 2026-07-28T10:25:00Z
+**Priority**: high
+**Status**: resolved
+**Area**: infra
+
+### Summary
+The local release image build again stopped making progress while downloading Debian package indexes.
+
+### Error
+```text
+[runtime 2/8] RUN apt-get ... update
+Get:4 http://deb.debian.org/debian trixie/main amd64 Packages [9673 kB]
+ERROR: failed to build: failed to solve: Canceled: context canceled
+```
+
+### Context
+- `docker build --tag infinitas-skill:backup-export-test .` remained in `apt-get update` for more than five minutes.
+- The same external mirror behavior occurred during the 2026-07-20 Coolify runtime smoke.
+- The build also exposed that a fixed amd64 age binary would violate the existing multi-architecture CI contract.
+
+### Suggested Fix
+Bound APT and curl operations, select age artifacts by BuildKit target architecture, and set explicit GitHub Actions job timeouts.
+
+### Metadata
+- Reproducible: intermittent
+- Related Files: Dockerfile, .github/workflows/validate.yml
+- See Also: ERR-20260720-001
+
+### Resolution
+- **Resolved**: 2026-07-28T10:25:00Z
+- **Notes**: APT and age downloads now have hard time limits, age has pinned amd64/arm64 hashes, and all CI jobs have explicit maximum durations.
+
+---
+
 ## [ERR-20260724-008] hosted-publish-summary-used-as-display-name
 
 **Logged**: 2026-07-24T16:40:00Z
@@ -30,6 +66,102 @@ own field.
 ### Resolution
 - **Resolved**: 2026-07-24T16:40:00Z
 - **Notes**: Display names now use the declared name/slug and long summaries have regression coverage.
+
+---
+
+## [ERR-20260728-001] playwright-wait-for-function-positional-arg
+
+**Logged**: 2026-07-28T00:24:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+The production browser acceptance script passed the page-function argument positionally, which is rejected by the installed Playwright Python API.
+
+### Error
+```
+TypeError: Page.wait_for_function() takes 2 positional arguments but 3 were given
+```
+
+### Context
+- The UI had already created a temporary namespace Token before the assertion helper failed.
+- The installed Playwright API requires `arg=<value>` after the expression.
+- Production test scripts must preserve created object identifiers or recover them by unique names so interrupted runs can clean up.
+
+### Suggested Fix
+Pass page-function data with the `arg=` keyword and include an idempotent cleanup phase for every production acceptance run.
+
+### Metadata
+- Reproducible: yes
+- Related Files: tests/e2e/test_access_settings.py
+
+### Resolution
+- **Resolved**: 2026-07-28T00:24:00Z
+- **Notes**: The corrected acceptance script uses `arg=` and recovers/revokes the interrupted run's uniquely named Token before continuing.
+
+---
+
+## [ERR-20260728-002] zsh-path-loop-variable
+
+**Logged**: 2026-07-28T00:34:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+Using `path` as a zsh loop variable replaced the shell command search path and made an otherwise valid latency probe unable to find `curl`.
+
+### Error
+```
+zsh: command not found: curl
+```
+
+### Context
+- In zsh, the lowercase `path` array is tied to the uppercase `PATH` scalar.
+- Assigning URL paths through `for path in ...` changed command lookup for the loop body.
+- The failure occurred in the local production test harness and did not affect the deployed service.
+
+### Suggested Fix
+Use a neutral name such as `endpoint` for URL-path loops under zsh.
+
+### Metadata
+- Reproducible: yes
+- Related Files: .learnings/ERRORS.md
+
+### Resolution
+- **Resolved**: 2026-07-28T00:34:00Z
+- **Notes**: The probe was rerun with `endpoint` and an unchanged command search path.
+
+---
+
+## [ERR-20260728-003] openlist-webdav-auth-contract
+
+**Logged**: 2026-07-28T08:52:00Z
+**Priority**: high
+**Status**: pending
+**Area**: infra
+
+### Summary
+The current OpenList API Token authenticates API requests but is rejected as the WebDAV Basic Auth password.
+
+### Error
+```
+WebDAV PROPFIND /dav/ returned HTTP 401
+```
+
+### Context
+- The protected OpenList Token returned HTTP 200 from `/api/fs/list` and identified `/infinitas` as a writable GoogleDrive mount.
+- Both the WebDAV skill's configured password and the current OpenList API Token returned HTTP 401 from WebDAV.
+- OpenList v4.2.1 source confirms Basic Auth uses an OpenList user's real password, while an admin API Token is accepted only as an `Authorization: Bearer` credential; the latter returned HTTP 207 in production.
+- The WebDAV skill currently documents the API Token as the Basic Auth password, so its credential contract does not match OpenList v4.2.1.
+
+### Suggested Fix
+Create a dedicated non-admin OpenList user restricted to the backup directory with WebDAV read/write permissions, and update the WebDAV skill to support either that user's real password or explicit Bearer Token authentication.
+
+### Metadata
+- Reproducible: yes
+- Related Files: /home/tdcasual/.agents/skills/webdav-manager/SKILL.md, /home/tdcasual/.agents/skills/openlist-manager/SKILL.md
 
 ---
 

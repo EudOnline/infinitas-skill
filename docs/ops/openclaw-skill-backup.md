@@ -2,7 +2,7 @@
 audience: operators and OpenClaw workspace maintainers
 owner: repository maintainers
 source_of_truth: OpenClaw snapshot and DataHub backup runbook
-last_reviewed: 2026-07-24
+last_reviewed: 2026-07-28
 status: maintained
 ---
 
@@ -100,6 +100,13 @@ For DataHub verification, compare `raw/`, `catalog/`, and `curated/` byte-for-by
   store. Keep only `.env.example`, `.env.sample`, or `.env.template` files with empty values.
 - A skill Release is not a database backup. Keep independent encrypted snapshots with at least
   one off-host copy and periodically perform a restore rehearsal.
+
+An OpenList-mounted Google Drive is suitable for the off-host copy only after the snapshot is
+encrypted locally. Upload the `.tar.gz.age` object through a restricted WebDAV user, then download
+it and compare SHA-256 before recording completion. Never upload the age identity, plaintext
+workspace data, `.env` files, or a broad OpenList administrator credential. Keep OpenClaw snapshot
+retention separate from hosted-registry receipts because their recovery units and data owners are
+different.
 
 For `teacher-work-datahub`, the current release position remains private/incubating and
 workspace-scoped. It is not a zero-configuration public skill.
