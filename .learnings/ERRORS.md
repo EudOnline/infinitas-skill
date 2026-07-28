@@ -1,5 +1,72 @@
 # Errors
 
+## [ERR-20260728-007] backup-staging-volume-ownership
+
+**Logged**: 2026-07-28T11:28:00Z
+**Priority**: high
+**Status**: resolved
+**Area**: infra
+
+### Summary
+The first production backup export could not prepare its staging directory because the new staging volume was not initialized for the non-root runtime user.
+
+### Error
+```text
+PermissionError: [Errno 1] Operation not permitted: '/srv/infinitas/backup-staging'
+```
+
+### Context
+- `backup-exporter` runs as UID/GID `1000:1000` and correctly mounts the staging volume read/write.
+- `init-permissions` mounted and changed ownership of the receipt volume but omitted the staging volume.
+- The export stopped before encryption or WebDAV upload, so no partial offsite object was created.
+
+### Suggested Fix
+Mount `infinitas-backup-staging` into `init-permissions`, create it, recursively change ownership to `1000:1000`, and assert that contract in the hosted Compose integration test.
+
+### Metadata
+- Reproducible: yes
+- Related Files: docker-compose.coolify.yml, tests/integration/test_hosted_deployment_templates.py
+
+### Resolution
+- **Resolved**: 2026-07-28T11:28:00Z
+- **Notes**: The Compose initialization contract and regression test now cover both exporter-owned writable volumes. Production verification remains required after the corrected image is deployed.
+
+---
+
+## [ERR-20260728-006] hosted-backup-shell-and-version-contract
+
+**Logged**: 2026-07-28T11:14:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: infra
+
+### Summary
+The first pre-upgrade backup attempts used a login shell that selected system Python and then passed a flag unavailable in the older deployed CLI.
+
+### Error
+```text
+ModuleNotFoundError: No module named 'typing_extensions'
+infinitas: error: unrecognized arguments: --lock-path /srv/infinitas/data/repo.lock
+```
+
+### Context
+- `docker exec ... sh -lc` reset the image's virtual-environment command lookup, while direct container execution resolved `/opt/venv/bin/infinitas` correctly.
+- The deployed `sha-a5cc...` image predates the shared backup lock option present on `main`.
+- Both failed attempts exited before creating a snapshot.
+
+### Suggested Fix
+Invoke `infinitas` directly in the target container and inspect the deployed command's `--help` before using options introduced by the upgrade being protected.
+
+### Metadata
+- Reproducible: yes
+- Related Files: docs/ops/coolify-deployment.md
+
+### Resolution
+- **Resolved**: 2026-07-28T11:14:41Z
+- **Notes**: The old image's supported command completed with `ok: true` and created `/srv/infinitas/backups/20260728T111441Z-pre-upgrade`. The shared-lock form remains the required command after deployment.
+
+---
+
 ## [ERR-20260728-005] openlist-empty-list-null-content
 
 **Logged**: 2026-07-28T11:09:00Z

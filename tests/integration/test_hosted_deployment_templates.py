@@ -49,6 +49,11 @@ def test_coolify_compose_freezes_single_node_proxy_and_volume_contract() -> None
     assert "init-permissions:" in compose_text
     assert 'user: "0:0"' in compose_text
     assert "chown -R 1000:1000" in compose_text
+    init_permissions_text = compose_text.split("\n  init-permissions:\n", 1)[1].split(
+        "\n  init-repo:\n", 1
+    )[0]
+    assert "/srv/infinitas/backup-staging" in init_permissions_text
+    assert "infinitas-backup-staging:/srv/infinitas/backup-staging" in init_permissions_text
     assert "app:" in compose_text
     assert "worker:" in compose_text
     assert "backup-exporter:" in compose_text

@@ -44,10 +44,11 @@ services:
     command:
       - >-
         mkdir -p /srv/infinitas/repo /srv/infinitas/data /srv/infinitas/artifacts
-        /srv/infinitas/backups /srv/infinitas/home /srv/infinitas/backup-receipts &&
+        /srv/infinitas/backups /srv/infinitas/home /srv/infinitas/backup-staging
+        /srv/infinitas/backup-receipts &&
         chown -R 1000:1000 /srv/infinitas/repo /srv/infinitas/data
         /srv/infinitas/artifacts /srv/infinitas/backups /srv/infinitas/home
-        /srv/infinitas/backup-receipts
+        /srv/infinitas/backup-staging /srv/infinitas/backup-receipts
     restart: "no"
     volumes:
       - infinitas-repo:/srv/infinitas/repo
@@ -55,6 +56,7 @@ services:
       - infinitas-artifacts:/srv/infinitas/artifacts
       - infinitas-backups:/srv/infinitas/backups
       - infinitas-home:/srv/infinitas/home
+      - infinitas-backup-staging:/srv/infinitas/backup-staging
       - infinitas-backup-receipts:/srv/infinitas/backup-receipts
 
   init-repo:
