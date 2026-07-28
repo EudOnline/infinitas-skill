@@ -14,6 +14,7 @@ from infinitas_skill.server.backup_export import (
     run_server_inspect_backup_state,
     run_server_verify_offsite_backup,
 )
+from infinitas_skill.server.coolify_tasks import run_coolify_task
 from infinitas_skill.server.db_utils import standalone_session
 from infinitas_skill.server.health import run_server_healthcheck
 from infinitas_skill.server.inspection_notifications import (
@@ -27,6 +28,7 @@ from infinitas_skill.server.inspection_summary import (
 )
 from infinitas_skill.server.ops_parsers import (
     build_server_backup_parser,
+    build_server_coolify_task_parser,
     build_server_export_backups_parser,
     build_server_healthcheck_parser,
     build_server_inspect_backup_state_parser,
@@ -37,6 +39,7 @@ from infinitas_skill.server.ops_parsers import (
     build_server_worker_healthcheck_parser,
     build_server_worker_parser,
     configure_server_backup_parser,
+    configure_server_coolify_task_parser,
     configure_server_export_backups_parser,
     configure_server_healthcheck_parser,
     configure_server_inspect_backup_state_parser,
@@ -329,6 +332,13 @@ def _configure_server_offsite_commands(subparsers: argparse._SubParsersAction) -
 
 
 def _configure_server_runtime_commands(subparsers: argparse._SubParsersAction) -> None:
+    coolify_task = subparsers.add_parser(
+        "coolify-task",
+        help="Run a scheduled operation for the supported Coolify layout",
+    )
+    configure_server_coolify_task_parser(coolify_task)
+    coolify_task.set_defaults(_handler=lambda args: run_coolify_task(args.task))
+
     prune_backups = subparsers.add_parser(
         "prune-backups",
         help="Prune older hosted registry backup snapshots",
@@ -415,7 +425,7 @@ def configure_server_parser(parser: argparse.ArgumentParser) -> argparse.Argumen
         dest="server_command",
         metavar=(
             "{healthcheck,backup,export-backups,verify-offsite-backup,"
-            "inspect-backup-state,render-systemd,prune-backups,worker,"
+            "inspect-backup-state,render-systemd,coolify-task,prune-backups,worker,"
             "worker-healthcheck,inspect-state,restore-rehearsal}"
         ),
     )
@@ -444,6 +454,7 @@ __all__ = [
     "SERVER_PARSER_DESCRIPTION",
     "SERVER_TOP_LEVEL_HELP",
     "build_server_backup_parser",
+    "build_server_coolify_task_parser",
     "build_server_export_backups_parser",
     "build_server_healthcheck_parser",
     "build_server_inspect_state_parser",
@@ -455,6 +466,7 @@ __all__ = [
     "build_server_worker_parser",
     "build_server_verify_offsite_backup_parser",
     "configure_server_backup_parser",
+    "configure_server_coolify_task_parser",
     "configure_server_export_backups_parser",
     "configure_server_healthcheck_parser",
     "configure_server_inspect_state_parser",

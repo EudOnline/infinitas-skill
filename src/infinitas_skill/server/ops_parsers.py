@@ -4,6 +4,15 @@ from __future__ import annotations
 
 import argparse
 
+from infinitas_skill.server.coolify_tasks import COOLIFY_TASK_NAMES
+
+
+def configure_server_coolify_task_parser(
+    parser: argparse.ArgumentParser,
+) -> argparse.ArgumentParser:
+    parser.add_argument("task", choices=COOLIFY_TASK_NAMES)
+    return parser
+
 
 def configure_server_healthcheck_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument(
@@ -387,6 +396,13 @@ def build_server_verify_offsite_backup_parser(
     return configure_server_verify_offsite_backup_parser(parser)
 
 
+def build_server_coolify_task_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Run a scheduled operation for the supported Coolify layout", prog=prog
+    )
+    return configure_server_coolify_task_parser(parser)
+
+
 def build_server_inspect_backup_state_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Inspect hosted backup freshness", prog=prog)
     return configure_server_inspect_backup_state_parser(parser)
@@ -425,6 +441,7 @@ def build_server_inspect_state_parser(*, prog: str | None = None) -> argparse.Ar
 
 __all__ = [
     "build_server_backup_parser",
+    "build_server_coolify_task_parser",
     "build_server_export_backups_parser",
     "build_server_healthcheck_parser",
     "build_server_inspect_state_parser",
@@ -435,6 +452,7 @@ __all__ = [
     "build_server_worker_healthcheck_parser",
     "build_server_verify_offsite_backup_parser",
     "configure_server_backup_parser",
+    "configure_server_coolify_task_parser",
     "configure_server_export_backups_parser",
     "configure_server_healthcheck_parser",
     "configure_server_inspect_state_parser",

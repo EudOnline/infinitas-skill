@@ -65,6 +65,7 @@ from infinitas_skill.release.signing_readiness import build_signing_readiness_pa
 from infinitas_skill.release.state import build_release_check_state_parser
 from infinitas_skill.server.ops import (
     build_server_backup_parser,
+    build_server_coolify_task_parser,
     build_server_healthcheck_parser,
     build_server_inspect_state_parser,
     build_server_parser,
@@ -278,6 +279,11 @@ def _release_and_server_sections() -> list[Section]:
             "infinitas server healthcheck",
         ),
         ("infinitas server backup", build_server_backup_parser, "infinitas server backup"),
+        (
+            "infinitas server coolify-task",
+            build_server_coolify_task_parser,
+            "infinitas server coolify-task",
+        ),
         (
             "infinitas server inspect-state",
             build_server_inspect_state_parser,

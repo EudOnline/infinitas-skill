@@ -295,10 +295,15 @@ restore rehearsal have all succeeded:
 
 | Schedule (UTC) | Container | Command |
 |---|---|---|
-| `7 * * * *` | `app` | `infinitas server backup --repo-path /srv/infinitas/repo --database-url sqlite:////srv/infinitas/data/server.db --artifact-path /srv/infinitas/artifacts --output-dir /srv/infinitas/backups --lock-path /srv/infinitas/data/repo.lock --label scheduled --json` |
-| `22 * * * *` | `backup-exporter` | `infinitas server export-backups --backup-root /srv/infinitas/backups --staging-dir /srv/infinitas/backup-staging --receipt-root /srv/infinitas/backup-receipts --webdav-url "$INFINITAS_BACKUP_WEBDAV_URL" --remote-prefix "$INFINITAS_BACKUP_REMOTE_PREFIX" --age-recipient "$INFINITAS_BACKUP_AGE_RECIPIENT" --auth-mode basic --json` |
-| `42 3 * * *` | `app` | `infinitas server prune-backups --backup-root /srv/infinitas/backups --keep-last 48 --require-offsite-receipt --receipt-root /srv/infinitas/backup-receipts --json` |
-| `15 4 * * *` | `backup-exporter` | `infinitas server inspect-backup-state --backup-root /srv/infinitas/backups --receipt-root /srv/infinitas/backup-receipts --max-local-age-hours 2 --max-offsite-age-hours 3 --json` |
+| `7 * * * *` | `app` | `infinitas server coolify-task backup` |
+| `22 * * * *` | `backup-exporter` | `infinitas server coolify-task export` |
+| `42 3 * * *` | `app` | `infinitas server coolify-task prune` |
+| `15 4 * * *` | `backup-exporter` | `infinitas server coolify-task inspect` |
+
+Coolify 4.1 stores the command in a 255-character column. Keep the scheduler commands above short;
+the maintained CLI entrypoint owns the fixed single-node paths, retention values, freshness limits,
+JSON output, and environment-variable mapping. The prune task retains the
+`--require-offsite-receipt` safety contract and keeps the newest 48 local snapshots.
 
 Inspect the first execution of every task. The task is successful only when the JSON result has
 `ok: true`; a queued task or a container exit without a receipt is not completion. Keep offsite

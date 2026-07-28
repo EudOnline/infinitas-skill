@@ -1,5 +1,72 @@
 # Errors
 
+## [ERR-20260728-009] release-preflight-environment-assumptions
+
+**Logged**: 2026-07-28T11:25:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: infra
+
+### Summary
+Two release preflight checks assumed a nonexistent generic env file and package-read scope on the local GitHub token.
+
+### Error
+```text
+couldn't find env file: .env.example
+HTTP 403: You need at least read:packages scope
+```
+
+### Context
+- The hosted Compose template needs only schema-valid placeholder values for offline parsing.
+- The workflow token published the package, but the local `gh` token did not have package metadata read scope.
+- Neither failed read-only check changed repository, Coolify, or registry state.
+
+### Suggested Fix
+Supply explicit non-secret placeholder variables to `docker compose config` and verify the public OCI manifest directly when package metadata scope is unavailable.
+
+### Metadata
+- Reproducible: yes
+- Related Files: docker-compose.coolify.yml, .github/workflows/validate.yml
+
+### Resolution
+- **Resolved**: 2026-07-28T11:25:00Z
+- **Notes**: Compose validation passed with explicit placeholders, and `docker manifest inspect` confirmed amd64 and arm64 images for the full SHA tag.
+
+---
+
+## [ERR-20260728-008] coolify-scheduled-command-length
+
+**Logged**: 2026-07-28T11:36:00Z
+**Priority**: high
+**Status**: resolved
+**Area**: infra
+
+### Summary
+Coolify rejected the documented offsite export schedule because its command exceeded the platform's 255-character database column.
+
+### Error
+```text
+SQLSTATE[22001]: value too long for type character varying(255)
+```
+
+### Context
+- The first hourly backup task fit and was created successfully.
+- The exporter task included every path and environment mapping explicitly and exceeded 255 characters.
+- The failed insert did not create a partial scheduled task.
+
+### Suggested Fix
+Expose a short maintained CLI entrypoint for the four fixed Coolify backup operations and keep Coolify responsible only for schedule, container, and task selection.
+
+### Metadata
+- Reproducible: yes
+- Related Files: src/infinitas_skill/server/coolify_tasks.py, docs/ops/coolify-deployment.md
+
+### Resolution
+- **Resolved**: 2026-07-28T11:36:00Z
+- **Notes**: Added `infinitas server coolify-task {backup,export,prune,inspect}` with unit and documentation contract coverage. Production task creation remains required after the corrected image is deployed.
+
+---
+
 ## [ERR-20260728-007] backup-staging-volume-ownership
 
 **Logged**: 2026-07-28T11:28:00Z

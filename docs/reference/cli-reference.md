@@ -948,12 +948,12 @@ options:
 
 ```text
 usage: infinitas server [-h]
-                        {healthcheck,backup,export-backups,verify-offsite-backup,inspect-backup-state,render-systemd,prune-backups,worker,worker-healthcheck,inspect-state,restore-rehearsal} ...
+                        {healthcheck,backup,export-backups,verify-offsite-backup,inspect-backup-state,render-systemd,coolify-task,prune-backups,worker,worker-healthcheck,inspect-state,restore-rehearsal} ...
 
 Hosted server operations CLI
 
 positional arguments:
-  {healthcheck,backup,export-backups,verify-offsite-backup,inspect-backup-state,render-systemd,prune-backups,worker,worker-healthcheck,inspect-state,restore-rehearsal}
+  {healthcheck,backup,export-backups,verify-offsite-backup,inspect-backup-state,render-systemd,coolify-task,prune-backups,worker,worker-healthcheck,inspect-state,restore-rehearsal}
     healthcheck         Run hosted server health checks
     backup              Create a hosted registry backup set
     render-systemd      Render a hosted registry systemd deployment bundle
@@ -963,6 +963,8 @@ positional arguments:
                         restore
     inspect-backup-state
                         Inspect local and offsite backup freshness
+    coolify-task        Run a scheduled operation for the supported Coolify
+                        layout
     prune-backups       Prune older hosted registry backup snapshots
     worker              Run the hosted registry worker loop
     worker-healthcheck  Check the hosted worker heartbeat
@@ -1028,6 +1030,20 @@ options:
   --lock-timeout-seconds LOCK_TIMEOUT_SECONDS
                         Maximum time to wait for the shared snapshot lock
   --json                Emit machine-readable JSON output
+```
+
+## `infinitas server coolify-task`
+
+```text
+usage: infinitas server coolify-task [-h] {backup,export,prune,inspect}
+
+Run a scheduled operation for the supported Coolify layout
+
+positional arguments:
+  {backup,export,prune,inspect}
+
+options:
+  -h, --help            show this help message and exit
 ```
 
 ## `infinitas server inspect-state`

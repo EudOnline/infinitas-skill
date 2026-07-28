@@ -73,6 +73,7 @@ def assert_server_cli_help_lists_maintained_subcommands() -> None:
         "export-backups",
         "verify-offsite-backup",
         "inspect-backup-state",
+        "coolify-task",
         "render-systemd",
         "prune-backups",
         "worker",

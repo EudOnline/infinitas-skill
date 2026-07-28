@@ -109,6 +109,20 @@ def test_hosted_runtime_executes_immutable_image_code() -> None:
     assert "X-Forwarded-Proto':'https" in compose_text
 
 
+def test_coolify_scheduled_commands_fit_platform_limit() -> None:
+    doc_text = COOLIFY_DOC.read_text(encoding="utf-8")
+    commands = [
+        "infinitas server coolify-task backup",
+        "infinitas server coolify-task export",
+        "infinitas server coolify-task prune",
+        "infinitas server coolify-task inspect",
+    ]
+
+    for command in commands:
+        assert f"`{command}`" in doc_text
+        assert len(command) <= 255
+
+
 def test_container_cli_entrypoint_is_relocated_and_smoked() -> None:
     dockerfile_text = DOCKERFILE.read_text(encoding="utf-8")
     workflow_text = VALIDATE_WORKFLOW.read_text(encoding="utf-8")
