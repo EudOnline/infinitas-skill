@@ -38,6 +38,9 @@ jobs:
       - name: Install Playwright Chromium
         run: .venv/bin/playwright install --with-deps chromium
 
+      - name: Install age encryption tools
+        run: sudo apt-get install --yes --no-install-recommends age
+
       - name: Run maintainability-aware closeout verification matrix
         env:
           INFINITAS_REQUIRE_HOSTED_E2E_TESTS: 1

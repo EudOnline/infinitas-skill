@@ -1,5 +1,38 @@
 # Errors
 
+## [ERR-20260728-005] openlist-empty-list-null-content
+
+**Logged**: 2026-07-28T11:09:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+An OpenList cleanup assertion treated an empty `data.content` value as an array and failed after the cleanup itself had succeeded.
+
+### Error
+```text
+jq: error: Cannot iterate over null (null)
+```
+
+### Context
+- `/api/fs/list` returns `data.content: null` for an empty directory in the deployed OpenList v4.2.1 instance.
+- The remove request completed before the assertion attempted `.data.content[]`.
+- The error affected only the verification harness, not stored backup data.
+
+### Suggested Fix
+Normalize collection responses with `.data.content // []` before iterating.
+
+### Metadata
+- Reproducible: yes
+- Related Files: .learnings/ERRORS.md
+
+### Resolution
+- **Resolved**: 2026-07-28T11:09:00Z
+- **Notes**: The follow-up assertion uses `((.data.content // [])[])` and confirmed the directory is empty.
+
+---
+
 ## [ERR-20260728-004] docker-build-debian-index-stall
 
 **Logged**: 2026-07-28T10:25:00Z
@@ -139,7 +172,7 @@ Use a neutral name such as `endpoint` for URL-path loops under zsh.
 
 **Logged**: 2026-07-28T08:52:00Z
 **Priority**: high
-**Status**: pending
+**Status**: resolved
 **Area**: infra
 
 ### Summary
@@ -162,6 +195,10 @@ Create a dedicated non-admin OpenList user restricted to the backup directory wi
 ### Metadata
 - Reproducible: yes
 - Related Files: /home/tdcasual/.agents/skills/webdav-manager/SKILL.md, /home/tdcasual/.agents/skills/openlist-manager/SKILL.md
+
+### Resolution
+- **Resolved**: 2026-07-28T11:11:00Z
+- **Notes**: Created a non-admin user with base path `/infinitas/infinitas-skill-backups`, permission `776`, and an exact Meta allowlist for user ID 3. Production Basic Auth passed PROPFIND, MKCOL, PUT, HEAD, and GET; DELETE remained denied by least privilege. The rotated password was recreated as a Coolify secret and the probe was removed through the administrator file API.
 
 ---
 
