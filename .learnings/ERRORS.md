@@ -1,5 +1,39 @@
 # Errors
 
+## [ERR-20260728-010] coolify-compose-latest-deployment-resolution
+
+**Logged**: 2026-07-28T12:25:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: infra
+
+### Summary
+The Coolify wrapper's `deployments latest` command selected an init child of an exact Compose service and queried it as a standalone application.
+
+### Error
+```text
+API request failed (HTTP 404): Application not found
+GET /deployments/applications/kzw3hn6ppg495jytx1wllyod
+```
+
+### Context
+- The exact parent service resolved uniquely and remained `running:healthy`.
+- Compose child UUIDs are returned by resource discovery but are not standalone application UUIDs for this deployment endpoint.
+- `deployments find` completed through the service-aware path and reported that Coolify retained no deployment rows for the five children.
+
+### Suggested Fix
+For an exact Compose service, keep deployment lookup on the service-aware path and do not pass an arbitrary child UUID to the standalone application endpoint.
+
+### Metadata
+- Reproducible: yes
+- Related Files: /home/tdcasual/.agents/skills/coolify/scripts/coolify.sh
+
+### Resolution
+- **Resolved**: 2026-07-28T12:25:00Z
+- **Notes**: Final production verification used service status plus direct read-only container inspection to confirm the full deployed image SHA and all child states.
+
+---
+
 ## [ERR-20260728-009] release-preflight-environment-assumptions
 
 **Logged**: 2026-07-28T11:25:00Z
@@ -329,10 +363,12 @@ Create a dedicated non-admin OpenList user restricted to the backup directory wi
 ### Metadata
 - Reproducible: yes
 - Related Files: /home/tdcasual/.agents/skills/webdav-manager/SKILL.md, /home/tdcasual/.agents/skills/openlist-manager/SKILL.md
+- Recurrence-Count: 2
+- Last-Seen: 2026-07-28
 
 ### Resolution
 - **Resolved**: 2026-07-28T11:11:00Z
-- **Notes**: Created a non-admin user with base path `/infinitas/infinitas-skill-backups`, permission `776`, and an exact Meta allowlist for user ID 3. Production Basic Auth passed PROPFIND, MKCOL, PUT, HEAD, and GET; DELETE remained denied by least privilege. The rotated password was recreated as a Coolify secret and the probe was removed through the administrator file API.
+- **Notes**: Created a non-admin user with base path `/infinitas/infinitas-skill-backups`, permission `776`, and an exact Meta allowlist for user ID 3. Production Basic Auth passed PROPFIND, MKCOL, PUT, HEAD, and GET; DELETE remained denied by least privilege. The rotated password was recreated as a Coolify secret and the probe was removed through the administrator file API. On 2026-07-28 the local WebDAV skill cache still returned 401, while the production exporter and OpenList administrator API both verified the remote archives.
 
 ---
 
@@ -920,10 +956,12 @@ Use a fresh cookie-free HTTP client for anonymous contract checks; keep browser 
 ### Metadata
 - Reproducible: yes
 - Related Files: server/middleware.py, server/modules/access/share_links_router.py, /tmp/infinitas_prod_acceptance.py
+- Recurrence-Count: 2
+- Last-Seen: 2026-07-28
 
 ### Resolution
 - **Resolved**: 2026-07-23T19:34:00Z
-- **Notes**: The production harness now performs the revoked Share check from a clean anonymous client.
+- **Notes**: The production harness now performs Share resolve checks from a clean anonymous client. A 2026-07-28 browser E2E rehearsal independently reproduced the same CSRF boundary before the harness was corrected.
 
 ---
 
@@ -987,6 +1025,8 @@ The external DNS skill should load its protected sibling `.env` consistently wit
 ### Metadata
 - Reproducible: yes
 - Related Files: /home/tdcasual/.agents/skills/dnspod/scripts/dns.sh, /home/tdcasual/.agents/skills/dnspod/.env
+- Recurrence-Count: 2
+- Last-Seen: 2026-07-28
 
 ### Resolution
 - **Resolved**: 2026-07-23T19:43:00Z
