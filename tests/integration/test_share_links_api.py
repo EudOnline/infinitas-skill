@@ -168,6 +168,53 @@ def test_revoke_share_link_blocks_resolution(
         ]
 
 
+def test_share_history_remains_listable_after_grant_exposure_is_revoked(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    client = _prepare_library_client(
+        monkeypatch,
+        tmp_path=tmp_path,
+        temp_repo_copy=temp_repo_copy,
+        signing_key=signing_key,
+    )
+    headers = {"Authorization": "Bearer fixture-maintainer-token"}
+    _object_id, release_id = _prepared_object_and_release(client, headers=headers)
+    created = client.post(
+        f"/api/v1/share-links/releases/{release_id}/share-links",
+        headers=headers,
+        json={"name": "historical-share", "max_uses": 1},
+    )
+    assert created.status_code == 201, created.text
+    share_id = int(created.json()["id"])
+
+    exposures = client.get(f"/api/v1/releases/{release_id}/exposures", headers=headers)
+    assert exposures.status_code == 200, exposures.text
+    grant_exposure = next(item for item in exposures.json() if item["audience_type"] == "grant")
+    revoked = client.post(
+        f"/api/v1/exposures/{grant_exposure['id']}/revoke",
+        headers=headers,
+    )
+    assert revoked.status_code == 200, revoked.text
+
+    listing = client.get(
+        f"/api/v1/share-links/releases/{release_id}/share-links",
+        headers=headers,
+    )
+    assert listing.status_code == 200, listing.text
+    assert listing.json()["total"] == 1
+    assert listing.json()["items"] == [
+        {
+            **listing.json()["items"][0],
+            "id": share_id,
+            "name": "historical-share",
+            "state": "active",
+        }
+    ]
+
+
 def test_passwordless_share_link_resolves_without_legacy_share_row(
     monkeypatch,
     tmp_path: Path,

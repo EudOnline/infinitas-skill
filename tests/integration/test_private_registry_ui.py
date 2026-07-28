@@ -22,6 +22,9 @@ MODULES_DIR = ROOT / "server" / "static" / "js" / "modules"
 SEARCH_MODULE_PATH = MODULES_DIR / "search.js"
 SEARCH_FORMATTING_MODULE_PATH = MODULES_DIR / "search-formatting.js"
 SEARCH_INSTALL_PANEL_MODULE_PATH = MODULES_DIR / "search-install-panel.js"
+MANAGE_MODULE_PATH = MODULES_DIR / "manage.js"
+LIBRARY_MODULE_PATH = MODULES_DIR / "library.js"
+SHARE_ACTIONS_MODULE_PATH = MODULES_DIR / "share-actions.js"
 LIFECYCLE_MODULE_PATH = MODULES_DIR / "lifecycle.js"
 LIFECYCLE_CRUD_MODULE_PATH = MODULES_DIR / "lifecycle-crud.js"
 LIFECYCLE_ACCESS_MODULE_PATH = MODULES_DIR / "lifecycle-access.js"
@@ -261,11 +264,25 @@ def _sha256_base64(payload: str) -> str:
     return base64.b64encode(hashlib.sha256(payload.encode("utf-8")).digest()).decode("ascii")
 
 
+def _assert_share_action_contracts() -> None:
+    share_actions_source = SHARE_ACTIONS_MODULE_PATH.read_text(encoding="utf-8")
+    manage_source = MANAGE_MODULE_PATH.read_text(encoding="utf-8")
+    for marker in [
+        "event.target.closest('[data-action=\"revoke-share-link\"]')",
+        "apiPost(`/api/v1/share-links/${grantId}/revoke`)",
+        "'confirm_revoke_share_link'",
+    ]:
+        assert marker in share_actions_source
+    assert "e.target.closest('[data-action=\"revoke-share-link\"]')" not in manage_source
+
+
 def assert_private_registry_ui_js_contracts() -> None:
     app_js_source = APP_JS_PATH.read_text(encoding="utf-8")
     search_source = SEARCH_MODULE_PATH.read_text(encoding="utf-8")
     search_formatting_source = SEARCH_FORMATTING_MODULE_PATH.read_text(encoding="utf-8")
     search_install_panel_source = SEARCH_INSTALL_PANEL_MODULE_PATH.read_text(encoding="utf-8")
+    manage_source = MANAGE_MODULE_PATH.read_text(encoding="utf-8")
+    library_source = LIBRARY_MODULE_PATH.read_text(encoding="utf-8")
     lifecycle_crud_source = LIFECYCLE_CRUD_MODULE_PATH.read_text(encoding="utf-8")
     lifecycle_access_source = LIFECYCLE_ACCESS_MODULE_PATH.read_text(encoding="utf-8")
     lifecycle_exposure_source = LIFECYCLE_EXPOSURE_MODULE_PATH.read_text(encoding="utf-8")
@@ -363,6 +380,11 @@ def assert_private_registry_ui_js_contracts() -> None:
             "expected maintained templates to own their page-level module wiring; "
             f"missing marker {marker!r}"
         )
+
+    for page_source in (manage_source, library_source):
+        assert "from './share-actions.js'" in page_source
+        assert "initShareRevocation();" in page_source
+    _assert_share_action_contracts()
 
     for deleted_module in ("access-center.js", "shares.js", "activity.js"):
         marker = f"static_url('/static/js/modules/{deleted_module}')"

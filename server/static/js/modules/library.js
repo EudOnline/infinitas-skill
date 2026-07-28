@@ -1,4 +1,5 @@
 import { uiText } from './config.js';
+import { initShareRevocation } from './share-actions.js';
 
 function initLibraryFilters() {
   const group = document.querySelector('[data-library-filter]');
@@ -83,6 +84,7 @@ function initObjectTabs() {
 function initLibraryPage() {
   initLibraryFilters();
   initObjectTabs();
+  initShareRevocation();
 }
 
 if (document.readyState === 'loading') {

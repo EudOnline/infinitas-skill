@@ -283,10 +283,11 @@ def create_share_link(
 
 def list_share_links(db: Session, *, release_id: int, actor: ActorRef) -> list[dict]:
     _release_context(db, release_id=release_id, actor=actor)
-    exposure = _active_grant_exposure(db, release_id=release_id)
     shares = db.scalars(
         select(AccessGrant)
-        .where(AccessGrant.exposure_id == exposure.id)
+        .join(Exposure, Exposure.id == AccessGrant.exposure_id)
+        .where(Exposure.release_id == release_id)
+        .where(Exposure.audience_type == "grant")
         .where(AccessGrant.grant_type == "link")
         .order_by(AccessGrant.id.desc())
     ).all()

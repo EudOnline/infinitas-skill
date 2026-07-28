@@ -318,6 +318,11 @@ def test_library_release_page_shows_real_artifacts_and_distribution_summary(
 
     for label in ["Manifest", "Bundle", "Provenance", "Signature"]:
         assert label in html
+    assert "OpenClaw" in html
+    assert "native" in html
+    assert "fresh" in html
+    assert "infinitas-hosted-materializer/openclaw-contract" in html
+    assert "Runtime bundle SHA" in html
     assert "Channels" in html
     assert "Agent tokens" in html
     assert "Links" in html

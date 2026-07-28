@@ -23,6 +23,15 @@
   <dl class="detail-meta mt-3">
     <div><dt>{{ ui.get('label_content_digest', 'Content digest') }}</dt><dd><code class="table-code">{{ release.content_digest }}</code></dd></div>
     <div><dt>{{ ui.get('label_metadata_digest', 'Metadata digest') }}</dt><dd><code class="table-code">{{ release.metadata_digest }}</code></dd></div>
+    {% if release.install_target %}
+    <div><dt>Runtime</dt><dd>{% if release.install_target == 'openclaw' %}OpenClaw{% else %}{{ release.install_target | title }}{% endif %} · {{ release.runtime_state or 'unknown' }} · {{ release.install_readiness or 'unknown' }}</dd></div>
+    {% endif %}
+    {% if release.runtime_content_sha256 %}
+    <div><dt>Runtime bundle SHA</dt><dd><code class="table-code">{{ release.runtime_content_sha256 }}</code></dd></div>
+    {% endif %}
+    {% if release.runtime_checker %}
+    <div><dt>Runtime checker</dt><dd><code class="table-code">{{ release.runtime_checker }}</code>{% if release.runtime_checked_at %} · {{ release.runtime_checked_at }}{% endif %}</dd></div>
+    {% endif %}
   </dl>
 </section>
 

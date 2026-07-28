@@ -2,8 +2,10 @@ import { initCardSwipe } from './card-swipe.js';
 import { apiPost } from './api.js';
 import { uiText } from './config.js';
 import { getSharedToast } from './toast.js';
+import { initShareRevocation } from './share-actions.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+  initShareRevocation();
   const tabs = document.querySelector('[data-manage-tabs]');
   if (!tabs) return;
 
@@ -106,35 +108,6 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.textContent = '...';
     try {
       await apiPost(`/api/v1/object-tokens/tokens/${credId}/revoke`);
-      const card = btn.closest('article');
-      if (card) {
-        card.style.transition = 'opacity 0.3s';
-        card.style.opacity = '0';
-        setTimeout(() => card.remove(), 300);
-      } else {
-        const row = btn.closest('tr');
-        if (row) row.remove();
-      }
-    } catch (err) {
-      getSharedToast()?.error(err.message || 'Revoke failed');
-      btn.disabled = false;
-      btn.textContent = btn.dataset.label || 'Revoke';
-    }
-  });
-
-  // Revoke share-link handler
-  document.addEventListener('click', async (e) => {
-    const btn = e.target.closest('[data-action="revoke-share-link"]');
-    if (!btn) return;
-    const grantId = btn.dataset.grantId;
-    if (!grantId) return;
-    if (!confirm(uiText('confirm_revoke_share_link', 'Are you sure you want to revoke this share link? This action cannot be undone.'))) {
-      return;
-    }
-    btn.disabled = true;
-    btn.textContent = '...';
-    try {
-      await apiPost(`/api/v1/share-links/${grantId}/revoke`);
       const card = btn.closest('article');
       if (card) {
         card.style.transition = 'opacity 0.3s';
