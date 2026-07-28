@@ -948,15 +948,21 @@ options:
 
 ```text
 usage: infinitas server [-h]
-                        {healthcheck,backup,render-systemd,prune-backups,worker,worker-healthcheck,inspect-state,restore-rehearsal} ...
+                        {healthcheck,backup,export-backups,verify-offsite-backup,inspect-backup-state,render-systemd,prune-backups,worker,worker-healthcheck,inspect-state,restore-rehearsal} ...
 
 Hosted server operations CLI
 
 positional arguments:
-  {healthcheck,backup,render-systemd,prune-backups,worker,worker-healthcheck,inspect-state,restore-rehearsal}
+  {healthcheck,backup,export-backups,verify-offsite-backup,inspect-backup-state,render-systemd,prune-backups,worker,worker-healthcheck,inspect-state,restore-rehearsal}
     healthcheck         Run hosted server health checks
     backup              Create a hosted registry backup set
     render-systemd      Render a hosted registry systemd deployment bundle
+    export-backups      Encrypt and export pending backups to WebDAV
+    verify-offsite-backup
+                        Download, decrypt, and rehearse an offsite backup
+                        restore
+    inspect-backup-state
+                        Inspect local and offsite backup freshness
     prune-backups       Prune older hosted registry backup snapshots
     worker              Run the hosted registry worker loop
     worker-healthcheck  Check the hosted worker heartbeat
@@ -999,6 +1005,8 @@ usage: infinitas server backup [-h] --repo-path REPO_PATH
                                --database-url DATABASE_URL
                                --artifact-path ARTIFACT_PATH
                                --output-dir OUTPUT_DIR [--label LABEL]
+                               [--lock-path LOCK_PATH]
+                               [--lock-timeout-seconds LOCK_TIMEOUT_SECONDS]
                                [--json]
 
 Create a hosted registry backup set
@@ -1014,6 +1022,11 @@ options:
   --output-dir OUTPUT_DIR
                         Directory where backup snapshots should be created
   --label LABEL         Optional label appended to the backup directory name
+  --lock-path LOCK_PATH
+                        Exclusive backup lock path; defaults to <output-
+                        dir>/.backup.lock
+  --lock-timeout-seconds LOCK_TIMEOUT_SECONDS
+                        Maximum time to wait for the shared snapshot lock
   --json                Emit machine-readable JSON output
 ```
 
@@ -1162,7 +1175,9 @@ options:
 
 ```text
 usage: infinitas server prune-backups [-h] --backup-root BACKUP_ROOT
-                                      --keep-last KEEP_LAST [--json]
+                                      --keep-last KEEP_LAST
+                                      [--require-offsite-receipt]
+                                      [--receipt-root RECEIPT_ROOT] [--json]
 
 Prune older hosted registry backup snapshots
 
@@ -1173,6 +1188,11 @@ options:
                         directories
   --keep-last KEEP_LAST
                         How many newest recognized backup directories to keep
+  --require-offsite-receipt
+                        Never prune a snapshot until it has a completed
+                        offsite receipt
+  --receipt-root RECEIPT_ROOT
+                        Separate directory containing local receipts
   --json                Emit machine-readable JSON output
 ```
 

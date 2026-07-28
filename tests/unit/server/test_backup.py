@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import sqlite3
 import stat
 import subprocess
@@ -7,8 +9,13 @@ from contextlib import closing
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import pytest
+
+import src.infinitas_skill.server.backup as backup_module
+from server.repo_ops import locked_repo
 from src.infinitas_skill.server.backup import (
     archive_artifacts,
+    backup_lock,
     build_backup_checksums,
     build_prune_summary,
     classify_backup_entries,
@@ -17,6 +24,25 @@ from src.infinitas_skill.server.backup import (
     run_server_backup,
     sanitize_label,
 )
+
+
+def _create_backup_fixture(tmp_path: Path) -> tuple[Path, Path, Path, Path]:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", str(repo)], check=True, capture_output=True)
+    subprocess.run(["git", "-C", str(repo), "config", "user.name", "Test User"], check=True)
+    subprocess.run(["git", "-C", str(repo), "config", "user.email", "test@example.com"], check=True)
+    (repo / "README.md").write_text("backup fixture\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(repo), "add", "README.md"], check=True)
+    subprocess.run(["git", "-C", str(repo), "commit", "-m", "fixture"], check=True)
+    database = tmp_path / "server.db"
+    with closing(sqlite3.connect(database)) as connection:
+        connection.execute("CREATE TABLE entries (value TEXT NOT NULL)")
+        connection.commit()
+    artifacts = tmp_path / "artifacts"
+    (artifacts / "catalog").mkdir(parents=True)
+    (artifacts / "ai-index.json").write_text("{}\n", encoding="utf-8")
+    return repo, database, artifacts, tmp_path / "backups"
 
 
 class TestSanitizeLabel:
@@ -94,22 +120,7 @@ class TestArchiveArtifacts:
 
 
 def test_run_server_backup_secures_every_snapshot_file(tmp_path: Path) -> None:
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    subprocess.run(["git", "init", str(repo)], check=True, capture_output=True)
-    subprocess.run(["git", "-C", str(repo), "config", "user.name", "Test User"], check=True)
-    subprocess.run(["git", "-C", str(repo), "config", "user.email", "test@example.com"], check=True)
-    (repo / "README.md").write_text("backup fixture\n", encoding="utf-8")
-    subprocess.run(["git", "-C", str(repo), "add", "README.md"], check=True)
-    subprocess.run(["git", "-C", str(repo), "commit", "-m", "fixture"], check=True)
-    database = tmp_path / "server.db"
-    with closing(sqlite3.connect(database)) as connection:
-        connection.execute("CREATE TABLE entries (value TEXT NOT NULL)")
-        connection.commit()
-    artifacts = tmp_path / "artifacts"
-    (artifacts / "catalog").mkdir(parents=True)
-    (artifacts / "ai-index.json").write_text("{}\n", encoding="utf-8")
-    output = tmp_path / "backups"
+    repo, database, artifacts, output = _create_backup_fixture(tmp_path)
 
     assert (
         run_server_backup(
@@ -123,7 +134,10 @@ def test_run_server_backup_secures_every_snapshot_file(tmp_path: Path) -> None:
         == 0
     )
 
-    snapshot = next(output.iterdir())
+    snapshots, ignored = classify_backup_entries(output)
+    assert len(snapshots) == 1
+    assert [path.name for path in ignored] == [".backup.lock"]
+    snapshot = snapshots[0]
     assert stat.S_IMODE(snapshot.stat().st_mode) == 0o700
     assert {path.name for path in snapshot.iterdir()} == {
         "repo.bundle",
@@ -132,6 +146,43 @@ def test_run_server_backup_secures_every_snapshot_file(tmp_path: Path) -> None:
         "manifest.json",
     }
     assert all(stat.S_IMODE(path.stat().st_mode) == 0o600 for path in snapshot.iterdir())
+    assert stat.S_IMODE((output / ".backup.lock").stat().st_mode) == 0o600
+    assert not list(output.glob("*.incomplete"))
+
+
+def test_run_server_backup_removes_incomplete_snapshot_on_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo, database, artifacts, output = _create_backup_fixture(tmp_path)
+
+    def fail_archive(_artifact_path: Path, _backup_dir: Path) -> str:
+        raise RuntimeError("simulated archive failure")
+
+    monkeypatch.setattr(backup_module, "archive_artifacts", fail_archive)
+    with pytest.raises(RuntimeError, match="simulated archive failure"):
+        backup_module.run_server_backup(
+            repo_path=str(repo),
+            database_url=f"sqlite:///{database}",
+            artifact_path=str(artifacts),
+            output_dir=str(output),
+        )
+
+    assert not [path for path in output.iterdir() if path.is_dir()]
+
+
+def test_backup_lock_rejects_overlapping_operation(tmp_path: Path) -> None:
+    lock_path = tmp_path / "backup.lock"
+    with backup_lock(lock_path):
+        with pytest.raises(SystemExit) as exc_info, backup_lock(lock_path, timeout_seconds=0):
+            pass
+    assert exc_info.value.code == 1
+
+
+def test_backup_lock_coordinates_with_runtime_repo_lock(tmp_path: Path) -> None:
+    lock_path = tmp_path / "shared.lock"
+    with locked_repo(lock_path):
+        with pytest.raises(SystemExit), backup_lock(lock_path, timeout_seconds=0):
+            pass
 
 
 class TestBuildBackupChecksums:
@@ -176,3 +227,25 @@ class TestBuildPruneSummary:
             assert len(summary["kept"]) == 2
             assert len(summary["deleted"]) == 1
             assert "20240101T000000Z" in summary["deleted"][0]
+
+    def test_protects_snapshots_without_offsite_receipts(self):
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            for name in ["20240103T000000Z", "20240102T000000Z", "20240101T000000Z"]:
+                snapshot = root / name
+                snapshot.mkdir()
+                (snapshot / "manifest.json").write_text("{}", encoding="utf-8")
+                if name != "20240101T000000Z":
+                    receipt = {
+                        "schema_version": 1,
+                        "snapshot_id": name,
+                        "backup_manifest_sha256": hashlib.sha256(b"{}").hexdigest(),
+                    }
+                    (snapshot / "offsite-receipt.json").write_text(
+                        json.dumps(receipt), encoding="utf-8"
+                    )
+
+            summary = build_prune_summary(root, 1, require_offsite_receipt=True)
+
+            assert [Path(path).name for path in summary["deleted"]] == ["20240102T000000Z"]
+            assert [Path(path).name for path in summary["protected"]] == ["20240101T000000Z"]

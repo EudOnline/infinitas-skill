@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+import errno
+import fcntl
 import json
+import os
 import re
 import shutil
 import sqlite3
 import subprocess
 import tarfile
-from contextlib import closing
+import time
+import uuid
+from collections.abc import Iterator
+from contextlib import closing, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -42,6 +48,45 @@ def create_backup_dir(output_dir: str, label: str) -> tuple[Path, str]:
     backup_dir.mkdir(mode=0o700)
     backup_dir.chmod(0o700)
     return backup_dir, timestamp
+
+
+def create_backup_staging_dir(output_dir: str, label: str) -> tuple[Path, Path, str]:
+    root = Path(output_dir)
+    root.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    suffix = sanitize_label(label)
+    dirname = f"{timestamp}-{suffix}" if suffix else timestamp
+    final_dir = root / dirname
+    if final_dir.exists():
+        fail(f"backup directory already exists: {final_dir}")
+    staging_dir = root / f".{dirname}.{uuid.uuid4().hex}.incomplete"
+    staging_dir.mkdir(mode=0o700)
+    staging_dir.chmod(0o700)
+    return staging_dir, final_dir, timestamp
+
+
+@contextmanager
+def backup_lock(path: Path, *, timeout_seconds: float = 120) -> Iterator[None]:
+    if timeout_seconds < 0:
+        fail("backup lock timeout must be zero or greater")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    deadline = time.monotonic() + timeout_seconds
+    with path.open("a+", encoding="utf-8") as handle:
+        path.chmod(0o600)
+        while True:
+            try:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except OSError as exc:
+                if exc.errno not in {errno.EAGAIN, errno.EACCES}:
+                    raise
+                if time.monotonic() >= deadline:
+                    fail(f"could not acquire backup lock within {timeout_seconds}s: {path}")
+                time.sleep(min(0.5, max(0.01, timeout_seconds)))
+        try:
+            yield
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
 def write_repo_bundle(repo: Path, backup_dir: Path) -> str:
@@ -106,9 +151,42 @@ def classify_backup_entries(root: Path) -> tuple[list[Path], list[Path]]:
     return eligible, ignored
 
 
-def build_prune_summary(root: Path, keep_last: int) -> dict:
+def _has_valid_offsite_receipt(snapshot: Path, receipt_root: Path | None) -> bool:
+    receipt_path = (
+        receipt_root / f"{snapshot.name}.json"
+        if receipt_root is not None
+        else snapshot / "offsite-receipt.json"
+    )
+    try:
+        payload = json.loads(receipt_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return (
+        isinstance(payload, dict)
+        and payload.get("schema_version") == 1
+        and payload.get("snapshot_id") == snapshot.name
+        and payload.get("backup_manifest_sha256") == sha256_file(snapshot / "manifest.json")
+    )
+
+
+def build_prune_summary(
+    root: Path,
+    keep_last: int,
+    *,
+    require_offsite_receipt: bool = False,
+    receipt_root: Path | None = None,
+) -> dict:
     eligible, ignored = classify_backup_entries(root)
-    eligible_desc = sorted(eligible, key=lambda item: item.name, reverse=True)
+    protected = (
+        [path for path in eligible if not _has_valid_offsite_receipt(path, receipt_root)]
+        if require_offsite_receipt
+        else []
+    )
+    eligible_desc = sorted(
+        [path for path in eligible if path not in protected],
+        key=lambda item: item.name,
+        reverse=True,
+    )
     kept = eligible_desc[:keep_last]
     deleted = eligible_desc[keep_last:]
 
@@ -121,6 +199,7 @@ def build_prune_summary(root: Path, keep_last: int) -> dict:
         "keep_last": keep_last,
         "kept": [str(path) for path in kept],
         "deleted": [str(path) for path in deleted],
+        "protected": [str(path) for path in protected],
         "ignored": [str(path) for path in ignored],
     }
 
@@ -144,6 +223,8 @@ def emit_prune_summary(summary: dict[str, Any], *, as_json: bool) -> None:
     print(f"OK: deleted {len(summary['deleted'])} recognized backup directories")
     if summary["ignored"]:
         print(f"OK: ignored {len(summary['ignored'])} non-hosted entries")
+    if summary["protected"]:
+        print(f"OK: protected {len(summary['protected'])} backups without offsite receipts")
 
 
 def run_server_backup(
@@ -153,18 +234,67 @@ def run_server_backup(
     artifact_path: str,
     output_dir: str,
     label: str = "",
+    lock_path: str = "",
+    lock_timeout_seconds: float = 120,
     as_json: bool = False,
 ) -> int:
     repo = require_clean_git_repo(repo_path)
     db_path = require_sqlite_db(database_url)
     artifacts = require_artifacts(artifact_path)
-    backup_dir, timestamp = create_backup_dir(output_dir, label)
+    lock = Path(lock_path).resolve() if lock_path else Path(output_dir).resolve() / ".backup.lock"
+    with backup_lock(lock, timeout_seconds=lock_timeout_seconds):
+        staging_dir, backup_dir, timestamp = create_backup_staging_dir(output_dir, label)
+        try:
+            repo_bundle_name = write_repo_bundle(repo, staging_dir)
+            db_copy_name = copy_sqlite_db(db_path, staging_dir)
+            artifacts_name = archive_artifacts(artifacts, staging_dir)
+            manifest = _backup_manifest(
+                repo=repo,
+                db_path=db_path,
+                database_url=database_url,
+                artifacts=artifacts,
+                backup_dir=staging_dir,
+                timestamp=timestamp,
+                label=label,
+                repo_bundle_name=repo_bundle_name,
+                db_copy_name=db_copy_name,
+                artifacts_name=artifacts_name,
+            )
+            _write_backup_manifest(staging_dir, manifest)
+            os.replace(staging_dir, backup_dir)
+        except BaseException:
+            shutil.rmtree(staging_dir, ignore_errors=True)
+            raise
 
-    repo_bundle_name = write_repo_bundle(repo, backup_dir)
-    db_copy_name = copy_sqlite_db(db_path, backup_dir)
-    artifacts_name = archive_artifacts(artifacts, backup_dir)
+    summary = {
+        "ok": True,
+        "backup_dir": str(backup_dir),
+        "manifest": str(backup_dir / "manifest.json"),
+        "files": {
+            "repo_bundle": repo_bundle_name,
+            "database": db_copy_name,
+            "artifacts": artifacts_name,
+            "manifest": "manifest.json",
+        },
+    }
+    emit_backup_summary(summary, as_json=as_json)
+    return 0
 
-    manifest = {
+
+def _backup_manifest(
+    *,
+    repo: Path,
+    db_path: Path,
+    database_url: str,
+    artifacts: Path,
+    backup_dir: Path,
+    timestamp: str,
+    label: str,
+    repo_bundle_name: str,
+    db_copy_name: str,
+    artifacts_name: str,
+) -> dict[str, Any]:
+    return {
         "schema_version": 1,
         "created_at": timestamp,
         "label": label,
@@ -189,32 +319,33 @@ def run_server_backup(
             [repo_bundle_name, db_copy_name, artifacts_name],
         ),
     }
-    manifest_name = "manifest.json"
-    manifest_path = backup_dir / manifest_name
+
+
+def _write_backup_manifest(backup_dir: Path, manifest: dict[str, Any]) -> None:
+    manifest_path = backup_dir / "manifest.json"
     manifest_path.write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     manifest_path.chmod(0o600)
 
-    summary = {
-        "ok": True,
-        "backup_dir": str(backup_dir),
-        "manifest": str(manifest_path),
-        "files": {
-            "repo_bundle": repo_bundle_name,
-            "database": db_copy_name,
-            "artifacts": artifacts_name,
-            "manifest": manifest_name,
-        },
-    }
-    emit_backup_summary(summary, as_json=as_json)
-    return 0
 
-
-def run_server_prune_backups(*, backup_root: str, keep_last: int, as_json: bool = False) -> int:
+def run_server_prune_backups(
+    *,
+    backup_root: str,
+    keep_last: int,
+    require_offsite_receipt: bool = False,
+    receipt_root: str = "",
+    as_json: bool = False,
+) -> int:
     root = require_backup_root(backup_root)
     count = require_keep_last(keep_last)
-    summary = build_prune_summary(root, count)
+    receipts = Path(receipt_root).resolve() if receipt_root else None
+    summary = build_prune_summary(
+        root,
+        count,
+        require_offsite_receipt=require_offsite_receipt,
+        receipt_root=receipts,
+    )
     emit_prune_summary(summary, as_json=as_json)
     return 0
 
@@ -227,6 +358,7 @@ __all__ = [
     "classify_backup_entries",
     "copy_sqlite_db",
     "create_backup_dir",
+    "create_backup_staging_dir",
     "emit_backup_summary",
     "emit_prune_summary",
     "run_server_backup",

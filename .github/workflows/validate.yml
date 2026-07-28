@@ -10,6 +10,7 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -46,6 +47,7 @@ jobs:
 
   python-314-archive-preview:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -67,6 +69,7 @@ jobs:
   build-container:
     needs: [validate, python-314-archive-preview]
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     env:
       DOCKER_METADATA_SHORT_SHA_LENGTH: 40
     permissions:

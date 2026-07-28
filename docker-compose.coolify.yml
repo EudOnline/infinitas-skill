@@ -44,11 +44,18 @@ services:
     command:
       - >-
         mkdir -p /srv/infinitas/repo /srv/infinitas/data /srv/infinitas/artifacts
-        /srv/infinitas/backups /srv/infinitas/home &&
+        /srv/infinitas/backups /srv/infinitas/home /srv/infinitas/backup-receipts &&
         chown -R 1000:1000 /srv/infinitas/repo /srv/infinitas/data
         /srv/infinitas/artifacts /srv/infinitas/backups /srv/infinitas/home
+        /srv/infinitas/backup-receipts
     restart: "no"
-    volumes: *infinitas-volumes
+    volumes:
+      - infinitas-repo:/srv/infinitas/repo
+      - infinitas-data:/srv/infinitas/data
+      - infinitas-artifacts:/srv/infinitas/artifacts
+      - infinitas-backups:/srv/infinitas/backups
+      - infinitas-home:/srv/infinitas/home
+      - infinitas-backup-receipts:/srv/infinitas/backup-receipts
 
   init-repo:
     image: "${INFINITAS_IMAGE:-ghcr.io/eudonline/infinitas-skill:latest}"
@@ -93,7 +100,13 @@ services:
       retries: 5
       start_period: 30s
     working_dir: /opt/infinitas/bundle
-    volumes: *infinitas-volumes
+    volumes:
+      - infinitas-repo:/srv/infinitas/repo
+      - infinitas-data:/srv/infinitas/data
+      - infinitas-artifacts:/srv/infinitas/artifacts
+      - infinitas-backups:/srv/infinitas/backups
+      - infinitas-home:/srv/infinitas/home
+      - infinitas-backup-receipts:/srv/infinitas/backup-receipts:ro
 
   worker:
     image: "${INFINITAS_IMAGE:-ghcr.io/eudonline/infinitas-skill:latest}"
@@ -126,9 +139,40 @@ services:
     working_dir: /opt/infinitas/bundle
     volumes: *infinitas-volumes
 
+  backup-exporter:
+    image: "${INFINITAS_IMAGE:-ghcr.io/eudonline/infinitas-skill:latest}"
+    init: true
+    entrypoint: ["/bin/bash", "-c"]
+    command: ["exec sleep infinity"]
+    environment:
+      HOME: /srv/infinitas/home
+      PYTHONPATH: /opt/infinitas/bundle/src:/opt/infinitas/bundle
+      INFINITAS_BACKUP_WEBDAV_URL: "${INFINITAS_BACKUP_WEBDAV_URL:-https://openlist.infinitas.fun/dav}"
+      INFINITAS_BACKUP_WEBDAV_USER: "${INFINITAS_BACKUP_WEBDAV_USER:-}"
+      INFINITAS_BACKUP_WEBDAV_PASSWORD: "${INFINITAS_BACKUP_WEBDAV_PASSWORD:-}"
+      INFINITAS_BACKUP_AGE_RECIPIENT: "${INFINITAS_BACKUP_AGE_RECIPIENT:-}"
+      INFINITAS_BACKUP_REMOTE_PREFIX: "${INFINITAS_BACKUP_REMOTE_PREFIX:-skills.infinitas.fun}"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - age --version >/dev/null && infinitas server export-backups --help >/dev/null
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    working_dir: /opt/infinitas/bundle
+    volumes:
+      - infinitas-backups:/srv/infinitas/backups:ro
+      - infinitas-backup-staging:/srv/infinitas/backup-staging
+      - infinitas-backup-receipts:/srv/infinitas/backup-receipts
+      - infinitas-home:/srv/infinitas/home
+
 volumes:
   infinitas-repo:
   infinitas-data:
   infinitas-artifacts:
   infinitas-backups:
   infinitas-home:
+  infinitas-backup-staging:
+  infinitas-backup-receipts:

@@ -22,7 +22,7 @@ from server.modules.jobs.models import Job
 from server.modules.release.materializer import materialize_release
 from server.modules.release.models import Release
 from server.modules.release.service import get_release_snapshot, mark_release_materialization_failed
-from server.repo_ops import RepoOpError
+from server.repo_ops import RepoOpError, locked_repo
 from server.settings import Settings, get_settings
 
 log = get_logger(__name__)
@@ -133,6 +133,11 @@ def _audit_materialization_failure(
 
 def process_job(job_id: int) -> None:
     settings = get_settings()
+    with locked_repo(settings.repo_lock_path):
+        _process_job_under_snapshot_lock(job_id, settings)
+
+
+def _process_job_under_snapshot_lock(job_id: int, settings: Settings) -> None:
     processing_error: Exception | None = None
     with session_scope() as session:
         job = session.get(Job, job_id)

@@ -70,6 +70,9 @@ def assert_server_cli_help_lists_maintained_subcommands() -> None:
     for command in [
         "healthcheck",
         "backup",
+        "export-backups",
+        "verify-offsite-backup",
+        "inspect-backup-state",
         "render-systemd",
         "prune-backups",
         "worker",
@@ -77,6 +80,10 @@ def assert_server_cli_help_lists_maintained_subcommands() -> None:
         "inspect-state",
     ]:
         assert command in help_text, f"expected {command!r} in infinitas server help"
+
+    backup_help = _run_cli(["server", "backup", "--help"], expect=0)
+    assert "--lock-path" in backup_help.stdout + backup_help.stderr
+    assert "--lock-timeout-seconds" in backup_help.stdout + backup_help.stderr
 
 
 def assert_server_ops_split_into_modules() -> None:

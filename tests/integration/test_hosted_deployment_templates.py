@@ -51,7 +51,8 @@ def test_coolify_compose_freezes_single_node_proxy_and_volume_contract() -> None
     assert "chown -R 1000:1000" in compose_text
     assert "app:" in compose_text
     assert "worker:" in compose_text
-    worker_text = compose_text.split("\n  worker:\n", 1)[1]
+    assert "backup-exporter:" in compose_text
+    worker_text = compose_text.split("\n  worker:\n", 1)[1].split("\n  backup-exporter:\n", 1)[0]
     assert "      - -c\n" in worker_text
     assert "      - -lc\n" not in worker_text
     assert 'expose:\n      - "8000"' in compose_text
@@ -64,6 +65,16 @@ def test_coolify_compose_freezes_single_node_proxy_and_volume_contract() -> None
     assert "'Host':host" in compose_text
     assert "X-Forwarded-Proto':'https" in compose_text
     assert "worker-healthcheck" in compose_text
+    exporter_text = compose_text.split("\n  backup-exporter:\n", 1)[1].split("\nvolumes:\n", 1)[0]
+    assert "infinitas-backups:/srv/infinitas/backups:ro" in exporter_text
+    assert "infinitas-backup-receipts:/srv/infinitas/backup-receipts" in exporter_text
+    assert "INFINITAS_BACKUP_WEBDAV_PASSWORD" in exporter_text
+    assert "INFINITAS_BACKUP_WEBDAV_PASSWORD" not in worker_text
+    assert (
+        "INFINITAS_BACKUP_WEBDAV_PASSWORD"
+        not in compose_text.split("\n  app:\n", 1)[1].split("\n  worker:\n", 1)[0]
+    )
+    assert "age --version" in exporter_text
     assert "PYTHONPATH: /opt/infinitas/bundle/src:/opt/infinitas/bundle" in compose_text
     assert "working_dir: /opt/infinitas/bundle" in compose_text
     assert "/srv/infinitas/repo/src" not in compose_text
@@ -73,6 +84,8 @@ def test_coolify_compose_freezes_single_node_proxy_and_volume_contract() -> None
         "infinitas-artifacts",
         "infinitas-backups",
         "infinitas-home",
+        "infinitas-backup-staging",
+        "infinitas-backup-receipts",
     ):
         assert volume in compose_text
 
@@ -97,7 +110,13 @@ def test_container_cli_entrypoint_is_relocated_and_smoked() -> None:
 
     assert "sed -i '1c #!/opt/venv/bin/python3' /opt/venv/bin/infinitas" in dockerfile_text
     assert "/opt/venv/bin/infinitas --help" in dockerfile_text
+    assert 'case "$TARGETARCH" in' in dockerfile_text
+    assert "AGE_LINUX_AMD64_SHA256" in dockerfile_text
+    assert "AGE_LINUX_ARM64_SHA256" in dockerfile_text
+    assert "--max-time 120" in dockerfile_text
+    assert "timeout --signal=TERM 300 apt-get" in dockerfile_text
     assert "docker exec infinitas-smoke infinitas --help" in workflow_text
+    assert workflow_text.count("timeout-minutes:") == 3
 
 
 def test_coolify_install_runbook_covers_release_operations() -> None:
@@ -113,7 +132,9 @@ def test_coolify_install_runbook_covers_release_operations() -> None:
         "worker-healthcheck",
         "Back up before every upgrade",
         "Upgrade and rollback",
-        "preserve all five named volumes",
+        "preserve all seven named volumes",
+        "backup-exporter` replicas: exactly `1`",
+        "--require-offsite-receipt",
         '"base_url": "https://skills.example.com/api/v1/registry"',
     ):
         assert marker in doc_text

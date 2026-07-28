@@ -9,6 +9,11 @@ from contextlib import nullcontext
 from typing import Any
 
 from infinitas_skill.server.backup import run_server_backup, run_server_prune_backups
+from infinitas_skill.server.backup_export import (
+    run_server_export_backups,
+    run_server_inspect_backup_state,
+    run_server_verify_offsite_backup,
+)
 from infinitas_skill.server.db_utils import standalone_session
 from infinitas_skill.server.health import run_server_healthcheck
 from infinitas_skill.server.inspection_notifications import (
@@ -22,17 +27,23 @@ from infinitas_skill.server.inspection_summary import (
 )
 from infinitas_skill.server.ops_parsers import (
     build_server_backup_parser,
+    build_server_export_backups_parser,
     build_server_healthcheck_parser,
+    build_server_inspect_backup_state_parser,
     build_server_inspect_state_parser,
     build_server_prune_backups_parser,
     build_server_render_systemd_parser,
+    build_server_verify_offsite_backup_parser,
     build_server_worker_healthcheck_parser,
     build_server_worker_parser,
     configure_server_backup_parser,
+    configure_server_export_backups_parser,
     configure_server_healthcheck_parser,
+    configure_server_inspect_backup_state_parser,
     configure_server_inspect_state_parser,
     configure_server_prune_backups_parser,
     configure_server_render_systemd_parser,
+    configure_server_verify_offsite_backup_parser,
     configure_server_worker_healthcheck_parser,
     configure_server_worker_parser,
 )
@@ -246,6 +257,8 @@ def _configure_server_core_commands(subparsers: argparse._SubParsersAction) -> N
             artifact_path=args.artifact_path,
             output_dir=args.output_dir,
             label=args.label,
+            lock_path=args.lock_path,
+            lock_timeout_seconds=args.lock_timeout_seconds,
             as_json=args.json,
         )
     )
@@ -259,6 +272,62 @@ def _configure_server_core_commands(subparsers: argparse._SubParsersAction) -> N
     render_systemd.set_defaults(_handler=run_server_render_systemd)
 
 
+def _configure_server_offsite_commands(subparsers: argparse._SubParsersAction) -> None:
+    export_backups = subparsers.add_parser(
+        "export-backups",
+        help="Encrypt and export pending backups to WebDAV",
+    )
+    configure_server_export_backups_parser(export_backups)
+    export_backups.set_defaults(
+        _handler=lambda args: run_server_export_backups(
+            backup_root=args.backup_root,
+            staging_dir=args.staging_dir,
+            webdav_url=args.webdav_url,
+            remote_prefix=args.remote_prefix,
+            receipt_root=args.receipt_root,
+            age_recipient=args.age_recipient,
+            auth_mode=args.auth_mode,
+            user_env=args.user_env,
+            secret_env=args.secret_env,
+            as_json=args.json,
+        )
+    )
+
+    verify_offsite = subparsers.add_parser(
+        "verify-offsite-backup",
+        help="Download, decrypt, and rehearse an offsite backup restore",
+    )
+    configure_server_verify_offsite_backup_parser(verify_offsite)
+    verify_offsite.set_defaults(
+        _handler=lambda args: run_server_verify_offsite_backup(
+            backup_dir=args.backup_dir,
+            output_dir=args.output_dir,
+            webdav_url=args.webdav_url,
+            auth_mode=args.auth_mode,
+            user_env=args.user_env,
+            secret_env=args.secret_env,
+            age_identity=args.age_identity,
+            receipt_root=args.receipt_root,
+            as_json=args.json,
+        )
+    )
+
+    inspect_backups = subparsers.add_parser(
+        "inspect-backup-state",
+        help="Inspect local and offsite backup freshness",
+    )
+    configure_server_inspect_backup_state_parser(inspect_backups)
+    inspect_backups.set_defaults(
+        _handler=lambda args: run_server_inspect_backup_state(
+            backup_root=args.backup_root,
+            max_local_age_hours=args.max_local_age_hours,
+            max_offsite_age_hours=args.max_offsite_age_hours,
+            receipt_root=args.receipt_root,
+            as_json=args.json,
+        )
+    )
+
+
 def _configure_server_runtime_commands(subparsers: argparse._SubParsersAction) -> None:
     prune_backups = subparsers.add_parser(
         "prune-backups",
@@ -270,6 +339,8 @@ def _configure_server_runtime_commands(subparsers: argparse._SubParsersAction) -
         _handler=lambda args: run_server_prune_backups(
             backup_root=args.backup_root,
             keep_last=args.keep_last,
+            require_offsite_receipt=args.require_offsite_receipt,
+            receipt_root=args.receipt_root,
             as_json=args.json,
         )
     )
@@ -343,11 +414,13 @@ def configure_server_parser(parser: argparse.ArgumentParser) -> argparse.Argumen
     subparsers = parser.add_subparsers(
         dest="server_command",
         metavar=(
-            "{healthcheck,backup,render-systemd,prune-backups,worker,"
+            "{healthcheck,backup,export-backups,verify-offsite-backup,"
+            "inspect-backup-state,render-systemd,prune-backups,worker,"
             "worker-healthcheck,inspect-state,restore-rehearsal}"
         ),
     )
     _configure_server_core_commands(subparsers)
+    _configure_server_offsite_commands(subparsers)
     _configure_server_runtime_commands(subparsers)
     return parser
 
@@ -371,26 +444,35 @@ __all__ = [
     "SERVER_PARSER_DESCRIPTION",
     "SERVER_TOP_LEVEL_HELP",
     "build_server_backup_parser",
+    "build_server_export_backups_parser",
     "build_server_healthcheck_parser",
     "build_server_inspect_state_parser",
+    "build_server_inspect_backup_state_parser",
     "build_server_parser",
     "build_server_prune_backups_parser",
     "build_server_render_systemd_parser",
     "build_server_worker_healthcheck_parser",
     "build_server_worker_parser",
+    "build_server_verify_offsite_backup_parser",
     "configure_server_backup_parser",
+    "configure_server_export_backups_parser",
     "configure_server_healthcheck_parser",
     "configure_server_inspect_state_parser",
+    "configure_server_inspect_backup_state_parser",
     "configure_server_parser",
     "configure_server_prune_backups_parser",
     "configure_server_render_systemd_parser",
     "configure_server_worker_healthcheck_parser",
     "configure_server_worker_parser",
+    "configure_server_verify_offsite_backup_parser",
     "run_server_backup",
+    "run_server_export_backups",
     "run_server_healthcheck",
     "run_server_inspect_state",
+    "run_server_inspect_backup_state",
     "run_server_prune_backups",
     "run_server_render_systemd",
     "run_server_worker",
+    "run_server_verify_offsite_backup",
     "server_main",
 ]

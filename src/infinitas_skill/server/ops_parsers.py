@@ -37,6 +37,88 @@ def configure_server_backup_parser(parser: argparse.ArgumentParser) -> argparse.
     parser.add_argument(
         "--label", default="", help="Optional label appended to the backup directory name"
     )
+    parser.add_argument(
+        "--lock-path",
+        default="",
+        help="Exclusive backup lock path; defaults to <output-dir>/.backup.lock",
+    )
+    parser.add_argument(
+        "--lock-timeout-seconds",
+        type=float,
+        default=120,
+        help="Maximum time to wait for the shared snapshot lock",
+    )
+    parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+    return parser
+
+
+def _configure_webdav_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--webdav-url", required=True, help="WebDAV base URL including /dav")
+    parser.add_argument(
+        "--auth-mode", choices=("basic", "bearer"), default="basic", help="WebDAV auth mode"
+    )
+    parser.add_argument(
+        "--user-env",
+        default="INFINITAS_BACKUP_WEBDAV_USER",
+        help="Environment variable containing the WebDAV username",
+    )
+    parser.add_argument(
+        "--secret-env",
+        default="INFINITAS_BACKUP_WEBDAV_PASSWORD",
+        help="Environment variable containing the WebDAV password or bearer token",
+    )
+
+
+def configure_server_export_backups_parser(
+    parser: argparse.ArgumentParser,
+) -> argparse.ArgumentParser:
+    parser.add_argument("--backup-root", required=True, help="Local backup snapshot directory")
+    parser.add_argument(
+        "--receipt-root", default="", help="Separate directory for local offsite receipts"
+    )
+    parser.add_argument(
+        "--staging-dir", required=True, help="Private temporary directory for encrypted exports"
+    )
+    parser.add_argument("--age-recipient", required=True, help="age recipient public key")
+    parser.add_argument(
+        "--remote-prefix",
+        default="skills.infinitas.fun",
+        help="Remote namespace below the WebDAV account root",
+    )
+    _configure_webdav_args(parser)
+    parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+    return parser
+
+
+def configure_server_verify_offsite_backup_parser(
+    parser: argparse.ArgumentParser,
+) -> argparse.ArgumentParser:
+    parser.add_argument("--backup-dir", required=True, help="Local snapshot with offsite receipt")
+    parser.add_argument(
+        "--receipt-root", default="", help="Separate directory containing local receipts"
+    )
+    parser.add_argument(
+        "--output-dir", required=True, help="Empty directory for the isolated restore rehearsal"
+    )
+    parser.add_argument("--age-identity", required=True, help="Path to the offline age identity")
+    _configure_webdav_args(parser)
+    parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+    return parser
+
+
+def configure_server_inspect_backup_state_parser(
+    parser: argparse.ArgumentParser,
+) -> argparse.ArgumentParser:
+    parser.add_argument("--backup-root", required=True, help="Local backup snapshot directory")
+    parser.add_argument(
+        "--receipt-root", default="", help="Separate directory containing local receipts"
+    )
+    parser.add_argument(
+        "--max-local-age-hours", type=float, default=2.0, help="Maximum local backup age"
+    )
+    parser.add_argument(
+        "--max-offsite-age-hours", type=float, default=3.0, help="Maximum offsite receipt age"
+    )
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
     return parser
 
@@ -196,6 +278,14 @@ def configure_server_prune_backups_parser(
         type=int,
         help="How many newest recognized backup directories to keep",
     )
+    parser.add_argument(
+        "--require-offsite-receipt",
+        action="store_true",
+        help="Never prune a snapshot until it has a completed offsite receipt",
+    )
+    parser.add_argument(
+        "--receipt-root", default="", help="Separate directory containing local receipts"
+    )
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
     return parser
 
@@ -285,6 +375,23 @@ def build_server_backup_parser(*, prog: str | None = None) -> argparse.ArgumentP
     return configure_server_backup_parser(parser)
 
 
+def build_server_export_backups_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Export encrypted hosted backups", prog=prog)
+    return configure_server_export_backups_parser(parser)
+
+
+def build_server_verify_offsite_backup_parser(
+    *, prog: str | None = None
+) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Verify an encrypted offsite backup", prog=prog)
+    return configure_server_verify_offsite_backup_parser(parser)
+
+
+def build_server_inspect_backup_state_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Inspect hosted backup freshness", prog=prog)
+    return configure_server_inspect_backup_state_parser(parser)
+
+
 def build_server_render_systemd_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Render a hosted registry systemd deployment bundle", prog=prog
@@ -318,17 +425,23 @@ def build_server_inspect_state_parser(*, prog: str | None = None) -> argparse.Ar
 
 __all__ = [
     "build_server_backup_parser",
+    "build_server_export_backups_parser",
     "build_server_healthcheck_parser",
     "build_server_inspect_state_parser",
+    "build_server_inspect_backup_state_parser",
     "build_server_prune_backups_parser",
     "build_server_render_systemd_parser",
     "build_server_worker_parser",
     "build_server_worker_healthcheck_parser",
+    "build_server_verify_offsite_backup_parser",
     "configure_server_backup_parser",
+    "configure_server_export_backups_parser",
     "configure_server_healthcheck_parser",
     "configure_server_inspect_state_parser",
+    "configure_server_inspect_backup_state_parser",
     "configure_server_prune_backups_parser",
     "configure_server_render_systemd_parser",
     "configure_server_worker_parser",
     "configure_server_worker_healthcheck_parser",
+    "configure_server_verify_offsite_backup_parser",
 ]

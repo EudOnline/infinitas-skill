@@ -98,6 +98,7 @@ class Settings:
     template_dir: Path
     bootstrap_users: list[dict]
     repo_path: Path
+    repo_lock_path: Path
     artifact_path: Path
     registry_read_tokens: list[str]
     trusted_proxies: list[str]
@@ -272,6 +273,11 @@ def get_settings() -> Settings:
         .expanduser()
         .resolve()
     )
+    repo_lock_path = (
+        Path(os.environ.get("INFINITAS_SERVER_REPO_LOCK_PATH") or (ROOT / ".state" / "repo.lock"))
+        .expanduser()
+        .resolve()
+    )
     registry_read_tokens = _load_string_list_env(
         "INFINITAS_REGISTRY_READ_TOKENS",
         strict=environment == "production",
@@ -305,6 +311,7 @@ def get_settings() -> Settings:
         template_dir=ROOT / "server" / "templates",
         bootstrap_users=bootstrap_users,
         repo_path=repo_path,
+        repo_lock_path=repo_lock_path,
         artifact_path=artifact_path,
         registry_read_tokens=registry_read_tokens,
         trusted_proxies=trusted_proxies,
