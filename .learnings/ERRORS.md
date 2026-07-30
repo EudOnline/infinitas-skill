@@ -1,5 +1,41 @@
 # Errors
 
+## [ERR-20260730-012] snapshot-user-delete-denied
+
+**Logged**: 2026-07-30T03:15:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: infra
+
+### Summary
+The long-lived Agent snapshot account could upload and download its encrypted probe but could not
+delete the probe directory.
+
+### Error
+```text
+Error: WebDAV request failed with HTTP 403 (DELETE /credential-verification-20260730)
+```
+
+### Context
+- Permission value `776` intentionally grants content write and WebDAV read/write without remove.
+- The upload and second download completed, and their SHA-256 values matched before cleanup.
+- The production encrypted snapshot object was not modified.
+
+### Suggested Fix
+Keep delete permission disabled for automated backup credentials and perform exceptional cleanup
+through an explicit administrator operation.
+
+### Metadata
+- Reproducible: yes
+- Related Files: docs/ops/openclaw-skill-backup.md
+
+### Resolution
+- **Resolved**: 2026-07-30T03:15:00Z
+- **Notes**: The administrator API removed the isolated probe directory and a follow-up listing
+  confirmed cleanup; the snapshot account remains unable to delete backups.
+
+---
+
 ## [ERR-20260730-011] dns-provider-credentials-unavailable
 
 **Logged**: 2026-07-30T02:28:00Z
@@ -199,9 +235,10 @@ restricted WebDAV user's real password before unattended backup operations.
 - Related Files: docs/ops/openclaw-skill-backup.md
 
 ### Resolution
-- **Resolved**: 2026-07-30T01:47:57Z
-- **Notes**: Continued the one-off verification with the current server-side maintenance token;
-  the stale Basic credential remains unsuitable for scheduled automation.
+- **Resolved**: 2026-07-30T03:15:00Z
+- **Notes**: Provisioned a non-admin user restricted to the Agent snapshot path, added its scoped
+  Meta ACL, updated the local username without exposing the stored password, and verified Basic
+  Auth upload/download with a matching SHA-256 round trip.
 
 ---
 

@@ -72,6 +72,14 @@ Create snapshot directories below the existing `/infinitas` mount and restrict t
 to `/infinitas/infinitas-skill-backups/agent-data-snapshots`; a root-level directory without a
 storage mount will fail even when authentication succeeds.
 
+For long-lived automation, use a non-admin OpenList user with permission value `776`: content
+write, WebDAV read, and WebDAV write. This intentionally omits delete permission. If an ancestor
+OpenList Meta restricts `read_users` or `write_users`, create a more-specific Meta on
+`/infinitas/infinitas-skill-backups/agent-data-snapshots`, include the administrator and snapshot
+user IDs, and enable both subdirectory flags. A base path alone does not override an ancestor Meta
+ACL. Verify the account by uploading an `.age` object, downloading it, comparing SHA-256, and
+confirming that deletion is denied.
+
 The Registry stores metadata and lineage only. It does not receive the snapshot bytes, WebDAV
 password, or age identity.
 

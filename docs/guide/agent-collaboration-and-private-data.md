@@ -113,7 +113,10 @@ infinitas registry data-snapshots register <skill-id> \
 The first URI component must name a real OpenList storage mount. In the production layout that is
 `/infinitas`; a root-level virtual path such as `/skill-data-snapshots` has no backing storage and
 cannot be used for WebDAV uploads. Give the Agent snapshot account a base path limited to
-`/infinitas/infinitas-skill-backups/agent-data-snapshots`.
+`/infinitas/infinitas-skill-backups/agent-data-snapshots`. Use OpenList permission value `776`
+(content write plus WebDAV read/write) without delete permission. When a parent OpenList Meta has
+an explicit user ACL, add a more-specific Meta at the snapshot path for the administrator and
+snapshot user; the user's base path does not bypass Meta ACLs.
 
 The Registry stores the encrypted object URI, ciphertext digest/size, manifest digest, schema
 version, parent link, related skill version, and creator attribution. It does not proxy the file,
