@@ -2,7 +2,7 @@
 audience: operators and OpenClaw workspace maintainers
 owner: repository maintainers
 source_of_truth: OpenClaw snapshot and DataHub backup runbook
-last_reviewed: 2026-07-28
+last_reviewed: 2026-07-29
 status: maintained
 ---
 
@@ -29,10 +29,11 @@ line (blank lines and `#` comments are ignored):
 data/
 ```
 
-`registry publish --dry-run` reports `excluded_paths`; inspect that field and the included file
-count before a live write. Exclusions never apply to encrypted snapshots, so the skill tree is
-still captured for disaster recovery. Move durable runtime truth to `~/.agents/data/<skill>`
-rather than relying on this exclusion as the long-term data architecture.
+`registry publish --dry-run` reports `excluded_paths` and the complete `included_paths` inventory;
+inspect both before a live write. Hosted publication also rejects runtime `data/`, databases,
+credential/cookie exports, and private-key filenames unless a legitimate static fixture has an
+explicit metadata allowlist. Move durable runtime truth to `~/.agents/data/<skill>` rather than
+relying on exclusions as the long-term data architecture.
 
 ## Create A Snapshot
 
@@ -48,11 +49,26 @@ infinitas openclaw skill backup \
   --json
 ```
 
-The snapshot contains a SHA-256 manifest for every regular file. It rejects symlinks and
-special files, excludes build/test caches and non-template `.env` files from the skill tree,
-writes output mode `0600`, and
+The snapshot contains a SHA-256 manifest for every regular file. It rejects symlinks and special
+files, excludes build/test caches from the skill tree and non-template `.env` files from both the
+skill and data trees, detects concurrent source changes, verifies the completed plaintext archive,
+returns archive/manifest SHA-256 values, writes output mode `0600`, and
 requires encryption whenever `--data-dir` is present. `--allow-plaintext-data` is reserved for
 an explicitly isolated local rehearsal.
+
+After restricted WebDAV upload and download verification, register only its recovery metadata:
+
+```bash
+infinitas registry data-snapshots register <skill-id> \
+  --skill-version-id <version-id> \
+  --file /srv/backups/teacher-work-datahub-2026-07-24.tar.gz.age \
+  --object-uri openlist://skill-backups/teacher-work-datahub-2026-07-24.tar.gz.age \
+  --manifest-digest sha256:<digest-from-backup-output> \
+  --parent-snapshot-id <previous-snapshot-id>
+```
+
+The Registry stores metadata and lineage only. It does not receive the snapshot bytes, WebDAV
+password, or age identity.
 
 Encrypted output must use the `.age` suffix; plaintext rehearsal output must not use it. The
 skill and data source trees, the snapshot output, and restore targets must be separate paths.

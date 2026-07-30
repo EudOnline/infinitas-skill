@@ -263,6 +263,12 @@ fresh release materialization before declaring the deployment ready for publishi
 
 ## Back up before every upgrade
 
+The project has one current schema and one `0001_initial.py`. During the pre-release period, an
+existing database already stamped at `0001` is not upgraded by later edits to that file. When a
+release changes schema, take and export a complete backup, rehearse recovery, then deliberately
+create a fresh current-schema database and re-bootstrap/re-publish required skills. Do not start a
+new image against an older stamped database and assume readiness proves every new route works.
+
 In the Coolify terminal for `app`, create a consistent repository, SQLite, and artifact backup:
 
 ```bash
@@ -287,6 +293,12 @@ space), and `infinitas-backup-receipts` (verified offsite state). When deleting 
 Coolify resource, preserve all seven named volumes.
 Ordinary redeploys should not delete them. Staging is reconstructable, but preserving it avoids
 interrupting an active export.
+
+Agent workspace snapshots are separate from these seven server volumes. Create and age-encrypt
+them on the Agent host, upload them with a separate path-restricted OpenList WebDAV user, and
+register only their metadata through the Registry API. Never mount a live Agent data directory
+into `app` or place an age identity in Coolify. The server backup exporter credential and the
+Agent snapshot credential should not be shared.
 
 ## Scheduled backup tasks
 

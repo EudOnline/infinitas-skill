@@ -15,6 +15,7 @@ Use the guide section when you need orientation, decision framing, or contributo
 - [Quickstart](quickstart.md)
 - [Coolify deployment](../ops/coolify-deployment.md)
 - [Control-plane business flows](control-plane-business-flows.md)
+- [Agent collaboration and private skill data](agent-collaboration-and-private-data.md)
 - [Retired multi-object branch notes](multi-object-agent-distribution-branch-notes.md)
 - [Trust model](trust-model.md)
 - [Frontend control-plane alignment](frontend-control-plane-alignment.md)

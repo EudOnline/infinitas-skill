@@ -33,6 +33,10 @@ API keys, cookies, bearer tokens, private SSH keys, and auth exports do not belo
 
 Repository-managed public signer entries in `config/allowed_signers` are allowed and expected for stable release verification.
 
+Hosted publication applies a default-deny path policy for runtime data, databases, credential and
+cookie exports, and private keys. An explicit fixture allowlist does not permit real secrets.
+OpenClaw data snapshots also exclude non-template `.env` files before local encryption.
+
 ### 4. Distribution is opt-in
 A skill being present in the registry does not mean every agent should load it. Install or sync into local runtime directories deliberately.
 

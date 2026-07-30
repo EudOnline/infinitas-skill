@@ -23,6 +23,10 @@ The product is split into two surfaces:
 publish workflows. Namespace publisher/reader Tokens are minted from `/settings`; object and
 release Tokens remain available for narrower delegation.
 
+For multiple Agents, issue one publisher Token per Agent and use `registry changesets`; the
+credential ID and `issued_for` value are retained in audit metadata. Use `registry data-snapshots`
+only for metadata about an already encrypted off-host object.
+
 ## Canonical route map
 
 ### Web admin
@@ -118,9 +122,27 @@ bound to its SHA-256 digest in the Release and signed provenance. Registry HTTP 
 status 1 and a concise message; expected authorization failures do not emit a Python traceback.
 
 Skill sources may include a root `.infinitasignore` with one relative file or directory prefix per
-line. Publishing omits those paths and reports them as `prepared.excluded_paths`; absolute paths,
+line. Publishing omits those paths and reports them as `prepared.excluded_paths`; dry-run also
+returns the complete `prepared.included_paths` inventory. Absolute paths,
 parent traversal, backslashes, and excluding `SKILL.md` are rejected. Use this for legacy runtime
 data that has been moved to an independently encrypted workspace-data snapshot.
+
+High-risk runtime paths (`data/`, databases, credentials, cookies, and private keys) are rejected
+by default. Only legitimate static fixtures may use `_meta.json.security.publish_allow_paths`.
+See [Agent collaboration and private skill data](../guide/agent-collaboration-and-private-data.md).
+
+## `infinitas registry changesets`
+
+Use `create`, `list`, `get`, `submit`, `accept`, and `reject` to coordinate candidate bundles.
+`accept` requires `--expected-latest-digest`; a stale digest exits non-zero after HTTP `409`.
+Successful acceptance creates exactly one immutable version and supersedes competitors based on
+the old version.
+
+## `infinitas registry data-snapshots`
+
+`register` hashes a local `.age` file and sends only its size/digest plus recovery metadata. The
+Registry does not upload or download the encrypted object. `list` and `get` return the related
+skill version, parent snapshot, schema version, URI, and verification digests.
 
 For long-lived install and rollback, configure a read-token-backed source once:
 

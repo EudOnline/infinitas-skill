@@ -101,6 +101,13 @@ identifier for support and log investigation and is not an authentication creden
 - `POST /api/v1/skills/{skill_id}/content`
 - `GET|POST /api/v1/skills/{skill_id}/versions`
 - `GET /api/v1/skills/{skill_id}/versions/{version}`
+- `GET|POST /api/v1/skills/{skill_id}/changesets`
+- `GET /api/v1/skills/{skill_id}/changesets/{change_set_id}`
+- `POST /api/v1/skills/{skill_id}/changesets/{change_set_id}/submit`
+- `POST /api/v1/skills/{skill_id}/changesets/{change_set_id}/accept`
+- `POST /api/v1/skills/{skill_id}/changesets/{change_set_id}/reject`
+- `GET|POST /api/v1/skills/{skill_id}/data-snapshots`
+- `GET /api/v1/skills/{skill_id}/data-snapshots/{snapshot_id}`
 - `POST /api/v1/versions/{version_id}/releases`
 - `GET /api/v1/releases/{release_id}`
 - `GET /api/v1/releases/{release_id}/exposures`
@@ -110,6 +117,12 @@ Skill content and versions are Agent-owned mutations. Versions are immutable: th
 version may only point to the same content digest. Archive is idempotent and permanently blocks
 new content/version writes. Browser routes only expose read views, digest comparison, and Share
 Link distribution.
+
+ChangeSets coordinate Agent candidates without making source mutable in the Registry. Creation is
+bound to the current base version; acceptance requires the reviewed latest content digest and
+returns `409` on stale/concurrent state. Data snapshot routes register only age-encrypted object
+metadata and lineage. They never accept plaintext objects, credential-bearing URIs, or workspace
+data bytes.
 
 ### Visibility and review
 

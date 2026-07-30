@@ -1,5 +1,168 @@
 # Errors
 
+## [ERR-20260729-005] model-registry-table-inventory
+
+**Logged**: 2026-07-29T00:00:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+New authoring-owned tables were omitted from the explicit model-registry metadata inventory test.
+
+### Error
+```text
+AssertionError: expected table set != set(Base.metadata.tables)
+```
+
+### Context
+- `SkillChangeSet` and `SkillDataSnapshot` were correctly imported through authoring models.
+- The clean-interpreter governance test intentionally enumerates every current ORM table.
+
+### Suggested Fix
+Update the explicit inventory whenever a domain owner adds a current-schema ORM table.
+
+### Metadata
+- Reproducible: yes
+- Related Files: tests/unit/server/test_model_imports.py
+
+### Resolution
+- **Resolved**: 2026-07-29T00:00:00Z
+- **Notes**: Both authoring tables are now part of the clean model-registry assertion.
+
+---
+
+## [ERR-20260729-004] sqlite-cas-lock-normalization
+
+**Logged**: 2026-07-29T00:00:00Z
+**Priority**: medium
+**Status**: resolved
+**Area**: backend
+
+### Summary
+Concurrent latest-version CAS writes surfaced as a SQLite lock error instead of a zero-row update.
+
+### Error
+```text
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) database is locked
+```
+
+### Context
+- Two independent sessions attempted to promote version candidates simultaneously.
+- PostgreSQL-style CAS reasoning expected the loser to observe `rowcount == 0`.
+- SQLite may reject the competing writer before it can evaluate the update predicate.
+
+### Suggested Fix
+Normalize only SQLite's specific lock contention during version promotion into the same domain
+conflict returned for a failed CAS; do not hide unrelated operational database failures.
+
+### Metadata
+- Reproducible: yes
+- Related Files: server/modules/authoring/service.py
+
+### Resolution
+- **Resolved**: 2026-07-29T00:00:00Z
+- **Notes**: SQLite lock contention now returns the retryable authoring conflict contract.
+
+---
+
+## [ERR-20260729-003] nonexistent-documentation-test-target
+
+**Logged**: 2026-07-29T00:00:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+A focused documentation validation command referenced a test file that does not exist.
+
+### Error
+```text
+ERROR: file or directory not found: tests/unit/governance/test_documentation_contract.py
+```
+
+### Context
+- The repository splits documentation governance across integration and unit test files.
+- Pytest stopped collection before running the valid targets in the same command.
+
+### Suggested Fix
+Discover documentation test paths with `rg --files tests` before composing a focused suite.
+
+### Metadata
+- Reproducible: yes
+- Related Files: tests/integration/test_doc_governance.py
+
+### Resolution
+- **Resolved**: 2026-07-29T00:00:00Z
+- **Notes**: Validation now uses the repository's actual documentation governance targets.
+
+---
+
+## [ERR-20260729-002] snapshot-lineage-test-expected-digest
+
+**Logged**: 2026-07-29T00:00:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+A lineage audit assertion reused the first snapshot digest after the second request overrode it.
+
+### Error
+```text
+assert 'sha256:cccc...' == 'sha256:aaaa...'
+```
+
+### Context
+- A shared request dictionary held the first snapshot digest.
+- The second snapshot intentionally supplied a different digest to satisfy uniqueness.
+
+### Suggested Fix
+Assert against the explicit digest sent by the operation being audited.
+
+### Metadata
+- Reproducible: yes
+- Related Files: tests/integration/test_agent_collaboration_and_data_snapshots.py
+
+### Resolution
+- **Resolved**: 2026-07-29T00:00:00Z
+- **Notes**: The assertion now checks the second snapshot's explicit ciphertext digest.
+
+---
+
+## [ERR-20260729-001] audit-attribution-test-isolation
+
+**Logged**: 2026-07-29T00:00:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+An audit attribution integration test counted matching events created by its shared fixture.
+
+### Error
+```text
+assert len(events) == 3
+E assert 6 == 3
+```
+
+### Context
+- The query filtered only by event type, which was not unique to the operation under test.
+- The shared fixture had already emitted the same three authoring event types.
+
+### Suggested Fix
+Scope audit assertions to the credential or request IDs that initiated the tested operations.
+
+### Metadata
+- Reproducible: yes
+- Related Files: tests/integration/test_namespace_tokens_api.py
+
+### Resolution
+- **Resolved**: 2026-07-29T00:00:00Z
+- **Notes**: The query now filters by the publisher credential embedded in `actor_ref`.
+
+---
+
 ## [ERR-20260728-010] coolify-compose-latest-deployment-resolution
 
 **Logged**: 2026-07-28T12:25:00Z

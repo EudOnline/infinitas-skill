@@ -669,6 +669,8 @@ positional arguments:
     reviews             Manage review cases for public-facing exposures
     sources             Manage repository registry sources
     catalog             Build generated registry catalog views
+    changesets          Coordinate concurrent Agent improvements
+    data-snapshots      Register encrypted skill data backups
 
 options:
   -h, --help            show this help message and exit
@@ -740,6 +742,47 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --base-url BASE_URL   Hosted registry API base URL
+```
+
+## `infinitas registry changesets`
+
+```text
+usage: infinitas registry changesets [-h] [--base-url BASE_URL]
+                                     {create,list,get,submit,accept,reject} ...
+
+Coordinate concurrent Agent improvements
+
+positional arguments:
+  {create,list,get,submit,accept,reject}
+    create              Create a candidate from the current version
+    list                List ChangeSets for one skill
+    get                 Get one ChangeSet
+    submit              Submit one ChangeSet
+    accept              Accept one ChangeSet
+    reject              Reject one ChangeSet
+
+options:
+  -h, --help            show this help message and exit
+  --base-url BASE_URL   Hosted registry API base URL
+```
+
+## `infinitas registry data-snapshots`
+
+```text
+usage: infinitas registry data-snapshots [-h] [--base-url BASE_URL]
+                                         {register,list,get} ...
+
+Register encrypted skill data backups
+
+positional arguments:
+  {register,list,get}
+    register           Register an encrypted off-host object
+    list               List registered data snapshots
+    get                Get data snapshot recovery metadata
+
+options:
+  -h, --help           show this help message and exit
+  --base-url BASE_URL  Hosted registry API base URL
 ```
 
 ## `infinitas registry releases`

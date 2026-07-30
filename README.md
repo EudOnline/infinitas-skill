@@ -72,6 +72,8 @@ uv run infinitas registry publish ./my-skill --version 1.0.0 --visibility privat
 uv run infinitas registry bootstrap hosted https://skills.infinitas.fun/api/v1/registry \
   --repo-root . --token-env INFINITAS_REGISTRY_READ_TOKEN --set-default --json
 uv run infinitas registry versions compare <skill_id> 1.0.0 1.1.0
+uv run infinitas registry changesets list <skill_id>
+uv run infinitas registry data-snapshots list <skill_id>
 uv run infinitas install from-share '<resolve-url>' ~/.openclaw/skills
 uv run infinitas registry --help
 uv run infinitas policy check-promotion skills/active/operate-infinitas-skill --json
@@ -152,6 +154,7 @@ environment notes.
 - [Testing](docs/reference/testing.md)
 - [Operator runbooks](docs/ops/README.md)
 - [Coolify deployment](docs/ops/coolify-deployment.md)
+- [Agent collaboration and private data](docs/guide/agent-collaboration-and-private-data.md)
 - [ADR 0001: maintainability reset](docs/adr/0001-maintainability-reset.md)
 - [ADR 0002: maintained surface cutover](docs/adr/0002-maintained-surface-cutover.md)
 - [ADR 0003: OpenClaw runtime canonical](docs/adr/0003-openclaw-runtime-canonical.md)
