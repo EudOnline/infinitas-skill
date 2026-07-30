@@ -27,6 +27,7 @@ class RequestContextMiddleware:
             return
 
         request_id = uuid4().hex
+        scope.setdefault("state", {})["request_id"] = request_id
         started_at = perf_counter()
         status_code = 500
 

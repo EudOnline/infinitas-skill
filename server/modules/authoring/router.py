@@ -27,6 +27,7 @@ from server.modules.authoring.schemas import (
     SkillView,
 )
 from server.modules.identity.auth import get_current_access_context
+from server.modules.identity.guards import actor_ref_for_context
 from server.settings import get_settings
 
 router = APIRouter(prefix="/api/v1", tags=["authoring"])
@@ -37,6 +38,7 @@ _AUTHORING_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     401: {"description": "Not authenticated"},
     403: {"description": "Forbidden"},
     404: {"description": "Skill not found"},
+    409: {"description": "Authoring state conflict"},
 }
 
 _CONTENT_ERROR_RESPONSES = {
@@ -125,6 +127,7 @@ def create_skill(
             namespace_id=principal_id,
             actor_principal_id=principal_id,
             payload=payload,
+            audit_actor=actor_ref_for_context(context),
         )
     except service.ConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -195,6 +198,7 @@ async def upload_content(
             pending_ttl_hours=settings.content_pending_ttl_hours,
             max_pending_per_skill=settings.content_max_pending_per_skill,
             max_pending_bytes_per_principal=(settings.content_max_pending_bytes_per_principal),
+            audit_actor=actor_ref_for_context(context, is_maintainer=is_maintainer),
         )
     except service.NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -233,6 +237,7 @@ def create_version(
             version=payload.version,
             content_public_id=payload.content_id,
             pending_ttl_hours=settings.content_pending_ttl_hours,
+            audit_actor=actor_ref_for_context(context, is_maintainer=is_maintainer),
         )
     except service.NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -322,6 +327,7 @@ def archive_skill(
             skill_id=skill_id,
             actor_principal_id=principal_id,
             is_maintainer=is_maintainer,
+            audit_actor=actor_ref_for_context(context, is_maintainer=is_maintainer),
         )
     except service.NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -356,3 +362,9 @@ def get_skill(
     except service.ForbiddenError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     return SkillView.from_model(skill)
+
+
+from server.modules.authoring.collaboration_api import router as collaboration_router  # noqa: E402
+from server.modules.authoring.data_snapshot_api import router as data_snapshot_router  # noqa: E402
+
+routers = (router, collaboration_router, data_snapshot_router)

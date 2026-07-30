@@ -14,6 +14,7 @@ class AccessContext:
     principal: Principal | None
     user: User | None
     scopes: set[str]
+    request_id: str = ""
 
 
 def resolve_access_context(

@@ -18,7 +18,8 @@ from infinitas_skill.skills.schema_version import validate_schema_version
 _SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9_.-]+)?$")
 _SECRET_RE = re.compile(
     rb"(?:gh[pousr]_|github_pat_|sk-[A-Za-z0-9_-]{10,}|"
-    rb"AIza[0-9A-Za-z_-]{20,}|xox[baprs]-|"
+    rb"sk-ant-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|"
+    rb"AIza[0-9A-Za-z_-]{20,}|xox[baprs]-|glpat-[A-Za-z0-9_-]{20,}|npm_[A-Za-z0-9]{20,}|"
     rb"-----BEGIN (?:RSA|OPENSSH|EC|DSA|PGP|PRIVATE KEY)|"
     rb"Authorization:\s*Bearer\s+[A-Za-z0-9._-]+)"
 )

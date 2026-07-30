@@ -29,6 +29,7 @@ class Skill(Base):
     summary: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(String(32), default="active")
     default_visibility_profile: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    latest_content_digest: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_by_principal_id: Mapped[int | None] = mapped_column(
         ForeignKey("principals.id"),
         nullable=True,
@@ -81,4 +82,54 @@ class SkillVersion(Base):
         nullable=True,
         index=True,
     )
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class SkillChangeSet(Base):
+    __tablename__ = "skill_change_sets"
+    __table_args__ = (Index("ix_skill_change_sets_skill_id_state", "skill_id", "state"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    public_id: Mapped[str] = mapped_column(String(64), unique=True)
+    skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"))
+    base_version_id: Mapped[int | None] = mapped_column(
+        ForeignKey("skill_versions.id"), nullable=True
+    )
+    candidate_content_id: Mapped[int] = mapped_column(ForeignKey("skill_contents.id"), unique=True)
+    proposed_version: Mapped[str] = mapped_column(String(64))
+    state: Mapped[str] = mapped_column(String(32), default="open")
+    created_by_principal_id: Mapped[int] = mapped_column(ForeignKey("principals.id"), index=True)
+    actor_metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    submitted_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    decided_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class SkillDataSnapshot(Base):
+    __tablename__ = "skill_data_snapshots"
+    __table_args__ = (
+        UniqueConstraint(
+            "skill_id",
+            "ciphertext_sha256",
+            name="uq_skill_data_snapshots_skill_id_ciphertext_sha256",
+        ),
+        Index("ix_skill_data_snapshots_skill_id_created_at", "skill_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    public_id: Mapped[str] = mapped_column(String(64), unique=True)
+    skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"))
+    skill_version_id: Mapped[int] = mapped_column(ForeignKey("skill_versions.id"))
+    parent_snapshot_id: Mapped[int | None] = mapped_column(
+        ForeignKey("skill_data_snapshots.id"), nullable=True
+    )
+    schema_version: Mapped[int] = mapped_column(Integer)
+    encrypted_object_uri: Mapped[str] = mapped_column(String(1000))
+    ciphertext_sha256: Mapped[str] = mapped_column(String(71))
+    ciphertext_size_bytes: Mapped[int] = mapped_column(BigInteger)
+    manifest_digest: Mapped[str] = mapped_column(String(71))
+    encryption: Mapped[str] = mapped_column(String(32), default="age")
+    state: Mapped[str] = mapped_column(String(32), default="registered")
+    created_by_principal_id: Mapped[int] = mapped_column(ForeignKey("principals.id"), index=True)
+    actor_metadata_json: Mapped[str] = mapped_column(Text, default="{}")
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)

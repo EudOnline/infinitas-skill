@@ -183,6 +183,45 @@ def test_infinitasignore_excludes_workspace_data_prefixes(tmp_path: Path) -> Non
     assert (result.skill_dir / ".infinitasignore").is_file()
 
 
+@pytest.mark.parametrize(
+    "relative_path",
+    ["data/teachers.json", "state.sqlite3", "credentials.json", "keys/id_ed25519"],
+)
+def test_rejects_private_runtime_paths_by_default(tmp_path: Path, relative_path: str) -> None:
+    source = _write_plain_skill(tmp_path / "source")
+    private_file = source / relative_path
+    private_file.parent.mkdir(parents=True, exist_ok=True)
+    private_file.write_text("private\n", encoding="utf-8")
+
+    with pytest.raises(SkillSourceError, match="private runtime data"):
+        stage_skill_source(
+            source,
+            tmp_path / "staged",
+            publisher="tdcasual",
+            version="1.0.0",
+        )
+
+
+def test_explicit_publish_allowlist_supports_safe_static_fixture(tmp_path: Path) -> None:
+    source = _write_plain_skill(tmp_path / "source")
+    fixture = source / "fixtures" / "empty.sqlite"
+    fixture.parent.mkdir()
+    fixture.write_bytes(b"fixture")
+    (source / "_meta.json").write_text(
+        json.dumps({"security": {"publish_allow_paths": ["fixtures/empty.sqlite"]}}),
+        encoding="utf-8",
+    )
+
+    result = stage_skill_source(
+        source,
+        tmp_path / "staged",
+        publisher="tdcasual",
+        version="1.0.0",
+    )
+
+    assert "fixtures/empty.sqlite" in result.included_paths
+
+
 @pytest.mark.parametrize("rule", ["../secrets", "/etc", "nested\\secret"])
 def test_rejects_unsafe_infinitasignore_paths(tmp_path: Path, rule: str) -> None:
     source = _write_plain_skill(tmp_path / "source")

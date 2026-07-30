@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import stat
 from pathlib import Path
@@ -143,6 +144,14 @@ def test_publish_dry_run_with_publisher_is_fully_offline(monkeypatch, tmp_path: 
     assert result["prepared"]["qualified_name"] == "tdcasual/adapt"
     assert result["prepared"]["included_file_count"] == 6
     assert result["prepared"]["included_expanded_bytes"] > 0
+    assert result["prepared"]["included_paths"] == [
+        ".env.example",
+        "CHANGELOG.md",
+        "SKILL.md",
+        "_meta.json",
+        "data.json",
+        "tests/smoke.md",
+    ]
     assert result["prepared"]["excluded_paths"] == []
 
 
@@ -298,3 +307,53 @@ def test_publish_resume_rejects_changed_source(monkeypatch, tmp_path: Path) -> N
             receipt_path=receipt_path,
             resume=True,
         )
+
+
+def test_publish_reloads_same_digest_after_concurrent_version_conflict(
+    monkeypatch, tmp_path: Path
+) -> None:
+    source = _source(tmp_path)
+    bundle_digest = ""
+
+    def fake_request(method: str, url: str, **kwargs) -> httpx.Response:
+        nonlocal bundle_digest
+        path = url.removeprefix("https://registry.example.test")
+        if path == "/api/v1/access/me":
+            return _response(200, {"principal_slug": "tdcasual"})
+        if path == "/api/v1/skills?slug=adapt":
+            return _response(200, [{"id": 8, "slug": "adapt", "status": "active"}])
+        if method == "GET" and path == "/api/v1/skills/8/versions":
+            return _response(200, [])
+        if method == "POST" and path == "/api/v1/skills/8/content":
+            bundle_digest = hashlib.sha256(kwargs["content"]).hexdigest()
+            return _response(201, {"content_id": "cnt_concurrent"})
+        if method == "POST" and path == "/api/v1/skills/8/versions":
+            return _response(409, {"detail": "skill version already exists"})
+        if method == "GET" and path == "/api/v1/skills/8/versions/1.0.0":
+            return _response(
+                200,
+                {
+                    "id": 10,
+                    "version": "1.0.0",
+                    "content_digest": f"sha256:{bundle_digest}",
+                },
+            )
+        if method == "POST" and path == "/api/v1/versions/10/releases":
+            return _response(201, {"id": 11, "state": "ready"})
+        if path == "/api/v1/releases/11":
+            return _response(200, {"id": 11, "state": "ready"})
+        if method == "GET" and path == "/api/v1/releases/11/exposures":
+            return _response(200, [{"id": 12, "audience_type": "private", "state": "active"}])
+        raise AssertionError(f"unexpected request {method} {path}")
+
+    monkeypatch.setattr(httpx, "request", fake_request)
+    result = publish_skill(
+        source,
+        base_url="https://registry.example.test",
+        token="publisher-token",
+        version="1.0.0",
+        repo_root=Path.cwd(),
+    ).payload
+
+    assert result["state"] == "published"
+    assert result["reused_version"] is True

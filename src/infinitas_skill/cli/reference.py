@@ -50,6 +50,8 @@ from infinitas_skill.policy.review_commands import (
 from infinitas_skill.registry.cli import build_registry_parser
 from infinitas_skill.registry.parser_reference import (
     build_registry_bootstrap_parser,
+    build_registry_changesets_parser,
+    build_registry_data_snapshots_parser,
     build_registry_exposures_parser,
     build_registry_releases_parser,
     build_registry_reviews_parser,
@@ -232,6 +234,16 @@ def _registry_sections() -> list[Section]:
             "infinitas registry versions",
             build_registry_versions_parser,
             "infinitas registry versions",
+        ),
+        (
+            "infinitas registry changesets",
+            build_registry_changesets_parser,
+            "infinitas registry changesets",
+        ),
+        (
+            "infinitas registry data-snapshots",
+            build_registry_data_snapshots_parser,
+            "infinitas registry data-snapshots",
         ),
         (
             "infinitas registry releases",

@@ -8,9 +8,11 @@ from pathlib import Path
 from typing import cast
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 
 import server.modules.audit.service as audit_service
+import server.modules.authoring.events as authoring_events
 import server.modules.authoring.repository as repository
 from server.db import register_rollback_artifact_cleanup
 from server.exceptions_base import (
@@ -30,6 +32,7 @@ from server.modules.authoring.models import Skill, SkillContent, SkillVersion
 from server.modules.authoring.schemas import SkillCreateRequest
 from server.modules.identity.models import Principal
 from server.modules.release.storage import build_artifact_storage
+from server.modules.shared.actor import ActorRef, actor_audit_payload, actor_ref_label
 
 
 class AuthoringError(Exception):
@@ -112,6 +115,7 @@ def upload_skill_content(
     pending_ttl_hours: int,
     max_pending_per_skill: int,
     max_pending_bytes_per_principal: int,
+    audit_actor: ActorRef | None = None,
 ) -> SkillContent:
     skill = get_skill_or_404(db, skill_id)
     if skill.status == "archived":
@@ -184,6 +188,13 @@ def upload_skill_content(
     )
     if not object_was_referenced:
         register_rollback_artifact_cleanup(db, root=artifact_root, path=stored.storage_uri)
+    authoring_events.append_content_uploaded(
+        db,
+        skill=skill,
+        content=content,
+        principal_id=actor_principal_id,
+        actor=audit_actor,
+    )
     return content
 
 
@@ -246,6 +257,28 @@ def prune_expired_skill_contents(
     }
 
 
+def _claim_latest_for_version(
+    db: Session,
+    *,
+    skill: Skill,
+    candidate_digest: str,
+    expected_latest_digest: str | None,
+    enforce_expected_digest: bool,
+) -> None:
+    latest = repository.get_latest_skill_version(db, skill_id=skill.id)
+    current_digest = latest.content_digest if latest is not None else None
+    if enforce_expected_digest and expected_latest_digest != current_digest:
+        raise ConflictError("expected latest digest does not match current version")
+    repository.sync_skill_latest_marker(db, skill, latest)
+    if not repository.claim_skill_latest_digest(
+        db,
+        skill_id=skill.id,
+        expected=current_digest,
+        candidate=candidate_digest,
+    ):
+        raise ConflictError("skill latest version changed; retry from the current version")
+
+
 def create_skill_version_snapshot(
     db: Session,
     *,
@@ -255,6 +288,9 @@ def create_skill_version_snapshot(
     version: str,
     content_public_id: str,
     pending_ttl_hours: int,
+    audit_actor: ActorRef | None = None,
+    expected_latest_digest: str | None = None,
+    enforce_expected_digest: bool = False,
 ) -> SkillVersion:
     skill = repository.get_skill(db, skill_id)
     if skill is None:
@@ -298,30 +334,42 @@ def create_skill_version_snapshot(
         metadata=frozen_metadata,
     )
 
-    if not repository.consume_skill_content(db, content.id):
-        raise ConflictError("skill content has already been consumed")
-    skill_version = repository.create_skill_version(
+    try:
+        with db.begin_nested():
+            _claim_latest_for_version(
+                db,
+                skill=skill,
+                candidate_digest=content_digest,
+                expected_latest_digest=expected_latest_digest,
+                enforce_expected_digest=enforce_expected_digest,
+            )
+            if not repository.consume_skill_content(db, content.id):
+                raise ConflictError("skill content has already been consumed")
+            skill_version = repository.create_skill_version(
+                db,
+                skill_id=skill.id,
+                content_id=content.id,
+                version=version,
+                content_digest=content_digest,
+                metadata_digest=metadata_digest,
+                sealed_manifest_json=canonical_manifest_json(version_manifest),
+                created_by_principal_id=actor_principal_id,
+            )
+            repository.set_skill_latest_version(db, skill, skill_version)
+    except IntegrityError as exc:
+        raise ConflictError("skill version already exists") from exc
+    except OperationalError as exc:
+        if db.bind is not None and db.bind.dialect.name == "sqlite" and "locked" in str(exc):
+            raise ConflictError(
+                "skill latest version changed; retry from the current version"
+            ) from exc
+        raise
+    authoring_events.append_version_created(
         db,
-        skill_id=skill.id,
-        content_id=content.id,
-        version=version,
-        content_digest=content_digest,
-        metadata_digest=metadata_digest,
-        sealed_manifest_json=canonical_manifest_json(version_manifest),
-        created_by_principal_id=actor_principal_id,
-    )
-    audit_service.append_audit_event(
-        db,
-        aggregate_type="skill_version",
-        aggregate_id=str(skill_version.id),
-        event_type="skill_version.created",
-        actor_ref=f"principal:{actor_principal_id}",
-        owner_principal_id=skill.namespace_id,
-        payload={
-            "object_id": skill.id,
-            "version_id": skill_version.id,
-            "version": skill_version.version,
-        },
+        skill=skill,
+        version=skill_version,
+        principal_id=actor_principal_id,
+        actor=audit_actor,
     )
     return skill_version
 
@@ -332,6 +380,7 @@ def create_skill(
     namespace_id: int,
     actor_principal_id: int,
     payload: SkillCreateRequest,
+    audit_actor: ActorRef | None = None,
 ) -> Skill:
     existing = repository.get_skill_by_namespace_and_slug(
         db,
@@ -355,12 +404,17 @@ def create_skill(
         aggregate_type="skill",
         aggregate_id=str(skill.id),
         event_type="skill.created",
-        actor_ref=f"principal:{actor_principal_id}",
+        actor_ref=(
+            actor_ref_label(audit_actor)
+            if audit_actor is not None
+            else f"principal:{actor_principal_id}"
+        ),
         owner_principal_id=skill.namespace_id,
         payload={
             "object_id": skill.id,
             "object_name": skill.display_name,
             "slug": skill.slug,
+            **actor_audit_payload(audit_actor),
         },
     )
     return skill
@@ -372,6 +426,7 @@ def archive_skill(
     skill_id: int,
     actor_principal_id: int,
     is_maintainer: bool = False,
+    audit_actor: ActorRef | None = None,
 ) -> Skill:
     skill = get_skill_or_404(db, skill_id)
     assert_namespace_owner(
@@ -387,9 +442,17 @@ def archive_skill(
             aggregate_type="skill",
             aggregate_id=str(skill.id),
             event_type="skill.archived",
-            actor_ref=f"principal:{actor_principal_id}",
+            actor_ref=(
+                actor_ref_label(audit_actor)
+                if audit_actor is not None
+                else f"principal:{actor_principal_id}"
+            ),
             owner_principal_id=skill.namespace_id,
-            payload={"object_id": skill.id, "slug": skill.slug},
+            payload={
+                "object_id": skill.id,
+                "slug": skill.slug,
+                **actor_audit_payload(audit_actor),
+            },
         )
         db.flush()
     return skill

@@ -177,6 +177,15 @@ def get_skill_version_by_version(
     )
 
 
+def get_latest_skill_version(db: Session, *, skill_id: int) -> SkillVersion | None:
+    return db.scalar(
+        select(SkillVersion)
+        .where(SkillVersion.skill_id == skill_id)
+        .order_by(SkillVersion.created_at.desc(), SkillVersion.id.desc())
+        .limit(1)
+    )
+
+
 def consume_skill_content(db: Session, content_id: int) -> bool:
     result = db.execute(
         update(SkillContent)
@@ -211,3 +220,28 @@ def create_skill_version(
     db.add(skill_version)
     db.flush()
     return skill_version
+
+
+def set_skill_latest_version(db: Session, skill: Skill, version: SkillVersion) -> None:
+    skill.latest_content_digest = version.content_digest
+    db.add(skill)
+    db.flush()
+
+
+def sync_skill_latest_marker(db: Session, skill: Skill, latest: SkillVersion | None) -> None:
+    expected_digest = latest.content_digest if latest else None
+    if skill.latest_content_digest != expected_digest:
+        skill.latest_content_digest = expected_digest
+        db.flush()
+
+
+def claim_skill_latest_digest(
+    db: Session, *, skill_id: int, expected: str | None, candidate: str
+) -> bool:
+    result = db.execute(
+        update(Skill)
+        .where(Skill.id == skill_id)
+        .where(Skill.latest_content_digest == expected)
+        .values(latest_content_digest=candidate)
+    )
+    return bool(cast(Any, result).rowcount)

@@ -11,6 +11,10 @@ from typing import Any
 
 from infinitas_skill.install.distribution import deterministic_bundle
 from infinitas_skill.install.skill_validation import validate_installable_skill_dir
+from infinitas_skill.registry.source_security import (
+    publish_allow_paths,
+    sensitive_publish_paths,
+)
 
 _SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 _IGNORED_NAMES = {
@@ -42,6 +46,7 @@ class StagedSkillSource:
     version: str
     generated_files: tuple[str, ...]
     excluded_paths: tuple[str, ...]
+    included_paths: tuple[str, ...]
     metadata: dict[str, Any]
 
 
@@ -235,7 +240,22 @@ def stage_skill_source(
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.exists():
         raise SkillSourceError(f"staging destination already exists: {destination}")
+    existing_metadata = _load_existing_metadata(source)
     excluded_paths = _load_excluded_paths(source)
+    try:
+        allow_paths = publish_allow_paths(existing_metadata)
+    except ValueError as exc:
+        raise SkillSourceError(str(exc)) from exc
+    blocked_paths = sensitive_publish_paths(
+        source,
+        excluded_paths=excluded_paths,
+        allow_paths=allow_paths,
+    )
+    if blocked_paths:
+        raise SkillSourceError(
+            "private runtime data cannot be published without an explicit "
+            "security.publish_allow_paths entry: " + ", ".join(blocked_paths)
+        )
     _copy_source(source, destination, excluded_paths=excluded_paths)
     staged_skill_md = destination / "SKILL.md"
     original_name = _frontmatter_value(staged_skill_md, "name")
@@ -249,7 +269,7 @@ def stage_skill_source(
         )
         staged_skill_md.write_text(text, encoding="utf-8")
     metadata = _normalized_metadata(
-        _load_existing_metadata(source),
+        existing_metadata,
         slug=resolved_slug,
         publisher=publisher,
         version=version,
@@ -258,6 +278,13 @@ def stage_skill_source(
         risk_level=risk_level,
     )
     generated = _write_generated_files(destination, metadata=metadata, version=version)
+    included_paths = tuple(
+        sorted(
+            path.relative_to(destination).as_posix()
+            for path in destination.rglob("*")
+            if path.is_file()
+        )
+    )
     return StagedSkillSource(
         source_dir=source,
         skill_dir=destination,
@@ -267,6 +294,7 @@ def stage_skill_source(
         version=version,
         generated_files=generated,
         excluded_paths=excluded_paths,
+        included_paths=included_paths,
         metadata=metadata,
     )
 

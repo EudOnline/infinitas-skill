@@ -124,6 +124,7 @@ def upgrade() -> None:
         sa.Column("summary", sa.Text(), nullable=False),
         sa.Column("status", sa.String(length=32), nullable=False),
         sa.Column("default_visibility_profile", sa.String(length=64), nullable=True),
+        sa.Column("latest_content_digest", sa.String(length=255), nullable=True),
         sa.Column("created_by_principal_id", sa.Integer(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
@@ -219,6 +220,81 @@ def upgrade() -> None:
         "ix_skill_versions_skill_id_version",
         "skill_versions",
         ["skill_id", "version"],
+        unique=False,
+    )
+    op.create_table(
+        "skill_change_sets",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("public_id", sa.String(length=64), nullable=False),
+        sa.Column("skill_id", sa.Integer(), nullable=False),
+        sa.Column("base_version_id", sa.Integer(), nullable=True),
+        sa.Column("candidate_content_id", sa.Integer(), nullable=False),
+        sa.Column("proposed_version", sa.String(length=64), nullable=False),
+        sa.Column("state", sa.String(length=32), nullable=False),
+        sa.Column("created_by_principal_id", sa.Integer(), nullable=False),
+        sa.Column("actor_metadata_json", sa.Text(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("submitted_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("decided_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(["base_version_id"], ["skill_versions.id"]),
+        sa.ForeignKeyConstraint(["candidate_content_id"], ["skill_contents.id"]),
+        sa.ForeignKeyConstraint(["created_by_principal_id"], ["principals.id"]),
+        sa.ForeignKeyConstraint(["skill_id"], ["skills.id"]),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("candidate_content_id"),
+        sa.UniqueConstraint("public_id"),
+    )
+    op.create_index(
+        op.f("ix_skill_change_sets_created_by_principal_id"),
+        "skill_change_sets",
+        ["created_by_principal_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_skill_change_sets_skill_id_state",
+        "skill_change_sets",
+        ["skill_id", "state"],
+        unique=False,
+    )
+    op.create_table(
+        "skill_data_snapshots",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("public_id", sa.String(length=64), nullable=False),
+        sa.Column("skill_id", sa.Integer(), nullable=False),
+        sa.Column("skill_version_id", sa.Integer(), nullable=False),
+        sa.Column("parent_snapshot_id", sa.Integer(), nullable=True),
+        sa.Column("schema_version", sa.Integer(), nullable=False),
+        sa.Column("encrypted_object_uri", sa.String(length=1000), nullable=False),
+        sa.Column("ciphertext_sha256", sa.String(length=71), nullable=False),
+        sa.Column("ciphertext_size_bytes", sa.BigInteger(), nullable=False),
+        sa.Column("manifest_digest", sa.String(length=71), nullable=False),
+        sa.Column("encryption", sa.String(length=32), nullable=False),
+        sa.Column("state", sa.String(length=32), nullable=False),
+        sa.Column("created_by_principal_id", sa.Integer(), nullable=False),
+        sa.Column("actor_metadata_json", sa.Text(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["created_by_principal_id"], ["principals.id"]),
+        sa.ForeignKeyConstraint(["parent_snapshot_id"], ["skill_data_snapshots.id"]),
+        sa.ForeignKeyConstraint(["skill_id"], ["skills.id"]),
+        sa.ForeignKeyConstraint(["skill_version_id"], ["skill_versions.id"]),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("public_id"),
+        sa.UniqueConstraint(
+            "skill_id",
+            "ciphertext_sha256",
+            name="uq_skill_data_snapshots_skill_id_ciphertext_sha256",
+        ),
+    )
+    op.create_index(
+        op.f("ix_skill_data_snapshots_created_by_principal_id"),
+        "skill_data_snapshots",
+        ["created_by_principal_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_skill_data_snapshots_skill_id_created_at",
+        "skill_data_snapshots",
+        ["skill_id", "created_at"],
         unique=False,
     )
     op.create_table(
@@ -570,6 +646,17 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_team_memberships_user_id"), table_name="team_memberships")
     op.drop_index(op.f("ix_team_memberships_team_id"), table_name="team_memberships")
     op.drop_table("team_memberships")
+    op.drop_index("ix_skill_data_snapshots_skill_id_created_at", table_name="skill_data_snapshots")
+    op.drop_index(
+        op.f("ix_skill_data_snapshots_created_by_principal_id"),
+        table_name="skill_data_snapshots",
+    )
+    op.drop_table("skill_data_snapshots")
+    op.drop_index("ix_skill_change_sets_skill_id_state", table_name="skill_change_sets")
+    op.drop_index(
+        op.f("ix_skill_change_sets_created_by_principal_id"), table_name="skill_change_sets"
+    )
+    op.drop_table("skill_change_sets")
     op.drop_index("ix_skill_versions_skill_id_version", table_name="skill_versions")
     op.drop_index(op.f("ix_skill_versions_created_by_principal_id"), table_name="skill_versions")
     op.drop_table("skill_versions")

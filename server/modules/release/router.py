@@ -20,6 +20,7 @@ from server.modules.access.product_scope import (
 )
 from server.modules.authoring.models import SkillVersion
 from server.modules.identity.auth import get_current_access_context
+from server.modules.identity.guards import actor_ref_for_context
 from server.modules.identity.models import User
 from server.modules.release.materializer import release_requires_materialization
 from server.modules.release.schemas import ArtifactListView, ArtifactView, ReleaseView
@@ -95,6 +96,7 @@ def create_release(
             version_id=version_id,
             actor_principal_id=principal_id,
             is_maintainer=is_maintainer,
+            audit_actor=actor_ref_for_context(context, is_maintainer=is_maintainer),
         )
     except service.NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

@@ -78,6 +78,64 @@ def test_create_version_sends_only_hosted_content_contract(monkeypatch, capsys) 
     assert json.loads(capsys.readouterr().out)["id"] == 9
 
 
+def test_changeset_accept_sends_expected_latest_digest(monkeypatch, capsys) -> None:
+    captured: dict = {}
+
+    def fake_request(method, url, **kwargs):
+        captured.update({"method": method, "url": url, **kwargs})
+        return _response({"version": "1.2.0"})
+
+    monkeypatch.setattr(httpx, "request", fake_request)
+    args = build_registry_parser().parse_args(
+        [
+            "changesets",
+            "accept",
+            "7",
+            "chg_candidate",
+            "--expected-latest-digest",
+            "sha256:" + "a" * 64,
+        ]
+    )
+
+    assert args._handler(args) == 0
+    assert captured["url"].endswith("/api/v1/skills/7/changesets/chg_candidate/accept")
+    assert captured["json"] == {"expected_latest_digest": "sha256:" + "a" * 64}
+    assert json.loads(capsys.readouterr().out)["version"] == "1.2.0"
+
+
+def test_data_snapshot_register_hashes_local_ciphertext(monkeypatch, tmp_path, capsys) -> None:
+    encrypted = tmp_path / "snapshot.tar.gz.age"
+    encrypted.write_bytes(b"encrypted-snapshot")
+    captured: dict = {}
+
+    def fake_request(method, url, **kwargs):
+        captured.update({"method": method, "url": url, **kwargs})
+        return _response({"id": "dsp_fixture"})
+
+    monkeypatch.setattr(httpx, "request", fake_request)
+    args = build_registry_parser().parse_args(
+        [
+            "data-snapshots",
+            "register",
+            "7",
+            "--skill-version-id",
+            "9",
+            "--file",
+            str(encrypted),
+            "--object-uri",
+            "openlist://backups/snapshot.tar.gz.age",
+            "--manifest-digest",
+            "sha256:" + "b" * 64,
+        ]
+    )
+
+    assert args._handler(args) == 0
+    assert captured["json"]["ciphertext_size_bytes"] == len(b"encrypted-snapshot")
+    assert captured["json"]["ciphertext_sha256"].startswith("sha256:")
+    assert captured["json"]["encrypted_object_uri"].startswith("openlist://")
+    assert json.loads(capsys.readouterr().out)["id"] == "dsp_fixture"
+
+
 def test_create_exposure_omits_to_skill_default_visibility(monkeypatch, capsys) -> None:
     captured: dict = {}
 

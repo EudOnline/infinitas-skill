@@ -391,7 +391,24 @@ def _resolve_version(
             )
     if not content_id:
         raise HostedPublishError("registry upload did not return content_id")
-    created = client.create_version(skill_id, version=version, content_id=content_id)
+    try:
+        created = client.create_version(skill_id, version=version, content_id=content_id)
+    except HostedPublishError as exc:
+        if exc.status_code != 409:
+            raise
+        existing = client.get_version(skill_id, version)
+        if existing.get("content_digest") != expected_digest:
+            raise HostedPublishError(
+                f"version {version} already exists with a different content digest",
+                status_code=409,
+            ) from exc
+        _update_receipt(
+            receipt_path,
+            receipt,
+            state="version-created",
+            version_id=int(existing["id"]),
+        )
+        return {"version": existing, "content": content, "reused": True}
     _update_receipt(
         receipt_path,
         receipt,
@@ -528,6 +545,7 @@ def publish_skill(
             "bundle_sha256": f"sha256:{digest}",
             "bundle_size_bytes": len(bundle),
             "included_file_count": sum(1 for path in staged.skill_dir.rglob("*") if path.is_file()),
+            "included_paths": list(staged.included_paths),
             "included_expanded_bytes": sum(
                 path.stat().st_size for path in staged.skill_dir.rglob("*") if path.is_file()
             ),

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -7,6 +8,7 @@ from fastapi.testclient import TestClient
 from server.modules.identity.auth import AUTH_COOKIE_NAME, create_auth_session_cookie
 from server.modules.identity.models import Credential
 from server.modules.identity.service import create_fresh_session_credential
+from tests.helpers.hosted_content import build_skill_bundle
 from tests.integration.conftest import _prepare_library_client
 
 
@@ -66,6 +68,48 @@ def test_namespace_publisher_creates_new_skills_and_reader_is_read_only(
         json={"slug": "namespace-created", "display_name": "Namespace Created"},
     )
     assert created.status_code == 201, created.text
+    content_response = client.post(
+        f"/api/v1/skills/{created.json()['id']}/content",
+        headers={**publisher_headers, "Content-Type": "application/gzip"},
+        content=build_skill_bundle(
+            "namespace-created",
+            "1.0.0",
+            publisher="fixture-maintainer",
+        ),
+    )
+    assert content_response.status_code == 201, content_response.text
+    content = content_response.json()
+    version = client.post(
+        f"/api/v1/skills/{created.json()['id']}/versions",
+        headers=publisher_headers,
+        json={"version": "1.0.0", "content_id": content["content_id"]},
+    )
+    assert version.status_code == 201, version.text
+
+    from server.db import get_session_factory
+    from server.modules.audit.models import AuditEvent
+
+    expected_request_ids = {
+        "skill.created": created.headers["x-request-id"],
+        "skill_content.uploaded": content_response.headers["x-request-id"],
+        "skill_version.created": version.headers["x-request-id"],
+    }
+    credential_suffix = f"credential:{publisher['token']['id']}"
+    with get_session_factory()() as db:
+        events = (
+            db.query(AuditEvent)
+            .filter(AuditEvent.event_type.in_(expected_request_ids))
+            .filter(AuditEvent.actor_ref.like(f"%{credential_suffix}"))
+            .order_by(AuditEvent.id)
+            .all()
+        )
+    assert len(events) == 3
+    for event in events:
+        payload = json.loads(event.payload_json)
+        assert event.actor_ref.endswith(f"credential:{publisher['token']['id']}")
+        assert payload["credential_id"] == publisher["token"]["id"]
+        assert payload["issued_for"] == "agent-e2e"
+        assert payload["request_id"] == expected_request_ids[event.event_type]
     listed = client.get("/api/v1/skills", headers=publisher_headers)
     assert listed.status_code == 200, listed.text
     assert {item["slug"] for item in listed.json()} >= {

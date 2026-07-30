@@ -166,8 +166,12 @@ def _resolve_session_access_context(db: Session, auth_cookie: str | None) -> Acc
 def maybe_get_current_access_context(request: Request, db: Session) -> AccessContext | None:
     bearer = _resolve_request_token(request)
     if bearer:
-        return resolve_access_context(db, bearer)
-    return _resolve_session_access_context(db, request.cookies.get(AUTH_COOKIE_NAME))
+        context = resolve_access_context(db, bearer)
+    else:
+        context = _resolve_session_access_context(db, request.cookies.get(AUTH_COOKIE_NAME))
+    if context is not None:
+        context.request_id = str(getattr(request.state, "request_id", ""))
+    return context
 
 
 def maybe_get_current_user(request: Request, db: Session) -> User | None:
@@ -178,6 +182,7 @@ def maybe_get_current_user(request: Request, db: Session) -> User | None:
 
 
 def get_current_access_context(
+    request: Request,
     authorization: str | None = Header(default=None),
     auth_cookie: str | None = Cookie(default=None, alias=AUTH_COOKIE_NAME),
     db: Session = Depends(get_db),
@@ -191,15 +196,18 @@ def get_current_access_context(
         raise HTTPException(status_code=401, detail="missing bearer token")
     if context is None:
         raise HTTPException(status_code=401, detail="invalid bearer token")
+    context.request_id = str(getattr(request.state, "request_id", ""))
     return context
 
 
 def get_current_user(
+    request: Request,
     authorization: str | None = Header(default=None),
     auth_cookie: str | None = Cookie(default=None, alias=AUTH_COOKIE_NAME),
     db: Session = Depends(get_db),
 ) -> User:
     context = get_current_access_context(
+        request=request,
         authorization=authorization,
         auth_cookie=auth_cookie,
         db=db,

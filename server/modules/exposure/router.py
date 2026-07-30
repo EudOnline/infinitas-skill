@@ -18,6 +18,7 @@ from server.modules.exposure.schemas import (
     ExposureView,
 )
 from server.modules.identity.auth import get_current_access_context
+from server.modules.identity.guards import actor_ref_for_context
 from server.modules.release.models import Release
 
 router = APIRouter(prefix="/api/v1", tags=["exposure"])
@@ -91,6 +92,7 @@ def create_exposure(
             actor_principal_id=principal_id,
             is_maintainer=is_maintainer,
             payload=payload,
+            audit_actor=actor_ref_for_context(context, is_maintainer=is_maintainer),
         )
     except service.NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -118,6 +120,7 @@ def patch_exposure(
             actor_principal_id=principal_id,
             is_maintainer=is_maintainer,
             payload=payload,
+            audit_actor=actor_ref_for_context(context, is_maintainer=is_maintainer),
         )
     except service.NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -143,6 +146,7 @@ def activate_exposure(
             exposure_id=exposure_id,
             actor_principal_id=principal_id,
             is_maintainer=is_maintainer,
+            audit_actor=actor_ref_for_context(context, is_maintainer=is_maintainer),
         )
     except service.NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -168,6 +172,7 @@ def revoke_exposure(
             exposure_id=exposure_id,
             actor_principal_id=principal_id,
             is_maintainer=is_maintainer,
+            audit_actor=actor_ref_for_context(context, is_maintainer=is_maintainer),
         )
     except service.NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

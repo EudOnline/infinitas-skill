@@ -21,6 +21,7 @@ from server.model_base import utcnow
 from server.modules.authoring.models import Skill, SkillVersion
 from server.modules.identity.models import Principal
 from server.modules.release.models import Artifact, Release
+from server.modules.shared.actor import ActorRef, actor_audit_payload, actor_ref_label
 
 
 class ReleaseError(Exception):
@@ -146,6 +147,7 @@ def create_or_get_release(
     version_id: int,
     actor_principal_id: int,
     is_maintainer: bool = False,
+    audit_actor: ActorRef | None = None,
 ) -> tuple[Release, bool]:
     skill_version = get_skill_version_or_404(db, version_id)
     skill = _get_skill_or_404(db, skill_version.skill_id)
@@ -189,13 +191,18 @@ def create_or_get_release(
         aggregate_type="release",
         aggregate_id=str(release.id),
         event_type="release.created",
-        actor_ref=f"principal:{actor_principal_id}",
+        actor_ref=(
+            actor_ref_label(audit_actor)
+            if audit_actor is not None
+            else f"principal:{actor_principal_id}"
+        ),
         owner_principal_id=skill.namespace_id,
         payload={
             "object_id": skill.id,
             "release_id": release.id,
             "version_id": skill_version.id,
             "version": skill_version.version,
+            **actor_audit_payload(audit_actor),
         },
     )
     return release, True

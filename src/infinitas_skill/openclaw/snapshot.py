@@ -46,6 +46,7 @@ class SnapshotFile:
     size: int
     sha256: str
     mode: int
+    mtime_ns: int
 
     @property
     def archive_path(self) -> str:
@@ -74,8 +75,8 @@ def _paths_overlap(first: Path, second: Path) -> bool:
     return first == second or first.is_relative_to(second) or second.is_relative_to(first)
 
 
-def _is_ignored_skill_path(relative: Path) -> bool:
-    if any(part in SKILL_IGNORED_NAMES for part in relative.parts):
+def _is_ignored_path(relative: Path, *, ignore_skill_caches: bool) -> bool:
+    if ignore_skill_caches and any(part in SKILL_IGNORED_NAMES for part in relative.parts):
         return True
     name = relative.name
     return name.startswith(".env") and not name.endswith(ENV_TEMPLATE_SUFFIXES)
@@ -87,11 +88,12 @@ def _collect_files(root: Path, *, area: str, ignore_skill_caches: bool) -> list[
     files: list[SnapshotFile] = []
     for path in sorted(root.rglob("*"), key=lambda item: item.as_posix()):
         relative = path.relative_to(root)
-        if ignore_skill_caches and _is_ignored_skill_path(relative):
+        if _is_ignored_path(relative, ignore_skill_caches=ignore_skill_caches):
             continue
         if path.is_symlink():
             raise OpenClawSnapshotError(f"symbolic links are not supported: {path}")
-        mode = path.stat().st_mode
+        path_stat = path.stat()
+        mode = path_stat.st_mode
         if path.is_dir():
             continue
         if not stat.S_ISREG(mode):
@@ -101,9 +103,10 @@ def _collect_files(root: Path, *, area: str, ignore_skill_caches: bool) -> list[
                 area=area,
                 relative_path=relative.as_posix(),
                 source_path=path,
-                size=path.stat().st_size,
+                size=path_stat.st_size,
                 sha256=_sha256_file(path),
                 mode=0o755 if mode & 0o111 else 0o644,
+                mtime_ns=path_stat.st_mtime_ns,
             )
         )
     return files
@@ -147,13 +150,32 @@ def _add_bytes(archive: tarfile.TarFile, name: str, payload: bytes, *, mode: int
     archive.addfile(info, io.BytesIO(payload))
 
 
-def _write_plain_snapshot(path: Path, manifest: dict[str, Any], files: list[SnapshotFile]) -> None:
-    with tarfile.open(path, "w:gz", compresslevel=9) as archive:
-        manifest_bytes = (
-            json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
-        ).encode("utf-8")
-        _add_bytes(archive, "manifest.json", manifest_bytes)
-        for item in files:
+def _manifest_bytes(manifest: dict[str, Any]) -> bytes:
+    return (json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode(
+        "utf-8"
+    )
+
+
+def _add_snapshot_file(archive: tarfile.TarFile, item: SnapshotFile) -> None:
+    try:
+        digest = hashlib.sha256()
+        copied_size = 0
+        with tempfile.SpooledTemporaryFile(max_size=8 * 1024 * 1024) as payload:
+            with item.source_path.open("rb") as source:
+                for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                    payload.write(chunk)
+                    digest.update(chunk)
+                    copied_size += len(chunk)
+                after = os.fstat(source.fileno())
+            if (
+                copied_size != item.size
+                or digest.hexdigest() != item.sha256
+                or after.st_mtime_ns != item.mtime_ns
+            ):
+                raise OpenClawSnapshotError(
+                    f"snapshot source changed while it was being archived: {item.source_path}"
+                )
+            payload.seek(0)
             info = tarfile.TarInfo(item.archive_path)
             info.size = item.size
             info.mode = item.mode
@@ -162,8 +184,16 @@ def _write_plain_snapshot(path: Path, manifest: dict[str, Any], files: list[Snap
             info.gid = 0
             info.uname = ""
             info.gname = ""
-            with item.source_path.open("rb") as handle:
-                archive.addfile(info, handle)
+            archive.addfile(info, payload)
+    except OSError as exc:
+        raise OpenClawSnapshotError(f"could not read snapshot file: {item.source_path}") from exc
+
+
+def _write_plain_snapshot(path: Path, manifest: dict[str, Any], files: list[SnapshotFile]) -> None:
+    with tarfile.open(path, "w:gz", compresslevel=9) as archive:
+        _add_bytes(archive, "manifest.json", _manifest_bytes(manifest))
+        for item in files:
+            _add_snapshot_file(archive, item)
     path.chmod(0o600)
 
 
@@ -221,6 +251,10 @@ def create_openclaw_snapshot(
     with tempfile.TemporaryDirectory(prefix="infinitas-openclaw-snapshot-") as temp_dir:
         plain = Path(temp_dir) / "snapshot.tar.gz"
         _write_plain_snapshot(plain, manifest, files)
+        verification_root = Path(temp_dir) / "verification"
+        verification_root.mkdir()
+        verified_manifest, members = _extract_snapshot(plain, verification_root)
+        _verified_payload(verified_manifest, verification_root, members)
         temporary_output = output.with_name(f".{output.name}.{uuid.uuid4().hex}.tmp")
         try:
             if recipients:
@@ -239,6 +273,8 @@ def create_openclaw_snapshot(
         "skill_name": manifest["skill"]["name"],
         "payloads": manifest["payloads"],
         "archive_size_bytes": output.stat().st_size,
+        "archive_sha256": f"sha256:{_sha256_file(output)}",
+        "manifest_digest": f"sha256:{hashlib.sha256(_manifest_bytes(manifest)).hexdigest()}",
     }
 
 
@@ -487,6 +523,8 @@ def restore_openclaw_snapshot(
         "restored": not verify_only,
         "skill_name": skill_manifest.get("name"),
         "payloads": manifest.get("payloads"),
+        "archive_sha256": f"sha256:{_sha256_file(snapshot)}",
+        "manifest_digest": f"sha256:{hashlib.sha256(_manifest_bytes(manifest)).hexdigest()}",
         "skill_target": str(Path(skill_target).expanduser().resolve()) if skill_target else None,
         "data_target": str(Path(data_target).expanduser().resolve()) if data_target else None,
     }

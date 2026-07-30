@@ -11,6 +11,23 @@ from fastapi import HTTPException
 from server.modules.access.authn import AccessContext
 from server.modules.shared.actor import ActorRef
 
+
+def actor_ref_for_context(
+    context: AccessContext,
+    *,
+    is_maintainer: bool = False,
+) -> ActorRef:
+    if context.principal is None:
+        raise HTTPException(status_code=403, detail="principal required")
+    return ActorRef(
+        principal=context.principal,
+        is_maintainer=is_maintainer,
+        credential_id=context.credential.id,
+        issued_for=str(context.credential.issued_for or "").strip(),
+        request_id=context.request_id,
+    )
+
+
 # ── Role-only checks ──────────────────────────────────────────────
 
 
@@ -53,8 +70,8 @@ def require_actor_ref(
         raise HTTPException(status_code=403, detail="user session required")
     if context.principal is None:
         raise HTTPException(status_code=403, detail="principal required")
-    return ActorRef(
-        principal=context.principal,
+    return actor_ref_for_context(
+        context,
         is_maintainer=context.user.role == "maintainer",
     )
 

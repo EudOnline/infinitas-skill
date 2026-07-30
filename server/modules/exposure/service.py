@@ -24,6 +24,7 @@ from server.modules.exposure.models import Exposure
 from server.modules.exposure.schemas import ExposureCreateRequest, ExposurePatchRequest
 from server.modules.release.models import Release
 from server.modules.review.policy import PolicyOutcome, evaluate_exposure_policy
+from server.modules.shared.actor import ActorRef, actor_audit_payload, actor_ref_label
 
 
 class ExposureError(Exception):
@@ -169,6 +170,7 @@ def _audit_exposure(
     exposure: Exposure,
     event_type: str,
     actor_principal_id: int,
+    audit_actor: ActorRef | None = None,
 ) -> None:
     release = release_service.get_release_or_404(db, exposure.release_id)
     snapshot = release_service.get_release_snapshot(db, release.id)
@@ -177,7 +179,11 @@ def _audit_exposure(
         aggregate_type="exposure",
         aggregate_id=str(exposure.id),
         event_type=event_type,
-        actor_ref=f"principal:{actor_principal_id}",
+        actor_ref=(
+            actor_ref_label(audit_actor)
+            if audit_actor is not None
+            else f"principal:{actor_principal_id}"
+        ),
         owner_principal_id=snapshot.skill.namespace_id,
         payload={
             "object_id": release.skill_id,
@@ -185,6 +191,7 @@ def _audit_exposure(
             "exposure_id": exposure.id,
             "audience_type": exposure.audience_type,
             "state": exposure.state,
+            **actor_audit_payload(audit_actor),
         },
     )
 
@@ -228,6 +235,7 @@ def create_exposure(
     actor_principal_id: int,
     is_maintainer: bool = False,
     payload: ExposureCreateRequest,
+    audit_actor: ActorRef | None = None,
 ) -> Exposure:
     """Create a new exposure for a release.
 
@@ -302,6 +310,7 @@ def create_exposure(
         exposure=exposure,
         event_type="exposure.created",
         actor_principal_id=actor_principal_id,
+        audit_actor=audit_actor,
     )
     if exposure.state == "active":
         _audit_exposure(
@@ -309,6 +318,7 @@ def create_exposure(
             exposure=exposure,
             event_type="exposure.activated",
             actor_principal_id=actor_principal_id,
+            audit_actor=audit_actor,
         )
     return exposure
 
@@ -320,6 +330,7 @@ def patch_exposure(
     actor_principal_id: int,
     is_maintainer: bool = False,
     payload: ExposurePatchRequest,
+    audit_actor: ActorRef | None = None,
 ) -> Exposure:
     exposure = get_exposure_or_404(db, exposure_id)
     release = release_service.get_release_or_404(db, exposure.release_id)
@@ -352,6 +363,7 @@ def patch_exposure(
         exposure=exposure,
         event_type="exposure.updated",
         actor_principal_id=actor_principal_id,
+        audit_actor=audit_actor,
     )
     return exposure
 
@@ -362,6 +374,7 @@ def activate_exposure(
     exposure_id: int,
     actor_principal_id: int,
     is_maintainer: bool = False,
+    audit_actor: ActorRef | None = None,
 ) -> Exposure:
     exposure = get_exposure_or_404(db, exposure_id)
     release = release_service.get_release_or_404(db, exposure.release_id)
@@ -393,6 +406,7 @@ def activate_exposure(
         exposure=exposure,
         event_type="exposure.activated",
         actor_principal_id=actor_principal_id,
+        audit_actor=audit_actor,
     )
     return exposure
 
@@ -403,6 +417,7 @@ def revoke_exposure(
     exposure_id: int,
     actor_principal_id: int,
     is_maintainer: bool = False,
+    audit_actor: ActorRef | None = None,
 ) -> Exposure:
     exposure = get_exposure_or_404(db, exposure_id)
     release = release_service.get_release_or_404(db, exposure.release_id)
@@ -427,5 +442,6 @@ def revoke_exposure(
         exposure=exposure,
         event_type="exposure.revoked",
         actor_principal_id=actor_principal_id,
+        audit_actor=audit_actor,
     )
     return exposure

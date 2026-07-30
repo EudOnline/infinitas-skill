@@ -12,6 +12,7 @@ import httpx
 
 from infinitas_skill.registry.bootstrap_cli import configure_registry_bootstrap_command
 from infinitas_skill.registry.catalog import configure_registry_catalog_parser
+from infinitas_skill.registry.collaboration_cli import configure_collaboration_commands
 from infinitas_skill.registry.connection_cli import configure_registry_connection_args
 from infinitas_skill.registry.handler import wrap_hosted_handler
 from infinitas_skill.registry.local_ops import configure_registry_sources_parser
@@ -562,6 +563,9 @@ def configure_registry_parser(parser: argparse.ArgumentParser) -> argparse.Argum
     _configure_registry_access_commands(subparsers)
     _configure_registry_share_commands(subparsers)
     _configure_registry_review_commands(subparsers)
+    configure_collaboration_commands(
+        subparsers, request_json=request_json, wrap=_wrap_registry_handler
+    )
     return parser
 
 

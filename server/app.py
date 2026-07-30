@@ -20,7 +20,7 @@ from server.middleware import (
 )
 from server.modules.access.router import routers as access_routers
 from server.modules.audit.router import router as audit_router
-from server.modules.authoring.router import router as authoring_router
+from server.modules.authoring.router import routers as authoring_routers
 from server.modules.discovery.router import routers as discovery_routers
 from server.modules.exposure.router import router as exposure_router
 from server.modules.identity.router import routers as identity_routers
@@ -133,7 +133,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         system_router,
         audit_router,
         library_router,
-        authoring_router,
+        *authoring_routers,
         release_router,
         exposure_router,
         review_router,

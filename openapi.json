@@ -789,6 +789,9 @@
           "404": {
             "description": "Skill not found"
           },
+          "409": {
+            "description": "Authoring state conflict"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -880,6 +883,9 @@
           },
           "404": {
             "description": "Skill not found"
+          },
+          "409": {
+            "description": "Authoring state conflict"
           },
           "413": {
             "description": "Content bundle exceeds the upload size limit"
@@ -984,6 +990,9 @@
           },
           "404": {
             "description": "Skill not found"
+          },
+          "409": {
+            "description": "Authoring state conflict"
           },
           "422": {
             "description": "Validation Error",
@@ -1102,6 +1111,9 @@
           "404": {
             "description": "Skill not found"
           },
+          "409": {
+            "description": "Authoring state conflict"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -1205,6 +1217,9 @@
           "404": {
             "description": "Skill not found"
           },
+          "409": {
+            "description": "Authoring state conflict"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -1297,6 +1312,9 @@
           "404": {
             "description": "Skill not found"
           },
+          "409": {
+            "description": "Authoring state conflict"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -1388,6 +1406,948 @@
           },
           "404": {
             "description": "Skill not found"
+          },
+          "409": {
+            "description": "Authoring state conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/skills/{skill_id}/changesets": {
+      "post": {
+        "tags": [
+          "authoring-collaboration"
+        ],
+        "summary": "Create Change Set",
+        "operationId": "create_change_set_api_v1_skills__skill_id__changesets_post",
+        "parameters": [
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "title": "Skill Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "infinitas_auth_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Infinitas Auth Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeSetCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeSetView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Skill or ChangeSet not found"
+          },
+          "409": {
+            "description": "ChangeSet state or latest-version conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      },
+      "get": {
+        "tags": [
+          "authoring-collaboration"
+        ],
+        "summary": "List Change Sets",
+        "operationId": "list_change_sets_api_v1_skills__skill_id__changesets_get",
+        "parameters": [
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "title": "Skill Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "infinitas_auth_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Infinitas Auth Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChangeSetView"
+                  },
+                  "title": "Response List Change Sets Api V1 Skills  Skill Id  Changesets Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Skill or ChangeSet not found"
+          },
+          "409": {
+            "description": "ChangeSet state or latest-version conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/skills/{skill_id}/changesets/{change_set_id}": {
+      "get": {
+        "tags": [
+          "authoring-collaboration"
+        ],
+        "summary": "Get Change Set",
+        "operationId": "get_change_set_api_v1_skills__skill_id__changesets__change_set_id__get",
+        "parameters": [
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "title": "Skill Id"
+            }
+          },
+          {
+            "name": "change_set_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^chg_[A-Za-z0-9_-]+$",
+              "title": "Change Set Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "infinitas_auth_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Infinitas Auth Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeSetView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Skill or ChangeSet not found"
+          },
+          "409": {
+            "description": "ChangeSet state or latest-version conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/skills/{skill_id}/changesets/{change_set_id}/submit": {
+      "post": {
+        "tags": [
+          "authoring-collaboration"
+        ],
+        "summary": "Submit Change Set",
+        "operationId": "submit_change_set_api_v1_skills__skill_id__changesets__change_set_id__submit_post",
+        "parameters": [
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "title": "Skill Id"
+            }
+          },
+          {
+            "name": "change_set_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^chg_[A-Za-z0-9_-]+$",
+              "title": "Change Set Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "infinitas_auth_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Infinitas Auth Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeSetView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Skill or ChangeSet not found"
+          },
+          "409": {
+            "description": "ChangeSet state or latest-version conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/skills/{skill_id}/changesets/{change_set_id}/reject": {
+      "post": {
+        "tags": [
+          "authoring-collaboration"
+        ],
+        "summary": "Reject Change Set",
+        "operationId": "reject_change_set_api_v1_skills__skill_id__changesets__change_set_id__reject_post",
+        "parameters": [
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "title": "Skill Id"
+            }
+          },
+          {
+            "name": "change_set_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^chg_[A-Za-z0-9_-]+$",
+              "title": "Change Set Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "infinitas_auth_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Infinitas Auth Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeSetView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Skill or ChangeSet not found"
+          },
+          "409": {
+            "description": "ChangeSet state or latest-version conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/skills/{skill_id}/changesets/{change_set_id}/accept": {
+      "post": {
+        "tags": [
+          "authoring-collaboration"
+        ],
+        "summary": "Accept Change Set",
+        "operationId": "accept_change_set_api_v1_skills__skill_id__changesets__change_set_id__accept_post",
+        "parameters": [
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "title": "Skill Id"
+            }
+          },
+          {
+            "name": "change_set_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^chg_[A-Za-z0-9_-]+$",
+              "title": "Change Set Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "infinitas_auth_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Infinitas Auth Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeSetAcceptRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeSetAcceptView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Skill or ChangeSet not found"
+          },
+          "409": {
+            "description": "ChangeSet state or latest-version conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/skills/{skill_id}/data-snapshots": {
+      "post": {
+        "tags": [
+          "authoring-data-snapshots"
+        ],
+        "summary": "Register Snapshot",
+        "operationId": "register_snapshot_api_v1_skills__skill_id__data_snapshots_post",
+        "parameters": [
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "title": "Skill Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "infinitas_auth_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Infinitas Auth Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DataSnapshotRegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataSnapshotView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Skill, version, or data snapshot not found"
+          },
+          "409": {
+            "description": "Data snapshot conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      },
+      "get": {
+        "tags": [
+          "authoring-data-snapshots"
+        ],
+        "summary": "List Snapshots",
+        "operationId": "list_snapshots_api_v1_skills__skill_id__data_snapshots_get",
+        "parameters": [
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "title": "Skill Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "infinitas_auth_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Infinitas Auth Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DataSnapshotView"
+                  },
+                  "title": "Response List Snapshots Api V1 Skills  Skill Id  Data Snapshots Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Skill, version, or data snapshot not found"
+          },
+          "409": {
+            "description": "Data snapshot conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/skills/{skill_id}/data-snapshots/{snapshot_id}": {
+      "get": {
+        "tags": [
+          "authoring-data-snapshots"
+        ],
+        "summary": "Get Snapshot",
+        "operationId": "get_snapshot_api_v1_skills__skill_id__data_snapshots__snapshot_id__get",
+        "parameters": [
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "title": "Skill Id"
+            }
+          },
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^dsp_[A-Za-z0-9_-]+$",
+              "title": "Snapshot Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "infinitas_auth_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Infinitas Auth Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataSnapshotView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Skill, version, or data snapshot not found"
+          },
+          "409": {
+            "description": "Data snapshot conflict"
           },
           "422": {
             "description": "Validation Error",
@@ -4976,6 +5936,184 @@
         "type": "object",
         "title": "CatalogListView"
       },
+      "ChangeSetAcceptRequest": {
+        "properties": {
+          "expected_latest_digest": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Latest Digest"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_latest_digest"
+        ],
+        "title": "ChangeSetAcceptRequest"
+      },
+      "ChangeSetAcceptView": {
+        "properties": {
+          "change_set": {
+            "$ref": "#/components/schemas/ChangeSetView"
+          },
+          "version_id": {
+            "type": "integer",
+            "title": "Version Id"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "content_digest": {
+            "type": "string",
+            "title": "Content Digest"
+          }
+        },
+        "type": "object",
+        "required": [
+          "change_set",
+          "version_id",
+          "version",
+          "content_digest"
+        ],
+        "title": "ChangeSetAcceptView"
+      },
+      "ChangeSetCreateRequest": {
+        "properties": {
+          "base_version_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Version Id"
+          },
+          "content_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 8,
+            "pattern": "^cnt_[A-Za-z0-9_-]+$",
+            "title": "Content Id"
+          },
+          "proposed_version": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+            "title": "Proposed Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "base_version_id",
+          "content_id",
+          "proposed_version"
+        ],
+        "title": "ChangeSetCreateRequest"
+      },
+      "ChangeSetView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "skill_id": {
+            "type": "integer",
+            "title": "Skill Id"
+          },
+          "base_version_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Version Id"
+          },
+          "candidate_content_id": {
+            "type": "string",
+            "title": "Candidate Content Id"
+          },
+          "proposed_version": {
+            "type": "string",
+            "title": "Proposed Version"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "open",
+              "submitted",
+              "accepted",
+              "superseded",
+              "rejected"
+            ],
+            "title": "State"
+          },
+          "created_by_principal_id": {
+            "type": "integer",
+            "title": "Created By Principal Id"
+          },
+          "actor": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Actor"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "skill_id",
+          "base_version_id",
+          "candidate_content_id",
+          "proposed_version",
+          "state",
+          "created_by_principal_id",
+          "created_at",
+          "submitted_at",
+          "decided_at"
+        ],
+        "title": "ChangeSetView"
+      },
       "CredentialPolicyUpdateView": {
         "properties": {
           "status": {
@@ -5087,6 +6225,161 @@
           "authenticated"
         ],
         "title": "CurrentUserResponse"
+      },
+      "DataSnapshotRegisterRequest": {
+        "properties": {
+          "skill_version_id": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Skill Version Id"
+          },
+          "parent_snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^dsp_[A-Za-z0-9_-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Snapshot Id"
+          },
+          "schema_version": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 1.0,
+            "title": "Schema Version"
+          },
+          "encrypted_object_uri": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 8,
+            "title": "Encrypted Object Uri"
+          },
+          "ciphertext_sha256": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "title": "Ciphertext Sha256"
+          },
+          "ciphertext_size_bytes": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Ciphertext Size Bytes"
+          },
+          "manifest_digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "title": "Manifest Digest"
+          },
+          "encryption": {
+            "type": "string",
+            "const": "age",
+            "title": "Encryption",
+            "default": "age"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_version_id",
+          "schema_version",
+          "encrypted_object_uri",
+          "ciphertext_sha256",
+          "ciphertext_size_bytes",
+          "manifest_digest"
+        ],
+        "title": "DataSnapshotRegisterRequest"
+      },
+      "DataSnapshotView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "skill_id": {
+            "type": "integer",
+            "title": "Skill Id"
+          },
+          "skill_version_id": {
+            "type": "integer",
+            "title": "Skill Version Id"
+          },
+          "parent_snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Snapshot Id"
+          },
+          "schema_version": {
+            "type": "integer",
+            "title": "Schema Version"
+          },
+          "encrypted_object_uri": {
+            "type": "string",
+            "title": "Encrypted Object Uri"
+          },
+          "ciphertext_sha256": {
+            "type": "string",
+            "title": "Ciphertext Sha256"
+          },
+          "ciphertext_size_bytes": {
+            "type": "integer",
+            "title": "Ciphertext Size Bytes"
+          },
+          "manifest_digest": {
+            "type": "string",
+            "title": "Manifest Digest"
+          },
+          "encryption": {
+            "type": "string",
+            "const": "age",
+            "title": "Encryption"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "registered",
+              "retired"
+            ],
+            "title": "State"
+          },
+          "created_by_principal_id": {
+            "type": "integer",
+            "title": "Created By Principal Id"
+          },
+          "actor": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Actor"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "skill_id",
+          "skill_version_id",
+          "parent_snapshot_id",
+          "schema_version",
+          "encrypted_object_uri",
+          "ciphertext_sha256",
+          "ciphertext_size_bytes",
+          "manifest_digest",
+          "encryption",
+          "state",
+          "created_by_principal_id",
+          "created_at"
+        ],
+        "title": "DataSnapshotView"
       },
       "ExposureCreateRequest": {
         "properties": {

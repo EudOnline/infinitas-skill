@@ -40,6 +40,8 @@ def _data(tmp_path: Path) -> Path:
     raw.mkdir(parents=True)
     (raw / "教师配备表.xls").write_bytes(b"binary-xls")
     (data / "catalog.json").write_text('{"records": []}\n', encoding="utf-8")
+    (data / ".env").write_text("TOKEN=must-not-be-backed-up\n", encoding="utf-8")
+    (data / ".env.example").write_text("TOKEN=\n", encoding="utf-8")
     return data
 
 
@@ -105,13 +107,18 @@ def test_plaintext_snapshot_round_trip_preserves_skill_and_data(tmp_path: Path) 
     )
 
     assert created["payloads"]["skill"]["file_count"] == 3
-    assert created["payloads"]["data"]["file_count"] == 2
+    assert created["payloads"]["data"]["file_count"] == 3
+    assert created["archive_sha256"].startswith("sha256:")
+    assert created["manifest_digest"].startswith("sha256:")
     assert restored["verified"] is True
+    assert restored["manifest_digest"] == created["manifest_digest"]
     assert (restored_skill / "SKILL.md").read_bytes() == (skill / "SKILL.md").read_bytes()
     assert not (restored_skill / "__pycache__").exists()
     assert not (restored_skill / ".env").exists()
     assert (restored_skill / ".env.example").is_file()
     assert (restored_data / "raw/2025-2026-S2/教师配备表.xls").read_bytes() == b"binary-xls"
+    assert not (restored_data / ".env").exists()
+    assert (restored_data / ".env.example").is_file()
     assert (restored_skill / "scripts/check.py").stat().st_mode & 0o111
 
 
@@ -123,6 +130,28 @@ def test_restore_verify_only_does_not_require_targets(tmp_path: Path) -> None:
 
     assert result["verified"] is True
     assert result["restored"] is False
+
+
+def test_snapshot_rejects_source_mutation_during_archive(monkeypatch, tmp_path: Path) -> None:
+    skill = _skill(tmp_path)
+    from infinitas_skill.openclaw import snapshot as snapshot_module
+
+    original = snapshot_module._add_snapshot_file
+    mutated = False
+
+    def mutate_then_add(archive, item):
+        nonlocal mutated
+        if not mutated:
+            item.source_path.write_bytes(item.source_path.read_bytes() + b"changed")
+            mutated = True
+        return original(archive, item)
+
+    monkeypatch.setattr(snapshot_module, "_add_snapshot_file", mutate_then_add)
+    with pytest.raises(OpenClawSnapshotError, match="source changed"):
+        create_openclaw_snapshot(
+            skill_dir=skill,
+            output_path=tmp_path / "snapshot.tar.gz",
+        )
 
 
 def test_restore_refuses_existing_target_without_force(tmp_path: Path) -> None:

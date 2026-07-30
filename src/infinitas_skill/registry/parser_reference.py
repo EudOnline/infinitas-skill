@@ -94,6 +94,52 @@ def build_registry_versions_parser(*, prog: str | None = None) -> argparse.Argum
     return parser
 
 
+def build_registry_changesets_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog=prog or "infinitas registry changesets",
+        description="Coordinate concurrent Agent improvements",
+    )
+    _add_common_args(parser)
+    sub = parser.add_subparsers(dest="subcommand", metavar="{create,list,get,submit,accept,reject}")
+    create = sub.add_parser("create", help="Create a candidate from the current version")
+    create.add_argument("skill_id", type=int)
+    create.add_argument("--base-version-id", type=int, default=None)
+    create.add_argument("--content-id", required=True)
+    create.add_argument("--version", required=True)
+    listing = sub.add_parser("list", help="List ChangeSets for one skill")
+    listing.add_argument("skill_id", type=int)
+    for command_name in ("get", "submit", "accept", "reject"):
+        command = sub.add_parser(command_name, help=f"{command_name.title()} one ChangeSet")
+        command.add_argument("skill_id", type=int)
+        command.add_argument("change_set_id")
+        if command_name == "accept":
+            command.add_argument("--expected-latest-digest", required=True)
+    return parser
+
+
+def build_registry_data_snapshots_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog=prog or "infinitas registry data-snapshots",
+        description="Register encrypted skill data backups",
+    )
+    _add_common_args(parser)
+    sub = parser.add_subparsers(dest="subcommand", metavar="{register,list,get}")
+    register = sub.add_parser("register", help="Register an encrypted off-host object")
+    register.add_argument("skill_id", type=int)
+    register.add_argument("--skill-version-id", type=int, required=True)
+    register.add_argument("--file", required=True, help="Local .age object used for hashing")
+    register.add_argument("--object-uri", required=True)
+    register.add_argument("--manifest-digest", required=True)
+    register.add_argument("--schema-version", type=int, default=1)
+    register.add_argument("--parent-snapshot-id", default=None)
+    listing = sub.add_parser("list", help="List registered data snapshots")
+    listing.add_argument("skill_id", type=int)
+    get = sub.add_parser("get", help="Get data snapshot recovery metadata")
+    get.add_argument("skill_id", type=int)
+    get.add_argument("snapshot_id")
+    return parser
+
+
 def build_registry_releases_parser(*, prog: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=prog or "infinitas registry releases",
