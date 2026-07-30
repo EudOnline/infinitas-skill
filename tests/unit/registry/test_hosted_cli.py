@@ -103,6 +103,38 @@ def test_changeset_accept_sends_expected_latest_digest(monkeypatch, capsys) -> N
     assert json.loads(capsys.readouterr().out)["version"] == "1.2.0"
 
 
+def test_changeset_conflict_reports_http_status_without_traceback(monkeypatch, capsys) -> None:
+    def fake_request(method, url, **kwargs):
+        return httpx.Response(
+            409,
+            json={"detail": "expected latest digest does not match current version"},
+            request=httpx.Request(method, url),
+        )
+
+    monkeypatch.setattr(httpx, "request", fake_request)
+    args = build_registry_parser().parse_args(
+        [
+            "changesets",
+            "accept",
+            "7",
+            "chg_candidate",
+            "--expected-latest-digest",
+            "sha256:" + "a" * 64,
+        ]
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        args._handler(args)
+
+    captured = capsys.readouterr()
+    assert exc_info.value.code == 1
+    assert captured.out == ""
+    assert captured.err == (
+        "registry returned HTTP 409: expected latest digest does not match current version\n"
+    )
+    assert "Traceback" not in captured.err
+
+
 def test_data_snapshot_register_hashes_local_ciphertext(monkeypatch, tmp_path, capsys) -> None:
     encrypted = tmp_path / "snapshot.tar.gz.age"
     encrypted.write_bytes(b"encrypted-snapshot")

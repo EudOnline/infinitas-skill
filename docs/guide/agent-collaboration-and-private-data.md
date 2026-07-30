@@ -105,10 +105,15 @@ comparing its SHA-256, register recovery metadata:
 infinitas registry data-snapshots register <skill-id> \
   --skill-version-id <version-id> \
   --file /srv/backups/<skill>-2026-07-29.tar.gz.age \
-  --object-uri openlist://skill-backups/<skill>-2026-07-29.tar.gz.age \
+  --object-uri openlist://infinitas/infinitas-skill-backups/agent-data-snapshots/<skill>/<snapshot>.tar.gz.age \
   --manifest-digest sha256:<manifest-digest> \
   --parent-snapshot-id <previous-snapshot-id>
 ```
+
+The first URI component must name a real OpenList storage mount. In the production layout that is
+`/infinitas`; a root-level virtual path such as `/skill-data-snapshots` has no backing storage and
+cannot be used for WebDAV uploads. Give the Agent snapshot account a base path limited to
+`/infinitas/infinitas-skill-backups/agent-data-snapshots`.
 
 The Registry stores the encrypted object URI, ciphertext digest/size, manifest digest, schema
 version, parent link, related skill version, and creator attribution. It does not proxy the file,

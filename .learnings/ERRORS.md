@@ -1,5 +1,378 @@
 # Errors
 
+## [ERR-20260730-011] dns-provider-credentials-unavailable
+
+**Logged**: 2026-07-30T02:28:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: infra
+
+### Summary
+The final DNS control-plane inspection could not run because the DNS wrapper found no provider
+credential, while local resolver checks were also affected by OpenClash Fake-IP mode.
+
+### Error
+```text
+No DNS provider credentials found.
+```
+
+### Context
+- Ordinary `dig` returned the local Fake-IP value `28.0.1.62` even with a public resolver argument.
+- Cloudflare and Google DNS-over-HTTPS independently returned the production server address.
+- HTTPS readiness and TLS verification succeeded.
+
+### Suggested Fix
+Restore the DNS provider credential for control-plane inspection and use DNS-over-HTTPS when
+validating public answers from a host running Fake-IP interception.
+
+### Metadata
+- Reproducible: yes
+- Related Files: docs/ops/coolify-deployment.md
+
+### Resolution
+- **Resolved**: 2026-07-30T02:28:00Z
+- **Notes**: Two independent DNS-over-HTTPS resolvers confirmed `45.153.245.25`; no DNS mutation was
+  required. Provider-side inspection remains unavailable until its local credential is restored.
+
+---
+
+## [ERR-20260730-010] openlist-unmounted-root-path
+
+**Logged**: 2026-07-30T02:20:00Z
+**Priority**: medium
+**Status**: resolved
+**Area**: infra
+
+### Summary
+The first Agent snapshot path was placed at an OpenList root-level path without a storage mount.
+
+### Error
+```text
+failed get storage: storage not found; rawPath: /skill-data-snapshots
+```
+
+### Context
+- Production exposes Google Drive below `/infinitas`.
+- Authentication succeeded, but the virtual root had no storage capable of accepting the object.
+
+### Suggested Fix
+Store Agent snapshots below
+`/infinitas/infinitas-skill-backups/agent-data-snapshots` and scope the WebDAV user to that path.
+
+### Metadata
+- Reproducible: yes
+- Related Files: docs/ops/openclaw-skill-backup.md, docs/ops/coolify-deployment.md
+
+### Resolution
+- **Resolved**: 2026-07-30T02:20:00Z
+- **Notes**: The encrypted snapshot was uploaded, downloaded, hashed, and restored from the mounted
+  production path; operator documentation now names that path.
+
+---
+
+## [ERR-20260730-009] changeset-cli-status-assumption
+
+**Logged**: 2026-07-30T02:15:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+The production ChangeSet wrapper expected the CLI error text to contain `HTTP 409`, but direct JSON
+requests printed only the response body.
+
+### Error
+```text
+{"detail":"expected latest digest does not match current version"}
+```
+
+### Context
+- The server returned HTTP 409 and left the submitted ChangeSet unchanged.
+- Hosted publish client errors already included status codes, but direct Registry CLI requests did
+  not use the same diagnostic contract.
+
+### Suggested Fix
+Include the HTTP status and concise response detail for all direct Registry CLI errors.
+
+### Metadata
+- Reproducible: yes
+- Related Files: src/infinitas_skill/registry/cli.py, tests/unit/registry/test_hosted_cli.py
+
+### Resolution
+- **Resolved**: 2026-07-30T02:20:00Z
+- **Notes**: Direct JSON and binary Registry requests now report the HTTP status without a traceback.
+
+---
+
+## [ERR-20260730-008] changeset-consumed-content-reuse
+
+**Logged**: 2026-07-30T02:08:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+The first stale-ChangeSet production check tried to reuse the content object already consumed by
+Version 19.
+
+### Error
+```text
+{"detail":"skill content has already been consumed"}
+```
+
+### Context
+- ChangeSet candidates require their own unconsumed uploaded content object.
+- No ChangeSet was created by the rejected request.
+
+### Suggested Fix
+Upload a fresh candidate content object before creating each ChangeSet, even when the file bytes
+are intentionally identical to an existing version.
+
+### Metadata
+- Reproducible: yes
+- Related Files: server/modules/authoring/service.py
+
+### Resolution
+- **Resolved**: 2026-07-30T02:08:00Z
+- **Notes**: Continued the production check with a newly uploaded candidate content object.
+
+---
+
+## [ERR-20260730-007] zsh-path-special-parameter
+
+**Logged**: 2026-07-30T01:50:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+A WebDAV verification loop used zsh's special `path` array as a scalar loop variable and broke
+command lookup.
+
+### Error
+```text
+env: 'bash': No such file or directory
+```
+
+### Context
+- The workspace shell is zsh, where assigning `path` also changes `PATH`.
+- The failure occurred before any WebDAV directory or object was created.
+
+### Suggested Fix
+Avoid `path` as a zsh wrapper variable; use a neutral name such as `remote_dir`.
+
+### Metadata
+- Reproducible: yes
+- Related Files: .learnings/ERRORS.md
+
+### Resolution
+- **Resolved**: 2026-07-30T01:50:00Z
+- **Notes**: Renamed the loop variable before retrying the verification.
+
+---
+
+## [ERR-20260730-006] webdav-basic-credential-rejected
+
+**Logged**: 2026-07-30T01:47:57Z
+**Priority**: medium
+**Status**: resolved
+**Area**: infra
+
+### Summary
+The saved WebDAV Basic credential was rejected while creating the encrypted snapshot directory.
+
+### Error
+```text
+Error: WebDAV request failed with HTTP 401 (MKCOL /skill-data-snapshots/...)
+```
+
+### Context
+- The local WebDAV configuration had not been updated since 2026-07-02.
+- No object was uploaded and no credential or age identity was printed.
+
+### Suggested Fix
+Use a current short-lived OpenList bearer token for explicit maintenance, or rotate the dedicated
+restricted WebDAV user's real password before unattended backup operations.
+
+### Metadata
+- Reproducible: yes
+- Related Files: docs/ops/openclaw-skill-backup.md
+
+### Resolution
+- **Resolved**: 2026-07-30T01:47:57Z
+- **Notes**: Continued the one-off verification with the current server-side maintenance token;
+  the stale Basic credential remains unsuitable for scheduled automation.
+
+---
+
+## [ERR-20260730-005] coolify-dns-provider-inspection
+
+**Logged**: 2026-07-30T01:47:57Z
+**Priority**: low
+**Status**: resolved
+**Area**: infra
+
+### Summary
+Coolify domain inspection could not resolve its configured DNS provider even though public DNS and
+HTTPS routing were healthy.
+
+### Error
+```text
+DNS provider lookup failed
+```
+
+### Context
+- Public resolution for `skills.infinitas.fun` returned the intended server.
+- The production HTTPS readiness endpoint remained successful.
+
+### Suggested Fix
+Treat Coolify's provider lookup as a control-plane diagnostic and independently verify authoritative
+DNS, public resolution, TLS, and HTTP readiness.
+
+### Metadata
+- Reproducible: unknown
+- Related Files: docs/deployment/coolify.md
+
+### Resolution
+- **Resolved**: 2026-07-30T01:47:57Z
+- **Notes**: Public DNS and HTTPS checks established that the deployed domain was working.
+
+---
+
+## [ERR-20260730-004] registry-global-option-order
+
+**Logged**: 2026-07-30T01:47:57Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+The first production publish dry-run placed `--base-url` after the `publish` subcommand.
+
+### Error
+```text
+infinitas: error: unrecognized arguments: --base-url https://skills.infinitas.fun
+```
+
+### Context
+- Registry connection flags belong to the `infinitas registry` parser.
+- Argparse requires those global flags before the selected subcommand.
+
+### Suggested Fix
+Use `infinitas registry --base-url <url> publish ...` for production registry operations.
+
+### Metadata
+- Reproducible: yes
+- Related Files: docs/reference/registry-cli.md
+
+### Resolution
+- **Resolved**: 2026-07-30T01:47:57Z
+- **Notes**: Re-ran the production command with registry flags before `publish`.
+
+---
+
+## [ERR-20260730-003] sqlite-named-constraint-line-shape
+
+**Logged**: 2026-07-30T01:47:57Z
+**Priority**: medium
+**Status**: resolved
+**Area**: infra
+
+### Summary
+SQLite 3.46.1 did not recover a named unique constraint when its name and `UNIQUE` clause were split
+across lines in the rehearsal DDL.
+
+### Error
+```text
+SQLAlchemy could not reflect the expected named UNIQUE constraint
+```
+
+### Context
+- The affected data-snapshot table was new and empty.
+- The issue occurred during an offline rehearsal against a copied production database.
+
+### Suggested Fix
+Keep `CONSTRAINT <name> UNIQUE (...)` on one DDL line when exact SQLite reflection is required.
+
+### Metadata
+- Reproducible: yes
+- Related Files: alembic/versions/0001_initial.py
+
+### Resolution
+- **Resolved**: 2026-07-30T01:47:57Z
+- **Notes**: Recreated the empty table with the named unique constraint on one line; `alembic check`
+  then reported no drift.
+
+---
+
+## [ERR-20260730-002] docker-default-entrypoint-interception
+
+**Logged**: 2026-07-30T01:47:57Z
+**Priority**: low
+**Status**: resolved
+**Area**: infra
+
+### Summary
+A one-off Python verification command was interpreted by the application image's default entrypoint.
+
+### Error
+```text
+The image entrypoint handled the Python arguments as application startup arguments.
+```
+
+### Context
+- The target image defines an application entrypoint.
+- The intended operation was an isolated database verification script.
+
+### Suggested Fix
+Set `--entrypoint python3` explicitly for one-off Python commands in the production image.
+
+### Metadata
+- Reproducible: yes
+- Related Files: Dockerfile
+
+### Resolution
+- **Resolved**: 2026-07-30T01:47:57Z
+- **Notes**: Re-ran the container with an explicit Python entrypoint.
+
+---
+
+## [ERR-20260730-001] sqlite-rehearsal-constraint-shape
+
+**Logged**: 2026-07-30T01:00:00Z
+**Priority**: medium
+**Status**: resolved
+**Area**: infra
+
+### Summary
+The first offline production-schema rehearsal used SQLite constraints that were semantically
+unique but did not reflect identically to the current Alembic schema.
+
+### Error
+```text
+FAILED: New upgrade operations detected: add unique constraint on public_id
+```
+
+### Context
+- Inline `public_id UNIQUE` and `AUTOINCREMENT` syntax differed from the exact DDL emitted by the
+  current `0001_initial.py` migration.
+- The rehearsal ran only against a copied backup; production was not changed.
+
+### Suggested Fix
+Generate a clean current-schema database, extract its exact SQLite DDL, and require both
+`PRAGMA integrity_check` and `alembic check` on a fresh backup copy before production use.
+
+### Metadata
+- Reproducible: yes
+- Related Files: alembic/versions/0001_initial.py
+
+### Resolution
+- **Resolved**: 2026-07-30T01:00:00Z
+- **Notes**: The exact table-level constraints passed zero-drift Alembic comparison and preserved
+  all sampled production record counts.
+
+---
+
 ## [ERR-20260729-005] model-registry-table-inventory
 
 **Logged**: 2026-07-29T00:00:00Z

@@ -62,10 +62,15 @@ After restricted WebDAV upload and download verification, register only its reco
 infinitas registry data-snapshots register <skill-id> \
   --skill-version-id <version-id> \
   --file /srv/backups/teacher-work-datahub-2026-07-24.tar.gz.age \
-  --object-uri openlist://skill-backups/teacher-work-datahub-2026-07-24.tar.gz.age \
+  --object-uri openlist://infinitas/infinitas-skill-backups/agent-data-snapshots/teacher-work-datahub/2026-07-24.tar.gz.age \
   --manifest-digest sha256:<digest-from-backup-output> \
   --parent-snapshot-id <previous-snapshot-id>
 ```
+
+The production OpenList root exposes storage mounts rather than a writable virtual filesystem.
+Create snapshot directories below the existing `/infinitas` mount and restrict the snapshot user
+to `/infinitas/infinitas-skill-backups/agent-data-snapshots`; a root-level directory without a
+storage mount will fail even when authentication succeeds.
 
 The Registry stores metadata and lineage only. It does not receive the snapshot bytes, WebDAV
 password, or age identity.

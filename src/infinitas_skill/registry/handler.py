@@ -5,7 +5,21 @@ import json
 from collections.abc import Callable
 from typing import NoReturn
 
+import httpx
+
 from infinitas_skill.registry.publish import HostedPublishError
+
+
+def format_http_error(response: httpx.Response) -> str:
+    try:
+        body = response.json()
+    except ValueError:
+        detail = response.text.strip() or "request failed"
+    else:
+        detail = body.get("detail", body) if isinstance(body, dict) else body
+        if not isinstance(detail, str):
+            detail = json.dumps(detail, ensure_ascii=False)
+    return f"registry returned HTTP {response.status_code}: {detail}"
 
 
 def wrap_hosted_handler(
@@ -23,4 +37,4 @@ def wrap_hosted_handler(
     return handler
 
 
-__all__ = ["wrap_hosted_handler"]
+__all__ = ["format_http_error", "wrap_hosted_handler"]

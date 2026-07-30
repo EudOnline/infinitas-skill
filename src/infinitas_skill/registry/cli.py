@@ -14,7 +14,7 @@ from infinitas_skill.registry.bootstrap_cli import configure_registry_bootstrap_
 from infinitas_skill.registry.catalog import configure_registry_catalog_parser
 from infinitas_skill.registry.collaboration_cli import configure_collaboration_commands
 from infinitas_skill.registry.connection_cli import configure_registry_connection_args
-from infinitas_skill.registry.handler import wrap_hosted_handler
+from infinitas_skill.registry.handler import format_http_error, wrap_hosted_handler
 from infinitas_skill.registry.local_ops import configure_registry_sources_parser
 
 if TYPE_CHECKING:
@@ -45,7 +45,7 @@ def request_json(
     except httpx.HTTPError as exc:
         fail(f"API request failed: {exc}")
     if response.status_code >= 400:
-        fail(response.text)
+        fail(format_http_error(response))
     if response.content:
         result: dict[str, Any] = response.json()
         return result
@@ -71,7 +71,7 @@ def request_binary(
     except httpx.HTTPError as exc:
         fail(f"API request failed: {exc}")
     if response.status_code >= 400:
-        fail(response.text)
+        fail(format_http_error(response))
     result: dict[str, Any] = response.json()
     return result
 
