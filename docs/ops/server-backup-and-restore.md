@@ -138,8 +138,8 @@ The manual restore target is four hours (RTO), including volume recovery, owners
 redeploy, readiness, worker heartbeat, and catalog checks.
 
 These are operating targets, not guarantees. Test one restore rehearsal from an off-host copy at
-least quarterly and after any deployment-layout change. PostgreSQL, multi-node, and managed
-object-storage deployments require their own backup and recovery contract before production use.
+least quarterly and after any deployment-layout change. Other database engines, multi-node
+deployments, and managed object storage are outside this product's backup and recovery contract.
 
 If you install the generated `systemd` bundle from `uv run infinitas server render-systemd ...`, enable the matching backup timer so this command runs on a predictable schedule:
 
@@ -244,4 +244,4 @@ persistent volumes.
 - Back up immediately before every image upgrade and retain the previous immutable image tag
 - Do not restore GitHub back into the hosted source-of-truth repo
 - If artifacts are missing but the repo is intact, rerun worker publish for the affected release after verifying tags and provenance
-- PostgreSQL dumps and object-storage snapshots remain future automation work; v0.1 backup tooling supports only the single-node SQLite deployment shape
+- Backup tooling intentionally supports only the single-node SQLite and filesystem deployment shape

@@ -4235,22 +4235,6 @@
         "operationId": "create_namespace_token_api_v1_namespace_tokens_post",
         "parameters": [
           {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
             "name": "infinitas_auth_token",
             "in": "cookie",
             "required": false,
@@ -4301,9 +4285,6 @@
         },
         "security": [
           {
-            "BearerAuth": []
-          },
-          {
             "SessionCookie": []
           }
         ]
@@ -4315,22 +4296,6 @@
         "summary": "List Namespace Tokens",
         "operationId": "list_namespace_tokens_api_v1_namespace_tokens_get",
         "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
           {
             "name": "infinitas_auth_token",
             "in": "cookie",
@@ -4372,9 +4337,6 @@
         },
         "security": [
           {
-            "BearerAuth": []
-          },
-          {
             "SessionCookie": []
           }
         ]
@@ -4395,22 +4357,6 @@
             "schema": {
               "type": "integer",
               "title": "Token Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
             }
           },
           {
@@ -4453,9 +4399,6 @@
           }
         },
         "security": [
-          {
-            "BearerAuth": []
-          },
           {
             "SessionCookie": []
           }

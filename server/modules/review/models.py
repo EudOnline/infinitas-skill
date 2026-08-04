@@ -37,7 +37,6 @@ class ReviewCase(Base):
             "exposure_id",
             unique=True,
             sqlite_where=text("state = 'open'"),
-            postgresql_where=text("state = 'open'"),
         ),
     )
 

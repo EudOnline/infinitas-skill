@@ -26,9 +26,9 @@ advisory before public disclosure. Credit is offered when requested and legally 
 
 ## Deployment threat boundary
 
-The supported v0.1 Hosted profile is a trusted, single-node deployment using durable SQLite and
-filesystem-backed artifacts. It does not claim hostile multi-tenant isolation, horizontal API or
-worker scaling, or production PostgreSQL support. TLS termination, host hardening, backups,
+The supported Hosted profile is a trusted, single-node deployment using durable SQLite and
+filesystem-backed artifacts. Hostile multi-tenant isolation and horizontal API or worker scaling
+are outside the product boundary. TLS termination, host hardening, backups,
 filesystem permissions, outbound network policy, and access to signing keys remain operator
 responsibilities.
 

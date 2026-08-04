@@ -24,6 +24,29 @@ def test_login_page_exists(page, live_server):
     assert box["height"] >= 44
 
 
+def test_auth_redirect_targets_remain_same_origin(page, live_server):
+    page.goto(f"{live_server}/login?lang=en", wait_until="domcontentloaded")
+    targets = page.evaluate(
+        """async () => {
+          const { normalizeSameOriginTarget } = await import(
+            '/static/js/modules/auth-shared.js'
+          );
+          return {
+            internal: normalizeSameOriginTarget('/library?sort=name#results'),
+            protocolRelative: normalizeSameOriginTarget('//evil.example/path'),
+            backslash: normalizeSameOriginTarget('/\\\\evil.example/path'),
+            external: normalizeSameOriginTarget('https://evil.example/path'),
+          };
+        }"""
+    )
+    assert targets == {
+        "internal": "/library?sort=name#results",
+        "protocolRelative": None,
+        "backslash": None,
+        "external": None,
+    }
+
+
 def test_login_with_valid_token(live_server, browser):
     context = browser.new_context()
     pg = context.new_page()

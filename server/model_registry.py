@@ -8,6 +8,5 @@ import server.modules.identity.models as _identity_models  # noqa: F401
 import server.modules.jobs.models as _jobs_models  # noqa: F401
 import server.modules.release.models as _release_models  # noqa: F401
 import server.modules.review.models as _review_models  # noqa: F401
-from server import rate_limit as _rate_limit  # noqa: F401
 
 __all__: tuple[str, ...] = ()

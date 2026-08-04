@@ -141,6 +141,19 @@ def _normalize_environment(raw: str | None) -> str:
     return environment
 
 
+def validate_database_url(database_url: str) -> str:
+    """Return a supported SQLite URL or fail before application startup."""
+    normalized = database_url.strip()
+    if normalized in {"sqlite://", "sqlite:///:memory:"}:
+        return normalized
+    if normalized.startswith("sqlite:///") and len(normalized) > len("sqlite:///"):
+        return normalized
+    raise RuntimeError(
+        "INFINITAS_SERVER_DATABASE_URL must use SQLite; "
+        "single-node SQLite is the only supported database profile"
+    )
+
+
 def _load_bootstrap_payload(raw: str | None, *, allow_default_fixture: bool) -> object:
     if not raw:
         return list(DEFAULT_BOOTSTRAP_USERS) if allow_default_fixture else None
@@ -266,7 +279,9 @@ def get_settings() -> Settings:
         bootstrap_users = _normalize_bootstrap_users(list(DEFAULT_BOOTSTRAP_USERS))
 
     default_db_path = ROOT / ".state" / "server.db"
-    database_url = os.environ.get("INFINITAS_SERVER_DATABASE_URL") or f"sqlite:///{default_db_path}"
+    database_url = validate_database_url(
+        os.environ.get("INFINITAS_SERVER_DATABASE_URL") or f"sqlite:///{default_db_path}"
+    )
     repo_path = Path(os.environ.get("INFINITAS_SERVER_REPO_PATH") or ROOT).expanduser().resolve()
     artifact_path = (
         Path(os.environ.get("INFINITAS_SERVER_ARTIFACT_PATH") or (ROOT / ".state" / "artifacts"))

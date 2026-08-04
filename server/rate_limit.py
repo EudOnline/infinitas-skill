@@ -15,11 +15,12 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, cast
 
 from fastapi import Request
-from sqlalchemy import DateTime, Integer, String, UniqueConstraint, case, delete, func, select
+from sqlalchemy import case, delete, func, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-from sqlalchemy.orm import Mapped, Session, mapped_column
+from sqlalchemy.orm import Session
 
-from server.model_base import Base, utcnow
+from server.model_base import utcnow
+from server.modules.access.models import RateLimitEntry
 
 
 def resolve_client_ip(request: Request) -> str:
@@ -70,22 +71,6 @@ def resolve_rate_limit_key(request: Request, user_id: int | None = None) -> str:
     # Hash the trusted client IP so raw addresses are not stored or logged.
     client_ip = resolve_client_ip(request)
     return f"anon:{hashlib.sha256(client_ip.encode()).hexdigest()[:32]}"
-
-
-class RateLimitEntry(Base):
-    """Shared rate-limit bucket storage for multi-process deployments."""
-
-    __tablename__ = "rate_limit_entries"
-    __table_args__ = (UniqueConstraint("key", name="uq_rate_limit_entries_key"),)
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    key: Mapped[str] = mapped_column(String(255), index=True)
-    window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
-    attempt_count: Mapped[int] = mapped_column(Integer, default=1)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
 
 
 class RateLimiter(ABC):
@@ -228,31 +213,51 @@ class DBRateLimiter(RateLimiter):
                 RateLimitEntry.window_start < now - timedelta(seconds=window_seconds * 2)
             )
         )
-        statement = sqlite_insert(RateLimitEntry).values(
+        bind = self._db.get_bind()
+        if bind.dialect.name != "sqlite":
+            raise RuntimeError("database rate limiting requires SQLite")
+        statement = _build_consume_statement(
             key=key,
-            window_start=now,
-            attempt_count=1,
-            created_at=now,
-            updated_at=now,
-        )
-        statement = statement.on_conflict_do_update(
-            index_elements=[RateLimitEntry.key],
-            set_={
-                "attempt_count": case(
-                    (RateLimitEntry.window_start < cutoff, 1),
-                    else_=RateLimitEntry.attempt_count + 1,
-                ),
-                "window_start": case(
-                    (RateLimitEntry.window_start < cutoff, now),
-                    else_=RateLimitEntry.window_start,
-                ),
-                "updated_at": now,
-            },
-            where=(RateLimitEntry.window_start < cutoff)
-            | (RateLimitEntry.attempt_count < max_attempts),
+            now=now,
+            cutoff=cutoff,
+            max_attempts=max_attempts,
         )
         result = self._db.execute(statement)
         return cast(Any, result).rowcount == 1
+
+
+def _build_consume_statement(
+    *,
+    key: str,
+    now: datetime,
+    cutoff: datetime,
+    max_attempts: int,
+) -> Any:
+    """Build the SQLite atomic rate-limit UPSERT."""
+    statement = sqlite_insert(RateLimitEntry).values(
+        key=key,
+        window_start=now,
+        attempt_count=1,
+        created_at=now,
+        updated_at=now,
+    )
+    statement = statement.on_conflict_do_update(
+        index_elements=[RateLimitEntry.key],
+        set_={
+            "attempt_count": case(
+                (RateLimitEntry.window_start < cutoff, 1),
+                else_=RateLimitEntry.attempt_count + 1,
+            ),
+            "window_start": case(
+                (RateLimitEntry.window_start < cutoff, now),
+                else_=RateLimitEntry.window_start,
+            ),
+            "updated_at": now,
+        },
+        where=(RateLimitEntry.window_start < cutoff)
+        | (RateLimitEntry.attempt_count < max_attempts),
+    )
+    return statement
 
 
 # Global singleton for memory-backed rate limiting.

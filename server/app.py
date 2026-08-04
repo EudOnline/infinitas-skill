@@ -38,16 +38,23 @@ from server.ui.routes.profile import router as profile_ui_router
 from server.ui.routes.settings import router as settings_ui_router
 
 
-def _dependency_requires_auth(dependency: Any) -> bool:
+def _dependency_security(dependency: Any) -> tuple[str, ...]:
     call = getattr(dependency, "call", None)
     module = getattr(call, "__module__", "")
     name = getattr(call, "__name__", "")
+    if module == "server.modules.identity.auth" and name == "get_current_session_access_context":
+        return ("SessionCookie",)
     if module == "server.modules.identity.auth" and name in {
         "get_current_access_context",
         "get_current_user",
     }:
-        return True
-    return any(_dependency_requires_auth(item) for item in dependency.dependencies)
+        return ("BearerAuth", "SessionCookie")
+    nested = [_dependency_security(item) for item in dependency.dependencies]
+    if any(methods == ("SessionCookie",) for methods in nested):
+        return ("SessionCookie",)
+    if any(methods for methods in nested):
+        return ("BearerAuth", "SessionCookie")
+    return ()
 
 
 def _iter_api_routes(routes: list[Any]) -> list[APIRoute]:
@@ -85,7 +92,8 @@ def _install_openapi(application: FastAPI) -> None:
             }
         )
         for route in _iter_api_routes(list(application.routes)):
-            if not _dependency_requires_auth(route.dependant):
+            security_schemes = _dependency_security(route.dependant)
+            if not security_schemes:
                 continue
             path_item = schema.get("paths", {}).get(route.path_format)
             if not path_item:
@@ -93,7 +101,7 @@ def _install_openapi(application: FastAPI) -> None:
             for method in route.methods or set():
                 operation = path_item.get(method.lower())
                 if operation is not None:
-                    operation["security"] = [{"BearerAuth": []}, {"SessionCookie": []}]
+                    operation["security"] = [{scheme: []} for scheme in security_schemes]
         application.openapi_schema = schema
         return schema
 

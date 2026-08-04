@@ -12,9 +12,8 @@ Private skill registry and hosted control plane for human administrators, Agents
 
 The repository is intentionally pre-release and uses one current architecture: one FastAPI application, one initial database migration, one `infinitas` CLI, pytest-only automated tests, and no project-internal upgrade adapters.
 
-The supported v0.1 deployment profile is single-node SQLite with filesystem-backed
-artifacts. PostgreSQL driver support is present for development evaluation, but
-multi-node production operation and PostgreSQL backup/restore are not release claims.
+The product supports one deployment profile: single-node SQLite with filesystem-backed
+artifacts. PostgreSQL and multi-node operation are intentionally outside the product boundary.
 
 OpenClaw is now the canonical agent runtime. The registry/release/install backend remains the durable control plane; OpenClaw-specific runtime metadata is a consumer contract, not a replacement for registry ownership or release verification.
 

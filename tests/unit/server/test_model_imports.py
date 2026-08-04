@@ -24,7 +24,7 @@ def _run_in_clean_interpreter(source: str) -> subprocess.CompletedProcess[str]:
 def test_models_import_directly_from_their_owners() -> None:
     result = _run_in_clean_interpreter(
         """
-from server.modules.access.models import AccessGrant
+from server.modules.access.models import AccessGrant, RateLimitEntry
 from server.modules.audit.models import AuditEvent
 from server.modules.authoring.models import Skill, SkillVersion
 from server.modules.exposure.models import Exposure
@@ -39,7 +39,6 @@ from server.modules.identity.models import (
 from server.modules.jobs.models import Job
 from server.modules.release.models import Artifact, Release
 from server.modules.review.models import ReviewCase, ReviewDecision, ReviewPolicy
-from server.rate_limit import RateLimitEntry
 
 expected_owners = {
     User: "server.modules.identity.models",
@@ -59,7 +58,7 @@ expected_owners = {
     ReviewCase: "server.modules.review.models",
     ReviewDecision: "server.modules.review.models",
     ReviewPolicy: "server.modules.review.models",
-    RateLimitEntry: "server.rate_limit",
+    RateLimitEntry: "server.modules.access.models",
 }
 for model, expected_owner in expected_owners.items():
     assert model.__module__ == expected_owner, (model, model.__module__)

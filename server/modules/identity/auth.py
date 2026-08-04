@@ -200,6 +200,19 @@ def get_current_access_context(
     return context
 
 
+def get_current_session_access_context(
+    request: Request,
+    auth_cookie: str | None = Cookie(default=None, alias=AUTH_COOKIE_NAME),
+    db: Session = Depends(get_db),
+) -> AccessContext:
+    """Resolve an access context exclusively from the browser session cookie."""
+    context = _resolve_session_access_context(db, auth_cookie)
+    if context is None:
+        raise HTTPException(status_code=403, detail="browser session required")
+    context.request_id = str(getattr(request.state, "request_id", ""))
+    return context
+
+
 def get_current_user(
     request: Request,
     authorization: str | None = Header(default=None),

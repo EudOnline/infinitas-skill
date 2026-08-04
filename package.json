@@ -27,7 +27,7 @@
   "type": "commonjs",
   "devDependencies": {
     "autoprefixer": "^10.4.27",
-    "postcss": "^8.5.10",
+    "postcss": "^8.5.25",
     "purgecss": "^8.0.0",
     "tailwindcss": "^3.4.19"
   }

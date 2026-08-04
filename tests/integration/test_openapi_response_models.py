@@ -49,25 +49,40 @@ def test_authenticated_json_routes_publish_openapi_security(tmp_path: Path) -> N
 
     from fastapi.routing import APIRoute
 
-    from server.app import _dependency_requires_auth, _iter_api_routes, create_app
+    from server.app import _dependency_security, _iter_api_routes, create_app
 
     app = create_app()
     schema = TestClient(app).get("/openapi.json").json()
-    expected = [{"BearerAuth": []}, {"SessionCookie": []}]
 
     checked = []
     for route in _iter_api_routes(list(app.routes)):
         if not isinstance(route, APIRoute) or not route.path.startswith("/api/"):
             continue
-        if not _dependency_requires_auth(route.dependant):
+        security_schemes = _dependency_security(route.dependant)
+        if not security_schemes:
             continue
         path_item = schema["paths"][route.path_format]
         for method in route.methods or set():
             operation = path_item.get(method.lower())
             if operation is None:
                 continue
-            assert operation["security"] == expected, (method, route.path, route.path_format)
+            route_expected = [{scheme: []} for scheme in security_schemes]
+            assert operation["security"] == route_expected, (
+                method,
+                route.path,
+                route.path_format,
+            )
             checked.append((method, route.path_format))
 
     assert ("GET", "/api/v1/install/me/{skill_ref}") in checked
     assert ("GET", "/api/v1/install/grant/{skill_ref}") in checked
+    for path, method in {
+        ("/api/v1/namespace-tokens", "get"),
+        ("/api/v1/namespace-tokens", "post"),
+        ("/api/v1/namespace-tokens/{token_id}/revoke", "post"),
+    }:
+        operation = schema["paths"][path][method]
+        assert operation["security"] == [{"SessionCookie": []}]
+        assert not any(
+            parameter["name"] == "authorization" for parameter in operation["parameters"]
+        )

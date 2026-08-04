@@ -36,6 +36,100 @@ through an explicit administrator operation.
 
 ---
 
+## [ERR-20260804-001] uv-cache-read-only
+
+**Logged**: 2026-08-04T00:00:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: infra
+
+### Summary
+`uv lock` could not create a temporary file in uv's default cache under the read-only home directory.
+
+### Error
+```text
+Could not create temporary file: Read-only file system at /home/tdcasual/.cache/uv
+```
+
+### Context
+- The workspace and `/tmp` are writable, but the default home cache is not.
+- Dependency resolution itself had not started and was not the source of the failure.
+
+### Suggested Fix
+Set `UV_CACHE_DIR` to a task-specific directory under `/tmp` for uv commands in restricted runs.
+
+### Metadata
+- Reproducible: yes
+- Related Files: uv.lock
+
+### Resolution
+- **Resolved**: 2026-08-04T00:00:00Z
+- **Notes**: Lock generation was rerun with a writable task-specific uv cache.
+
+---
+
+## [ERR-20260804-002] git-index-read-only
+
+**Logged**: 2026-08-04T00:00:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: infra
+
+### Summary
+Git staging could not create `.git/index.lock` because the sandbox exposes the repository metadata as read-only.
+
+### Error
+```text
+fatal: Unable to create '.git/index.lock': Read-only file system
+```
+
+### Context
+- Source files are writable, but staging, committing, and pushing require metadata writes under `.git`.
+
+### Suggested Fix
+Run the Git lifecycle commands with repository metadata write permission.
+
+### Metadata
+- Reproducible: yes
+- Related Files: .git/index
+
+### Resolution
+- **Resolved**: 2026-08-04T00:00:00Z
+- **Notes**: Git operations were rerun with the required repository metadata permission.
+
+---
+
+## [ERR-20260803-001] dialect-insert-type-inference
+
+**Logged**: 2026-08-03T00:00:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: backend
+
+### Summary
+The first dialect-aware rate-limit statement builder reused one inferred callable variable for
+SQLite and PostgreSQL insert factories, which mypy rejected.
+
+### Error
+```text
+server/rate_limit.py:241: error: Incompatible types in assignment
+```
+
+### Context
+- Both SQLAlchemy dialect factories are callable but return distinct concrete Insert types.
+- Runtime compilation was valid; only the shared local variable's inferred type was too narrow.
+
+### Metadata
+- Reproducible: yes
+- Related Files: server/rate_limit.py, tests/integration/test_architecture_fixes.py
+
+### Resolution
+- **Resolved**: 2026-08-03T00:00:00Z
+- **Notes**: The product boundary was narrowed to SQLite-only. Removing the PostgreSQL factory
+  and dialect selection branch eliminated the type mismatch and its test matrix.
+
+---
+
 ## [ERR-20260730-011] dns-provider-credentials-unavailable
 
 **Logged**: 2026-07-30T02:28:00Z

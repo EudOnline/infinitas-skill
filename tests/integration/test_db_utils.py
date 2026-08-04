@@ -9,6 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.pool import StaticPool
 
 from server.db import _engine_kwargs
+from server.settings import get_settings
 
 
 def _configure_bootstrap_env(monkeypatch, tmp_path: Path) -> None:
@@ -53,10 +54,21 @@ class TestEngineKwargs:
         assert kwargs["connect_args"] == {"check_same_thread": False}
         assert kwargs["poolclass"] is StaticPool
 
-    def test_non_sqlite_returns_pool_settings(self):
-        kwargs = _engine_kwargs("postgresql://user:pass@localhost/db")
-        assert kwargs["pool_pre_ping"] is True
-        assert kwargs["pool_recycle"] == 3600
+    def test_non_sqlite_is_rejected(self):
+        with pytest.raises(RuntimeError, match="must use SQLite"):
+            _engine_kwargs("postgresql://user:pass@localhost/db")
+
+
+class TestDatabaseSettings:
+    def test_non_sqlite_database_url_is_rejected(self, monkeypatch):
+        monkeypatch.setenv("INFINITAS_SERVER_DATABASE_URL", "postgresql://localhost/infinitas")
+        monkeypatch.setenv("INFINITAS_SERVER_ENV", "test")
+        get_settings.cache_clear()
+
+        with pytest.raises(RuntimeError, match="single-node SQLite"):
+            get_settings()
+
+        get_settings.cache_clear()
 
 
 class TestGetDb:

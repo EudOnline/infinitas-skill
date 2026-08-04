@@ -7,9 +7,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
+from sqlalchemy.dialects import sqlite
 from sqlalchemy.orm import Session
 
-from server.db import _engine_kwargs
 from server.modules.access.authn import AccessContext
 from server.modules.access.authz import can_access_releases
 from server.modules.access.models import AccessGrant
@@ -17,7 +17,7 @@ from server.modules.authoring.models import Skill, SkillContent, SkillVersion
 from server.modules.exposure.models import Exposure
 from server.modules.identity.models import Credential, Principal, User
 from server.modules.release.models import Release
-from server.rate_limit import DBRateLimiter, MemoryRateLimiter
+from server.rate_limit import DBRateLimiter, MemoryRateLimiter, _build_consume_statement
 from server.ui.assets import load_asset_hashes, static_url_factory
 
 
@@ -233,6 +233,17 @@ class TestMemoryRateLimiter:
 
 
 class TestDBRateLimiter:
+    def test_consume_statement_compiles_for_sqlite(self):
+        now = datetime(2026, 8, 3, tzinfo=timezone.utc)
+        statement = _build_consume_statement(
+            key="compile-check",
+            now=now,
+            cutoff=now,
+            max_attempts=3,
+        )
+        compiled = str(statement.compile(dialect=sqlite.dialect()))
+        assert "ON CONFLICT" in compiled
+
     def test_zero_limit_never_consumes(self, db: Session):
         limiter = DBRateLimiter(db)
         assert limiter.consume("zero", max_attempts=0, window_seconds=60) is False
@@ -294,17 +305,3 @@ class TestAssetHashHelpers:
     def test_static_url_without_hash(self):
         url = static_url_factory({})("/static/css/output.css")
         assert url == "/static/css/output.css"
-
-
-class TestEngineKwargs:
-    def test_memory_sqlite_uses_static_pool(self):
-        kwargs = _engine_kwargs("sqlite:///:memory:")
-        from sqlalchemy.pool import StaticPool
-
-        assert kwargs["poolclass"] is StaticPool
-        assert kwargs["connect_args"] == {"check_same_thread": False}
-
-    def test_postgresql_uses_pool_pre_ping(self):
-        kwargs = _engine_kwargs("postgresql://user:pass@localhost/db")
-        assert kwargs["pool_pre_ping"] is True
-        assert kwargs["pool_recycle"] == 3600

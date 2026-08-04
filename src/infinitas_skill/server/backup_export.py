@@ -2,25 +2,30 @@
 
 from __future__ import annotations
 
-import base64
 import io
 import json
 import os
 import sqlite3
 import subprocess
-import sys
 import tarfile
 import tempfile
 from contextlib import closing, redirect_stdout
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
-from typing import Any, NoReturn
-from urllib.parse import quote
-
-import httpx
+from typing import Any
 
 from infinitas_skill.hashing import sha256_file
 from infinitas_skill.server.backup import classify_backup_entries
+from infinitas_skill.server.backup_webdav import (
+    WebDAVClient,
+    fail,
+)
+from infinitas_skill.server.backup_webdav import (
+    client_from_environment as _client_from_environment,
+)
+from infinitas_skill.server.backup_webdav import (
+    remote_path as _remote_path,
+)
 from infinitas_skill.server.restore import (
     load_manifest,
     require_child,
@@ -31,11 +36,6 @@ from infinitas_skill.server.restore import (
 
 RECEIPT_NAME = "offsite-receipt.json"
 RECEIPT_SCHEMA_VERSION = 1
-
-
-def fail(message: str) -> NoReturn:
-    print(message, file=sys.stderr)
-    raise SystemExit(1)
 
 
 def _manifest_reference(manifest: dict[str, Any], section: str, field: str) -> str:
@@ -105,119 +105,6 @@ def run_age_decrypt(source: Path, output: Path, identity: Path) -> None:
         output.unlink(missing_ok=True)
         fail(f"age decryption failed: {result.stderr.strip()}")
     output.chmod(0o600)
-
-
-def _remote_path(path: str) -> str:
-    normalized = PurePosixPath("/" + path.strip("/"))
-    if ".." in normalized.parts:
-        fail(f"remote path must not contain parent traversal: {path}")
-    return normalized.as_posix()
-
-
-class WebDAVClient:
-    def __init__(
-        self,
-        *,
-        base_url: str,
-        auth_mode: str,
-        username: str,
-        secret: str,
-        transport: httpx.BaseTransport | None = None,
-    ) -> None:
-        if auth_mode not in {"basic", "bearer"}:
-            fail("WebDAV auth mode must be basic or bearer")
-        if not secret:
-            fail("WebDAV secret environment variable is empty")
-        headers: dict[str, str] = {}
-        if auth_mode == "basic":
-            encoded = base64.b64encode(f"{username}:{secret}".encode()).decode()
-            headers["Authorization"] = f"Basic {encoded}"
-        else:
-            headers["Authorization"] = f"Bearer {secret}"
-        self._client = httpx.Client(
-            base_url=base_url.rstrip("/") + "/",
-            headers=headers,
-            timeout=120,
-            follow_redirects=False,
-            transport=transport,
-        )
-
-    def close(self) -> None:
-        self._client.close()
-
-    def _url(self, remote_path: str) -> str:
-        return quote(_remote_path(remote_path).lstrip("/"), safe="/")
-
-    def ensure_directories(self, remote_file: str) -> None:
-        parts = PurePosixPath(_remote_path(remote_file)).parent.parts[1:]
-        current = ""
-        for part in parts:
-            current += f"/{part}"
-            response = self._client.request("MKCOL", self._url(current))
-            if response.status_code not in {201, 405}:
-                fail(f"WebDAV MKCOL failed for {current}: HTTP {response.status_code}")
-
-    def exists(self, remote_path: str) -> bool:
-        response = self._client.request("HEAD", self._url(remote_path))
-        if response.status_code in {200, 204}:
-            return True
-        if response.status_code == 404:
-            return False
-        fail(f"WebDAV HEAD failed for {remote_path}: HTTP {response.status_code}")
-
-    def get_json(self, remote_path: str) -> dict[str, Any] | None:
-        response = self._client.get(self._url(remote_path))
-        if response.status_code == 404:
-            return None
-        if response.status_code != 200:
-            fail(f"WebDAV GET failed for {remote_path}: HTTP {response.status_code}")
-        try:
-            payload = response.json()
-        except ValueError:
-            fail(f"WebDAV receipt is not valid JSON: {remote_path}")
-        if not isinstance(payload, dict):
-            fail(f"WebDAV receipt must contain an object: {remote_path}")
-        return payload
-
-    def upload_file(self, local_path: Path, remote_path: str) -> None:
-        with local_path.open("rb") as handle:
-            response = self._client.put(self._url(remote_path), content=handle)
-        if response.status_code not in {200, 201, 204}:
-            fail(f"WebDAV PUT failed for {remote_path}: HTTP {response.status_code}")
-
-    def upload_json_once(self, payload: dict[str, Any], remote_path: str) -> None:
-        response = self._client.put(
-            self._url(remote_path),
-            content=json.dumps(payload, separators=(",", ":")).encode(),
-            headers={"Content-Type": "application/json", "If-None-Match": "*"},
-        )
-        if response.status_code not in {200, 201, 204}:
-            fail(f"WebDAV receipt PUT failed for {remote_path}: HTTP {response.status_code}")
-
-    def download_file(self, remote_path: str, local_path: Path) -> None:
-        local_path.parent.mkdir(parents=True, exist_ok=True)
-        with self._client.stream("GET", self._url(remote_path)) as response:
-            if response.status_code != 200:
-                fail(f"WebDAV download failed for {remote_path}: HTTP {response.status_code}")
-            with local_path.open("wb") as handle:
-                for chunk in response.iter_bytes():
-                    handle.write(chunk)
-        local_path.chmod(0o600)
-
-
-def _client_from_environment(
-    *, base_url: str, auth_mode: str, user_env: str, secret_env: str
-) -> WebDAVClient:
-    username = os.environ.get(user_env, "")
-    secret = os.environ.get(secret_env, "")
-    if auth_mode == "basic" and not username:
-        fail(f"WebDAV username environment variable is empty: {user_env}")
-    return WebDAVClient(
-        base_url=base_url,
-        auth_mode=auth_mode,
-        username=username,
-        secret=secret,
-    )
 
 
 def _receipt_paths(backup_dir: Path, remote_prefix: str) -> tuple[str, str]:

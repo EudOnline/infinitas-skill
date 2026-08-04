@@ -217,7 +217,8 @@ Tune the allowed age with `INFINITAS_WORKER_HEALTH_MAX_AGE_SECONDS`; it should r
 comfortably above the heartbeat refresh interval and below the operator's failure
 detection target.
 
-Phase 1 automation validates SQLite deployments only. PostgreSQL health probes can be added later without changing the hosted artifact contract.
+Deployment automation validates only the supported SQLite profile. Alternative database health
+probes and distributed topologies are intentionally out of scope.
 
 For hosted installs on other machines, point the registry source `base_url` at the
 `/api/v1/registry` prefix, not the app root.
@@ -387,4 +388,4 @@ GitHub is an optional **one-way mirror** only. The hosted server remains the wri
 - Keep the repo checkout on fast local storage; worker jobs mutate it directly
 - Serve artifacts from the synced artifact directory, not from editable skill folders
 - Monitor job logs for failed `materialize_release` jobs
-- v0.1 supports one API/Worker deployment group backed by SQLite; do not add multiple app or Worker nodes until PostgreSQL concurrency, health, backup, and restore contracts are implemented and validated
+- Run exactly one SQLite-backed API/Worker deployment group; multiple app or Worker nodes are unsupported

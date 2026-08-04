@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from server.model_base import Base, utcnow
@@ -34,3 +34,19 @@ class AccessGrant(Base):
         index=True,
     )
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class RateLimitEntry(Base):
+    """Shared rate-limit bucket storage owned by the access domain."""
+
+    __tablename__ = "rate_limit_entries"
+    __table_args__ = (UniqueConstraint("key", name="uq_rate_limit_entries_key"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    key: Mapped[str] = mapped_column(String(255), index=True)
+    window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    attempt_count: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )

@@ -54,7 +54,7 @@ truth and review its changes like any other production secret rotation.
 
 | Variable | Container recommendation | Description |
 |---|---|---|
-| `INFINITAS_SERVER_DATABASE_URL` | `sqlite:////srv/infinitas/data/server.db` | SQLAlchemy database URL. Defaults to `.state/server.db` outside the container deployment. |
+| `INFINITAS_SERVER_DATABASE_URL` | `sqlite:////srv/infinitas/data/server.db` | SQLite SQLAlchemy URL. Defaults to `.state/server.db` outside the container deployment; other database schemes are rejected at startup. |
 | `INFINITAS_SERVER_REPO_PATH` | `/srv/infinitas/repo` | Writable source-of-truth Git worktree. |
 | `INFINITAS_SERVER_ARTIFACT_PATH` | `/srv/infinitas/artifacts` | Hosted `/api/v1/registry/*` artifact root. |
 | `INFINITAS_SERVER_REPO_LOCK_PATH` | `/srv/infinitas/data/repo.lock` | Cross-process lock used while bootstrapping the runtime repository. |
@@ -64,9 +64,8 @@ truth and review its changes like any other production secret rotation.
 All of these paths must survive a redeploy. In Coolify they are named volumes; in generic
 Compose they are bind mounts.
 
-The runtime includes a PostgreSQL driver and accepts PostgreSQL URLs for development evaluation,
-but PostgreSQL is not a release-supported production profile until health checks,
-backup/restore, concurrency behavior, and the CI matrix are validated end to end.
+SQLite is the only supported database. The server rejects non-SQLite URLs during settings
+loading so an unsupported topology cannot reach migrations or application startup.
 
 ## Hosted registry reads and proxy trust
 

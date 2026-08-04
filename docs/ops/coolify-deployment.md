@@ -22,8 +22,8 @@ The supported v0.1 topology is deliberately single-node:
 - artifacts: filesystem storage on the `infinitas-artifacts` volume
 - HTTPS and public routing: Coolify proxy
 
-Do not horizontally scale either service. Multi-node operation and PostgreSQL are not current
-production claims.
+Do not horizontally scale either service. Multi-node operation and alternative database engines
+are outside the product boundary.
 
 The app emits a server-generated `X-Request-ID` on every HTTP response and includes it in JSON
 logs. Keep that header when escalating a failed request so Coolify log searches can isolate the

@@ -14,7 +14,7 @@ from server.modules.access.schemas import (
     ProductTokenListView,
     ProductTokenView,
 )
-from server.modules.identity.auth import get_current_access_context
+from server.modules.identity.auth import get_current_session_access_context
 from server.modules.identity.guards import require_session_actor_ref
 from server.modules.shared.actor import ActorRef
 from server.rate_limit import get_rate_limiter, resolve_client_ip
@@ -44,7 +44,7 @@ def _actor(context: AccessContext) -> ActorRef:
 def create_namespace_token(
     payload: NamespaceTokenCreateRequest,
     request: Request,
-    context: AccessContext = Depends(get_current_access_context),
+    context: AccessContext = Depends(get_current_session_access_context),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     if not get_rate_limiter(db).consume(
@@ -70,7 +70,7 @@ def create_namespace_token(
 
 @router.get("", response_model=ProductTokenListView)
 def list_namespace_tokens(
-    context: AccessContext = Depends(get_current_access_context),
+    context: AccessContext = Depends(get_current_session_access_context),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     items = token_service.list_namespace_tokens(db, actor=_actor(context))
@@ -80,7 +80,7 @@ def list_namespace_tokens(
 @router.post("/{token_id}/revoke", response_model=ProductTokenView)
 def revoke_namespace_token(
     token_id: int,
-    context: AccessContext = Depends(get_current_access_context),
+    context: AccessContext = Depends(get_current_session_access_context),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     try:

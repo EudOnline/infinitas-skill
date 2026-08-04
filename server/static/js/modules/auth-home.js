@@ -6,6 +6,7 @@ import {
   hasAuthCookieHint,
   setAuthCookieHint,
   initialSessionUser,
+  normalizeSameOriginTarget,
   requestSessionCleanup,
 } from './auth-shared.js';
 import { AUTH_SESSION_CONFIG, logError, uiTemplate, uiText } from './config.js';
@@ -18,11 +19,6 @@ function parseHomeAuthData() {
   } catch (_error) {
     return {};
   }
-}
-
-function normalizeProtectedTarget(rawTarget) {
-  if (typeof rawTarget !== 'string' || !rawTarget.startsWith('/')) return null;
-  return rawTarget.startsWith('//') ? null : rawTarget;
 }
 
 class HomeAuthSession {
@@ -47,7 +43,7 @@ class HomeAuthSession {
   consumePendingAuthRedirect() {
     const url = new URL(window.location.href);
     if (url.searchParams.get('auth') !== 'required') return null;
-    const target = normalizeProtectedTarget(url.searchParams.get('next'));
+    const target = normalizeSameOriginTarget(url.searchParams.get('next'));
     url.searchParams.delete('auth');
     url.searchParams.delete('next');
     window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
@@ -55,7 +51,7 @@ class HomeAuthSession {
   }
 
   openAuthModal(targetHref = null) {
-    this.controller.openModal(normalizeProtectedTarget(targetHref));
+    this.controller.openModal(normalizeSameOriginTarget(targetHref));
   }
 
   updateUserTriggerIcon(authenticated) {

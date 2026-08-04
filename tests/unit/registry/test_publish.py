@@ -312,6 +312,7 @@ def test_publish_resume_rejects_changed_source(monkeypatch, tmp_path: Path) -> N
 def test_publish_reloads_same_digest_after_concurrent_version_conflict(
     monkeypatch, tmp_path: Path
 ) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     source = _source(tmp_path)
     bundle_digest = ""
 

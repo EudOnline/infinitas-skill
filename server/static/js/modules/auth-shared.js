@@ -94,6 +94,22 @@ export function initialSessionUser() {
 }
 
 /**
+ * Normalize a navigation target while guaranteeing it remains on this origin.
+ */
+export function normalizeSameOriginTarget(rawTarget) {
+  if (typeof rawTarget !== 'string' || !rawTarget.startsWith('/') || rawTarget.includes('\\')) {
+    return null;
+  }
+  try {
+    const target = new URL(rawTarget, window.location.origin);
+    if (target.origin !== window.location.origin) return null;
+    return `${target.pathname}${target.search}${target.hash}`;
+  } catch (_error) {
+    return null;
+  }
+}
+
+/**
  * Send a POST to /api/auth/logout and clear local state.
  */
 export async function requestSessionCleanup() {

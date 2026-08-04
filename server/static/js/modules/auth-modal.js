@@ -1,6 +1,11 @@
 /** Reusable authentication modal controller. */
 
-import { validateCredentials, markLocalSessionActive, setAuthCookieHint } from './auth-shared.js';
+import {
+  validateCredentials,
+  markLocalSessionActive,
+  normalizeSameOriginTarget,
+  setAuthCookieHint,
+} from './auth-shared.js';
 import { currentPageLanguage, getCsrfToken, uiText } from './config.js';
 
 const ID_SUFFIXES = {
@@ -163,9 +168,7 @@ class AuthModalController {
 
   openModal(redirectHref = null) {
     if (!this.dom.modal) return;
-    this.pendingRedirect = typeof redirectHref === 'string' && redirectHref.startsWith('/')
-      ? redirectHref
-      : null;
+    this.pendingRedirect = normalizeSameOriginTarget(redirectHref);
     const focusReturnId = this.prefix === 'console-' ? 'console-session-trigger' : 'user-trigger';
     this.dom.lastFocus = document.activeElement || document.getElementById(focusReturnId);
     this.dom.modal.hidden = false;

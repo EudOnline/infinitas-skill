@@ -24,7 +24,6 @@ class Exposure(Base):
             "audience_type",
             unique=True,
             sqlite_where=text("state NOT IN ('revoked', 'rejected')"),
-            postgresql_where=text("state NOT IN ('revoked', 'rejected')"),
         ),
     )
 

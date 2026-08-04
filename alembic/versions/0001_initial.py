@@ -434,7 +434,6 @@ def upgrade() -> None:
         ["release_id", "audience_type"],
         unique=True,
         sqlite_where=sa.text("state NOT IN ('revoked', 'rejected')"),
-        postgresql_where=sa.text("state NOT IN ('revoked', 'rejected')"),
     )
     op.create_index(
         op.f("ix_exposures_requested_by_principal_id"),
@@ -544,7 +543,6 @@ def upgrade() -> None:
         ["exposure_id"],
         unique=True,
         sqlite_where=sa.text("state = 'open'"),
-        postgresql_where=sa.text("state = 'open'"),
     )
     op.create_table(
         "credentials",

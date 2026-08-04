@@ -14,7 +14,7 @@ from sqlalchemy.pool import StaticPool
 from alembic import command
 from server import model_registry as _model_registry  # noqa: F401
 from server.model_base import Base
-from server.settings import get_settings
+from server.settings import get_settings, validate_database_url
 
 _ROLLBACK_ARTIFACT_PATHS = "rollback_artifact_paths"
 
@@ -53,19 +53,15 @@ def _run_rollback_artifact_cleanups(session: Session) -> None:
 
 
 def _engine_kwargs(database_url: str) -> dict:
+    database_url = validate_database_url(database_url)
     if database_url in {"sqlite://", "sqlite:///:memory:"}:
         return {
             "connect_args": {"check_same_thread": False},
             "poolclass": StaticPool,
         }
-    if database_url.startswith("sqlite:///"):
-        return {
-            "connect_args": {"check_same_thread": False},
-            "pool_pre_ping": True,
-        }
     return {
+        "connect_args": {"check_same_thread": False},
         "pool_pre_ping": True,
-        "pool_recycle": 3600,
     }
 
 

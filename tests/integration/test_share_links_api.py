@@ -350,7 +350,7 @@ def test_wrong_share_password_attempts_persist_and_return_retry_after(
     assert responses[20].headers["retry-after"] == "60"
 
     from server.db import get_session_factory
-    from server.rate_limit import RateLimitEntry
+    from server.modules.access.models import RateLimitEntry
 
     with get_session_factory()() as session:
         bucket = (
