@@ -1,5 +1,6 @@
 import argparse
 
+from infinitas_skill.agent import configure_agent_cli
 from infinitas_skill.compatibility.checks import (
     COMPATIBILITY_PARSER_DESCRIPTION,
     COMPATIBILITY_TOP_LEVEL_HELP,
@@ -48,6 +49,9 @@ def build_parser() -> argparse.ArgumentParser:
         description=COMPATIBILITY_PARSER_DESCRIPTION,
     )
     configure_compatibility_cli(compatibility)
+
+    agent = top.add_parser("agent", help="Agent enrollment and public Skill backup")
+    configure_agent_cli(agent)
 
     release = top.add_parser(
         "release",

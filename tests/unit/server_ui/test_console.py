@@ -50,7 +50,7 @@ class TestBuildConsoleContext:
             cli_command="",
             stats=[],
         )
-        assert len(ctx["nav_links"]) == 3
+        assert len(ctx["nav_links"]) == 4
 
     def test_custom_nav_links(self):
         request = _make_request()

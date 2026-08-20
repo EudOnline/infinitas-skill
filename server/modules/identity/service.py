@@ -10,11 +10,13 @@ from sqlalchemy import Select, or_, select
 from sqlalchemy.orm import Session
 
 from server.model_base import utcnow
-from server.modules.identity.models import Credential, Principal, User
+from server.modules.identity.models import Credential, Principal, ServicePrincipal, User
 from server.modules.identity.passwords import verify_password
 
 TOKEN_HASH_PREFIX = "sha256:"  # noqa: S105
-BEARER_CREDENTIAL_TYPES = frozenset({"personal_token", "product_token", "grant_token"})
+BEARER_CREDENTIAL_TYPES = frozenset(
+    {"personal_token", "product_token", "grant_token", "agent_token"}
+)
 
 
 def normalize_token(raw: str | None) -> str:
@@ -155,6 +157,17 @@ def get_personal_credential(db: Session, *, principal_id: int) -> Credential | N
 
 def get_principal(db: Session, principal_id: int | None) -> Principal | None:
     return None if principal_id is None else db.get(Principal, principal_id)
+
+
+def get_service_principal(db: Session, principal_id: int | None) -> ServicePrincipal | None:
+    if principal_id is None:
+        return None
+    return db.scalar(select(ServicePrincipal).where(ServicePrincipal.principal_id == principal_id))
+
+
+def service_principal_is_active(db: Session, principal_id: int | None) -> bool:
+    service = get_service_principal(db, principal_id)
+    return service is not None and service.state == "active"
 
 
 def get_user_for_principal(db: Session, principal: Principal | None) -> User | None:

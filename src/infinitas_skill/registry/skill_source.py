@@ -251,6 +251,14 @@ def stage_skill_source(
         excluded_paths=excluded_paths,
         allow_paths=allow_paths,
     )
+    blocked_paths = tuple(
+        path
+        for path in blocked_paths
+        if not (
+            Path(path).name.startswith(".env")
+            and not Path(path).name.endswith(_ENV_TEMPLATE_SUFFIXES)
+        )
+    )
     if blocked_paths:
         raise SkillSourceError(
             "private runtime data cannot be published without an explicit "

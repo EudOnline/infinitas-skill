@@ -239,7 +239,7 @@
         </label>
         <label for="share-link-password">
           <span class="block text-sm font-bold text-kawaii-ink mb-1.5">{{ ui['table_col_password'] }}</span>
-          <input class="kawaii-input" type="password" name="temporary_password" id="share-link-password" autocomplete="off" placeholder="{{ ui['placeholder_share_password'] }}" />
+          <input class="kawaii-input" type="password" name="temporary_password" id="share-link-password" autocomplete="off" minlength="4" maxlength="200" placeholder="{{ ui['placeholder_share_password'] }}" />
         </label>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <label for="share-link-expiry">

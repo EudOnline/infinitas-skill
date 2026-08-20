@@ -60,6 +60,8 @@ def test_create_passworded_share_link_and_resolve(
     assert listing.json()["items"][0]["has_password"] is True
     assert listing.json()["items"][0]["id"] == share["grant_id"]
 
+    client.cookies.clear()
+
     wrong_password = client.post(
         f"/api/v1/share-links/{share['id']}/resolve",
         json={"password": "wrong"},
@@ -112,6 +114,30 @@ def test_create_passworded_share_link_and_resolve(
         ]
 
 
+def test_short_share_password_is_rejected_as_validation_error(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    client = _prepare_library_client(
+        monkeypatch,
+        tmp_path=tmp_path,
+        temp_repo_copy=temp_repo_copy,
+        signing_key=signing_key,
+    )
+    headers = {"Authorization": "Bearer fixture-maintainer-token"}
+    _object_id, release_id = _prepared_object_and_release(client, headers=headers)
+
+    response = client.post(
+        f"/api/v1/share-links/releases/{release_id}/share-links",
+        headers=headers,
+        json={"name": "short-password", "password": "x"},
+    )
+
+    assert response.status_code == 422
+
+
 def test_revoke_share_link_blocks_resolution(
     monkeypatch,
     tmp_path: Path,
@@ -138,6 +164,8 @@ def test_revoke_share_link_blocks_resolution(
     revoke = client.post(f"/api/v1/share-links/{share_id}/revoke", headers=headers)
     assert revoke.status_code == 200, revoke.text
     assert revoke.json()["state"] == "revoked"
+
+    client.cookies.clear()
 
     resolved = client.post(f"/api/v1/share-links/{share_id}/resolve", json={})
     assert resolved.status_code == 410, resolved.text
@@ -243,6 +271,8 @@ def test_passwordless_share_link_resolves_without_legacy_share_row(
     assert share["used_count"] == 0
     assert share["resolve_secret"]
 
+    client.cookies.clear()
+
     missing_secret = client.post(f"/api/v1/share-links/{share['id']}/resolve", json={})
     assert missing_secret.status_code == 403, missing_secret.text
 
@@ -304,6 +334,7 @@ def test_share_link_usage_limit_is_atomic_under_concurrency(
     share = created.json()
     share_id = share["id"]
     resolve_secret = share["resolve_secret"]
+    client.cookies.clear()
 
     def resolve() -> int:
         return client.post(
@@ -337,6 +368,7 @@ def test_wrong_share_password_attempts_persist_and_return_retry_after(
         json={"name": "brute-force-password", "password": "1234"},
     )
     share_id = int(created.json()["id"])
+    client.cookies.clear()
 
     responses = [
         client.post(
@@ -382,6 +414,7 @@ def test_wrong_share_capability_limit_is_atomic_under_concurrency(
         json={"name": "brute-force-capability"},
     )
     share_id = int(created.json()["id"])
+    client.cookies.clear()
 
     def resolve_wrong_secret(_index: int) -> int:
         return client.post(

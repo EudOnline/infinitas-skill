@@ -52,7 +52,8 @@ class TestBuildSiteNav:
 
     def test_default_variant_zh(self):
         nav = build_site_nav(home=False, lang="zh")
-        assert len(nav) == 3
+        assert len(nav) == 4
+        assert nav[-1] == {"href": "/agents?lang=zh", "label": "Agents"}
         assert nav[0]["href"] == "/?lang=zh"
         assert nav[0]["label"] == "首页"
         assert nav[1]["href"] == "/profile?lang=zh"
@@ -62,7 +63,8 @@ class TestBuildSiteNav:
 
     def test_default_variant_en(self):
         nav = build_site_nav(home=False, lang="en")
-        assert len(nav) == 3
+        assert len(nav) == 4
+        assert nav[-1] == {"href": "/agents?lang=en", "label": "Agents"}
         assert nav[0]["href"] == "/?lang=en"
         assert nav[0]["label"] == "Home"
         assert nav[1]["href"] == "/profile?lang=en"

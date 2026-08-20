@@ -165,8 +165,9 @@ class TestCookieSecurity:
 class TestExceptionHandlers:
     def test_404_returns_json_for_api(self, tmp_path: Path):
         client = _security_client(tmp_path)
-        response = client.get("/api/nonexistent", headers={"Accept": "application/json"})
+        response = client.get("/api/nonexistent")
         assert response.status_code == 404
+        assert "application/json" in response.headers.get("content-type", "")
         assert response.json()["detail"] == "Not found"
 
     def test_404_renders_html_for_browser(self, tmp_path: Path):

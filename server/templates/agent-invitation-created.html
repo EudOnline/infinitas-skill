@@ -1,0 +1,6 @@
+{% extends "layout-kawaii.html" %}
+{% block body %}
+<main class="page-shell"><header class="page-header"><p class="eyebrow">Invitation</p><h1>复制提示词</h1><p>此内容只显示一次，离开页面后不能再次获取。</p></header>
+<section class="surface"><textarea id="agent-prompt" readonly rows="16">{{ invitation.prompt }}</textarea><button type="button" id="copy-agent-prompt">复制</button><p>请勿把邀请密钥放入命令参数、日志或公开对话。</p></section></main>
+<script>document.getElementById('copy-agent-prompt')?.addEventListener('click',()=>navigator.clipboard.writeText(document.getElementById('agent-prompt').value));</script>
+{% endblock %}

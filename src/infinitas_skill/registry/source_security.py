@@ -6,6 +6,12 @@ from pathlib import Path
 from typing import Any
 
 _SENSITIVE_NAMES = {
+    ".env",
+    ".env.local",
+    ".env.production",
+    ".bash_history",
+    ".zsh_history",
+    "history.txt",
     ".git-credentials",
     ".netrc",
     ".npmrc",
@@ -21,8 +27,12 @@ _SENSITIVE_NAMES = {
     "secrets.json",
     "secrets.yaml",
     "secrets.yml",
+    "config.json",
+    "config.yaml",
+    "config.yml",
+    "token.json",
 }
-_SENSITIVE_SUFFIXES = {".db", ".key", ".p12", ".pem", ".pfx", ".sqlite", ".sqlite3"}
+_SENSITIVE_SUFFIXES = {".db", ".key", ".p12", ".pem", ".pfx", ".sqlite", ".sqlite3", ".crt", ".cer"}
 _RUNTIME_DATA_ROOTS = {"data"}
 
 
@@ -68,15 +78,16 @@ def sensitive_publish_paths(
         if not path.is_file() or path.is_symlink():
             continue
         relative = path.relative_to(source_dir).as_posix()
-        if _allowed(relative, excluded_paths) or _allowed(relative, allow_paths):
+        if _allowed(relative, excluded_paths):
             continue
         relative_path = Path(relative)
         name = relative_path.name.lower()
-        if (
+        path_blocked = (
             relative_path.parts[0].lower() in _RUNTIME_DATA_ROOTS
             or name in _SENSITIVE_NAMES
             or relative_path.suffix.lower() in _SENSITIVE_SUFFIXES
-        ):
+        )
+        if path_blocked and not _allowed(relative, allow_paths):
             blocked.append(relative)
     return tuple(blocked)
 

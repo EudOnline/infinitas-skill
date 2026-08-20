@@ -4607,3 +4607,86 @@ Move cohesive parser concerns into focused modules instead of compressing code t
 - **Notes**: Bootstrap and connection parser configuration now live in focused modules; the main CLI is 588 lines.
 
 ---
+## [ERR-20260819-001] command_environment_alias
+
+**Logged**: 2026-08-19T00:00:00Z
+**Priority**: low
+**Status**: pending
+**Area**: config
+
+### Summary
+The audit shell environment does not provide a `python` executable alias.
+
+### Error
+```
+zsh:1: command not found: python
+```
+
+### Context
+- A read-only CLI/API path cross-check was first invoked with `python`.
+- This repository's documented interpreter is `.venv/bin/python`.
+
+### Suggested Fix
+Use `.venv/bin/python` (or `python3` when appropriate) for repository checks.
+
+### Metadata
+- Reproducible: yes
+- Related Files: pyproject.toml
+
+---
+
+## [ERR-20260819-002] shell_regex_quoting
+
+**Logged**: 2026-08-19T00:00:00Z
+**Priority**: low
+**Status**: pending
+**Area**: config
+
+### Summary
+A read-only ripgrep command used nested shell quoting incorrectly and was rejected by zsh.
+
+### Error
+```
+zsh: parse error near `)'
+```
+
+### Context
+- The command attempted to search multiple route patterns in test files.
+- A simpler, separately quoted `rg` expression produced the required evidence.
+
+### Suggested Fix
+Prefer simple fixed-string searches or separate `rg` calls when shell regex quoting becomes nested.
+
+### Metadata
+- Reproducible: no
+- Related Files: tests/integration/test_library_pages.py
+
+---
+
+## [ERR-20260819-003] pytest_path_typo
+
+**Logged**: 2026-08-19T00:00:00Z
+**Priority**: low
+**Status**: pending
+**Area**: tests
+
+### Summary
+A targeted pytest command referenced a non-existent nested test path.
+
+### Error
+```
+ERROR: file or directory not found: tests/unit/server/test_job_queue_claiming.py
+```
+
+### Context
+- The test is located at `tests/unit/test_job_queue_claiming.py`.
+- The other two requested test files were not executed in that failed invocation.
+
+### Suggested Fix
+Use `rg --files tests | rg 'job_queue_claiming'` before composing targeted test paths.
+
+### Metadata
+- Reproducible: yes
+- Related Files: tests/unit/test_job_queue_claiming.py
+
+---

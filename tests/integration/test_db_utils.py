@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import text
-from sqlalchemy.pool import StaticPool
 
 from server.db import _engine_kwargs
 from server.settings import get_settings
@@ -49,10 +48,10 @@ class TestEngineKwargs:
         assert kwargs["pool_pre_ping"] is True
         assert "poolclass" not in kwargs
 
-    def test_memory_sqlite_uses_static_pool(self):
-        kwargs = _engine_kwargs("sqlite:///:memory:")
-        assert kwargs["connect_args"] == {"check_same_thread": False}
-        assert kwargs["poolclass"] is StaticPool
+    @pytest.mark.parametrize("database_url", ["sqlite://", "sqlite:///:memory:"])
+    def test_memory_sqlite_is_rejected(self, database_url: str):
+        with pytest.raises(RuntimeError, match="file-backed SQLite"):
+            _engine_kwargs(database_url)
 
     def test_non_sqlite_is_rejected(self):
         with pytest.raises(RuntimeError, match="must use SQLite"):

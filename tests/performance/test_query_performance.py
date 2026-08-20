@@ -12,6 +12,7 @@ from time import perf_counter
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import event as sqlalchemy_event
 from sqlalchemy.orm import Session
 
 from server.app import create_app
@@ -267,45 +268,67 @@ class TestN1QueryPrevention:
     """Test that N+1 queries are prevented."""
 
     def test_no_n1_queries_on_list(self, db: Session) -> None:
-        """Test that listing entities doesn't cause N+1 queries."""
-        from sqlalchemy import select
-
+        """Test that library query count stays constant as the page grows."""
+        from server.modules.access.authn import AccessContext
         from server.modules.authoring.models import Skill
-        from server.modules.identity.models import Principal
+        from server.modules.identity.models import Credential, Principal, User
+        from server.modules.library.objects import list_library_objects
 
-        # Create test data
         principal = Principal(
             slug="n1-namespace",
             kind="user",
             display_name="N1 Namespace",
         )
+        user = User(username="n1-maintainer", display_name="N1 Maintainer", role="maintainer")
         db.add(principal)
+        db.add(user)
         db.flush()
-
-        # Create skills
-        for i in range(20):
-            skill = Skill(
-                namespace_id=principal.id,
-                slug=f"n1-skill-{i}",
-                display_name=f"N1 Skill {i}",
-                status="published",
-            )
-            db.add(skill)
-        db.flush()
-
-        # Measure query count
-        # In production, we'd use query counting middleware
-        # For this test, we just ensure the query completes quickly
-        start = perf_counter()
-        stmt = (
-            select(Skill)
-            .where(Skill.namespace_id == principal.id)
-            .order_by(Skill.created_at.desc())
-            .limit(20)
+        credential = Credential(
+            principal_id=principal.id,
+            type="personal",
+            hashed_secret="n1-query-test",
         )
-        results = list(db.scalars(stmt).all())
-        elapsed = perf_counter() - start
+        db.add(credential)
+        db.flush()
+        actor = AccessContext(
+            credential=credential,
+            principal=principal,
+            user=user,
+            scopes=set(),
+        )
 
-        assert len(results) <= 20
-        # If there were N+1 queries, this would be much slower
-        assert elapsed < 0.2, f"Query took {elapsed:.3f}s, possible N+1 issue"
+        def add_skills(start: int, stop: int) -> None:
+            for index in range(start, stop):
+                db.add(
+                    Skill(
+                        namespace_id=principal.id,
+                        slug=f"n1-skill-{index}",
+                        display_name=f"N1 Skill {index}",
+                        status="published",
+                    )
+                )
+            db.flush()
+
+        def count_list_statements() -> tuple[int, int]:
+            statements = 0
+
+            def count_statement(*_args) -> None:
+                nonlocal statements
+                statements += 1
+
+            engine = db.get_bind()
+            sqlalchemy_event.listen(engine, "before_cursor_execute", count_statement)
+            try:
+                items, _total = list_library_objects(db, actor=actor, limit=20)
+            finally:
+                sqlalchemy_event.remove(engine, "before_cursor_execute", count_statement)
+            return statements, len(items)
+
+        add_skills(0, 1)
+        small_statements, small_count = count_list_statements()
+        add_skills(1, 20)
+        large_statements, large_count = count_list_statements()
+
+        assert small_count == 1
+        assert large_count == 20
+        assert large_statements == small_statements

@@ -73,6 +73,82 @@ class ServicePrincipal(Base):
     principal_id: Mapped[int] = mapped_column(ForeignKey("principals.id"), unique=True)
     slug: Mapped[str] = mapped_column(String(200))
     description: Mapped[str] = mapped_column(Text, default="")
+    enrollment_id: Mapped[int | None] = mapped_column(Integer, nullable=True, unique=True)
+    state: Mapped[str] = mapped_column(String(32), default="active", index=True)
+    policy_json: Mapped[str] = mapped_column(Text, default="{}")
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class AgentNamespaceReservation(Base):
+    __tablename__ = "agent_namespace_reservations"
+    __table_args__ = (
+        UniqueConstraint("slug", name="uq_agent_namespace_reservations_slug"),
+        Index("ix_agent_namespace_reservations_state", "state"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    slug: Mapped[str] = mapped_column(String(200))
+    display_name: Mapped[str] = mapped_column(String(200))
+    state: Mapped[str] = mapped_column(String(32), default="reserved")
+    created_by_principal_id: Mapped[int] = mapped_column(ForeignKey("principals.id"))
+    claimed_service_principal_id: Mapped[int | None] = mapped_column(
+        ForeignKey("service_principals.id"), nullable=True
+    )
+    released_by_principal_id: Mapped[int | None] = mapped_column(
+        ForeignKey("principals.id"), nullable=True
+    )
+    released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class AgentInvitation(Base):
+    __tablename__ = "agent_invitations"
+    __table_args__ = (
+        UniqueConstraint("public_id", name="uq_agent_invitations_public_id"),
+        Index("ix_agent_invitations_reservation_state", "reservation_id", "state"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    public_id: Mapped[str] = mapped_column(String(64))
+    reservation_id: Mapped[int] = mapped_column(ForeignKey("agent_namespace_reservations.id"))
+    purpose: Mapped[str] = mapped_column(String(32), default="enroll")
+    target_service_principal_id: Mapped[int | None] = mapped_column(
+        ForeignKey("service_principals.id"), nullable=True
+    )
+    invitation_hash: Mapped[str] = mapped_column(String(255))
+    policy_json: Mapped[str] = mapped_column(Text, default="{}")
+    state: Mapped[str] = mapped_column(String(32), default="open")
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by_principal_id: Mapped[int] = mapped_column(ForeignKey("principals.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class AgentEnrollment(Base):
+    __tablename__ = "agent_enrollments"
+    __table_args__ = (
+        UniqueConstraint("public_id", name="uq_agent_enrollments_public_id"),
+        UniqueConstraint("invitation_id", name="uq_agent_enrollments_invitation_id"),
+        Index("ix_agent_enrollments_state", "state"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    public_id: Mapped[str] = mapped_column(String(64))
+    invitation_id: Mapped[int] = mapped_column(ForeignKey("agent_invitations.id"))
+    status_hash: Mapped[str] = mapped_column(String(255))
+    proposed_api_key_hash: Mapped[str] = mapped_column(String(255))
+    fingerprint: Mapped[str] = mapped_column(String(32))
+    runtime_metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    state: Mapped[str] = mapped_column(String(32), default="pending")
+    decision_note: Mapped[str] = mapped_column(Text, default="")
+    decision_by_principal_id: Mapped[int | None] = mapped_column(
+        ForeignKey("principals.id"), nullable=True
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 

@@ -1,0 +1,27 @@
+{% extends "layout-kawaii.html" %}
+{% block body %}
+<main class="page-shell">
+  <header class="page-header"><p class="eyebrow">Agent</p><h1>Agent 管理</h1><p>邀请、审批和查看 Agent 状态。</p></header>
+  <section class="surface"><h2>创建邀请</h2>
+    <form method="post" action="/agents/invitations" class="stack">
+      <label>Slug <input name="slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*"></label>
+      <label>显示名称 <input name="display_name" required></label>
+      <label>有效期（分钟） <input name="expires_in_minutes" type="number" min="5" max="1440" value="30"></label>
+      <label>每日发布上限 <input name="max_daily_publishes" type="number" min="1" value="100"></label>
+      <label><input name="auto_public_publish" type="checkbox" value="true" checked> 允许自动公开备份</label>
+      <button type="submit">创建邀请</button>
+    </form>
+  </section>
+  <section class="surface"><h2>Enrollment</h2>
+    {% for enrollment, invitation, principal in enrollments %}
+    <article class="list-row"><div><strong>{{ invitation.public_id }}</strong><span>{{ enrollment.state }}</span><span>fingerprint {{ enrollment.fingerprint }}</span></div>
+      {% if enrollment.state == 'pending' %}
+      <form method="post" action="/agents/enrollments/{{ enrollment.id }}/approve"><input name="fingerprint" placeholder="确认 fingerprint" required><button type="submit">批准</button></form>
+      <form method="post" action="/agents/enrollments/{{ enrollment.id }}/reject"><button type="submit">拒绝</button></form>
+      {% endif %}
+    </article>
+    {% else %}<p>暂无 Agent 请求。</p>{% endfor %}
+  </section>
+</main>
+<script type="module" src="{{ static_url('/static/js/modules/agents.js') }}"></script>
+{% endblock %}

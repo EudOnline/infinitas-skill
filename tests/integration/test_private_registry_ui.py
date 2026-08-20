@@ -81,6 +81,23 @@ def configure_env(tmpdir: Path) -> None:
     )
 
 
+def establish_browser_session(client) -> None:
+    from server.db import get_session_factory
+    from server.modules.identity import service as identity_service
+    from server.modules.identity.auth import AUTH_COOKIE_NAME, create_auth_session_cookie
+    from server.modules.identity.models import User
+
+    with get_session_factory()() as session:
+        user = session.query(User).filter(User.username == "fixture-maintainer").one()
+        principal = identity_service.ensure_user_principal(session, user)
+        credential = identity_service.create_fresh_session_credential(
+            session, principal_id=principal.id
+        )
+        session.commit()
+    client.cookies.set(AUTH_COOKIE_NAME, create_auth_session_cookie(credential.id))
+    client.cookies.set("csrf_token", "fixture-ui-csrf")
+
+
 def assert_ui_route_registration_boundary() -> None:
     module = ast.parse(APP_PATH.read_text(encoding="utf-8"), filename=str(APP_PATH))
     expected_imports = {
@@ -707,6 +724,7 @@ def test_private_first_console_ui_round_trip() -> None:
 
         client = TestClient(create_app())
         headers = {"Authorization": "Bearer fixture-maintainer-token"}
+        establish_browser_session(client)
 
         login_response = client.get("/login?lang=en")
         assert login_response.status_code == 200, login_response.text

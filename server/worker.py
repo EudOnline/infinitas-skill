@@ -19,6 +19,7 @@ from server.modules.audit.service import append_audit_event
 from server.modules.authoring.service import prune_expired_skill_contents
 from server.modules.discovery.projections import refresh_projection_snapshot
 from server.modules.jobs.models import Job
+from server.modules.release.agent_publish_service import finalize_publish_intent
 from server.modules.release.materializer import materialize_release
 from server.modules.release.models import Release
 from server.modules.release.service import get_release_snapshot, mark_release_materialization_failed
@@ -61,6 +62,14 @@ def _process_materialize_release_job(session: Session, job: Job, settings: Setti
         heartbeat=lambda: _renew_job_lease(job.id),
     )
     refresh_projection_snapshot(session, settings.artifact_path)
+    payload = load_job_payload(job)
+    intent_id = payload.get("publish_intent_id")
+    if intent_id:
+        try:
+            finalized = finalize_publish_intent(session, intent_id=int(intent_id))
+            append_job_log(job, f"Agent publish intent {finalized.id}: {finalized.state}")
+        except (TypeError, ValueError) as exc:
+            raise RepoOpError("materialize_release job has invalid publish_intent_id") from exc
     append_job_log(job, f"materialized release {release.id} with {len(artifacts)} artifacts")
     return release
 
@@ -215,16 +224,18 @@ def run_worker_loop(
     while limit is None or processed < limit:
         with session_scope() as session:
             job = claim_next_job(session)
-            if job is None:
-                if not daemon:
-                    break
-                consecutive_empty += 1
-                if consecutive_empty == 1:
-                    log.info("worker idle, polling every %.1fs", poll_interval)
-                time.sleep(poll_interval)
-                continue
-            consecutive_empty = 0
-            job_id = job.id
+            job_id = job.id if job is not None else None
+
+        if job_id is None:
+            if not daemon:
+                break
+            consecutive_empty += 1
+            if consecutive_empty == 1:
+                log.info("worker idle, polling every %.1fs", poll_interval)
+            time.sleep(poll_interval)
+            continue
+
+        consecutive_empty = 0
         try:
             process_job(job_id)
         except Exception as _job_exc:

@@ -9,7 +9,6 @@ from pathlib import Path
 from alembic.config import Config
 from sqlalchemy import Engine, create_engine, inspect
 from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from alembic import command
 from server import model_registry as _model_registry  # noqa: F401
@@ -54,11 +53,6 @@ def _run_rollback_artifact_cleanups(session: Session) -> None:
 
 def _engine_kwargs(database_url: str) -> dict:
     database_url = validate_database_url(database_url)
-    if database_url in {"sqlite://", "sqlite:///:memory:"}:
-        return {
-            "connect_args": {"check_same_thread": False},
-            "poolclass": StaticPool,
-        }
     return {
         "connect_args": {"check_same_thread": False},
         "pool_pre_ping": True,

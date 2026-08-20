@@ -46,8 +46,9 @@ only for metadata about an already encrypted off-host object.
 - `POST /api/v1/object-tokens/objects/{object_id}/tokens`
 - `GET /api/v1/object-tokens/objects/{object_id}/tokens`
 - `POST /api/v1/object-tokens/tokens/{token_id}/revoke`
-- `GET|POST /api/v1/namespace-tokens`
-- `POST /api/v1/namespace-tokens/{token_id}/revoke`
+- `POST /api/v1/agent-enrollments`
+- `GET /api/v1/agent-enrollments/{public_id}`
+- `POST /api/v1/agent/versions/{version_id}/publish`
 - `POST /api/v1/share-links/releases/{release_id}/share-links`
 - `GET /api/v1/share-links/releases/{release_id}/share-links`
 - `POST /api/v1/share-links/{share_id}/resolve`

@@ -40,6 +40,7 @@ def test_publish_orchestrates_idempotent_hosted_flow(monkeypatch, tmp_path: Path
     )
 
     def fake_request(method: str, url: str, **kwargs) -> httpx.Response:
+        assert kwargs["headers"]["Accept"] == "application/json"
         path = url.removeprefix("https://registry.example.test")
         calls.append((method, path))
         if path == "/api/v1/access/me":

@@ -109,10 +109,8 @@ def _resolve_registry_audience(db: Session, request: Request) -> RegistryAudienc
     session_cookie = request.cookies.get(AUTH_COOKIE_NAME)
     has_auth_input = bool(bearer_token or session_cookie)
 
-    if not has_auth_input and not allowed_reader_tokens:
-        return RegistryAudience(mode="public", context=None)
     if not has_auth_input:
-        raise UnauthorizedError("missing registry bearer token")
+        return RegistryAudience(mode="public", context=None)
 
     if (
         bearer_token is not None

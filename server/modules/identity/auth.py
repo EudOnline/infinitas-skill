@@ -154,6 +154,10 @@ def _resolve_session_access_context(db: Session, auth_cookie: str | None) -> Acc
     if credential.revoked_at is not None:
         return None
     principal = identity_service.get_principal(db, credential.principal_id)
+    if credential.type == "agent_token" and not identity_service.service_principal_is_active(
+        db, credential.principal_id
+    ):
+        return None
     user = identity_service.get_user_for_principal(db, principal)
     return AccessContext(
         credential=credential,
@@ -174,11 +178,29 @@ def maybe_get_current_access_context(request: Request, db: Session) -> AccessCon
     return context
 
 
+def maybe_get_current_session_access_context(request: Request, db: Session) -> AccessContext | None:
+    """Resolve browser UI identity from the session cookie only.
+
+    HTML routes deliberately do not accept bearer credentials: browser actions
+    rely on the session cookie and CSRF middleware, while bearer tokens remain
+    an API/CLI credential.
+    """
+    context = _resolve_session_access_context(db, request.cookies.get(AUTH_COOKIE_NAME))
+    if context is not None:
+        context.request_id = str(getattr(request.state, "request_id", ""))
+    return context
+
+
 def maybe_get_current_user(request: Request, db: Session) -> User | None:
     context = maybe_get_current_access_context(request, db)
     if context is None:
         return None
     return context.user
+
+
+def maybe_get_current_session_user(request: Request, db: Session) -> User | None:
+    context = maybe_get_current_session_access_context(request, db)
+    return None if context is None else context.user
 
 
 def get_current_access_context(

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-21T14:13:18Z",
+  "generated_at": "2026-08-20T15:17:07Z",
   "count": 4,
   "skills": [
     {
@@ -104,8 +104,8 @@
           "note": "Installed the immutable release into an isolated Claude target and validated its installable Skill layout.",
           "contract_last_verified": "2026-07-21",
           "fresh_until": "2026-08-20T14:10:22Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         },
         "codex": {
           "state": "adapted",
@@ -115,8 +115,8 @@
           "note": "Installed the immutable release into an isolated Codex target and validated its installable Skill layout.",
           "contract_last_verified": "2026-07-21",
           "fresh_until": "2026-08-20T14:10:22Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         },
         "openclaw": {
           "state": "adapted",
@@ -126,8 +126,8 @@
           "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation.",
           "contract_last_verified": "2026-07-21",
           "fresh_until": "2026-08-20T14:10:22Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         }
       }
     },
@@ -231,8 +231,8 @@
           "note": "Installed the immutable release into an isolated Claude target and validated its installable Skill layout.",
           "contract_last_verified": "2026-07-21",
           "fresh_until": "2026-08-20T14:10:22Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         },
         "codex": {
           "state": "adapted",
@@ -242,8 +242,8 @@
           "note": "Installed the immutable release into an isolated Codex target and validated its installable Skill layout.",
           "contract_last_verified": "2026-07-21",
           "fresh_until": "2026-08-20T14:10:22Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         },
         "openclaw": {
           "state": "adapted",
@@ -253,8 +253,8 @@
           "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation.",
           "contract_last_verified": "2026-07-21",
           "fresh_until": "2026-08-20T14:10:22Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         }
       }
     },
@@ -361,8 +361,8 @@
           "note": "Installed the immutable release into an isolated Claude target and validated its installable Skill layout.",
           "contract_last_verified": "2026-07-21",
           "fresh_until": "2026-08-20T14:10:22Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         },
         "codex": {
           "state": "adapted",
@@ -372,8 +372,8 @@
           "note": "Installed the immutable release into an isolated Codex target and validated its installable Skill layout.",
           "contract_last_verified": "2026-07-21",
           "fresh_until": "2026-08-20T14:10:22Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         },
         "openclaw": {
           "state": "adapted",
@@ -383,8 +383,8 @@
           "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation.",
           "contract_last_verified": "2026-07-21",
           "fresh_until": "2026-08-20T14:10:22Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         }
       }
     },
@@ -488,8 +488,8 @@
           "note": "Installed the immutable release into an isolated Claude target and validated its installable Skill layout.",
           "contract_last_verified": "2026-07-21",
           "fresh_until": "2026-08-20T14:10:22Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         },
         "codex": {
           "state": "adapted",
@@ -499,8 +499,8 @@
           "note": "Installed the immutable release into an isolated Codex target and validated its installable Skill layout.",
           "contract_last_verified": "2026-07-21",
           "fresh_until": "2026-08-20T14:10:22Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         },
         "openclaw": {
           "state": "adapted",
@@ -510,8 +510,8 @@
           "note": "Exported from the immutable release artifact and passed current OpenClaw public-ready validation.",
           "contract_last_verified": "2026-07-21",
           "fresh_until": "2026-08-20T14:10:22Z",
-          "freshness_state": "fresh",
-          "freshness_reason": "not-applicable"
+          "freshness_state": "stale",
+          "freshness_reason": "age-expired"
         }
       }
     }

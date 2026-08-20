@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from server.i18n import build_auth_redirect_url, resolve_language
 from server.modules.access.authn import AccessContext
-from server.modules.identity.auth import maybe_get_current_access_context
+from server.modules.identity.auth import maybe_get_current_session_access_context
 from server.modules.identity.models import Principal, User
 from server.ui.queries import (
     get_release_bundle_or_404,
@@ -54,7 +54,7 @@ def require_lifecycle_actor(
 ) -> AccessContext | RedirectResponse | dict[str, Any]:
     from server.ui.console import build_console_forbidden_context
 
-    context = maybe_get_current_access_context(request, db)
+    context = maybe_get_current_session_access_context(request, db)
     if context is None or context.user is None:
         return RedirectResponse(
             url=build_auth_redirect_url(request, resolve_language(request)),

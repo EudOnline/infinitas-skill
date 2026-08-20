@@ -6,7 +6,7 @@ from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from server.model_base import Base, utcnow
-from server.modules.identity.models import User
+from server.modules.identity.models import Principal
 
 
 class Job(Base):
@@ -22,7 +22,9 @@ class Job(Base):
         nullable=True,
         index=True,
     )
-    requested_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    requested_by_principal_id: Mapped[int | None] = mapped_column(
+        ForeignKey("principals.id"), nullable=True
+    )
     note: Mapped[str] = mapped_column(Text, default="")
     log: Mapped[str] = mapped_column(Text, default="")
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -41,4 +43,4 @@ class Job(Base):
         onupdate=utcnow,
     )
 
-    requested_by: Mapped[User | None] = relationship(foreign_keys=[requested_by_user_id])
+    requested_by: Mapped[Principal | None] = relationship(foreign_keys=[requested_by_principal_id])

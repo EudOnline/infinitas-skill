@@ -21,7 +21,6 @@ from server.modules.access.product_scope import (
 from server.modules.authoring.models import SkillVersion
 from server.modules.identity.auth import get_current_access_context
 from server.modules.identity.guards import actor_ref_for_context
-from server.modules.identity.models import User
 from server.modules.release.materializer import release_requires_materialization
 from server.modules.release.schemas import ArtifactListView, ArtifactView, ReleaseView
 from server.settings import get_settings
@@ -29,18 +28,18 @@ from server.settings import get_settings
 router = APIRouter(prefix="/api/v1", tags=["release"])
 
 
-def _require_release_context(context: AccessContext) -> tuple[int, User]:
-    if context.principal is None or context.user is None:
+def _require_release_context(context: AccessContext) -> int:
+    if context.principal is None:
         raise HTTPException(
             status_code=403,
-            detail="release actor must resolve to a user principal",
+            detail="release actor must resolve to a principal",
         )
     if not require_any_scope(
         context,
         {"api:user", "release:write", "authoring:write", "skill:write"},
     ):
         raise HTTPException(status_code=403, detail="insufficient scope")
-    return context.principal.id, context.user
+    return context.principal.id
 
 
 def _require_product_scope(context: AccessContext, db: Session, object_id: int | None) -> None:
@@ -83,13 +82,13 @@ def create_release(
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
 ) -> ReleaseView:
-    principal_id, user = _require_release_context(context)
+    principal_id = _require_release_context(context)
     skill_version = db.get(SkillVersion, version_id)
     if skill_version is None:
         raise HTTPException(status_code=404, detail="skill version not found")
     _require_product_scope(context, db, skill_version.skill_id)
     _require_credential_mutation(context, db)
-    is_maintainer = user.role == "maintainer"
+    is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
         release, created = service.create_or_get_release(
             db,
@@ -111,7 +110,7 @@ def create_release(
             db,
             kind="materialize_release",
             payload={"release_id": release.id},
-            requested_by=user,
+            requested_by=context.principal,
             note=f"materialize release {release.id}",
         )
     else:
@@ -131,7 +130,7 @@ def create_release(
                 db,
                 kind="materialize_release",
                 payload={"release_id": release.id},
-                requested_by=user,
+                requested_by=context.principal,
                 note=f"rematerialize release {release.id}",
             )
         response.status_code = status.HTTP_200_OK
@@ -144,7 +143,7 @@ def get_release(
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
 ) -> ReleaseView:
-    principal_id, _ = _require_release_context(context)
+    principal_id = _require_release_context(context)
     is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
         release = service.get_release_or_404(db, release_id)
@@ -168,7 +167,7 @@ def list_release_artifacts(
     context: AccessContext = Depends(get_current_access_context),
     db: Session = Depends(get_db),
 ) -> ArtifactListView:
-    principal_id, _ = _require_release_context(context)
+    principal_id = _require_release_context(context)
     is_maintainer = context.user is not None and context.user.role == "maintainer"
     try:
         release = service.get_release_or_404(db, release_id)

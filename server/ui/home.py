@@ -189,9 +189,9 @@ def _console_links(lang: str, counts: Any, settings: Any) -> list[dict[str, str]
 
 
 def _user_stats(request: Request, db: Session) -> dict[str, int] | None:
-    from server.modules.identity.auth import maybe_get_current_user
+    from server.modules.identity.auth import maybe_get_current_session_user
 
-    if maybe_get_current_user(request, db) is None:
+    if maybe_get_current_session_user(request, db) is None:
         return None
     stats = get_user_stats(db)
     return {

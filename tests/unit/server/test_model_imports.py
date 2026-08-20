@@ -76,6 +76,10 @@ import server.model_registry as model_registry
 
 assert model_registry.__all__ == ()
 assert {
+    "agent_enrollments",
+    "agent_invitations",
+    "agent_namespace_reservations",
+    "agent_publish_intents",
     "access_grants",
     "artifacts",
     "audit_events",

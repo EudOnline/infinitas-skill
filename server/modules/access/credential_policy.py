@@ -8,7 +8,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from server.modules.access.models import AccessGrant
-from server.modules.identity.models import Credential
+from server.modules.identity.models import Credential, ServicePrincipal
 from server.rate_limit import DBRateLimiter
 
 _DAILY_WINDOW_SECONDS = 24 * 60 * 60
@@ -33,6 +33,7 @@ class CredentialPolicy:
     readonly: bool
     max_daily_publishes: int | None
     allowed_object_kinds: frozenset[str] | None
+    auto_public_publish: bool
 
 
 def _json_object(raw: str | None) -> dict[str, Any]:
@@ -73,7 +74,61 @@ def resolve_credential_policy(db: Session, credential: Credential) -> Credential
         readonly=payload.get("readonly") is True,
         max_daily_publishes=max_daily,
         allowed_object_kinds=allowed,
+        auto_public_publish=payload.get("auto_public_publish") is True,
     )
+
+
+def resolve_service_policy(service: ServicePrincipal) -> CredentialPolicy:
+    payload = _json_object(service.policy_json)
+    max_daily = payload.get("max_daily_publishes")
+    if not isinstance(max_daily, int) or isinstance(max_daily, bool):
+        max_daily = None
+    allowed_raw = payload.get("allowed_object_kinds")
+    allowed = None
+    if allowed_raw is not None:
+        allowed = (
+            frozenset(
+                item.strip() for item in allowed_raw if isinstance(item, str) and item.strip()
+            )
+            if isinstance(allowed_raw, list)
+            else frozenset()
+        )
+    return CredentialPolicy(
+        readonly=payload.get("readonly") is True,
+        max_daily_publishes=max_daily,
+        allowed_object_kinds=allowed,
+        auto_public_publish=payload.get("auto_public_publish") is True,
+    )
+
+
+def assert_agent_publish_allowed(
+    db: Session, *, service: ServicePrincipal, object_kind: str
+) -> None:
+    policy = resolve_service_policy(service)
+    if policy.readonly:
+        raise CredentialPolicyForbidden("agent policy is read-only")
+    if policy.allowed_object_kinds is not None and object_kind not in policy.allowed_object_kinds:
+        raise CredentialPolicyForbidden(f"agent policy does not allow object kind {object_kind!r}")
+
+
+def consume_publish_quota_for_principal(
+    db: Session, *, principal_id: int, service: ServicePrincipal
+) -> str:
+    policy = resolve_service_policy(service)
+    limit = policy.max_daily_publishes
+    quota_key = f"agent-publish:{principal_id}"
+    if limit is None:
+        return quota_key
+    if limit <= 0:
+        raise CredentialPublishQuotaExceeded(_seconds_until_next_utc_day())
+    consumed = DBRateLimiter(db).consume(
+        quota_key,
+        max_attempts=limit,
+        window_seconds=_DAILY_WINDOW_SECONDS,
+    )
+    if not consumed:
+        raise CredentialPublishQuotaExceeded(_seconds_until_next_utc_day())
+    return quota_key
 
 
 def assert_credential_mutation_allowed(
@@ -118,6 +173,9 @@ __all__ = [
     "CredentialPublishQuotaExceeded",
     "assert_credential_mutation_allowed",
     "consume_credential_publish_quota",
+    "consume_publish_quota_for_principal",
+    "assert_agent_publish_allowed",
     "load_credential_policy_mapping",
     "resolve_credential_policy",
+    "resolve_service_policy",
 ]

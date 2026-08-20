@@ -55,7 +55,10 @@ def _release_is_accessible(
         audience = exposure.audience_type
         if audience == "public":
             return True
-        if audience == "authenticated" and context.user is not None:
+        if audience == "authenticated" and (
+            context.user is not None
+            or (context.credential.type == "agent_token" and context.principal is not None)
+        ):
             return True
         if audience == "private" and principal_id is not None:
             if exposure.requested_by_principal_id == principal_id:

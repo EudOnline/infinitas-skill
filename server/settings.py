@@ -145,7 +145,10 @@ def validate_database_url(database_url: str) -> str:
     """Return a supported SQLite URL or fail before application startup."""
     normalized = database_url.strip()
     if normalized in {"sqlite://", "sqlite:///:memory:"}:
-        return normalized
+        raise RuntimeError(
+            "INFINITAS_SERVER_DATABASE_URL must point to a file-backed SQLite database; "
+            "in-memory SQLite cannot be migrated safely during application startup"
+        )
     if normalized.startswith("sqlite:///") and len(normalized) > len("sqlite:///"):
         return normalized
     raise RuntimeError(

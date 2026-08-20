@@ -5,8 +5,13 @@ from pathlib import Path
 
 # Existing tests construct TestClient directly. Patch the imported class once so
 # every such client executes the application's migration/bootstrap lifespan.
+import anyio.to_thread
+import fastapi.concurrency
+import fastapi.routing
 import fastapi.testclient
 import pytest
+import starlette.concurrency
+import starlette.routing
 from sqlalchemy.orm import Session, close_all_sessions
 
 from tests.helpers.cli import CliResult, run_cli
@@ -16,6 +21,19 @@ from tests.helpers.signing import add_allowed_signer, generate_signing_key
 from tests.helpers.test_client import LifespanTestClient, close_test_clients
 
 fastapi.testclient.TestClient = LifespanTestClient
+
+
+async def _run_sync_without_worker_thread(func, *args, **kwargs):
+    """Avoid AnyIO worker-thread deadlocks in the Python 3.13 test sandbox."""
+    kwargs.pop("limiter", None)
+    return func(*args, **kwargs)
+
+
+anyio.to_thread.run_sync = _run_sync_without_worker_thread
+starlette.concurrency.run_in_threadpool = _run_sync_without_worker_thread
+starlette.routing.run_in_threadpool = _run_sync_without_worker_thread
+fastapi.concurrency.run_in_threadpool = _run_sync_without_worker_thread
+fastapi.routing.run_in_threadpool = _run_sync_without_worker_thread
 
 ROOT = Path(__file__).resolve().parents[1]
 

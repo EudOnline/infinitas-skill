@@ -48,6 +48,28 @@ class Release(Base):
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class AgentPublishIntent(Base):
+    __tablename__ = "agent_publish_intents"
+    __table_args__ = (
+        UniqueConstraint("release_id", name="uq_agent_publish_intents_release_id"),
+        Index("ix_agent_publish_intents_principal_state", "principal_id", "state"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    release_id: Mapped[int] = mapped_column(ForeignKey("releases.id"))
+    principal_id: Mapped[int] = mapped_column(ForeignKey("principals.id"), index=True)
+    credential_id: Mapped[int] = mapped_column(ForeignKey("credentials.id"), index=True)
+    policy_snapshot_json: Mapped[str] = mapped_column(Text, default="{}")
+    audience_type: Mapped[str] = mapped_column(String(32), default="public")
+    listing_mode: Mapped[str] = mapped_column(String(32), default="listed")
+    install_mode: Mapped[str] = mapped_column(String(32), default="enabled")
+    state: Mapped[str] = mapped_column(String(32), default="pending", index=True)
+    reason: Mapped[str] = mapped_column(Text, default="")
+    quota_key: Mapped[str] = mapped_column(String(255), index=True)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    activated_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class Artifact(Base):
     __tablename__ = "artifacts"
 

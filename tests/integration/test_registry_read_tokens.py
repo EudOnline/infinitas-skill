@@ -161,7 +161,7 @@ def _approve_exposure_review(
     assert decision.status_code == 201, decision.text
 
 
-def test_registry_read_tokens_gate_registry_routes_without_breaking_user_credentials(
+def test_registry_read_tokens_do_not_gate_public_routes_and_preserve_private_credentials(
     monkeypatch,
     tmp_path: Path,
     temp_repo_copy: Path,
@@ -198,7 +198,7 @@ def test_registry_read_tokens_gate_registry_routes_without_breaking_user_credent
     )
 
     anonymous = client.get("/api/v1/registry/ai-index.json")
-    assert anonymous.status_code == 401, anonymous.text
+    assert anonymous.status_code == 200, anonymous.text
 
     wrong_token = client.get(
         "/api/v1/registry/ai-index.json",

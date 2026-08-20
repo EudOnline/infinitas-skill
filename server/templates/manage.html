@@ -4,14 +4,14 @@
 <div class="space-y-4">
   {# Sub-view filter chips #}
   <div class="flex gap-2 flex-wrap" data-manage-tabs role="tablist" aria-label="{{ ui.get('manage_title', '管理') }}">
-    <button class="toggle-chip is-active" data-view="library" role="tab" aria-selected="true" aria-controls="manage-panel-library">{{ ui.get('tab_library', '对象库') }}</button>
-    <button class="toggle-chip" data-view="tokens" role="tab" aria-selected="false" aria-controls="manage-panel-tokens" tabindex="-1">{{ ui.get('tab_tokens', 'Token') }}</button>
-    <button class="toggle-chip" data-view="shares" role="tab" aria-selected="false" aria-controls="manage-panel-shares" tabindex="-1">{{ ui.get('tab_shares', '分享') }}</button>
-    <button class="toggle-chip" data-view="activity" role="tab" aria-selected="false" aria-controls="manage-panel-activity" tabindex="-1">{{ ui.get('tab_activity', '活动') }}</button>
+    <button class="toggle-chip is-active" id="manage-tab-library" data-view="library" role="tab" aria-selected="true" aria-controls="manage-panel-library" tabindex="0">{{ ui.get('tab_library', '对象库') }}</button>
+    <button class="toggle-chip" id="manage-tab-tokens" data-view="tokens" role="tab" aria-selected="false" aria-controls="manage-panel-tokens" tabindex="-1">{{ ui.get('tab_tokens', 'Token') }}</button>
+    <button class="toggle-chip" id="manage-tab-shares" data-view="shares" role="tab" aria-selected="false" aria-controls="manage-panel-shares" tabindex="-1">{{ ui.get('tab_shares', '分享') }}</button>
+    <button class="toggle-chip" id="manage-tab-activity" data-view="activity" role="tab" aria-selected="false" aria-controls="manage-panel-activity" tabindex="-1">{{ ui.get('tab_activity', '活动') }}</button>
   </div>
 
   {# Library view #}
-  <section data-view-panel="library" id="manage-panel-library" role="tabpanel">
+  <section data-view-panel="library" id="manage-panel-library" role="tabpanel" aria-labelledby="manage-tab-library">
     <div class="flex gap-2 mb-3 flex-wrap">
       <div class="search-bar-wrapper flex-1 min-w-[12rem]" role="search">
         <label for="manage-search-input" class="sr-only">{{ ui.get('search_placeholder', '搜索...') }}</label>
@@ -61,7 +61,7 @@
   </section>
 
   {# Tokens view — mobile cards, desktop table #}
-  <section data-view-panel="tokens" id="manage-panel-tokens" role="tabpanel" class="hidden">
+  <section data-view-panel="tokens" id="manage-panel-tokens" role="tabpanel" aria-labelledby="manage-tab-tokens" class="hidden" hidden>
     <div class="md:hidden space-y-3">
       {% for item in token_items %}
       <article class="kawaii-card animate-in">
@@ -118,7 +118,7 @@
   </section>
 
   {# Shares view — mobile cards, desktop table #}
-  <section data-view-panel="shares" id="manage-panel-shares" role="tabpanel" class="hidden">
+  <section data-view-panel="shares" id="manage-panel-shares" role="tabpanel" aria-labelledby="manage-tab-shares" class="hidden" hidden>
     <div class="md:hidden space-y-3">
       {% for item in share_items %}
       <article class="kawaii-card animate-in">
@@ -178,7 +178,7 @@
   </section>
 
   {# Activity view #}
-  <section data-view-panel="activity" id="manage-panel-activity" role="tabpanel" class="hidden">
+  <section data-view-panel="activity" id="manage-panel-activity" role="tabpanel" aria-labelledby="manage-tab-activity" class="hidden" hidden>
     <div class="space-y-2">
       {% for item in activity_items %}
       <article class="kawaii-card animate-in flex items-center gap-2">

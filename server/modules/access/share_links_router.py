@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 import server.modules.access.share_links as share_service
@@ -29,9 +29,23 @@ _SHARE_RATE_WINDOW = 60  # seconds
 
 class ShareLinkCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=200)
-    password: str | None = Field(default=None, max_length=200)
+    password: str | None = Field(default=None, min_length=4, max_length=200)
     expires_in_days: int | None = Field(default=None, ge=1, le=3650)
     max_uses: int | None = Field(default=None, ge=1, le=100000)
+
+    @field_validator("password", mode="before")
+    @classmethod
+    def normalize_password(cls, value: object) -> str | None:
+        if value is None:
+            return None
+        if not isinstance(value, str):
+            raise ValueError("Share password must be a string")
+        password = value.strip()
+        if not password:
+            return None
+        if len(password) < 4:
+            raise ValueError("Share password must be at least 4 characters")
+        return password
 
 
 class ShareLinkResolveRequest(BaseModel):

@@ -42,8 +42,10 @@ def test_share_installs_verified_release_without_persisting_credentials(
     )
     assert created.status_code == 201, created.text
     share = created.json()
+    accepted_media_types: list[str] = []
 
     def request(method: str, url: str, **kwargs) -> httpx.Response:
+        accepted_media_types.append(kwargs["headers"]["Accept"])
         parsed = urllib.parse.urlsplit(url)
         path = parsed.path + (f"?{parsed.query}" if parsed.query else "")
         response = client.request(
@@ -57,6 +59,7 @@ def test_share_installs_verified_release_without_persisting_credentials(
     monkeypatch.setattr(httpx, "request", request)
     monkeypatch.setattr(httpx, "get", lambda url, **kwargs: request("GET", url, **kwargs))
     monkeypatch.setenv("TEST_SHARE_SECRET", share["resolve_secret"])
+    client.cookies.clear()
     target = tmp_path / "agent-skills"
 
     return_code = run_install_from_share(
@@ -76,6 +79,8 @@ def test_share_installs_verified_release_without_persisting_credentials(
     serialized = json.dumps(manifest, sort_keys=True)
     assert share["resolve_secret"] not in serialized
     assert "grant_" not in serialized
+    assert "application/json" in accepted_media_types
+    assert "application/octet-stream" in accepted_media_types
 
     revoked = client.post(f"/api/v1/share-links/{share['id']}/revoke", headers=headers)
     assert revoked.status_code == 200

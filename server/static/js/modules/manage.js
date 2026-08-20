@@ -17,7 +17,9 @@ document.addEventListener('DOMContentLoaded', () => {
       b.setAttribute('tabindex', isActive ? '0' : '-1');
     });
     document.querySelectorAll('[data-view-panel]').forEach((panel) => {
-      panel.classList.toggle('hidden', panel.dataset.viewPanel !== btn.dataset.view);
+      const hidden = panel.dataset.viewPanel !== btn.dataset.view;
+      panel.classList.toggle('hidden', hidden);
+      panel.hidden = hidden;
     });
     btn.focus();
   }

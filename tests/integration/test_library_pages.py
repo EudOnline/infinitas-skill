@@ -149,6 +149,31 @@ def test_library_page_loads_with_multi_object_cards(
     assert "Test Library Skill" in response.text
 
 
+def test_library_ui_rejects_bearer_only_authentication(
+    monkeypatch,
+    tmp_path: Path,
+    temp_repo_copy: Path,
+    signing_key: Path,
+) -> None:
+    client = _prepare_library_client(
+        monkeypatch,
+        tmp_path=tmp_path,
+        temp_repo_copy=temp_repo_copy,
+        signing_key=signing_key,
+    )
+    client.cookies.clear()
+
+    response = client.get(
+        "/manage?lang=en",
+        headers={"Authorization": "Bearer fixture-maintainer-token"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert "auth=required" in response.headers["location"]
+    assert "next=%2Fmanage%3Flang%3Den" in response.headers["location"]
+
+
 def test_home_and_login_pages_promote_library_as_admin_entry(
     monkeypatch,
     tmp_path: Path,

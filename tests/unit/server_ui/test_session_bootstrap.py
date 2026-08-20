@@ -37,4 +37,5 @@ def test_build_site_nav_assembles_language_aware_home_and_console_links() -> Non
         {"href": "/?lang=en", "label": "Home"},
         {"href": "/profile?lang=en", "label": "Profile"},
         {"href": "/manage?lang=en", "label": "Management"},
+        {"href": "/agents?lang=en", "label": "Agents"},
     ]

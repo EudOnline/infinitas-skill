@@ -18,6 +18,18 @@ def assert_product_token_skill_scope(
     allow_create: bool = False,
 ) -> None:
     credential = context.credential
+    if credential.type == "agent_token":
+        principal_id = context.principal.id if context.principal is not None else None
+        if principal_id is None or credential.product_scope_id != principal_id:
+            raise ProductScopeForbidden("agent namespace scope mismatch")
+        if skill_id is None:
+            if allow_create:
+                return
+            raise ProductScopeForbidden("skill scope required")
+        skill = db.get(Skill, skill_id)
+        if skill is None or skill.namespace_id != principal_id:
+            raise ProductScopeForbidden("agent namespace scope mismatch")
+        return
     if credential.type != "product_token":
         return
     if credential.product_token_type != "publisher":  # noqa: S105

@@ -20,13 +20,14 @@ uv run python3 -m infinitas_skill.cli.reference
 
 ```text
 usage: infinitas [-h]
-                 {compatibility,release,install,discovery,openclaw,registry,policy,server} ...
+                 {compatibility,agent,release,install,discovery,openclaw,registry,policy,server} ...
 
 infinitas project CLI
 
 positional arguments:
-  {compatibility,release,install,discovery,openclaw,registry,policy,server}
+  {compatibility,agent,release,install,discovery,openclaw,registry,policy,server}
     compatibility       Platform contract and rendering tools
+    agent               Agent enrollment and public Skill backup
     release             Release readiness, signing, and verification tools
     install             Install planning and workflow tools
     discovery           Discovery and inspection tools

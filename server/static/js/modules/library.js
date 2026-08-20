@@ -55,6 +55,7 @@ function initObjectTabs() {
       const active = item === tab;
       item.classList.toggle('is-active', active);
       item.setAttribute('aria-selected', String(active));
+      item.setAttribute('tabindex', active ? '0' : '-1');
       const panel = document.getElementById(item.getAttribute('aria-controls'));
       if (panel) {
         panel.hidden = !active;
@@ -70,6 +71,26 @@ function initObjectTabs() {
     tab.addEventListener('click', (event) => {
       event.preventDefault();
       activateTab(tab);
+    });
+  });
+
+  tabs.forEach((tab) => {
+    tab.addEventListener('keydown', (event) => {
+      const index = tabs.indexOf(tab);
+      let nextIndex = -1;
+      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+        nextIndex = (index + 1) % tabs.length;
+      } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+        nextIndex = (index - 1 + tabs.length) % tabs.length;
+      } else if (event.key === 'Home') {
+        nextIndex = 0;
+      } else if (event.key === 'End') {
+        nextIndex = tabs.length - 1;
+      }
+      if (nextIndex >= 0) {
+        event.preventDefault();
+        activateTab(tabs[nextIndex]);
+      }
     });
   });
 

@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from server.db import get_db
-from server.modules.identity.auth import maybe_get_current_user
+from server.modules.identity.auth import maybe_get_current_session_user
 from server.ui.context import build_login_context, templates_for
 from server.ui.home import build_home_context
 from server.ui.session_bootstrap import build_session_bootstrap
@@ -17,7 +17,7 @@ router = APIRouter()
 
 @router.get("/", response_class=HTMLResponse)
 def index(request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    session_user = maybe_get_current_user(request, db)
+    session_user = maybe_get_current_session_user(request, db)
     context: dict[str, Any] = {"request": request}
     context.update(build_home_context(settings=request.app.state.settings, db=db, request=request))
     context["session_ui"] = build_session_bootstrap(context.get("session_ui"), session_user)

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import traceback
+from collections.abc import Callable
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
@@ -14,52 +16,77 @@ from server.exceptions_base import (  # noqa: F401
 )
 from server.i18n import pick_lang, resolve_language
 from server.logging import get_logger
-from server.ui.formatting import build_kawaii_ui_context
 
 log = get_logger(__name__)
+UiContextBuilder = Callable[[Request, str, str, str], dict[str, Any]]
 
 
-def register_exception_handlers(app: FastAPI, templates: Jinja2Templates) -> None:
+def _request_wants_json(request: Request) -> bool:
+    """Keep machine-facing API errors JSON when clients omit Accept."""
+    path = request.url.path
+    return (
+        path == "/api"
+        or path.startswith("/api/")
+        or request.headers.get("accept", "").startswith("application/json")
+    )
+
+
+def _error_page(
+    request: Request,
+    *,
+    templates: Jinja2Templates,
+    build_ui_context: UiContextBuilder,
+    status_code: int,
+    title: tuple[str, str],
+    message: tuple[str, str],
+) -> Response:
+    lang = resolve_language(request)
+    return templates.TemplateResponse(
+        request,
+        "error.html",
+        {
+            "request": request,
+            "status_code": status_code,
+            "title": pick_lang(lang, *title),
+            "message": pick_lang(lang, *message),
+            **build_ui_context(request, lang, "", ""),
+        },
+        status_code=status_code,
+    )
+
+
+def register_exception_handlers(
+    app: FastAPI,
+    templates: Jinja2Templates,
+    build_ui_context: UiContextBuilder,
+) -> None:
     @app.exception_handler(NotFoundError)
     async def not_found_exc_handler(request: Request, exc: NotFoundError) -> Response:
-        lang = resolve_language(request)
-        if request.headers.get("accept", "").startswith("application/json"):
+        if _request_wants_json(request):
             return JSONResponse({"detail": str(exc) or "Not found"}, status_code=404)
-        return templates.TemplateResponse(
+        return _error_page(
             request,
-            "error.html",
-            {
-                "request": request,
-                "status_code": 404,
-                "title": pick_lang(lang, "未找到", "Not Found"),
-                "message": pick_lang(
-                    lang, "您访问的页面不存在。", "The page you are looking for does not exist."
-                ),
-                **build_kawaii_ui_context(request, lang, "", ""),
-            },
+            templates=templates,
+            build_ui_context=build_ui_context,
             status_code=404,
+            title=("未找到", "Not Found"),
+            message=("您访问的页面不存在。", "The page you are looking for does not exist."),
         )
 
     @app.exception_handler(ForbiddenError)
     async def forbidden_exc_handler(request: Request, exc: ForbiddenError) -> Response:
-        lang = resolve_language(request)
-        if request.headers.get("accept", "").startswith("application/json"):
+        if _request_wants_json(request):
             return JSONResponse({"detail": str(exc) or "Forbidden"}, status_code=403)
-        return templates.TemplateResponse(
+        return _error_page(
             request,
-            "error.html",
-            {
-                "request": request,
-                "status_code": 403,
-                "title": pick_lang(lang, "禁止访问", "Forbidden"),
-                "message": pick_lang(
-                    lang,
-                    "您没有权限访问此资源。",
-                    "You do not have permission to access this resource.",
-                ),
-                **build_kawaii_ui_context(request, lang, "", ""),
-            },
+            templates=templates,
+            build_ui_context=build_ui_context,
             status_code=403,
+            title=("禁止访问", "Forbidden"),
+            message=(
+                "您没有权限访问此资源。",
+                "You do not have permission to access this resource.",
+            ),
         )
 
     @app.exception_handler(ConflictError)
@@ -72,22 +99,15 @@ def register_exception_handlers(app: FastAPI, templates: Jinja2Templates) -> Non
 
     @app.exception_handler(404)
     async def not_found_handler(request: Request, exc: Exception) -> Response:
-        lang = resolve_language(request)
-        if request.headers.get("accept", "").startswith("application/json"):
+        if _request_wants_json(request):
             return JSONResponse({"detail": "Not found"}, status_code=404)
-        return templates.TemplateResponse(
+        return _error_page(
             request,
-            "error.html",
-            {
-                "request": request,
-                "status_code": 404,
-                "title": pick_lang(lang, "未找到", "Not Found"),
-                "message": pick_lang(
-                    lang, "您访问的页面不存在。", "The page you are looking for does not exist."
-                ),
-                **build_kawaii_ui_context(request, lang, "", ""),
-            },
+            templates=templates,
+            build_ui_context=build_ui_context,
             status_code=404,
+            title=("未找到", "Not Found"),
+            message=("您访问的页面不存在。", "The page you are looking for does not exist."),
         )
 
     @app.exception_handler(500)
@@ -98,22 +118,13 @@ def register_exception_handlers(app: FastAPI, templates: Jinja2Templates) -> Non
             request.url.path,
             traceback.format_exc(),
         )
-        lang = resolve_language(request)
-        if request.headers.get("accept", "").startswith("application/json"):
+        if _request_wants_json(request):
             return JSONResponse({"detail": "Internal server error"}, status_code=500)
-        return templates.TemplateResponse(
+        return _error_page(
             request,
-            "error.html",
-            {
-                "request": request,
-                "status_code": 500,
-                "title": pick_lang(lang, "服务器错误", "Server Error"),
-                "message": pick_lang(
-                    lang,
-                    "出了点问题，请稍后再试。",
-                    "Something went wrong. Please try again later.",
-                ),
-                **build_kawaii_ui_context(request, lang, "", ""),
-            },
+            templates=templates,
+            build_ui_context=build_ui_context,
             status_code=500,
+            title=("服务器错误", "Server Error"),
+            message=("出了点问题，请稍后再试。", "Something went wrong. Please try again later."),
         )

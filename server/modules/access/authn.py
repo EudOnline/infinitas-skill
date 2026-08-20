@@ -30,6 +30,10 @@ def resolve_access_context(
         return None
 
     principal = identity_service.get_principal(db, credential.principal_id)
+    if credential.type == "agent_token" and not identity_service.service_principal_is_active(
+        db, credential.principal_id
+    ):
+        return None
     user = identity_service.get_user_for_principal(db, principal)
     return AccessContext(
         credential=credential,

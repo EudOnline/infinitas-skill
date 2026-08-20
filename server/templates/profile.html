@@ -34,7 +34,7 @@
   </div>
 
   {# Skills tab #}
-  <section class="space-y-3" role="tabpanel" id="profile-panel-skills" aria-labelledby="profile-tab-skills" data-tab-panel="skills">
+  <section class="space-y-3" role="tabpanel" id="profile-panel-skills" aria-labelledby="profile-tab-skills" data-tab-panel="skills" tabindex="0">
     <div id="profile-skills-list" class="space-y-2">
       <div class="kawaii-card animate-in text-center py-8 text-kawaii-ink-muted text-sm">
         {{ ui.get('profile_loading', '加载中...') }}
@@ -43,7 +43,7 @@
   </section>
 
   {# History tab #}
-  <section class="space-y-3 hidden" role="tabpanel" id="profile-panel-history" aria-labelledby="profile-tab-history" data-tab-panel="history">
+  <section class="space-y-3 hidden" role="tabpanel" id="profile-panel-history" aria-labelledby="profile-tab-history" data-tab-panel="history" hidden tabindex="0">
     <div id="profile-history-list" class="space-y-2">
       <div class="kawaii-card animate-in text-center py-8 text-kawaii-ink-muted text-sm">
         {{ ui.get('profile_no_history', '暂无操作记录') }}
@@ -52,7 +52,7 @@
   </section>
 
   {# Policy tab #}
-  <section class="space-y-3 hidden" role="tabpanel" id="profile-panel-policy" aria-labelledby="profile-tab-policy" data-tab-panel="policy">
+  <section class="space-y-3 hidden" role="tabpanel" id="profile-panel-policy" aria-labelledby="profile-tab-policy" data-tab-panel="policy" hidden tabindex="0">
     <div id="profile-policy-list">
       <div class="kawaii-card animate-in text-center py-8 text-kawaii-ink-muted text-sm">
         {{ ui.get('profile_no_policy', '暂无策略约束') }}

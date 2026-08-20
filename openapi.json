@@ -2616,6 +2616,88 @@
         ]
       }
     },
+    "/api/v1/agent/versions/{version_id}/publish": {
+      "post": {
+        "tags": [
+          "agent-publish"
+        ],
+        "summary": "Publish Agent Version",
+        "operationId": "publish_agent_version_api_v1_agent_versions__version_id__publish_post",
+        "parameters": [
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Version Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "infinitas_auth_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Infinitas Auth Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
     "/api/v1/releases/{release_id}/exposures": {
       "get": {
         "tags": [
@@ -3817,6 +3899,123 @@
         ]
       }
     },
+    "/api/v1/agent-enrollments": {
+      "post": {
+        "tags": [
+          "agent-enrollment"
+        ],
+        "summary": "Submit Agent Enrollment",
+        "operationId": "submit_agent_enrollment_api_v1_agent_enrollments_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentEnrollmentSubmitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentEnrollmentSubmitView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agent-enrollments/{public_id}": {
+      "get": {
+        "tags": [
+          "agent-enrollment"
+        ],
+        "summary": "Poll Agent Enrollment",
+        "operationId": "poll_agent_enrollment_api_v1_agent_enrollments__public_id__get",
+        "parameters": [
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Public Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentEnrollmentStatusView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/access/me": {
       "get": {
         "tags": [
@@ -4220,185 +4419,6 @@
           {
             "BearerAuth": []
           },
-          {
-            "SessionCookie": []
-          }
-        ]
-      }
-    },
-    "/api/v1/namespace-tokens": {
-      "post": {
-        "tags": [
-          "namespace-tokens"
-        ],
-        "summary": "Create Namespace Token",
-        "operationId": "create_namespace_token_api_v1_namespace_tokens_post",
-        "parameters": [
-          {
-            "name": "infinitas_auth_token",
-            "in": "cookie",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Infinitas Auth Token"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NamespaceTokenCreateRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProductTokenCreateView"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "SessionCookie": []
-          }
-        ]
-      },
-      "get": {
-        "tags": [
-          "namespace-tokens"
-        ],
-        "summary": "List Namespace Tokens",
-        "operationId": "list_namespace_tokens_api_v1_namespace_tokens_get",
-        "parameters": [
-          {
-            "name": "infinitas_auth_token",
-            "in": "cookie",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Infinitas Auth Token"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProductTokenListView"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "SessionCookie": []
-          }
-        ]
-      }
-    },
-    "/api/v1/namespace-tokens/{token_id}/revoke": {
-      "post": {
-        "tags": [
-          "namespace-tokens"
-        ],
-        "summary": "Revoke Namespace Token",
-        "operationId": "revoke_namespace_token_api_v1_namespace_tokens__token_id__revoke_post",
-        "parameters": [
-          {
-            "name": "token_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Token Id"
-            }
-          },
-          {
-            "name": "infinitas_auth_token",
-            "in": "cookie",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Infinitas Auth Token"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProductTokenView"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
           {
             "SessionCookie": []
           }
@@ -5437,6 +5457,120 @@
           }
         }
       }
+    },
+    "/agents": {
+      "get": {
+        "summary": "Agents Page",
+        "operationId": "agents_page_agents_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agents/invitations": {
+      "post": {
+        "summary": "Create Agent Invitation",
+        "operationId": "create_agent_invitation_agents_invitations_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agents/enrollments/{enrollment_id}/approve": {
+      "post": {
+        "summary": "Approve Agent",
+        "operationId": "approve_agent_agents_enrollments__enrollment_id__approve_post",
+        "parameters": [
+          {
+            "name": "enrollment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Enrollment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agents/enrollments/{enrollment_id}/reject": {
+      "post": {
+        "summary": "Reject Agent",
+        "operationId": "reject_agent_agents_enrollments__enrollment_id__reject_post",
+        "parameters": [
+          {
+            "name": "enrollment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Enrollment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5699,6 +5833,128 @@
           "id"
         ],
         "title": "ActivityReleaseView"
+      },
+      "AgentEnrollmentStatusView": {
+        "properties": {
+          "public_id": {
+            "type": "string",
+            "title": "Public Id"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "fingerprint": {
+            "type": "string",
+            "title": "Fingerprint"
+          },
+          "principal_slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Principal Slug"
+          },
+          "principal_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Principal Id"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "public_id",
+          "state",
+          "slug",
+          "fingerprint"
+        ],
+        "title": "AgentEnrollmentStatusView"
+      },
+      "AgentEnrollmentSubmitRequest": {
+        "properties": {
+          "status_verifier": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "title": "Status Verifier"
+          },
+          "api_key_verifier": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "title": "Api Key Verifier"
+          },
+          "fingerprint": {
+            "type": "string",
+            "maxLength": 16,
+            "minLength": 16,
+            "pattern": "^[0-9a-f]{16}$",
+            "title": "Fingerprint"
+          },
+          "runtime": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Runtime"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status_verifier",
+          "api_key_verifier",
+          "fingerprint"
+        ],
+        "title": "AgentEnrollmentSubmitRequest"
+      },
+      "AgentEnrollmentSubmitView": {
+        "properties": {
+          "public_id": {
+            "type": "string",
+            "title": "Public Id"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "fingerprint": {
+            "type": "string",
+            "title": "Fingerprint"
+          },
+          "expires_at": {
+            "type": "string",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "public_id",
+          "state",
+          "fingerprint",
+          "expires_at"
+        ],
+        "title": "AgentEnrollmentSubmitView"
       },
       "ArtifactListView": {
         "properties": {
@@ -7105,62 +7361,6 @@
           "success"
         ],
         "title": "LogoutResponse"
-      },
-      "NamespaceTokenCreateRequest": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "maxLength": 200,
-            "minLength": 1,
-            "title": "Name"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "reader",
-              "publisher"
-            ],
-            "title": "Type"
-          },
-          "issued_for": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 200
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Issued For"
-          },
-          "expires_in_days": {
-            "type": "integer",
-            "maximum": 3650.0,
-            "minimum": 1.0,
-            "title": "Expires In Days",
-            "default": 90
-          },
-          "max_daily_publishes": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 100000.0,
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Max Daily Publishes"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "type"
-        ],
-        "title": "NamespaceTokenCreateRequest"
       },
       "ObjectTokenCreateRequest": {
         "properties": {
@@ -8794,7 +8994,8 @@
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 200
+                "maxLength": 200,
+                "minLength": 4
               },
               {
                 "type": "null"

@@ -28,7 +28,7 @@ def request_json(
     path: str,
     payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    headers = {}
+    headers = {"Accept": "application/json"}
     if args.token:
         headers["Authorization"] = f"Bearer {args.token}"
     try:
@@ -46,7 +46,7 @@ def request_json(
 
 
 def request_binary(args: argparse.Namespace, path: str, data: bytes) -> dict[str, Any]:
-    headers = {"Content-Type": "application/gzip"}
+    headers = {"Accept": "application/json", "Content-Type": "application/gzip"}
     if args.token:
         headers["Authorization"] = f"Bearer {args.token}"
     try:

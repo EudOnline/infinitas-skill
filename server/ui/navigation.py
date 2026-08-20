@@ -30,6 +30,7 @@ def build_site_nav(*, home: bool, lang: str) -> list[dict[str, str]]:
         {"href": with_lang("/", lang), "label": pick_lang(lang, "首页", "Home")},
         {"href": with_lang("/profile", lang), "label": pick_lang(lang, "档案", "Profile")},
         {"href": with_lang("/manage", lang), "label": pick_lang(lang, "管理", "Management")},
+        {"href": with_lang("/agents", lang), "label": pick_lang(lang, "Agents", "Agents")},
     ]
 
 

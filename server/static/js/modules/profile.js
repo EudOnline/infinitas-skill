@@ -65,7 +65,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     document.querySelectorAll('[data-tab-panel]').forEach((panel) => {
-      panel.classList.toggle('hidden', panel.dataset.tabPanel !== btn.dataset.tab);
+      const hidden = panel.dataset.tabPanel !== btn.dataset.tab;
+      panel.classList.toggle('hidden', hidden);
+      panel.hidden = hidden;
     });
     btn.focus();
   }

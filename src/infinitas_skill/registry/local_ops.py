@@ -294,7 +294,10 @@ def run_registry_bootstrap(args: argparse.Namespace) -> int:
         )
         response = httpx.get(
             f"{entry['base_url']}/trust-bootstrap.json",
-            headers={"Authorization": f"Bearer {token}"},
+            headers={
+                "Accept": "application/json",
+                "Authorization": f"Bearer {token}",
+            },
             timeout=30.0,
         )
         if response.status_code >= 400:

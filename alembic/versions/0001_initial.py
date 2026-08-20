@@ -106,6 +106,12 @@ def upgrade() -> None:
         sa.Column("principal_id", sa.Integer(), nullable=False),
         sa.Column("slug", sa.String(length=200), nullable=False),
         sa.Column("description", sa.Text(), nullable=False),
+        sa.Column("enrollment_id", sa.Integer(), nullable=True),
+        sa.Column("state", sa.String(length=32), nullable=False),
+        sa.Column("policy_json", sa.Text(), nullable=False),
+        sa.Column("approved_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("suspended_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
             ["principal_id"],
@@ -113,8 +119,10 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("principal_id"),
+        sa.UniqueConstraint("enrollment_id"),
     )
     op.create_index("ix_service_principals_slug", "service_principals", ["slug"], unique=False)
+    op.create_index("ix_service_principals_state", "service_principals", ["state"], unique=False)
     op.create_table(
         "skills",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
@@ -448,7 +456,7 @@ def upgrade() -> None:
         sa.Column("status", sa.String(length=64), nullable=False),
         sa.Column("payload_json", sa.Text(), nullable=False),
         sa.Column("release_id", sa.Integer(), nullable=True),
-        sa.Column("requested_by_user_id", sa.Integer(), nullable=True),
+        sa.Column("requested_by_principal_id", sa.Integer(), nullable=True),
         sa.Column("note", sa.Text(), nullable=False),
         sa.Column("log", sa.Text(), nullable=False),
         sa.Column("started_at", sa.DateTime(timezone=True), nullable=True),
@@ -464,8 +472,8 @@ def upgrade() -> None:
             ["releases.id"],
         ),
         sa.ForeignKeyConstraint(
-            ["requested_by_user_id"],
-            ["users.id"],
+            ["requested_by_principal_id"],
+            ["principals.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -475,6 +483,80 @@ def upgrade() -> None:
     )
     op.create_index(op.f("ix_jobs_release_id"), "jobs", ["release_id"], unique=False)
     op.create_index(op.f("ix_jobs_status"), "jobs", ["status"], unique=False)
+    op.create_table(
+        "agent_namespace_reservations",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("slug", sa.String(length=200), nullable=False),
+        sa.Column("display_name", sa.String(length=200), nullable=False),
+        sa.Column("state", sa.String(length=32), nullable=False),
+        sa.Column("created_by_principal_id", sa.Integer(), nullable=False),
+        sa.Column("claimed_service_principal_id", sa.Integer(), nullable=True),
+        sa.Column("released_by_principal_id", sa.Integer(), nullable=True),
+        sa.Column("released_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["created_by_principal_id"], ["principals.id"]),
+        sa.ForeignKeyConstraint(["claimed_service_principal_id"], ["service_principals.id"]),
+        sa.ForeignKeyConstraint(["released_by_principal_id"], ["principals.id"]),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("slug", name="uq_agent_namespace_reservations_slug"),
+    )
+    op.create_index(
+        "ix_agent_namespace_reservations_state",
+        "agent_namespace_reservations",
+        ["state"],
+        unique=False,
+    )
+    op.create_table(
+        "agent_invitations",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("public_id", sa.String(length=64), nullable=False),
+        sa.Column("reservation_id", sa.Integer(), nullable=False),
+        sa.Column("purpose", sa.String(length=32), nullable=False),
+        sa.Column("target_service_principal_id", sa.Integer(), nullable=True),
+        sa.Column("invitation_hash", sa.String(length=255), nullable=False),
+        sa.Column("policy_json", sa.Text(), nullable=False),
+        sa.Column("state", sa.String(length=32), nullable=False),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("consumed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_by_principal_id", sa.Integer(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["reservation_id"], ["agent_namespace_reservations.id"]),
+        sa.ForeignKeyConstraint(["target_service_principal_id"], ["service_principals.id"]),
+        sa.ForeignKeyConstraint(["created_by_principal_id"], ["principals.id"]),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("public_id", name="uq_agent_invitations_public_id"),
+    )
+    op.create_index(
+        "ix_agent_invitations_reservation_state",
+        "agent_invitations",
+        ["reservation_id", "state"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_agent_invitations_expires_at", "agent_invitations", ["expires_at"], unique=False
+    )
+    op.create_table(
+        "agent_enrollments",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("public_id", sa.String(length=64), nullable=False),
+        sa.Column("invitation_id", sa.Integer(), nullable=False),
+        sa.Column("status_hash", sa.String(length=255), nullable=False),
+        sa.Column("proposed_api_key_hash", sa.String(length=255), nullable=False),
+        sa.Column("fingerprint", sa.String(length=32), nullable=False),
+        sa.Column("runtime_metadata_json", sa.Text(), nullable=False),
+        sa.Column("state", sa.String(length=32), nullable=False),
+        sa.Column("decision_note", sa.Text(), nullable=False),
+        sa.Column("decision_by_principal_id", sa.Integer(), nullable=True),
+        sa.Column("decided_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["invitation_id"], ["agent_invitations.id"]),
+        sa.ForeignKeyConstraint(["decision_by_principal_id"], ["principals.id"]),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("public_id", name="uq_agent_enrollments_public_id"),
+        sa.UniqueConstraint("invitation_id", name="uq_agent_enrollments_invitation_id"),
+    )
+    op.create_index("ix_agent_enrollments_state", "agent_enrollments", ["state"], unique=False)
     op.create_table(
         "access_grants",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
@@ -589,6 +671,51 @@ def upgrade() -> None:
         op.f("ix_credentials_product_scope_id"), "credentials", ["product_scope_id"], unique=False
     )
     op.create_table(
+        "agent_publish_intents",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("release_id", sa.Integer(), nullable=False),
+        sa.Column("principal_id", sa.Integer(), nullable=False),
+        sa.Column("credential_id", sa.Integer(), nullable=False),
+        sa.Column("policy_snapshot_json", sa.Text(), nullable=False),
+        sa.Column("audience_type", sa.String(length=32), nullable=False),
+        sa.Column("listing_mode", sa.String(length=32), nullable=False),
+        sa.Column("install_mode", sa.String(length=32), nullable=False),
+        sa.Column("state", sa.String(length=32), nullable=False),
+        sa.Column("reason", sa.Text(), nullable=False),
+        sa.Column("quota_key", sa.String(length=255), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("activated_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(["release_id"], ["releases.id"]),
+        sa.ForeignKeyConstraint(["principal_id"], ["principals.id"]),
+        sa.ForeignKeyConstraint(["credential_id"], ["credentials.id"]),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("release_id", name="uq_agent_publish_intents_release_id"),
+    )
+    op.create_index(
+        "ix_agent_publish_intents_principal_state",
+        "agent_publish_intents",
+        ["principal_id", "state"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_agent_publish_intents_state", "agent_publish_intents", ["state"], unique=False
+    )
+    op.create_index(
+        "ix_agent_publish_intents_quota_key", "agent_publish_intents", ["quota_key"], unique=False
+    )
+    op.create_index(
+        op.f("ix_agent_publish_intents_principal_id"),
+        "agent_publish_intents",
+        ["principal_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_agent_publish_intents_credential_id"),
+        "agent_publish_intents",
+        ["credential_id"],
+        unique=False,
+    )
+    op.create_table(
         "review_decisions",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("review_case_id", sa.Integer(), nullable=False),
@@ -612,6 +739,14 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_index(
+        op.f("ix_agent_publish_intents_credential_id"), table_name="agent_publish_intents"
+    )
+    op.drop_index(op.f("ix_agent_publish_intents_principal_id"), table_name="agent_publish_intents")
+    op.drop_index("ix_agent_publish_intents_principal_state", table_name="agent_publish_intents")
+    op.drop_index("ix_agent_publish_intents_state", table_name="agent_publish_intents")
+    op.drop_index("ix_agent_publish_intents_quota_key", table_name="agent_publish_intents")
+    op.drop_table("agent_publish_intents")
     op.drop_table("review_decisions")
     op.drop_index(op.f("ix_credentials_product_scope_id"), table_name="credentials")
     op.drop_index(op.f("ix_credentials_product_object_id"), table_name="credentials")
@@ -630,6 +765,16 @@ def downgrade() -> None:
     op.drop_index("ix_jobs_kind_status_created_at", table_name="jobs")
     op.drop_index(op.f("ix_jobs_kind"), table_name="jobs")
     op.drop_table("jobs")
+    op.drop_index("ix_agent_enrollments_state", table_name="agent_enrollments")
+    op.drop_table("agent_enrollments")
+    op.drop_index("ix_agent_invitations_expires_at", table_name="agent_invitations")
+    op.drop_index("ix_agent_invitations_reservation_state", table_name="agent_invitations")
+    op.drop_table("agent_invitations")
+    op.drop_index(
+        "ix_agent_namespace_reservations_state", table_name="agent_namespace_reservations"
+    )
+    op.drop_table("agent_namespace_reservations")
+    op.drop_index("ix_service_principals_state", table_name="service_principals")
     op.drop_index(op.f("ix_exposures_requested_by_principal_id"), table_name="exposures")
     op.drop_index("uq_exposures_open_release_audience", table_name="exposures")
     op.drop_index("ix_exposures_release_id_audience_type_state", table_name="exposures")

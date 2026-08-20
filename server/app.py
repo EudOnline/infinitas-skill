@@ -17,6 +17,7 @@ from server.middleware import (
     CsrfValidationMiddleware,
     RequestContextMiddleware,
     SecurityHeadersMiddleware,
+    TrustedProxySchemeMiddleware,
 )
 from server.modules.access.router import routers as access_routers
 from server.modules.audit.router import router as audit_router
@@ -26,12 +27,15 @@ from server.modules.exposure.router import router as exposure_router
 from server.modules.identity.router import routers as identity_routers
 from server.modules.library.router import router as library_router
 from server.modules.registry.router import router as registry_router
+from server.modules.release.agent_publish_router import router as agent_publish_router
 from server.modules.release.router import router as release_router
 from server.modules.review.router import router as review_router
 from server.modules.system.router import router as system_router
 from server.settings import Settings, get_settings
 from server.static_files import CachedStaticFiles
 from server.ui.assets import load_asset_hashes, static_url_factory
+from server.ui.formatting import build_kawaii_ui_context
+from server.ui.routes.agents import router as agents_ui_router
 from server.ui.routes.home import router as home_ui_router
 from server.ui.routes.library import router as library_ui_router
 from server.ui.routes.profile import router as profile_ui_router
@@ -132,17 +136,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         cache_dir.mkdir(parents=True, exist_ok=True)
         templates.env.bytecode_cache = FileSystemBytecodeCache(str(cache_dir))
         application.add_middleware(HTTPSRedirectMiddleware)
+        if settings.trusted_proxies:
+            application.add_middleware(
+                TrustedProxySchemeMiddleware,
+                trusted_proxies=settings.trusted_proxies,
+            )
     application.add_middleware(CsrfValidationMiddleware)
     application.add_middleware(RequestContextMiddleware)
     static_root = str(settings.template_dir.parent / "static")
     application.mount("/static", CachedStaticFiles(directory=static_root), name="static")
-    register_exception_handlers(application, templates)
+    register_exception_handlers(application, templates, build_kawaii_ui_context)
     for router in (
         system_router,
         audit_router,
         library_router,
         *authoring_routers,
         release_router,
+        agent_publish_router,
         exposure_router,
         review_router,
         registry_router,
@@ -153,6 +163,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         library_ui_router,
         profile_ui_router,
         settings_ui_router,
+        agents_ui_router,
     ):
         application.include_router(router)
     _install_openapi(application)

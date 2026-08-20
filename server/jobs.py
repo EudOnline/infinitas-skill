@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement
 
 from server.model_base import utcnow
-from server.modules.identity.models import User
+from server.modules.identity.models import Principal
 from server.modules.jobs.models import Job
 from server.modules.shared.formatting import iso_format as _iso
 
@@ -74,7 +74,7 @@ def enqueue_job(
     *,
     kind: str,
     payload: dict | None,
-    requested_by: User | None,
+    requested_by: Principal | None,
     release_id: int | None = None,
     note: str = "",
 ) -> Job:
@@ -84,7 +84,7 @@ def enqueue_job(
         status="queued",
         payload_json=json.dumps(normalized_payload, ensure_ascii=False),
         release_id=release_id or _optional_positive_int(normalized_payload.get("release_id")),
-        requested_by_user_id=(requested_by.id if requested_by is not None else None),
+        requested_by_principal_id=(requested_by.id if requested_by is not None else None),
         note=note or "",
     )
     append_job_log(

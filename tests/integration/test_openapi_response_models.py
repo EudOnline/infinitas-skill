@@ -76,13 +76,5 @@ def test_authenticated_json_routes_publish_openapi_security(tmp_path: Path) -> N
 
     assert ("GET", "/api/v1/install/me/{skill_ref}") in checked
     assert ("GET", "/api/v1/install/grant/{skill_ref}") in checked
-    for path, method in {
-        ("/api/v1/namespace-tokens", "get"),
-        ("/api/v1/namespace-tokens", "post"),
-        ("/api/v1/namespace-tokens/{token_id}/revoke", "post"),
-    }:
-        operation = schema["paths"][path][method]
-        assert operation["security"] == [{"SessionCookie": []}]
-        assert not any(
-            parameter["name"] == "authorization" for parameter in operation["parameters"]
-        )
+    assert "/api/v1/namespace-tokens" not in schema["paths"]
+    assert "/api/v1/agent/versions/{version_id}/publish" in schema["paths"]

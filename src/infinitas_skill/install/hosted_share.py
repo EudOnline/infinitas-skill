@@ -66,7 +66,10 @@ def _origin(url: str) -> str:
 def _request_json(
     url: str, *, method: str, token: str | None = None, payload: dict | None = None
 ) -> dict:
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    headers = {
+        "Accept": "application/json",
+        **({"Authorization": f"Bearer {token}"} if token else {}),
+    }
     try:
         response = httpx.request(method, url, json=payload, headers=headers, timeout=60.0)
     except httpx.HTTPError as exc:
@@ -121,7 +124,14 @@ def _download_artifact(url: str, *, origin: str, token: str, destination: Path) 
     if _origin(url) != origin:
         raise HostedShareError("share artifact URL changed origin")
     try:
-        response = httpx.get(url, headers={"Authorization": f"Bearer {token}"}, timeout=60.0)
+        response = httpx.get(
+            url,
+            headers={
+                "Accept": "application/octet-stream",
+                "Authorization": f"Bearer {token}",
+            },
+            timeout=60.0,
+        )
     except httpx.HTTPError as exc:
         raise HostedShareError(f"share artifact download failed: {exc}") from exc
     if response.status_code >= 400:

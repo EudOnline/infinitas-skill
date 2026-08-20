@@ -44,7 +44,10 @@ class HostedRegistryClient:
         payload: dict[str, Any] | None = None,
         content: bytes | None = None,
     ) -> Any:
-        headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}
+        headers = {
+            "Accept": "application/json",
+            **({"Authorization": f"Bearer {self.token}"} if self.token else {}),
+        }
         if content is not None:
             headers["Content-Type"] = "application/gzip"
         try:
@@ -148,6 +151,12 @@ class HostedRegistryClient:
         body = self.request("POST", f"/api/v1/versions/{version_id}/releases", payload={})
         if not isinstance(body, dict):
             raise HostedPublishError("registry release response is invalid")
+        return body
+
+    def publish_agent_version(self, version_id: int) -> dict[str, Any]:
+        body = self.request("POST", f"/api/v1/agent/versions/{version_id}/publish", payload={})
+        if not isinstance(body, dict):
+            raise HostedPublishError("agent publish response is invalid")
         return body
 
     def get_release(self, release_id: int) -> dict[str, Any]:
@@ -328,6 +337,7 @@ def _publish_prepared(
     prepared: dict[str, Any],
     receipt: dict[str, Any],
     receipt_path: Path,
+    agent_mode: bool = False,
 ) -> PublishResult:
     display_name = str(
         staged.metadata.get("display_name") or staged.metadata.get("name") or staged.slug
@@ -350,7 +360,11 @@ def _publish_prepared(
         receipt_path=receipt_path,
     )
     version_view = version_result["version"]
-    release = client.create_release(int(version_view["id"]))
+    release = (
+        client.publish_agent_version(int(version_view["id"]))
+        if agent_mode
+        else client.create_release(int(version_view["id"]))
+    )
     release_id = int(release["id"])
     _update_receipt(receipt_path, receipt, state="release-created", release_id=release_id)
     if wait:
@@ -359,6 +373,20 @@ def _publish_prepared(
         return PublishResult(
             {
                 "state": "release-created",
+                "prepared": prepared,
+                "skill": skill,
+                "version": version_view,
+                "release": release,
+                "exposure": None,
+                "reused_version": bool(version_result["reused"]),
+                "receipt_path": str(receipt_path),
+            }
+        )
+    if agent_mode:
+        _update_receipt(receipt_path, receipt, state="published")
+        return PublishResult(
+            {
+                "state": "published",
                 "prepared": prepared,
                 "skill": skill,
                 "version": version_view,
@@ -409,6 +437,7 @@ def publish_skill(
     publisher: str | None = None,
     receipt_path: str | Path | None = None,
     resume: bool = False,
+    agent_mode: bool = False,
 ) -> PublishResult:
     """Normalize, publish, and expose one local skill idempotently."""
     if publisher is not None and not dry_run:
@@ -484,6 +513,7 @@ def publish_skill(
             prepared=prepared,
             receipt=receipt,
             receipt_path=resolved_receipt_path,
+            agent_mode=agent_mode,
         )
 
 

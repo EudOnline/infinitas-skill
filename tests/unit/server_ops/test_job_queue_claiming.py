@@ -393,3 +393,35 @@ def test_process_job_clears_lease_metadata_when_work_fails(monkeypatch, tmp_path
         assert job.error_message == "boom"
         assert job.heartbeat_at is None
         assert job.lease_expires_at is None
+
+
+def test_worker_idle_sleep_happens_after_claim_transaction_closes(monkeypatch) -> None:
+    from contextlib import contextmanager
+
+    from server import worker as worker_module
+
+    events: list[str] = []
+
+    @contextmanager
+    def fake_session_scope():
+        events.append("enter")
+        try:
+            yield object()
+        finally:
+            events.append("exit")
+
+    monkeypatch.setattr(worker_module, "session_scope", fake_session_scope)
+    monkeypatch.setattr(worker_module, "claim_next_job", lambda _session: None)
+
+    def stop_after_asserted_sleep(_interval: float) -> None:
+        assert events == ["enter", "exit"]
+        raise StopIteration
+
+    monkeypatch.setattr(worker_module.time, "sleep", stop_after_asserted_sleep)
+
+    try:
+        worker_module.run_worker_loop(daemon=True, poll_interval=0.01)
+    except StopIteration:
+        pass
+    else:
+        raise AssertionError("expected idle test sentinel")

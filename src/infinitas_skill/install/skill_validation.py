@@ -60,6 +60,7 @@ def _secret_matches(skill_dir: Path) -> list[str]:
         try:
             content = path.read_bytes()
         except OSError:
+            matches.append(str(path.relative_to(skill_dir)))
             continue
         if _SECRET_RE.search(content):
             matches.append(str(path.relative_to(skill_dir)))

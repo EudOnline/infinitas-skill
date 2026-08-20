@@ -62,7 +62,10 @@ def test_registry_bootstrap_installs_source_and_public_trust(monkeypatch, tmp_pa
     assert result["source_changed"] is True
     assert result["trust_changed"] is True
     assert captured["url"].endswith("/api/v1/registry/trust-bootstrap.json")
-    assert captured["headers"] == {"Authorization": "Bearer reader-secret"}
+    assert captured["headers"] == {
+        "Accept": "application/json",
+        "Authorization": "Bearer reader-secret",
+    }
 
     config_dir = tmp_path / "config"
     source = json.loads((config_dir / "registry-sources.json").read_text(encoding="utf-8"))

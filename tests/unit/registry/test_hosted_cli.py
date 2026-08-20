@@ -44,6 +44,7 @@ def test_upload_content_sends_binary_gzip(monkeypatch, tmp_path, capsys) -> None
     assert captured["url"] == "https://registry.example.test/api/v1/skills/7/content"
     assert captured["content"] == b"bundle-bytes"
     assert captured["headers"] == {
+        "Accept": "application/json",
         "Content-Type": "application/gzip",
         "Authorization": "Bearer publisher-token",
     }
@@ -75,6 +76,7 @@ def test_create_version_sends_only_hosted_content_contract(monkeypatch, capsys) 
         "version": "1.2.3",
         "content_id": "cnt_fixture",
     }
+    assert captured["headers"]["Accept"] == "application/json"
     assert json.loads(capsys.readouterr().out)["id"] == 9
 
 

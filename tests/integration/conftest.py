@@ -66,4 +66,21 @@ def _prepare_library_client(
     assert release_response.status_code == 201, release_response.text
     run_worker_loop(limit=1)
 
+    # UI routes intentionally require a browser session rather than the
+    # bearer credential used for API setup calls.
+    from server.db import get_session_factory
+    from server.modules.identity import service as identity_service
+    from server.modules.identity.auth import AUTH_COOKIE_NAME, create_auth_session_cookie
+    from server.modules.identity.models import User
+
+    with get_session_factory()() as session:
+        user = session.query(User).filter(User.username == "fixture-maintainer").one()
+        principal = identity_service.ensure_user_principal(session, user)
+        session_credential = identity_service.create_fresh_session_credential(
+            session, principal_id=principal.id
+        )
+        session.commit()
+        client.cookies.set(AUTH_COOKIE_NAME, create_auth_session_cookie(session_credential.id))
+        client.cookies.set("csrf_token", "fixture-ui-csrf")
+
     return client
