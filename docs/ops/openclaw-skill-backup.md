@@ -72,6 +72,10 @@ Create snapshot directories below the existing `/newins` mount and restrict the 
 to `/newins/infinitas-skill-backups/agent-data-snapshots`; a root-level directory without a
 storage mount will fail even when authentication succeeds.
 
+OpenList maps this user's base path to the WebDAV root. Configure the client with
+`https://openlist.infinitas.fun/dav` and address objects relative to that root; do not prefix
+requests with `/newins` or the full base path.
+
 For long-lived automation, use a non-admin OpenList user with permission value `776`: content
 write, WebDAV read, and WebDAV write. This intentionally omits delete permission. If an ancestor
 OpenList Meta restricts `read_users` or `write_users`, create a more-specific Meta on
