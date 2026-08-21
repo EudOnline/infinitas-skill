@@ -37,14 +37,13 @@ These commands read the maintained generated surfaces under `catalog/` rather th
 ## Configure a hosted registry
 
 For the production server at `https://skills.infinitas.fun`, bootstrap an HTTP source with the
-maintained CLI. It writes the source, public signing trust root, and install integrity policy
-while storing only the Token environment variable name:
+maintained CLI. It writes the anonymous source, public signing trust root, and install integrity
+policy:
 
 ```bash
-export INFINITAS_REGISTRY_READ_TOKEN=<namespace-reader-token>
 uv run infinitas registry bootstrap hosted \
   https://skills.infinitas.fun/api/v1/registry \
-  --repo-root . --token-env INFINITAS_REGISTRY_READ_TOKEN --set-default --json
+  --repo-root . --set-default --json
 ```
 
 The equivalent JSON shape is:
@@ -56,11 +55,8 @@ The equivalent JSON shape is:
       "name": "hosted",
       "kind": "http",
       "base_url": "https://skills.infinitas.fun/api/v1/registry",
-      "trust": "private",
-      "auth": {
-        "mode": "token",
-        "env": "INFINITAS_REGISTRY_READ_TOKEN"
-      }
+      "trust": "public",
+      "auth": {"mode": "none"}
     }
   ]
 }
@@ -69,14 +65,13 @@ The equivalent JSON shape is:
 Then validate the effective source configuration:
 
 ```bash
-export INFINITAS_REGISTRY_READ_TOKEN=<namespace-reader-token>
 uv run infinitas registry sources --repo-root . check
 uv run infinitas registry sources --repo-root . sync hosted --json
 uv run infinitas registry sources --repo-root . status hosted --json
 ```
 
-The `base_url` must point to `/api/v1/registry`, not the application root. The environment
-variable name is a local indirection: the token itself does not belong in the JSON file.
+The `base_url` must point to `/api/v1/registry`, not the application root. Public source requests
+carry no credential.
 
 ## Agent publish, share, and rollback
 

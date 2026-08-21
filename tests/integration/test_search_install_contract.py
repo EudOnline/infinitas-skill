@@ -18,7 +18,6 @@ def configure_env(tmpdir: Path) -> Path:
     os.environ["INFINITAS_SERVER_ENV"] = "test"
     os.environ["INFINITAS_SERVER_SECRET_KEY"] = "test-secret-key-32chars-long-minimum"
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(artifact_root)
-    os.environ["INFINITAS_REGISTRY_READ_TOKENS"] = json.dumps(["registry-reader-token"])
     os.environ["INFINITAS_SERVER_BOOTSTRAP_USERS"] = json.dumps(
         [
             {

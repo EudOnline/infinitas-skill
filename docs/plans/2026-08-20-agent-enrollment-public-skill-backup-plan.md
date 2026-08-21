@@ -2,11 +2,26 @@
 audience: contributors, maintainers, security reviewers, operators
 owner: repository maintainers
 source_of_truth: agent enrollment and public skill backup implementation plan
-last_reviewed: 2026-08-20
+last_reviewed: 2026-08-21
 status: active
 ---
 
 # Agent Enrollment And Public Skill Backup Implementation Plan
+
+## 2026-08-21 Audit Closure
+
+The post-implementation audit closed the Agent enrollment/public-backup lifecycle gaps: Agent
+Release reads accept `release:read`; publish orchestration explicitly requires `agent:publish` and
+maps daily quota exhaustion to `429` with `Retry-After`; invitation submission and status polling
+have separate persistent IP/token-derived rate limits; and the database enforces one open invitation
+per reservation while a one-use request nonce prevents form replay from re-emitting a secret.
+
+The administrator form now returns complete validation/conflict pages with preserved values instead
+of server errors. The owner-scoped `GET /api/v1/agent/publish-intents/{release_id}` route exposes the
+worker's final decision, and the CLI reports `published` only when both the Release is `ready` and the
+intent is `activated`; `suppressed` is an explicit failure. Dedicated integration, security, and CLI
+tests cover enrollment through anonymous discovery, quota rollback, authorization, replay,
+concurrency, rate limiting, and publish-intent state handling.
 
 ## Goal
 
@@ -345,6 +360,15 @@ copy control must not send clipboard contents to telemetry.
     unavailable to `agent_token`
   - first request returns `202`; an idempotent retry reports the existing Release/intent without
     consuming quota again
+- `GET /api/v1/agent/publish-intents/{release_id}`
+  - normal `Authorization: Bearer agt_...`
+  - owner-scoped status containing Release state, intent state, optional suppression reason, and
+    activation time
+  - accepts the Agent publication/read capabilities without granting Exposure administration
+
+Agent enrollment submission is limited to 10 attempts per minute and polling to 120 requests per
+minute. Both operations enforce persistent client-address and token-hash buckets; failed
+authentication/conflict attempts count, and limited requests return `Retry-After: 60`.
 
 Enrollment errors use stable meanings:
 

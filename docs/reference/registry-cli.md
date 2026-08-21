@@ -19,9 +19,8 @@ The product is split into two surfaces:
 - Agent workflows for automation: normalization, publish, immutable versioning, install, switch,
   rollback, read, Visibility, Token, Share Link, and Activity APIs
 
-`INFINITAS_REGISTRY_API_TOKEN` should contain a namespace publisher Token for Agent creation and
-publish workflows. Namespace publisher/reader Tokens are minted from `/settings`; object and
-release Tokens remain available for narrower delegation.
+`INFINITAS_REGISTRY_API_TOKEN` contains an Agent, object, or maintainer credential only for scoped
+JSON API writes and private reads. Public Registry discovery and artifacts do not use this token.
 
 For multiple Agents, issue one publisher Token per Agent and use `registry changesets`; the
 credential ID and `issued_for` value are retained in audit metadata. Use `registry data-snapshots`
@@ -145,17 +144,17 @@ the old version.
 Registry does not upload or download the encrypted object. `list` and `get` return the related
 skill version, parent snapshot, schema version, URI, and verification digests.
 
-For long-lived install and rollback, configure a read-token-backed source once:
+For long-lived install and rollback, configure the anonymous public source once:
 
 ```bash
 uv run infinitas registry bootstrap hosted \
   https://skills.infinitas.fun/api/v1/registry \
-  --repo-root . --token-env INFINITAS_REGISTRY_READ_TOKEN --set-default --json
+  --repo-root . --set-default --json
 uv run infinitas registry sources --repo-root . sync hosted --json
 ```
 
-Bootstrap writes the source configuration, public signing trust root, and install integrity
-policy atomically per file. No file contains a Token value. `install switch` and
+Bootstrap writes the source configuration with `auth.mode=none`, public signing trust root, and
+install integrity policy atomically per file. `install switch` and
 `install rollback` use this configured Registry source; a short-lived Share credential must not
 be persisted for those operations.
 
@@ -166,7 +165,6 @@ artifacts. Existing trust files with different content are rejected unless `--fo
 explicitly supplied.
 
 ```bash
-export INFINITAS_REGISTRY_READ_TOKEN=<namespace-reader-token>
 uv run infinitas registry bootstrap hosted \
   https://skills.infinitas.fun/api/v1/registry \
   --repo-root . --set-default --json

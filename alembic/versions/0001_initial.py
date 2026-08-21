@@ -514,6 +514,7 @@ def upgrade() -> None:
         sa.Column("purpose", sa.String(length=32), nullable=False),
         sa.Column("target_service_principal_id", sa.Integer(), nullable=True),
         sa.Column("invitation_hash", sa.String(length=255), nullable=False),
+        sa.Column("request_nonce_hash", sa.String(length=255), nullable=False),
         sa.Column("policy_json", sa.Text(), nullable=False),
         sa.Column("state", sa.String(length=32), nullable=False),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
@@ -526,12 +527,20 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["created_by_principal_id"], ["principals.id"]),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("public_id", name="uq_agent_invitations_public_id"),
+        sa.UniqueConstraint("request_nonce_hash", name="uq_agent_invitations_request_nonce_hash"),
     )
     op.create_index(
         "ix_agent_invitations_reservation_state",
         "agent_invitations",
         ["reservation_id", "state"],
         unique=False,
+    )
+    op.create_index(
+        "uq_agent_invitations_open_reservation",
+        "agent_invitations",
+        ["reservation_id"],
+        unique=True,
+        sqlite_where=sa.text("state = 'open'"),
     )
     op.create_index(
         "ix_agent_invitations_expires_at", "agent_invitations", ["expires_at"], unique=False
@@ -768,6 +777,7 @@ def downgrade() -> None:
     op.drop_index("ix_agent_enrollments_state", table_name="agent_enrollments")
     op.drop_table("agent_enrollments")
     op.drop_index("ix_agent_invitations_expires_at", table_name="agent_invitations")
+    op.drop_index("uq_agent_invitations_open_reservation", table_name="agent_invitations")
     op.drop_index("ix_agent_invitations_reservation_state", table_name="agent_invitations")
     op.drop_table("agent_invitations")
     op.drop_index(

@@ -23,7 +23,7 @@ from infinitas_skill.registry.publish_receipts import (
 from infinitas_skill.registry.publish_receipts import (
     update_receipt as _update_receipt,
 )
-from infinitas_skill.registry.publish_types import HostedPublishError, PublishResult
+from infinitas_skill.registry.publish_types import HostedPublishError, PublishResult, publish_result
 from infinitas_skill.registry.skill_source import (
     build_skill_source_bundle,
     stage_skill_source,
@@ -165,6 +165,12 @@ class HostedRegistryClient:
             raise HostedPublishError("registry release detail response is invalid")
         return body
 
+    def get_agent_publish_status(self, release_id: int) -> dict[str, Any]:
+        body = self.request("GET", f"/api/v1/agent/publish-intents/{release_id}")
+        if not isinstance(body, dict):
+            raise HostedPublishError("agent publish status response is invalid")
+        return body
+
     def list_exposures(self, release_id: int) -> list[dict[str, Any]]:
         body = self.request("GET", f"/api/v1/releases/{release_id}/exposures")
         if not isinstance(body, list):
@@ -230,6 +236,30 @@ def _wait_for_release(
             return release
         if time.monotonic() >= deadline:
             raise HostedPublishError(f"timed out waiting for release {release_id}")
+        time.sleep(1)
+
+
+def _wait_for_agent_publish(
+    client: HostedRegistryClient,
+    release_id: int,
+    *,
+    timeout_seconds: int,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        release = client.get_release(release_id)
+        publish_status = client.get_agent_publish_status(release_id)
+        intent_state = str(publish_status.get("state") or "")
+        release_state = str(release.get("state") or "")
+        if intent_state == "activated" and release_state == "ready":
+            return release, publish_status
+        if intent_state == "suppressed":
+            reason = str(publish_status.get("reason") or "public activation was suppressed")
+            raise HostedPublishError(f"Agent publish {release_id} was suppressed: {reason}")
+        if release_state in {"failed", "withdrawn"}:
+            raise HostedPublishError(f"release {release_id} ended in state {release_state}")
+        if time.monotonic() >= deadline:
+            raise HostedPublishError(f"timed out waiting for Agent publish {release_id}")
         time.sleep(1)
 
 
@@ -324,6 +354,28 @@ def _resolve_version(
     return {"version": created, "content": content, "reused": False}
 
 
+def _resolve_agent_publish_state(
+    client: HostedRegistryClient,
+    release: dict[str, Any],
+    *,
+    wait: bool,
+    timeout_seconds: int,
+) -> tuple[dict[str, Any], dict[str, Any], bool]:
+    release_id = int(release["id"])
+    if wait:
+        completed_release, publish_status = _wait_for_agent_publish(
+            client, release_id, timeout_seconds=timeout_seconds
+        )
+        return completed_release, publish_status, True
+    publish_status = client.get_agent_publish_status(release_id)
+    intent_state = str(publish_status.get("state") or "")
+    if intent_state == "suppressed":
+        reason = str(publish_status.get("reason") or "public activation was suppressed")
+        raise HostedPublishError(f"Agent publish {release_id} was suppressed: {reason}")
+    completed = intent_state == "activated" and str(release.get("state") or "") == "ready"
+    return release, publish_status, completed
+
+
 def _publish_prepared(
     client: HostedRegistryClient,
     *,
@@ -366,35 +418,37 @@ def _publish_prepared(
         else client.create_release(int(version_view["id"]))
     )
     release_id = int(release["id"])
+    publish_status = None
+    result_base = {
+        "prepared": prepared,
+        "skill": skill,
+        "version": version_view,
+        "reused_version": bool(version_result["reused"]),
+        "receipt_path": str(receipt_path),
+    }
     _update_receipt(receipt_path, receipt, state="release-created", release_id=release_id)
-    if wait:
+    if agent_mode:
+        release, publish_status, completed = _resolve_agent_publish_state(
+            client, release, wait=wait, timeout_seconds=timeout_seconds
+        )
+        if not completed:
+            return publish_result(
+                "release-created",
+                result_base,
+                release,
+                publish_intent=publish_status,
+            )
+    elif wait:
         release = _wait_for_release(client, release_id, timeout_seconds=timeout_seconds)
     elif str(release.get("state") or "") != "ready":
-        return PublishResult(
-            {
-                "state": "release-created",
-                "prepared": prepared,
-                "skill": skill,
-                "version": version_view,
-                "release": release,
-                "exposure": None,
-                "reused_version": bool(version_result["reused"]),
-                "receipt_path": str(receipt_path),
-            }
-        )
+        return publish_result("release-created", result_base, release)
     if agent_mode:
         _update_receipt(receipt_path, receipt, state="published")
-        return PublishResult(
-            {
-                "state": "published",
-                "prepared": prepared,
-                "skill": skill,
-                "version": version_view,
-                "release": release,
-                "exposure": None,
-                "reused_version": bool(version_result["reused"]),
-                "receipt_path": str(receipt_path),
-            }
+        return publish_result(
+            "published",
+            result_base,
+            release,
+            publish_intent=publish_status,
         )
     exposures = client.list_exposures(release_id)
     exposure = next(
@@ -409,17 +463,11 @@ def _publish_prepared(
     if exposure is None:
         exposure = client.create_exposure(release_id, visibility=visibility)
     _update_receipt(receipt_path, receipt, state="published", exposure_id=int(exposure["id"]))
-    return PublishResult(
-        {
-            "state": "published",
-            "prepared": prepared,
-            "skill": skill,
-            "version": version_view,
-            "release": release,
-            "exposure": exposure,
-            "reused_version": bool(version_result["reused"]),
-            "receipt_path": str(receipt_path),
-        }
+    return publish_result(
+        "published",
+        result_base,
+        release,
+        exposure=exposure,
     )
 
 

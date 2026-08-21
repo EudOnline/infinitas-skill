@@ -62,7 +62,6 @@ def configure_env(tmpdir: Path) -> None:
     os.environ["INFINITAS_SERVER_ENV"] = "test"
     os.environ["INFINITAS_SERVER_SECRET_KEY"] = "test-secret-key-32chars-long-minimum"
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(tmpdir / "artifacts")
-    os.environ["INFINITAS_REGISTRY_READ_TOKENS"] = json.dumps(["registry-reader-token"])
     os.environ["INFINITAS_SERVER_BOOTSTRAP_USERS"] = json.dumps(
         [
             {
@@ -506,12 +505,13 @@ def assert_private_registry_ui_js_contracts() -> None:
     for marker in [
         "const startsVisible = !this.standaloneLoginPage",
         "if (!startsVisible) return;",
-        "else this.openAuthModal();",
+        "this.openAuthModal();",
     ]:
         assert marker in auth_init_home_source, (
             "expected home auth bootstrap to explicitly sync a server-rendered visible modal "
             f"into the open modal controller state; missing marker {marker!r}"
         )
+    assert "suppressInitialModal" not in auth_init_home_source
     assert "home-auth-session-bootstrap" not in home_auth_panel_template, (
         "expected home auth panel data bootstrap to avoid inline script tags so the "
         "page stays compatible with the CSP"

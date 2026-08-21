@@ -178,7 +178,6 @@ def test_compose_bootstrap_contract_supports_first_browser_login(monkeypatch, tm
     monkeypatch.setenv("INFINITAS_SERVER_ALLOWED_HOSTS", '["testserver"]')
     monkeypatch.setenv("INFINITAS_SERVER_BOOTSTRAP_USERS", json.dumps(users))
     monkeypatch.setenv("INFINITAS_SERVER_ARTIFACT_PATH", str(tmp_path / "artifacts"))
-    monkeypatch.setenv("INFINITAS_REGISTRY_READ_TOKENS", "[]")
 
     from server.app import create_app
 
@@ -199,7 +198,6 @@ def test_production_rejects_token_only_bootstrap_maintainer(monkeypatch) -> None
         "INFINITAS_SERVER_BOOTSTRAP_USERS",
         '[{"username":"maintainer","role":"maintainer","token":"agent-only-token"}]',
     )
-    monkeypatch.setenv("INFINITAS_REGISTRY_READ_TOKENS", "[]")
     from server.settings import get_settings
 
     get_settings.cache_clear()

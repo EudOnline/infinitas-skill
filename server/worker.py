@@ -61,7 +61,6 @@ def _process_materialize_release_job(session: Session, job: Job, settings: Setti
         repo_root=settings.repo_path,
         heartbeat=lambda: _renew_job_lease(job.id),
     )
-    refresh_projection_snapshot(session, settings.artifact_path)
     payload = load_job_payload(job)
     intent_id = payload.get("publish_intent_id")
     if intent_id:
@@ -70,6 +69,7 @@ def _process_materialize_release_job(session: Session, job: Job, settings: Setti
             append_job_log(job, f"Agent publish intent {finalized.id}: {finalized.state}")
         except (TypeError, ValueError) as exc:
             raise RepoOpError("materialize_release job has invalid publish_intent_id") from exc
+    refresh_projection_snapshot(session, settings.artifact_path)
     append_job_log(job, f"materialized release {release.id} with {len(artifacts)} artifacts")
     return release
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from server.model_base import Base, utcnow
@@ -108,7 +108,14 @@ class AgentInvitation(Base):
     __tablename__ = "agent_invitations"
     __table_args__ = (
         UniqueConstraint("public_id", name="uq_agent_invitations_public_id"),
+        UniqueConstraint("request_nonce_hash", name="uq_agent_invitations_request_nonce_hash"),
         Index("ix_agent_invitations_reservation_state", "reservation_id", "state"),
+        Index(
+            "uq_agent_invitations_open_reservation",
+            "reservation_id",
+            unique=True,
+            sqlite_where=text("state = 'open'"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -119,6 +126,7 @@ class AgentInvitation(Base):
         ForeignKey("service_principals.id"), nullable=True
     )
     invitation_hash: Mapped[str] = mapped_column(String(255))
+    request_nonce_hash: Mapped[str] = mapped_column(String(255))
     policy_json: Mapped[str] = mapped_column(Text, default="{}")
     state: Mapped[str] = mapped_column(String(32), default="open")
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)

@@ -26,7 +26,6 @@ class HomeAuthSession {
     const config = parseHomeAuthData();
     this.wrapper = wrapper;
     this.standaloneLoginPage = Boolean(loginPanel && !wrapper);
-    this.suppressInitialModal = config.suppressInitialModal === true;
     this.currentUser = initialSessionUser();
     this.isUserPanelOpen = false;
     this.controller = createAuthModalController({
@@ -212,8 +211,7 @@ class HomeAuthSession {
       && this.controller.dom.modal
       && !this.controller.dom.modal.hidden;
     if (!startsVisible) return;
-    if (this.suppressInitialModal && !this.currentUser) this.controller.dom.modal.hidden = true;
-    else this.openAuthModal();
+    this.openAuthModal();
   }
 
   applyPendingRedirect() {

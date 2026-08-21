@@ -17,3 +17,22 @@ class HostedPublishError(RuntimeError):
 @dataclass(frozen=True)
 class PublishResult:
     payload: dict[str, Any]
+
+
+def publish_result(
+    state: str,
+    base: dict[str, Any],
+    release: dict[str, Any],
+    *,
+    publish_intent: dict[str, Any] | None = None,
+    exposure: dict[str, Any] | None = None,
+) -> PublishResult:
+    return PublishResult(
+        {
+            "state": state,
+            **base,
+            "release": release,
+            "publish_intent": publish_intent,
+            "exposure": exposure,
+        }
+    )

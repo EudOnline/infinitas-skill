@@ -100,7 +100,6 @@ class Settings:
     repo_path: Path
     repo_lock_path: Path
     artifact_path: Path
-    registry_read_tokens: list[str]
     trusted_proxies: list[str]
     content_pending_ttl_hours: int
     content_max_pending_per_skill: int
@@ -296,10 +295,6 @@ def get_settings() -> Settings:
         .expanduser()
         .resolve()
     )
-    registry_read_tokens = _load_string_list_env(
-        "INFINITAS_REGISTRY_READ_TOKENS",
-        strict=environment == "production",
-    )
     trusted_proxies = _load_string_list_env(
         "INFINITAS_SERVER_TRUSTED_PROXIES",
         strict=False,
@@ -331,7 +326,6 @@ def get_settings() -> Settings:
         repo_path=repo_path,
         repo_lock_path=repo_lock_path,
         artifact_path=artifact_path,
-        registry_read_tokens=registry_read_tokens,
         trusted_proxies=trusted_proxies,
         content_pending_ttl_hours=content_pending_ttl_hours,
         content_max_pending_per_skill=content_max_pending_per_skill,

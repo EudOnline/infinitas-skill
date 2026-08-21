@@ -683,8 +683,7 @@ options:
 
 ```text
 usage: infinitas registry bootstrap [-h] [--repo-root REPO_ROOT]
-                                    [--token-env TOKEN_ENV] [--set-default]
-                                    [--force-trust] [--json]
+                                    [--set-default] [--force-trust] [--json]
                                     name base_url
 
 Configure a Hosted Registry and install its public trust policy
@@ -696,9 +695,6 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --repo-root REPO_ROOT
-  --token-env TOKEN_ENV
-                        Environment variable containing the Registry reader
-                        token
   --set-default
   --force-trust
   --json

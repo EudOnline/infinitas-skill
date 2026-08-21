@@ -39,11 +39,10 @@ Generate independent values locally:
 ```bash
 python -c "import secrets; print(secrets.token_urlsafe(48))"  # session secret
 python -c "import secrets; print(secrets.token_urlsafe(32))"  # maintainer Agent token
-python -c "import secrets; print(secrets.token_urlsafe(32))"  # registry read token
 ```
 
-Choose a strong browser password separately. The browser password, Agent token, registry read
-token, and session secret must not be the same value.
+Choose a strong browser password separately. The browser password, Agent token, and session secret
+must not be the same value.
 
 ## 2. Create the Coolify resource
 
@@ -72,7 +71,6 @@ INFINITAS_IMAGE=ghcr.io/eudonline/infinitas-skill:sha-<full-40-character-commit>
 INFINITAS_SERVER_ALLOWED_HOSTS=["skills.infinitas.fun"]
 INFINITAS_SERVER_SECRET_KEY=<strong-random-session-secret>
 INFINITAS_SERVER_BOOTSTRAP_USERS=[{"username":"maintainer","display_name":"Maintainer","role":"maintainer","password":"<strong-browser-password>","token":"<distinct-agent-token>"}]
-INFINITAS_REGISTRY_READ_TOKENS=["<distinct-registry-read-token>"]
 INFINITAS_BACKUP_WEBDAV_URL=https://openlist.infinitas.fun/dav
 INFINITAS_BACKUP_WEBDAV_USER=infinitas-backup
 INFINITAS_BACKUP_WEBDAV_PASSWORD=<dedicated-openlist-user-password>
@@ -84,7 +82,7 @@ Important details:
 
 - Use a released version or the full 40-character `sha-<commit>` image tag emitted by CI in
   production. `latest` is convenient for initial evaluation but is not a stable rollback target.
-- `INFINITAS_SERVER_ALLOWED_HOSTS` and token settings are JSON arrays, not comma-separated text.
+- `INFINITAS_SERVER_ALLOWED_HOSTS` is a JSON array, not comma-separated text.
 - `INFINITAS_SERVER_BOOTSTRAP_USERS` is a JSON array on one line. Production startup requires at
   least one maintainer with a valid browser password.
 - Mark secrets, passwords, and tokens as secret values in Coolify. Do not commit them to Git.
@@ -153,9 +151,7 @@ Verify from outside the server:
 ```bash
 curl --fail --silent --show-error https://skills.infinitas.fun/api/v1/system/healthz
 curl --fail --silent --show-error https://skills.infinitas.fun/api/v1/system/readyz
-curl --fail --silent --show-error \
-  -H "Authorization: Bearer $INFINITAS_REGISTRY_READ_TOKEN" \
-  https://skills.infinitas.fun/api/v1/registry/ai-index.json
+curl --fail --silent --show-error https://skills.infinitas.fun/api/v1/registry/ai-index.json
 ```
 
 Then open `https://skills.infinitas.fun/login`, sign in with the configured browser password, and
@@ -183,13 +179,12 @@ python3 -m infinitas_skill.cli.main server worker-healthcheck \
 
 ## 6. Configure clients for hosted discovery and install
 
-On each client repository, issue a namespace reader Token from `/settings`, then bootstrap the
-hosted source and its public trust policy:
+On each client repository, bootstrap the anonymous hosted source and its public trust policy:
 
 ```bash
 uv run infinitas registry bootstrap hosted \
   https://skills.infinitas.fun/api/v1/registry \
-  --repo-root . --token-env INFINITAS_REGISTRY_READ_TOKEN --set-default --json
+  --repo-root . --set-default --json
 ```
 
 ```json
@@ -199,11 +194,8 @@ uv run infinitas registry bootstrap hosted \
       "name": "hosted",
       "kind": "http",
       "base_url": "https://skills.infinitas.fun/api/v1/registry",
-      "trust": "private",
-      "auth": {
-        "mode": "token",
-        "env": "INFINITAS_REGISTRY_READ_TOKEN"
-      }
+      "trust": "public",
+      "auth": {"mode": "none"}
     }
   ]
 }
@@ -212,7 +204,6 @@ uv run infinitas registry bootstrap hosted \
 Validate and use it:
 
 ```bash
-export INFINITAS_REGISTRY_READ_TOKEN=<namespace-reader-token>
 uv run infinitas registry sources --repo-root . check
 uv run infinitas registry sources --repo-root . sync hosted --json
 uv run infinitas registry catalog build --repo-root .
@@ -222,10 +213,9 @@ uv run infinitas install by-name <publisher>/<skill> ~/.openclaw/skills --mode c
 uv run infinitas install report ~/.openclaw/skills --refresh --json
 ```
 
-The source `base_url` must end in `/api/v1/registry`; it is not the application root. Registry
-reader Tokens protect catalog and artifact reads. Namespace publisher Tokens authenticate skill
-creation and publish APIs through `INFINITAS_REGISTRY_API_TOKEN`; object publisher Tokens should
-be used when an Agent only needs one existing skill.
+The source `base_url` must end in `/api/v1/registry`; it is not the application root. Public catalog,
+trust, and artifact reads are anonymous. Agent credentials authenticate enrollment, authoring, and
+publish APIs but are never written into Registry source configuration.
 
 For reusable non-production templates, substitute the hostname while keeping the same path
 (for example, `"base_url": "https://skills.example.com/api/v1/registry"`). Production uses
@@ -377,11 +367,11 @@ path and Google Drive mount independently. Do not put WebDAV checks into app rea
 Use the HTTPS production domain, confirm it is present in `INFINITAS_SERVER_ALLOWED_HOSTS`, and do
 not put another proxy in front of Coolify without preserving the original scheme and host.
 
-### Hosted installs return 401
+### Hosted public installs fail
 
-Send a token listed in `INFINITAS_REGISTRY_READ_TOKENS` as a Bearer token and make the client
-source reference the matching environment variable. An Agent API token is not automatically a
-registry artifact-read token.
+Confirm that the source points to `/api/v1/registry`, uses `auth.mode=none`, and that the Release has
+an active public, listed, install-enabled Exposure. Re-run bootstrap only after explicitly reviewing
+any reported trust-root change.
 
 ## Related runbooks
 

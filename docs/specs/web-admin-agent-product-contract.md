@@ -154,7 +154,9 @@ Share Link requirements:
 - `POST /api/v1/object-tokens/tokens/{token_id}/revoke`
 - `POST /api/v1/agent-enrollments`
 - `GET /api/v1/agent-enrollments/{public_id}`
+- `POST /api/v1/agent/credentials/rotate`
 - `POST /api/v1/agent/versions/{version_id}/publish`
+- `GET /api/v1/agent/publish-intents/{release_id}`
 - `POST /api/v1/share-links/releases/{release_id}/share-links`
 - `GET /api/v1/share-links/releases/{release_id}/share-links`
 - `POST /api/v1/share-links/{share_id}/resolve`
@@ -165,6 +167,36 @@ Share Link requirements:
 - `GET|POST /api/v1/skills/{skill_id}/versions`
 - `POST /api/v1/versions/{version_id}/releases`
 - `GET /api/v1/releases/{release_id}`
+
+Agent enrollment submission is limited to 10 attempts per minute and status polling to 120 requests
+per minute, independently keyed by client address and a truncated hash of the presented enrollment
+credential. Rate-limit responses use `429` with `Retry-After: 60`; expired invitations use `410`.
+The administrator invitation form carries a server-generated, one-use nonce, preserves entered
+values on validation/conflict responses, and never re-renders an already-issued raw invitation.
+At most one open invitation may exist for a namespace reservation; an expired open invitation is
+marked `expired` before a replacement is created, and concurrent creation is reported as a conflict.
+Approval requires the maintainer to independently enter both the Agent-reported enrollment public
+ID and API-key fingerprint. The Agents page supports invitation revocation, unclaimed reservation
+release, suspension/resumption, permanent revocation, and one-use recovery invitations. Suspension
+blocks all Agent credentials until resume; permanent revocation never restores credentials or
+withdraws existing public Releases.
+
+Approved Agent credentials carry `agent:publish` for the publish orchestration and `release:read` for
+Release polling. `POST /api/v1/agent/versions/{version_id}/publish` returns `202` when it creates an
+intent, `200` when it reuses the idempotent intent, and `429` with `Retry-After` when the
+service-principal daily quota is exhausted. The owner-scoped publish-intent status route reports
+`pending`, `activated`, or `suppressed`; it does not grant generic Exposure administration. CLI
+publication is successful only after both the Release is `ready` and its intent is `activated`, and
+reports the server's reason when activation is suppressed.
+
+`infinitas agent restore`, `update`, and `verify` use the standard trusted installer, installed
+integrity record, atomic replacement, version resolver, and rollback history. Anonymous users pass
+`--base-url` or bootstrap a public Registry source with no reader credential. `infinitas agent
+rotate-key` creates the replacement key locally, calls the atomic rotation API, and never prints a
+raw key. Before the API call it persists the replacement in a mode-`0600` pending-rotation file. If
+the server accepts the replacement but the final profile rename is interrupted, rerunning
+`rotate-key` authenticates with the staged key and completes the local promotion without issuing a
+second replacement.
 
 ## UX rules
 

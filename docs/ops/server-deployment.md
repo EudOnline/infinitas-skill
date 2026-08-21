@@ -34,7 +34,6 @@ The recommended single-node deployment shape now includes a generated `systemd` 
 - `INFINITAS_SERVER_BOOTSTRAP_USERS`
 - `INFINITAS_SERVER_REPO_PATH`
 - `INFINITAS_SERVER_ARTIFACT_PATH`
-- optional `INFINITAS_REGISTRY_READ_TOKENS`
 - optional `INFINITAS_SERVER_REPO_LOCK_PATH`
 - optional `INFINITAS_SERVER_MIRROR_REMOTE`
 - optional `INFINITAS_SERVER_MIRROR_BRANCH`
@@ -69,9 +68,8 @@ hosted install surface through the same app process, for example:
 - `https://skills.example.com/library/{object_id}`
 - `https://skills.example.com/library/{object_id}/releases/{release_id}`
 
-If `INFINITAS_REGISTRY_READ_TOKENS` is unset or empty, `/api/v1/registry/*` stays public for
-local/dev compatibility. If it is set to a JSON array of bearer tokens, hosted installers must
-send one of those tokens when reading `/api/v1/registry/*`.
+The `/api/v1/registry/*` catalog, trust bootstrap, and public artifacts are always anonymous.
+Authenticated/private metadata remains on separate scoped JSON routes.
 
 ## Container image
 
@@ -222,7 +220,8 @@ probes and distributed topologies are intentionally out of scope.
 
 For hosted installs on other machines, point the registry source `base_url` at the
 `/api/v1/registry` prefix, not the app root.
-If the hosted registry requires bearer auth, set the registry source `auth.mode` to `token` and point `auth.env` at the local environment variable that holds one of the configured read tokens.
+Bootstrap the hosted source with `auth.mode=none`; no client secret is needed for public discovery,
+installation, verification, switch, or rollback.
 
 For operators inspecting queue state manually, the hosted app exposes the human-admin
 console at `/manage` (consolidating Library, Access, Shares, and Activity), and the matching

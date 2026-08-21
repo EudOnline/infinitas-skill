@@ -71,12 +71,12 @@ loading so an unsupported topology cannot reach migrations or application startu
 
 | Variable | Default | Description |
 |---|---|---|
-| `INFINITAS_REGISTRY_READ_TOKENS` | `[]` | JSON array of bearer tokens accepted by `/api/v1/registry/*`. An empty list makes hosted artifact reads public. |
 | `INFINITAS_SERVER_TRUSTED_PROXIES` | `[]` | JSON array of trusted proxy IP addresses/networks used when resolving forwarded client addresses. |
 | `INFINITAS_SERVER_SECURE_COOKIES` | automatic | Optional boolean override. By default cookies become secure when the request or `X-Forwarded-Proto` is HTTPS. |
 
-Only trust known proxy addresses. Never configure `0.0.0.0/0` or `::/0`. Registry read tokens
-are distinct from browser passwords and Agent API tokens.
+All `/api/v1/registry/*` catalog, trust, and public artifact reads are anonymous. Private,
+authenticated, and grant-scoped JSON APIs continue to require their normal credentials. Only trust
+known proxy addresses; never configure `0.0.0.0/0` or `::/0`.
 
 ## Pending content limits
 
@@ -149,7 +149,6 @@ These variables configure a CLI client and are not server secrets:
 |---|---|---|
 | `INFINITAS_REGISTRY_API_BASE_URL` | `http://127.0.0.1:8000` | Hosted JSON API origin, without `/api/v1`. |
 | `INFINITAS_REGISTRY_API_TOKEN` | empty | Agent/publisher/maintainer Bearer token for JSON APIs. |
-| `INFINITAS_REGISTRY_READ_TOKEN` | operator-selected name | Example local variable referenced by `auth.env` in a hosted registry source. |
 
 Development and test environments may use documented fixture defaults. Production validation
 cannot be bypassed with an insecure-default flag; startup fails before serving traffic when the

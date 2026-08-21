@@ -74,7 +74,5 @@
   </div>
 </div>
 
-{% set home_auth_session_config = {
-  'suppressInitialModal': registry_reader_tokens_enabled | default(false),
-} %}
+{% set home_auth_session_config = {} %}
 <div hidden id="home-auth-session-data" data-json="{{ home_auth_session_config | tojson | forceescape }}"></div>

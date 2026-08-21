@@ -1,5 +1,38 @@
 # Errors
 
+## [ERR-20260821-001] zsh-nested-quote-scan
+
+**Logged**: 2026-08-21T00:00:00Z
+**Priority**: low
+**Status**: resolved
+**Area**: tests
+
+### Summary
+A read-only ripgrep scan failed because its shell command mixed nested single and double quotes.
+
+### Error
+```text
+zsh:1: unmatched "
+```
+
+### Context
+- The scan attempted to combine several credential-prefix patterns in one shell expression.
+- No files were modified and the preceding test run was unaffected.
+
+### Suggested Fix
+Use separate fixed-string `rg -F` commands for literal credential-prefix scans.
+
+### Metadata
+- Reproducible: yes
+- Related Files: tests/integration/test_agent_enrollment_public_backup.py
+
+### Resolution
+- **Resolved**: 2026-08-21T00:00:00Z
+- **Notes**: Replaced the compound expression with three fixed-string scans; only documented
+  placeholders and deliberately invalid rate-limit tokens matched.
+
+---
+
 ## [ERR-20260730-012] snapshot-user-delete-denied
 
 **Logged**: 2026-07-30T03:15:00Z

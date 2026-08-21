@@ -45,6 +45,15 @@ class ReleaseView(BaseModel):
         )
 
 
+class AgentPublishStatusView(BaseModel):
+    intent_id: int
+    release_id: int
+    release_state: str
+    state: str
+    reason: str | None = None
+    activated_at: str | None = None
+
+
 class ArtifactView(BaseModel):
     id: int
     release_id: int

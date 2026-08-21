@@ -65,7 +65,6 @@ def live_server(tmpdir_session):
     os.environ["INFINITAS_SERVER_DATABASE_URL"] = f"sqlite:///{tmpdir_session / 'server.db'}"
     os.environ["INFINITAS_SERVER_SECRET_KEY"] = "test-secret-key"
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(tmpdir_session / "artifacts")
-    os.environ["INFINITAS_REGISTRY_READ_TOKENS"] = json.dumps(["registry-reader-token"])
     os.environ["INFINITAS_SERVER_BOOTSTRAP_USERS"] = json.dumps(
         [
             {

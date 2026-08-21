@@ -1,24 +1,29 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
-import shutil
 import sys
-import tempfile
 import urllib.error
 import urllib.request
 from pathlib import Path
 
 from infinitas_skill.agent.profile import (
+    finalize_profile_rotation,
     fingerprint,
     new_keys,
     read_profile,
+    stage_profile_rotation,
     verifier,
     write_profile,
 )
-from infinitas_skill.install.distribution_materialization import safely_extract_bundle
-from infinitas_skill.install.distribution_verification import verify_distribution_manifest
+from infinitas_skill.install.exact import run_install_exact
+from infinitas_skill.install.install_manifest import InstallManifestError, load_install_manifest
+from infinitas_skill.install.installed_integrity import (
+    InstalledIntegrityError,
+    verify_installed_skill,
+)
+from infinitas_skill.install.upgrade import run_install_upgrade
+from infinitas_skill.registry.local_ops import bootstrap_public_registry
 from infinitas_skill.registry.publish import publish_skill
 
 
@@ -117,110 +122,128 @@ def _backup(args: argparse.Namespace) -> int:
     return 0
 
 
-def _download(url: str, destination: Path, token: str = "") -> None:
-    request = urllib.request.Request(
-        url,
-        headers={
-            "Accept": "application/octet-stream",
-            **({"Authorization": f"Bearer {token}"} if token else {}),
+def _rotate(args: argparse.Namespace) -> int:
+    profile = read_profile(args.profile)
+    current_key = str(profile["api_key"])
+    _status_key, replacement_key = new_keys()
+    replacement_verifier = verifier(replacement_key)
+    staged_profile, created = stage_profile_rotation(
+        args.profile,
+        {
+            **profile,
+            "api_key": replacement_key,
+            "fingerprint": fingerprint(replacement_verifier),
+        },
+        expected_api_key=current_key,
+    )
+    replacement_key = str(staged_profile["api_key"])
+    replacement_verifier = verifier(replacement_key)
+    if not created:
+        try:
+            _request(
+                str(profile["base_url"]),
+                "GET",
+                "/api/v1/access/me",
+                token=replacement_key,
+            )
+        except RuntimeError:
+            pass
+        else:
+            path = finalize_profile_rotation(args.profile)
+            print(
+                json.dumps(
+                    {
+                        "ok": True,
+                        "profile": str(path),
+                        "fingerprint": fingerprint(replacement_verifier),
+                        "recovered": True,
+                    }
+                )
+            )
+            return 0
+    result = _request(
+        str(profile["base_url"]),
+        "POST",
+        "/api/v1/agent/credentials/rotate",
+        token=current_key,
+        body={
+            "api_key_verifier": replacement_verifier,
+            "fingerprint": fingerprint(replacement_verifier),
         },
     )
+    if result["fingerprint"] != fingerprint(replacement_verifier):
+        raise RuntimeError("Agent API returned an unexpected credential fingerprint")
+    path = finalize_profile_rotation(args.profile)
+    print(json.dumps({"ok": True, "profile": str(path), "fingerprint": result["fingerprint"]}))
+    return 0
+
+
+def _profile_base_url(args: argparse.Namespace) -> str:
+    if args.base_url:
+        return str(args.base_url).rstrip("/")
     try:
-        with urllib.request.urlopen(request, timeout=60) as response:
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            destination.write_bytes(response.read())
-    except urllib.error.HTTPError as exc:
-        raise RuntimeError(f"Registry returned HTTP {exc.code} while downloading artifact") from exc
-
-
-def _public_entry(base_url: str, qualified_name: str, version: str | None = None) -> dict:
-    payload = _request(base_url, "GET", "/api/v1/registry/distributions.json")
-    entries = payload.get("skills", []) if isinstance(payload, dict) else []
-    matches = [item for item in entries if item.get("qualified_name") == qualified_name]
-    if version:
-        matches = [item for item in matches if item.get("version") == version]
-    if not matches:
+        profile = read_profile(args.profile)
+    except ValueError as exc:
         raise RuntimeError(
-            f"public skill not found: {qualified_name}{'@' + version if version else ''}"
-        )
-    return sorted(matches, key=lambda item: str(item.get("version", "")), reverse=True)[0]
+            "no public Registry configured; pass --base-url or create an Agent profile"
+        ) from exc
+    base_url = str(profile.get("base_url") or "").strip().rstrip("/")
+    if not base_url:
+        raise RuntimeError("Agent profile has no base_url; pass --base-url")
+    return base_url
 
 
-def _fetch_distribution(
-    base_url: str, entry: dict, token: str = ""
-) -> tuple[Path, Path, tempfile.TemporaryDirectory]:
-    temp = tempfile.TemporaryDirectory(prefix="infinitas-agent-restore-")
-    root = Path(temp.name)
-    manifest = root / str(entry["manifest_path"])
-    bundle = root / str(entry["bundle_path"])
-    provenance = root / str(entry["attestation_path"])
-    signature = root / str(entry["attestation_signature_path"])
-    for path in (manifest, bundle, provenance, signature):
-        _download(
-            f"{base_url.rstrip('/')}/api/v1/registry/{path.relative_to(root).as_posix()}",
-            path,
-            token,
-        )
-    verified = verify_distribution_manifest(manifest, root=root, attestation_root=root)
-    expected = entry.get("bundle_sha256")
-    if expected and hashlib.sha256(
-        verified["bundle_path"].read_bytes()
-    ).hexdigest() != expected.removeprefix("sha256:"):
-        raise RuntimeError("public registry bundle digest mismatch")
-    return manifest, verified["bundle_path"], temp
+def _registry_base_url(base_url: str) -> str:
+    suffix = "/api/v1/registry"
+    return base_url if base_url.endswith(suffix) else f"{base_url.rstrip('/')}{suffix}"
+
+
+def _bootstrap_install_root(args: argparse.Namespace, target: Path) -> str:
+    registry_name = str(args.registry or "public")
+    bootstrap_public_registry(
+        root=target,
+        name=registry_name,
+        base_url=_registry_base_url(_profile_base_url(args)),
+        set_default=True,
+    )
+    return registry_name
 
 
 def _restore(args: argparse.Namespace) -> int:
-    profile = read_profile(args.profile)
-    base_url = str(args.base_url or profile["base_url"])
-    entry = _public_entry(base_url, args.qualified_name, args.version)
-    manifest, bundle, temp = _fetch_distribution(base_url, entry)
-    try:
-        target = Path(args.target).expanduser().resolve()
-        if target.exists() and any(target.iterdir()) and not args.force:
-            raise RuntimeError(f"target is not empty: {target} (use --force)")
-        target.mkdir(parents=True, exist_ok=True)
-        extracted = safely_extract_bundle(
-            bundle, target / ".staging", expected_root=(entry.get("name") or "")
-        )
-        source = Path(extracted)
-        for item in source.iterdir():
-            destination = target / item.name
-            if destination.exists() and destination.is_dir():
-                shutil.rmtree(destination)
-            elif destination.exists():
-                destination.unlink()
-            shutil.move(str(item), destination)
-        distribution_dir = target / ".infinitas-distribution"
-        shutil.copytree(Path(temp.name), distribution_dir, dirs_exist_ok=True)
-        shutil.rmtree(target / ".staging", ignore_errors=True)
-        print(
-            json.dumps(
-                {
-                    "ok": True,
-                    "qualified_name": entry["qualified_name"],
-                    "version": entry["version"],
-                    "target": str(target),
-                },
-                ensure_ascii=False,
-            )
-        )
-        return 0
-    finally:
-        temp.cleanup()
+    target = Path(args.target).expanduser().resolve()
+    target.mkdir(parents=True, exist_ok=True)
+    registry_name = _bootstrap_install_root(args, target)
+    return run_install_exact(
+        root=target,
+        name=args.qualified_name,
+        target_dir=str(target),
+        requested_version=args.version,
+        source_registry=registry_name,
+        force=args.force,
+        as_json=True,
+    )
 
 
 def _verify(args: argparse.Namespace) -> int:
-    root = Path(args.target).expanduser().resolve()
-    candidates = sorted((root / ".infinitas-distribution").rglob("manifest.json"))
-    manifest = candidates[0] if candidates else root / "manifest.json"
-    result = verify_distribution_manifest(manifest, root=root, attestation_root=root)
+    target = Path(args.target).expanduser().resolve()
+    try:
+        manifest = load_install_manifest(target)
+    except InstallManifestError as exc:
+        raise RuntimeError(str(exc)) from exc
+    names = list((manifest.get("skills") or {}).keys())
+    requested = args.qualified_name or (names[0] if len(names) == 1 else None)
+    if not requested:
+        raise RuntimeError("multiple installed Skills found; pass --qualified-name")
+    try:
+        result = verify_installed_skill(target, requested, root=target)
+    except InstalledIntegrityError as exc:
+        raise RuntimeError(str(exc)) from exc
     print(
         json.dumps(
             {
-                "ok": True,
-                "manifest": str(manifest),
-                "bundle_sha256": result["manifest"]["bundle"]["sha256"],
+                "ok": result.get("state") == "verified",
+                "qualified_name": requested,
+                **result,
             },
             ensure_ascii=False,
         )
@@ -230,17 +253,23 @@ def _verify(args: argparse.Namespace) -> int:
 
 def _update(args: argparse.Namespace) -> int:
     target = Path(args.target).expanduser().resolve()
-    metadata = target / "_meta.json"
-    if not metadata.is_file():
-        raise RuntimeError("target does not contain _meta.json; pass --name explicitly")
-    payload = json.loads(metadata.read_text(encoding="utf-8"))
-    qualified = args.qualified_name or payload.get("qualified_name")
+    if args.base_url:
+        _bootstrap_install_root(args, target)
+    try:
+        manifest = load_install_manifest(target)
+    except InstallManifestError as exc:
+        raise RuntimeError(str(exc)) from exc
+    names = list((manifest.get("skills") or {}).keys())
+    qualified = args.qualified_name or (names[0] if len(names) == 1 else None)
     if not qualified:
-        raise RuntimeError("could not determine qualified skill name")
-    args.qualified_name = qualified
-    args.version = None
-    args.force = True
-    return _restore(args)
+        raise RuntimeError("multiple installed Skills found; pass --qualified-name")
+    return run_install_upgrade(
+        root=target,
+        installed_name=qualified,
+        target_dir=str(target),
+        force=args.force,
+        as_json=True,
+    )
 
 
 def configure_agent_cli(parser: argparse.ArgumentParser) -> None:
@@ -264,11 +293,15 @@ def configure_agent_cli(parser: argparse.ArgumentParser) -> None:
     backup.add_argument("--profile", default="default")
     backup.add_argument("--no-wait", action="store_true")
     backup.set_defaults(_handler=_backup)
+    rotate = subparsers.add_parser("rotate-key", help="Rotate the local Agent API key")
+    rotate.add_argument("--profile", default="default")
+    rotate.set_defaults(_handler=_rotate)
     restore = subparsers.add_parser("restore", help="Restore a public Skill backup")
     restore.add_argument("qualified_name")
     restore.add_argument("target")
     restore.add_argument("--version")
     restore.add_argument("--base-url")
+    restore.add_argument("--registry", default="public")
     restore.add_argument("--profile", default="default")
     restore.add_argument("--force", action="store_true")
     restore.set_defaults(_handler=_restore)
@@ -277,9 +310,12 @@ def configure_agent_cli(parser: argparse.ArgumentParser) -> None:
     update.add_argument("--qualified-name")
     update.add_argument("--profile", default="default")
     update.add_argument("--base-url")
+    update.add_argument("--registry", default="public")
+    update.add_argument("--force", action="store_true")
     update.set_defaults(_handler=_update)
     verify_cmd = subparsers.add_parser("verify", help="Verify a restored public Skill distribution")
     verify_cmd.add_argument("target")
+    verify_cmd.add_argument("--qualified-name")
     verify_cmd.set_defaults(_handler=_verify)
 
 

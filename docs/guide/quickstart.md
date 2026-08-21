@@ -60,20 +60,9 @@ For each Object, the web flow should make it easy to:
 
 Admins issue agent-facing Tokens from the access flow.
 
-Minimum token types:
-
-- `reader`
-- `publisher`
-
-Recommended usage:
-
-- use `reader` for search, metadata reads, and install/fetch access
-- use `publisher` for publishing and release creation
-
-Issue namespace Tokens from `/settings`. A namespace publisher can create new skills and publish
-only inside the issuing principal's namespace. A namespace reader is read-only and is the
-recommended credential for Registry sync and long-lived install operations. Object and release
-Tokens remain the narrower choice after a skill already exists.
+Agent enrollment creates a namespace-scoped credential for publishing and private control-plane
+reads. Public Registry search, sync, install, and rollback are anonymous. Object and release Tokens
+remain available for narrower private delegation after a Skill exists.
 
 Agents without a Token can be granted temporary Release access through a Share Link with
 an expiry and optional password. Share credentials use an explicit exchange flow:
@@ -178,22 +167,21 @@ target. Revoked or expired shares return a clear failure.
 
 ## Step 7: Configure a long-lived Hosted Registry and rollback
 
-Share Links are for temporary distribution. Configure a read-token-backed HTTP source for repeat
+Share Links are for temporary distribution. Configure the anonymous public HTTP source for repeat
 install, switch, and rollback operations:
 
 ```bash
-export INFINITAS_REGISTRY_READ_TOKEN='<namespace-reader-token>'
 uv run infinitas registry bootstrap hosted \
   https://skills.infinitas.fun/api/v1/registry \
-  --repo-root . --token-env INFINITAS_REGISTRY_READ_TOKEN --set-default --json
+  --repo-root . --set-default --json
 uv run infinitas registry sources --repo-root . sync hosted --json
 uv run infinitas install exact <publisher>/<skill> ~/.openclaw/skills --version 1.0.0 --registry hosted --json
 uv run infinitas install switch <publisher>/<skill> ~/.openclaw/skills --to-version 1.1.0 --registry hosted --json
 uv run infinitas install rollback <publisher>/<skill> ~/.openclaw/skills --json
 ```
 
-Bootstrap also installs the Registry's public signing trust root and integrity policy. The config
-stores only the environment variable name. Never persist a Share token for rollback.
+Bootstrap also installs the Registry's public signing trust root and integrity policy and records
+`auth.mode=none`. Never persist a Share token for rollback.
 
 ## Step 8: Build the new frontend with `kimi cli`
 

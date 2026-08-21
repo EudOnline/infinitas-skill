@@ -15,11 +15,6 @@ def configure_registry_bootstrap_command(
     bootstrap.add_argument("name", help="Registry source name in lowercase kebab-case")
     bootstrap.add_argument("base_url", help="Hosted catalog base URL")
     bootstrap.add_argument("--repo-root", default=".")
-    bootstrap.add_argument(
-        "--token-env",
-        default="INFINITAS_REGISTRY_READ_TOKEN",
-        help="Environment variable containing the Registry reader token",
-    )
     bootstrap.add_argument("--set-default", action="store_true")
     bootstrap.add_argument(
         "--force-trust",

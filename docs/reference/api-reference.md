@@ -39,11 +39,8 @@ Use a Bearer credential:
 Authorization: Bearer <token>
 ```
 
-Credential scopes and release access are enforced by the access domain. Registry artifact reads may additionally require the configured registry read token.
-
-Namespace publisher and reader Tokens are created only from an authenticated browser Session.
-Publisher Tokens can create skills inside their issuing namespace; reader Tokens cannot mutate
-authoring, release, visibility, or share state.
+Credential scopes and release access are enforced by the access domain. Public Registry catalogs,
+trust configuration, and public artifacts under `/api/v1/registry/*` are anonymous.
 
 ### Browser requests
 
@@ -140,11 +137,30 @@ data bytes.
 - `POST /api/v1/object-tokens/tokens/{token_id}/revoke`
 - `POST /api/v1/agent-enrollments`
 - `GET /api/v1/agent-enrollments/{public_id}`
+- `POST /api/v1/agent/credentials/rotate`
 - `POST /api/v1/agent/versions/{version_id}/publish`
+- `GET /api/v1/agent/publish-intents/{release_id}`
 - `GET|POST /api/v1/share-links/releases/{release_id}/share-links`
 - `POST /api/v1/share-links/{share_id}/resolve`
 - `POST /api/v1/share-links/{share_id}/revoke`
 - `PATCH /api/v1/credentials/{credential_id}/policy`
+
+Enrollment submission accepts only `enroll_...` credentials and is limited to 10 attempts per
+minute. Status polling accepts only `status_...` credentials and is limited to 120 requests per
+minute. Both limits use client and token-derived buckets; `429` responses include `Retry-After: 60`.
+Expired invitations return `410`, while replayed or conflicting state transitions return `409`.
+Approval requires matching the Agent-reported enrollment public ID and API-key fingerprint. Key
+rotation installs a locally generated verifier and revokes the presenting credential atomically.
+The CLI stages the replacement in a protected local pending-rotation file before calling this API;
+rerunning `infinitas agent rotate-key` completes an interrupted local promotion after verifying the
+staged credential against `/api/v1/access/me`.
+
+Agent publication requires `agent:publish`; subsequent Release polling is authorized by
+`release:read`. Creating a publish intent returns `202`, while an idempotent retry returns the
+existing Release with `200`. Exhausted daily quota returns `429` and `Retry-After`. The status route
+is scoped to the owning Agent and returns the Release state plus publish-intent state (`pending`,
+`activated`, or `suppressed`), optional suppression reason, and activation timestamp. A Release is a
+successful public backup only when it is `ready` and the intent is `activated`.
 
 ### Discovery, catalog, and install
 
@@ -180,6 +196,16 @@ neither endpoint is an adapter for superseded repository data.
 - `GET /library/{object_id}/releases/{release_id}`
 - `GET /profile`
 - `GET /settings`
+- `GET /agents`
+- `POST /agents/invitations`
+- `POST /agents/invitations/{invitation_id}/revoke`
+- `POST /agents/reservations/{reservation_id}/release`
+- `POST /agents/enrollments/{enrollment_id}/approve`
+- `POST /agents/enrollments/{enrollment_id}/reject`
+- `POST /agents/{agent_id}/suspend`
+- `POST /agents/{agent_id}/resume`
+- `POST /agents/{agent_id}/revoke`
+- `POST /agents/{agent_id}/recovery-invitations`
 - `GET /login`
 
 These routes return `HTMLResponse` and use Cookie + CSRF authentication. They are not aliases for the JSON API.

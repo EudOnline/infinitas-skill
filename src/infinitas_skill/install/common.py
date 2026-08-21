@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from infinitas_skill.install.distribution_core import DistributionError
@@ -157,11 +159,49 @@ def _load_resolution_plan(
     return 0, plan
 
 
-def _copy_skill_tree(*, source_dir: str, dest_dir: str) -> None:
+def _begin_skill_tree_replace(*, source_dir: str, dest_dir: str) -> tuple[Path, bool]:
     destination = Path(dest_dir)
-    if destination.exists():
-        shutil.rmtree(destination)
-    shutil.copytree(source_dir, destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    transaction_root = Path(
+        tempfile.mkdtemp(prefix=f".{destination.name}.install-", dir=destination.parent)
+    )
+    staged = transaction_root / "staged"
+    backup = transaction_root / "previous"
+    replaced = False
+    shutil.copytree(source_dir, staged)
+    try:
+        if destination.exists() or destination.is_symlink():
+            os.replace(destination, backup)
+            replaced = True
+        os.replace(staged, destination)
+    except Exception:
+        if replaced and backup.exists() and not destination.exists():
+            os.replace(backup, destination)
+        shutil.rmtree(transaction_root, ignore_errors=True)
+        raise
+    return transaction_root, replaced
+
+
+def _finish_skill_tree_replace(transaction_root: Path, *, dest_dir: str, rollback: bool) -> None:
+    destination = Path(dest_dir)
+    backup = transaction_root / "previous"
+    try:
+        if rollback:
+            if destination.is_dir() and not destination.is_symlink():
+                shutil.rmtree(destination)
+            elif destination.exists() or destination.is_symlink():
+                destination.unlink()
+            if backup.exists() or backup.is_symlink():
+                os.replace(backup, destination)
+    finally:
+        shutil.rmtree(transaction_root, ignore_errors=True)
+
+
+def _copy_skill_tree(*, source_dir: str, dest_dir: str) -> None:
+    transaction_root, _replaced = _begin_skill_tree_replace(
+        source_dir=source_dir, dest_dir=dest_dir
+    )
+    _finish_skill_tree_replace(transaction_root, dest_dir=dest_dir, rollback=False)
 
 
 def _update_install_manifest_entry(
@@ -304,19 +344,27 @@ def _apply_plan(
         )
         if check_code != 0:
             return check_code, applied, check_payload
-        _copy_skill_tree(source_dir=step_source_dir, dest_dir=step_dest)
-        update_code, update_payload = _update_install_manifest_entry(
-            repo_root=repo_root,
-            target_dir=target_dir,
-            source_dir=step_source_dir,
-            dest_dir=step_dest,
-            action=step_action,
-            locked_version=step_locked_version,
-            source_payload=step_materialized,
-            resolution_plan=step_plan,
+        transaction_root, _replaced = _begin_skill_tree_replace(
+            source_dir=step_source_dir, dest_dir=step_dest
         )
+        try:
+            update_code, update_payload = _update_install_manifest_entry(
+                repo_root=repo_root,
+                target_dir=target_dir,
+                source_dir=step_source_dir,
+                dest_dir=step_dest,
+                action=step_action,
+                locked_version=step_locked_version,
+                source_payload=step_materialized,
+                resolution_plan=step_plan,
+            )
+        except Exception:
+            _finish_skill_tree_replace(transaction_root, dest_dir=step_dest, rollback=True)
+            raise
         if update_code != 0:
+            _finish_skill_tree_replace(transaction_root, dest_dir=step_dest, rollback=True)
             return update_code, applied, update_payload
+        _finish_skill_tree_replace(transaction_root, dest_dir=step_dest, rollback=False)
         applied += 1
     return 0, applied, None
 

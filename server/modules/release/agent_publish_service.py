@@ -10,6 +10,7 @@ import server.modules.release.service as release_service
 from server.jobs import enqueue_job, has_active_job
 from server.model_base import utcnow
 from server.modules.access.authn import AccessContext
+from server.modules.access.authz import require_any_scope
 from server.modules.access.credential_policy import (
     CredentialPolicyForbidden,
     CredentialPublishQuotaExceeded,
@@ -58,6 +59,8 @@ def create_or_get_publish_intent(
 ) -> tuple[AgentPublishIntent, Release, bool]:
     if context.credential.type != "agent_token" or context.principal is None:
         raise AgentPublishForbidden("agent credential required")
+    if not require_any_scope(context, {"agent:publish"}):
+        raise AgentPublishForbidden("agent publish scope required")
     service = db.scalar(
         select(ServicePrincipal).where(ServicePrincipal.principal_id == context.principal.id)
     )
@@ -130,8 +133,6 @@ def create_or_get_publish_intent(
             db, principal_id=context.principal.id, service=service
         )
     except CredentialPublishQuotaExceeded:
-        intent.state = "suppressed"
-        intent.reason = "daily publish quota exceeded"
         raise
 
     if not has_active_job(db, kind="materialize_release", release_id=release.id):
@@ -144,6 +145,29 @@ def create_or_get_publish_intent(
             note=f"materialize Agent release {release.id}",
         )
     return intent, release, True
+
+
+def get_publish_status(
+    db: Session,
+    *,
+    release_id: int,
+    context: AccessContext,
+) -> tuple[AgentPublishIntent, Release]:
+    if context.credential.type != "agent_token" or context.principal is None:
+        raise AgentPublishForbidden("agent credential required")
+    if not require_any_scope(context, {"agent:publish", "release:read"}):
+        raise AgentPublishForbidden("agent publish status scope required")
+    intent = db.scalar(
+        select(AgentPublishIntent)
+        .where(AgentPublishIntent.release_id == release_id)
+        .where(AgentPublishIntent.principal_id == context.principal.id)
+    )
+    if intent is None:
+        raise AgentPublishNotFound("agent publish intent not found")
+    release = db.get(Release, intent.release_id)
+    if release is None:
+        raise AgentPublishNotFound("publish intent release not found")
+    return intent, release
 
 
 def finalize_publish_intent(db: Session, *, intent_id: int) -> AgentPublishIntent:
@@ -249,6 +273,7 @@ def finalize_publish_intent(db: Session, *, intent_id: int) -> AgentPublishInten
 
 __all__ = [
     "create_or_get_publish_intent",
+    "get_publish_status",
     "finalize_publish_intent",
     "AgentPublishError",
     "AgentPublishForbidden",

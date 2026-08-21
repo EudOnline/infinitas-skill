@@ -2667,12 +2667,107 @@
           }
         ],
         "responses": {
-          "200": {
+          "202": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ReleaseView"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Existing Agent publish intent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseView"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Agent daily publish quota exceeded"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/agent/publish-intents/{release_id}": {
+      "get": {
+        "tags": [
+          "agent-publish"
+        ],
+        "summary": "Read Agent Publish Status",
+        "operationId": "read_agent_publish_status_api_v1_agent_publish_intents__release_id__get",
+        "parameters": [
+          {
+            "name": "release_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Release Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "infinitas_auth_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Infinitas Auth Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentPublishStatusView"
                 }
               }
             }
@@ -3945,6 +4040,12 @@
               }
             }
           },
+          "410": {
+            "description": "Invitation expired"
+          },
+          "429": {
+            "description": "Enrollment submission rate limit exceeded"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -4003,6 +4104,9 @@
               }
             }
           },
+          "429": {
+            "description": "Enrollment polling rate limit exceeded"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -4014,6 +4118,92 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/agent/credentials/rotate": {
+      "post": {
+        "tags": [
+          "agent-enrollment"
+        ],
+        "summary": "Rotate Agent Credential",
+        "operationId": "rotate_agent_credential_api_v1_agent_credentials_rotate_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "infinitas_auth_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Infinitas Auth Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentCredentialRotateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentCredentialRotateView"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Credential rotation conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "SessionCookie": []
+          }
+        ]
       }
     },
     "/api/v1/access/me": {
@@ -5533,6 +5723,240 @@
         }
       }
     },
+    "/agents/invitations/{invitation_id}/revoke": {
+      "post": {
+        "summary": "Revoke Agent Invitation",
+        "operationId": "revoke_agent_invitation_agents_invitations__invitation_id__revoke_post",
+        "parameters": [
+          {
+            "name": "invitation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Invitation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agents/reservations/{reservation_id}/release": {
+      "post": {
+        "summary": "Release Agent Reservation",
+        "operationId": "release_agent_reservation_agents_reservations__reservation_id__release_post",
+        "parameters": [
+          {
+            "name": "reservation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Reservation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agents/{service_id}/suspend": {
+      "post": {
+        "summary": "Suspend Agent",
+        "operationId": "suspend_agent_agents__service_id__suspend_post",
+        "parameters": [
+          {
+            "name": "service_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Service Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agents/{service_id}/resume": {
+      "post": {
+        "summary": "Resume Agent",
+        "operationId": "resume_agent_agents__service_id__resume_post",
+        "parameters": [
+          {
+            "name": "service_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Service Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agents/{service_id}/revoke": {
+      "post": {
+        "summary": "Revoke Agent",
+        "operationId": "revoke_agent_agents__service_id__revoke_post",
+        "parameters": [
+          {
+            "name": "service_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Service Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agents/{service_id}/recovery-invitations": {
+      "post": {
+        "summary": "Create Agent Recovery Invitation",
+        "operationId": "create_agent_recovery_invitation_agents__service_id__recovery_invitations_post",
+        "parameters": [
+          {
+            "name": "service_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Service Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/agents/enrollments/{enrollment_id}/reject": {
       "post": {
         "summary": "Reject Agent",
@@ -5834,6 +6258,51 @@
         ],
         "title": "ActivityReleaseView"
       },
+      "AgentCredentialRotateRequest": {
+        "properties": {
+          "api_key_verifier": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "title": "Api Key Verifier"
+          },
+          "fingerprint": {
+            "type": "string",
+            "maxLength": 16,
+            "minLength": 16,
+            "pattern": "^[0-9a-f]{16}$",
+            "title": "Fingerprint"
+          }
+        },
+        "type": "object",
+        "required": [
+          "api_key_verifier",
+          "fingerprint"
+        ],
+        "title": "AgentCredentialRotateRequest"
+      },
+      "AgentCredentialRotateView": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "credential_id": {
+            "type": "integer",
+            "title": "Credential Id"
+          },
+          "fingerprint": {
+            "type": "string",
+            "title": "Fingerprint"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "credential_id",
+          "fingerprint"
+        ],
+        "title": "AgentCredentialRotateView"
+      },
       "AgentEnrollmentStatusView": {
         "properties": {
           "public_id": {
@@ -5955,6 +6424,56 @@
           "expires_at"
         ],
         "title": "AgentEnrollmentSubmitView"
+      },
+      "AgentPublishStatusView": {
+        "properties": {
+          "intent_id": {
+            "type": "integer",
+            "title": "Intent Id"
+          },
+          "release_id": {
+            "type": "integer",
+            "title": "Release Id"
+          },
+          "release_state": {
+            "type": "string",
+            "title": "Release State"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "activated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "intent_id",
+          "release_id",
+          "release_state",
+          "state"
+        ],
+        "title": "AgentPublishStatusView"
       },
       "ArtifactListView": {
         "properties": {

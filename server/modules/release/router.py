@@ -36,7 +36,7 @@ def _require_release_context(context: AccessContext) -> int:
         )
     if not require_any_scope(
         context,
-        {"api:user", "release:write", "authoring:write", "skill:write"},
+        {"api:user", "release:read", "release:write", "authoring:write", "skill:write"},
     ):
         raise HTTPException(status_code=403, detail="insufficient scope")
     return context.principal.id

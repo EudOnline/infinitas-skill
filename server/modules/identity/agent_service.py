@@ -1,16 +1,43 @@
 from __future__ import annotations
 
-import hashlib
 import json
-import secrets
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy import and_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+import server.modules.audit.service as audit_service
 import server.modules.identity.service as identity_service
 from server.model_base import utcnow
+from server.modules.identity.agent_shared import (
+    AgentEnrollmentConflict,
+    AgentEnrollmentExpired,
+    AgentEnrollmentNotFound,
+    credential_fingerprint,
+)
+from server.modules.identity.agent_shared import (
+    AgentEnrollmentError as AgentEnrollmentError,
+)
+from server.modules.identity.agent_shared import (
+    active_invitation_for_reservation as _active_invitation_for_reservation,
+)
+from server.modules.identity.agent_shared import (
+    canonical_verifier as _canonical_verifier,
+)
+from server.modules.identity.agent_shared import (
+    enrollment_public_id as _public_id,
+)
+from server.modules.identity.agent_shared import (
+    enrollment_token as _token,
+)
+from server.modules.identity.agent_shared import (
+    new_invitation_request_nonce as new_invitation_request_nonce,
+)
+from server.modules.identity.agent_shared import (
+    validate_invitation_request_nonce as _validate_invitation_request_nonce,
+)
 from server.modules.identity.models import (
     AgentEnrollment,
     AgentInvitation,
@@ -21,59 +48,19 @@ from server.modules.identity.models import (
 )
 
 
-class AgentEnrollmentError(Exception):
-    pass
-
-
-class AgentEnrollmentNotFound(AgentEnrollmentError):
-    pass
-
-
-class AgentEnrollmentConflict(AgentEnrollmentError):
-    pass
-
-
-def _token(prefix: str) -> str:
-    return f"{prefix}{secrets.token_urlsafe(32)}"
-
-
-def _public_id(prefix: str) -> str:
-    return f"{prefix}{secrets.token_urlsafe(18)}"
-
-
-def _canonical_verifier(value: str) -> str:
-    normalized = str(value or "").strip()
-    if len(normalized) != 71 or not normalized.startswith("sha256:"):
-        raise AgentEnrollmentConflict("invalid credential verifier")
-    try:
-        int(normalized[7:], 16)
-    except ValueError as exc:
-        raise AgentEnrollmentConflict("invalid credential verifier") from exc
-    return normalized
-
-
-def credential_fingerprint(verifier: str) -> str:
-    canonical = _canonical_verifier(verifier)
-    return hashlib.sha256(f"infinitas-agent-fingerprint-v1\0{canonical}".encode()).hexdigest()[:16]
-
-
 def _iso(value: Any) -> str:
     return value.isoformat() if value is not None else ""
 
 
-def _active_invitation_for_reservation(db: Session, reservation_id: int) -> AgentInvitation | None:
-    return db.scalar(
-        select(AgentInvitation)
-        .where(AgentInvitation.reservation_id == reservation_id)
-        .where(AgentInvitation.state == "open")
-        .where(AgentInvitation.expires_at > utcnow())
-    )
+def _as_utc(value: datetime) -> datetime:
+    return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
 
 
 def create_invitation(
     db: Session,
     *,
     slug: str,
+    request_nonce: str,
     display_name: str,
     expires_in_minutes: int,
     max_daily_publishes: int,
@@ -82,6 +69,13 @@ def create_invitation(
     base_url: str,
 ) -> tuple[AgentInvitation, str, str]:
     normalized_slug = slug.strip().lower()
+    normalized_nonce = _validate_invitation_request_nonce(request_nonce)
+    request_nonce_hash = identity_service.hash_token(normalized_nonce)
+    replay = db.scalar(
+        select(AgentInvitation).where(AgentInvitation.request_nonce_hash == request_nonce_hash)
+    )
+    if replay is not None:
+        raise AgentEnrollmentConflict("invitation request has already been used")
     reservation = db.scalar(
         select(AgentNamespaceReservation).where(AgentNamespaceReservation.slug == normalized_slug)
     )
@@ -92,10 +86,27 @@ def create_invitation(
             state="reserved",
             created_by_principal_id=creator_principal_id,
         )
-        db.add(reservation)
-        db.flush()
+        try:
+            with db.begin_nested():
+                db.add(reservation)
+                db.flush()
+        except IntegrityError:
+            reservation = db.scalar(
+                select(AgentNamespaceReservation).where(
+                    AgentNamespaceReservation.slug == normalized_slug
+                )
+            )
+            if reservation is None:
+                raise AgentEnrollmentConflict("agent slug reservation conflicted")
     elif reservation.state != "reserved":
         raise AgentEnrollmentConflict("agent slug is already claimed or released")
+    db.execute(
+        update(AgentInvitation)
+        .where(AgentInvitation.reservation_id == reservation.id)
+        .where(AgentInvitation.state == "open")
+        .where(AgentInvitation.expires_at <= utcnow())
+        .values(state="expired")
+    )
     if _active_invitation_for_reservation(db, reservation.id) is not None:
         raise AgentEnrollmentConflict("an invitation is already open for this agent")
 
@@ -105,6 +116,7 @@ def create_invitation(
         reservation_id=reservation.id,
         purpose="enroll",
         invitation_hash=identity_service.hash_token(raw),
+        request_nonce_hash=request_nonce_hash,
         policy_json=json.dumps(
             {
                 "max_daily_publishes": max_daily_publishes,
@@ -117,8 +129,22 @@ def create_invitation(
         expires_at=utcnow() + timedelta(minutes=expires_in_minutes),
         created_by_principal_id=creator_principal_id,
     )
-    db.add(invitation)
-    db.flush()
+    try:
+        with db.begin_nested():
+            db.add(invitation)
+            db.flush()
+    except IntegrityError as exc:
+        raise AgentEnrollmentConflict(
+            "an invitation is already open or this request was already used"
+        ) from exc
+    audit_service.append_audit_event(
+        db,
+        aggregate_type="agent",
+        aggregate_id=invitation.public_id,
+        event_type="agent.invitation.created",
+        actor_ref=f"principal:{creator_principal_id}",
+        payload={"slug": normalized_slug, "purpose": "enroll"},
+    )
     normalized_base = base_url.rstrip("/")
     prompt = (
         f"Join Infinitas Agent {normalized_slug}.\n"
@@ -141,11 +167,13 @@ def _find_invitation_by_token(db: Session, raw_token: str) -> AgentInvitation:
     )
     if invitation is None:
         raise AgentEnrollmentNotFound("invalid enrollment token")
+    if invitation.state in {"revoked", "expired"}:
+        raise AgentEnrollmentExpired(f"invitation is {invitation.state}")
     if invitation.state != "open":
         raise AgentEnrollmentConflict("invitation has already been consumed")
-    if invitation.expires_at <= utcnow():
+    if _as_utc(invitation.expires_at) <= utcnow():
         invitation.state = "expired"
-        raise AgentEnrollmentConflict("invitation has expired")
+        raise AgentEnrollmentExpired("invitation has expired")
     return invitation
 
 
@@ -175,6 +203,7 @@ def submit_enrollment(
             )
         )
         .values(state="consumed", consumed_at=now)
+        .execution_options(synchronize_session=False)
     )
     changed = int(getattr(result, "rowcount", 0) or 0)
     if changed != 1:
@@ -190,6 +219,14 @@ def submit_enrollment(
     )
     db.add(enrollment)
     db.flush()
+    audit_service.append_audit_event(
+        db,
+        aggregate_type="agent",
+        aggregate_id=enrollment.public_id,
+        event_type="agent.enrollment.submitted",
+        actor_ref=f"enrollment:{enrollment.public_id}",
+        payload={"invitation_public_id": invitation.public_id},
+    )
     return enrollment
 
 
@@ -214,69 +251,58 @@ def status_for_token(
     service = db.scalar(
         select(ServicePrincipal).where(ServicePrincipal.enrollment_id == enrollment.id)
     )
+    if service is None and invitation.target_service_principal_id is not None:
+        service = db.get(ServicePrincipal, invitation.target_service_principal_id)
     if service is not None:
         principal = db.get(Principal, service.principal_id)
     return enrollment, invitation, principal
 
 
-def decide_enrollment(
+def _approve_initial_enrollment(
     db: Session,
     *,
-    enrollment_id: int,
-    approve: bool,
+    enrollment: AgentEnrollment,
+    invitation: AgentInvitation,
     actor_principal_id: int,
-    fingerprint: str | None,
     note: str,
 ) -> AgentEnrollment:
-    enrollment = db.get(AgentEnrollment, enrollment_id)
-    if enrollment is None:
-        raise AgentEnrollmentNotFound("enrollment not found")
-    if enrollment.state != "pending":
-        raise AgentEnrollmentConflict("enrollment is already terminal")
-    if approve:
-        if fingerprint != enrollment.fingerprint:
-            raise AgentEnrollmentConflict("fingerprint confirmation required")
-        invitation = db.get(AgentInvitation, enrollment.invitation_id)
-        if invitation is None:
-            raise AgentEnrollmentNotFound("invitation not found")
-        reservation = db.get(AgentNamespaceReservation, invitation.reservation_id)
-        if reservation is None or reservation.state != "reserved":
-            raise AgentEnrollmentConflict("namespace reservation is unavailable")
-        policy = json.loads(invitation.policy_json or "{}")
-        now = utcnow()
-        result = db.execute(
-            update(AgentEnrollment)
-            .where(AgentEnrollment.id == enrollment.id)
-            .where(AgentEnrollment.state == "pending")
-            .values(
-                state="approved",
-                decision_by_principal_id=actor_principal_id,
-                decided_at=now,
-                decision_note=note,
-            )
+    reservation = db.get(AgentNamespaceReservation, invitation.reservation_id)
+    if reservation is None or reservation.state != "reserved":
+        raise AgentEnrollmentConflict("namespace reservation is unavailable")
+    policy = json.loads(invitation.policy_json or "{}")
+    now = utcnow()
+    result = db.execute(
+        update(AgentEnrollment)
+        .where(AgentEnrollment.id == enrollment.id, AgentEnrollment.state == "pending")
+        .values(
+            state="approved",
+            decision_by_principal_id=actor_principal_id,
+            decided_at=now,
+            decision_note=note,
         )
-        changed = int(getattr(result, "rowcount", 0) or 0)
-        if changed != 1:
-            raise AgentEnrollmentConflict("enrollment was decided concurrently")
-        principal = Principal(
-            kind="service", slug=reservation.slug, display_name=reservation.display_name
-        )
-        db.add(principal)
-        db.flush()
-        service = ServicePrincipal(
-            principal_id=principal.id,
-            slug=reservation.slug,
-            description=reservation.display_name,
-            enrollment_id=enrollment.id,
-            state="active",
-            policy_json=json.dumps(policy, sort_keys=True),
-            approved_at=now,
-        )
-        db.add(service)
-        db.flush()
-        reservation.state = "claimed"
-        reservation.claimed_service_principal_id = service.id
-        credential = Credential(
+    )
+    if int(getattr(result, "rowcount", 0) or 0) != 1:
+        raise AgentEnrollmentConflict("enrollment was decided concurrently")
+    principal = Principal(
+        kind="service", slug=reservation.slug, display_name=reservation.display_name
+    )
+    db.add(principal)
+    db.flush()
+    service = ServicePrincipal(
+        principal_id=principal.id,
+        slug=reservation.slug,
+        description=reservation.display_name,
+        enrollment_id=enrollment.id,
+        state="active",
+        policy_json=json.dumps(policy, sort_keys=True),
+        approved_at=now,
+    )
+    db.add(service)
+    db.flush()
+    reservation.state = "claimed"
+    reservation.claimed_service_principal_id = service.id
+    db.add(
+        Credential(
             principal_id=principal.id,
             type="agent_token",
             hashed_secret=enrollment.proposed_api_key_hash,
@@ -290,8 +316,26 @@ def decide_enrollment(
             product_token_name=f"agent:{reservation.slug}",
             created_at=now,
         )
-        db.add(credential)
-        return enrollment
+    )
+    audit_service.append_audit_event(
+        db,
+        aggregate_type="agent",
+        aggregate_id=str(service.id),
+        event_type="agent.approved",
+        actor_ref=f"principal:{actor_principal_id}",
+        owner_principal_id=principal.id,
+        payload={"enrollment_public_id": enrollment.public_id},
+    )
+    return enrollment
+
+
+def _reject_enrollment(
+    db: Session,
+    *,
+    enrollment: AgentEnrollment,
+    actor_principal_id: int,
+    note: str,
+) -> AgentEnrollment:
     result = db.execute(
         update(AgentEnrollment)
         .where(AgentEnrollment.id == enrollment.id)
@@ -306,7 +350,63 @@ def decide_enrollment(
     changed = int(getattr(result, "rowcount", 0) or 0)
     if changed != 1:
         raise AgentEnrollmentConflict("enrollment was decided concurrently")
+    audit_service.append_audit_event(
+        db,
+        aggregate_type="agent",
+        aggregate_id=enrollment.public_id,
+        event_type="agent.enrollment.rejected",
+        actor_ref=f"principal:{actor_principal_id}",
+        payload={"note": note},
+    )
     return enrollment
+
+
+def decide_enrollment(
+    db: Session,
+    *,
+    enrollment_id: int,
+    approve: bool,
+    actor_principal_id: int,
+    enrollment_public_id: str | None,
+    fingerprint: str | None,
+    note: str,
+) -> AgentEnrollment:
+    enrollment = db.get(AgentEnrollment, enrollment_id)
+    if enrollment is None:
+        raise AgentEnrollmentNotFound("enrollment not found")
+    if enrollment.state != "pending":
+        raise AgentEnrollmentConflict("enrollment is already terminal")
+    if not approve:
+        return _reject_enrollment(
+            db,
+            enrollment=enrollment,
+            actor_principal_id=actor_principal_id,
+            note=note,
+        )
+    if enrollment_public_id != enrollment.public_id:
+        raise AgentEnrollmentConflict("enrollment public ID confirmation required")
+    if fingerprint != enrollment.fingerprint:
+        raise AgentEnrollmentConflict("fingerprint confirmation required")
+    invitation = db.get(AgentInvitation, enrollment.invitation_id)
+    if invitation is None:
+        raise AgentEnrollmentNotFound("invitation not found")
+    if invitation.purpose == "recover":
+        from server.modules.identity.agent_lifecycle import approve_recovery
+
+        return approve_recovery(
+            db,
+            enrollment=enrollment,
+            invitation=invitation,
+            actor_principal_id=actor_principal_id,
+            note=note,
+        )
+    return _approve_initial_enrollment(
+        db,
+        enrollment=enrollment,
+        invitation=invitation,
+        actor_principal_id=actor_principal_id,
+        note=note,
+    )
 
 
 def list_enrollments(

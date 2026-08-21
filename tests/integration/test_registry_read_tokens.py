@@ -45,10 +45,6 @@ def _configure_env(monkeypatch, *, tmp_path: Path, repo: Path) -> Path:
     monkeypatch.setenv("INFINITAS_SERVER_ARTIFACT_PATH", str(artifact_root))
     monkeypatch.setenv("INFINITAS_SERVER_REPO_PATH", str(repo))
     monkeypatch.setenv(
-        "INFINITAS_REGISTRY_READ_TOKENS",
-        json.dumps(["registry-reader-token"]),
-    )
-    monkeypatch.setenv(
         "INFINITAS_SERVER_BOOTSTRAP_USERS",
         json.dumps(
             [
@@ -78,7 +74,6 @@ def _configure_public_env(monkeypatch, *, tmp_path: Path, repo: Path) -> Path:
     monkeypatch.setenv("INFINITAS_SERVER_SECRET_KEY", "test-secret-key-32chars-long-minimum")
     monkeypatch.setenv("INFINITAS_SERVER_ARTIFACT_PATH", str(artifact_root))
     monkeypatch.setenv("INFINITAS_SERVER_REPO_PATH", str(repo))
-    monkeypatch.delenv("INFINITAS_REGISTRY_READ_TOKENS", raising=False)
     monkeypatch.setenv(
         "INFINITAS_SERVER_BOOTSTRAP_USERS",
         json.dumps(
@@ -161,7 +156,7 @@ def _approve_exposure_review(
     assert decision.status_code == 201, decision.text
 
 
-def test_registry_read_tokens_do_not_gate_public_routes_and_preserve_private_credentials(
+def test_public_registry_is_anonymous_and_preserves_private_credentials(
     monkeypatch,
     tmp_path: Path,
     temp_repo_copy: Path,
@@ -204,7 +199,7 @@ def test_registry_read_tokens_do_not_gate_public_routes_and_preserve_private_cre
         "/api/v1/registry/ai-index.json",
         headers={"Authorization": "Bearer wrong-token"},
     )
-    assert wrong_token.status_code == 401, wrong_token.text
+    assert wrong_token.status_code == 200, wrong_token.text
 
     reader_token = client.get(
         "/api/v1/registry/ai-index.json",
@@ -524,66 +519,6 @@ def test_public_registry_hides_release_when_materialized_artifacts_are_missing(
         "/api/v1/install/public/fixture-maintainer/registry-gated-skill@0.1.0"
     )
     assert install_public.status_code == 404, install_public.text
-
-
-def test_production_rejects_malformed_registry_read_tokens(monkeypatch, tmp_path: Path) -> None:
-    from server.settings import get_settings
-
-    monkeypatch.setenv("INFINITAS_SERVER_ENV", "production")
-    monkeypatch.setenv("INFINITAS_SERVER_DATABASE_URL", f"sqlite:///{tmp_path / 'server.db'}")
-    monkeypatch.setenv("INFINITAS_SERVER_SECRET_KEY", "Xn9pL2vQ4sT7wZ1aB3cD5eF7gH9jK1mN")
-    monkeypatch.setenv(
-        "INFINITAS_SERVER_ALLOWED_HOSTS",
-        json.dumps(["registry.example.com"]),
-    )
-    monkeypatch.setenv(
-        "INFINITAS_SERVER_BOOTSTRAP_USERS",
-        json.dumps(
-            [
-                {
-                    "username": "fixture-maintainer",
-                    "display_name": "Fixture Maintainer",
-                    "role": "maintainer",
-                    "token": "fixture-maintainer-token",
-                }
-            ]
-        ),
-    )
-    monkeypatch.setenv("INFINITAS_REGISTRY_READ_TOKENS", "not-json")
-
-    get_settings.cache_clear()
-    with pytest.raises(RuntimeError, match="INFINITAS_REGISTRY_READ_TOKENS"):
-        get_settings()
-
-
-def test_production_rejects_non_array_registry_read_tokens(monkeypatch, tmp_path: Path) -> None:
-    from server.settings import get_settings
-
-    monkeypatch.setenv("INFINITAS_SERVER_ENV", "production")
-    monkeypatch.setenv("INFINITAS_SERVER_DATABASE_URL", f"sqlite:///{tmp_path / 'server.db'}")
-    monkeypatch.setenv("INFINITAS_SERVER_SECRET_KEY", "Xn9pL2vQ4sT7wZ1aB3cD5eF7gH9jK1mN")
-    monkeypatch.setenv(
-        "INFINITAS_SERVER_ALLOWED_HOSTS",
-        json.dumps(["registry.example.com"]),
-    )
-    monkeypatch.setenv(
-        "INFINITAS_SERVER_BOOTSTRAP_USERS",
-        json.dumps(
-            [
-                {
-                    "username": "fixture-maintainer",
-                    "display_name": "Fixture Maintainer",
-                    "role": "maintainer",
-                    "token": "fixture-maintainer-token",
-                }
-            ]
-        ),
-    )
-    monkeypatch.setenv("INFINITAS_REGISTRY_READ_TOKENS", json.dumps({"bad": True}))
-
-    get_settings.cache_clear()
-    with pytest.raises(RuntimeError, match="INFINITAS_REGISTRY_READ_TOKENS"):
-        get_settings()
 
 
 def test_production_cannot_enable_insecure_defaults(monkeypatch, tmp_path: Path) -> None:

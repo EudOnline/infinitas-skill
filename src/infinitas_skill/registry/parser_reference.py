@@ -22,11 +22,6 @@ def build_registry_bootstrap_parser(*, prog: str | None = None) -> argparse.Argu
     parser.add_argument("name", help="Registry source name in lowercase kebab-case")
     parser.add_argument("base_url", help="Hosted catalog base URL")
     parser.add_argument("--repo-root", default=".")
-    parser.add_argument(
-        "--token-env",
-        default="INFINITAS_REGISTRY_READ_TOKEN",
-        help="Environment variable containing the Registry reader token",
-    )
     parser.add_argument("--set-default", action="store_true")
     parser.add_argument("--force-trust", action="store_true")
     parser.add_argument("--json", action="store_true")

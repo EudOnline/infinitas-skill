@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 
@@ -13,7 +12,6 @@ def test_agent_json_routes_publish_named_response_models(tmp_path: Path) -> None
     os.environ["INFINITAS_SERVER_ENV"] = "test"
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(tmp_path / "artifacts")
     os.environ["INFINITAS_SERVER_BOOTSTRAP_USERS"] = "[]"
-    os.environ["INFINITAS_REGISTRY_READ_TOKENS"] = json.dumps(["reader"])
 
     from server.app import create_app
 
@@ -45,7 +43,6 @@ def test_authenticated_json_routes_publish_openapi_security(tmp_path: Path) -> N
     os.environ["INFINITAS_SERVER_ENV"] = "test"
     os.environ["INFINITAS_SERVER_ARTIFACT_PATH"] = str(tmp_path / "artifacts")
     os.environ["INFINITAS_SERVER_BOOTSTRAP_USERS"] = "[]"
-    os.environ["INFINITAS_REGISTRY_READ_TOKENS"] = json.dumps(["reader"])
 
     from fastapi.routing import APIRoute
 

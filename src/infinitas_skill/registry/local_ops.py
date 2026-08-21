@@ -10,8 +10,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-import httpx
-
+from infinitas_skill.install.http_registry import HostedRegistryError, fetch_json
 from infinitas_skill.install.registry_source_primitives import (
     resolve_registry_root,
     short_pin_value,
@@ -151,12 +150,12 @@ def _prepare_http_registry_source(
     root: Path,
     name: str,
     base_url: str,
-    token_env: str,
+    token_env: str | None,
     set_default: bool = False,
 ) -> tuple[Path, dict[str, Any], dict[str, Any], bool]:
     if not _REGISTRY_NAME_RE.fullmatch(name):
         raise ValueError("registry name must use lowercase kebab-case")
-    if not _ENV_NAME_RE.fullmatch(token_env):
+    if token_env is not None and not _ENV_NAME_RE.fullmatch(token_env):
         raise ValueError("token environment variable name is invalid")
     config_path = root / "config" / "registry-sources.json"
     config = _read_local_config(config_path)
@@ -169,8 +168,8 @@ def _prepare_http_registry_source(
         "base_url": base_url.rstrip("/"),
         "enabled": True,
         "priority": 100,
-        "trust": "private",
-        "auth": {"mode": "token", "env": token_env},
+        "trust": "public" if token_env is None else "private",
+        "auth": {"mode": "none"} if token_env is None else {"mode": "token", "env": token_env},
     }
     existing = next(
         (item for item in registries if isinstance(item, dict) and item.get("name") == name),
@@ -194,7 +193,7 @@ def add_http_registry_source(
     root: str | Path,
     name: str,
     base_url: str,
-    token_env: str,
+    token_env: str | None,
     set_default: bool = False,
 ) -> dict[str, Any]:
     repo_root = Path(root).resolve()
@@ -212,7 +211,7 @@ def add_http_registry_source(
         "changed": changed,
         "name": name,
         "base_url": entry["base_url"],
-        "token_env": token_env,
+        "auth_mode": entry["auth"]["mode"],
         "default_registry": config.get("default_registry"),
         "path": str(config_path),
     }
@@ -275,56 +274,53 @@ def _preflight_trust_files(root: Path, files: dict[str, str], *, force: bool) ->
 
 def run_registry_bootstrap(args: argparse.Namespace) -> int:
     root = Path(args.repo_root).resolve()
-    token = os.environ.get(args.token_env, "").strip()
-    if not token:
-        return (
-            _emit(
-                {"ok": False, "message": f"missing token in environment {args.token_env}"},
-                as_json=args.json,
-            )
-            or 1
-        )
     try:
-        config_path, config, entry, source_changed = _prepare_http_registry_source(
+        payload = bootstrap_public_registry(
             root=root,
             name=args.name,
             base_url=args.base_url,
-            token_env=args.token_env,
             set_default=args.set_default,
+            force_trust=args.force_trust,
         )
-        response = httpx.get(
-            f"{entry['base_url']}/trust-bootstrap.json",
-            headers={
-                "Accept": "application/json",
-                "Authorization": f"Bearer {token}",
-            },
-            timeout=30.0,
-        )
-        if response.status_code >= 400:
-            raise ValueError(f"registry trust endpoint returned HTTP {response.status_code}")
-        files = _trust_files(response.json())
-        trust_changed = _preflight_trust_files(root, files, force=args.force_trust)
-        for name, content in files.items():
-            path = root / "config" / name
-            if not path.exists() or path.read_text(encoding="utf-8") != content:
-                _write_text_atomically(path, content)
-        if source_changed:
-            _write_config_atomically(config_path, config)
-    except (OSError, ValueError, httpx.HTTPError) as exc:
+    except (OSError, ValueError, HostedRegistryError) as exc:
         return _emit({"ok": False, "message": str(exc)}, as_json=args.json) or 1
-    return _emit(
-        {
-            "ok": True,
-            "name": args.name,
-            "base_url": entry["base_url"],
-            "token_env": args.token_env,
-            "source_changed": source_changed,
-            "trust_changed": trust_changed,
-            "config_path": str(config_path),
-            "trust_paths": [str(root / "config" / name) for name in sorted(files)],
-        },
-        as_json=args.json,
+    return _emit(payload, as_json=args.json)
+
+
+def bootstrap_public_registry(
+    *,
+    root: str | Path,
+    name: str,
+    base_url: str,
+    set_default: bool = False,
+    force_trust: bool = False,
+) -> dict[str, Any]:
+    repo_root = Path(root).resolve()
+    config_path, config, entry, source_changed = _prepare_http_registry_source(
+        root=repo_root,
+        name=name,
+        base_url=base_url,
+        token_env=None,
+        set_default=set_default,
     )
+    files = _trust_files(fetch_json(entry["base_url"], "trust-bootstrap.json"))
+    trust_changed = _preflight_trust_files(repo_root, files, force=force_trust)
+    for filename, content in files.items():
+        path = repo_root / "config" / filename
+        if not path.exists() or path.read_text(encoding="utf-8") != content:
+            _write_text_atomically(path, content)
+    if source_changed:
+        _write_config_atomically(config_path, config)
+    return {
+        "ok": True,
+        "name": name,
+        "base_url": entry["base_url"],
+        "auth_mode": "none",
+        "source_changed": source_changed,
+        "trust_changed": trust_changed,
+        "config_path": str(config_path),
+        "trust_paths": [str(repo_root / "config" / item) for item in sorted(files)],
+    }
 
 
 def _find_source(root: Path, registry_name: str) -> dict:

@@ -209,6 +209,131 @@ def test_publish_no_wait_stops_before_exposure_for_preparing_release(
     assert json.loads(receipt_path.read_text(encoding="utf-8"))["state"] == "release-created"
 
 
+def test_agent_publish_waits_for_intent_activation(monkeypatch, tmp_path: Path) -> None:
+    calls: list[tuple[str, str]] = []
+
+    def fake_request(method: str, url: str, **_kwargs) -> httpx.Response:
+        path = url.removeprefix("https://registry.example.test")
+        calls.append((method, path))
+        responses = {
+            "/api/v1/access/me": {"principal_slug": "backup-agent"},
+            "/api/v1/skills?slug=adapt": [{"id": 8, "slug": "adapt"}],
+            "/api/v1/skills/8/versions": [],
+        }
+        if method == "GET" and path in responses:
+            return _response(200, responses[path])
+        if method == "POST" and path == "/api/v1/skills/8/content":
+            return _response(201, {"content_id": "cnt_agent"})
+        if method == "POST" and path == "/api/v1/skills/8/versions":
+            return _response(201, {"id": 10, "version": "1.0.0"})
+        if method == "POST" and path == "/api/v1/agent/versions/10/publish":
+            return _response(202, {"id": 11, "state": "preparing"})
+        if path == "/api/v1/releases/11":
+            return _response(200, {"id": 11, "state": "ready"})
+        if path == "/api/v1/agent/publish-intents/11":
+            return _response(
+                200,
+                {"intent_id": 12, "release_id": 11, "release_state": "ready", "state": "activated"},
+            )
+        raise AssertionError(f"unexpected request {method} {path}")
+
+    monkeypatch.setattr(httpx, "request", fake_request)
+    result = publish_skill(
+        _source(tmp_path),
+        base_url="https://registry.example.test",
+        token="agent-token",
+        version="1.0.0",
+        repo_root=Path.cwd(),
+        agent_mode=True,
+    ).payload
+
+    assert result["state"] == "published"
+    assert result["publish_intent"]["state"] == "activated"
+    assert ("GET", "/api/v1/agent/publish-intents/11") in calls
+
+
+def test_agent_publish_reports_suppressed_intent(monkeypatch, tmp_path: Path) -> None:
+    def fake_request(method: str, url: str, **_kwargs) -> httpx.Response:
+        path = url.removeprefix("https://registry.example.test")
+        if path == "/api/v1/access/me":
+            return _response(200, {"principal_slug": "backup-agent"})
+        if path == "/api/v1/skills?slug=adapt":
+            return _response(200, [{"id": 8, "slug": "adapt"}])
+        if method == "GET" and path == "/api/v1/skills/8/versions":
+            return _response(200, [])
+        if method == "POST" and path == "/api/v1/skills/8/content":
+            return _response(201, {"content_id": "cnt_agent"})
+        if method == "POST" and path == "/api/v1/skills/8/versions":
+            return _response(201, {"id": 10, "version": "1.0.0"})
+        if method == "POST" and path == "/api/v1/agent/versions/10/publish":
+            return _response(202, {"id": 11, "state": "preparing"})
+        if path == "/api/v1/releases/11":
+            return _response(200, {"id": 11, "state": "ready"})
+        if path == "/api/v1/agent/publish-intents/11":
+            return _response(
+                200,
+                {
+                    "intent_id": 12,
+                    "release_id": 11,
+                    "release_state": "ready",
+                    "state": "suppressed",
+                    "reason": "auto public publish is disabled",
+                },
+            )
+        raise AssertionError(f"unexpected request {method} {path}")
+
+    monkeypatch.setattr(httpx, "request", fake_request)
+    with pytest.raises(RuntimeError, match="suppressed: auto public publish is disabled"):
+        publish_skill(
+            _source(tmp_path),
+            base_url="https://registry.example.test",
+            token="agent-token",
+            version="1.0.0",
+            repo_root=Path.cwd(),
+            agent_mode=True,
+        )
+
+
+def test_agent_publish_without_wait_does_not_report_pending_intent_as_published(
+    monkeypatch, tmp_path: Path
+) -> None:
+    def fake_request(method: str, url: str, **_kwargs) -> httpx.Response:
+        path = url.removeprefix("https://registry.example.test")
+        responses = {
+            "/api/v1/access/me": {"principal_slug": "backup-agent"},
+            "/api/v1/skills?slug=adapt": [{"id": 8, "slug": "adapt"}],
+            "/api/v1/skills/8/versions": [],
+        }
+        if method == "GET" and path in responses:
+            return _response(200, responses[path])
+        if method == "POST" and path == "/api/v1/skills/8/content":
+            return _response(201, {"content_id": "cnt_agent"})
+        if method == "POST" and path == "/api/v1/skills/8/versions":
+            return _response(201, {"id": 10, "version": "1.0.0"})
+        if method == "POST" and path == "/api/v1/agent/versions/10/publish":
+            return _response(200, {"id": 11, "state": "ready"})
+        if path == "/api/v1/agent/publish-intents/11":
+            return _response(
+                200,
+                {"intent_id": 12, "release_id": 11, "release_state": "ready", "state": "pending"},
+            )
+        raise AssertionError(f"unexpected request {method} {path}")
+
+    monkeypatch.setattr(httpx, "request", fake_request)
+    result = publish_skill(
+        _source(tmp_path),
+        base_url="https://registry.example.test",
+        token="agent-token",
+        version="1.0.0",
+        repo_root=Path.cwd(),
+        wait=False,
+        agent_mode=True,
+    ).payload
+
+    assert result["state"] == "release-created"
+    assert result["publish_intent"]["state"] == "pending"
+
+
 def test_publish_resume_reuses_uploaded_content(monkeypatch, tmp_path: Path) -> None:
     source = _source(tmp_path)
     receipt_path = tmp_path / "publish-receipt.json"

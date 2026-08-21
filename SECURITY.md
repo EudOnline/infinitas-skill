@@ -32,10 +32,15 @@ are outside the product boundary. TLS termination, host hardening, backups,
 filesystem permissions, outbound network policy, and access to signing keys remain operator
 responsibilities.
 
-Browser administrator passwords, Agent tokens, registry read tokens, session cookies, share
+Browser administrator passwords, Agent tokens, session cookies, share
 secrets, and SSH signing keys are separate credentials. Do not reuse them. A suspected exposure
 requires rotation or revocation of every affected credential, invalidation of active sessions and
 Share Links where applicable, and review of Activity/audit records.
+
+`infinitas agent rotate-key` stores an in-progress replacement beside the Agent profile with mode
+`0600` before sending its verifier. This prevents a successful server-side rotation from losing the
+only usable raw key if local profile replacement is interrupted. Rerun the same command to verify
+and promote the staged key; do not copy or edit the pending-rotation file.
 
 ## Repository and dependency hygiene
 

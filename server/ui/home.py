@@ -255,7 +255,6 @@ def build_home_context(*, settings: Any, db: Session, request: Request) -> dict[
             "",
             "",
         ),
-        "registry_reader_tokens_enabled": bool(settings.registry_read_tokens),
         "stats": stats,
     }
     context.update(build_kawaii_ui_context(request, lang, lifecycle_mode, page_eyebrow))

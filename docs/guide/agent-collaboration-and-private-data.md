@@ -2,7 +2,7 @@
 audience: Agent authors, administrators, operators
 owner: repository maintainers
 source_of_truth: ChangeSet and encrypted data snapshot workflow
-last_reviewed: 2026-07-29
+last_reviewed: 2026-08-21
 status: maintained
 ---
 
@@ -19,6 +19,27 @@ The Registry separates three recovery units:
 The Web UI remains read-only for skill authoring. Agents use Bearer credentials and the JSON API
 or CLI. Every write audit event records the principal, credential ID, `issued_for`, and request ID
 when those values are available.
+
+## Agent Enrollment And Public Program Backup
+
+An administrator creates an invitation from `/agents`. The HTML form uses Session Cookie + CSRF and
+a server-generated one-use nonce; the resulting `enroll_...` secret is shown once in a response that
+must not be cached. The Agent submits its locally generated credential/status verifiers through the
+JSON enrollment API, then polls with the separate `status_...` credential until an administrator
+approves or rejects it. Submission and polling have separate persistent rate limits, and approval
+creates an independently revocable service Principal rather than delegating an administrator user.
+
+An approved Agent backs up program files through the Agent publish orchestration. Its credential
+needs `agent:publish` to create or reuse an intent and `release:read` to poll materialization. The
+first publish request returns `202`, an idempotent retry returns `200`, and daily quota exhaustion
+returns `429` with a retry interval. The CLI reports success only after the immutable Release is
+`ready` and the owner-scoped intent is `activated`; a `suppressed` intent is a failed public backup
+and includes the server reason. Public activation is server-derived and never gives the Agent
+generic Exposure administration.
+
+This public backup contains only Skill program files. It is not a backup of runtime or business
+data. Runtime state follows the encrypted snapshot workflow below and is never exposed through the
+public catalog or public artifact routes.
 
 ## Multiple Agents On One Skill
 

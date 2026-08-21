@@ -165,6 +165,45 @@ class TestAuthenticatedRateLimiting:
         assert response.status_code == 401
 
 
+class TestAgentEnrollmentRateLimiting:
+    def test_invalid_enrollment_submissions_are_persistently_rate_limited(
+        self, tmp_path: Path
+    ) -> None:
+        client = _test_client(tmp_path)
+        statuses = []
+        payload = {
+            "status_verifier": "sha256:" + "a" * 64,
+            "api_key_verifier": "sha256:" + "b" * 64,
+            "fingerprint": "c" * 16,
+            "runtime": {},
+        }
+        for index in range(12):
+            response = client.post(
+                "/api/v1/agent-enrollments",
+                headers={"Authorization": f"Bearer enroll_invalid-{index}"},
+                json=payload,
+            )
+            statuses.append(response.status_code)
+            if response.status_code == 429:
+                assert response.headers["Retry-After"] == "60"
+                break
+
+        assert statuses[:10] == [401] * 10
+        assert statuses[10] == 429
+
+    def test_invalid_status_polling_is_rate_limited_per_client(self, tmp_path: Path) -> None:
+        client = _test_client(tmp_path)
+        response = None
+        for index in range(121):
+            response = client.get(
+                f"/api/v1/agent-enrollments/aenr_missing-{index}",
+                headers={"Authorization": f"Bearer status_invalid-{index}"},
+            )
+        assert response is not None
+        assert response.status_code == 429
+        assert response.headers["Retry-After"] == "60"
+
+
 class TestRateLimitRecovery:
     """Test rate limit recovery after time window expires."""
 

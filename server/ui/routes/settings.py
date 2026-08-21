@@ -42,7 +42,6 @@ def settings_page(request: Request, db: Session = Depends(get_db)) -> Response:
         registry_version=server_version,
         admin_token_env_name="INFINITAS_REGISTRY_API_TOKEN",  # noqa: S106
         bootstrap_user_count=len(settings.bootstrap_users),
-        registry_read_token_count=len(settings.registry_read_tokens),
         object_kinds=["Skill"],
         library_href=with_lang("/manage", lang),
         access_href=with_lang("/manage#tokens", lang),

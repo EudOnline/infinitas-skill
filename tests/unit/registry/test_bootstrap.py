@@ -33,14 +33,13 @@ def _trust_response() -> httpx.Response:
 
 
 def test_registry_bootstrap_installs_source_and_public_trust(monkeypatch, tmp_path, capsys) -> None:
-    monkeypatch.setenv("HOSTED_READER_TOKEN", "reader-secret")
     captured = {}
 
-    def fake_get(url, **kwargs):
-        captured.update({"url": url, **kwargs})
-        return _trust_response()
+    def fake_fetch(url, path, **kwargs):
+        captured.update({"url": url, "path": path, **kwargs})
+        return _trust_response().json()
 
-    monkeypatch.setattr(httpx, "get", fake_get)
+    monkeypatch.setattr("infinitas_skill.registry.local_ops.fetch_json", fake_fetch)
     parser = build_registry_parser()
     args = parser.parse_args(
         [
@@ -49,8 +48,6 @@ def test_registry_bootstrap_installs_source_and_public_trust(monkeypatch, tmp_pa
             "https://registry.example.test/api/v1/registry",
             "--repo-root",
             str(tmp_path),
-            "--token-env",
-            "HOSTED_READER_TOKEN",
             "--set-default",
             "--json",
         ]
@@ -61,21 +58,16 @@ def test_registry_bootstrap_installs_source_and_public_trust(monkeypatch, tmp_pa
     assert result["ok"] is True
     assert result["source_changed"] is True
     assert result["trust_changed"] is True
-    assert captured["url"].endswith("/api/v1/registry/trust-bootstrap.json")
-    assert captured["headers"] == {
-        "Accept": "application/json",
-        "Authorization": "Bearer reader-secret",
+    assert captured == {
+        "url": "https://registry.example.test/api/v1/registry",
+        "path": "trust-bootstrap.json",
     }
 
     config_dir = tmp_path / "config"
     source = json.loads((config_dir / "registry-sources.json").read_text(encoding="utf-8"))
     assert source["default_registry"] == "hosted"
-    assert source["registries"][0]["auth"] == {
-        "mode": "token",
-        "env": "HOSTED_READER_TOKEN",
-    }
-    combined = "".join(path.read_text(encoding="utf-8") for path in config_dir.iterdir())
-    assert "reader-secret" not in combined
+    assert source["registries"][0]["auth"] == {"mode": "none"}
+    assert source["registries"][0]["trust"] == "public"
     assert (config_dir / "allowed_signers").stat().st_mode & 0o777 == 0o644
 
     assert args._handler(args) == 0
@@ -87,8 +79,10 @@ def test_registry_bootstrap_installs_source_and_public_trust(monkeypatch, tmp_pa
 def test_registry_bootstrap_refuses_to_replace_different_trust(
     monkeypatch, tmp_path, capsys
 ) -> None:
-    monkeypatch.setenv("HOSTED_READER_TOKEN", "reader-secret")
-    monkeypatch.setattr(httpx, "get", lambda *_args, **_kwargs: _trust_response())
+    monkeypatch.setattr(
+        "infinitas_skill.registry.local_ops.fetch_json",
+        lambda *_args, **_kwargs: _trust_response().json(),
+    )
     config_dir = tmp_path / "config"
     config_dir.mkdir()
     signing = config_dir / "signing.json"
@@ -101,8 +95,6 @@ def test_registry_bootstrap_refuses_to_replace_different_trust(
             "https://registry.example.test/api/v1/registry",
             "--repo-root",
             str(tmp_path),
-            "--token-env",
-            "HOSTED_READER_TOKEN",
             "--json",
         ]
     )

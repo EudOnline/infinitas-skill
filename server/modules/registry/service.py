@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hmac
 import json
 from dataclasses import dataclass
 from functools import lru_cache
@@ -95,38 +94,17 @@ def _resolve_request_token(request: Request) -> str | None:
     return _extract_bearer_token(request.headers.get("authorization"))
 
 
-def _matches_registry_reader_token(token: str, allowed_tokens: list[str]) -> bool:
-    candidate = str(token or "").strip()
-    if not candidate:
-        return False
-    return any(hmac.compare_digest(candidate, allowed) for allowed in allowed_tokens if allowed)
-
-
 def _resolve_registry_audience(db: Session, request: Request) -> RegistryAudience:
-    settings = get_settings()
-    allowed_reader_tokens = list(settings.registry_read_tokens)
     bearer_token = _resolve_request_token(request)
     session_cookie = request.cookies.get(AUTH_COOKIE_NAME)
-    has_auth_input = bool(bearer_token or session_cookie)
-
-    if not has_auth_input:
+    if not bearer_token and not session_cookie:
         return RegistryAudience(mode="public", context=None)
-
-    if (
-        bearer_token is not None
-        and allowed_reader_tokens
-        and _matches_registry_reader_token(bearer_token, allowed_reader_tokens)
-    ):
-        return RegistryAudience(mode="public", context=None)
-
     if bearer_token:
         context = resolve_access_context(db, bearer_token)
     else:
         context = maybe_get_current_access_context(request, db)
-    if context is None and not allowed_reader_tokens:
-        return RegistryAudience(mode="public", context=None)
     if context is None:
-        raise UnauthorizedError("invalid registry bearer token")
+        return RegistryAudience(mode="public", context=None)
     if context.credential.grant_id is not None:
         return RegistryAudience(mode="grant", context=context)
     return RegistryAudience(mode="me", context=context)
