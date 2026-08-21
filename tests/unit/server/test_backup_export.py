@@ -195,7 +195,13 @@ def test_webdav_download_follows_cross_origin_redirect_without_forwarding_auth(
     def handle(request: httpx.Request) -> httpx.Response:
         requests.append((request.url.host, request.headers.get("authorization")))
         if request.url.host == "openlist.example":
+            if request.method == "HEAD":
+                return httpx.Response(
+                    302, headers={"Location": "https://objects.example/backup.age"}
+                )
             return httpx.Response(302, headers={"Location": "https://objects.example/backup.age"})
+        if request.method == "HEAD":
+            return httpx.Response(200)
         return httpx.Response(200, content=b"encrypted-backup")
 
     client = WebDAVClient(
@@ -210,7 +216,10 @@ def test_webdav_download_follows_cross_origin_redirect_without_forwarding_auth(
     client.download_file("/backup.age", target)
 
     assert target.read_bytes() == b"encrypted-backup"
+    assert client.exists("/backup.age") is True
     assert requests == [
+        ("openlist.example", "Basic YmFja3VwLXVzZXI6dGVzdC1wYXNzd29yZA=="),
+        ("objects.example", None),
         ("openlist.example", "Basic YmFja3VwLXVzZXI6dGVzdC1wYXNzd29yZA=="),
         ("objects.example", None),
     ]

@@ -69,7 +69,9 @@ class WebDAVClient:
                 fail(f"WebDAV MKCOL failed for {current}: HTTP {response.status_code}")
 
     def exists(self, remote_path_value: str) -> bool:
-        response = self._client.request("HEAD", self._url(remote_path_value))
+        response = self._client.request(
+            "HEAD", self._url(remote_path_value), follow_redirects=True
+        )
         if response.status_code in {200, 204}:
             return True
         if response.status_code == 404:
