@@ -185,3 +185,33 @@ def test_inspect_backup_state_reports_missing_offsite_export(tmp_path: Path, cap
     assert result == 2
     assert summary["pending_exports"] == 1
     assert summary["alerts"] == ["offsite_backup_stale"]
+
+
+def test_webdav_download_follows_cross_origin_redirect_without_forwarding_auth(
+    tmp_path: Path,
+) -> None:
+    requests: list[tuple[str, str | None]] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        requests.append((request.url.host, request.headers.get("authorization")))
+        if request.url.host == "openlist.example":
+            return httpx.Response(302, headers={"Location": "https://objects.example/backup.age"})
+        return httpx.Response(200, content=b"encrypted-backup")
+
+    client = WebDAVClient(
+        base_url="https://openlist.example/dav",
+        auth_mode="basic",
+        username="backup-user",
+        secret="test-password",
+        transport=httpx.MockTransport(handle),
+    )
+    target = tmp_path / "backup.age"
+
+    client.download_file("/backup.age", target)
+
+    assert target.read_bytes() == b"encrypted-backup"
+    assert requests == [
+        ("openlist.example", "Basic YmFja3VwLXVzZXI6dGVzdC1wYXNzd29yZA=="),
+        ("objects.example", None),
+    ]
+    client.close()

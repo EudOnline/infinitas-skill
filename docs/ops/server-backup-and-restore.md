@@ -83,12 +83,16 @@ of the Coolify server. Use the encrypted export below for server-loss recovery.
 
 ## Encrypted offsite export through OpenList
 
-Use OpenList only as a replaceable WebDAV gateway. The durable offsite medium is the Google Drive
-mounted below `/infinitas`. In OpenList, create a dedicated non-admin user with:
+Use OpenList only as a replaceable WebDAV gateway. The durable offsite medium is the storage
+mounted below `/newins`. In OpenList, create a dedicated non-admin user with:
 
-- base path `/infinitas/infinitas-skill-backups`
+- base path `/newins/infinitas-skill-backups`
 - only WebDAV read and WebDAV write permissions
 - a unique random password used with Basic Auth
+
+OpenList exposes that base path as `/dav/` to this user. Keep the exporter URL at
+`https://openlist.infinitas.fun/dav` and use a relative remote prefix; do not append `/newins` or
+the base path to the WebDAV request path.
 
 Do not use an administrator API Token as a Basic password. Generate an age identity on an offline
 recovery host, store the identity outside Coolify and Google Drive, and put only its public

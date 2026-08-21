@@ -77,7 +77,7 @@ class WebDAVClient:
         fail(f"WebDAV HEAD failed for {remote_path_value}: HTTP {response.status_code}")
 
     def get_json(self, remote_path_value: str) -> dict[str, Any] | None:
-        response = self._client.get(self._url(remote_path_value))
+        response = self._client.get(self._url(remote_path_value), follow_redirects=True)
         if response.status_code == 404:
             return None
         if response.status_code != 200:
@@ -107,7 +107,9 @@ class WebDAVClient:
 
     def download_file(self, remote_path_value: str, local_path: Path) -> None:
         local_path.parent.mkdir(parents=True, exist_ok=True)
-        with self._client.stream("GET", self._url(remote_path_value)) as response:
+        with self._client.stream(
+            "GET", self._url(remote_path_value), follow_redirects=True
+        ) as response:
             if response.status_code != 200:
                 fail(f"WebDAV download failed for {remote_path_value}: HTTP {response.status_code}")
             with local_path.open("wb") as handle:

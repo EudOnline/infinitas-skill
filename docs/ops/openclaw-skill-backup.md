@@ -62,20 +62,20 @@ After restricted WebDAV upload and download verification, register only its reco
 infinitas registry data-snapshots register <skill-id> \
   --skill-version-id <version-id> \
   --file /srv/backups/teacher-work-datahub-2026-07-24.tar.gz.age \
-  --object-uri openlist://infinitas/infinitas-skill-backups/agent-data-snapshots/teacher-work-datahub/2026-07-24.tar.gz.age \
+  --object-uri openlist://newins/infinitas-skill-backups/agent-data-snapshots/teacher-work-datahub/2026-07-24.tar.gz.age \
   --manifest-digest sha256:<digest-from-backup-output> \
   --parent-snapshot-id <previous-snapshot-id>
 ```
 
 The production OpenList root exposes storage mounts rather than a writable virtual filesystem.
-Create snapshot directories below the existing `/infinitas` mount and restrict the snapshot user
-to `/infinitas/infinitas-skill-backups/agent-data-snapshots`; a root-level directory without a
+Create snapshot directories below the existing `/newins` mount and restrict the snapshot user
+to `/newins/infinitas-skill-backups/agent-data-snapshots`; a root-level directory without a
 storage mount will fail even when authentication succeeds.
 
 For long-lived automation, use a non-admin OpenList user with permission value `776`: content
 write, WebDAV read, and WebDAV write. This intentionally omits delete permission. If an ancestor
 OpenList Meta restricts `read_users` or `write_users`, create a more-specific Meta on
-`/infinitas/infinitas-skill-backups/agent-data-snapshots`, include the administrator and snapshot
+`/newins/infinitas-skill-backups/agent-data-snapshots`, include the administrator and snapshot
 user IDs, and enable both subdirectory flags. A base path alone does not override an ancestor Meta
 ACL. Verify the account by uploading an `.age` object, downloading it, comparing SHA-256, and
 confirming that deletion is denied.

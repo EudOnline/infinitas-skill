@@ -126,15 +126,15 @@ comparing its SHA-256, register recovery metadata:
 infinitas registry data-snapshots register <skill-id> \
   --skill-version-id <version-id> \
   --file /srv/backups/<skill>-2026-07-29.tar.gz.age \
-  --object-uri openlist://infinitas/infinitas-skill-backups/agent-data-snapshots/<skill>/<snapshot>.tar.gz.age \
+  --object-uri openlist://newins/infinitas-skill-backups/agent-data-snapshots/<skill>/<snapshot>.tar.gz.age \
   --manifest-digest sha256:<manifest-digest> \
   --parent-snapshot-id <previous-snapshot-id>
 ```
 
 The first URI component must name a real OpenList storage mount. In the production layout that is
-`/infinitas`; a root-level virtual path such as `/skill-data-snapshots` has no backing storage and
+`/newins`; a root-level virtual path such as `/skill-data-snapshots` has no backing storage and
 cannot be used for WebDAV uploads. Give the Agent snapshot account a base path limited to
-`/infinitas/infinitas-skill-backups/agent-data-snapshots`. Use OpenList permission value `776`
+`/newins/infinitas-skill-backups/agent-data-snapshots`. Use OpenList permission value `776`
 (content write plus WebDAV read/write) without delete permission. When a parent OpenList Meta has
 an explicit user ACL, add a more-specific Meta at the snapshot path for the administrator and
 snapshot user; the user's base path does not bypass Meta ACLs.

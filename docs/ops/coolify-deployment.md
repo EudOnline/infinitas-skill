@@ -288,9 +288,11 @@ Agent workspace snapshots are separate from these seven server volumes. Create a
 them on the Agent host, upload them with a separate path-restricted OpenList WebDAV user, and
 register only their metadata through the Registry API. Never mount a live Agent data directory
 into `app` or place an age identity in Coolify. The server backup exporter credential and the
-Agent snapshot credential should not be shared. In the production OpenList layout, restrict that
-user to `/infinitas/infinitas-skill-backups/agent-data-snapshots`; `/infinitas` is the real Google
-Drive-backed storage mount, while arbitrary root-level WebDAV paths have no backing storage.
+Agent snapshot credential should not be shared. In the production OpenList layout, the active
+storage mount is `/newins`. Restrict that user to
+`/newins/infinitas-skill-backups/agent-data-snapshots`; arbitrary root-level WebDAV paths have no
+backing storage. OpenList maps a user's `base_path` to `/dav/`, so clients use paths relative to
+that base path rather than appending `/newins` to the WebDAV URL.
 
 ## Scheduled backup tasks
 
